@@ -24,51 +24,83 @@ SIMD_ALWAYS_INLINE void CountAllConditionalOp(int64_t *res, int64_t &noUsed1, co
     *res += (in & mask);
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-class CountColumnAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
+template <DataTypeId IN_ID, DataTypeId OUT_ID> class CountColumnAggregator : public TypedAggregator {
 public:
     ~CountColumnAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
-        std::vector<int32_t> &channels)
+        std::vector<int32_t> &channels, bool inRaw, bool outPartial, bool isOverflowAsNull)
     {
-        if constexpr (OUT_ID != OMNI_LONG) {
+        if (OUT_ID != OMNI_LONG) {
             LogError("Error in count column aggregator: Expecting long output type. Got %s",
                 TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
-        } else if constexpr (!RAW_IN && IN_ID != OMNI_LONG) {
+        } else if (!inRaw && IN_ID != OMNI_LONG) {
             LogError("Error in count column aggregator: Expecting long intput type for partial input. Got %s",
                 TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else {
-            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes("count column", inputTypes,
-                outputTypes, IN_ID, OUT_ID)) {
+            if (!TypedAggregator::CheckTypes("count column", inputTypes, outputTypes, IN_ID, OUT_ID)) {
                 return nullptr;
             }
 
-            return std::unique_ptr<CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
-                new CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(outputTypes, channels));
+            return std::unique_ptr<CountColumnAggregator<IN_ID, OUT_ID>>(
+                new CountColumnAggregator<IN_ID, OUT_ID>(outputTypes, channels, inRaw, outPartial, isOverflowAsNull));
         }
     }
 
 protected:
-    CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
-        *DataTypes::NoneDataTypesInstance(), outputTypes, channels)
-    {}
+    CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels,
+                          const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+        : TypedAggregator(OMNI_AGGREGATION_TYPE_COUNT_COLUMN, *DataTypes::NoneDataTypesInstance(), outputTypes,
+        channels, inputRaw, outputPartial, isOverflowAsNull)
+    {
+        if (inputRaw) {
+            processSingleInternalPtr = &CountColumnAggregator<IN_ID,OUT_ID>::ProcessSingleInternalFunction<true>;
+            processGroupInternalPtr = &CountColumnAggregator<IN_ID,OUT_ID>::ProcessGroupInternalFunction<true>;
+        } else {
+            processSingleInternalPtr = &CountColumnAggregator<IN_ID,OUT_ID>::ProcessSingleInternalFunction<false>;
+            processGroupInternalPtr = &CountColumnAggregator<IN_ID,OUT_ID>::ProcessGroupInternalFunction<false>;
+        }
+    }
 
-    CountColumnAggregator(FunctionType aggregateType, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(aggregateType, *DataTypes::NoneDataTypesInstance(),
-        outputTypes, channels)
-    {}
+    CountColumnAggregator(FunctionType aggregateType, const DataTypes &outputTypes, std::vector<int32_t> &channels,
+                          const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+        : TypedAggregator(aggregateType, *DataTypes::NoneDataTypesInstance(), outputTypes, channels,
+                          inputRaw, outputPartial, isOverflowAsNull)
+    {
+        if (inputRaw) {
+            processSingleInternalPtr = &CountColumnAggregator<IN_ID,OUT_ID>::ProcessSingleInternalFunction<true>;
+            processGroupInternalPtr = &CountColumnAggregator<IN_ID,OUT_ID>::ProcessGroupInternalFunction<true>;
+        } else {
+            processGroupInternalPtr = &CountColumnAggregator<IN_ID,OUT_ID>::ProcessGroupInternalFunction<false>;
+            processSingleInternalPtr = &CountColumnAggregator<IN_ID,OUT_ID>::ProcessSingleInternalFunction<false>;
+        }
+    }
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
+
+    template<bool RAW_IN>
+    void ProcessSingleInternalFunction(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
+                                       const uint8_t *nullMap, const int32_t *indexMap);
+
+    template<bool RAW_IN>
+    void ProcessGroupInternalFunction(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+                                      const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap);
+
+private:
+    void (CountColumnAggregator<IN_ID, OUT_ID>::*processGroupInternalPtr)(std::vector<AggregateState *> &rowStates,
+        const size_t aggIdx, Vector *vector, const int32_t rowOffset, const uint8_t *nullMap,
+        const int32_t *indexMap) = nullptr;
+
+    void (CountColumnAggregator<IN_ID, OUT_ID>::*processSingleInternalPtr)(AggregateState &state, Vector *vector,
+        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = nullptr;
 };
 }
 }

@@ -25,11 +25,12 @@ static const int32_t NUM_VALUES = 15;
 
 static std::vector<int32_t> CHANNEL{0 };
 
-class AggregatorCastTestClass : public TypedAggregator<true, false, false> {
+class AggregatorCastTestClass : public TypedAggregator {
 public:
-    AggregatorCastTestClass(DataTypes &inTypes, DataTypes &outTypes)
-        : TypedAggregator<true, false, false>(OMNI_AGGREGATION_TYPE_SUM, std::move(inTypes), std::move(outTypes),
-                                              CHANNEL)
+    AggregatorCastTestClass(DataTypes &inTypes, DataTypes &outTypes,
+                            bool rawIn, bool partialOut, bool isOverflowAsNull)
+        : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, std::move(inTypes), std::move(outTypes),
+                                              CHANNEL, rawIn, partialOut, isOverflowAsNull)
     {}
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
@@ -44,7 +45,7 @@ public:
 
     template <typename InType, typename OutType> OutType TestCastWithOverflow(const InType val, bool &overflow)
     {
-        return TypedAggregator<true, false, false>::CastWithOverflow<InType, OutType>(val, overflow);
+        return TypedAggregator::CastWithOverflow<InType, OutType>(val, overflow);
     }
 
     void SetInputType(DataTypes &inType)
@@ -1173,7 +1174,8 @@ TEST_P(AggregatorCastTest, verify_cast)
 {
     const DataTypeId inType = std::get<0>(GetParam());
     const int32_t valueIndex = std::get<1>(GetParam());
-    AggregatorCastTestClass agg(*CreateType(inType), *CreateType(std::get<2>(GetParam())));
+    AggregatorCastTestClass agg(*CreateType(inType), *CreateType(std::get<2>(GetParam())),
+                                true, false, false);
 
     switch (inType) {
         case OMNI_SHORT:

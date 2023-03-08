@@ -82,8 +82,7 @@ inline uint8_t AddDictMask(uint8_t *__restrict nullMap, const size_t length, con
     return nonZero;
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW>
-class TypedMaskColAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
+class TypedMaskColAggregator : public TypedAggregator {
 public:
     ~TypedMaskColAggregator() override = default;
 
@@ -195,18 +194,19 @@ public:
 
     static std::unique_ptr<Aggregator> Create(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
     {
-        return std::unique_ptr<TypedMaskColAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>>(
-            new TypedMaskColAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(maskColumnId, std::move(realAggregator)));
+        return std::unique_ptr<TypedMaskColAggregator>(
+            new TypedMaskColAggregator(maskColumnId, std::move(realAggregator)));
     }
 
 protected:
     TypedMaskColAggregator(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(realAggregator->GetType(),
-        realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(), realAggregator->GetInputChannels()),
+        : TypedAggregator(realAggregator->GetType(),
+        realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(), realAggregator->GetInputChannels(),
+        realAggregator->IsInputRaw(), realAggregator->IsOutputPartial(), realAggregator->IsOverflowAsNull()),
           maskColumnId(maskColumnId)
     {
-        this->realAggregator = std::unique_ptr<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>>(
-            static_cast<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> *>(realAggregator.release()));
+        this->realAggregator = std::unique_ptr<TypedAggregator>(
+            static_cast<TypedAggregator *>(realAggregator.release()));
     }
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
@@ -315,7 +315,7 @@ private:
     }
 
     int32_t maskColumnId;
-    std::unique_ptr<TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>> realAggregator;
+    std::unique_ptr<TypedAggregator> realAggregator;
 };
 }
 }

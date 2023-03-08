@@ -12,8 +12,8 @@
 namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(
     AggregateState &state, VectorBatch *vectorBatch)
 {
     auto vector = vectorBatch->GetVector(this->channels[0]);
@@ -46,8 +46,8 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+bool MinVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
     VectorBatch *vectorBatch)
 {
     // must no null inpout
@@ -62,8 +62,8 @@ bool MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Ca
 }
 #endif
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
     std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     int32_t offset;
@@ -76,8 +76,8 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Ex
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(
     AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
@@ -100,8 +100,8 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
     SaveState(state);
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
     std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v, const int32_t rowOffset,
     const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -126,8 +126,8 @@ void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-ALWAYS_INLINE void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::SaveState(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+ALWAYS_INLINE void MinVarcharAggregator<IN_ID, OUT_ID>::SaveState(
     AggregateState &state)
 {
     if ((state.count & UPDATE_FLAG) == 0) {
@@ -152,41 +152,13 @@ ALWAYS_INLINE void MinVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_I
 // since, compiler needs to generate each individual template instance wherever aggregator header is include
 // to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
 // and used explicit template instantiation to generate template instances
-template class MinVarcharAggregator<false, false, false, OMNI_CHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<false, false, true, OMNI_CHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<false, true, false, OMNI_CHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<false, true, true, OMNI_CHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<true, false, false, OMNI_CHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<true, false, true, OMNI_CHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<true, true, false, OMNI_CHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<true, true, true, OMNI_CHAR, OMNI_CHAR>;
+template class MinVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
-template class MinVarcharAggregator<false, false, false, OMNI_CHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<false, false, true, OMNI_CHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<false, true, false, OMNI_CHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<false, true, true, OMNI_CHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<true, false, false, OMNI_CHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<true, false, true, OMNI_CHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<true, true, false, OMNI_CHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<true, true, true, OMNI_CHAR, OMNI_VARCHAR>;
+template class MinVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
 
+template class MinVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
 
-template class MinVarcharAggregator<false, false, false, OMNI_VARCHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<false, false, true, OMNI_VARCHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<false, true, false, OMNI_VARCHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<false, true, true, OMNI_VARCHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<true, false, false, OMNI_VARCHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<true, false, true, OMNI_VARCHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<true, true, false, OMNI_VARCHAR, OMNI_CHAR>;
-template class MinVarcharAggregator<true, true, true, OMNI_VARCHAR, OMNI_CHAR>;
+template class MinVarcharAggregator<OMNI_VARCHAR, OMNI_VARCHAR>;
 
-template class MinVarcharAggregator<false, false, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<false, false, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<false, true, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<false, true, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<true, false, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<true, false, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<true, true, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MinVarcharAggregator<true, true, true, OMNI_VARCHAR, OMNI_VARCHAR>;
 }
 }

@@ -24,8 +24,8 @@ inline uint8_t *MaxCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-class MaxVarcharAggregator : public TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW> {
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+class MaxVarcharAggregator : public TypedAggregator {
 public:
     ~MaxVarcharAggregator() override = default;
 
@@ -38,7 +38,7 @@ public:
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
-        std::vector<int32_t> &channels)
+        std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
         if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR)) {
             LogError("Error in max_varchar aggregator: Unsupported input type %s",
@@ -54,21 +54,22 @@ public:
                 TypeUtil::TypeToStringLog(IN_ID).c_str(), TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {
-            if (!TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>::CheckTypes("max_varchar", inputTypes, outputTypes,
+            if (!TypedAggregator::CheckTypes("max_varchar", inputTypes, outputTypes,
                 IN_ID, OUT_ID)) {
                 return nullptr;
             }
 
-            return std::unique_ptr<MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>>(
-                new MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>(inputTypes, outputTypes,
-                channels));
+            return std::unique_ptr<MaxVarcharAggregator<IN_ID, OUT_ID>>(
+                new MaxVarcharAggregator<IN_ID, OUT_ID>(inputTypes, outputTypes, channels,
+                                                        rawIn, partialOut, isOverflowAsNull));
         }
     }
 
 protected:
-    MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : TypedAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes,
-        channels)
+    MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
+                         const bool inputRaw , const bool outputPartial, const bool isOverflowAsNull)
+        : TypedAggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels,
+                          inputRaw, outputPartial, isOverflowAsNull)
     {}
 
     void ProcessSingleInternal(AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,

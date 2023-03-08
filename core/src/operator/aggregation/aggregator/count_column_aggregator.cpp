@@ -26,8 +26,8 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalCountRaw(int64_t &res, const size_t 
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CountColumnAggregator<IN_ID, OUT_ID>::ExtractValues(
     const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     int32_t offset;
@@ -35,10 +35,11 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::E
     static_cast<LongVector *>(vector)->SetValue(offset, state.count);
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
-    AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
-    const int32_t *indexMap)
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+template <bool RAW_IN>
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(
+        AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+        const int32_t *indexMap)
 {
     if constexpr (RAW_IN) {
         if (nullMap == nullptr) {
@@ -71,10 +72,18 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
-    const uint8_t *nullMap, const int32_t *indexMap)
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(
+    AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+    const int32_t *indexMap) {
+    return (this->*processSingleInternalPtr)(state, vector, rowOffset, rowCount, nullMap, indexMap);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+template <bool RAW_IN>
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(
+        std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
+        const uint8_t *nullMap, const int32_t *indexMap)
 {
     if constexpr (RAW_IN) {
         if (nullMap == nullptr) {
@@ -114,11 +123,19 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
             } else {
                 for (size_t i = 0; i < rowCount; ++i) {
                     CountAllConditionalOp<false>(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL,
-                        nullMap[i]);
+                                                 nullMap[i]);
                 }
             }
         }
     }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
+    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
+{
+    return (this->*processGroupInternalPtr)(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap);
 }
 
 // Explicit template instantiation
@@ -126,157 +143,38 @@ void CountColumnAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::P
 // since, compiler needs to generate each individual template instance wherever aggregator header is include
 // to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
 // and used explicit template instantiation to generate template instances
-template class CountColumnAggregator<false, false, false, OMNI_NONE, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_NONE, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_NONE, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_NONE, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_NONE, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_NONE, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_NONE, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_NONE, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_NONE, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_BOOLEAN, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_BOOLEAN, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_BOOLEAN, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_BOOLEAN, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_BOOLEAN, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_BOOLEAN, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_BOOLEAN, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_BOOLEAN, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_BOOLEAN, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_SHORT, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_SHORT, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_SHORT, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_SHORT, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_SHORT, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_SHORT, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_SHORT, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_SHORT, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_SHORT, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_DATE32, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_DATE32, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_DATE32, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_DATE32, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_DATE32, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_DATE32, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_DATE32, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_DATE32, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_DATE32, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_TIME32, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_TIME32, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_TIME32, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_TIME32, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_TIME32, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_TIME32, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_TIME32, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_TIME32, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_TIME32, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_INT, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_INT, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_INT, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_INT, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_INT, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_INT, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_INT, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_INT, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_INT, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_LONG, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_LONG, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_LONG, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_LONG, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_LONG, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_LONG, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_LONG, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_LONG, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_LONG, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_DATE64, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_DATE64, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_DATE64, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_DATE64, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_DATE64, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_DATE64, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_DATE64, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_DATE64, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_DATE64, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_TIME64, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_TIME64, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_TIME64, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_TIME64, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_TIME64, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_TIME64, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_TIME64, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_TIME64, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_TIME64, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_TIMESTAMP, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_TIMESTAMP, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_TIMESTAMP, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_TIMESTAMP, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_TIMESTAMP, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_TIMESTAMP, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_TIMESTAMP, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_TIMESTAMP, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_TIMESTAMP, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_DOUBLE, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_DOUBLE, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_DOUBLE, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_DOUBLE, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_DOUBLE, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_DOUBLE, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_DOUBLE, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_DOUBLE, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_DOUBLE, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_DECIMAL64, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_DECIMAL64, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_DECIMAL64, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_DECIMAL64, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_DECIMAL64, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_DECIMAL64, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_DECIMAL64, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_DECIMAL64, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_DECIMAL64, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_DECIMAL128, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_DECIMAL128, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_DECIMAL128, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_DECIMAL128, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_DECIMAL128, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_DECIMAL128, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_DECIMAL128, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_DECIMAL128, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_DECIMAL128, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_CONTAINER, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_CONTAINER, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_CONTAINER, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_CONTAINER, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_CONTAINER, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_CONTAINER, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_CONTAINER, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_CONTAINER, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_CONTAINER, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_VARCHAR, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_VARCHAR, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_VARCHAR, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_VARCHAR, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_VARCHAR, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_VARCHAR, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_VARCHAR, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_VARCHAR, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_VARCHAR, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_CHAR, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_CHAR, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_CHAR, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_CHAR, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_CHAR, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_CHAR, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_CHAR, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_CHAR, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_CHAR, OMNI_LONG>;
 
-template class CountColumnAggregator<false, false, false, OMNI_INVALID, OMNI_LONG>;
-template class CountColumnAggregator<false, false, true, OMNI_INVALID, OMNI_LONG>;
-template class CountColumnAggregator<false, true, false, OMNI_INVALID, OMNI_LONG>;
-template class CountColumnAggregator<false, true, true, OMNI_INVALID, OMNI_LONG>;
-template class CountColumnAggregator<true, false, false, OMNI_INVALID, OMNI_LONG>;
-template class CountColumnAggregator<true, false, true, OMNI_INVALID, OMNI_LONG>;
-template class CountColumnAggregator<true, true, false, OMNI_INVALID, OMNI_LONG>;
-template class CountColumnAggregator<true, true, true, OMNI_INVALID, OMNI_LONG>;
+template class CountColumnAggregator<OMNI_INVALID, OMNI_LONG>;
 }
 }

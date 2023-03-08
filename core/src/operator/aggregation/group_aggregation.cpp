@@ -205,13 +205,6 @@ OmniStatus HashAggregationOperator::Init()
     executionContext = std::make_unique<ExecutionContext>();
     executionContext->GetArena()->SetAllocator(vecAllocator);
 
-    if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
-        serialize = std::make_unique<decltype(serialize)::element_type>();
-    } else {
-        // only the serialization method is used now
-        return OMNI_STATUS_ERROR;
-    }
-
     int32_t rowByteSize = InitMaxRowCountAndOutputTypes();
     rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
 

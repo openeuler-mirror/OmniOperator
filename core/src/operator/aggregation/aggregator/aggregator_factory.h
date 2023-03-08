@@ -11,7 +11,7 @@
 
 namespace omniruntime {
 namespace op {
-template <template <bool, bool, bool, DataTypeId, DataTypeId> class T>
+template <template <DataTypeId, DataTypeId> class T>
 class TypedAggregatorFactory : public AggregatorFactory {
 public:
     TypedAggregatorFactory() = default;
@@ -20,45 +20,16 @@ public:
     std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull) override
     {
-        if (inputRaw) {
-            if (outputPartial) {
-                if (isOverflowAsNull) {
-                    return CreateAggregator<true, true, true>(inputTypes, outputTypes, channels);
-                } else {
-                    return CreateAggregator<true, true, false>(inputTypes, outputTypes, channels);
-                }
-            } else {
-                if (isOverflowAsNull) {
-                    return CreateAggregator<true, false, true>(inputTypes, outputTypes, channels);
-                } else {
-                    return CreateAggregator<true, false, false>(inputTypes, outputTypes, channels);
-                }
-            }
-        } else {
-            if (outputPartial) {
-                if (isOverflowAsNull) {
-                    return CreateAggregator<false, true, true>(inputTypes, outputTypes, channels);
-                } else {
-                    return CreateAggregator<false, true, false>(inputTypes, outputTypes, channels);
-                }
-            } else {
-                if (isOverflowAsNull) {
-                    return CreateAggregator<false, false, true>(inputTypes, outputTypes, channels);
-                } else {
-                    return CreateAggregator<false, false, false>(inputTypes, outputTypes, channels);
-                }
-            }
-        }
+        return CreateAggregatorInternal(inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
     }
 
 protected:
-    template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW>
-    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
-        std::vector<int32_t> &channels);
+    std::unique_ptr<Aggregator> CreateAggregatorInternal(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull);
 
-    template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId OUT_ID>
+    template <DataTypeId OUT_ID>
     std::unique_ptr<Aggregator> FromKnownOutput(const DataTypes &inputTypes, const DataTypes &outputTypes,
-        std::vector<int32_t> &channels);
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull);
 };
 
 template <template <bool, bool, typename...> class T, typename... Args>
@@ -165,43 +136,7 @@ public:
             return nullptr;
         }
         if (realAggregator->IsTypedAggregator()) {
-            if (realAggregator->IsInputRaw()) {
-                if (realAggregator->IsOutputPartial()) {
-                    if (realAggregator->IsOverflowAsNull()) {
-                        return TypedMaskColAggregator<true, true, true>::Create(maskColumnId,
-                            std::move(realAggregator));
-                    } else {
-                        return TypedMaskColAggregator<true, true, false>::Create(maskColumnId,
-                            std::move(realAggregator));
-                    }
-                } else {
-                    if (realAggregator->IsOverflowAsNull()) {
-                        return TypedMaskColAggregator<true, false, true>::Create(maskColumnId,
-                            std::move(realAggregator));
-                    } else {
-                        return TypedMaskColAggregator<true, false, false>::Create(maskColumnId,
-                            std::move(realAggregator));
-                    }
-                }
-            } else {
-                if (realAggregator->IsOutputPartial()) {
-                    if (realAggregator->IsOverflowAsNull()) {
-                        return TypedMaskColAggregator<false, true, true>::Create(maskColumnId,
-                            std::move(realAggregator));
-                    } else {
-                        return TypedMaskColAggregator<false, true, false>::Create(maskColumnId,
-                            std::move(realAggregator));
-                    }
-                } else {
-                    if (realAggregator->IsOverflowAsNull()) {
-                        return TypedMaskColAggregator<false, false, true>::Create(maskColumnId,
-                            std::move(realAggregator));
-                    } else {
-                        return TypedMaskColAggregator<false, false, false>::Create(maskColumnId,
-                            std::move(realAggregator));
-                    }
-                }
-            }
+            return TypedMaskColAggregator::Create(maskColumnId,std::move(realAggregator));
         } else {
             return std::make_unique<MaskColAggregator>(maskColumnId, std::move(realAggregator));
         }

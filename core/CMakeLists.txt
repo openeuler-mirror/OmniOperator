@@ -44,8 +44,8 @@ endif (CCACHE_FOUND)
 
 #-ffast-math
 #-fopt-info-vec-optimized
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -fno-var-tracking-assignments -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
 
 if(ENABLE_COMPILE_TIME_REPORT)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftime-report")

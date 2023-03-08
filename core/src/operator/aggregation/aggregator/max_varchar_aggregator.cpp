@@ -13,8 +13,8 @@
 namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(
     AggregateState &state, VectorBatch *vectorBatch)
 {
     auto vector = vectorBatch->GetVector(this->channels[0]);
@@ -47,8 +47,8 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+bool MaxVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
     VectorBatch *vectorBatch)
 {
     // must no null inpout
@@ -63,8 +63,8 @@ bool MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Ca
 }
 #endif
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
     std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     int32_t offset;
@@ -77,8 +77,8 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Ex
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(
     AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
@@ -100,8 +100,8 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
     SaveState(state);
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
     std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v, const int32_t rowOffset,
     const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -126,8 +126,8 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Pr
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::SaveState(AggregateState &state)
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState &state)
 {
     if ((state.count & UPDATE_FLAG) == 0) {
         return;
@@ -151,41 +151,12 @@ void MaxVarcharAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::Sa
 // since, compiler needs to generate each individual template instance wherever aggregator header is include
 // to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
 // and used explicit template instantiation to generate template instances
-template class MaxVarcharAggregator<false, false, false, OMNI_CHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<false, false, true, OMNI_CHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<false, true, false, OMNI_CHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<false, true, true, OMNI_CHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<true, false, false, OMNI_CHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<true, false, true, OMNI_CHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<true, true, false, OMNI_CHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<true, true, true, OMNI_CHAR, OMNI_CHAR>;
+template class MaxVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
-template class MaxVarcharAggregator<false, false, false, OMNI_CHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<false, false, true, OMNI_CHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<false, true, false, OMNI_CHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<false, true, true, OMNI_CHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<true, false, false, OMNI_CHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<true, false, true, OMNI_CHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<true, true, false, OMNI_CHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<true, true, true, OMNI_CHAR, OMNI_VARCHAR>;
+template class MaxVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
 
+template class MaxVarcharAggregator< OMNI_VARCHAR, OMNI_CHAR>;
 
-template class MaxVarcharAggregator<false, false, false, OMNI_VARCHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<false, false, true, OMNI_VARCHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<false, true, false, OMNI_VARCHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<false, true, true, OMNI_VARCHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<true, false, false, OMNI_VARCHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<true, false, true, OMNI_VARCHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<true, true, false, OMNI_VARCHAR, OMNI_CHAR>;
-template class MaxVarcharAggregator<true, true, true, OMNI_VARCHAR, OMNI_CHAR>;
-
-template class MaxVarcharAggregator<false, false, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<false, false, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<false, true, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<false, true, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<true, false, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<true, false, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<true, true, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class MaxVarcharAggregator<true, true, true, OMNI_VARCHAR, OMNI_VARCHAR>;
+template class MaxVarcharAggregator<OMNI_VARCHAR, OMNI_VARCHAR>;
 }
 }

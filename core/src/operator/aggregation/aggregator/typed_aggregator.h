@@ -128,10 +128,10 @@ template <typename T> struct AggregatorBuffer {
     T *data = nullptr;
 };
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW> class TypedMaskColAggregator;
+class TypedMaskColAggregator;
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW> class TypedAggregator : public Aggregator {
-    friend class TypedMaskColAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW>;
+class TypedAggregator : public Aggregator {
+    friend class TypedMaskColAggregator;
 
 public:
     ~TypedAggregator() override = default;
@@ -165,8 +165,9 @@ public:
 
 protected:
     TypedAggregator(const FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
-        const std::vector<int32_t> &channels)
-        : Aggregator(aggregateType, inputTypes, outputTypes, channels, RAW_IN, PARTIAL_OUT, NULL_OVERFLOW)
+        const std::vector<int32_t> &channels, const bool inputRaw , const bool outputPartial,
+        const bool isOverflowAsNull)
+        : Aggregator(aggregateType, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull)
     {}
 
     virtual void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,

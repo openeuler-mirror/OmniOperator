@@ -11,8 +11,8 @@
 namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
     VectorBatch *vectorBatch)
 {
     if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
@@ -74,8 +74,8 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-bool SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+bool SumAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
     VectorBatch *vectorBatch)
 {
     // not accept dictionnary vector
@@ -86,7 +86,7 @@ bool SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProces
     // only OMNI_LONG or OMNI_DECIMAL128 type input support
     if (this->inputTypes.GetType(0)->GetId() == OMNI_DECIMAL128) {
         // just support row Raw data for decimal128
-        return RAW_IN;
+        return inputRaw;
     } else if (this->inputTypes.GetType(0)->GetId() == OMNI_LONG) {
         return true;
     }
@@ -94,8 +94,8 @@ bool SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::CanProces
 }
 #endif
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
     std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     int32_t offset;
@@ -129,16 +129,16 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ExtractVa
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::InitState(AggregateState &state)
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
     state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
     *reinterpret_cast<ResultType *>(state.val) = ResultType{};
     state.count = 0;
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
     Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if (state.val == nullptr) {
@@ -171,8 +171,8 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessSi
     }
 }
 
-template <bool RAW_IN, bool PARTIAL_OUT, bool NULL_OVERFLOW, DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGroupInternal(
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
     std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
     const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -203,587 +203,132 @@ void SumAggregator<RAW_IN, PARTIAL_OUT, NULL_OVERFLOW, IN_ID, OUT_ID>::ProcessGr
 // since, compiler needs to generate each individual template instance wherever aggregator header is include
 // to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
 // and used explicit template instantiation to generate template instances
-template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_SHORT>;
-template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_SHORT>;
-template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_SHORT>;
-template class SumAggregator<false, true, true, OMNI_SHORT, OMNI_SHORT>;
-template class SumAggregator<true, false, false, OMNI_SHORT, OMNI_SHORT>;
-template class SumAggregator<true, false, true, OMNI_SHORT, OMNI_SHORT>;
-template class SumAggregator<true, true, false, OMNI_SHORT, OMNI_SHORT>;
-template class SumAggregator<true, true, true, OMNI_SHORT, OMNI_SHORT>;
-
-template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_INT>;
-template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_INT>;
-template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_INT>;
-template class SumAggregator<false, true, true, OMNI_SHORT, OMNI_INT>;
-template class SumAggregator<true, false, false, OMNI_SHORT, OMNI_INT>;
-template class SumAggregator<true, false, true, OMNI_SHORT, OMNI_INT>;
-template class SumAggregator<true, true, false, OMNI_SHORT, OMNI_INT>;
-template class SumAggregator<true, true, true, OMNI_SHORT, OMNI_INT>;
-
-template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_LONG>;
-template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_LONG>;
-template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_LONG>;
-template class SumAggregator<false, true, true, OMNI_SHORT, OMNI_LONG>;
-template class SumAggregator<true, false, false, OMNI_SHORT, OMNI_LONG>;
-template class SumAggregator<true, false, true, OMNI_SHORT, OMNI_LONG>;
-template class SumAggregator<true, true, false, OMNI_SHORT, OMNI_LONG>;
-template class SumAggregator<true, true, true, OMNI_SHORT, OMNI_LONG>;
-
-template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_DOUBLE>;
-template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_DOUBLE>;
-template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_DOUBLE>;
-template class SumAggregator<false, true, true, OMNI_SHORT, OMNI_DOUBLE>;
-template class SumAggregator<true, false, false, OMNI_SHORT, OMNI_DOUBLE>;
-template class SumAggregator<true, false, true, OMNI_SHORT, OMNI_DOUBLE>;
-template class SumAggregator<true, true, false, OMNI_SHORT, OMNI_DOUBLE>;
-template class SumAggregator<true, true, true, OMNI_SHORT, OMNI_DOUBLE>;
-
-template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_DECIMAL128>;
-template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, true, OMNI_SHORT, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, false, OMNI_SHORT, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, true, OMNI_SHORT, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, false, OMNI_SHORT, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, true, OMNI_SHORT, OMNI_DECIMAL128>;
-
-template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_DECIMAL64>;
-template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, true, OMNI_SHORT, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, false, OMNI_SHORT, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, true, OMNI_SHORT, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, false, OMNI_SHORT, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, true, OMNI_SHORT, OMNI_DECIMAL64>;
-
-template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_VARCHAR>;
-template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_VARCHAR>;
-template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_VARCHAR>;
-template class SumAggregator<false, true, true, OMNI_SHORT, OMNI_VARCHAR>;
-template class SumAggregator<true, false, false, OMNI_SHORT, OMNI_VARCHAR>;
-template class SumAggregator<true, false, true, OMNI_SHORT, OMNI_VARCHAR>;
-template class SumAggregator<true, true, false, OMNI_SHORT, OMNI_VARCHAR>;
-template class SumAggregator<true, true, true, OMNI_SHORT, OMNI_VARCHAR>;
-
-template class SumAggregator<false, false, false, OMNI_SHORT, OMNI_CONTAINER>;
-template class SumAggregator<false, false, true, OMNI_SHORT, OMNI_CONTAINER>;
-template class SumAggregator<false, true, false, OMNI_SHORT, OMNI_CONTAINER>;
-template class SumAggregator<false, true, true, OMNI_SHORT, OMNI_CONTAINER>;
-template class SumAggregator<true, false, false, OMNI_SHORT, OMNI_CONTAINER>;
-template class SumAggregator<true, false, true, OMNI_SHORT, OMNI_CONTAINER>;
-template class SumAggregator<true, true, false, OMNI_SHORT, OMNI_CONTAINER>;
-template class SumAggregator<true, true, true, OMNI_SHORT, OMNI_CONTAINER>;
-
-
-template class SumAggregator<false, false, false, OMNI_INT, OMNI_SHORT>;
-template class SumAggregator<false, false, true, OMNI_INT, OMNI_SHORT>;
-template class SumAggregator<false, true, false, OMNI_INT, OMNI_SHORT>;
-template class SumAggregator<false, true, true, OMNI_INT, OMNI_SHORT>;
-template class SumAggregator<true, false, false, OMNI_INT, OMNI_SHORT>;
-template class SumAggregator<true, false, true, OMNI_INT, OMNI_SHORT>;
-template class SumAggregator<true, true, false, OMNI_INT, OMNI_SHORT>;
-template class SumAggregator<true, true, true, OMNI_INT, OMNI_SHORT>;
-
-template class SumAggregator<false, false, false, OMNI_INT, OMNI_INT>;
-template class SumAggregator<false, false, true, OMNI_INT, OMNI_INT>;
-template class SumAggregator<false, true, false, OMNI_INT, OMNI_INT>;
-template class SumAggregator<false, true, true, OMNI_INT, OMNI_INT>;
-template class SumAggregator<true, false, false, OMNI_INT, OMNI_INT>;
-template class SumAggregator<true, false, true, OMNI_INT, OMNI_INT>;
-template class SumAggregator<true, true, false, OMNI_INT, OMNI_INT>;
-template class SumAggregator<true, true, true, OMNI_INT, OMNI_INT>;
-
-template class SumAggregator<false, false, false, OMNI_INT, OMNI_LONG>;
-template class SumAggregator<false, false, true, OMNI_INT, OMNI_LONG>;
-template class SumAggregator<false, true, false, OMNI_INT, OMNI_LONG>;
-template class SumAggregator<false, true, true, OMNI_INT, OMNI_LONG>;
-template class SumAggregator<true, false, false, OMNI_INT, OMNI_LONG>;
-template class SumAggregator<true, false, true, OMNI_INT, OMNI_LONG>;
-template class SumAggregator<true, true, false, OMNI_INT, OMNI_LONG>;
-template class SumAggregator<true, true, true, OMNI_INT, OMNI_LONG>;
-
-template class SumAggregator<false, false, false, OMNI_INT, OMNI_DOUBLE>;
-template class SumAggregator<false, false, true, OMNI_INT, OMNI_DOUBLE>;
-template class SumAggregator<false, true, false, OMNI_INT, OMNI_DOUBLE>;
-template class SumAggregator<false, true, true, OMNI_INT, OMNI_DOUBLE>;
-template class SumAggregator<true, false, false, OMNI_INT, OMNI_DOUBLE>;
-template class SumAggregator<true, false, true, OMNI_INT, OMNI_DOUBLE>;
-template class SumAggregator<true, true, false, OMNI_INT, OMNI_DOUBLE>;
-template class SumAggregator<true, true, true, OMNI_INT, OMNI_DOUBLE>;
-
-template class SumAggregator<false, false, false, OMNI_INT, OMNI_DECIMAL128>;
-template class SumAggregator<false, false, true, OMNI_INT, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, false, OMNI_INT, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, true, OMNI_INT, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, false, OMNI_INT, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, true, OMNI_INT, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, false, OMNI_INT, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, true, OMNI_INT, OMNI_DECIMAL128>;
-
-template class SumAggregator<false, false, false, OMNI_INT, OMNI_DECIMAL64>;
-template class SumAggregator<false, false, true, OMNI_INT, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, false, OMNI_INT, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, true, OMNI_INT, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, false, OMNI_INT, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, true, OMNI_INT, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, false, OMNI_INT, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, true, OMNI_INT, OMNI_DECIMAL64>;
-
-template class SumAggregator<false, false, false, OMNI_INT, OMNI_VARCHAR>;
-template class SumAggregator<false, false, true, OMNI_INT, OMNI_VARCHAR>;
-template class SumAggregator<false, true, false, OMNI_INT, OMNI_VARCHAR>;
-template class SumAggregator<false, true, true, OMNI_INT, OMNI_VARCHAR>;
-template class SumAggregator<true, false, false, OMNI_INT, OMNI_VARCHAR>;
-template class SumAggregator<true, false, true, OMNI_INT, OMNI_VARCHAR>;
-template class SumAggregator<true, true, false, OMNI_INT, OMNI_VARCHAR>;
-template class SumAggregator<true, true, true, OMNI_INT, OMNI_VARCHAR>;
-
-template class SumAggregator<false, false, false, OMNI_INT, OMNI_CONTAINER>;
-template class SumAggregator<false, false, true, OMNI_INT, OMNI_CONTAINER>;
-template class SumAggregator<false, true, false, OMNI_INT, OMNI_CONTAINER>;
-template class SumAggregator<false, true, true, OMNI_INT, OMNI_CONTAINER>;
-template class SumAggregator<true, false, false, OMNI_INT, OMNI_CONTAINER>;
-template class SumAggregator<true, false, true, OMNI_INT, OMNI_CONTAINER>;
-template class SumAggregator<true, true, false, OMNI_INT, OMNI_CONTAINER>;
-template class SumAggregator<true, true, true, OMNI_INT, OMNI_CONTAINER>;
-
-
-template class SumAggregator<false, false, false, OMNI_LONG, OMNI_SHORT>;
-template class SumAggregator<false, false, true, OMNI_LONG, OMNI_SHORT>;
-template class SumAggregator<false, true, false, OMNI_LONG, OMNI_SHORT>;
-template class SumAggregator<false, true, true, OMNI_LONG, OMNI_SHORT>;
-template class SumAggregator<true, false, false, OMNI_LONG, OMNI_SHORT>;
-template class SumAggregator<true, false, true, OMNI_LONG, OMNI_SHORT>;
-template class SumAggregator<true, true, false, OMNI_LONG, OMNI_SHORT>;
-template class SumAggregator<true, true, true, OMNI_LONG, OMNI_SHORT>;
-
-template class SumAggregator<false, false, false, OMNI_LONG, OMNI_INT>;
-template class SumAggregator<false, false, true, OMNI_LONG, OMNI_INT>;
-template class SumAggregator<false, true, false, OMNI_LONG, OMNI_INT>;
-template class SumAggregator<false, true, true, OMNI_LONG, OMNI_INT>;
-template class SumAggregator<true, false, false, OMNI_LONG, OMNI_INT>;
-template class SumAggregator<true, false, true, OMNI_LONG, OMNI_INT>;
-template class SumAggregator<true, true, false, OMNI_LONG, OMNI_INT>;
-template class SumAggregator<true, true, true, OMNI_LONG, OMNI_INT>;
-
-template class SumAggregator<false, false, false, OMNI_LONG, OMNI_LONG>;
-template class SumAggregator<false, false, true, OMNI_LONG, OMNI_LONG>;
-template class SumAggregator<false, true, false, OMNI_LONG, OMNI_LONG>;
-template class SumAggregator<false, true, true, OMNI_LONG, OMNI_LONG>;
-template class SumAggregator<true, false, false, OMNI_LONG, OMNI_LONG>;
-template class SumAggregator<true, false, true, OMNI_LONG, OMNI_LONG>;
-template class SumAggregator<true, true, false, OMNI_LONG, OMNI_LONG>;
-template class SumAggregator<true, true, true, OMNI_LONG, OMNI_LONG>;
-
-template class SumAggregator<false, false, false, OMNI_LONG, OMNI_DOUBLE>;
-template class SumAggregator<false, false, true, OMNI_LONG, OMNI_DOUBLE>;
-template class SumAggregator<false, true, false, OMNI_LONG, OMNI_DOUBLE>;
-template class SumAggregator<false, true, true, OMNI_LONG, OMNI_DOUBLE>;
-template class SumAggregator<true, false, false, OMNI_LONG, OMNI_DOUBLE>;
-template class SumAggregator<true, false, true, OMNI_LONG, OMNI_DOUBLE>;
-template class SumAggregator<true, true, false, OMNI_LONG, OMNI_DOUBLE>;
-template class SumAggregator<true, true, true, OMNI_LONG, OMNI_DOUBLE>;
-
-template class SumAggregator<false, false, false, OMNI_LONG, OMNI_DECIMAL128>;
-template class SumAggregator<false, false, true, OMNI_LONG, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, false, OMNI_LONG, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, true, OMNI_LONG, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, false, OMNI_LONG, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, true, OMNI_LONG, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, false, OMNI_LONG, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, true, OMNI_LONG, OMNI_DECIMAL128>;
-
-template class SumAggregator<false, false, false, OMNI_LONG, OMNI_DECIMAL64>;
-template class SumAggregator<false, false, true, OMNI_LONG, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, false, OMNI_LONG, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, true, OMNI_LONG, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, false, OMNI_LONG, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, true, OMNI_LONG, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, false, OMNI_LONG, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, true, OMNI_LONG, OMNI_DECIMAL64>;
-
-template class SumAggregator<false, false, false, OMNI_LONG, OMNI_VARCHAR>;
-template class SumAggregator<false, false, true, OMNI_LONG, OMNI_VARCHAR>;
-template class SumAggregator<false, true, false, OMNI_LONG, OMNI_VARCHAR>;
-template class SumAggregator<false, true, true, OMNI_LONG, OMNI_VARCHAR>;
-template class SumAggregator<true, false, false, OMNI_LONG, OMNI_VARCHAR>;
-template class SumAggregator<true, false, true, OMNI_LONG, OMNI_VARCHAR>;
-template class SumAggregator<true, true, false, OMNI_LONG, OMNI_VARCHAR>;
-template class SumAggregator<true, true, true, OMNI_LONG, OMNI_VARCHAR>;
-
-template class SumAggregator<false, false, false, OMNI_LONG, OMNI_CONTAINER>;
-template class SumAggregator<false, false, true, OMNI_LONG, OMNI_CONTAINER>;
-template class SumAggregator<false, true, false, OMNI_LONG, OMNI_CONTAINER>;
-template class SumAggregator<false, true, true, OMNI_LONG, OMNI_CONTAINER>;
-template class SumAggregator<true, false, false, OMNI_LONG, OMNI_CONTAINER>;
-template class SumAggregator<true, false, true, OMNI_LONG, OMNI_CONTAINER>;
-template class SumAggregator<true, true, false, OMNI_LONG, OMNI_CONTAINER>;
-template class SumAggregator<true, true, true, OMNI_LONG, OMNI_CONTAINER>;
-
-
-template class SumAggregator<false, false, false, OMNI_DOUBLE, OMNI_SHORT>;
-template class SumAggregator<false, false, true, OMNI_DOUBLE, OMNI_SHORT>;
-template class SumAggregator<false, true, false, OMNI_DOUBLE, OMNI_SHORT>;
-template class SumAggregator<false, true, true, OMNI_DOUBLE, OMNI_SHORT>;
-template class SumAggregator<true, false, false, OMNI_DOUBLE, OMNI_SHORT>;
-template class SumAggregator<true, false, true, OMNI_DOUBLE, OMNI_SHORT>;
-template class SumAggregator<true, true, false, OMNI_DOUBLE, OMNI_SHORT>;
-template class SumAggregator<true, true, true, OMNI_DOUBLE, OMNI_SHORT>;
-
-template class SumAggregator<false, false, false, OMNI_DOUBLE, OMNI_INT>;
-template class SumAggregator<false, false, true, OMNI_DOUBLE, OMNI_INT>;
-template class SumAggregator<false, true, false, OMNI_DOUBLE, OMNI_INT>;
-template class SumAggregator<false, true, true, OMNI_DOUBLE, OMNI_INT>;
-template class SumAggregator<true, false, false, OMNI_DOUBLE, OMNI_INT>;
-template class SumAggregator<true, false, true, OMNI_DOUBLE, OMNI_INT>;
-template class SumAggregator<true, true, false, OMNI_DOUBLE, OMNI_INT>;
-template class SumAggregator<true, true, true, OMNI_DOUBLE, OMNI_INT>;
-
-template class SumAggregator<false, false, false, OMNI_DOUBLE, OMNI_LONG>;
-template class SumAggregator<false, false, true, OMNI_DOUBLE, OMNI_LONG>;
-template class SumAggregator<false, true, false, OMNI_DOUBLE, OMNI_LONG>;
-template class SumAggregator<false, true, true, OMNI_DOUBLE, OMNI_LONG>;
-template class SumAggregator<true, false, false, OMNI_DOUBLE, OMNI_LONG>;
-template class SumAggregator<true, false, true, OMNI_DOUBLE, OMNI_LONG>;
-template class SumAggregator<true, true, false, OMNI_DOUBLE, OMNI_LONG>;
-template class SumAggregator<true, true, true, OMNI_DOUBLE, OMNI_LONG>;
-
-template class SumAggregator<false, false, false, OMNI_DOUBLE, OMNI_DOUBLE>;
-template class SumAggregator<false, false, true, OMNI_DOUBLE, OMNI_DOUBLE>;
-template class SumAggregator<false, true, false, OMNI_DOUBLE, OMNI_DOUBLE>;
-template class SumAggregator<false, true, true, OMNI_DOUBLE, OMNI_DOUBLE>;
-template class SumAggregator<true, false, false, OMNI_DOUBLE, OMNI_DOUBLE>;
-template class SumAggregator<true, false, true, OMNI_DOUBLE, OMNI_DOUBLE>;
-template class SumAggregator<true, true, false, OMNI_DOUBLE, OMNI_DOUBLE>;
-template class SumAggregator<true, true, true, OMNI_DOUBLE, OMNI_DOUBLE>;
-
-template class SumAggregator<false, false, false, OMNI_DOUBLE, OMNI_DECIMAL128>;
-template class SumAggregator<false, false, true, OMNI_DOUBLE, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, false, OMNI_DOUBLE, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, true, OMNI_DOUBLE, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, false, OMNI_DOUBLE, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, true, OMNI_DOUBLE, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, false, OMNI_DOUBLE, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, true, OMNI_DOUBLE, OMNI_DECIMAL128>;
-
-template class SumAggregator<false, false, false, OMNI_DOUBLE, OMNI_DECIMAL64>;
-template class SumAggregator<false, false, true, OMNI_DOUBLE, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, false, OMNI_DOUBLE, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, true, OMNI_DOUBLE, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, false, OMNI_DOUBLE, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, true, OMNI_DOUBLE, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, false, OMNI_DOUBLE, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, true, OMNI_DOUBLE, OMNI_DECIMAL64>;
-
-template class SumAggregator<false, false, false, OMNI_DOUBLE, OMNI_VARCHAR>;
-template class SumAggregator<false, false, true, OMNI_DOUBLE, OMNI_VARCHAR>;
-template class SumAggregator<false, true, false, OMNI_DOUBLE, OMNI_VARCHAR>;
-template class SumAggregator<false, true, true, OMNI_DOUBLE, OMNI_VARCHAR>;
-template class SumAggregator<true, false, false, OMNI_DOUBLE, OMNI_VARCHAR>;
-template class SumAggregator<true, false, true, OMNI_DOUBLE, OMNI_VARCHAR>;
-template class SumAggregator<true, true, false, OMNI_DOUBLE, OMNI_VARCHAR>;
-template class SumAggregator<true, true, true, OMNI_DOUBLE, OMNI_VARCHAR>;
-
-template class SumAggregator<false, false, false, OMNI_DOUBLE, OMNI_CONTAINER>;
-template class SumAggregator<false, false, true, OMNI_DOUBLE, OMNI_CONTAINER>;
-template class SumAggregator<false, true, false, OMNI_DOUBLE, OMNI_CONTAINER>;
-template class SumAggregator<false, true, true, OMNI_DOUBLE, OMNI_CONTAINER>;
-template class SumAggregator<true, false, false, OMNI_DOUBLE, OMNI_CONTAINER>;
-template class SumAggregator<true, false, true, OMNI_DOUBLE, OMNI_CONTAINER>;
-template class SumAggregator<true, true, false, OMNI_DOUBLE, OMNI_CONTAINER>;
-template class SumAggregator<true, true, true, OMNI_DOUBLE, OMNI_CONTAINER>;
-
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL128, OMNI_SHORT>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL128, OMNI_SHORT>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL128, OMNI_SHORT>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL128, OMNI_SHORT>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL128, OMNI_SHORT>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL128, OMNI_SHORT>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL128, OMNI_SHORT>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL128, OMNI_SHORT>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL128, OMNI_INT>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL128, OMNI_INT>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL128, OMNI_INT>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL128, OMNI_INT>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL128, OMNI_INT>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL128, OMNI_INT>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL128, OMNI_INT>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL128, OMNI_INT>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL128, OMNI_LONG>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL128, OMNI_LONG>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL128, OMNI_LONG>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL128, OMNI_LONG>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL128, OMNI_LONG>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL128, OMNI_LONG>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL128, OMNI_LONG>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL128, OMNI_LONG>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL128, OMNI_DOUBLE>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL128, OMNI_DOUBLE>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL128, OMNI_DOUBLE>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL128, OMNI_DOUBLE>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL128, OMNI_DOUBLE>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL128, OMNI_DOUBLE>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL128, OMNI_DOUBLE>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL128, OMNI_DOUBLE>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL128, OMNI_DECIMAL128>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL128, OMNI_DECIMAL64>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL128, OMNI_VARCHAR>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL128, OMNI_VARCHAR>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL128, OMNI_VARCHAR>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL128, OMNI_VARCHAR>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL128, OMNI_VARCHAR>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL128, OMNI_VARCHAR>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL128, OMNI_VARCHAR>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL128, OMNI_VARCHAR>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL128, OMNI_CONTAINER>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL128, OMNI_CONTAINER>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL128, OMNI_CONTAINER>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL128, OMNI_CONTAINER>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL128, OMNI_CONTAINER>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL128, OMNI_CONTAINER>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL128, OMNI_CONTAINER>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL128, OMNI_CONTAINER>;
-
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL64, OMNI_SHORT>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL64, OMNI_SHORT>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL64, OMNI_SHORT>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL64, OMNI_SHORT>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL64, OMNI_SHORT>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL64, OMNI_SHORT>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL64, OMNI_SHORT>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL64, OMNI_SHORT>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL64, OMNI_INT>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL64, OMNI_INT>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL64, OMNI_INT>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL64, OMNI_INT>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL64, OMNI_INT>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL64, OMNI_INT>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL64, OMNI_INT>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL64, OMNI_INT>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL64, OMNI_LONG>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL64, OMNI_LONG>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL64, OMNI_LONG>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL64, OMNI_LONG>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL64, OMNI_LONG>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL64, OMNI_LONG>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL64, OMNI_LONG>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL64, OMNI_LONG>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL64, OMNI_DOUBLE>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL64, OMNI_DOUBLE>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL64, OMNI_DOUBLE>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL64, OMNI_DOUBLE>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL64, OMNI_DOUBLE>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL64, OMNI_DOUBLE>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL64, OMNI_DOUBLE>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL64, OMNI_DOUBLE>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL64, OMNI_DECIMAL128>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL64, OMNI_DECIMAL64>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL64, OMNI_VARCHAR>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL64, OMNI_VARCHAR>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL64, OMNI_VARCHAR>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL64, OMNI_VARCHAR>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL64, OMNI_VARCHAR>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL64, OMNI_VARCHAR>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL64, OMNI_VARCHAR>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL64, OMNI_VARCHAR>;
-
-template class SumAggregator<false, false, false, OMNI_DECIMAL64, OMNI_CONTAINER>;
-template class SumAggregator<false, false, true, OMNI_DECIMAL64, OMNI_CONTAINER>;
-template class SumAggregator<false, true, false, OMNI_DECIMAL64, OMNI_CONTAINER>;
-template class SumAggregator<false, true, true, OMNI_DECIMAL64, OMNI_CONTAINER>;
-template class SumAggregator<true, false, false, OMNI_DECIMAL64, OMNI_CONTAINER>;
-template class SumAggregator<true, false, true, OMNI_DECIMAL64, OMNI_CONTAINER>;
-template class SumAggregator<true, true, false, OMNI_DECIMAL64, OMNI_CONTAINER>;
-template class SumAggregator<true, true, true, OMNI_DECIMAL64, OMNI_CONTAINER>;
-
-
-template class SumAggregator<false, false, false, OMNI_VARCHAR, OMNI_SHORT>;
-template class SumAggregator<false, false, true, OMNI_VARCHAR, OMNI_SHORT>;
-template class SumAggregator<false, true, false, OMNI_VARCHAR, OMNI_SHORT>;
-template class SumAggregator<false, true, true, OMNI_VARCHAR, OMNI_SHORT>;
-template class SumAggregator<true, false, false, OMNI_VARCHAR, OMNI_SHORT>;
-template class SumAggregator<true, false, true, OMNI_VARCHAR, OMNI_SHORT>;
-template class SumAggregator<true, true, false, OMNI_VARCHAR, OMNI_SHORT>;
-template class SumAggregator<true, true, true, OMNI_VARCHAR, OMNI_SHORT>;
-
-template class SumAggregator<false, false, false, OMNI_VARCHAR, OMNI_INT>;
-template class SumAggregator<false, false, true, OMNI_VARCHAR, OMNI_INT>;
-template class SumAggregator<false, true, false, OMNI_VARCHAR, OMNI_INT>;
-template class SumAggregator<false, true, true, OMNI_VARCHAR, OMNI_INT>;
-template class SumAggregator<true, false, false, OMNI_VARCHAR, OMNI_INT>;
-template class SumAggregator<true, false, true, OMNI_VARCHAR, OMNI_INT>;
-template class SumAggregator<true, true, false, OMNI_VARCHAR, OMNI_INT>;
-template class SumAggregator<true, true, true, OMNI_VARCHAR, OMNI_INT>;
-
-template class SumAggregator<false, false, false, OMNI_VARCHAR, OMNI_LONG>;
-template class SumAggregator<false, false, true, OMNI_VARCHAR, OMNI_LONG>;
-template class SumAggregator<false, true, false, OMNI_VARCHAR, OMNI_LONG>;
-template class SumAggregator<false, true, true, OMNI_VARCHAR, OMNI_LONG>;
-template class SumAggregator<true, false, false, OMNI_VARCHAR, OMNI_LONG>;
-template class SumAggregator<true, false, true, OMNI_VARCHAR, OMNI_LONG>;
-template class SumAggregator<true, true, false, OMNI_VARCHAR, OMNI_LONG>;
-template class SumAggregator<true, true, true, OMNI_VARCHAR, OMNI_LONG>;
-
-template class SumAggregator<false, false, false, OMNI_VARCHAR, OMNI_DOUBLE>;
-template class SumAggregator<false, false, true, OMNI_VARCHAR, OMNI_DOUBLE>;
-template class SumAggregator<false, true, false, OMNI_VARCHAR, OMNI_DOUBLE>;
-template class SumAggregator<false, true, true, OMNI_VARCHAR, OMNI_DOUBLE>;
-template class SumAggregator<true, false, false, OMNI_VARCHAR, OMNI_DOUBLE>;
-template class SumAggregator<true, false, true, OMNI_VARCHAR, OMNI_DOUBLE>;
-template class SumAggregator<true, true, false, OMNI_VARCHAR, OMNI_DOUBLE>;
-template class SumAggregator<true, true, true, OMNI_VARCHAR, OMNI_DOUBLE>;
-
-template class SumAggregator<false, false, false, OMNI_VARCHAR, OMNI_DECIMAL128>;
-template class SumAggregator<false, false, true, OMNI_VARCHAR, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, false, OMNI_VARCHAR, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, true, OMNI_VARCHAR, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, false, OMNI_VARCHAR, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, true, OMNI_VARCHAR, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, false, OMNI_VARCHAR, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, true, OMNI_VARCHAR, OMNI_DECIMAL128>;
-
-template class SumAggregator<false, false, false, OMNI_VARCHAR, OMNI_DECIMAL64>;
-template class SumAggregator<false, false, true, OMNI_VARCHAR, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, false, OMNI_VARCHAR, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, true, OMNI_VARCHAR, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, false, OMNI_VARCHAR, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, true, OMNI_VARCHAR, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, false, OMNI_VARCHAR, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, true, OMNI_VARCHAR, OMNI_DECIMAL64>;
-
-template class SumAggregator<false, false, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class SumAggregator<false, false, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class SumAggregator<false, true, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class SumAggregator<false, true, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class SumAggregator<true, false, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class SumAggregator<true, false, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class SumAggregator<true, true, false, OMNI_VARCHAR, OMNI_VARCHAR>;
-template class SumAggregator<true, true, true, OMNI_VARCHAR, OMNI_VARCHAR>;
-
-template class SumAggregator<false, false, false, OMNI_VARCHAR, OMNI_CONTAINER>;
-template class SumAggregator<false, false, true, OMNI_VARCHAR, OMNI_CONTAINER>;
-template class SumAggregator<false, true, false, OMNI_VARCHAR, OMNI_CONTAINER>;
-template class SumAggregator<false, true, true, OMNI_VARCHAR, OMNI_CONTAINER>;
-template class SumAggregator<true, false, false, OMNI_VARCHAR, OMNI_CONTAINER>;
-template class SumAggregator<true, false, true, OMNI_VARCHAR, OMNI_CONTAINER>;
-template class SumAggregator<true, true, false, OMNI_VARCHAR, OMNI_CONTAINER>;
-template class SumAggregator<true, true, true, OMNI_VARCHAR, OMNI_CONTAINER>;
-
-
-template class SumAggregator<false, false, false, OMNI_CONTAINER, OMNI_SHORT>;
-template class SumAggregator<false, false, true, OMNI_CONTAINER, OMNI_SHORT>;
-template class SumAggregator<false, true, false, OMNI_CONTAINER, OMNI_SHORT>;
-template class SumAggregator<false, true, true, OMNI_CONTAINER, OMNI_SHORT>;
-template class SumAggregator<true, false, false, OMNI_CONTAINER, OMNI_SHORT>;
-template class SumAggregator<true, false, true, OMNI_CONTAINER, OMNI_SHORT>;
-template class SumAggregator<true, true, false, OMNI_CONTAINER, OMNI_SHORT>;
-template class SumAggregator<true, true, true, OMNI_CONTAINER, OMNI_SHORT>;
-
-template class SumAggregator<false, false, false, OMNI_CONTAINER, OMNI_INT>;
-template class SumAggregator<false, false, true, OMNI_CONTAINER, OMNI_INT>;
-template class SumAggregator<false, true, false, OMNI_CONTAINER, OMNI_INT>;
-template class SumAggregator<false, true, true, OMNI_CONTAINER, OMNI_INT>;
-template class SumAggregator<true, false, false, OMNI_CONTAINER, OMNI_INT>;
-template class SumAggregator<true, false, true, OMNI_CONTAINER, OMNI_INT>;
-template class SumAggregator<true, true, false, OMNI_CONTAINER, OMNI_INT>;
-template class SumAggregator<true, true, true, OMNI_CONTAINER, OMNI_INT>;
-
-template class SumAggregator<false, false, false, OMNI_CONTAINER, OMNI_LONG>;
-template class SumAggregator<false, false, true, OMNI_CONTAINER, OMNI_LONG>;
-template class SumAggregator<false, true, false, OMNI_CONTAINER, OMNI_LONG>;
-template class SumAggregator<false, true, true, OMNI_CONTAINER, OMNI_LONG>;
-template class SumAggregator<true, false, false, OMNI_CONTAINER, OMNI_LONG>;
-template class SumAggregator<true, false, true, OMNI_CONTAINER, OMNI_LONG>;
-template class SumAggregator<true, true, false, OMNI_CONTAINER, OMNI_LONG>;
-template class SumAggregator<true, true, true, OMNI_CONTAINER, OMNI_LONG>;
-
-template class SumAggregator<false, false, false, OMNI_CONTAINER, OMNI_DOUBLE>;
-template class SumAggregator<false, false, true, OMNI_CONTAINER, OMNI_DOUBLE>;
-template class SumAggregator<false, true, false, OMNI_CONTAINER, OMNI_DOUBLE>;
-template class SumAggregator<false, true, true, OMNI_CONTAINER, OMNI_DOUBLE>;
-template class SumAggregator<true, false, false, OMNI_CONTAINER, OMNI_DOUBLE>;
-template class SumAggregator<true, false, true, OMNI_CONTAINER, OMNI_DOUBLE>;
-template class SumAggregator<true, true, false, OMNI_CONTAINER, OMNI_DOUBLE>;
-template class SumAggregator<true, true, true, OMNI_CONTAINER, OMNI_DOUBLE>;
-
-template class SumAggregator<false, false, false, OMNI_CONTAINER, OMNI_DECIMAL128>;
-template class SumAggregator<false, false, true, OMNI_CONTAINER, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, false, OMNI_CONTAINER, OMNI_DECIMAL128>;
-template class SumAggregator<false, true, true, OMNI_CONTAINER, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, false, OMNI_CONTAINER, OMNI_DECIMAL128>;
-template class SumAggregator<true, false, true, OMNI_CONTAINER, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, false, OMNI_CONTAINER, OMNI_DECIMAL128>;
-template class SumAggregator<true, true, true, OMNI_CONTAINER, OMNI_DECIMAL128>;
-
-template class SumAggregator<false, false, false, OMNI_CONTAINER, OMNI_DECIMAL64>;
-template class SumAggregator<false, false, true, OMNI_CONTAINER, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, false, OMNI_CONTAINER, OMNI_DECIMAL64>;
-template class SumAggregator<false, true, true, OMNI_CONTAINER, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, false, OMNI_CONTAINER, OMNI_DECIMAL64>;
-template class SumAggregator<true, false, true, OMNI_CONTAINER, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, false, OMNI_CONTAINER, OMNI_DECIMAL64>;
-template class SumAggregator<true, true, true, OMNI_CONTAINER, OMNI_DECIMAL64>;
-
-template class SumAggregator<false, false, false, OMNI_CONTAINER, OMNI_VARCHAR>;
-template class SumAggregator<false, false, true, OMNI_CONTAINER, OMNI_VARCHAR>;
-template class SumAggregator<false, true, false, OMNI_CONTAINER, OMNI_VARCHAR>;
-template class SumAggregator<false, true, true, OMNI_CONTAINER, OMNI_VARCHAR>;
-template class SumAggregator<true, false, false, OMNI_CONTAINER, OMNI_VARCHAR>;
-template class SumAggregator<true, false, true, OMNI_CONTAINER, OMNI_VARCHAR>;
-template class SumAggregator<true, true, false, OMNI_CONTAINER, OMNI_VARCHAR>;
-template class SumAggregator<true, true, true, OMNI_CONTAINER, OMNI_VARCHAR>;
-
-template class SumAggregator<false, false, false, OMNI_CONTAINER, OMNI_CONTAINER>;
-template class SumAggregator<false, false, true, OMNI_CONTAINER, OMNI_CONTAINER>;
-template class SumAggregator<false, true, false, OMNI_CONTAINER, OMNI_CONTAINER>;
-template class SumAggregator<false, true, true, OMNI_CONTAINER, OMNI_CONTAINER>;
-template class SumAggregator<true, false, false, OMNI_CONTAINER, OMNI_CONTAINER>;
-template class SumAggregator<true, false, true, OMNI_CONTAINER, OMNI_CONTAINER>;
-template class SumAggregator<true, true, false, OMNI_CONTAINER, OMNI_CONTAINER>;
-template class SumAggregator<true, true, true, OMNI_CONTAINER, OMNI_CONTAINER>;
+template class SumAggregator<OMNI_SHORT, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_SHORT, OMNI_INT>;
+
+template class SumAggregator<OMNI_SHORT, OMNI_LONG>;
+
+template class SumAggregator<OMNI_SHORT, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_SHORT, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_SHORT, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_SHORT, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_SHORT, OMNI_CONTAINER>;
+
+template class SumAggregator<OMNI_INT, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_INT, OMNI_INT>;
+
+template class SumAggregator<OMNI_INT, OMNI_LONG>;
+
+template class SumAggregator<OMNI_INT, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_INT, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_INT, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_INT, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_INT, OMNI_CONTAINER>;
+
+template class SumAggregator<OMNI_LONG, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_LONG, OMNI_INT>;
+
+template class SumAggregator<OMNI_LONG, OMNI_LONG>;
+
+template class SumAggregator<OMNI_LONG, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_LONG, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_LONG, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_LONG, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_LONG, OMNI_CONTAINER>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_INT>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_LONG>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_DOUBLE, OMNI_CONTAINER>;
+
+template class SumAggregator<OMNI_DECIMAL128, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_DECIMAL128, OMNI_INT>;
+
+template class SumAggregator<OMNI_DECIMAL128, OMNI_LONG>;
+
+template class SumAggregator<OMNI_DECIMAL128, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_DECIMAL128, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_DECIMAL128, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_DECIMAL128, OMNI_CONTAINER>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_INT>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_LONG>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_DECIMAL64, OMNI_CONTAINER>;
+
+template class SumAggregator<OMNI_VARCHAR, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_VARCHAR, OMNI_INT>;
+
+template class SumAggregator<OMNI_VARCHAR, OMNI_LONG>;
+
+template class SumAggregator<OMNI_VARCHAR, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_VARCHAR, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_VARCHAR, OMNI_CONTAINER>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_SHORT>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_INT>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_LONG>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_DOUBLE>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL128>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL64>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_VARCHAR>;
+
+template class SumAggregator<OMNI_CONTAINER, OMNI_CONTAINER>;
 }
 }

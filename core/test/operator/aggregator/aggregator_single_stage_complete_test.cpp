@@ -507,7 +507,7 @@ INSTANTIATE_TEST_CASE_P(AggregatorTest, SingleStageCompleteTest,
     ::testing::Values(0, 25), // nullPercent
     ::testing::Bool(),        // isDict
     ::testing::Bool(),        // hasMask
-    ::testing::Bool(),        // nullWhenOverflow
+    ::testing::Values(true),         // nullWhenOverflow
     ::testing::Bool()         // groupby
     ),
     [](const testing::TestParamInfo<SingleStageCompleteTest::ParamType> &info) {
