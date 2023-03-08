@@ -114,7 +114,8 @@ llvm::Function *RowProjectionCodeGen::CreateFunction()
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(ROW_PROJ_LENGTH_INDEX);
-        Value *lengthGep = builder->CreateGEP(outputLength, llvmTypes->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+        Value *lengthGep = builder->CreateGEP(llvmTypes->I32Type(), outputLength, llvmTypes->CreateConstantInt(0),
+            "OUTPUT_LENGTH_ADDRESS");
         builder->CreateStore(result->length, lengthGep);
     }
 
@@ -137,14 +138,15 @@ void RowProjectionCodeGen::Visit(const FieldExpr &fExpr)
     Value *bitmap = this->codegenContext->nullBitmap;
     Value *offsets = this->codegenContext->offsets;
     Value *dictionaryVectors = this->codegenContext->dictionaryVectors;
+    Type *dataType = llvmTypes->ToLLVMType(fExpr.GetReturnTypeId());
 
     Value *colIdx = llvmTypes->CreateConstantInt(fExpr.colVal);
     // Find address of this column in the addresses array argument.
-    Value *gep = builder->CreateGEP(vecBatch, colIdx);
+    Value *gep = builder->CreateGEP(llvmTypes->I64Type(), vecBatch, colIdx);
     Value *length = nullptr;
 
-    auto dictionaryVectorGEP = builder->CreateGEP(dictionaryVectors, colIdx);
-    Value *dictionaryVectorPtr = builder->CreateLoad(dictionaryVectorGEP);
+    auto dictionaryVectorGEP = builder->CreateGEP(llvmTypes->I64Type(), dictionaryVectors, colIdx);
+    Value *dictionaryVectorPtr = builder->CreateLoad(llvmTypes->I64Type(), dictionaryVectorGEP);
     auto condition = builder->CreateIsNotNull(dictionaryVectorPtr);
 
     BasicBlock *trueBlock = BasicBlock::Create(*context, "DICTIONARY_NOT_NULL", func);
@@ -164,7 +166,7 @@ void RowProjectionCodeGen::Visit(const FieldExpr &fExpr)
 
     Value *dictionaryLength = nullptr;
     if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
-        dictionaryLength = builder->CreateLoad(lengthAllocaInst, "varchar_length");
+        dictionaryLength = builder->CreateLoad(llvmTypes->I32Type(), lengthAllocaInst, "varchar_length");
     }
 
     builder->CreateBr(mergeBlock);
@@ -175,41 +177,41 @@ void RowProjectionCodeGen::Visit(const FieldExpr &fExpr)
     // using valuesAddress and length using offsets if varchar type
     builder->SetInsertPoint(falseBlock);
     // Load the address value.
-    Value *elementAddr = builder->CreateLoad(gep);
+    Value *elementAddr = builder->CreateLoad(llvmTypes->I64Type(), gep);
 
     Value *elementPtr = GetPtrTypeFromInt(fExpr.GetReturnTypeId(), elementAddr);
     Value *dataValue = nullptr;
     if (TypeUtil::IsStringType(fExpr.GetReturnTypeId())) {
         // Get offset for varchar
-        auto offsetsGEP = builder->CreateGEP(offsets, colIdx);
-        Value *offsetPtr = builder->CreateLoad(offsetsGEP);
+        auto offsetsGEP = builder->CreateGEP(llvmTypes->I64Type(), offsets, colIdx);
+        Value *offsetPtr = builder->CreateLoad(llvmTypes->I64Type(), offsetsGEP);
         offsetPtr = builder->CreateIntToPtr(offsetPtr, llvmTypes->I32PtrType());
-        auto colOffsetGEP = builder->CreateGEP(offsetPtr, rowIdx);
-        Value *startOffset = builder->CreateLoad(colOffsetGEP);
-        colOffsetGEP = builder->CreateGEP(offsetPtr, builder->CreateAdd(rowIdx, llvmTypes->CreateConstantInt(1)));
-        Value *endOffset = builder->CreateLoad(colOffsetGEP);
+        auto colOffsetGEP = builder->CreateGEP(llvmTypes->I32Type(), offsetPtr, rowIdx);
+        Value *startOffset = builder->CreateLoad(llvmTypes->I32Type(), colOffsetGEP);
+        colOffsetGEP = builder->CreateGEP(llvmTypes->I32Type(), offsetPtr,
+            builder->CreateAdd(rowIdx, llvmTypes->CreateConstantInt(1)));
+        Value *endOffset = builder->CreateLoad(llvmTypes->I32Type(), colOffsetGEP);
         // Get length for varchar
         length = builder->CreateSub(endOffset, startOffset);
         // Find the address of the row to be processed.
-        dataValue = builder->CreateGEP(elementPtr, startOffset);
+        dataValue = builder->CreateGEP(llvmTypes->I8Type(), elementPtr, startOffset);
     } else {
         // Find the address of the row to be processed.
-        gep = builder->CreateGEP(elementPtr, rowIdx);
+        gep = builder->CreateGEP(dataType, elementPtr, rowIdx);
         // Value to be processed.
-        dataValue = builder->CreateLoad(gep);
+        dataValue = builder->CreateLoad(dataType, gep);
     }
 
     builder->CreateBr(mergeBlock);
     falseBlock = builder->GetInsertBlock();
 
-    Type *phiType = llvmTypes->ToLLVMType(fExpr.GetReturnTypeId());
     func->getBasicBlockList().push_back(mergeBlock);
     builder->SetInsertPoint(mergeBlock);
 
     // Get merged data value and length
     int32_t numReservedValues = 2;
 
-    PHINode *phiValue = builder->CreatePHI(phiType, numReservedValues, "iftmp");
+    PHINode *phiValue = builder->CreatePHI(dataType, numReservedValues, "iftmp");
     phiValue->addIncoming(dictionaryValue, trueBlock);
     phiValue->addIncoming(dataValue, falseBlock);
 
@@ -222,11 +224,11 @@ void RowProjectionCodeGen::Visit(const FieldExpr &fExpr)
     }
 
     // Get isNull value
-    auto bitmapGEP = builder->CreateGEP(bitmap, colIdx);
-    Value *bitmapValue = builder->CreateLoad(bitmapGEP);
+    auto bitmapGEP = builder->CreateGEP(llvmTypes->I64Type(), bitmap, colIdx);
+    Value *bitmapValue = builder->CreateLoad(llvmTypes->I64Type(), bitmapGEP);
     bitmapValue = builder->CreateIntToPtr(bitmapValue, llvmTypes->I1PtrType());
-    bitmapGEP = builder->CreateGEP(bitmapValue, rowIdx);
-    bitmapValue = builder->CreateLoad(bitmapGEP);
+    bitmapGEP = builder->CreateGEP(llvmTypes->I1Type(), bitmapValue, rowIdx);
+    bitmapValue = builder->CreateLoad(llvmTypes->I1Type(), bitmapGEP);
 
     if (TypeUtil::IsDecimalType(fExpr.GetReturnTypeId())) {
         Value *precision =

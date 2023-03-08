@@ -145,12 +145,12 @@ intptr_t ProjectionCodeGen::CreateWrapper()
     // loop body
     builder->SetInsertPoint(loopBody);
     // i32 counter = *ptrToCounter, Get the value of the current row index to process.
-    curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
+    curIndexVal = builder->CreateLoad(llvmTypes->I32Type(), indexStore, "CUR_INDEX");
     if (filter) {
         // i32* selectedAddress = gep i32* selected, i32 counter, Get address of selected index.
-        selectedAddress = builder->CreateGEP(selected, curIndexVal, "SELECTED_ADDRESS");
+        selectedAddress = builder->CreateGEP(llvmTypes->I32Type(), selected, curIndexVal, "SELECTED_ADDRESS");
         // i32 rowIndexVal = *selectedAddress
-        rowIndexVal = builder->CreateLoad(selectedAddress);
+        rowIndexVal = builder->CreateLoad(llvmTypes->I32Type(), selectedAddress);
     } else {
         // i32 rowIndexVal = counter
         rowIndexVal = curIndexVal;
@@ -183,8 +183,9 @@ intptr_t ProjectionCodeGen::CreateWrapper()
     builder->SetInsertPoint(addToOutput);
 
     Value *gep;
+    Type *ty = llvmTypes->VectorToLLVMType(*(expr->GetReturnType()));
     if (TypeUtil::IsStringType(expr->GetReturnTypeId())) {
-        auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
+        auto outputLen = builder->CreateLoad(llvmTypes->I32Type(), outputLenPtr, "OUTPUT_LENGTH");
         auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
         // call wrap_varchar_vector function
         std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen };
@@ -193,13 +194,13 @@ intptr_t ProjectionCodeGen::CreateWrapper()
         InlineFunction(*call, inlineFunctionInfo);
     } else {
         // x* gep = gep x* outColPtr, i32 counter
-        gep = builder->CreateGEP(outColPtr, curIndexVal, "OUTPUT_ADDRESS");
+        gep = builder->CreateGEP(ty, outColPtr, curIndexVal, "OUTPUT_ADDRESS");
         // *gep = ret
         builder->CreateStore(ret, gep);
     }
 
-    gep = builder->CreateGEP(nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
-    builder->CreateStore(builder->CreateLoad(isNullPtr), gep);
+    gep = builder->CreateGEP(llvmTypes->I1Type(), nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
+    builder->CreateStore(builder->CreateLoad(llvmTypes->I1Type(), isNullPtr), gep);
 
     builder->CreateBr(incrementCounter);
     // Increment loop counter

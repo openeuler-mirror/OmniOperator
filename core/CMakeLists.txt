@@ -21,7 +21,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_COMPILER "g++")
 
 # this is used to generate LLVM IR for jitting
-set(IR_COMPILER "clang++-12")
+set(IR_COMPILER "clang++-15")
+message(STATUS "IR_COMPILER : ${IR_COMPILER}")
 
 if (DEFINED COVERAGE)
     if (${COVERAGE} STREQUAL "ON")

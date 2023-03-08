@@ -6,6 +6,8 @@
 #include "llvm_engine.h"
 
 #include <llvm/Transforms/Utils/Cloning.h>
+#include "llvm/Pass.h"
+#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 
 #include "expr_info_extractor.h"
 #include "func_registry.h"
@@ -74,7 +76,7 @@ int64_t LLVMEngine::Compile()
     MakeThreadSafe(&resTracker);
     rt = resTracker;
     auto sym = eoe(jit->lookup("WRAPPER_FUNC"));
-    return sym.getAddress();
+    return sym.getValue();
 }
 
 void LLVMEngine::MakeThreadSafe(ResourceTrackerSP *resTracker)
@@ -313,8 +315,8 @@ llvm::Value *LLVMEngine::CallDecimalFunction(const std::string &fnName, llvm::Ty
 
             CreateCall(f, disassembledArgs, const_cast<std::string &>(fnName));
 
-            auto outHigh = builder->CreateLoad(outHighPtr);
-            auto outLow = builder->CreateLoad(outLowPtr);
+            auto outHigh = builder->CreateLoad(llvmTypes.I64Type(), outHighPtr);
+            auto outLow = builder->CreateLoad(llvmTypes.I64Type(), outLowPtr);
             result = ToInt128(outHigh, outLow);
         } else {
             result = CreateCall(f, disassembledArgs, const_cast<std::string &>(fnName));
