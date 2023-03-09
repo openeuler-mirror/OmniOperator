@@ -7,58 +7,10 @@
 namespace omniruntime {
 namespace op {
 template <template <DataTypeId, DataTypeId> class T>
-std::unique_ptr<Aggregator> TypedAggregatorFactory<T>::CreateAggregatorInternal(const DataTypes &inputTypes,
-    const DataTypes &outputTypes, std::vector<int32_t> &channels,
-    bool inputRaw, bool outputPartial, bool isOverflowAsNull)
-{
-    auto outputTypeId = outputTypes.GetType(0)->GetId();
-    switch (outputTypeId) {
-        case OMNI_BOOLEAN:
-            return FromKnownOutput<OMNI_BOOLEAN>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_SHORT:
-            return FromKnownOutput<OMNI_SHORT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_DATE32:
-        case OMNI_TIME32:
-        case OMNI_INT:
-            return FromKnownOutput<OMNI_INT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_LONG:
-        case OMNI_DATE64:
-        case OMNI_TIME64:
-        case OMNI_TIMESTAMP:
-            return FromKnownOutput<OMNI_LONG>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_DOUBLE:
-            return FromKnownOutput<OMNI_DOUBLE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_DECIMAL64:
-            return FromKnownOutput<OMNI_DECIMAL64>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_DECIMAL128:
-            return FromKnownOutput<OMNI_DECIMAL128>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_CONTAINER:
-            return FromKnownOutput<OMNI_CONTAINER>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_VARCHAR:
-            return FromKnownOutput<OMNI_VARCHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        case OMNI_CHAR:
-            return FromKnownOutput<OMNI_CHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        default:
-            LogError("Unsupported output type %s", TypeUtil::TypeToStringLog(outputTypeId).c_str());
-            return nullptr;
-    }
-}
-
-template <template <DataTypeId, DataTypeId> class T>
 template <DataTypeId OUT_ID>
 std::unique_ptr<Aggregator> TypedAggregatorFactory<T>::FromKnownOutput(const DataTypes &inputTypes,
-    const DataTypes &outputTypes, std::vector<int32_t> &channels,
-    bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
 {
     auto inputTypeId = inputTypes.GetType(0)->GetId();
     switch (inputTypeId) {
