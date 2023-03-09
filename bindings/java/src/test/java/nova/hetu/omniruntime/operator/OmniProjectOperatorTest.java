@@ -233,7 +233,7 @@ public class OmniProjectOperatorTest {
                 + "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":0,\"width\":20},"
                 + "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":1,\"width\":10},{\"exprType\":"
                 + "\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":2,\"width\":10}],\"width\":100}"};
-        DataType[] inputTypes = {new VarcharDataType(20)};
+        DataType[] inputTypes = {new VarcharDataType(20), new VarcharDataType(10), new VarcharDataType(10)};
 
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(expressions, inputTypes, 1,
                 new OperatorConfig());
@@ -260,7 +260,7 @@ public class OmniProjectOperatorTest {
         String[] expressions = {"{\"exprType\":\"FUNCTION\",\"returnType\":15,\"function_name\":\"replace\","
                 + "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":0,\"width\":20},"
                 + "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":1,\"width\":10}],\"width\":100}"};
-        DataType[] inputTypes = {new VarcharDataType(20)};
+        DataType[] inputTypes = {new VarcharDataType(20), new VarcharDataType(10)};
 
         OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(expressions, inputTypes, 1,
                 new OperatorConfig());

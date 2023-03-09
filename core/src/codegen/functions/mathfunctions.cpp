@@ -14,8 +14,7 @@
 #define DLLEXPORT
 #endif
 
-using namespace omniruntime::codegen;
-
+namespace omniruntime::codegen::function {
 static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
 
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
@@ -256,4 +255,5 @@ extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
     } else {
         return r;
     }
+}
 }

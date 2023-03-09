@@ -22,8 +22,7 @@
 #define DLLEXPORT
 #endif
 
-namespace omniruntime::codegen {
-
+namespace omniruntime::codegen::function {
 using namespace omniruntime::type;
 
 // Cast

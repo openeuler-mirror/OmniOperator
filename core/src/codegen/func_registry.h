@@ -27,7 +27,7 @@
 #include "batch_func_registry_varchar_vector.h"
 #include "batch_func_registry_util.h"
 
-namespace omniruntime {
+namespace omniruntime::codegen {
 struct Hash {
     std::size_t operator () (const FunctionSignature *signature) const
     {

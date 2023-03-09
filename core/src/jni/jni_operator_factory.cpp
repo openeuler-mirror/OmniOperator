@@ -473,17 +473,13 @@ Java_nova_hetu_omniruntime_operator_filter_OmniFilterAndProjectOperatorFactory_c
     }
 
     FilterAndProjectOperatorFactory *factory = nullptr;
-    JNI_METHOD_START
-    factory = new FilterAndProjectOperatorFactory(filterExpr, inputDataTypes, inputLength, projectExprs, jProjectLength,
-        overflowConfig);
-    JNI_METHOD_END_WITH_MULTI_EXPRS(0L, { filterExpr }, projectExprs)
-    Expr::DeleteExprs({ filterExpr });
-    Expr::DeleteExprs(projectExprs);
-
-    if (!factory->IsSupportedExpr()) {
-        delete factory;
+    auto exprEvaluator =
+        std::make_shared<ExpressionEvaluator>(filterExpr, projectExprs, inputDataTypes, overflowConfig);
+    if (!exprEvaluator->IsSupportedExpr()) {
         return 0;
     }
+
+    factory = new FilterAndProjectOperatorFactory(std::move(exprEvaluator));
 
     return reinterpret_cast<intptr_t>(static_cast<void *>(factory));
 }
@@ -500,7 +496,6 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
     auto inputDataTypes = Deserialize(inputTypesCharPtr);
     env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
-    auto inputLength = static_cast<int32_t>(jInputLength);
 
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
@@ -532,16 +527,12 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
     }
 
     ProjectionOperatorFactory *factory = nullptr;
-    JNI_METHOD_START
-    factory = new ProjectionOperatorFactory(expressions, jExprsLength, inputDataTypes, inputLength, overflowConfig);
-    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, expressions)
-    Expr::DeleteExprs(expressions);
-
-    if (!factory->IsSupported()) {
-        delete factory;
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(expressions, inputDataTypes, overflowConfig);
+    if (!exprEvaluator->IsSupportedExpr()) {
         return 0;
     }
 
+    factory = new ProjectionOperatorFactory(std::move(exprEvaluator));
     return reinterpret_cast<intptr_t>(static_cast<void *>(factory));
 }
 

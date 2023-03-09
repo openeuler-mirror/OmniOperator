@@ -249,7 +249,7 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         DataType[] bufferedTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
         int[] bufferedOutputCols = {};
         String[] bufferedKeyExps = {
-                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 1), getOmniJsonLiteral(1, false, 5))};
+                omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0), getOmniJsonLiteral(1, false, 5))};
         OmniSmjBufferedTableWithExprOperatorFactory bufferedWithExprOperatorFactory = new OmniSmjBufferedTableWithExprOperatorFactory(
                 bufferedTypes, bufferedKeyExps, bufferedOutputCols, streamedBuilderWithExprOperatorFactory);
         OmniOperator bufferedTableOperator = bufferedWithExprOperatorFactory.createOperator();
@@ -274,8 +274,8 @@ public class OmniSortMergeJoinWithExprOperatorsTest {
         VecBatch resultVecBatch = results.next();
 
         int len = resultVecBatch.getRowCount();
-        assertEquals(len, 4);
-        Object[][] expectedDatas = {{1, 1, 2, 3}, {40L, 25L, 35L, 30L}};
+        assertEquals(len, 3);
+        Object[][] expectedDatas = {{1, 1, 2}, {40L, 25L, 35L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);

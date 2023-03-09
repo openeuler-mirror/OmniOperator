@@ -6,9 +6,9 @@
 #include "functions/decimal_arithmetic_functions.h"
 #include "functions/decimal_cast_functions.h"
 
-using namespace omniruntime;
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
-using namespace omniruntime::codegen;
+using namespace codegen::function;
 
 const std::string DecimalCastFnStr()
 {
@@ -642,4 +642,5 @@ std::vector<Function> DecimalFunctionRegistryReScale::GetFunctions()
     };
 
     return decimalFnRegistry;
+}
 }

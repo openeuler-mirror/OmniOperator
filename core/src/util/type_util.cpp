@@ -48,6 +48,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
     }
 }
 
+namespace omniruntime {
+namespace type {
 std::shared_ptr<DataType> InvalidType()
 {
     return InvalidDataType::Instance();
@@ -186,4 +188,6 @@ std::shared_ptr<omniruntime::type::DataTypes> BuildDataTypesPtr(std::vector<omni
 std::shared_ptr<omniruntime::type::DataTypes> BuildDataTypesPtr(std::vector<omniruntime::type::DataTypePtr> &dataTypes)
 {
     return std::make_shared<omniruntime::type::DataTypes>(dataTypes);
+}
+}
 }

@@ -4,9 +4,9 @@
  */
 #include "func_registry_math.h"
 #include "functions/mathfunctions.h"
-
-using namespace omniruntime;
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
+using namespace omniruntime::codegen::function;
 
 const std::string AbsFnStr()
 {
@@ -234,4 +234,5 @@ std::vector<Function> MathFunctionRegistryDown::GetFunctions()
     };
 
     return mathFnRegistry;
+}
 }

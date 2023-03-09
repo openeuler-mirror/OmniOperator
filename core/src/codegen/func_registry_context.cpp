@@ -5,13 +5,13 @@
 #include "func_registry_context.h"
 #include "context_helper.h"
 
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
-using namespace omniruntime;
-using namespace omniruntime::codegen;
 
 std::vector<Function> ContextFunctionRegistry::GetFunctions()
 {
     std::vector<Function> contextFnRegistry = { Function(reinterpret_cast<void *>(ArenaAllocatorMalloc),
         "ArenaAllocatorMalloc", {}, { OMNI_LONG, OMNI_INT }, OMNI_CHAR) };
     return contextFnRegistry;
+}
 }

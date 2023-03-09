@@ -7,8 +7,7 @@
 #include "codegen/context_helper.h"
 #include "codegen/functions/stringfunctions.h"
 
-using namespace omniruntime::codegen;
-
+namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT void FillRowIndexArray(int32_t *dataArray, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
@@ -304,4 +303,5 @@ extern "C" DLLEXPORT void InExprString(int32_t cmpCnt, int64_t *cmpValues, int64
             }
         }
     }
+}
 }

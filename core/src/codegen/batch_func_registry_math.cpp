@@ -5,8 +5,9 @@
 #include "batch_func_registry_math.h"
 #include "batch_functions/batch_mathfunctions.h"
 
-using namespace omniruntime;
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
+using namespace codegen::function;
 
 namespace {
 const std::string absFnStr = "batch_abs";
@@ -130,4 +131,5 @@ std::vector<Function> BatchMathFunctionRegistryDown::GetFunctions()
     };
 
     return batchMathFunctions;
+}
 }

@@ -8,7 +8,7 @@
 #include "func_signature.h"
 #include "util/type_util.h"
 
-namespace omniruntime {
+namespace omniruntime::codegen {
 enum NullableResultType {
     INPUT_DATA,
     INPUT_DATA_AND_NULL,

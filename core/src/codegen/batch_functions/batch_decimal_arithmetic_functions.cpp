@@ -10,7 +10,7 @@
 
 using namespace omniruntime::type;
 
-namespace omniruntime::codegen {
+namespace omniruntime::codegen::function {
 
 const std::string DECIMAL_OVERFLOW { "Decimal overflow" };
 const std::string DIVIDE_ZERO { "Division by zero" };
@@ -120,7 +120,6 @@ extern "C" DLLEXPORT void BatchRoundDecimal64(int64_t contextPtr, int64_t *x, in
         CHECK_OVERFLOW_CONTINUE(input, outPrecision)
         output[i] = input.GetValue();
     }
-
 }
 
 extern "C" DLLEXPORT void BatchRoundDecimal128WithoutRound(int64_t contextPtr, Decimal128 *x, int32_t xPrecision,

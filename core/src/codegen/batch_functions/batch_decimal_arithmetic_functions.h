@@ -10,11 +10,10 @@
 #include <vector>
 #include "type/decimal128.h"
 #include "type/decimal_operations.h"
-#include "type/data_type.h"
 
 using namespace omniruntime::type;
 
-namespace omniruntime::codegen {
+namespace omniruntime::codegen::function {
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else

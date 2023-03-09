@@ -5,8 +5,9 @@
 #include "batch_func_registry_string.h"
 #include "batch_functions/batch_stringfunctions.h"
 
-using namespace omniruntime;
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
+using namespace codegen::function;
 
 namespace {
 const std::string lessThanFnStr = "batch_lessThan";
@@ -255,4 +256,4 @@ std::vector<Function> BatchStringFunctionRegistryReplaceInterceptFromBeyond::Get
 
     return batchStringFnRegistry;
 }
-
+}

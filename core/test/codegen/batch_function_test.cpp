@@ -14,7 +14,7 @@
 #include "util/test_util.h"
 
 using namespace omniruntime::op;
-using namespace omniruntime::codegen;
+using namespace omniruntime::codegen::function;
 using namespace std;
 using namespace TestUtil;
 

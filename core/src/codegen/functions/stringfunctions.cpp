@@ -4,7 +4,7 @@
  */
 #include "stringfunctions.h"
 
-namespace omniruntime::codegen {
+namespace omniruntime::codegen::function {
 namespace {
 const int THOUSANDS = 1000;
 const int HUNDREDS = 100;

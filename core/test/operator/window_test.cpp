@@ -2099,7 +2099,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowPerf)
     double cpuElapsed = timer.GetCpuElapse();
     std::cout << "Window with Omni, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    Operator::DeleteOperator(windowOperator);
+    op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
 
     delete[] input;
@@ -2204,8 +2204,8 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
 
     std::cout << "Window without OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    Operator::DeleteOperator(windowOperatorWithJit);
-    Operator::DeleteOperator(windowOperatorWithoutJit);
+    op::Operator::DeleteOperator(windowOperatorWithJit);
+    op::Operator::DeleteOperator(windowOperatorWithoutJit);
     DeleteOperatorFactory(operatorFactoryWithJit);
     DeleteOperatorFactory(operatorFactoryWithoutJit);
 

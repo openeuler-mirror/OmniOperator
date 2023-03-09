@@ -5,8 +5,9 @@
 #include "func_registry_string.h"
 #include "functions/stringfunctions.h"
 
-using namespace omniruntime;
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
+using namespace codegen::function;
 
 const std::string ConcatFnStr()
 {
@@ -296,4 +297,5 @@ std::vector<Function> StringFunctionRegistryReplaceInterceptFromBeyond::GetFunct
     };
 
     return stringFnRegistry;
+}
 }

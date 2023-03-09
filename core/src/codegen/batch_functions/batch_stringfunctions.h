@@ -16,6 +16,7 @@
 #include "codegen/string_util.h"
 #include "type/decimal128.h"
 #include "type/decimal_operations.h"
+#include "util/config_util.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -24,7 +25,7 @@
 #endif
 
 using namespace omniruntime::type;
-
+namespace omniruntime::codegen::function {
 // string compare functions
 extern "C" DLLEXPORT void BatchStrCompare(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, int32_t *res,
     int32_t rowCnt);
@@ -191,7 +192,7 @@ extern DLLEXPORT void BatchSubstrInterceptFromBeyond(int64_t contextPtr, uint8_t
         int64_t startCodePoint = startIdx[i];
         int64_t lengthCodePoint = length[i];
         int32_t len = strLen[i];
-        output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
+        output[i] = const_cast<uint8_t *>(EMPTY);
         if (startCodePoint == 0 || (lengthCodePoint <= 0) || (len == 0) || startCodePoint > len) {
             outLen[i] = 0;
             continue;
@@ -249,7 +250,7 @@ extern DLLEXPORT void BatchSubstrWithStartInterceptFromBeyond(int64_t contextPtr
         }
         int64_t startCodePoint = startIdx[i];
         int32_t len = strLen[i];
-        output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
+        output[i] = const_cast<uint8_t *>(EMPTY);
         if (startCodePoint == 0 || len == 0 || startCodePoint > len) {
             outLen[i] = 0;
             continue;
@@ -301,7 +302,7 @@ extern DLLEXPORT void BatchSubstrEmptyString(int64_t contextPtr, uint8_t **str, 
         int64_t startCodePoint = startIdx[i];
         int64_t lengthCodePoint = length[i];
         int32_t len = strLen[i];
-        output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
+        output[i] = const_cast<uint8_t *>(EMPTY);
         if (startCodePoint == 0 || (lengthCodePoint <= 0) || (len == 0) || startCodePoint > len) {
             outLen[i] = 0;
             continue;
@@ -359,7 +360,7 @@ extern DLLEXPORT void BatchSubstrWithStartEmptyString(int64_t contextPtr, uint8_
         }
         int64_t startCodePoint = startIdx[i];
         int32_t len = strLen[i];
-        output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
+        output[i] = const_cast<uint8_t *>(EMPTY);
         if (startCodePoint == 0 || len == 0 || startCodePoint > len) {
             outLen[i] = 0;
             continue;
@@ -439,14 +440,14 @@ static inline void ReplaceWithReplaceNotEmpty(int64_t contextPtr, uint8_t **str,
         if (searchLen[i] == 0) {
             ret = lambda(&hasErr, i);
         } else {
-            auto result = omniruntime::codegen::StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
+            auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
                 reinterpret_cast<const char *>(str[i]), strLen[i], reinterpret_cast<const char *>(searchStr[i]),
                 searchLen[i], reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
             ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         }
 
         if (hasErr) {
-            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG);
+            SetError(contextPtr, REPLACE_ERR_MSG);
         }
         output[i] = ret;
     }
@@ -468,18 +469,18 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
         if (searchLen[i] == 0) {
             ret = lambda(&hasErr, i);
         } else {
-            auto result = omniruntime::codegen::StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
+            auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
                 reinterpret_cast<char *>(str[i]), strLen[i], reinterpret_cast<char *>(searchStr[i]), searchLen[i],
-                reinterpret_cast<const char *>(omniruntime::codegen::EMPTY), 0, &hasErr, outLen + i);
+                reinterpret_cast<const char *>(EMPTY), 0, &hasErr, outLen + i);
             ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         }
 
         if (hasErr) {
-            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG);
+            SetError(contextPtr, REPLACE_ERR_MSG);
         }
         output[i] = ret;
     }
 }
-
+}
 
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

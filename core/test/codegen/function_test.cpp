@@ -8,8 +8,6 @@
 #include "gtest/gtest.h"
 #include "expression/expressions.h"
 #include "codegen/functions/stringfunctions.h"
-#include "codegen/functions/decimal_arithmetic_functions.h"
-#include "codegen/functions/decimal_cast_functions.h"
 #include "codegen/functions/mathfunctions.h"
 #include "codegen/functions/murmur3_hash.h"
 #include "codegen/functions/dictionaryfunctions.h"
@@ -23,7 +21,7 @@ namespace omniruntime {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
-using namespace omniruntime::codegen;
+using namespace omniruntime::codegen::function;
 
 /*
  * Dictionary funtion tests

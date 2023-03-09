@@ -9,7 +9,7 @@
 
 using namespace omniruntime::vec;
 
-namespace omniruntime::codegen {
+namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT void BatchGetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, int32_t *output)
 {
