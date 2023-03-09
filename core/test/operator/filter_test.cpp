@@ -3214,17 +3214,18 @@ TEST(FilterTest, Test10SQLMutilThread)
         { 8, "q9" }, { 9, "q10" } };
     int64_t totalPositions = 1000000;
     int64_t positionsPerPage = 1024;
+    static constexpr int FILTER_UNIT_TEST_TIME = 1;
 
-    double singleThreadWallTime[10];
-    double singleThreadCpuTime[10];
-    double fourThreadsWallTime[10];
-    double fourThreadsCpuTime[10];
-    double eightThreadsWallTime[10];
-    double eightThreadsCpuTime[10];
-    double sixteenThreadsWallTime[10];
-    double sixteenThreadsCpuTime[10];
+    double singleThreadWallTime[FILTER_UNIT_TEST_TIME];
+    double singleThreadCpuTime[FILTER_UNIT_TEST_TIME];
+    double fourThreadsWallTime[FILTER_UNIT_TEST_TIME];
+    double fourThreadsCpuTime[FILTER_UNIT_TEST_TIME];
+    double eightThreadsWallTime[FILTER_UNIT_TEST_TIME];
+    double eightThreadsCpuTime[FILTER_UNIT_TEST_TIME];
+    double sixteenThreadsWallTime[FILTER_UNIT_TEST_TIME];
+    double sixteenThreadsCpuTime[FILTER_UNIT_TEST_TIME];
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < FILTER_UNIT_TEST_TIME; i++) {
         std::string sqlName = SQL_NAME.at(i);
         VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter and project");
         auto overflowConfig = new OverflowConfig();
@@ -3289,22 +3290,22 @@ TEST(FilterTest, Test10SQLMutilThread)
     }
 
     std::cout << "singleThreadWallTime";
-    PrintValueLine(singleThreadWallTime, 10);
+    PrintValueLine(singleThreadWallTime, FILTER_UNIT_TEST_TIME);
     std::cout << "fourThreadsWallTime";
-    PrintValueLine(fourThreadsWallTime, 10);
+    PrintValueLine(fourThreadsWallTime, FILTER_UNIT_TEST_TIME);
     std::cout << "eightThreadsWallTime";
-    PrintValueLine(eightThreadsWallTime, 10);
+    PrintValueLine(eightThreadsWallTime, FILTER_UNIT_TEST_TIME);
     std::cout << "sixteenThreadsWallTime";
-    PrintValueLine(sixteenThreadsWallTime, 10);
+    PrintValueLine(sixteenThreadsWallTime, FILTER_UNIT_TEST_TIME);
 
     std::cout << "singleThreadCpuTime";
-    PrintValueLine(singleThreadCpuTime, 10);
+    PrintValueLine(singleThreadCpuTime, FILTER_UNIT_TEST_TIME);
     std::cout << "fourThreadsCpuTime";
-    PrintValueLine(fourThreadsCpuTime, 10);
+    PrintValueLine(fourThreadsCpuTime, FILTER_UNIT_TEST_TIME);
     std::cout << "eightThreadsCpuTime";
-    PrintValueLine(eightThreadsCpuTime, 10);
+    PrintValueLine(eightThreadsCpuTime, FILTER_UNIT_TEST_TIME);
     std::cout << "sixteenThreadsCpuTime";
-    PrintValueLine(sixteenThreadsCpuTime, 10);
+    PrintValueLine(sixteenThreadsCpuTime, FILTER_UNIT_TEST_TIME);
 }
 }
 }

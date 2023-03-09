@@ -123,15 +123,15 @@ public:
 
 protected:
     AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-                      const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
-        : SumAggregator<IN_ID, OUT_ID>(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels,
-                                       inputRaw, outputPartial, isOverflowAsNull)
+        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+        : SumAggregator<IN_ID, OUT_ID>(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw,
+        outputPartial, isOverflowAsNull)
     {
         // varchar only in partial stage
         if constexpr (OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CONTAINER) {
             extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<true>;
         } else {
-            extractValuesFuncPointer =  &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false>;
+            extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false>;
         }
     }
 
@@ -142,7 +142,7 @@ protected:
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 
 private:
-    void(AverageAggregator<IN_ID, OUT_ID>::*extractValuesFuncPointer)(const AggregateState &state,
+    void (AverageAggregator<IN_ID, OUT_ID>::*extractValuesFuncPointer)(const AggregateState &state,
         std::vector<Vector *> &vectors, int32_t rowIndex) = nullptr;
 };
 }

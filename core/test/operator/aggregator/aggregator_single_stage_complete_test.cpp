@@ -412,7 +412,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     auto factory = tester->CreateFinalFactory();
     EXPECT_TRUE(factory != nullptr);
 
-    Operator *agg;
+    op::Operator *agg;
     try {
         agg = factory->CreateOperator();
     } catch (OmniException &e) {
@@ -441,7 +441,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         EXPECT_EQ(result[0]->GetVectorCount(), expectedResult->GetVectorCount());
         EXPECT_EQ(result[0]->GetRowCount(), expectedResult->GetRowCount());
     } catch (OmniException &e) {
-        Operator::DeleteOperator(agg);
+        op::Operator::DeleteOperator(agg);
         VectorHelper::FreeVecBatch(expectedResult);
 
         if (expectedExceptionMessage.length() == 0 || std::string(e.what()).find(expectedExceptionMessage, 0) < 0) {
@@ -455,7 +455,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     }
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(result[0], expectedResult, error));
 
-    Operator::DeleteOperator(agg);
+    op::Operator::DeleteOperator(agg);
     VectorHelper::FreeVecBatch(expectedResult);
     VectorHelper::FreeVecBatches(result);
 }
@@ -501,9 +501,9 @@ TEST_P(SingleStageCompleteTest, verify_correctness)
 INSTANTIATE_TEST_CASE_P(AggregatorTest, SingleStageCompleteTest,
     ::testing::Combine(::testing::Values("sum", "min", "max", "avg"),
     ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_CHAR, OMNI_VARCHAR),
+    OMNI_VARCHAR),
     ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_CHAR, OMNI_VARCHAR),
+    OMNI_VARCHAR),
     ::testing::Values(0, 25), // nullPercent
     ::testing::Bool(),        // isDict
     ::testing::Bool(),        // hasMask

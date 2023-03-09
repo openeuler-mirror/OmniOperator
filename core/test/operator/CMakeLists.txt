@@ -5,7 +5,11 @@ ELSE ()
     list(REMOVE_ITEM OP_TESTS_LIST ${CMAKE_CURRENT_LIST_DIR}/hmpp_hash_test.cpp)
 endif()
 
+# test of aggregator will spend too much time especially link stage
+SET(ENABLE_AGG_TEST ON)
+if(ENABLE_AGG_TEST)
 aux_source_directory(${CMAKE_CURRENT_LIST_DIR}/aggregator OP_AGG_TEST_TARGET)
+endif()
 
 set(OP_TEST_TARGET optest)
 add_library(${OP_TEST_TARGET} ${OP_TESTS_LIST} ${OP_AGG_TEST_TARGET})

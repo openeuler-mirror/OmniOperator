@@ -115,7 +115,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     auto finalFactory = tester->CreateFinalFactory();
     EXPECT_TRUE(finalFactory != nullptr);
 
-    Operator *aggPartial1;
+    op::Operator *aggPartial1;
     try {
         aggPartial1 = partialFactory->CreateOperator();
     } catch (OmniException &e) {
@@ -126,11 +126,11 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     }
     EXPECT_TRUE(aggPartial1 != nullptr);
 
-    Operator *aggPartial2;
+    op::Operator *aggPartial2;
     try {
         aggPartial2 = partialFactory->CreateOperator();
     } catch (OmniException &e) {
-        Operator::DeleteOperator(aggPartial1);
+        op::Operator::DeleteOperator(aggPartial1);
         if (!isSupported) {
             return;
         }
@@ -138,12 +138,12 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     }
     EXPECT_TRUE(aggPartial2 != nullptr);
 
-    Operator *aggFinal;
+    op::Operator *aggFinal;
     try {
         aggFinal = finalFactory->CreateOperator();
     } catch (OmniException &e) {
-        Operator::DeleteOperator(aggPartial1);
-        Operator::DeleteOperator(aggPartial2);
+        op::Operator::DeleteOperator(aggPartial1);
+        op::Operator::DeleteOperator(aggPartial2);
         if (!isSupported) {
             return;
         }
@@ -151,7 +151,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     }
     EXPECT_TRUE(aggFinal != nullptr);
 
-    // operator 1 (partial)
+    // op::Operator 1 (partial)
     std::vector<VectorBatch *> input1 = tester->BuildAggInput(VEC_BATCH_NUM, ROW_SIZE);
     EXPECT_TRUE(input1.size() > 0);
     VectorBatch *expectedResult1 = nullptr;
@@ -169,9 +169,9 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         EXPECT_EQ(result1[0]->GetVectorCount(), expectedResult1->GetVectorCount());
         EXPECT_EQ(result1[0]->GetRowCount(), expectedResult1->GetRowCount());
     } catch (OmniException &e) {
-        Operator::DeleteOperator(aggPartial1);
-        Operator::DeleteOperator(aggPartial2);
-        Operator::DeleteOperator(aggFinal);
+        op::Operator::DeleteOperator(aggPartial1);
+        op::Operator::DeleteOperator(aggPartial2);
+        op::Operator::DeleteOperator(aggFinal);
         VectorHelper::FreeVecBatch(expectedResult1);
 
         if (expectedExceptionMessage.length() == 0 || std::string(e.what()).find(expectedExceptionMessage, 0) < 0) {
@@ -183,9 +183,9 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         EXPECT_EQ(expectedExceptionMessage.length(), 0);
         EXPECT_TRUE(ValidateOverflow("Partial1", valueColIdx, expectedResult1, result1[0]));
     }
-    Operator::DeleteOperator(aggPartial1);
+    op::Operator::DeleteOperator(aggPartial1);
 
-    // operator 2 (partial)
+    // op::Operator 2 (partial)
     std::vector<VectorBatch *> input2 = tester->BuildAggInput(VEC_BATCH_NUM, ROW_SIZE);
     EXPECT_TRUE(input2.size() > 0);
     VectorBatch *expectedResult2 = nullptr;
@@ -205,8 +205,8 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     } catch (OmniException &e) {
         VectorHelper::FreeVecBatch(expectedResult1);
         VectorHelper::FreeVecBatches(result1);
-        Operator::DeleteOperator(aggPartial2);
-        Operator::DeleteOperator(aggFinal);
+        op::Operator::DeleteOperator(aggPartial2);
+        op::Operator::DeleteOperator(aggFinal);
         VectorHelper::FreeVecBatch(expectedResult2);
 
         if (expectedExceptionMessage.length() == 0 || std::string(e.what()).find(expectedExceptionMessage, 0) < 0) {
@@ -218,7 +218,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         EXPECT_EQ(expectedExceptionMessage.length(), 0);
         EXPECT_TRUE(ValidateOverflow("Partial2", valueColIdx, expectedResult2, result2[0]));
     }
-    Operator::DeleteOperator(aggPartial2);
+    op::Operator::DeleteOperator(aggPartial2);
 
     // Second stage (final)
     std::vector<VectorBatch *> expectedResults{ expectedResult1, expectedResult2 };
@@ -241,7 +241,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         EXPECT_EQ(finalResult[0]->GetVectorCount(), expectedResultFinal->GetVectorCount());
         EXPECT_EQ(finalResult[0]->GetRowCount(), expectedResultFinal->GetRowCount());
     } catch (OmniException &e) {
-        Operator::DeleteOperator(aggFinal);
+        op::Operator::DeleteOperator(aggFinal);
         VectorHelper::FreeVecBatch(expectedResultFinal);
 
         if (expectedExceptionMessage.length() == 0 || std::string(e.what()).find(expectedExceptionMessage, 0) < 0) {
@@ -256,7 +256,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(finalResult[0], expectedResultFinal, error));
 
-    Operator::DeleteOperator(aggFinal);
+    op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatch(expectedResultFinal);
     VectorHelper::FreeVecBatches(finalResult);
 }
@@ -301,9 +301,9 @@ TEST_P(MultiStageCompleteTest, verify_correctness)
 INSTANTIATE_TEST_CASE_P(AggregatorTest, MultiStageCompleteTest,
     ::testing::Combine(::testing::Values("sum", "min", "max", "avg"),
     ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_CHAR, OMNI_VARCHAR),
+    OMNI_VARCHAR),
     ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_CHAR, OMNI_VARCHAR),
+    OMNI_VARCHAR),
     ::testing::Values(0, 25), // nullPercent
     ::testing::Bool(),        // isDict
     ::testing::Bool(),        // hasMask

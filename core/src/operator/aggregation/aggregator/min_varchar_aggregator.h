@@ -272,8 +272,7 @@ VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<Aggrega
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-class MinVarcharAggregator : public TypedAggregator {
+template <DataTypeId IN_ID, DataTypeId OUT_ID> class MinVarcharAggregator : public TypedAggregator {
 public:
     ~MinVarcharAggregator() override = default;
 
@@ -302,22 +301,20 @@ public:
                 TypeUtil::TypeToStringLog(IN_ID).c_str(), TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {
-            if (!TypedAggregator::CheckTypes("min_varchar", inputTypes, outputTypes,
-                IN_ID, OUT_ID)) {
+            if (!TypedAggregator::CheckTypes("min_varchar", inputTypes, outputTypes, IN_ID, OUT_ID)) {
                 return nullptr;
             }
 
-            return std::unique_ptr<MinVarcharAggregator<IN_ID, OUT_ID>>(
-                new MinVarcharAggregator<IN_ID, OUT_ID>(inputTypes, outputTypes, channels,
-                rawIn, partialOut, isOverflowAsNull));
+            return std::unique_ptr<MinVarcharAggregator<IN_ID, OUT_ID>>(new MinVarcharAggregator<IN_ID, OUT_ID>(
+                inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
         }
     }
 
 protected:
     MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-                         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
-        : TypedAggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels,
-                          inputRaw, outputPartial, isOverflowAsNull)
+        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+        : TypedAggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels, inputRaw, outputPartial,
+        isOverflowAsNull)
     {}
 
     void ProcessSingleInternal(AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,

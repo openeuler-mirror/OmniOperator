@@ -13,8 +13,7 @@ namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
         throw OmniException("NOT SUPPORT", "Unsupported input type for avg aggregate");
@@ -78,8 +77,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &stat
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool AverageAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+bool AverageAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     // just support raw input data
     if (!AverageAggregator<IN_ID, OUT_ID>::inputRaw) {
@@ -98,8 +96,8 @@ bool AverageAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool PARTIAL_OUT>
-void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateState &state, std::vector<Vector *> &vectors,
-    int32_t rowIndex)
+void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateState &state,
+    std::vector<Vector *> &vectors, int32_t rowIndex)
 {
     if constexpr (PARTIAL_OUT) {
         if constexpr (OUT_ID == OMNI_VARCHAR) {
@@ -135,7 +133,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
         if (state.count > 0 && state.val != nullptr) {
             if constexpr (std::is_same_v<ResultType, Decimal128>) {
                 Decimal128Wrapper result128 = Decimal128Wrapper(*reinterpret_cast<Decimal128 *>(state.val))
-                                              .Divide(Decimal128Wrapper(state.count), 0);
+                                                  .Divide(Decimal128Wrapper(state.count), 0);
                 result = this->template CastWithOverflow<Decimal128, OutType>(result128.ToDecimal128(), overflow);
             } else {
                 // Result type is either double or int64, which for both cases we generate double avgResult;

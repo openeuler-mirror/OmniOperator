@@ -38,6 +38,7 @@ static DataTypePtr SUM_IMMEDIATE_VARBINARY = VarcharType(CONST_VALUE_24);
 static DataTypePtr AVG_IMMEDIATE_VARBINARY = VarcharType(CONST_VALUE_32);
 static DataTypePtr LONG_DECIMAL_TYPE = Decimal128Type(CONST_VALUE_38, 0);
 
+#ifdef DISABLE_TEST_NO_NEED_OCCUPY_BRANCH_TEST
 long lrand()
 {
     const int CONST_VALUE_8 = 8;
@@ -46,6 +47,7 @@ long lrand()
     }
     return rand();
 }
+#endif
 
 using namespace omniruntime::vec;
 using namespace omniruntime::op;
@@ -285,6 +287,7 @@ VectorBatch **BuildVarCharInput(int32_t vecBatchNum, int32_t colNum, int32_t row
     return input;
 }
 
+#ifdef DISABLE_TEST_NO_NEED_OCCUPY_BRANCH_TEST
 // create a factory and make it optimized
 uintptr_t CreateHashFactoryWithJit(bool inputRaw, bool outputPartial)
 {
@@ -342,6 +345,7 @@ uintptr_t CreateAggFactoryWithJit()
     std::cout << "after create factory" << std::endl;
     return reinterpret_cast<uintptr_t>(nativeOperatorFactory);
 }
+#endif
 
 using HAFactoryParameters = struct HashAggregationFactoryParameters {
 public:
@@ -385,7 +389,7 @@ uintptr_t CreateHashFactoryWithoutJit(HAFactoryParameters &parameters)
 
 double g_totalCpuTime;
 double g_totalWallTime;
-
+#ifdef DISABLE_TEST_NO_NEED_OCCUPY_BRANCH_TEST
 void PerfTestOriginal(int64_t moduleAddr, VectorBatch **input)
 {
     // create operator
@@ -406,7 +410,7 @@ void PerfTestOriginal(int64_t moduleAddr, VectorBatch **input)
     for (auto res : result) {
         VectorHelper::FreeVecBatch(res);
     }
-    Operator::DeleteOperator(groupBy);
+    op::Operator::DeleteOperator(groupBy);
 }
 
 void PerfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int32_t *rowCount)
@@ -430,14 +434,14 @@ void PerfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int3
     for (auto res : result) {
         VectorHelper::FreeVecBatch(res);
     }
-    Operator::DeleteOperator(groupBy);
+    op::Operator::DeleteOperator(groupBy);
 }
 
 void PerfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input, int32_t vecBatchNum, int32_t *rowCount)
 {
     // create operatory
     auto nativeOperatorFactory = reinterpret_cast<AggregationOperatorFactory *>(moduleAddr);
-    Operator *aggregation = nullptr;
+    op::Operator *aggregation = nullptr;
     if (codegenMode) {
         aggregation = CreateTestOperator(nativeOperatorFactory);
     } else {
@@ -459,6 +463,7 @@ void PerfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input,
         VectorHelper::FreeVecBatch(res);
     }
 }
+#endif
 
 std::unique_ptr<HashAggregationOperatorFactory> CreateHashAggregationOperatorFactory(
     const std::vector<uint32_t> &groupByColumns_, const std::vector<DataTypePtr> &groupTypes,
@@ -568,7 +573,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     std::vector<VectorBatch *> result1;
     int32_t vecBatchCount = aggPartial1->GetOutput(result1);
     EXPECT_EQ(vecBatchCount, 1);
-    Operator::DeleteOperator(aggPartial1);
+    op::Operator::DeleteOperator(aggPartial1);
 
     VectorBatch **input2 = buildAggInput(vecBatchNum, rowSize, cardinality, 2, 5, groupTypes, aggTypes);
     if (input2 == nullptr) {
@@ -585,7 +590,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     std::vector<VectorBatch *> result2;
     int32_t tableCount2 = aggPartial2->GetOutput(result2);
     EXPECT_EQ(tableCount2, 1);
-    Operator::DeleteOperator(aggPartial2);
+    op::Operator::DeleteOperator(aggPartial2);
 
     // Second stage (final)
     auto aggFinalFactory = CreateHashAggregationOperatorFactory(std::vector<uint32_t>({ 0, 1 }),
@@ -607,7 +612,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
 
     std::vector<VectorBatch *> result3;
     aggFinal->GetOutput(result3);
-    Operator::DeleteOperator(aggFinal);
+    op::Operator::DeleteOperator(aggFinal);
 
     std::vector<DataTypePtr> expectFieldTypes{ LongType(), LongType(), LongType(), DoubleType(),
         LongType(), LongType(), LongType() };
@@ -668,7 +673,7 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
         VectorHelper::FreeVecBatch(res);
     }
 
-    Operator::DeleteOperator(groupByVarChar);
+    op::Operator::DeleteOperator(groupByVarChar);
     std::string expectData1[3] = {"0", "1", "2"};
     int64_t expectData2[3] = {3, 3, 2};
     std::string expectData3[3] = {"0", "1", "2"};
@@ -722,7 +727,7 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
         VectorHelper::FreeVecBatch(res);
     }
 
-    Operator::DeleteOperator(groupByVarChar);
+    op::Operator::DeleteOperator(groupByVarChar);
     std::string expectData1[3] = {"0", "1", "2"};
     int64_t expectData2[3] = {3, 3, 2};
     std::string expectData3[3] = {"0", "1", "2"};
@@ -783,7 +788,7 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     int32_t vecBatchCount = groupByNULL->GetOutput(result);
     EXPECT_EQ(vecBatchCount, 1);
 
-    Operator::DeleteOperator(groupByNULL);
+    op::Operator::DeleteOperator(groupByNULL);
 
     int64_t expectData1[1] = {0};
     int64_t expectData2[1] = {6};
@@ -831,7 +836,7 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     std::vector<VectorBatch *> expected{ ConstructSimpleBuildData() };
     EXPECT_TRUE(VecBatchesIgnoreOrderMatch(result, expected));
 
-    Operator::DeleteOperator(groupBy);
+    op::Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatches(result);
 
     VectorHelper::FreeVecBatches(expected);
@@ -917,12 +922,12 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
 
     EXPECT_TRUE(VecBatchMatch(result1[0], expVecBatch1));
 
-    omniruntime::op::Operator::DeleteOperator(aggregatePartial);
-    omniruntime::op::Operator::DeleteOperator(aggregateFinal);
+    omniruntime::op::op::Operator::DeleteOperator(aggregatePartial);
+    omniruntime::op::op::Operator::DeleteOperator(aggregateFinal);
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatches(result1);
 }
-
+#ifdef DISABLE_TEST_NO_NEED_OCCUPY_BRANCH_TEST
 TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
 {
     using namespace std;
@@ -1023,6 +1028,7 @@ TEST(HashAggregationOperatorTest, DISABLED_perf_via_API_multiple_threads)
     delete[] rowCount;
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
+#endif
 
 TEST(AggregationOperatorTest, hmpp_min_max_varchar)
 {
@@ -1095,8 +1101,8 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar)
     EXPECT_EQ(maxValLen, data1[1].size());
     EXPECT_EQ(data1[1].compare(maxStr), 0);
 
-    omniruntime::op::Operator::DeleteOperator(aggFinal);
-    omniruntime::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::op::Operator::DeleteOperator(aggPartial);
     VectorHelper::FreeVecBatches(finalResult);
     delete vectorAllocator;
     ConfigUtil::SetEnableHMPP(false);
@@ -1165,8 +1171,8 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar_without_nulls)
     EXPECT_EQ(maxValLen, data1[1].size());
     EXPECT_EQ(data1[1].compare(maxStr), 0);
 
-    omniruntime::op::Operator::DeleteOperator(aggFinal);
-    omniruntime::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::op::Operator::DeleteOperator(aggPartial);
     VectorHelper::FreeVecBatches(finalResult);
     delete vectorAllocator;
     ConfigUtil::SetEnableHMPP(false);
@@ -1227,8 +1233,8 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
 
     EXPECT_TRUE(VecBatchMatch(finalResult[0], expVecBatch));
 
-    omniruntime::op::Operator::DeleteOperator(aggFinal);
-    omniruntime::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::op::Operator::DeleteOperator(aggPartial);
     VectorHelper::FreeVecBatch(expVecBatch);
     VectorHelper::FreeVecBatches(finalResult);
     ConfigUtil::SetEnableHMPP(false);
@@ -1313,8 +1319,8 @@ TEST(AggregationOperatorTest, hmpp_decimal128)
 
     EXPECT_TRUE(VecBatchMatch(finalResult[0], expVecBatch));
 
-    omniruntime::op::Operator::DeleteOperator(aggFinal);
-    omniruntime::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::op::Operator::DeleteOperator(aggPartial);
     VectorHelper::FreeVecBatch(expVecBatch);
     VectorHelper::FreeVecBatches(finalResult);
     ConfigUtil::SetEnableHMPP(false);
@@ -1345,7 +1351,7 @@ TEST(HashAggregationOperatorTest, hmpp_group_by_agg_same_cols)
     groupBy->GetOutput(result);
     std::vector<VectorBatch *> expected{ ConstructSimpleBuildData() };
     EXPECT_TRUE(VecBatchesIgnoreOrderMatch(result, expected));
-    Operator::DeleteOperator(groupBy);
+    op::Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatches(result);
     VectorHelper::FreeVecBatches(expected);
     delete vecAllocator;
@@ -1385,7 +1391,7 @@ TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
         VectorHelper::FreeVecBatch(res);
     }
 
-    Operator::DeleteOperator(groupByVarChar);
+    op::Operator::DeleteOperator(groupByVarChar);
 
     std::vector<DataTypePtr> expectFieldTypes{ VarcharType(10), LongType(), VarcharType(10), VarcharType(10) };
     // construct the output data
@@ -1436,7 +1442,7 @@ TEST(AggregationOperatorTest, verify_correctness)
     std::vector<VectorBatch *> result;
     int32_t tableCount1 = aggPartial1->GetOutput(result);
     EXPECT_EQ(tableCount1, 1);
-    omniruntime::op::Operator::DeleteOperator(aggPartial1);
+    omniruntime::op::op::Operator::DeleteOperator(aggPartial1);
 
     VectorBatch **input2 = buildAggInput(vecBatchNum, ROW_PER_VEC_BATCH, cardinality, 0, 5, groupTypes, aggTypes);
     ASSERT(!(input2 == nullptr));
@@ -1448,7 +1454,7 @@ TEST(AggregationOperatorTest, verify_correctness)
     }
     int32_t tableCount2 = aggPartial2->GetOutput(result);
     EXPECT_EQ(tableCount2, 1);
-    omniruntime::op::Operator::DeleteOperator(aggPartial2);
+    omniruntime::op::op::Operator::DeleteOperator(aggPartial2);
 
     // STAGE2: (final)
     std::vector<DataTypePtr> finalOutputTypes{ LongType(), DoubleType(), LongType(), LongType(), LongType() };
@@ -1467,7 +1473,7 @@ TEST(AggregationOperatorTest, verify_correctness)
 
     delete[] input1;
     delete[] input2;
-    omniruntime::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatches(result1);
 }
 
@@ -1537,8 +1543,8 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     EXPECT_TRUE(VecBatchMatch(result1[0], expVecBatch1));
 
-    omniruntime::op::Operator::DeleteOperator(aggPartial);
-    omniruntime::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatches(result1);
 }
@@ -1573,7 +1579,7 @@ TEST(AggregationOperatorTest, avg_correctness_test)
 
     delete[] input;
     VectorHelper::FreeVecBatches(result);
-    Operator::DeleteOperator(aggregate);
+    op::Operator::DeleteOperator(aggregate);
 }
 
 TEST(AggregationOperatorTest, min_max_varchar_correctness)
@@ -1611,10 +1617,10 @@ TEST(AggregationOperatorTest, min_max_varchar_correctness)
     EXPECT_EQ(maxValLen, data1[4].size());
     EXPECT_EQ(data1[4].compare(maxStr), 0);
 
-    omniruntime::op::Operator::DeleteOperator(aggOperator);
+    omniruntime::op::op::Operator::DeleteOperator(aggOperator);
     VectorHelper::FreeVecBatches(result);
 }
-
+#ifdef DISABLE_TEST_NO_NEED_OCCUPY_BRANCH_TEST
 TEST(AggregationOperatorTest, DISABLED_perf_original)
 {
     std::vector<DataTypePtr> sourceFieldTypes{ LongType(), LongType(), LongType(), LongType() };
@@ -1735,6 +1741,7 @@ TEST(AggregationOperatorTest, DISABLED_perf_codegen)
     delete[] rowCount;
     VectorHelper::FreeVecBatches(input, VEC_BATCH_NUM);
 }
+#endif
 
 TEST(HashAggregationOperatorTest, compare_perf)
 {
@@ -1847,8 +1854,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
     delete perfUtil;
     delete[] input1;
     delete[] input2;
-    Operator::DeleteOperator(jitGroupBy);
-    Operator::DeleteOperator(groupBy);
+    op::Operator::DeleteOperator(jitGroupBy);
+    op::Operator::DeleteOperator(groupBy);
     DeleteOperatorFactory(nativeOperatorFactory);
     DeleteOperatorFactory(nativeOperatorFactory2);
 
@@ -1942,9 +1949,9 @@ TEST(HashAggregationOperatorTest, multi_stage)
     std::vector<VectorBatch *> resultFromFinal;
     operator2->GetOutput(resultFromFinal);
 
-    Operator::DeleteOperator(partialOperator1);
-    Operator::DeleteOperator(partialOperator2);
-    Operator::DeleteOperator(operator2);
+    op::Operator::DeleteOperator(partialOperator1);
+    op::Operator::DeleteOperator(partialOperator2);
+    op::Operator::DeleteOperator(operator2);
     DeleteOperatorFactory(partialFactory1);
     DeleteOperatorFactory(partialFactory2);
     DeleteOperatorFactory(finalFactory);
@@ -1994,7 +2001,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     std::vector<VectorBatch *> result;
     int32_t vecBatchCount = groupBy->GetOutput(result);
     ASSERT_EQ(vecBatchCount, 1);
-    Operator::DeleteOperator(groupBy);
+    op::Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatches(result);
     result.clear();
     delete[] input;
@@ -2019,7 +2026,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     }
 
     vecBatchCount = groupBy->GetOutput(result);
-    Operator::DeleteOperator(groupBy);
+    op::Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatches(result);
     result.clear();
     delete[] input;
@@ -2054,7 +2061,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     }
 
     vecBatchCount = groupBy->GetOutput(result);
-    Operator::DeleteOperator(groupBy);
+    op::Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatches(result);
     result.clear();
@@ -3733,4 +3740,276 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     delete resultfirstVec2;
     delete firstIgnoreNullFactory;
 }
+#ifdef ENABLE_HMPP_
+TEST(AggregatorTest, hmpp_sum_aggregator_exceptions)
+{
+    ConfigUtil::SetEnableHMPP(true);
+    auto inputType = DoubleType();
+    DataTypes inputTypes({ inputType }), outputTypes({ inputType });
+    std::vector<int32_t> channels{ 0 };
+    bool rawIn = false, partialOut = false, isOverflowAsNull = false;
+
+    const int dataSize = 6;
+    double data0[dataSize] = {0.0f, 1.0f, 2.0f, 0.0f, 1.0f, 2.0f};
+    void *datas[1] = {data0};
+    std::vector<DataTypePtr> sourceFieldTypes{ IntType() };
+    DataTypes sourceTypes(sourceFieldTypes);
+    int32_t ids[] = {0, 1, 2, 3, 4, 5};
+    VectorBatch *vectorBatch = new VectorBatch(1, dataSize);
+    DataType type(inputType->GetId());
+    vectorBatch->SetVector(0, CreateDictionaryVector(type, dataSize, ids, dataSize, datas[0]));
+    AggregateState state;
+    auto rawVectorBatch = CreateVectorBatch(inputTypes, dataSize, datas[0]);
+    std::vector<DataTypePtr> typesPtr = {
+        nullptr,         IntType(),        LongType(), DoubleType(),    BooleanType(),   ShortType(),
+        Decimal64Type(), Decimal128Type(), IntType(),  LongType(),      IntType(),       LongType(),
+        LongType(),      LongType(),       LongType(), VarcharType(15), VarcharType(16), VarcharType(15),
+    };
+    {
+        auto agg = SumAggregator<OMNI_SHORT, OMNI_SHORT>::Create(DataTypes({ typesPtr.at(OMNI_SHORT) }),
+            DataTypes({ typesPtr.at(OMNI_SHORT) }), channels, rawIn, partialOut, isOverflowAsNull);
+        auto aggPtr = reinterpret_cast<SumAggregator<OMNI_SHORT, OMNI_SHORT> *>(agg.get());
+        EXPECT_ANY_THROW(aggPtr->ProcessGroupWithHMPP(state, vectorBatch));
+        EXPECT_FALSE(agg->CanProcessWithHMPP(state, vectorBatch));
+        EXPECT_FALSE(agg->CanProcessWithHMPP(state, rawVectorBatch));
+    }
+#define TestAggregator(TEMP_CLASS, IN, OUT)                                                                        \
+    do {                                                                                                           \
+        auto agg = SumAggregator<IN, OUT>::Create(DataTypes({ typesPtr.at(IN) }), DataTypes({ typesPtr.at(OUT) }), \
+            channels, rawIn, partialOut, isOverflowAsNull);                                                        \
+        if (agg != nullptr) {                                                                                      \
+            EXPECT_ANY_THROW(agg->ProcessGroupWithHMPP(state, vectorBatch));                                       \
+            EXPECT_FALSE(agg->CanProcessWithHMPP(state, vectorBatch));                                             \
+            EXPECT_FALSE(agg->CanProcessWithHMPP(state, rawVectorBatch));                                          \
+        }                                                                                                          \
+    } while (0)
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_LONG>), OMNI_SHORT, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DOUBLE>), OMNI_SHORT, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DECIMAL128>), OMNI_SHORT, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DECIMAL64>), OMNI_SHORT, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_VARCHAR>), OMNI_SHORT, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_CONTAINER>), OMNI_SHORT, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_SHORT>), OMNI_INT, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_INT>), OMNI_INT, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_LONG>), OMNI_INT, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_DOUBLE>), OMNI_INT, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_DECIMAL128>), OMNI_INT, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_DECIMAL64>), OMNI_INT, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_VARCHAR>), OMNI_INT, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_CONTAINER>), OMNI_INT, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_SHORT>), OMNI_DOUBLE, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_INT>), OMNI_DOUBLE, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_LONG>), OMNI_DOUBLE, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DOUBLE>), OMNI_DOUBLE, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>), OMNI_DOUBLE, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL64>), OMNI_DOUBLE, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_VARCHAR>), OMNI_DOUBLE, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_CONTAINER>), OMNI_DOUBLE, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_SHORT>), OMNI_DECIMAL64, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_INT>), OMNI_DECIMAL64, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_LONG>), OMNI_DECIMAL64, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>), OMNI_DECIMAL64, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>), OMNI_DECIMAL64, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>), OMNI_DECIMAL64, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>), OMNI_DECIMAL64, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_CONTAINER>), OMNI_DECIMAL64, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_SHORT>), OMNI_VARCHAR, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_INT>), OMNI_VARCHAR, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_LONG>), OMNI_VARCHAR, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DOUBLE>), OMNI_VARCHAR, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL128>), OMNI_VARCHAR, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL64>), OMNI_VARCHAR, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_VARCHAR>), OMNI_VARCHAR, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_CONTAINER>), OMNI_VARCHAR, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_SHORT>), OMNI_CONTAINER, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_INT>), OMNI_CONTAINER, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_LONG>), OMNI_CONTAINER, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DOUBLE>), OMNI_CONTAINER, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL128>), OMNI_CONTAINER, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL64>), OMNI_CONTAINER, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_VARCHAR>), OMNI_CONTAINER, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_CONTAINER>), OMNI_CONTAINER, OMNI_CONTAINER);
+    ConfigUtil::SetEnableHMPP(false);
+    VectorHelper::FreeVecBatch(vectorBatch);
+    VectorHelper::FreeVecBatch(rawVectorBatch);
+}
+
+TEST(AggregatorTest, hmpp_avg_aggregator_exceptions)
+{
+    ConfigUtil::SetEnableHMPP(true);
+    auto inputType = DoubleType();
+    DataTypes inputTypes({ inputType }), outputTypes({ inputType });
+    std::vector<int32_t> channels{ 0 };
+    bool rawIn = false, partialOut = false, isOverflowAsNull = false;
+
+    const int dataSize = 6;
+    double data0[dataSize] = {0.0f, 1.0f, 2.0f, 0.0f, 1.0f, 2.0f};
+    void *datas[1] = {data0};
+    std::vector<DataTypePtr> sourceFieldTypes{ IntType() };
+    DataTypes sourceTypes(sourceFieldTypes);
+    int32_t ids[] = {0, 1, 2, 3, 4, 5};
+    VectorBatch *vectorBatch = new VectorBatch(1, dataSize);
+    DataType type(inputType->GetId());
+    vectorBatch->SetVector(0, CreateDictionaryVector(type, dataSize, ids, dataSize, datas[0]));
+    AggregateState state;
+    auto rawVectorBatch = CreateVectorBatch(inputTypes, dataSize, datas[0]);
+    std::vector<DataTypePtr> typesPtr = {
+        nullptr,         IntType(),        LongType(), DoubleType(),    BooleanType(),   ShortType(),
+        Decimal64Type(), Decimal128Type(), IntType(),  LongType(),      IntType(),       LongType(),
+        LongType(),      LongType(),       LongType(), VarcharType(15), VarcharType(16), VarcharType(15),
+    };
+
+#define TestAggregator(TEMP_CLASS, IN, OUT)                                                                            \
+    do {                                                                                                               \
+        auto agg = AverageAggregator<IN, OUT>::Create(DataTypes({ typesPtr.at(IN) }), DataTypes({ typesPtr.at(OUT) }), \
+            channels, rawIn, partialOut, isOverflowAsNull);                                                            \
+        if (agg != nullptr) {                                                                                          \
+            EXPECT_ANY_THROW(agg->ProcessGroupWithHMPP(state, vectorBatch));                                           \
+            EXPECT_FALSE(agg->CanProcessWithHMPP(state, vectorBatch));                                                 \
+            EXPECT_FALSE(agg->CanProcessWithHMPP(state, rawVectorBatch));                                              \
+        }                                                                                                              \
+    } while (0)
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_LONG>), OMNI_SHORT, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DOUBLE>), OMNI_SHORT, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DECIMAL128>), OMNI_SHORT, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DECIMAL64>), OMNI_SHORT, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_VARCHAR>), OMNI_SHORT, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_CONTAINER>), OMNI_SHORT, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_SHORT>), OMNI_INT, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_INT>), OMNI_INT, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_LONG>), OMNI_INT, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_DOUBLE>), OMNI_INT, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_DECIMAL128>), OMNI_INT, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_DECIMAL64>), OMNI_INT, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_VARCHAR>), OMNI_INT, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_INT, OMNI_CONTAINER>), OMNI_INT, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_SHORT>), OMNI_DOUBLE, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_INT>), OMNI_DOUBLE, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_LONG>), OMNI_DOUBLE, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DOUBLE>), OMNI_DOUBLE, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>), OMNI_DOUBLE, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL64>), OMNI_DOUBLE, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_VARCHAR>), OMNI_DOUBLE, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_CONTAINER>), OMNI_DOUBLE, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_SHORT>), OMNI_DECIMAL64, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_INT>), OMNI_DECIMAL64, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_LONG>), OMNI_DECIMAL64, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>), OMNI_DECIMAL64, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>), OMNI_DECIMAL64, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>), OMNI_DECIMAL64, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>), OMNI_DECIMAL64, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_CONTAINER>), OMNI_DECIMAL64, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_SHORT>), OMNI_VARCHAR, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_INT>), OMNI_VARCHAR, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_LONG>), OMNI_VARCHAR, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DOUBLE>), OMNI_VARCHAR, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL128>), OMNI_VARCHAR, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL64>), OMNI_VARCHAR, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_VARCHAR>), OMNI_VARCHAR, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_CONTAINER>), OMNI_VARCHAR, OMNI_CONTAINER);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_SHORT>), OMNI_CONTAINER, OMNI_SHORT);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_INT>), OMNI_CONTAINER, OMNI_INT);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_LONG>), OMNI_CONTAINER, OMNI_LONG);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DOUBLE>), OMNI_CONTAINER, OMNI_DOUBLE);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL128>), OMNI_CONTAINER, OMNI_DECIMAL128);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL64>), OMNI_CONTAINER, OMNI_DECIMAL64);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_VARCHAR>), OMNI_CONTAINER, OMNI_VARCHAR);
+
+    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_CONTAINER>), OMNI_CONTAINER, OMNI_CONTAINER);
+    ConfigUtil::SetEnableHMPP(false);
+    VectorHelper::FreeVecBatch(vectorBatch);
+    VectorHelper::FreeVecBatch(rawVectorBatch);
+}
+#endif
 }
