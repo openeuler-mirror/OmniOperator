@@ -23,14 +23,13 @@ using namespace omniruntime::type;
 // have 'NUM_VALUES' entries.
 static const int32_t NUM_VALUES = 15;
 
-static std::vector<int32_t> CHANNEL{0 };
+static std::vector<int32_t> CHANNEL{ 0 };
 
 class AggregatorCastTestClass : public TypedAggregator {
 public:
-    AggregatorCastTestClass(DataTypes &inTypes, DataTypes &outTypes,
-                            bool rawIn, bool partialOut, bool isOverflowAsNull)
-        : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, std::move(inTypes), std::move(outTypes),
-                                              CHANNEL, rawIn, partialOut, isOverflowAsNull)
+    AggregatorCastTestClass(DataTypes &inTypes, DataTypes &outTypes, bool rawIn, bool partialOut, bool isOverflowAsNull)
+        : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, std::move(inTypes), std::move(outTypes), CHANNEL, rawIn,
+        partialOut, isOverflowAsNull)
     {}
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
@@ -1174,8 +1173,7 @@ TEST_P(AggregatorCastTest, verify_cast)
 {
     const DataTypeId inType = std::get<0>(GetParam());
     const int32_t valueIndex = std::get<1>(GetParam());
-    AggregatorCastTestClass agg(*CreateType(inType), *CreateType(std::get<2>(GetParam())),
-                                true, false, false);
+    AggregatorCastTestClass agg(*CreateType(inType), *CreateType(std::get<2>(GetParam())), true, false, false);
 
     switch (inType) {
         case OMNI_SHORT:

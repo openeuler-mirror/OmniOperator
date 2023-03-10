@@ -13,8 +13,7 @@ namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     auto vector = vectorBatch->GetVector(this->channels[0]);
 
@@ -26,50 +25,36 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
 
     HmppResult result = HMPP_STS_NO_ERR;
     auto maxVal = reinterpret_cast<InType *>(this->executionContext->GetArena()->Allocate(sizeof(InType)));
-    switch (inputTypeId) {
-        case OMNI_SHORT: {
-            LogDebug("HMPP-Agg-max");
-            result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<int16_t *>(maxVal));
-            if (outputTypeId == OMNI_LONG) {
-                *maxVal = *reinterpret_cast<int16_t *>(maxVal);
-            }
-            break;
+
+    if constexpr (IN_ID == OMNI_SHORT) {
+        LogDebug("HMPP-Agg-max");
+        result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<int16_t *>(maxVal));
+        if constexpr (OUT_ID == OMNI_LONG) {
+            *maxVal = *reinterpret_cast<int16_t *>(maxVal);
         }
-        case OMNI_INT:
-        case OMNI_DATE32: {
-            LogDebug("HMPP-Agg-max");
-            result = HMPPS_Max_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<int32_t *>(maxVal));
-            if (outputTypeId == OMNI_LONG) {
-                *maxVal = *reinterpret_cast<int32_t *>(maxVal);
-            }
-            break;
+    } else if constexpr (IN_ID == OMNI_INT || IN_ID == OMNI_DATE32) {
+        LogDebug("HMPP-Agg-max");
+        result = HMPPS_Max_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<int32_t *>(maxVal));
+        if constexpr (OUT_ID == OMNI_LONG) {
+            *maxVal = *reinterpret_cast<int32_t *>(maxVal);
         }
-        case OMNI_LONG:
-        case OMNI_DECIMAL64: {
-            LogDebug("HMPP-Agg-max");
-            result = HMPPS_Max_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<int64_t *>(maxVal));
-            break;
-        }
-        case OMNI_DOUBLE: {
-            LogDebug("HMPP-Agg-max");
-            result = HMPPS_Max_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<double *>(maxVal));
-            break;
-        }
-        case OMNI_DECIMAL128: {
-            LogDebug("HMPP-Agg-max");
-            result = HMPPS_Max_decimal(
-                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
-                reinterpret_cast<HmppDecimal128 *>(maxVal));
-            break;
-        }
-        default: {
-            throw OmniException("NOT SUPPORT", "Unsupported input type for max aggregate");
-            break;
-        }
+    } else if constexpr (IN_ID == OMNI_LONG || IN_ID == OMNI_DECIMAL64) {
+        LogDebug("HMPP-Agg-max");
+        result = HMPPS_Max_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<int64_t *>(maxVal));
+    } else if constexpr (IN_ID == OMNI_DOUBLE) {
+        LogDebug("HMPP-Agg-max");
+        result = HMPPS_Max_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<double *>(maxVal));
+    } else if constexpr (IN_ID == OMNI_DECIMAL128) {
+        LogDebug("HMPP-Agg-max");
+        result = HMPPS_Max_decimal(
+            static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<HmppDecimal128 *>(maxVal));
+    } else {
+        throw OmniException("NOT SUPPORT", "Unsupported input type for max aggregate");
     }
 
     if (result != HMPP_STS_NO_ERR) {
@@ -86,8 +71,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MaxAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+bool MaxAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     // just support raw input data and must no null inpout
     if (!inputRaw) {
@@ -108,8 +92,8 @@ bool MaxAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
 #endif
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
-    std::vector<Vector *> &vectors, int32_t rowIndex)
+void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
+    int32_t rowIndex)
 {
     int32_t offset;
     auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
@@ -130,8 +114,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
+template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
     state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
     *reinterpret_cast<ResultType *>(state.val) = GetMin<ResultType>();
@@ -139,8 +122,8 @@ void MaxAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
-    Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,
+    const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         InitState(state);
@@ -169,9 +152,8 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
-    const uint8_t *nullMap, const int32_t *indexMap)
+void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
     InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
     ptr += vector->GetPositionOffset();
@@ -193,6 +175,13 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
         }
     }
 }
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+MaxAggregator<IN_ID, OUT_ID>::MaxAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+    std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+    : TypedAggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels, inputRaw, outputPartial,
+    isOverflowAsNull)
+{}
 
 // Explicit template instantiation
 // Defining templated aggregators in header file consume a lot of memory during compilation
@@ -253,7 +242,7 @@ template class MaxAggregator<OMNI_LONG, OMNI_DOUBLE>;
 
 template class MaxAggregator<OMNI_LONG, OMNI_DECIMAL128>;
 
-template class MaxAggregator< OMNI_LONG, OMNI_DECIMAL64>;
+template class MaxAggregator<OMNI_LONG, OMNI_DECIMAL64>;
 
 template class MaxAggregator<OMNI_DOUBLE, OMNI_BOOLEAN>;
 
@@ -296,6 +285,5 @@ template class MaxAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>;
 template class MaxAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>;
 
 template class MaxAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>;
-
 }
 }

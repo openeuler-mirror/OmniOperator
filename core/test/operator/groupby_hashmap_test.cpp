@@ -67,7 +67,7 @@ public:
         o.resPtr = nullptr;
     }
 
-    ValueWithResource& operator = (ValueWithResource &&o) noexcept
+    ValueWithResource &operator = (ValueWithResource &&o) noexcept
     {
         this->curSize = o.curSize;
         o.curSize = 0;

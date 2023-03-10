@@ -458,6 +458,7 @@ public:
             }
             return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize - remainHandleSize);
         }
+
     private:
         Slot *slotIterator;
         GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *groupByHashMapPtr;

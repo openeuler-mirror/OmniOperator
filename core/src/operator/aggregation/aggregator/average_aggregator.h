@@ -74,17 +74,18 @@ public:
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inRaw, bool outPartial, bool isOverflowAsNull)
     {
-        if (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
+        if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
             IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CONTAINER)) {
             LogError("Error in average aggregator: Unsupported input type %s",
                 TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
-        } else if (!(OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 ||
+        } else if constexpr (!(OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 ||
             OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CONTAINER)) {
             LogError("Error in average aggregator: Unsupported output type %s",
                 TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
-        } else if ((inRaw && (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CONTAINER)) ||
+        }
+        if ((inRaw && (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CONTAINER)) ||
             (!inRaw && (IN_ID != OMNI_VARCHAR && IN_ID != OMNI_CONTAINER))) {
             LogError("Error in average aggregator: Invalid input type %s for inputRaw=%s",
                 TypeUtil::TypeToStringLog(IN_ID).c_str(), (inRaw ? "true" : "false"));
@@ -94,20 +95,21 @@ public:
             LogError("Error in average aggregator: Invalid output type %s for outputPartial=%s",
                 TypeUtil::TypeToStringLog(OUT_ID).c_str(), (outPartial ? "true" : "false"));
             return nullptr;
-        } else if (IN_ID == OMNI_VARCHAR && OUT_ID == OMNI_CONTAINER) {
+        }
+        if constexpr (IN_ID == OMNI_VARCHAR && OUT_ID == OMNI_CONTAINER) {
             LogError("Error in average aggregator: Invalid output type %s for partial input with varchar type",
                 TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
-        } else if (IN_ID == OMNI_CONTAINER && OUT_ID == OMNI_VARCHAR) {
+        } else if constexpr (IN_ID == OMNI_CONTAINER && OUT_ID == OMNI_VARCHAR) {
             LogError("Error in average aggregator: Invalid output type %s for partial input with container type",
                 TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
-        } else if (OUT_ID == OMNI_VARCHAR &&
+        } else if constexpr (OUT_ID == OMNI_VARCHAR &&
             (IN_ID != OMNI_VARCHAR && IN_ID != OMNI_DECIMAL64 && IN_ID != OMNI_DECIMAL128)) {
             LogError("Error in average aggregator: Invalid input type %s for partial output with varchar type",
                 TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
-        } else if (OUT_ID == OMNI_CONTAINER &&
+        } else if constexpr (OUT_ID == OMNI_CONTAINER &&
             (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_DECIMAL128)) {
             LogError("Error in average aggregator: Invalid input type %s for partial output with container type",
                 TypeUtil::TypeToStringLog(IN_ID).c_str());
@@ -116,24 +118,14 @@ public:
             if (!SumAggregator<IN_ID, OUT_ID>::CheckTypes("average", inputTypes, outputTypes, IN_ID, OUT_ID)) {
                 return nullptr;
             }
-            return std::unique_ptr<AverageAggregator<IN_ID, OUT_ID>>(
-                new AverageAggregator<IN_ID, OUT_ID>(inputTypes, outputTypes, channels, inRaw, outPartial, isOverflowAsNull));
+            return std::unique_ptr<AverageAggregator<IN_ID, OUT_ID>>(new AverageAggregator<IN_ID, OUT_ID>(inputTypes,
+                outputTypes, channels, inRaw, outPartial, isOverflowAsNull));
         }
     }
 
 protected:
     AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
-        : SumAggregator<IN_ID, OUT_ID>(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw,
-        outputPartial, isOverflowAsNull)
-    {
-        // varchar only in partial stage
-        if constexpr (OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CONTAINER) {
-            extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<true>;
-        } else {
-            extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false>;
-        }
-    }
+        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;

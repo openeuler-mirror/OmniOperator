@@ -4,6 +4,7 @@
  */
 
 #include "window_function.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -11,7 +12,6 @@ using namespace std;
 
 namespace omniruntime {
 namespace op {
-extern std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType);
 WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)
     : pagesIndex(pagesIndex), start(start), size(end - start)
 {}

@@ -12,8 +12,7 @@ namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
         throw OmniException("NOT SUPPORT", "Unsupported input type for sum aggregate");
@@ -75,8 +74,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool SumAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+bool SumAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     // not accept dictionnary vector
     if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
@@ -95,8 +93,8 @@ bool SumAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
 #endif
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
-    std::vector<Vector *> &vectors, int32_t rowIndex)
+void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
+    int32_t rowIndex)
 {
     int32_t offset;
     auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
@@ -129,8 +127,7 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
+template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
     state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
     *reinterpret_cast<ResultType *>(state.val) = ResultType{};
@@ -138,8 +135,8 @@ void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
-    Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,
+    const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         this->InitState(state);
@@ -172,9 +169,8 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
-    const uint8_t *nullMap, const int32_t *indexMap)
+void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
     InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
     ptr += vector->GetPositionOffset();
@@ -197,6 +193,20 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
         }
     }
 }
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+SumAggregator<IN_ID, OUT_ID>::SumAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+    std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+    : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial,
+    isOverflowAsNull)
+{}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+SumAggregator<IN_ID, OUT_ID>::SumAggregator(FunctionType aggregateType, const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial,
+    const bool isOverflowAsNull)
+    : TypedAggregator(aggregateType, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull)
+{}
 
 // Explicit template instantiation
 // Defining templated aggregators in header file consume a lot of memory during compilation

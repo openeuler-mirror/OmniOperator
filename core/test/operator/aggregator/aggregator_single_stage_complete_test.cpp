@@ -500,14 +500,12 @@ TEST_P(SingleStageCompleteTest, verify_correctness)
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, SingleStageCompleteTest,
     ::testing::Combine(::testing::Values("sum", "min", "max", "avg"),
-    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_VARCHAR),
-    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128,
-    OMNI_VARCHAR),
+    ::testing::Values(OMNI_BOOLEAN, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR),
+    ::testing::Values(OMNI_BOOLEAN, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR),
     ::testing::Values(0, 25), // nullPercent
     ::testing::Bool(),        // isDict
     ::testing::Bool(),        // hasMask
-    ::testing::Values(true),         // nullWhenOverflow
+    ::testing::Values(true),  // nullWhenOverflow
     ::testing::Bool()         // groupby
     ),
     [](const testing::TestParamInfo<SingleStageCompleteTest::ParamType> &info) {

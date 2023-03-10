@@ -60,7 +60,7 @@ using FirstState = struct FirstState {
     bool valueSet;
 };
 
-template <typename T> static int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
+template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
 {
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));
 }

@@ -100,8 +100,7 @@ FAST_MATH NO_INLINE void SumConditionalFloat(MID *res, int64_t &flag, const IN *
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-class SumAggregator : public TypedAggregator {
+template <DataTypeId IN_ID, DataTypeId OUT_ID> class SumAggregator : public TypedAggregator {
     using InVector = typename NativeAndVectorType<IN_ID>::vector;
     using InType = typename NativeAndVectorType<IN_ID>::type;
     using OutVector = typename NativeAndVectorType<OUT_ID>::vector;
@@ -125,16 +124,17 @@ public:
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
-        if (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
+        if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
             IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CONTAINER)) {
             LogError("Error in sum aggregator: Unsupported input type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
-        } else if (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG ||
+        } else if constexpr (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG ||
             OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 || OUT_ID == OMNI_VARCHAR ||
             OUT_ID == OMNI_CONTAINER)) {
             LogError("Error in sum aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
-        } else if (rawIn && IN_ID == OMNI_VARCHAR) {
+        }
+        if (rawIn && IN_ID == OMNI_VARCHAR) {
             LogError("Error in sum aggregator: Invalid input type %s for inputRaw=%s",
                 TypeUtil::TypeToStringLog(IN_ID).c_str(), (rawIn ? "true" : "false"));
             return nullptr;
@@ -142,34 +142,27 @@ public:
             LogError("Error in sum aggregator: Invalid output type %s for outputPartial=%s",
                 TypeUtil::TypeToStringLog(OUT_ID).c_str(), (partialOut ? "true" : "false"));
             return nullptr;
-        } else if (OUT_ID == OMNI_VARCHAR &&
+        }
+        if constexpr (OUT_ID == OMNI_VARCHAR &&
             (IN_ID != OMNI_VARCHAR && IN_ID != OMNI_DECIMAL64 && IN_ID != OMNI_DECIMAL128)) {
             LogError("Error in sum aggregator: Invalid input type %s for partial output with varchar type",
                 TypeUtil::TypeToStringLog(IN_ID).c_str());
             return nullptr;
         } else {
-            if (!SumAggregator<IN_ID, OUT_ID>::CheckTypes("sum", inputTypes,
-                outputTypes, IN_ID, OUT_ID)) {
+            if (!SumAggregator<IN_ID, OUT_ID>::CheckTypes("sum", inputTypes, outputTypes, IN_ID, OUT_ID)) {
                 return nullptr;
             }
-            return std::unique_ptr<SumAggregator<IN_ID, OUT_ID>>(
-                new SumAggregator<IN_ID, OUT_ID>(inputTypes, outputTypes, channels,
-                                                 rawIn, partialOut, isOverflowAsNull));
+            return std::unique_ptr<SumAggregator<IN_ID, OUT_ID>>(new SumAggregator<IN_ID, OUT_ID>(inputTypes,
+                outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
         }
     }
 
 protected:
     SumAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-                  const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
-        : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels,
-                          inputRaw, outputPartial, isOverflowAsNull)
-    {}
+        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
     SumAggregator(FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
-        std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
-        : TypedAggregator(aggregateType, inputTypes, outputTypes, channels,
-                          inputRaw, outputPartial, isOverflowAsNull)
-    {}
+        std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;

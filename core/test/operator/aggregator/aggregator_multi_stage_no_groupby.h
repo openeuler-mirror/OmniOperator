@@ -16,7 +16,7 @@ using namespace omniruntime::op;
 using namespace omniruntime::type;
 
 constexpr int32_t MAX_VARCHAR_LENGTH = 128;
-constexpr int32_t VEC_BATCH_NUM  = 10;
+constexpr int32_t VEC_BATCH_NUM = 10;
 constexpr int32_t ROW_SIZE = 2000;
 inline static std::map<std::string, FunctionType> aggFuncs = { { "sum", OMNI_AGGREGATION_TYPE_SUM },
                                                                { "avg", OMNI_AGGREGATION_TYPE_AVG },

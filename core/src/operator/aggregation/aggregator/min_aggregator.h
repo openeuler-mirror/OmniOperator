@@ -63,8 +63,7 @@ SIMD_ALWAYS_INLINE void MinConditionalOp(OUT *res, int64_t &flag, const IN &in, 
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-class MinAggregator : public TypedAggregator {
+template <DataTypeId IN_ID, DataTypeId OUT_ID> class MinAggregator : public TypedAggregator {
     using InVector = typename NativeAndVectorType<IN_ID>::vector;
     using InType = typename NativeAndVectorType<IN_ID>::type;
     using OutVector = typename NativeAndVectorType<OUT_ID>::vector;
@@ -91,8 +90,8 @@ public:
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
-            return MinVarcharAggregator<IN_ID, OUT_ID>::Create(inputTypes,
-                outputTypes, channels, rawIn, partialOut, isOverflowAsNull);
+            return MinVarcharAggregator<IN_ID, OUT_ID>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
+                isOverflowAsNull);
         } else if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
             IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_BOOLEAN)) {
             LogError("Error in min aggregator: Unsupported input type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
@@ -102,23 +101,18 @@ public:
             LogError("Error in min aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(OUT_ID).c_str());
             return nullptr;
         } else {
-            if (!TypedAggregator::CheckTypes("min", inputTypes, outputTypes, IN_ID,
-                OUT_ID)) {
+            if (!TypedAggregator::CheckTypes("min", inputTypes, outputTypes, IN_ID, OUT_ID)) {
                 return nullptr;
             }
 
-            return std::unique_ptr<MinAggregator<IN_ID, OUT_ID>>(
-                new MinAggregator<IN_ID, OUT_ID>(inputTypes, outputTypes, channels,
-                                                 rawIn, partialOut, isOverflowAsNull));
+            return std::unique_ptr<MinAggregator<IN_ID, OUT_ID>>(new MinAggregator<IN_ID, OUT_ID>(inputTypes,
+                outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
         }
     }
 
 protected:
     MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-                  const bool inputRaw , const bool outputPartial, const bool isOverflowAsNull)
-        : TypedAggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels,
-                          inputRaw, outputPartial, isOverflowAsNull)
-    {}
+        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;

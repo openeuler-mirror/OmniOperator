@@ -12,8 +12,7 @@ namespace omniruntime {
 namespace type {
 const int32_t PRINT_OUT_HEX_WIDTH = 16;
 
-Decimal128::Decimal128(int64_t highBits, uint64_t lowBits) : lowBits(lowBits), highBits(highBits)
-{}
+Decimal128::Decimal128(int64_t highBits, uint64_t lowBits) : lowBits(lowBits), highBits(highBits) {}
 
 
 Decimal128::Decimal128(int64_t unscaledValue)
@@ -70,7 +69,7 @@ Decimal128::Decimal128(const char *input)
     }
     bool isNegative = s[0] == '-';
     __int128_t value = 0;
-    for (char i: s) {
+    for (char i : s) {
         if (isdigit(i)) {
             value *= 10;
             value += i - '0';
@@ -89,38 +88,40 @@ Decimal128::Decimal128(const char *input)
 }
 
 // All comparing operator remains due to template function
-bool Decimal128::operator==(const Decimal128 &right) const
+bool Decimal128::operator == (const Decimal128 &right) const
 {
     // should return true for -0 == 0
     return (lowBits == right.lowBits && highBits == right.highBits) || (IsZero() && right.IsZero());
 }
 
-bool Decimal128::operator!=(const Decimal128 &right) const
+bool Decimal128::operator != (const Decimal128 &right) const
 {
-    return !operator==(right);
+    return !operator == (right);
 }
 
-bool Decimal128::operator<(const Decimal128 &right) const
+bool Decimal128::operator < (const Decimal128 &right) const
 {
     return Compare(right) == -1;
 }
 
-bool Decimal128::operator<=(const Decimal128 &right) const
+bool Decimal128::operator <= (const Decimal128 &right) const
 {
-    return !operator>(right);
+    return !operator > (right);
 }
 
-bool Decimal128::operator>(const Decimal128 &right) const
+bool Decimal128::operator > (const Decimal128 &right) const
 {
     return Compare(right) == 1;
 }
 
-bool Decimal128::operator>=(const Decimal128 &right) const
+bool Decimal128::operator >= (const Decimal128 &right) const
 {
-    return !operator<(right);
+    return !operator < (right);
 }
 
-std::ostream &operator<<(std::ostream &os, const Decimal128 &decimal128)
+Decimal128::Decimal128() : Decimal128(0, 0) {}
+
+std::ostream &operator << (std::ostream &os, const Decimal128 &decimal128)
 {
     os << std::hex << "0x" << std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.HighBits() <<
         std::setfill('0') << std::setw(PRINT_OUT_HEX_WIDTH) << decimal128.LowBits();

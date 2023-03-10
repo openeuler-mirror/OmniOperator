@@ -13,8 +13,7 @@ namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     auto vector = vectorBatch->GetVector(this->channels[0]);
 
@@ -26,50 +25,37 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
 
     HmppResult result = HMPP_STS_NO_ERR;
     auto minVal = reinterpret_cast<InType *>(this->executionContext->GetArena()->Allocate(sizeof(InType)));
-    switch (inputTypeId) {
-        case OMNI_SHORT: {
-            LogDebug("HMPP-Agg-min");
-            result = HMPPS_Min_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<int16_t *>(minVal));
-            if (outputTypeId == OMNI_LONG) {
-                *minVal = *reinterpret_cast<int16_t *>(minVal);
-            }
-            break;
+    if constexpr (IN_ID == OMNI_SHORT) {
+        LogDebug("HMPP-Agg-min");
+        result = HMPPS_Min_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<int16_t *>(minVal));
+        if constexpr (OUT_ID == OMNI_LONG) {
+            *minVal = *reinterpret_cast<int16_t *>(minVal);
         }
-        case OMNI_INT:
-        case OMNI_DATE32: {
-            LogDebug("HMPP-Agg-min");
-            result = HMPPS_Min_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<int32_t *>(minVal));
-            if (outputTypeId == OMNI_LONG) {
-                *minVal = *reinterpret_cast<int32_t *>(minVal);
-            }
-            break;
+    } else if constexpr (IN_ID == OMNI_INT || IN_ID == OMNI_DATE32) {
+        LogDebug("HMPP-Agg-min");
+        result = HMPPS_Min_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<int32_t *>(minVal));
+        if (outputTypeId == OMNI_LONG) {
+            *minVal = *reinterpret_cast<int32_t *>(minVal);
         }
-        case OMNI_LONG:
-        case OMNI_DECIMAL64: {
-            LogDebug("HMPP-Agg-min");
-            result = HMPPS_Min_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<int64_t *>(minVal));
-            break;
-        }
-        case OMNI_DOUBLE: {
-            LogDebug("HMPP-Agg-min");
-            result = HMPPS_Min_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset),
-                rowCount, reinterpret_cast<double *>(minVal));
-            break;
-        }
-        case OMNI_DECIMAL128: {
-            LogDebug("HMPP-Agg-min");
-            result = HMPPS_Min_decimal(
-                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
-                reinterpret_cast<HmppDecimal128 *>(minVal));
-            break;
-        }
-        default: {
-            throw OmniException("NOT SUPPORT", "Unsupported input type for min aggregate");
-            break;
-        }
+    } else if constexpr (IN_ID == OMNI_LONG || IN_ID == OMNI_DECIMAL64) {
+        LogDebug("HMPP-Agg-min");
+        result = HMPPS_Min_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<int64_t *>(minVal));
+    }
+    else if constexpr (IN_ID == OMNI_DOUBLE) {
+        LogDebug("HMPP-Agg-min");
+        result = HMPPS_Min_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<double *>(minVal));
+    }
+    else if constexpr (IN_ID == OMNI_DECIMAL128) {
+        LogDebug("HMPP-Agg-min");
+        result = HMPPS_Min_decimal(
+            static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
+            reinterpret_cast<HmppDecimal128 *>(minVal));
+    } else {
+        throw OmniException("NOT SUPPORT", "Unsupported input type for min aggregate");
     }
 
     if (result != HMPP_STS_NO_ERR) {
@@ -86,8 +72,7 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state,
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MinAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+bool MinAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     // just support raw input data and must no null inpout
     if (!inputRaw) {
@@ -108,8 +93,8 @@ bool MinAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
 #endif
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
-    std::vector<Vector *> &vectors, int32_t rowIndex)
+void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
+    int32_t rowIndex)
 {
     int32_t offset;
     auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
@@ -129,8 +114,7 @@ void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
+template <DataTypeId IN_ID, DataTypeId OUT_ID> void MinAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
     state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
     *reinterpret_cast<ResultType *>(state.val) = GetMax<ResultType>();
@@ -138,8 +122,8 @@ void MinAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
-    Vector *vector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,
+    const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         InitState(state);
@@ -168,9 +152,8 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state,
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, const int32_t rowOffset,
-    const uint8_t *nullMap, const int32_t *indexMap)
+void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+    Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
     InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
     ptr += vector->GetPositionOffset();
@@ -192,6 +175,13 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
         }
     }
 }
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+MinAggregator<IN_ID, OUT_ID>::MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+    std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+    : TypedAggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels, inputRaw, outputPartial,
+    isOverflowAsNull)
+{}
 
 // Explicit template instantiation
 // Defining templated aggregators in header file consume a lot of memory during compilation

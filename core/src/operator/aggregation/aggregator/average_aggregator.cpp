@@ -245,6 +245,20 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
     }
 }
 
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+AverageAggregator<IN_ID, OUT_ID>::AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+    std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+    : SumAggregator<IN_ID, OUT_ID>(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw,
+    outputPartial, isOverflowAsNull)
+{
+    // varchar only in partial stage
+    if constexpr (OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CONTAINER) {
+        extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<true>;
+    } else {
+        extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false>;
+    }
+}
+
 // Explicit template instantiation
 // Defining templated aggregators in header file consume a lot of memory during compilation
 // since, compiler needs to generate each individual template instance wherever aggregator header is include

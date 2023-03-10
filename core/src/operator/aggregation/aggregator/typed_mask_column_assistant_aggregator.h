@@ -200,13 +200,13 @@ public:
 
 protected:
     TypedMaskColAggregator(int32_t maskColumnId, std::unique_ptr<Aggregator> realAggregator)
-        : TypedAggregator(realAggregator->GetType(),
-        realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(), realAggregator->GetInputChannels(),
-        realAggregator->IsInputRaw(), realAggregator->IsOutputPartial(), realAggregator->IsOverflowAsNull()),
+        : TypedAggregator(realAggregator->GetType(), realAggregator->GetInputTypes(), realAggregator->GetOutputTypes(),
+        realAggregator->GetInputChannels(), realAggregator->IsInputRaw(), realAggregator->IsOutputPartial(),
+        realAggregator->IsOverflowAsNull()),
           maskColumnId(maskColumnId)
     {
-        this->realAggregator = std::unique_ptr<TypedAggregator>(
-            static_cast<TypedAggregator *>(realAggregator.release()));
+        this->realAggregator =
+            std::unique_ptr<TypedAggregator>(static_cast<TypedAggregator *>(realAggregator.release()));
     }
 
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,

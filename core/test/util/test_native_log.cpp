@@ -60,8 +60,8 @@ TEST(NativeLog, TestWarn)
 
 TEST(NativeLog, AllLog)
 {
-    LogDebug("denig log %d,%f,%s\n",123,123.0f,"hello");
-    LogWarn("warn log %d,%f,%s\n",123,123.0f,"hello");
-    LogError("error log %d,%f,%s\n",123,123.0f,"hello");
-    LogInfo("info log %d,%f,%s\n",123,123.0f,"hello");
+    LogDebug("denig log %d,%f,%s\n", 123, 123.0f, "hello");
+    LogWarn("warn log %d,%f,%s\n", 123, 123.0f, "hello");
+    LogError("error log %d,%f,%s\n", 123, 123.0f, "hello");
+    LogInfo("info log %d,%f,%s\n", 123, 123.0f, "hello");
 }

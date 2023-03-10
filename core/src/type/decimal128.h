@@ -28,8 +28,7 @@ public:
 
     explicit Decimal128(const char *s);
 
-    Decimal128() : Decimal128(0, 0)
-    {}
+    Decimal128();
 
     Decimal128(const Decimal128 &rhs) = default;
 

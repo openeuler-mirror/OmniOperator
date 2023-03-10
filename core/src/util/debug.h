@@ -62,8 +62,9 @@ using fsec = std::chrono::duration<float>;
 #define LogTrace(format, ...)
 #endif
 
-template<typename T>
-void inline LogInner(T logLevel, const char *fileName, const char *funcName, int line, const char *format, ...){
+template <typename T>
+void LogInner(T logLevel, const char *fileName, const char *funcName, int line, const char *format, ...)
+{
     if (static_cast<int>(logLevel) >= GetLogLevel()) {
         va_list argPtr;
         char logBuf[GLOBAL_LOG_BUF_SIZE];
@@ -81,23 +82,23 @@ void inline LogInner(T logLevel, const char *fileName, const char *funcName, int
     }
 }
 
-#define LogDebug(...)                                                                          \
-    do {                                                                                               \
+#define LogDebug(...)                                                                \
+    do {                                                                             \
         LogInner(LogType::LOG_DEBUG, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__); \
     } while (0)
 
-#define LogInfo(...)                                        \
-    do {                                                                                               \
+#define LogInfo(...)                                                                \
+    do {                                                                            \
         LogInner(LogType::LOG_INFO, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__); \
     } while (0)
 
-#define LogWarn(...)                                                                          \
-    do {                                                                                              \
+#define LogWarn(...)                                                                \
+    do {                                                                            \
         LogInner(LogType::LOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__); \
     } while (0)
 
-#define LogError(...)                                                                          \
-    do {                                                                                               \
+#define LogError(...)                                                                \
+    do {                                                                             \
         LogInner(LogType::LOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__); \
     } while (0)
 

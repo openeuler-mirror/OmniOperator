@@ -14,8 +14,7 @@ namespace omniruntime {
 namespace op {
 #ifdef ENABLE_HMPP
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(
-    AggregateState &state, VectorBatch *vectorBatch)
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     auto vector = vectorBatch->GetVector(this->channels[0]);
 
@@ -48,8 +47,7 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MaxVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
-    VectorBatch *vectorBatch)
+bool MaxVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     // must no null inpout
     if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
@@ -64,8 +62,8 @@ bool MaxVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &sta
 #endif
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
-    std::vector<Vector *> &vectors, int32_t rowIndex)
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
+    int32_t rowIndex)
 {
     int32_t offset;
     auto v = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
@@ -78,9 +76,8 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(
-    AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
-    const int32_t *indexMap)
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *v,
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     VarcharVector *vector = static_cast<VarcharVector *>(v);
 
@@ -101,9 +98,8 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(
-    std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v, const int32_t rowOffset,
-    const uint8_t *nullMap, const int32_t *indexMap)
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
+    const size_t aggIdx, Vector *v, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
     VarcharVector *vector = static_cast<VarcharVector *>(v);
 
@@ -155,7 +151,7 @@ template class MaxVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
 template class MaxVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
 
-template class MaxVarcharAggregator< OMNI_VARCHAR, OMNI_CHAR>;
+template class MaxVarcharAggregator<OMNI_VARCHAR, OMNI_CHAR>;
 
 template class MaxVarcharAggregator<OMNI_VARCHAR, OMNI_VARCHAR>;
 }

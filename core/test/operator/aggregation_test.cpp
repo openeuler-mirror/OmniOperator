@@ -3740,10 +3740,41 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     delete resultfirstVec2;
     delete firstIgnoreNullFactory;
 }
-#ifdef ENABLE_HMPP_
-TEST(AggregatorTest, hmpp_sum_aggregator_exceptions)
+
+TEST(AggregatorTest, typed_aggregator_test)
 {
-    ConfigUtil::SetEnableHMPP(true);
+    class TestTypeAggregator : public TypedAggregator {
+    public:
+        TestTypeAggregator(const FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
+            const std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial,
+            const bool isOverflowAsNull)
+            : TypedAggregator(aggregateType, inputTypes, outputTypes, channels, inputRaw, outputPartial,
+            isOverflowAsNull)
+        {}
+
+        Vector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount, uint8_t **nullMap,
+            AggregatorBuffer<int32_t> &indexMap, const size_t channelIdx)
+        {
+            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, indexMap, channelIdx);
+        }
+        void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, const int32_t rowIndex)
+        {
+            return;
+        }
+
+        virtual void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,
+            const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+        {
+            return;
+        }
+
+        virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+            const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        {
+            return;
+        }
+    };
+    // just used to produce vector
     auto inputType = DoubleType();
     DataTypes inputTypes({ inputType }), outputTypes({ inputType });
     std::vector<int32_t> channels{ 0 };
@@ -3766,6 +3797,105 @@ TEST(AggregatorTest, hmpp_sum_aggregator_exceptions)
         LongType(),      LongType(),       LongType(), VarcharType(15), VarcharType(16), VarcharType(15),
     };
     {
+        TestTypeAggregator agg(omniruntime::op::FunctionType::OMNI_AGGREGATION_TYPE_SUM,
+            DataTypes({ typesPtr.at(OMNI_SHORT) }), DataTypes({ typesPtr.at(OMNI_SHORT) }), channels, rawIn, partialOut,
+            isOverflowAsNull);
+
+        uint8_t *nullMap = nullptr;
+        AggregatorBuffer<int32_t> indexMap;
+        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, indexMap, 0);
+        indexMap.Release();
+        agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap, indexMap, 0);
+        indexMap.Release();
+        rawVectorBatch->GetVector(0)->SetValueNull(1);
+        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, indexMap, 0);
+    }
+    VectorHelper::FreeVecBatch(vectorBatch);
+    VectorHelper::FreeVecBatch(rawVectorBatch);
+}
+
+TEST(AggregatorTest, count_aggregator_exception)
+{
+    // just used to produce vector
+    auto inputType = DoubleType();
+    DataTypes inputTypes({ inputType }), outputTypes({ inputType });
+    std::vector<int32_t> channels{ 0 };
+    bool rawIn = false, partialOut = false, isOverflowAsNull = false;
+
+    auto agg = CountColumnAggregator<OMNI_NONE, OMNI_LONG>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
+        isOverflowAsNull);
+    EXPECT_TRUE(agg == nullptr);
+#define TestColumnAggregator(IN, OUT)                                                                                \
+    do {                                                                                                             \
+        auto countAgg = CountColumnAggregator<IN, OUT>::Create(inputTypes, outputTypes, channels, rawIn, partialOut, \
+            isOverflowAsNull);                                                                                       \
+        EXPECT_TRUE(countAgg == nullptr);                                                                            \
+        auto countAllAgg = CountAllAggregator<IN, OUT>::Create(inputTypes, outputTypes, channels, rawIn, partialOut, \
+            isOverflowAsNull);                                                                                       \
+        EXPECT_TRUE(countAllAgg == nullptr);                                                                         \
+    } while (0)
+
+    TestColumnAggregator(OMNI_NONE, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_BOOLEAN, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_SHORT, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_DATE32, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_TIME32, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_INT, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_LONG, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_DATE64, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_TIME64, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_TIMESTAMP, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_DOUBLE, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_DECIMAL64, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_DECIMAL128, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_CONTAINER, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_VARCHAR, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_CHAR, OMNI_LONG);
+
+    TestColumnAggregator(OMNI_INVALID, OMNI_LONG);
+}
+
+#ifdef ENABLE_HMPP
+TEST(AggregatorTest, hmpp_sum_aggregator_exceptions)
+{
+    ConfigUtil::SetEnableHMPP(true);
+    auto inputType = DoubleType();
+    DataTypes inputTypes({ inputType }), outputTypes({ inputType });
+    std::vector<int32_t> channels{ 0 };
+    bool rawIn = false, partialOut = false, isOverflowAsNull = false;
+
+    const int dataSize = 6;
+    double data0[dataSize] = {0.0f, 1.0f, 2.0f, 0.0f, 1.0f, 2.0f};
+    void *datas[1] = {data0};
+    std::vector<DataTypePtr> sourceFieldTypes{ IntType() };
+    DataTypes sourceTypes(sourceFieldTypes);
+    int32_t ids[] = {0, 1, 2, 3, 4, 5};
+    VectorBatch *vectorBatch = new VectorBatch(1, dataSize);
+    DataType type(inputType->GetId());
+    vectorBatch->SetVector(0, CreateDictionaryVector(type, dataSize, ids, dataSize, datas[0]));
+    AggregateState state;
+    auto rawVectorBatch = CreateVectorBatch(inputTypes, dataSize, datas[0]);
+    std::vector<DataTypePtr> typesPtr = {
+        nullptr,         IntType(),        LongType(), DoubleType(),    BooleanType(),   ShortType(),
+        Decimal64Type(), Decimal128Type(), IntType(),  LongType(),      IntType(),       LongType(),
+        LongType(),      LongType(),       LongType(), VarcharType(15), VarcharType(16), ContainerType(),
+    };
+    {
         auto agg = SumAggregator<OMNI_SHORT, OMNI_SHORT>::Create(DataTypes({ typesPtr.at(OMNI_SHORT) }),
             DataTypes({ typesPtr.at(OMNI_SHORT) }), channels, rawIn, partialOut, isOverflowAsNull);
         auto aggPtr = reinterpret_cast<SumAggregator<OMNI_SHORT, OMNI_SHORT> *>(agg.get());
@@ -3773,7 +3903,7 @@ TEST(AggregatorTest, hmpp_sum_aggregator_exceptions)
         EXPECT_FALSE(agg->CanProcessWithHMPP(state, vectorBatch));
         EXPECT_FALSE(agg->CanProcessWithHMPP(state, rawVectorBatch));
     }
-#define TestAggregator(TEMP_CLASS, IN, OUT)                                                                        \
+#define TestSumAggregator(IN, OUT)                                                                                 \
     do {                                                                                                           \
         auto agg = SumAggregator<IN, OUT>::Create(DataTypes({ typesPtr.at(IN) }), DataTypes({ typesPtr.at(OUT) }), \
             channels, rawIn, partialOut, isOverflowAsNull);                                                        \
@@ -3784,97 +3914,97 @@ TEST(AggregatorTest, hmpp_sum_aggregator_exceptions)
         }                                                                                                          \
     } while (0)
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_LONG>), OMNI_SHORT, OMNI_LONG);
+    TestSumAggregator(OMNI_SHORT, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DOUBLE>), OMNI_SHORT, OMNI_DOUBLE);
+    TestSumAggregator(OMNI_SHORT, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DECIMAL128>), OMNI_SHORT, OMNI_DECIMAL128);
+    TestSumAggregator(OMNI_SHORT, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DECIMAL64>), OMNI_SHORT, OMNI_DECIMAL64);
+    TestSumAggregator(OMNI_SHORT, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_VARCHAR>), OMNI_SHORT, OMNI_VARCHAR);
+    TestSumAggregator(OMNI_SHORT, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_CONTAINER>), OMNI_SHORT, OMNI_CONTAINER);
+    TestSumAggregator(OMNI_SHORT, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_SHORT>), OMNI_INT, OMNI_SHORT);
+    TestSumAggregator(OMNI_INT, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_INT>), OMNI_INT, OMNI_INT);
+    TestSumAggregator(OMNI_INT, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_LONG>), OMNI_INT, OMNI_LONG);
+    TestSumAggregator(OMNI_INT, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_DOUBLE>), OMNI_INT, OMNI_DOUBLE);
+    TestSumAggregator(OMNI_INT, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_DECIMAL128>), OMNI_INT, OMNI_DECIMAL128);
+    TestSumAggregator(OMNI_INT, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_DECIMAL64>), OMNI_INT, OMNI_DECIMAL64);
+    TestSumAggregator(OMNI_INT, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_VARCHAR>), OMNI_INT, OMNI_VARCHAR);
+    TestSumAggregator(OMNI_INT, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_CONTAINER>), OMNI_INT, OMNI_CONTAINER);
+    TestSumAggregator(OMNI_INT, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_SHORT>), OMNI_DOUBLE, OMNI_SHORT);
+    TestSumAggregator(OMNI_DOUBLE, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_INT>), OMNI_DOUBLE, OMNI_INT);
+    TestSumAggregator(OMNI_DOUBLE, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_LONG>), OMNI_DOUBLE, OMNI_LONG);
+    TestSumAggregator(OMNI_DOUBLE, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DOUBLE>), OMNI_DOUBLE, OMNI_DOUBLE);
+    TestSumAggregator(OMNI_DOUBLE, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>), OMNI_DOUBLE, OMNI_DECIMAL128);
+    TestSumAggregator(OMNI_DOUBLE, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL64>), OMNI_DOUBLE, OMNI_DECIMAL64);
+    TestSumAggregator(OMNI_DOUBLE, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_VARCHAR>), OMNI_DOUBLE, OMNI_VARCHAR);
+    TestSumAggregator(OMNI_DOUBLE, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_CONTAINER>), OMNI_DOUBLE, OMNI_CONTAINER);
+    TestSumAggregator(OMNI_DOUBLE, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_SHORT>), OMNI_DECIMAL64, OMNI_SHORT);
+    TestSumAggregator(OMNI_DECIMAL64, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_INT>), OMNI_DECIMAL64, OMNI_INT);
+    TestSumAggregator(OMNI_DECIMAL64, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_LONG>), OMNI_DECIMAL64, OMNI_LONG);
+    TestSumAggregator(OMNI_DECIMAL64, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>), OMNI_DECIMAL64, OMNI_DOUBLE);
+    TestSumAggregator(OMNI_DECIMAL64, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>), OMNI_DECIMAL64, OMNI_DECIMAL128);
+    TestSumAggregator(OMNI_DECIMAL64, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>), OMNI_DECIMAL64, OMNI_DECIMAL64);
+    TestSumAggregator(OMNI_DECIMAL64, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>), OMNI_DECIMAL64, OMNI_VARCHAR);
+    TestSumAggregator(OMNI_DECIMAL64, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_CONTAINER>), OMNI_DECIMAL64, OMNI_CONTAINER);
+    TestSumAggregator(OMNI_DECIMAL64, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_SHORT>), OMNI_VARCHAR, OMNI_SHORT);
+    TestSumAggregator(OMNI_VARCHAR, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_INT>), OMNI_VARCHAR, OMNI_INT);
+    TestSumAggregator(OMNI_VARCHAR, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_LONG>), OMNI_VARCHAR, OMNI_LONG);
+    TestSumAggregator(OMNI_VARCHAR, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DOUBLE>), OMNI_VARCHAR, OMNI_DOUBLE);
+    TestSumAggregator(OMNI_VARCHAR, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL128>), OMNI_VARCHAR, OMNI_DECIMAL128);
+    TestSumAggregator(OMNI_VARCHAR, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL64>), OMNI_VARCHAR, OMNI_DECIMAL64);
+    TestSumAggregator(OMNI_VARCHAR, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_VARCHAR>), OMNI_VARCHAR, OMNI_VARCHAR);
+    TestSumAggregator(OMNI_VARCHAR, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_CONTAINER>), OMNI_VARCHAR, OMNI_CONTAINER);
+    TestSumAggregator(OMNI_VARCHAR, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_SHORT>), OMNI_CONTAINER, OMNI_SHORT);
+    TestSumAggregator(OMNI_CONTAINER, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_INT>), OMNI_CONTAINER, OMNI_INT);
+    TestSumAggregator(OMNI_CONTAINER, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_LONG>), OMNI_CONTAINER, OMNI_LONG);
+    TestSumAggregator(OMNI_CONTAINER, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DOUBLE>), OMNI_CONTAINER, OMNI_DOUBLE);
+    TestSumAggregator(OMNI_CONTAINER, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL128>), OMNI_CONTAINER, OMNI_DECIMAL128);
+    TestSumAggregator(OMNI_CONTAINER, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL64>), OMNI_CONTAINER, OMNI_DECIMAL64);
+    TestSumAggregator(OMNI_CONTAINER, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_VARCHAR>), OMNI_CONTAINER, OMNI_VARCHAR);
+    TestSumAggregator(OMNI_CONTAINER, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_CONTAINER>), OMNI_CONTAINER, OMNI_CONTAINER);
+    TestSumAggregator(OMNI_CONTAINER, OMNI_CONTAINER);
     ConfigUtil::SetEnableHMPP(false);
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(rawVectorBatch);
@@ -3902,10 +4032,10 @@ TEST(AggregatorTest, hmpp_avg_aggregator_exceptions)
     std::vector<DataTypePtr> typesPtr = {
         nullptr,         IntType(),        LongType(), DoubleType(),    BooleanType(),   ShortType(),
         Decimal64Type(), Decimal128Type(), IntType(),  LongType(),      IntType(),       LongType(),
-        LongType(),      LongType(),       LongType(), VarcharType(15), VarcharType(16), VarcharType(15),
+        LongType(),      LongType(),       LongType(), VarcharType(15), VarcharType(16), ContainerType(),
     };
 
-#define TestAggregator(TEMP_CLASS, IN, OUT)                                                                            \
+#define TestAggregator(IN, OUT)                                                                                        \
     do {                                                                                                               \
         auto agg = AverageAggregator<IN, OUT>::Create(DataTypes({ typesPtr.at(IN) }), DataTypes({ typesPtr.at(OUT) }), \
             channels, rawIn, partialOut, isOverflowAsNull);                                                            \
@@ -3916,97 +4046,97 @@ TEST(AggregatorTest, hmpp_avg_aggregator_exceptions)
         }                                                                                                              \
     } while (0)
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_LONG>), OMNI_SHORT, OMNI_LONG);
+    TestAggregator(OMNI_SHORT, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DOUBLE>), OMNI_SHORT, OMNI_DOUBLE);
+    TestAggregator(OMNI_SHORT, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DECIMAL128>), OMNI_SHORT, OMNI_DECIMAL128);
+    TestAggregator(OMNI_SHORT, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_DECIMAL64>), OMNI_SHORT, OMNI_DECIMAL64);
+    TestAggregator(OMNI_SHORT, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_VARCHAR>), OMNI_SHORT, OMNI_VARCHAR);
+    TestAggregator(OMNI_SHORT, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_SHORT, OMNI_CONTAINER>), OMNI_SHORT, OMNI_CONTAINER);
+    TestAggregator(OMNI_SHORT, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_SHORT>), OMNI_INT, OMNI_SHORT);
+    TestAggregator(OMNI_INT, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_INT>), OMNI_INT, OMNI_INT);
+    TestAggregator(OMNI_INT, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_LONG>), OMNI_INT, OMNI_LONG);
+    TestAggregator(OMNI_INT, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_DOUBLE>), OMNI_INT, OMNI_DOUBLE);
+    TestAggregator(OMNI_INT, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_DECIMAL128>), OMNI_INT, OMNI_DECIMAL128);
+    TestAggregator(OMNI_INT, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_DECIMAL64>), OMNI_INT, OMNI_DECIMAL64);
+    TestAggregator(OMNI_INT, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_VARCHAR>), OMNI_INT, OMNI_VARCHAR);
+    TestAggregator(OMNI_INT, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_INT, OMNI_CONTAINER>), OMNI_INT, OMNI_CONTAINER);
+    TestAggregator(OMNI_INT, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_SHORT>), OMNI_DOUBLE, OMNI_SHORT);
+    TestAggregator(OMNI_DOUBLE, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_INT>), OMNI_DOUBLE, OMNI_INT);
+    TestAggregator(OMNI_DOUBLE, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_LONG>), OMNI_DOUBLE, OMNI_LONG);
+    TestAggregator(OMNI_DOUBLE, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DOUBLE>), OMNI_DOUBLE, OMNI_DOUBLE);
+    TestAggregator(OMNI_DOUBLE, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL128>), OMNI_DOUBLE, OMNI_DECIMAL128);
+    TestAggregator(OMNI_DOUBLE, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_DECIMAL64>), OMNI_DOUBLE, OMNI_DECIMAL64);
+    TestAggregator(OMNI_DOUBLE, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_VARCHAR>), OMNI_DOUBLE, OMNI_VARCHAR);
+    TestAggregator(OMNI_DOUBLE, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_DOUBLE, OMNI_CONTAINER>), OMNI_DOUBLE, OMNI_CONTAINER);
+    TestAggregator(OMNI_DOUBLE, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_SHORT>), OMNI_DECIMAL64, OMNI_SHORT);
+    TestAggregator(OMNI_DECIMAL64, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_INT>), OMNI_DECIMAL64, OMNI_INT);
+    TestAggregator(OMNI_DECIMAL64, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_LONG>), OMNI_DECIMAL64, OMNI_LONG);
+    TestAggregator(OMNI_DECIMAL64, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DOUBLE>), OMNI_DECIMAL64, OMNI_DOUBLE);
+    TestAggregator(OMNI_DECIMAL64, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>), OMNI_DECIMAL64, OMNI_DECIMAL128);
+    TestAggregator(OMNI_DECIMAL64, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>), OMNI_DECIMAL64, OMNI_DECIMAL64);
+    TestAggregator(OMNI_DECIMAL64, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_VARCHAR>), OMNI_DECIMAL64, OMNI_VARCHAR);
+    TestAggregator(OMNI_DECIMAL64, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_DECIMAL64, OMNI_CONTAINER>), OMNI_DECIMAL64, OMNI_CONTAINER);
+    TestAggregator(OMNI_DECIMAL64, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_SHORT>), OMNI_VARCHAR, OMNI_SHORT);
+    TestAggregator(OMNI_VARCHAR, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_INT>), OMNI_VARCHAR, OMNI_INT);
+    TestAggregator(OMNI_VARCHAR, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_LONG>), OMNI_VARCHAR, OMNI_LONG);
+    TestAggregator(OMNI_VARCHAR, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DOUBLE>), OMNI_VARCHAR, OMNI_DOUBLE);
+    TestAggregator(OMNI_VARCHAR, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL128>), OMNI_VARCHAR, OMNI_DECIMAL128);
+    TestAggregator(OMNI_VARCHAR, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_DECIMAL64>), OMNI_VARCHAR, OMNI_DECIMAL64);
+    TestAggregator(OMNI_VARCHAR, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_VARCHAR>), OMNI_VARCHAR, OMNI_VARCHAR);
+    TestAggregator(OMNI_VARCHAR, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_VARCHAR, OMNI_CONTAINER>), OMNI_VARCHAR, OMNI_CONTAINER);
+    TestAggregator(OMNI_VARCHAR, OMNI_CONTAINER);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_SHORT>), OMNI_CONTAINER, OMNI_SHORT);
+    TestAggregator(OMNI_CONTAINER, OMNI_SHORT);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_INT>), OMNI_CONTAINER, OMNI_INT);
+    TestAggregator(OMNI_CONTAINER, OMNI_INT);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_LONG>), OMNI_CONTAINER, OMNI_LONG);
+    TestAggregator(OMNI_CONTAINER, OMNI_LONG);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DOUBLE>), OMNI_CONTAINER, OMNI_DOUBLE);
+    TestAggregator(OMNI_CONTAINER, OMNI_DOUBLE);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL128>), OMNI_CONTAINER, OMNI_DECIMAL128);
+    TestAggregator(OMNI_CONTAINER, OMNI_DECIMAL128);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_DECIMAL64>), OMNI_CONTAINER, OMNI_DECIMAL64);
+    TestAggregator(OMNI_CONTAINER, OMNI_DECIMAL64);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_VARCHAR>), OMNI_CONTAINER, OMNI_VARCHAR);
+    TestAggregator(OMNI_CONTAINER, OMNI_VARCHAR);
 
-    TestAggregator((SumAggregator<OMNI_CONTAINER, OMNI_CONTAINER>), OMNI_CONTAINER, OMNI_CONTAINER);
+    TestAggregator(OMNI_CONTAINER, OMNI_CONTAINER);
     ConfigUtil::SetEnableHMPP(false);
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(rawVectorBatch);
