@@ -3238,7 +3238,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinBothNullFirst)
 
     const int32_t bufferedTblSize = 6;
     double bufferedTblDataCol1[bufferedTblSize] =  {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
-    int32_t bufferedTblDataCol2[bufferedTblSize] =  {0, 1, 2, 3, 4, 5};
+    int32_t bufferedTblDataCol2[bufferedTblSize] =  {6, 1, 2, 3, 4, 5};
     VectorBatch *bufferedTblVecBatch1 =
         CreateVectorBatch(bufferedTblTypes, bufferedTblSize, bufferedTblDataCol1, bufferedTblDataCol2);
     bufferedTblVecBatch1->GetVector(1)->SetValueNull(0); // NULL, 1, 2, 3, 4, 5
