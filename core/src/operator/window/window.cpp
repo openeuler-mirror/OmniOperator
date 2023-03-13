@@ -188,14 +188,12 @@ int32_t WindowOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
+void WindowOperator::PrepareOutput()
 {
     Initialization();
-    int32_t positionCount = pagesIndex->GetRowCount();
-
-    int finalOutputColsCount = 0;
-    if (positionCount <= 0) {
-        return 0;
+    totalRowCount = pagesIndex->GetRowCount();
+    if (totalRowCount <= 0) {
+        return;
     }
     FinishPagesIndex();
 
@@ -212,14 +210,32 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
     }
 
     // next, get output
-    int32_t maxRowCount = OperatorUtil::GetMaxRowCount(allTypes.Get(), finalOutputCols, finalOutputColsCount);
-    int32_t outputPageCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
-    outputPages.reserve(outputPageCount);
+    maxRowCount = OperatorUtil::GetMaxRowCount(allTypes.Get(), finalOutputCols, finalOutputColsCount);
 
-    std::vector<DataTypePtr> finalOutputTypes;
     finalOutputTypes.reserve(finalOutputColsCount);
     for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
         finalOutputTypes.push_back(allTypes.GetType(finalOutputCols[colIdx]));
+    }
+    inputVecBatchForAgg = new VectorBatch(1, totalRowCount);
+    hasPrepare = true;
+}
+
+int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
+{
+    if (!hasPrepare) {
+        PrepareOutput();
+    }
+
+    // check whether the output is completed
+    if (totalRowCount == 0 || totalRowCount == rowCountOutputted) {
+        totalRowCount = 0;
+        rowCountOutputted = 0;
+        hasPrepare = false;
+        delete inputVecBatchForAgg;
+        inputVecBatchForAgg = nullptr;
+        pagesIndex->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+        return 0;
     }
 
     /*
@@ -229,44 +245,48 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
      * This is mainly to avoid using location information to copy data and construct a continuous vectorBatch when
      * calling agg interface.
      */
-    auto inputVecBatchForAgg = new VectorBatch(1, positionCount);
-    int32_t position = 0;
     try {
-        for (int32_t i = 0; i < outputPageCount; i++) {
-            int32_t rowCount = min(maxRowCount, positionCount - position);
-            auto *vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
-            outputPages.push_back(vecBatch);
-            ProcessData(inputVecBatchForAgg, finalOutputColsCount, finalOutputTypes, position, vecBatch, rowCount);
-            position += rowCount;
-        }
+        int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
+        auto *vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
+        outputPages.push_back(vecBatch);
+        ProcessData(vecBatch, rowCount);
+        rowCountOutputted += rowCount;
     } catch (const OmniException &e) {
         // in ProcessData, WindowFunction may be throw exception:
         // when spark sum/avg decimal overflow, it will throw exception when
         // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
+        totalRowCount = 0;
+        rowCountOutputted = 0;
+        hasPrepare = false;
         delete inputVecBatchForAgg;
         inputVecBatchForAgg = nullptr;
         pagesIndex->Clear();
         throw e;
     }
 
-    delete inputVecBatchForAgg;
-    inputVecBatchForAgg = nullptr;
-    pagesIndex->Clear();
-    SetStatus(OMNI_STATUS_FINISHED);
+    if (totalRowCount == rowCountOutputted) {
+        totalRowCount = 0;
+        rowCountOutputted = 0;
+        hasPrepare = false;
+        delete inputVecBatchForAgg;
+        inputVecBatchForAgg = nullptr;
+        pagesIndex->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+    }
+
     return 0;
 }
 
-void WindowOperator::ProcessData(VectorBatch *&inputVecBatchForAgg, int finalOutputColsCount,
-    std::vector<type::DataTypePtr> &outputTypes, int32_t position, VectorBatch *&outputVecBatch, int32_t rowCount)
+void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
 {
     // the data of input columns will create vectors in pageIndex GetOutput, we need to create the vector for the window
     // result
-    InitResultVectors(outputTypes, outputVecBatch, rowCount, outputColsCount, finalOutputColsCount);
+    InitResultVectors(outputVecBatch, rowCount);
 
     // build the output data with original input vecBatch, input data are not changed in window operator
     // we add extra columns of window result to the output vecBatch in window partition
-    pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(), position, rowCount,
-        GetVecAllocator());
+    pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(), rowCountOutputted,
+                          rowCount, GetVecAllocator());
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {
             int32_t partitionStart = partition == nullptr ? 0 : partition->GetPartitionEnd();
@@ -282,11 +302,10 @@ void WindowOperator::ProcessData(VectorBatch *&inputVecBatchForAgg, int finalOut
     }
 }
 
-void WindowOperator::InitResultVectors(const std::vector<DataTypePtr> &outputTypesField, VectorBatch *&vecBatchField,
-    const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const
+void WindowOperator::InitResultVectors(VectorBatch *&vecBatchField, const int32_t &rowCountField) const
 {
-    for (int colIndex = outputColsCountField; colIndex < finalOutputColsCountField; ++colIndex) {
-        auto type = outputTypesField[colIndex];
+    for (int colIndex = outputColsCount; colIndex < finalOutputColsCount; ++colIndex) {
+        auto type = finalOutputTypes[colIndex];
         switch (type->GetId()) {
             case OMNI_BOOLEAN:
                 vecBatchField->SetVector(colIndex, new BooleanVector(vecAllocator, rowCountField));
