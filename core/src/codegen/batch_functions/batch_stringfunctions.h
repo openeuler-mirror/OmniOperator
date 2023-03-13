@@ -49,20 +49,16 @@ extern "C" DLLEXPORT void BatchNotEqualStr(uint8_t **ap, int32_t *apLen, uint8_t
     int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDateAllowReducePrecison(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull,
-    int32_t *output, int32_t rowCnt);
+    bool *isAnyNull, int32_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDateNotAllowReducePrecison(int64_t contextPtr, uint8_t **str,
-    int32_t *strLen, bool *isAnyNull,
-    int32_t *output, int32_t rowCnt);
+    int32_t *strLen, bool *isAnyNull, int32_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDateRetNullNotAllowReducePrecison(bool *isNull, uint8_t **str,
-    int32_t *strLen, int32_t *output,
-    int32_t rowCnt);
+    int32_t *strLen, int32_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDateRetNullAllowReducePrecison(bool *isNull, uint8_t **str, int32_t *strLen,
-    int32_t *output,
-    int32_t rowCnt);
+    int32_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastIntToString(int64_t contextPtr, int32_t *value, bool *isAnyNull, uint8_t **output,
     int32_t *outLen, int32_t rowCnt);
@@ -100,14 +96,14 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64(int64_t contextPtr, uint8_t
 extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int32_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int32_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int64_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    int64_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, double *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    double *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDecimal64RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
     int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
@@ -176,7 +172,7 @@ extern "C" DLLEXPORT void BatchCastStrWithDiffWidthsRetNull(bool *isNull, int64_
  * Intercept substring from beyond.
  * e.g., str="apple", strLength=5, startIndex=-7, subStringLength=3, Result="a".
  */
-template<typename T>
+template <typename T>
 extern DLLEXPORT void BatchSubstrInterceptFromBeyond(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx,
     T *length, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
@@ -230,14 +226,14 @@ extern DLLEXPORT void BatchSubstrInterceptFromBeyond(int64_t contextPtr, uint8_t
     }
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT void BatchSubstrCharInterceptFromBeyond(int64_t contextPtr, uint8_t **str, int32_t width,
     int32_t *strLen, T *startIdx, T *length, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     BatchSubstrInterceptFromBeyond<T>(contextPtr, str, strLen, startIdx, length, isAnyNull, output, outLen, rowCnt);
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT void BatchSubstrWithStartInterceptFromBeyond(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     T *startIdx, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
@@ -279,14 +275,14 @@ extern DLLEXPORT void BatchSubstrWithStartInterceptFromBeyond(int64_t contextPtr
     }
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT void BatchSubstrCharWithStartInterceptFromBeyond(int64_t contextPtr, uint8_t **str, int32_t width,
     int32_t *strLen, T *startIdx, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     BatchSubstrWithStartInterceptFromBeyond(contextPtr, str, strLen, startIdx, isAnyNull, output, outLen, rowCnt);
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT void BatchSubstrEmptyString(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx, T *length,
     bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
@@ -340,14 +336,14 @@ extern DLLEXPORT void BatchSubstrEmptyString(int64_t contextPtr, uint8_t **str, 
     }
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT void BatchSubstrCharEmptyString(int64_t contextPtr, uint8_t **str, int32_t width, int32_t *strLen,
     T *startIdx, T *length, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     BatchSubstrEmptyString<T>(contextPtr, str, strLen, startIdx, length, isAnyNull, output, outLen, rowCnt);
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT void BatchSubstrWithStartEmptyString(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx,
     bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
@@ -390,7 +386,7 @@ extern DLLEXPORT void BatchSubstrWithStartEmptyString(int64_t contextPtr, uint8_
     }
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT void BatchSubstrCharWithStartEmptyString(int64_t contextPtr, uint8_t **str, int32_t width,
     int32_t *strLen, T *startIdx, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
@@ -423,7 +419,7 @@ extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRepReplace(int64_t contextPtr
 extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRepReplace(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     uint8_t **searchStr, int32_t *searchLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
 
-template<typename L>
+template <typename L>
 static inline void ReplaceWithReplaceNotEmpty(int64_t contextPtr, uint8_t **str, int32_t *strLen, uint8_t **searchStr,
     int32_t *searchLen, uint8_t **replaceStr, int32_t *replaceLen, bool *isAnyNull, uint8_t **output, int32_t *outLen,
     int32_t rowCnt, L lambda)
@@ -440,9 +436,9 @@ static inline void ReplaceWithReplaceNotEmpty(int64_t contextPtr, uint8_t **str,
         if (searchLen[i] == 0) {
             ret = lambda(&hasErr, i);
         } else {
-            auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
-                reinterpret_cast<const char *>(str[i]), strLen[i], reinterpret_cast<const char *>(searchStr[i]),
-                searchLen[i], reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
+            auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
+                strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
+                reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
             ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         }
 
@@ -453,7 +449,7 @@ static inline void ReplaceWithReplaceNotEmpty(int64_t contextPtr, uint8_t **str,
     }
 }
 
-template<typename L>
+template <typename L>
 static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, int32_t *strLen, uint8_t **searchStr,
     int32_t *searchLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt, L lambda)
 {
@@ -469,9 +465,9 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
         if (searchLen[i] == 0) {
             ret = lambda(&hasErr, i);
         } else {
-            auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
-                reinterpret_cast<char *>(str[i]), strLen[i], reinterpret_cast<char *>(searchStr[i]), searchLen[i],
-                reinterpret_cast<const char *>(EMPTY), 0, &hasErr, outLen + i);
+            auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<char *>(str[i]), strLen[i],
+                reinterpret_cast<char *>(searchStr[i]), searchLen[i], reinterpret_cast<const char *>(EMPTY), 0, &hasErr,
+                outLen + i);
             ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         }
 

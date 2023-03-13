@@ -125,7 +125,6 @@ private:
     std::vector<int64_t> streamedTableValueAddresses;
     std::vector<int64_t> bufferedTableValueAddresses;
     std::vector<bool> isSameBufferedKeyMatched;
-
 };
 }
 }

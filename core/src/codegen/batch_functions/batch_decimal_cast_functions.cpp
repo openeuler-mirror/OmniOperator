@@ -10,7 +10,6 @@
 #include "type/decimal_operations.h"
 
 namespace omniruntime::codegen::function {
-
 using namespace omniruntime::type;
 
 static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
@@ -19,7 +18,7 @@ static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_dig
 extern "C" DLLEXPORT void BatchCastDecimal64ToIntHalfUp(int64_t contextPtr, int64_t *x, int32_t precision,
     int32_t scale, const bool *isAnyNull, int32_t *output, int32_t rowCnt)
 {
-    int32_t result;
+    int32_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             continue;
@@ -123,8 +122,8 @@ extern "C" DLLEXPORT void BatchCastLongToDecimal64(int64_t contextPtr, int64_t *
         Decimal64 result(x[i]);
         result.ReScale(outScale);
         if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS && !HasError(contextPtr)) {
-            SetError(contextPtr, CastErrorMessage(OMNI_LONG, OMNI_DECIMAL64, x[i], OpStatus::SUCCESS, outPrecision,
-                outScale));
+            SetError(contextPtr,
+                CastErrorMessage(OMNI_LONG, OMNI_DECIMAL64, x[i], OpStatus::SUCCESS, outPrecision, outScale));
             continue;
         }
         output[i] = result.GetValue();
@@ -156,11 +155,11 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToInt(int64_t contextPtr, Decimal12
         if (isAnyNull[i]) {
             continue;
         }
-        int32_t result;
+        int32_t result = 0;
         auto status = Decimal128Wrapper(x[i]).SetScale(scale).ToInt(result);
         if (status != type::OpStatus::SUCCESS && !HasError(contextPtr)) {
-            SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_INT, x[i].ToInt128(),
-                OpStatus::OP_OVERFLOW, precision, scale));
+            SetError(contextPtr,
+                CastErrorMessage(OMNI_DECIMAL128, OMNI_INT, x[i].ToInt128(), OpStatus::OP_OVERFLOW, precision, scale));
             continue;
         }
         output[i] = result;
@@ -177,8 +176,8 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToLong(int64_t contextPtr, Decimal1
         int64_t result = 0;
         auto status = Decimal128Wrapper(x[i]).SetScale(scale).ToLong(result);
         if (status != type::OpStatus::SUCCESS && !HasError(contextPtr)) {
-            SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_LONG, x[i].ToInt128(),
-                OpStatus::OP_OVERFLOW, precision, scale));
+            SetError(contextPtr,
+                CastErrorMessage(OMNI_DECIMAL128, OMNI_LONG, x[i].ToInt128(), OpStatus::OP_OVERFLOW, precision, scale));
             continue;
         }
         output[i] = result;
@@ -255,8 +254,8 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal128(int64_t contextPtr, double
         Decimal128Wrapper result(x[i]);
         result.ReScale(outScale);
         if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS && !HasError(contextPtr)) {
-            SetError(contextPtr, CastErrorMessage(OMNI_BOOLEAN, OMNI_DECIMAL128, *x, OpStatus::SUCCESS, outPrecision,
-                outScale));
+            SetError(contextPtr,
+                CastErrorMessage(OMNI_BOOLEAN, OMNI_DECIMAL128, *x, OpStatus::SUCCESS, outPrecision, outScale));
             continue;
         }
         output[i] = result.ToDecimal128();
@@ -365,7 +364,7 @@ extern "C" DLLEXPORT void BatchCastIntToDecimal64RetNull(bool *isNull, int32_t *
     for (int i = 0; i < rowCnt; ++i) {
         Decimal64 result(x[i]);
         result.ReScale(scale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, precision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, precision);
         output[i] = result.GetValue();
     }
 }
@@ -376,7 +375,7 @@ extern "C" DLLEXPORT void BatchCastLongToDecimal64RetNull(bool *isNull, int64_t 
     for (int i = 0; i < rowCnt; ++i) {
         Decimal64 result(x[i]);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         output[i] = result.GetValue();
     }
 }
@@ -387,7 +386,7 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal64RetNull(bool *isNull, double
     for (int i = 0; i < rowCnt; ++i) {
         Decimal64 result(x[i]);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         output[i] = result.GetValue();
     }
 }
@@ -435,7 +434,7 @@ extern "C" DLLEXPORT void BatchCastIntToDecimal128RetNull(bool *isNull, int32_t 
     for (int i = 0; i < rowCnt; ++i) {
         Decimal128Wrapper result(x[i]);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         output[i] = result.ToDecimal128();
     }
 }
@@ -446,7 +445,7 @@ extern "C" DLLEXPORT void BatchCastLongToDecimal128RetNull(bool *isNull, int64_t
     for (int i = 0; i < rowCnt; ++i) {
         Decimal128Wrapper result(x[i]);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         output[i] = result.ToDecimal128();
     }
 }
@@ -457,7 +456,7 @@ extern "C" DLLEXPORT void BatchCastDoubleToDecimal128RetNull(bool *isNull, doubl
     for (int i = 0; i < rowCnt; ++i) {
         Decimal128Wrapper result(x[i]);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         output[i] = result.ToDecimal128();
     }
 }
@@ -468,7 +467,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64To64RetNull(bool *isNull, int64_t *x
     for (int i = 0; i < rowCnt; ++i) {
         Decimal64 result(x[i]);
         result.SetScale(scale).ReScale(newScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision);
         output[i] = result.GetValue();
     }
 }
@@ -478,7 +477,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128To128RetNull(bool *isNull, Decimal1
 {
     for (int i = 0; i < rowCnt; ++i) {
         auto result = Decimal128Wrapper(x[i]).SetScale(scale).ReScale(newScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision);
         output[i] = result.ToDecimal128();
     }
 }
@@ -489,7 +488,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64To128RetNull(bool *isNull, int64_t *
     for (int i = 0; i < rowCnt; ++i) {
         Decimal128Wrapper result(x[i]);
         result.SetScale(scale).ReScale(newScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision);
         output[i] = result.ToDecimal128();
     }
 }
@@ -499,7 +498,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128To64RetNull(bool *isNull, Decimal12
 {
     for (int i = 0; i < rowCnt; ++i) {
         Decimal64 result(Decimal128Wrapper(x[i]).SetScale(scale).ReScale(newScale));
-        CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision);
         output[i] = result.GetValue();
     }
 }

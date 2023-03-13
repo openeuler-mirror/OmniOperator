@@ -24,7 +24,7 @@ public:
           isOverflowAsNull(isOverflowAsNull)
     {}
 
-    ~AggregationCommonOperator() override{};
+    ~AggregationCommonOperator() override {};
 
 protected:
     std::vector<std::unique_ptr<Aggregator>> aggregators;
@@ -44,7 +44,7 @@ public:
         }
     }
 
-    ~AggregationCommonOperatorFactory() override{};
+    ~AggregationCommonOperatorFactory() override {};
 
     std::vector<int32_t> &GetMaskColumns()
     {

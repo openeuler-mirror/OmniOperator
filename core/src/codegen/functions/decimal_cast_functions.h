@@ -64,12 +64,10 @@ extern "C" DLLEXPORT int64_t CastDecimal64ToLongHalfUp(int64_t x, int32_t precis
 extern "C" DLLEXPORT double CastDecimal64ToDoubleHalfUp(int64_t x, int32_t precision, int32_t scale, bool isNull);
 
 extern "C" DLLEXPORT int32_t CastDecimal128ToIntHalfUp(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t precision,
-    int32_t scale, bool isNull);
+    int32_t precision, int32_t scale, bool isNull);
 
 extern "C" DLLEXPORT int64_t CastDecimal128ToLongHalfUp(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t precision,
-    int32_t scale, bool isNull);
+    int32_t precision, int32_t scale, bool isNull);
 
 extern "C" DLLEXPORT double CastDecimal128ToDoubleHalfUp(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
     bool isNull);
@@ -82,12 +80,10 @@ extern "C" DLLEXPORT int64_t CastDecimal64ToLongDown(int64_t x, int32_t precisio
 extern "C" DLLEXPORT double CastDecimal64ToDoubleDown(int64_t x, int32_t precision, int32_t scale, bool isNull);
 
 extern "C" DLLEXPORT int32_t CastDecimal128ToIntDown(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t precision,
-    int32_t scale, bool isNull);
+    int32_t precision, int32_t scale, bool isNull);
 
 extern "C" DLLEXPORT int64_t CastDecimal128ToLongDown(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t precision,
-    int32_t scale, bool isNull);
+    int32_t precision, int32_t scale, bool isNull);
 
 extern "C" DLLEXPORT double CastDecimal128ToDoubleDown(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
     bool isNull);
@@ -139,4 +135,4 @@ extern "C" DLLEXPORT double CastDecimal128ToDoubleRetNull(bool *isNull, int64_t 
 }
 
 
-#endif //OMNI_RUNTIME_DECIMAL_CAST_FUNCTIONS_H
+#endif // OMNI_RUNTIME_DECIMAL_CAST_FUNCTIONS_H

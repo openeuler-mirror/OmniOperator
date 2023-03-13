@@ -122,7 +122,7 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToDoubleRetNull(bool *isNull, const 
     int32_t scale, double *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastDecimal128ToIntRetNull(bool *isNull, Decimal128 *x, int32_t precision, int32_t scale,
-    int32_t *output, int32_t tch_rowCnt);
+    int32_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastDecimal128ToLongRetNull(bool *isNull, Decimal128 *x, int32_t precision,
     int32_t scale, int64_t *output, int32_t rowCnt);

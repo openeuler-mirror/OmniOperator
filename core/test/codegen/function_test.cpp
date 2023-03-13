@@ -1,7 +1,7 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
-* Description: function test
-*/
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Description: function test
+ */
 #include <string>
 #include <vector>
 #include <chrono>
@@ -1178,8 +1178,7 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     std::string searchStr = "o";
     std::string replaceStr = "**";
     auto result = ReplaceStrStrStrWithRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
-        searchStr.length(),
-        replaceStr.c_str(), replaceStr.length(), false, &outLen);
+        searchStr.length(), replaceStr.c_str(), replaceStr.length(), false, &outLen);
     std::string expected = "**perat**r1";
     EXPECT_EQ(outLen, 11);
     EXPECT_EQ(std::string(result, outLen), expected);
@@ -1188,8 +1187,7 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     searchStr = "";
     replaceStr = "*";
     result = ReplaceStrStrStrWithRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
-        searchStr.length(),
-        replaceStr.c_str(), replaceStr.length(), false, &outLen);
+        searchStr.length(), replaceStr.c_str(), replaceStr.length(), false, &outLen);
     expected = "*o*p*e*r*a*t*o*r*2*";
     EXPECT_EQ(outLen, 19);
     EXPECT_EQ(std::string(result, outLen), expected);
@@ -1198,8 +1196,7 @@ TEST(FunctionTest, ReplaceStrStrStrWithRep)
     searchStr = "era";
     replaceStr = "ER";
     result = ReplaceStrStrStrWithRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
-        searchStr.length(),
-        replaceStr.c_str(), replaceStr.length(), false, &outLen);
+        searchStr.length(), replaceStr.c_str(), replaceStr.length(), false, &outLen);
     expected = "opERtor3";
     EXPECT_EQ(outLen, 8);
     EXPECT_EQ(std::string(result, outLen), expected);
@@ -1215,8 +1212,7 @@ TEST(FunctionTest, ReplaceStrStrWithoutRep)
     std::string str = "operator1";
     std::string searchStr = "o";
     auto result = ReplaceStrStrWithoutRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
-        searchStr.length(),
-        false, &outLen);
+        searchStr.length(), false, &outLen);
     std::string expected = "peratr1";
     EXPECT_EQ(outLen, 7);
     EXPECT_EQ(std::string(result, outLen), expected);
@@ -1224,8 +1220,7 @@ TEST(FunctionTest, ReplaceStrStrWithoutRep)
     str = "operator2";
     searchStr = "";
     result = ReplaceStrStrWithoutRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
-        searchStr.length(),
-        false, &outLen);
+        searchStr.length(), false, &outLen);
     expected = "operator2";
     EXPECT_EQ(outLen, 9);
     EXPECT_EQ(std::string(result, outLen), expected);
@@ -1233,8 +1228,7 @@ TEST(FunctionTest, ReplaceStrStrWithoutRep)
     str = "operator3";
     searchStr = "era";
     result = ReplaceStrStrWithoutRepReplace(contextPtr, str.c_str(), str.length(), searchStr.c_str(),
-        searchStr.length(),
-        false, &outLen);
+        searchStr.length(), false, &outLen);
     expected = "optor3";
     EXPECT_EQ(outLen, 6);
     EXPECT_EQ(std::string(result, outLen), expected);
@@ -1645,5 +1639,4 @@ TEST(FunctionTest, EvaluateHiveUdfSingle)
     delete context;
     DestroyJNIEnvMock(env);
 }
-
 }

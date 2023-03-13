@@ -5,8 +5,8 @@
 #include <array>
 #include <iomanip>
 #include "util/debug.h"
-#include "decimal128.h"
 #include "data_operations.h"
+#include "decimal128.h"
 
 namespace omniruntime {
 namespace type {

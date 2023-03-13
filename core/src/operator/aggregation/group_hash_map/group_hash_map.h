@@ -62,7 +62,7 @@ public:
         kv.first = keyParam;
     }
 
-    explicit GroupByHashSlot(KeyType &&keyParam) : isAssigned(true), kv(std::move(keyParam), ValueType{}) {}
+    explicit GroupByHashSlot(KeyType &&keyParam) : isAssigned(true), kv(std::move(keyParam), ValueType {}) {}
 
     GroupByHashSlot(GroupByHashSlot &&o) noexcept : kv(std::move(o.kv)), hashVal(o.hashVal)
     {
@@ -303,7 +303,7 @@ struct OutputState {
  */
 template <typename KeyType, typename ValueType, typename HashType, typename GrowStrategy, typename Allocator,
     std::enable_if_t<std::is_move_constructible_v<KeyType> && std::is_move_constructible_v<ValueType> &&
-    (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)>* = nullptr>
+    (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)> * = nullptr>
 class GroupByHashMap {
 public:
     using Slot = GroupByHashSlot<KeyType, ValueType>;
@@ -367,7 +367,7 @@ public:
      * InsertResult's GetValue function will return value reference, and caller can update the value
      */
     template <typename T,
-        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>>* = nullptr>
+        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>> * = nullptr>
     InsertResult<ValueType> Emplace(T &&key)
     {
         if (NeedRehash()) {
@@ -548,9 +548,9 @@ private:
             ++elementsSize;
             allocator.Allocate(sizeof(Slot), reinterpret_cast<uint8_t **>(&nullSlot));
             new (nullSlot)Slot(std::forward<T>(key));
-            return InsertResult<ValueType>{ nullSlot->GetValue(), true };
+            return InsertResult<ValueType> { nullSlot->GetValue(), true };
         } else {
-            return InsertResult<ValueType>{ nullSlot->GetValue(), false };
+            return InsertResult<ValueType> { nullSlot->GetValue(), false };
         }
     }
 

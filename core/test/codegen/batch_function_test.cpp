@@ -18,8 +18,7 @@ using namespace omniruntime::codegen::function;
 using namespace std;
 using namespace TestUtil;
 
-template<typename T>
-bool CmpArray(T *x, T *y, int32_t rowCnt)
+template <typename T> bool CmpArray(T *x, T *y, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; ++i) {
         if (x[i] != y[i]) {
@@ -1077,8 +1076,7 @@ TEST(BatchFunctionTest, DecimalModulus)
     EXPECT_EQ(decimal128Val1[1].LowBits(), 0);
 
     BatchModDec128Dec128Dec64ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, output64, 18,
-        2,
-        rowCnt);
+        2, rowCnt);
     EXPECT_EQ(output64[0], -1058310);
     EXPECT_EQ(output64[1], 0);
 
@@ -1200,8 +1198,7 @@ TEST(BatchFunctionTest, SubstrCharZh)
 
     bool isAnyNull[] = { false, false, false, false, false, false, false, false };
     BatchSubstrCharEmptyString(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(), length.data(),
-        isAnyNull,
-        outResult.data(), outLen.data(), rowCnt);
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, "时欧基乌斯", "hello! 回复哦", "色的圣诞袜", "", "袜", "", str };
     AssertStringEquals(expected, outResult, outLen);
@@ -1229,8 +1226,7 @@ TEST(BatchFunctionTest, SubstrWithStartZh)
 
     bool isAnyNull[] = { false, false, false, false, false, false, false };
     BatchSubstrWithStartEmptyString(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
-        outResult.data(),
-        outLen.data(), rowCnt);
+        outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, " hello! 回复哦黑色的and magic粉色的圣诞袜", "圣诞袜", "", "袜", "", str };
     AssertStringEquals(expected, outResult, outLen);
@@ -1259,8 +1255,7 @@ TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
 
     bool isAnyNull[] = { false };
     BatchSubstrWithStartInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
-        outResult.data(),
-        outLen.data(), rowCnt);
+        outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected(1, str);
     AssertStringEquals(expected, outResult, outLen);
@@ -1290,8 +1285,7 @@ TEST(BatchFunctionTest, SubstrWithStartEnForSpark)
 
     bool isAnyNull[] = { false };
     BatchSubstrWithStartInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
-        outResult.data(),
-        outLen.data(), rowCnt);
+        outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected(1, str);
     AssertStringEquals(expected, outResult, outLen);
@@ -1323,8 +1317,7 @@ TEST(BatchFunctionTest, SubstrWithZhForSpark)
 
     bool isAnyNull1[] = { false, false, false, false };
     BatchSubstrInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(),
-        isAnyNull1,
-        outResult.data(), outLen.data(), rowCnt);
+        isAnyNull1, outResult.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "", "时", "时欧基乌斯侧后解 ", "时欧基乌斯侧后解 h" };
     AssertStringEquals(expected, outResult, outLen);
 
@@ -1355,8 +1348,7 @@ TEST(BatchFunctionTest, SubstrWithEnForSpark)
 
     bool isAnyNull1[] = { false };
     BatchSubstrInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(),
-        isAnyNull1,
-        outResult.data(), outLen.data(), rowCnt);
+        isAnyNull1, outResult.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "a" };
     AssertStringEquals(expected, outResult, outLen);
 
@@ -1385,8 +1377,7 @@ TEST(BatchFunctionTest, SubstrCharWithStartZh)
 
     bool isAnyNull[] = { false, false, false, false, false, false, false };
     BatchSubstrCharWithStartEmptyString(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(),
-        isAnyNull,
-        outResult.data(), outLen.data(), rowCnt);
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, " hello! 回复哦黑色的and magic粉色的圣诞袜", "圣诞袜", "", "袜", "", str };
     AssertStringEquals(expected, outResult, outLen);
@@ -1473,7 +1464,7 @@ TEST(BatchFunctionTest, ReplaceStrStrStrZh)
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::vector<std::string> str { "apple", "粉色的圣诞袜", "粉色de圣诞袜", "粉色de圣诞袜", "粉色de圣诞袜",
-        "", "粉色de圣诞袜" };
+        "",      "粉色de圣诞袜" };
     std::vector<int32_t> strLen { 5, 18, 17, 17, 17, 0, 17 };
     std::vector<std::string> searchStr { "", "", "", "", "de圣", "", "" };
     std::vector<int32_t> searchLen { 0, 0, 0, 0, 5, 0, 0 };
@@ -1493,8 +1484,7 @@ TEST(BatchFunctionTest, ReplaceStrStrStrZh)
 
     bool isAnyNull[] = { false, false, false, false, false, false, false };
     BatchReplaceStrStrStrWithRepReplace(contextPtr, strAddr.data(), strLen.data(), searchStrAddr.data(),
-        searchLen.data(),
-        replaceStrAddr.data(), replaceLen.data(), isAnyNull, output.data(), outLen.data(), rowCnt);
+        searchLen.data(), replaceStrAddr.data(), replaceLen.data(), isAnyNull, output.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "*w*a*w*p*w*p*w*l*w*e*w*",
         "*w*粉*w*色*w*的*w*圣*w*诞*w*袜*w*",
         "*w*粉*w*色*w*d*w*e*w*圣*w*诞*w*袜*w*",
@@ -1526,8 +1516,7 @@ TEST(BatchFunctionTest, ReplaceWithoutRepZh)
 
     bool isAnyNull[] = { false, false, false, false, false, false };
     BatchReplaceStrStrWithoutRepNotReplace(contextPtr, strAddr.data(), strLen.data(), searchStrAddr.data(),
-        searchLen.data(),
-        isAnyNull, output.data(), outLen.data(), rowCnt);
+        searchLen.data(), isAnyNull, output.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected {
         "apple", "ale", "粉色的圣诞袜", "粉色的袜", "粉色de圣诞袜", "粉圣诞袜",
     };
@@ -1564,14 +1553,14 @@ TEST(BatchFunctionTest, ConcatCharCharZh)
 {
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    std::vector<std::string> ap { "粉色de圣诞袜", "*黑色*", "Hei你好吗", "Oh我很好",
-        "Hei你好吗   ", "Oh我很好  ", "   Hei你好吗", "   Oh我很好",
-        "Hei   你好吗", "Oh   我很好", "   ", "Oh我很好",
-        "Hei你好吗", "   ", "Hei你好吗", "" };
+    std::vector<std::string> ap { "粉色de圣诞袜", "*黑色*",      "Hei你好吗",    "Oh我很好",
+        "Hei你好吗   ", "Oh我很好  ",  "   Hei你好吗", "   Oh我很好",
+        "Hei   你好吗", "Oh   我很好", "   ",          "Oh我很好",
+        "Hei你好吗",    "   ",         "Hei你好吗",    "" };
     std::vector<int32_t> aWidth { 7, 8, 10, 12, 12, 5, 8, 8 };
-    std::vector<std::string> bp { "*黑色*", "粉色de", "Oh我很好", "Hei你好吗", "Oh我很好  ",
+    std::vector<std::string> bp { "*黑色*",      "粉色de",      "Oh我很好",     "Hei你好吗",   "Oh我很好  ",
         "Hei你好吗  ", "   Oh我很好", "   Hei你好吗", "Oh   我很好", "Hei   你好",
-        "Oh我很好   ", "   ", "   ", "Hei你好吗", "",
+        "Oh我很好   ", "   ",         "   ",          "Hei你好吗",   "",
         "Hei你好" };
     std::vector<int32_t> bWidth { 4, 8, 8, 12, 8, 12, 5, 5 };
     std::vector<std::string> expected { "粉色de圣诞袜*黑色*",
@@ -1621,8 +1610,8 @@ TEST(BatchFunctionTest, ConcatCharStrZh)
     std::vector<std::string> ap { "*你是谁呢*", "我很OK", "*你是谁呢*", "我很OK", "*你是谁呢*", "" };
     std::vector<int32_t> aWidth { 6, 10, 10 };
     std::vector<std::string> bp { "我很OK", "*你是谁呢*", "我很OK", "*你是谁呢*", "", "*你是谁呢*" };
-    std::vector<std::string> expected { "*你是谁呢*我很OK", "我很OK  *你是谁呢*", "*你是谁呢*    我很OK",
-        "我很OK      *你是谁呢*", "*你是谁呢*", "          *你是谁呢*" };
+    std::vector<std::string> expected { "*你是谁呢*我很OK",       "我很OK  *你是谁呢*", "*你是谁呢*    我很OK",
+        "我很OK      *你是谁呢*", "*你是谁呢*",         "          *你是谁呢*" };
     int32_t batch = 3;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -1656,7 +1645,7 @@ TEST(BatchFunctionTest, ConcatStrCharZh)
     std::vector<std::string> bp { "*黑色*", "粉色de圣诞袜", "*黑色*", "粉色de圣诞袜", "", "粉色de圣诞袜   " };
     std::vector<int32_t> bWidth { 4, 6, 5 };
     std::vector<std::string> expected { "粉色de圣诞袜*黑色*", "*黑色*粉色de圣诞袜", "粉色de圣诞袜*黑色*",
-        "*黑色*粉色de圣诞袜", "粉色de圣诞袜   ", "粉色de圣诞袜   " };
+        "*黑色*粉色de圣诞袜", "粉色de圣诞袜   ",    "粉色de圣诞袜   " };
     int32_t batch = 3;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -1711,14 +1700,14 @@ TEST(BatchFunctionTest, ConcatCharCharRetNull)
 {
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    std::vector<std::string> ap { "粉色de圣诞袜", "*黑色*", "Hei你好吗", "Oh我很好",
-        "Hei你好吗   ", "Oh我很好  ", "   Hei你好吗", "   Oh我很好",
-        "Hei   你好吗", "Oh   我很好", "   ", "Oh我很好",
-        "Hei你好吗", "   ", "Hei你好吗", "" };
+    std::vector<std::string> ap { "粉色de圣诞袜", "*黑色*",      "Hei你好吗",    "Oh我很好",
+        "Hei你好吗   ", "Oh我很好  ",  "   Hei你好吗", "   Oh我很好",
+        "Hei   你好吗", "Oh   我很好", "   ",          "Oh我很好",
+        "Hei你好吗",    "   ",         "Hei你好吗",    "" };
     std::vector<int32_t> aWidth { 7, 8, 10, 12, 12, 5, 8, 8 };
-    std::vector<std::string> bp { "*黑色*", "粉色de", "Oh我很好", "Hei你好吗", "Oh我很好  ",
+    std::vector<std::string> bp { "*黑色*",      "粉色de",      "Oh我很好",     "Hei你好吗",   "Oh我很好  ",
         "Hei你好吗  ", "   Oh我很好", "   Hei你好吗", "Oh   我很好", "Hei   你好",
-        "Oh我很好   ", "   ", "   ", "Hei你好吗", "",
+        "Oh我很好   ", "   ",         "   ",          "Hei你好吗",   "",
         "Hei你好" };
     std::vector<int32_t> bWidth { 4, 8, 8, 12, 8, 12, 5, 5 };
     std::vector<std::string> expected { "粉色de圣诞袜*黑色*",
@@ -1768,8 +1757,8 @@ TEST(BatchFunctionTest, ConcatCharStrRetNull)
     std::vector<std::string> ap { "*你是谁呢*", "我很OK", "*你是谁呢*", "我很OK", "*你是谁呢*", "" };
     std::vector<int32_t> aWidth { 6, 10, 10 };
     std::vector<std::string> bp { "我很OK", "*你是谁呢*", "我很OK", "*你是谁呢*", "", "*你是谁呢*" };
-    std::vector<std::string> expected { "*你是谁呢*我很OK", "我很OK  *你是谁呢*", "*你是谁呢*    我很OK",
-        "我很OK      *你是谁呢*", "*你是谁呢*", "          *你是谁呢*" };
+    std::vector<std::string> expected { "*你是谁呢*我很OK",       "我很OK  *你是谁呢*", "*你是谁呢*    我很OK",
+        "我很OK      *你是谁呢*", "*你是谁呢*",         "          *你是谁呢*" };
     int32_t batch = 3;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -1803,7 +1792,7 @@ TEST(BatchFunctionTest, ConcatStrCharRetNull)
     std::vector<std::string> bp { "*黑色*", "粉色de圣诞袜", "*黑色*", "粉色de圣诞袜", "", "粉色de圣诞袜   " };
     std::vector<int32_t> bWidth { 4, 6, 5 };
     std::vector<std::string> expected { "粉色de圣诞袜*黑色*", "*黑色*粉色de圣诞袜", "粉色de圣诞袜*黑色*",
-        "*黑色*粉色de圣诞袜", "粉色de圣诞袜   ", "粉色de圣诞袜   " };
+        "*黑色*粉色de圣诞袜", "粉色de圣诞袜   ",    "粉色de圣诞袜   " };
     int32_t batch = 3;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {

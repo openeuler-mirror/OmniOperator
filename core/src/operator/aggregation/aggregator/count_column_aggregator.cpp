@@ -50,7 +50,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
         int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
         ptr += vector->GetPositionOffset();
 
-        int64_t noUsed{};
+        int64_t noUsed {};
 
         if (indexMap == nullptr) {
             ptr += rowOffset;

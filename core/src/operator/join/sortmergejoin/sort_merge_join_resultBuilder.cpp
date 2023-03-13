@@ -262,8 +262,7 @@ int32_t JoinResultBuilder::GetOutput(std::vector<omniruntime::vec::VectorBatch *
         if (buildVectorBatchRowCount == maxRowCount) {
             outputPages.push_back(buildVectorBatch);
         } else {
-            outputPages.push_back(
-                GetVectorBatchFromSlice(buildVectorBatch, buildVectorBatchRowCount));
+            outputPages.push_back(GetVectorBatchFromSlice(buildVectorBatch, buildVectorBatchRowCount));
             VectorHelper::FreeVecBatch(buildVectorBatch);
         }
     } else {

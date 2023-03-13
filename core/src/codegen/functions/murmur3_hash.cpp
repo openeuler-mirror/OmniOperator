@@ -4,9 +4,8 @@
  */
 #include <iostream>
 #include <string>
-
-#include "murmur3_hash.h"
 #include "util/compiler_util.h"
+#include "murmur3_hash.h"
 
 using namespace std;
 

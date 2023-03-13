@@ -78,10 +78,10 @@ public class OmniHashAggregationWithExprOperatorTest {
 
         int vecBatchCount = 0;
         int totalRowcount = 0;
-        long col1Sum = 0;
-        long col2Sum = 0;
-        long col3Sum = 0;
-        long col4Sum = 0;
+        long col1Sum = 0L;
+        long col2Sum = 0L;
+        long col3Sum = 0L;
+        long col4Sum = 0L;
         while (outputVecBatch.hasNext()) {
             VecBatch result = outputVecBatch.next();
             Vec[] vectors = result.getVectors();
@@ -101,12 +101,13 @@ public class OmniHashAggregationWithExprOperatorTest {
         assertEquals(totalRowcount, rowNum);
         // each row contains four columns, each of which contains 8 bytes.
         int rowSize = 4 * 8;
-        // single vecBatch is 1MB, calculate the maximum number of rows in single vecBatch.
+        // single vecBatch is 1MB, calculate the maximum number of rows in single
+        // vecBatch.
         int rowsPerBatch = (1024 * 1024 + rowSize - 1) / rowSize;
-        int expectedBatchCount = (rowNum + rowsPerBatch -1) / rowsPerBatch;
+        int expectedBatchCount = (rowNum + rowsPerBatch - 1) / rowsPerBatch;
         assertEquals(vecBatchCount, expectedBatchCount);
         // sum of an arithmetic sequence with a step of 1
-        assertEquals(col1Sum, (((long) rowNum - 1) * rowNum) / 2 );
+        assertEquals(col1Sum, (((long) rowNum - 1) * rowNum) / 2);
         assertEquals(col2Sum, (long) rowNum);
         assertEquals(col3Sum, (long) (rowNum / 2 * pageCount));
         assertEquals(col4Sum, (long) (rowNum * pageCount));

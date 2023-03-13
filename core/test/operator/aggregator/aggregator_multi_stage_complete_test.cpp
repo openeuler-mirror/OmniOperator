@@ -221,7 +221,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     op::Operator::DeleteOperator(aggPartial2);
 
     // Second stage (final)
-    std::vector<VectorBatch *> expectedResults{ expectedResult1, expectedResult2 };
+    std::vector<VectorBatch *> expectedResults { expectedResult1, expectedResult2 };
     VectorBatch *expectedResultFinal = nullptr;
     bool overflowFinal = tester->GenerateFinalExpectedResult(&expectedResultFinal, expectedResults);
 

@@ -83,8 +83,7 @@ std::vector<Function> BatchUtilFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(IfExprString), "batch_if", {}, { OMNI_CHAR }, OMNI_CHAR, INPUT_DATA),
         Function(reinterpret_cast<void *>(IfExpr<int64_t>), "batch_if", {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL64,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(IfExpr<int32_t>), "batch_if", {}, { OMNI_DATE32 }, OMNI_DATE32,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(IfExpr<int32_t>), "batch_if", {}, { OMNI_DATE32 }, OMNI_DATE32, INPUT_DATA),
         Function(reinterpret_cast<void *>(IfExpr<Decimal128>), "batch_if", {}, { OMNI_DECIMAL128 }, OMNI_DECIMAL128,
             INPUT_DATA),
 

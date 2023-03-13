@@ -18,9 +18,8 @@ extern "C" DLLEXPORT int64_t CastDecimal64To64(int64_t contextPtr, int64_t x, in
     Decimal64 result(x);
     result.SetScale(scale).ReScale(newScale);
     if (result.IsOverflow(newPrecision) != OpStatus::SUCCESS) {
-        SetError(contextPtr,
-            CastErrorMessage(OMNI_DECIMAL64, OMNI_DECIMAL64, x, OpStatus::SUCCESS, precision, scale, newPrecision,
-                newScale));
+        SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL64, OMNI_DECIMAL64, x, OpStatus::SUCCESS, precision, scale,
+            newPrecision, newScale));
         return 0;
     }
     return result.GetValue();
@@ -37,9 +36,8 @@ extern "C" DLLEXPORT void CastDecimal128To128(int64_t contextPtr, int64_t xHigh,
     Decimal128Wrapper result(xHigh, xLow);
     result.SetScale(scale).ReScale(newScale);
     if (result.IsOverflow(newPrecision) != OpStatus::SUCCESS) {
-        SetError(contextPtr,
-            CastErrorMessage(OMNI_DECIMAL128, OMNI_DECIMAL128, ((uint128_t(xHigh) << 64) + xLow), OpStatus::SUCCESS,
-                precision, scale, newPrecision, newScale));
+        SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_DECIMAL128, ((uint128_t(xHigh) << 64) + xLow),
+            OpStatus::SUCCESS, precision, scale, newPrecision, newScale));
         return;
     }
     *outHighPtr = result.HighBits();
@@ -57,9 +55,8 @@ extern "C" DLLEXPORT void CastDecimal64To128(int64_t contextPtr, int64_t x, int3
     Decimal128Wrapper result(x);
     result.SetScale(scale).ReScale(newScale);
     if (result.IsOverflow(newPrecision) != OpStatus::SUCCESS) {
-        SetError(contextPtr,
-            CastErrorMessage(OMNI_DECIMAL64, OMNI_DECIMAL128, x, OpStatus::SUCCESS, precision, scale, newPrecision,
-                newScale));
+        SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL64, OMNI_DECIMAL128, x, OpStatus::SUCCESS, precision, scale,
+            newPrecision, newScale));
         return;
     }
     *outHighPtr = result.HighBits();
@@ -74,9 +71,8 @@ extern "C" DLLEXPORT int64_t CastDecimal128To64(int64_t contextPtr, int64_t xHig
     }
     Decimal64 result(Decimal128Wrapper(xHigh, xLow).SetScale(scale).ReScale(newScale));
     if (result.IsOverflow(newPrecision) != OpStatus::SUCCESS) {
-        SetError(contextPtr,
-            CastErrorMessage(OMNI_DECIMAL128, OMNI_DECIMAL64, (uint128_t(xHigh) << 64 + xLow), OpStatus::SUCCESS,
-                precision, scale, newPrecision, newScale));
+        SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_DECIMAL64, (uint128_t(xHigh) << 64 + xLow),
+            OpStatus::SUCCESS, precision, scale, newPrecision, newScale));
         return 0;
     }
     return result.GetValue();
@@ -210,8 +206,7 @@ extern "C" DLLEXPORT double CastDecimal64ToDoubleHalfUp(int64_t x, int32_t preci
 }
 
 extern "C" DLLEXPORT int32_t CastDecimal128ToIntHalfUp(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t precision,
-    int32_t scale, bool isNull)
+    int32_t precision, int32_t scale, bool isNull)
 {
     if (isNull) {
         return 0;
@@ -228,8 +223,7 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToIntHalfUp(int64_t contextPtr, int64
 }
 
 extern "C" DLLEXPORT int64_t CastDecimal128ToLongHalfUp(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t precision,
-    int32_t scale, bool isNull)
+    int32_t precision, int32_t scale, bool isNull)
 {
     if (isNull) {
         return 0;
@@ -294,16 +288,17 @@ extern "C" DLLEXPORT double CastDecimal64ToDoubleDown(int64_t x, int32_t precisi
 }
 
 extern "C" DLLEXPORT int32_t CastDecimal128ToIntDown(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t precision,
-    int32_t scale, bool isNull)
+    int32_t precision, int32_t scale, bool isNull)
 {
     if (isNull) {
         return 0;
     }
     int32_t result;
     try {
-        result = static_cast<int32_t>(Decimal128Wrapper(xHigh, xLow).ReScale(-scale,
-            RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
+        result = static_cast<int32_t>(Decimal128Wrapper(xHigh, xLow)
+                                          .ReScale(-scale, RoundingMode::ROUND_FLOOR)
+                                          .ToInt128()
+                                          .convert_to<__int128>());
     } catch (std::overflow_error &e) {
         SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_INT, (uint128_t(xHigh) << 64 + xLow),
             OpStatus::OP_OVERFLOW, precision, scale));
@@ -313,16 +308,17 @@ extern "C" DLLEXPORT int32_t CastDecimal128ToIntDown(int64_t contextPtr, int64_t
 }
 
 extern "C" DLLEXPORT int64_t CastDecimal128ToLongDown(int64_t contextPtr, int64_t xHigh, uint64_t xLow,
-    int32_t precision,
-    int32_t scale, bool isNull)
+    int32_t precision, int32_t scale, bool isNull)
 {
     if (isNull) {
         return 0;
     }
     int64_t result;
     try {
-        result = static_cast<int64_t>(Decimal128Wrapper(xHigh, xLow).ReScale(-scale,
-            RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
+        result = static_cast<int64_t>(Decimal128Wrapper(xHigh, xLow)
+                                          .ReScale(-scale, RoundingMode::ROUND_FLOOR)
+                                          .ToInt128()
+                                          .convert_to<__int128>());
     } catch (std::overflow_error &e) {
         SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_LONG, (uint128_t(xHigh) << 64 + xLow),
             OpStatus::OP_OVERFLOW, precision, scale));
@@ -347,7 +343,7 @@ extern "C" DLLEXPORT int64_t CastDecimal64To64RetNull(bool *isNull, int64_t x, i
 {
     Decimal64 result(x);
     result.SetScale(scale).ReScale(newScale);
-    CHECK_OVERFLOW_RETURN_NULL(result, newPrecision)
+    CHECK_OVERFLOW_RETURN_NULL(result, newPrecision);
     return result.GetValue();
 }
 
@@ -356,7 +352,7 @@ extern "C" DLLEXPORT void CastDecimal128To128RetNull(bool *isNull, int64_t xHigh
 {
     Decimal128Wrapper result(xHigh, xLow);
     result.SetScale(scale).ReScale(newScale);
-    CHECK_OVERFLOW_VOID_RETURN_NULL(result, newPrecision)
+    CHECK_OVERFLOW_VOID_RETURN_NULL(result, newPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
 }
@@ -366,7 +362,7 @@ extern "C" DLLEXPORT void CastDecimal64To128RetNull(bool *isNull, int64_t x, int
 {
     Decimal128Wrapper result(x);
     result.SetScale(scale).ReScale(newScale);
-    CHECK_OVERFLOW_VOID_RETURN_NULL(result, newPrecision)
+    CHECK_OVERFLOW_VOID_RETURN_NULL(result, newPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
 }
@@ -375,7 +371,7 @@ extern "C" DLLEXPORT int64_t CastDecimal128To64RetNull(bool *isNull, int64_t xHi
     int32_t scale, int32_t newPrecision, int32_t newScale)
 {
     Decimal64 result(Decimal128Wrapper(xHigh, xLow).SetScale(scale).ReScale(newScale));
-    CHECK_OVERFLOW_RETURN_NULL(result, newPrecision)
+    CHECK_OVERFLOW_RETURN_NULL(result, newPrecision);
     return result.GetValue();
 }
 
@@ -383,7 +379,7 @@ extern "C" DLLEXPORT int64_t CastIntToDecimal64RetNull(bool *isNull, int32_t x, 
 {
     Decimal64 result(x);
     result.ReScale(outScale);
-    CHECK_OVERFLOW_RETURN_NULL(result, outPrecision)
+    CHECK_OVERFLOW_RETURN_NULL(result, outPrecision);
     return result.GetValue();
 }
 
@@ -391,7 +387,7 @@ extern "C" DLLEXPORT int64_t CastLongToDecimal64RetNull(bool *isNull, int64_t x,
 {
     Decimal64 result(x);
     result.ReScale(outScale);
-    CHECK_OVERFLOW_RETURN_NULL(result, outPrecision)
+    CHECK_OVERFLOW_RETURN_NULL(result, outPrecision);
     return result.GetValue();
 }
 
@@ -411,7 +407,7 @@ extern "C" DLLEXPORT void CastIntToDecimal128RetNull(bool *isNull, int32_t x, in
 {
     Decimal128Wrapper result(x);
     result.ReScale(outScale);
-    CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision)
+    CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
 }
@@ -421,7 +417,7 @@ extern "C" DLLEXPORT void CastLongToDecimal128RetNull(bool *isNull, int64_t x, i
 {
     Decimal128Wrapper result(x);
     result.ReScale(outScale);
-    CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision)
+    CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
 }
@@ -431,7 +427,7 @@ extern "C" DLLEXPORT void CastDoubleToDecimal128RetNull(bool *isNull, double x, 
 {
     Decimal128Wrapper result(x);
     result.ReScale(outScale);
-    CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision)
+    CHECK_OVERFLOW_VOID_RETURN_NULL(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();
 }
@@ -457,15 +453,15 @@ extern "C" DLLEXPORT double CastDecimal64ToDoubleRetNull(bool *isNull, int64_t x
 extern "C" DLLEXPORT int32_t CastDecimal128ToIntRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,
     int32_t scale)
 {
-    return static_cast<int32_t>(Decimal128Wrapper(xHigh, xLow).ReScale(-scale,
-        RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
+    return static_cast<int32_t>(
+        Decimal128Wrapper(xHigh, xLow).ReScale(-scale, RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
 }
 
 extern "C" DLLEXPORT int64_t CastDecimal128ToLongRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,
     int32_t scale)
 {
-    return static_cast<int64_t>(Decimal128Wrapper(xHigh, xLow).ReScale(-scale,
-        RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
+    return static_cast<int64_t>(
+        Decimal128Wrapper(xHigh, xLow).ReScale(-scale, RoundingMode::ROUND_FLOOR).ToInt128().convert_to<__int128>());
 }
 
 extern "C" DLLEXPORT double CastDecimal128ToDoubleRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,

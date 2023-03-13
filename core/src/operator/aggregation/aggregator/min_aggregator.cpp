@@ -43,13 +43,11 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         LogDebug("HMPP-Agg-min");
         result = HMPPS_Min_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset), rowCount,
             reinterpret_cast<int64_t *>(minVal));
-    }
-    else if constexpr (IN_ID == OMNI_DOUBLE) {
+    } else if constexpr (IN_ID == OMNI_DOUBLE) {
         LogDebug("HMPP-Agg-min");
         result = HMPPS_Min_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset), rowCount,
             reinterpret_cast<double *>(minVal));
-    }
-    else if constexpr (IN_ID == OMNI_DECIMAL128) {
+    } else if constexpr (IN_ID == OMNI_DECIMAL128) {
         LogDebug("HMPP-Agg-min");
         result = HMPPS_Min_decimal(
             static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,

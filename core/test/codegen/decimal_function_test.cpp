@@ -1,7 +1,7 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
-* Description: function test
-*/
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Description: function test
+ */
 #include <string>
 #include <vector>
 #include "gtest/gtest.h"
@@ -87,8 +87,7 @@ TEST(FunctionTest, AddDec128)
     op2 = Decimal128(0);
     expected = Decimal128(0);
     AddDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 9, op2.HighBits(), op2.LowBits(), 38, 9,
-        38, 9,
-        &zHigh, &zLow);
+        38, 9, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -96,8 +95,7 @@ TEST(FunctionTest, AddDec128)
     op2 = Decimal128(10);
     expected = Decimal128(15);
     AddDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 12, op2.HighBits(), op2.LowBits(), 38,
-        12, 38,
-        12, &zHigh, &zLow);
+        12, 38, 12, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -105,8 +103,7 @@ TEST(FunctionTest, AddDec128)
     op2 = Decimal128(1);
     expected = Decimal128(0);
     AddDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0,
-        38, 0,
-        &zHigh, &zLow);
+        38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -114,8 +111,7 @@ TEST(FunctionTest, AddDec128)
     op2 = Decimal128(-4);
     expected = Decimal128(-7);
     AddDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0,
-        38, 0,
-        &zHigh, &zLow);
+        38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -139,8 +135,7 @@ TEST(FunctionTest, SubDec128)
     op2 = Decimal128(0);
     expected = Decimal128(0);
     SubDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0,
-        38, 0,
-        &zHigh, &zLow);
+        38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -148,8 +143,7 @@ TEST(FunctionTest, SubDec128)
     op2 = Decimal128(5);
     expected = Decimal128(5);
     SubDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0,
-        38, 0,
-        &zHigh, &zLow);
+        38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -157,8 +151,7 @@ TEST(FunctionTest, SubDec128)
     op2 = Decimal128(10);
     expected = Decimal128(-5);
     SubDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0,
-        38, 0,
-        &zHigh, &zLow);
+        38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -166,8 +159,7 @@ TEST(FunctionTest, SubDec128)
     op2 = Decimal128(-4);
     expected = Decimal128(1);
     SubDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0,
-        38, 0,
-        &zHigh, &zLow);
+        38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -190,8 +182,7 @@ TEST(FunctionTest, MulDec128)
     op2 = Decimal128(500);
     expected = Decimal128(0);
     MulDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 7, op2.HighBits(), op2.LowBits(), 38, 7,
-        38,
-        14, &zHigh, &zLow);
+        38, 14, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -199,8 +190,7 @@ TEST(FunctionTest, MulDec128)
     op2 = Decimal128(500);
     expected = Decimal128(500);
     MulDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 1, op2.HighBits(), op2.LowBits(), 38, 1,
-        38, 2,
-        &zHigh, &zLow);
+        38, 2, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -208,8 +198,7 @@ TEST(FunctionTest, MulDec128)
     op2 = Decimal128(5);
     expected = Decimal128(15);
     MulDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0,
-        38, 0,
-        &zHigh, &zLow);
+        38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -217,8 +206,7 @@ TEST(FunctionTest, MulDec128)
     op2 = Decimal128(-4);
     expected = Decimal128(12);
     MulDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 0, op2.HighBits(), op2.LowBits(), 38, 0,
-        38, 0,
-        &zHigh, &zLow);
+        38, 0, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -226,8 +214,7 @@ TEST(FunctionTest, MulDec128)
     op2 = Decimal128(4);
     expected = Decimal128(-12);
     MulDec128Dec128Dec128ReScale(contextPtr, op1.HighBits(), op1.LowBits(), 38, 3, op2.HighBits(), op2.LowBits(), 38, 3,
-        38, 6,
-        &zHigh, &zLow);
+        38, 6, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -254,8 +241,7 @@ TEST(FunctionTest, DivDec128)
     op2 = Decimal128(2);
     expected = Decimal128(5);
     DivDec128Dec128Dec128ReScale(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(),
-        precision, scale, precision, scale, &zHigh, &zLow);
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -263,8 +249,7 @@ TEST(FunctionTest, DivDec128)
     op2 = Decimal128(2);
     expected = Decimal128(-5);
     DivDec128Dec128Dec128ReScale(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(),
-        precision, scale, precision, scale, &zHigh, &zLow);
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -272,8 +257,7 @@ TEST(FunctionTest, DivDec128)
     op2 = Decimal128(-2);
     expected = Decimal128(5);
     DivDec128Dec128Dec128ReScale(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(),
-        precision, scale, precision, scale, &zHigh, &zLow);
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -281,8 +265,7 @@ TEST(FunctionTest, DivDec128)
     op2 = Decimal128(3);
     expected = Decimal128(2);
     DivDec128Dec128Dec128ReScale(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(),
-        precision, scale, precision, scale, &zHigh, &zLow);
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -290,8 +273,7 @@ TEST(FunctionTest, DivDec128)
     op2 = Decimal128(3);
     expected = Decimal128(3);
     DivDec128Dec128Dec128ReScale(contextptr, op1.HighBits(), op1.LowBits(), precision, scale, op2.HighBits(),
-        op2.LowBits(),
-        precision, scale, precision, scale, &zHigh, &zLow);
+        op2.LowBits(), precision, scale, precision, scale, &zHigh, &zLow);
     EXPECT_EQ(zHigh, expected.HighBits());
     EXPECT_EQ(zLow, expected.LowBits());
 
@@ -803,8 +785,7 @@ TEST(FunctionTest, DecimalAddOpeartion)
     EXPECT_EQ(low, 33330);
     Decimal128 right = Decimal128("99999999999999999999980000000000000000");
     AddDec128Dec64Dec128ReScale(contextPtr, right.HighBits(), right.LowBits(), 38, 6, 999999999999999999L, 18, 6, 38, 6,
-        &high,
-        &low);
+        &high, &low);
     EXPECT_TRUE(context->HasError());
     delete context;
 }
@@ -835,15 +816,13 @@ TEST(FunctionTest, DecimalMulOpeartion)
     Decimal128 r = Decimal128("1234567891234567567891");
     bool isNull = false;
     MulDec128Dec128Dec128RetNull(&isNull, l.HighBits(), l.LowBits(), 22, 6, r.HighBits(), r.LowBits(), 22, 6, 38, 6,
-        &high,
-        &low);
+        &high, &low);
     EXPECT_EQ(Decimal128(high, low).ToString(), "152415787806736335252649604807436065");
 
     l = Decimal128("12345678912345623");
     r = Decimal128("1234567891234567567891");
     MulDec128Dec128Dec128ReScale(contextPtr, l.HighBits(), l.LowBits(), 17, 2, r.HighBits(), r.LowBits(), 22, 6, 38, 6,
-        &high,
-        &low);
+        &high, &low);
     EXPECT_EQ(Decimal128(high, low).ToString(), "152415787806736055266232119611091911");
 
     MulDec128Dec128Dec128ReScale(contextPtr, 0, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
@@ -878,8 +857,7 @@ TEST(FunctionTest, DecimalModOpeartion)
 
     Decimal128 inputValue(-23452700000965473);
     result = ModDec64Dec128Dec64ReScale(contextPtr, 500009700000012345, 18, 18, inputValue.HighBits(),
-        inputValue.LowBits(),
-        18, 5, 18, 18);
+        inputValue.LowBits(), 18, 5, 18, 18);
     EXPECT_EQ(result, 500009700000012345);
 
     int64_t high;
@@ -906,8 +884,7 @@ TEST(FunctionTest, DecimalDivOpeartion)
     uint64_t low = 0;
     // dec128 mul dec128 return dec128
     DivDec128Dec128Dec128ReScale(contextPtr, left.HighBits(), left.LowBits(), 38, 16, right.HighBits(), right.LowBits(),
-        22, 6,
-        38, 16, &high, &low);
+        22, 6, 38, 16, &high, &low);
     EXPECT_EQ(Decimal128(high, low).ToString(), "10000000000000000000001");
 
     DivDec64Dec64Dec128ReScale(contextPtr, -111, 7, 2, 50'0009'7000'0001'2345, 18, 18, 19, 18, &high, &low);
@@ -974,8 +951,7 @@ TEST(FunctionTest, DecimalAddOpeartionForSpark)
     EXPECT_EQ(low, 3333);
     Decimal128 right = Decimal128("99999999999999999999980000000000000000");
     AddDec128Dec64Dec128ReScale(contextPtr, right.HighBits(), right.LowBits(), 38, 6, 999999999999999999L, 18, 6, 38, 6,
-        &high,
-        &low);
+        &high, &low);
     EXPECT_TRUE(context->HasError());
     delete context;
 }
@@ -1006,15 +982,13 @@ TEST(FunctionTest, DecimalMulOpeartionForSpark)
     Decimal128 r = Decimal128("1234567891234567567891");
     bool isNull = false;
     MulDec128Dec128Dec128RetNull(&isNull, l.HighBits(), l.LowBits(), 22, 6, r.HighBits(), r.LowBits(), 22, 6, 38, 6,
-        &high,
-        &low);
+        &high, &low);
     EXPECT_EQ(Decimal128(high, low).ToString(), "152415787806736335252649604807436065");
 
     l = Decimal128("12345678912345623");
     r = Decimal128("1234567891234567567891");
     MulDec128Dec128Dec128NotReScale(contextPtr, l.HighBits(), l.LowBits(), 17, 2, r.HighBits(), r.LowBits(), 22, 6, 38,
-        6, &high,
-        &low);
+        6, &high, &low);
     EXPECT_EQ(Decimal128(high, low).ToString(), "15241578780673605526623211961109191093");
 
     MulDec128Dec128Dec128NotReScale(contextPtr, 0, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
@@ -1049,8 +1023,7 @@ TEST(FunctionTest, DecimalModOpeartionForSpark)
 
     Decimal128 inputValue(-23452700000965473);
     result = ModDec64Dec128Dec64NotReScale(contextPtr, 500009700000012345, 18, 18, inputValue.HighBits(),
-        inputValue.LowBits(),
-        18, 5, 18, 18);
+        inputValue.LowBits(), 18, 5, 18, 18);
     EXPECT_EQ(result, 500009700000012345);
 
     int64_t high;
@@ -1078,8 +1051,7 @@ TEST(FunctionTest, DecimalDivOpeartionForSpark)
     uint64_t low = 0;
     // dec128 mul dec128 return dec128
     DivDec128Dec128Dec128NotReScale(contextPtr, left.HighBits(), left.LowBits(), 38, 16, right.HighBits(),
-        right.LowBits(), 22, 6,
-        38, 16, &high, &low);
+        right.LowBits(), 22, 6, 38, 16, &high, &low);
     EXPECT_EQ(Decimal128(high, low).ToString(), "10000000000000000000001");
 
     DivDec64Dec64Dec128NotReScale(contextPtr, -111, 7, 2, 50'0009'7000'0001'2345, 18, 18, 19, 18, &high, &low);

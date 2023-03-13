@@ -1075,7 +1075,6 @@ public:
         return *this;
     }
 
-
     Decimal64 &operator%=(const Decimal64 &right)
     {
         val = val % right.val;

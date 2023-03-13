@@ -11,7 +11,6 @@
 using namespace omniruntime::type;
 
 namespace omniruntime::codegen::function {
-
 const std::string DECIMAL_OVERFLOW { "Decimal overflow" };
 const std::string DIVIDE_ZERO { "Division by zero" };
 static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
@@ -105,7 +104,7 @@ extern "C" DLLEXPORT void BatchRoundDecimal128(int64_t contextPtr, Decimal128 *x
         Decimal128Wrapper input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, round[i]);
-        CHECK_OVERFLOW_CONTINUE(input, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(input, outPrecision);
         output[i] = input.ToDecimal128();
     }
 }
@@ -117,7 +116,7 @@ extern "C" DLLEXPORT void BatchRoundDecimal64(int64_t contextPtr, int64_t *x, in
         Decimal64 input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, round[i]);
-        CHECK_OVERFLOW_CONTINUE(input, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(input, outPrecision);
         output[i] = input.GetValue();
     }
 }
@@ -129,7 +128,7 @@ extern "C" DLLEXPORT void BatchRoundDecimal128WithoutRound(int64_t contextPtr, D
         Decimal128Wrapper input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, 0);
-        CHECK_OVERFLOW_CONTINUE(input, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(input, outPrecision);
         output[i] = input.ToDecimal128();
     }
 }
@@ -141,7 +140,7 @@ extern "C" DLLEXPORT void BatchRoundDecimal64WithoutRound(int64_t contextPtr, in
         Decimal64 input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, 0);
-        CHECK_OVERFLOW_CONTINUE(input, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(input, outPrecision);
         output[i] = input.GetValue();
     }
 }
@@ -280,7 +279,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec64Dec64ReScale(int64_t contextPtr, boo
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -294,7 +293,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec64Dec128ReScale(int64_t contextPtr, bo
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -308,7 +307,7 @@ extern "C" DLLEXPORT void BatchAddDec128Dec128Dec128ReScale(int64_t contextPtr, 
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -322,7 +321,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec128Dec128ReScale(int64_t contextPtr, b
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -336,7 +335,7 @@ extern "C" DLLEXPORT void BatchAddDec128Dec64Dec128ReScale(int64_t contextPtr, b
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -351,7 +350,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec64Dec64ReScale(int64_t contextPtr, boo
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -365,7 +364,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec64Dec128ReScale(int64_t contextPtr, bo
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -379,7 +378,7 @@ extern "C" DLLEXPORT void BatchSubDec128Dec128Dec128ReScale(int64_t contextPtr, 
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -393,7 +392,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec128Dec128ReScale(int64_t contextPtr, b
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -407,7 +406,7 @@ extern "C" DLLEXPORT void BatchSubDec128Dec64Dec128ReScale(int64_t contextPtr, b
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -425,7 +424,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec64Dec64ReScale(int64_t contextPtr, boo
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -442,7 +441,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec64Dec128ReScale(int64_t contextPtr, bo
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -459,7 +458,7 @@ extern "C" DLLEXPORT void BatchMulDec128Dec128Dec128ReScale(int64_t contextPtr, 
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -476,7 +475,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec128Dec128ReScale(int64_t contextPtr, b
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -493,7 +492,7 @@ extern "C" DLLEXPORT void BatchMulDec128Dec64Dec128ReScale(int64_t contextPtr, b
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -511,7 +510,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec64ReScale(int64_t contextPtr, boo
         DecimalOperations::InternalDecimalDivide(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -529,7 +528,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec64ReScale(int64_t contextPtr, bo
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -547,7 +546,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec64ReScale(int64_t contextPtr, bo
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         y[i] = result.GetValue();
     }
 }
@@ -565,7 +564,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec128ReScale(int64_t contextPtr, bo
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         output[i] = result.ToDecimal128();
     }
 }
@@ -583,7 +582,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec128Dec128ReScale(int64_t contextPtr, 
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -601,7 +600,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec128ReScale(int64_t contextPtr, b
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         y[i] = result.ToDecimal128();
     }
 }
@@ -619,7 +618,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec128ReScale(int64_t contextPtr, b
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -638,7 +637,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec64Dec64ReScale(int64_t contextPtr, boo
         DecimalOperations::InternalDecimalMod(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -656,7 +655,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec64ReScale(int64_t contextPtr, bo
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -674,7 +673,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec64ReScale(int64_t contextPtr, bo
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         y[i] = result.GetValue();
     }
 }
@@ -692,7 +691,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec128ReScale(int64_t contextPtr, b
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -710,7 +709,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec128ReScale(int64_t contextPtr, 
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -728,7 +727,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec64ReScale(int64_t contextPtr, b
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         output[i] = result.GetValue();
     }
 }
@@ -746,7 +745,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec128ReScale(int64_t contextPtr, b
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         y[i] = result.ToDecimal128();
     }
 }
@@ -761,7 +760,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec64Dec64NotReScale(int64_t contextPtr, 
         DecimalOperations::InternalDecimalAdd(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -774,7 +773,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec64Dec128NotReScale(int64_t contextPtr,
         DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -787,7 +786,7 @@ extern "C" DLLEXPORT void BatchAddDec128Dec128Dec128NotReScale(int64_t contextPt
         DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -800,7 +799,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec128Dec128NotReScale(int64_t contextPtr
         DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -813,7 +812,7 @@ extern "C" DLLEXPORT void BatchAddDec128Dec64Dec128NotReScale(int64_t contextPtr
         DecimalOperations::InternalDecimalAdd(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -827,7 +826,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec64Dec64NotReScale(int64_t contextPtr, 
         DecimalOperations::InternalDecimalSubtract(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -840,7 +839,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec64Dec128NotReScale(int64_t contextPtr,
         DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -853,7 +852,7 @@ extern "C" DLLEXPORT void BatchSubDec128Dec128Dec128NotReScale(int64_t contextPt
         DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -866,7 +865,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec128Dec128NotReScale(int64_t contextPtr
         DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -879,7 +878,7 @@ extern "C" DLLEXPORT void BatchSubDec128Dec64Dec128NotReScale(int64_t contextPtr
         DecimalOperations::InternalDecimalSubtract(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -896,7 +895,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec64Dec64NotReScale(int64_t contextPtr, 
         DecimalOperations::InternalDecimalMultiply(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -912,7 +911,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec64Dec128NotReScale(int64_t contextPtr,
         DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -928,7 +927,7 @@ extern "C" DLLEXPORT void BatchMulDec128Dec128Dec128NotReScale(int64_t contextPt
         DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -944,7 +943,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec128Dec128NotReScale(int64_t contextPtr
         DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -960,7 +959,7 @@ extern "C" DLLEXPORT void BatchMulDec128Dec64Dec128NotReScale(int64_t contextPtr
         DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
     }
 }
 
@@ -977,7 +976,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec64NotReScale(int64_t contextPtr, 
         }
         DecimalOperations::InternalDecimalDivide(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -994,7 +993,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec64NotReScale(int64_t contextPtr,
         }
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -1011,7 +1010,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec64NotReScale(int64_t contextPtr,
         }
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         y[i] = result.GetValue();
     }
 }
@@ -1028,7 +1027,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec128NotReScale(int64_t contextPtr,
         }
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         output[i] = result.ToDecimal128();
     }
 }
@@ -1045,7 +1044,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec128Dec128NotReScale(int64_t contextPt
         }
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -1062,7 +1061,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec128NotReScale(int64_t contextPtr
         }
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         y[i] = result.ToDecimal128();
     }
 }
@@ -1079,7 +1078,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec128NotReScale(int64_t contextPtr
         }
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -1097,7 +1096,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec64Dec64NotReScale(int64_t contextPtr, 
         }
         DecimalOperations::InternalDecimalMod(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -1114,7 +1113,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec64NotReScale(int64_t contextPtr,
         }
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -1131,7 +1130,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec64NotReScale(int64_t contextPtr,
         }
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         y[i] = result.GetValue();
     }
 }
@@ -1148,7 +1147,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec128NotReScale(int64_t contextPtr
         }
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -1165,7 +1164,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec128NotReScale(int64_t contextPt
         }
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -1182,7 +1181,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec64NotReScale(int64_t contextPtr
         }
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         output[i] = result.GetValue();
     }
 }
@@ -1199,7 +1198,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec128NotReScale(int64_t contextPtr
         }
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
-        CHECK_OVERFLOW_CONTINUE(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE(result, outPrecision);
         y[i] = result.ToDecimal128();
     }
 }
@@ -1215,7 +1214,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec64Dec64RetNull(bool *isNull, int64_t *
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1229,7 +1228,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec64Dec128RetNull(bool *isNull, int64_t 
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1243,7 +1242,7 @@ extern "C" DLLEXPORT void BatchAddDec128Dec128Dec128RetNull(bool *isNull, Decima
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1256,7 +1255,7 @@ extern "C" DLLEXPORT void BatchAddDec64Dec128Dec128RetNull(bool *isNull, int64_t
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1270,7 +1269,7 @@ extern "C" DLLEXPORT void BatchAddDec128Dec64Dec128RetNull(bool *isNull, Decimal
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1284,7 +1283,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec64Dec64RetNull(bool *isNull, int64_t *
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1298,7 +1297,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec64Dec128RetNull(bool *isNull, int64_t 
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1312,7 +1311,7 @@ extern "C" DLLEXPORT void BatchSubDec128Dec128Dec128RetNull(bool *isNull, Decima
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1325,7 +1324,7 @@ extern "C" DLLEXPORT void BatchSubDec64Dec128Dec128RetNull(bool *isNull, int64_t
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1339,7 +1338,7 @@ extern "C" DLLEXPORT void BatchSubDec128Dec64Dec128RetNull(bool *isNull, Decimal
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1356,7 +1355,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec64Dec64RetNull(bool *isNull, int64_t *
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.GetValue();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1373,7 +1372,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec64Dec128RetNull(bool *isNull, int64_t 
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         output[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1390,7 +1389,7 @@ extern "C" DLLEXPORT void BatchMulDec128Dec128Dec128RetNull(bool *isNull, Decima
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1406,7 +1405,7 @@ extern "C" DLLEXPORT void BatchMulDec64Dec128Dec128RetNull(bool *isNull, int64_t
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         y[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1423,7 +1422,7 @@ extern "C" DLLEXPORT void BatchMulDec128Dec64Dec128RetNull(bool *isNull, Decimal
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
         x[i] = result.ToDecimal128();
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }
 }
 
@@ -1436,7 +1435,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec64RetNull(bool *isNull, int64_t *
         DecimalOperations::InternalDecimalDivide(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -1449,7 +1448,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec64RetNull(bool *isNull, int64_t 
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -1463,7 +1462,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec64RetNull(bool *isNull, Decimal1
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         y[i] = result.GetValue();
     }
 }
@@ -1477,7 +1476,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec128RetNull(bool *isNull, int64_t 
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         output[i] = result.ToDecimal128();
     }
 }
@@ -1491,7 +1490,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec128Dec128RetNull(bool *isNull, Decima
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -1504,7 +1503,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec128RetNull(bool *isNull, int64_t
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         y[i] = result.ToDecimal128();
     }
 }
@@ -1518,7 +1517,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec128RetNull(bool *isNull, Decimal
         DecimalOperations::InternalDecimalDivide(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result, outScale);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -1532,7 +1531,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec64Dec64RetNull(bool *isNull, int64_t *
         DecimalOperations::InternalDecimalMod(Decimal64(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal64(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -1545,7 +1544,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec64RetNull(bool *isNull, int64_t 
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         x[i] = result.GetValue();
     }
 }
@@ -1559,7 +1558,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec64RetNull(bool *isNull, Decimal1
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         y[i] = result.GetValue();
     }
 }
@@ -1573,7 +1572,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec128RetNull(bool *isNull, Decimal
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -1587,7 +1586,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec128RetNull(bool *isNull, Decima
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         x[i] = result.ToDecimal128();
     }
 }
@@ -1601,7 +1600,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec64RetNull(bool *isNull, Decimal
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         output[i] = result.GetValue();
     }
 }
@@ -1614,7 +1613,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec128RetNull(bool *isNull, int64_t
         DecimalOperations::InternalDecimalMod(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
             Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
         result.ReScale(outScale);
-        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
         y[i] = result.ToDecimal128();
     }
 }
@@ -1627,7 +1626,7 @@ extern "C" DLLEXPORT void BatchRoundDecimal128RetNull(bool *isNull, Decimal128 *
         Decimal128Wrapper input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, round[i]);
-        CHECK_OVERFLOW_CONTINUE_NULL(input, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(input, outPrecision);
         output[i] = input.ToDecimal128();
     }
 }
@@ -1639,7 +1638,7 @@ extern "C" DLLEXPORT void BatchRoundDecimal64RetNull(bool *isNull, int64_t *x, i
         Decimal64 input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, round[i]);
-        CHECK_OVERFLOW_CONTINUE_NULL(input, outPrecision)
+        CHECK_OVERFLOW_CONTINUE_NULL(input, outPrecision);
         output[i] = input.GetValue();
     }
 }

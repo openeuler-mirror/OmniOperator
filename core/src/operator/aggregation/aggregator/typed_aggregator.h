@@ -112,9 +112,7 @@ template <typename T> struct AggregatorBuffer {
 
     void Release()
     {
-        if (chunk != nullptr) {
-            delete chunk;
-        }
+        delete chunk;
         chunk = nullptr;
         data = nullptr;
     }
@@ -195,7 +193,7 @@ protected:
     template <typename InType, typename OutType> OutType CastWithOverflow(const InType &val, bool &overflow)
     {
         if (overflow) {
-            return OutType{};
+            return OutType {};
         }
 
         if constexpr (std::is_same_v<InType, Decimal128>) {
@@ -218,7 +216,7 @@ private:
             return this->CastWithOverflowDecimalToFloatingPoint<OutType>(val, overflow);
         } else {
             auto &inputType = inputTypes.GetType(0);
-            OutType result{};
+            OutType result {};
             Decimal128Wrapper val128(val);
 
             // so we shoud add decimal part separately if input is acutally decimal not varchar
@@ -290,7 +288,7 @@ private:
     {
         auto &inputType = inputTypes.GetType(0);
         auto &outputType = outputTypes.GetType(0);
-        int64_t result{};
+        int64_t result {};
         Decimal128Wrapper resultDec(val);
         int32_t scale = 0;
         if (outputType->GetId() == OMNI_DECIMAL64) {
@@ -381,8 +379,8 @@ private:
 
             int128_t res128;
             int32_t scaleNotUsed = 0;
-            int32_t percisionNotUsed = 0;
-            overflow = DecimalFromString(s, res128, scaleNotUsed, percisionNotUsed) != OpStatus::SUCCESS;
+            int32_t precisionNotUsed = 0;
+            overflow = DecimalFromString(s, res128, scaleNotUsed, precisionNotUsed) != OpStatus::SUCCESS;
             Decimal128Wrapper result(res128);
             result.ReScale(scale).SetScale(0);
             overflow |= result.IsOverflow() != OpStatus::SUCCESS;
@@ -399,9 +397,9 @@ private:
             ss >> s;
 
             int128_t res128;
-            int32_t scale = 0;
-            int32_t percision = 0;
-            overflow = DecimalFromString(s, res128, scale, percision) != OpStatus::SUCCESS;
+            int32_t resScale = 0;
+            int32_t resPrecision = 0;
+            overflow = DecimalFromString(s, res128, resScale, resPrecision) != OpStatus::SUCCESS;
             return Decimal128Wrapper(res128).ToDecimal128();
         }
     }

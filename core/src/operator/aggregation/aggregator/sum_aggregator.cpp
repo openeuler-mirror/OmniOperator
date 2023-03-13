@@ -47,7 +47,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         } else {
             // IN_ID == OMNI_DECIMAL128
             LogDebug("HMPP-Agg-sum");
-            HmppDecimal128 sumVal{};
+            HmppDecimal128 sumVal {};
             result = HMPPS_Sum_decimal128(
                 static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
                 static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal);
@@ -99,7 +99,7 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
     int32_t offset;
     auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
 
-    OutType result{};
+    OutType result {};
     bool overflow = state.count < 0;
 
     if constexpr (OUT_ID == OMNI_VARCHAR) {
@@ -130,7 +130,7 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
 template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
     state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-    *reinterpret_cast<ResultType *>(state.val) = ResultType{};
+    *reinterpret_cast<ResultType *>(state.val) = ResultType {};
     state.count = 0;
 }
 

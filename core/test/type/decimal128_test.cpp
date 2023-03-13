@@ -15,8 +15,8 @@ Decimal128Wrapper Negate(const Decimal128Wrapper &value)
     return Decimal128Wrapper::Negate(value);
 }
 
-bool AssertDivide(Decimal128Wrapper &dividend, Decimal128Wrapper &divisor, int32_t dividendScaleFactor, int32_t divisorScaleFactor,
-    Decimal128Wrapper &expectQuotient, Decimal128Wrapper &expectRemainder)
+bool AssertDivide(Decimal128Wrapper &dividend, Decimal128Wrapper &divisor, int32_t dividendScaleFactor,
+    int32_t divisorScaleFactor, Decimal128Wrapper &expectQuotient, Decimal128Wrapper &expectRemainder)
 {
     if (dividendScaleFactor >= Decimal128::MAX_LONG_PRECISION) {
         std::cout << "error" << std::endl;
@@ -426,10 +426,10 @@ TEST(DecimalTest, compare_after_sum)
     Decimal128Wrapper d1(-1);
     Decimal128Wrapper d2(-2);
     Decimal128Wrapper d3;
-    d3=d1.Add(d2);
+    d3 = d1.Add(d2);
     Decimal128Wrapper d4(-2);
     Decimal128Wrapper d5(-3);
-    Decimal128Wrapper d6=d4.Add(d5);
+    Decimal128Wrapper d6 = d4.Add(d5);
     auto result = d3 > d6;
     EXPECT_EQ(result, true);
 }

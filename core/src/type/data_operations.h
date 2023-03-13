@@ -11,14 +11,15 @@
 
 namespace omniruntime {
 namespace type {
-static std::regex decimalRegex("[+-]?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?");
-static std::regex intRegex("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*");
-static std::regex doubleRegex("[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
-static std::regex dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
+static std::regex g_decimalRegex("[+-]?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?");
+static std::regex g_intRegex("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*");
+static std::regex g_doubleRegex(
+    "[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
+static std::regex g_dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
 
 inline int StringToInt(const std::string &s, int32_t &result)
 {
-    if (!regex_match(s, intRegex)) {
+    if (!regex_match(s, g_intRegex)) {
         return -1;
     }
     int status = 0;
@@ -32,7 +33,7 @@ inline int StringToInt(const std::string &s, int32_t &result)
 
 inline int StringToLong(const std::string &s, int64_t &result)
 {
-    if (!regex_match(s, intRegex)) {
+    if (!regex_match(s, g_intRegex)) {
         return -1;
     }
     int status = 0;
@@ -46,7 +47,7 @@ inline int StringToLong(const std::string &s, int64_t &result)
 
 inline int StringToDouble(const std::string &s, double &result)
 {
-    if (!regex_match(s, doubleRegex)) {
+    if (!regex_match(s, g_doubleRegex)) {
         return -1;
     }
     int status = 0;
@@ -59,4 +60,4 @@ inline int StringToDouble(const std::string &s, double &result)
 }
 }
 }
-#endif //OMNI_RUNTIME_DATA_OPERATIONS_H
+#endif // OMNI_RUNTIME_DATA_OPERATIONS_H

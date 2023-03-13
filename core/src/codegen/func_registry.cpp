@@ -53,8 +53,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
         functionRegistries.push_back(make_unique<StringFunctionRegistryNotReplace>());
     }
 
-    if (policy->GetStringToDateFormatRule() ==
-        StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION) {
+    if (policy->GetStringToDateFormatRule() == StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION) {
         functionRegistries.push_back(make_unique<StringFunctionRegistryNotAllowReducePrecison>());
     } else {
         functionRegistries.push_back(make_unique<StringFunctionRegistryAllowReducePrecison>());

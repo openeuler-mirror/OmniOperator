@@ -1624,14 +1624,14 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
 
     std::vector<DataTypePtr> streamTypesVector = { IntType(), LongType() };
     DataTypes streamedTblTypes(streamTypesVector);
-    std::vector<int32_t> streamedKeysCols {0};
-    std::vector<int32_t> streamedOutputCols {1};
+    std::vector<int32_t> streamedKeysCols { 0 };
+    std::vector<int32_t> streamedOutputCols { 1 };
     smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols);
 
     std::vector<DataTypePtr> bufferTypesVector = { LongType(), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
-    std::vector<int32_t> bufferedKeysCols {1};
-    std::vector<int32_t> bufferedOutputCols {0};
+    std::vector<int32_t> bufferedKeysCols { 1 };
+    std::vector<int32_t> bufferedOutputCols { 0 };
     smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols);
     smjOp->InitScannerAndResultBuilder(nullptr);
 
@@ -1683,7 +1683,7 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
     VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
     addInputRetCode = smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
     ASSERT_EQ(DecodeAddFlag(addInputRetCode),
-              static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
+        static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA));
 
     // add eof flag to streamed table
     VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);

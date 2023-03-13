@@ -93,293 +93,245 @@ extern "C" DLLEXPORT void BatchMakeDecimal64RetNull(bool *isNull, int64_t *x, in
 
 // Decimal Add Operator ReScale
 extern "C" DLLEXPORT void BatchAddDec64Dec64Dec64ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchAddDec64Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchAddDec128Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchAddDec64Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchAddDec128Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *y,
-    int32_t yPrecision,
-    int32_t yScale, int64_t *x, int32_t xPrecision, int32_t xScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t yPrecision, int32_t yScale, int64_t *x, int32_t xPrecision, int32_t xScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Sub Operation ReScale
 extern "C" DLLEXPORT void BatchSubDec64Dec64Dec64ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchSubDec64Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchSubDec128Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchSubDec64Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchSubDec128Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Mul Operation ReScale
 extern "C" DLLEXPORT void BatchMulDec64Dec64Dec64ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMulDec64Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMulDec128Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMulDec64Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMulDec128Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *y,
-    int32_t yPrecision,
-    int32_t yScale, int64_t *x, int32_t xPrecision, int32_t xScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t yPrecision, int32_t yScale, int64_t *x, int32_t xPrecision, int32_t xScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Div Operation ReScale
 extern "C" DLLEXPORT void BatchDivDec64Dec64Dec64ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec64Dec128Dec64ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec128Dec64Dec64ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec64Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec128Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec64Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec128Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Mod Operation ReScale
 extern "C" DLLEXPORT void BatchModDec64Dec64Dec64ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec64Dec128Dec64ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec128Dec64Dec64ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec128Dec64Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec128Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec128Dec128Dec64ReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int64_t *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int64_t *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec64Dec128Dec128ReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Add Operator NotReScale
 extern "C" DLLEXPORT void BatchAddDec64Dec64Dec64NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchAddDec64Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchAddDec128Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchAddDec64Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchAddDec128Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *y,
-    int32_t yPrecision,
-    int32_t yScale, int64_t *x, int32_t xPrecision, int32_t xScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t yPrecision, int32_t yScale, int64_t *x, int32_t xPrecision, int32_t xScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Sub Operation NotReScale
 extern "C" DLLEXPORT void BatchSubDec64Dec64Dec64NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchSubDec64Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchSubDec128Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchSubDec64Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchSubDec128Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Mul Operation NotReScale
 extern "C" DLLEXPORT void BatchMulDec64Dec64Dec64NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMulDec64Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMulDec128Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMulDec64Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMulDec128Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *y,
-    int32_t yPrecision,
-    int32_t yScale, int64_t *x, int32_t xPrecision, int32_t xScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t yPrecision, int32_t yScale, int64_t *x, int32_t xPrecision, int32_t xScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Div Operation NotReScale
 extern "C" DLLEXPORT void BatchDivDec64Dec64Dec64NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec64Dec128Dec64NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec128Dec64Dec64NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec64Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, Decimal128 *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec128Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec64Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchDivDec128Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // Decimal Mod Operation NotReScale
 extern "C" DLLEXPORT void BatchModDec64Dec64Dec64NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec64Dec128Dec64NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec128Dec64Dec64NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec128Dec64Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, int64_t *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec128Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
     int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
     int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec128Dec128Dec64NotReScale(int64_t contextPtr, bool *isNull, Decimal128 *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int64_t *output, int32_t outPrecision,
-    int32_t outScale, int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int64_t *output,
+    int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchModDec64Dec128Dec128NotReScale(int64_t contextPtr, bool *isNull, int64_t *x,
-    int32_t xPrecision,
-    int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale,
-    int32_t rowCnt);
+    int32_t xPrecision, int32_t xScale, Decimal128 *y, int32_t yPrecision, int32_t yScale, int32_t outPrecision,
+    int32_t outScale, int32_t rowCnt);
 
 // add ret null
 extern "C" DLLEXPORT void BatchAddDec64Dec64Dec64RetNull(bool *isNull, int64_t *x, int32_t xPrecision, int32_t xScale,

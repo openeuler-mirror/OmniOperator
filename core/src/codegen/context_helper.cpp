@@ -71,6 +71,5 @@ extern "C" DLLEXPORT
         va_end(v);
         return errorMessage.str();
     }
-
 }
 }

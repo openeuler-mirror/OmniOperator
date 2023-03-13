@@ -212,9 +212,9 @@ public:
         return isSkipVerify;
     }
 
-    void SetIsSkipVerify(bool isSkipVerify)
+    void SetSkipVerify(bool needSkipVerify)
     {
-        this->isSkipVerify = isSkipVerify;
+        this->isSkipVerify = needSkipVerify;
     }
 
     static OperatorConfig DeserializeOperatorConfig(const std::string &configString);

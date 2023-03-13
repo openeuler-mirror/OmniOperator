@@ -87,7 +87,7 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
  * Intercept substring from beyond.
  * e.g., str="apple", strLength=5, startIndex=-7, subStringLength=3, Result="a".
  */
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrInterceptFromBeyond(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
     T length, bool isNull, int32_t *outLen)
 {
@@ -142,14 +142,14 @@ extern DLLEXPORT const char *SubstrInterceptFromBeyond(int64_t contextPtr, const
     return str + startIndex;
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrCharInterceptFromBeyond(int64_t contextPtr, const char *str, int32_t width,
     int32_t strLen, T startIdx, T length, bool isNull, int32_t *outLen)
 {
     return SubstrInterceptFromBeyond<T>(contextPtr, str, strLen, startIdx, length, isNull, outLen);
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrWithStartInterceptFromBeyond(int64_t contextPtr, const char *str, int32_t strLen,
     T startIdx, bool isNull, int32_t *outLen)
 {
@@ -184,14 +184,14 @@ extern DLLEXPORT const char *SubstrWithStartInterceptFromBeyond(int64_t contextP
     return str + startIndex;
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrCharWithStartInterceptFromBeyond(int64_t contextPtr, const char *str, int32_t width,
     int32_t strLen, T startIdx, bool isNull, int32_t *outLen)
 {
     return SubstrWithStartInterceptFromBeyond(contextPtr, str, strLen, startIdx, isNull, outLen);
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrEmptyString(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
     T length, bool isNull, int32_t *outLen)
 {
@@ -240,14 +240,14 @@ extern DLLEXPORT const char *SubstrEmptyString(int64_t contextPtr, const char *s
     return str + startIndex;
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrCharEmptyString(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
     T startIdx, T length, bool isNull, int32_t *outLen)
 {
     return SubstrEmptyString<T>(contextPtr, str, strLen, startIdx, length, isNull, outLen);
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrWithStartEmptyString(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
     bool isNull, int32_t *outLen)
 {
@@ -283,7 +283,7 @@ extern DLLEXPORT const char *SubstrWithStartEmptyString(int64_t contextPtr, cons
     return str + startIndex;
 }
 
-template<typename T>
+template <typename T>
 extern DLLEXPORT const char *SubstrCharWithStartEmptyString(int64_t contextPtr, const char *str, int32_t width,
     int32_t strLen, T startIdx, bool isNull, int32_t *outLen)
 {

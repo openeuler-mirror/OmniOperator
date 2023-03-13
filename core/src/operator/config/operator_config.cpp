@@ -47,10 +47,9 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
 {
     SpillConfig *resultSpillConfig = nullptr;
     OverflowConfig *resultOverflowConfig = nullptr;
-    bool isSkipVerify = false;
+    bool needSkipVerify = false;
+
     auto result = nlohmann::json::parse(configString);
-
-
     if (result.contains("overflowConfig")) {
         auto overflowConfigId = result.at("overflowConfig").at("overflowConfigId").get<OverflowConfigId>();
         resultOverflowConfig = new OverflowConfig(overflowConfigId);
@@ -80,10 +79,10 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     }
 
     if (result.contains("skipExpressionVerify")) {
-        isSkipVerify = result.at("skipExpressionVerify").get<bool>();
+        needSkipVerify = result.at("skipExpressionVerify").get<bool>();
     }
 
-    return OperatorConfig{ resultSpillConfig, resultOverflowConfig, isSkipVerify };
+    return OperatorConfig { resultSpillConfig, resultOverflowConfig, needSkipVerify };
 }
 
 void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)

@@ -171,8 +171,8 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
             inputVecBatchForAgg->SetVector(0, vector);
         }
         uint32_t vectorPosition = DecodePosition(sliceAddress);
-        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg,
-                                 static_cast<int32_t>(vectorPosition), 1);
+        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, static_cast<int32_t>(vectorPosition),
+            1);
     }
 }
 }

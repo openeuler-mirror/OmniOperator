@@ -4128,8 +4128,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
     addInputRetCode = bufferedTblWithExprOperator->AddInput(bufferedTblVecBatch);
     ASSERT_EQ(DecodeAddFlag(addInputRetCode),
         static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA));
-    ASSERT_EQ(DecodeFetchFlag(addInputRetCode),
-              static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
+    ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
     std::vector<omniruntime::vec::VectorBatch *> result;
 

@@ -42,7 +42,7 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
         Decimal64DataType::Instance(),
         BooleanType(),
         CharDataType::Instance(),
-        ShortType()};
+        ShortType() };
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 =
         CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6, data7, data8, data9, data10);

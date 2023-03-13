@@ -240,8 +240,7 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     if (bExpr->op == omniruntime::expressions::Operator::AND) {
         this->value = make_shared<CodeGenValue>(builder->CreateAnd(left->data, right->data, "logical_and"),
             builder->CreateOr(builder->CreateAnd(left->isNull, right->isNull), builder->CreateOr(
-                builder->CreateAnd(left->isNull, right->data),
-                builder->CreateAnd(right->isNull, left->data))));
+            builder->CreateAnd(left->isNull, right->data), builder->CreateAnd(right->isNull, left->data))));
         return;
     }
     if (bExpr->op == omniruntime::expressions::Operator::OR) {

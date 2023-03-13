@@ -51,7 +51,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &stat
         } else {
             // IN_ID == OMNI_DECIMAL128
             LogDebug("HMPP-Agg-avg");
-            HmppDecimal128 sumVal{};
+            HmppDecimal128 sumVal {};
             result = HMPPS_Mean_decimal128(
                 static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
                 static_cast<int8_t *>(static_cast<int8_t *>(nullAddr) + positionOffset), &overflow, &sumVal, &count);
@@ -104,7 +104,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
             SumAggregator<IN_ID, OUT_ID>::ExtractValues(state, vectors, rowIndex);
         } else if constexpr (OUT_ID == OMNI_CONTAINER) {
             int32_t offset;
-            OutType result{};
+            OutType result {};
             ContainerVector *vector =
                 static_cast<ContainerVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
             OutVector *doubleVector = reinterpret_cast<OutVector *>(vector->GetValue(0));
@@ -127,7 +127,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
         }
     } else {
         int32_t offset;
-        OutType result{};
+        OutType result {};
         auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
         bool overflow = state.count < 0;
         if (state.count > 0 && state.val != nullptr) {

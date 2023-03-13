@@ -17,8 +17,7 @@
 
 namespace omniruntime::codegen::function {
 // Absolute value
-template<typename T>
-extern DLLEXPORT T Abs(T x)
+template <typename T> extern DLLEXPORT T Abs(T x)
 {
     return std::abs(x);
 }
@@ -110,8 +109,7 @@ extern "C" DLLEXPORT bool NotEqualInt32(int32_t left, int32_t right);
 
 extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
 
-template<typename T>
-extern DLLEXPORT T Round(T num, int32_t decimals)
+template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
 {
     if (std::isnan(num) || std::isinf(num)) {
         return num;

@@ -49,9 +49,9 @@ static void SetAggregateFactoryParams(const bool hasMask, const FunctionType agg
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 class AggregatorTesterTemplateSingleState : public AggregatorTesterTemplate<IN_ID, OUT_ID> {
 public:
-    AggregatorTesterTemplateSingleState(const std::string aggFuncName_, const int32_t nullPercent_, const bool isDict_,
-        const bool hasMask_, const bool nullWhenOverflow_)
-        : AggregatorTesterTemplate<IN_ID, OUT_ID>(aggFuncName_, nullPercent_, isDict_, hasMask_, nullWhenOverflow_)
+    AggregatorTesterTemplateSingleState(const std::string aggFuncName, const int32_t nullPercent, const bool isDict,
+        const bool hasMask, const bool nullWhenOverflow)
+        : AggregatorTesterTemplate<IN_ID, OUT_ID>(aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow)
     {}
 
     ~AggregatorTesterTemplateSingleState() override = default;
@@ -100,7 +100,7 @@ public:
             using T_IN = typename NativeAndVectorType<IN_ID>::type;
             using T_OUT = typename NativeAndVectorType<OUT_ID>::type;
             using V_OUT = typename NativeAndVectorType<OUT_ID>::vector;
-            T_OUT result{};
+            T_OUT result {};
             int64_t count = 0;
             bool overflow;
             const int32_t valueIndex = this->GetValueColumnIndex();
@@ -109,35 +109,35 @@ public:
             if (TypeUtil::IsDecimalType(IN_ID) &&
                 (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
                 if (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM) {
-                    overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, Decimal128>(vvb, valueIndex,
-                        maskIndex, sumFunc<T_IN, Decimal128>, count, result);
+                    overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, T_OUT, Decimal128>(vvb, valueIndex,
+                        maskIndex, SumFunc<T_IN, Decimal128>, count, result);
                 } else {
-                    Decimal128 result128{};
-                    overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, Decimal128, Decimal128>(vvb,
-                        valueIndex, maskIndex, sumFunc<T_IN, Decimal128>, count, result128);
+                    Decimal128 result128 {};
+                    overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, Decimal128, Decimal128>(vvb,
+                        valueIndex, maskIndex, SumFunc<T_IN, Decimal128>, count, result128);
                     if (!overflow && count > 0) {
                         // generate actual average from some and count
                         Decimal128Wrapper wrapped = Decimal128Wrapper(result128).Divide(Decimal128Wrapper(count), 0);
-                        overflow = !doCast<Decimal128, T_OUT>(result, wrapped.ToDecimal128());
+                        overflow = !DoCast<Decimal128, T_OUT>(result, wrapped.ToDecimal128());
                     }
                 }
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM) {
                 using T_MID = std::conditional_t<std::is_floating_point_v<T_IN>, double, int64_t>;
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_MID>(vvb, valueIndex,
-                    maskIndex, sumFunc<T_IN, T_MID>, count, result);
+                overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, T_OUT, T_MID>(vvb, valueIndex,
+                    maskIndex, SumFunc<T_IN, T_MID>, count, result);
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                double resultDouble{};
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, double, double>(vvb, valueIndex,
-                    maskIndex, sumFunc<T_IN, double>, count, resultDouble);
+                double resultDouble {};
+                overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, double, double>(vvb, valueIndex,
+                    maskIndex, SumFunc<T_IN, double>, count, resultDouble);
                 if (!overflow && count > 0) {
-                    overflow = !doCast<double, T_OUT>(result, resultDouble /= count);
+                    overflow = !DoCast<double, T_OUT>(result, resultDouble /= count);
                 }
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MIN) {
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex, maskIndex,
-                    minFunc<T_IN, T_IN>, count, result);
+                overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex, maskIndex,
+                    MinFunc<T_IN, T_IN>, count, result);
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MAX) {
-                overflow = GenerateExpectedResultNumeric<allMatchFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex, maskIndex,
-                    maxFunc<T_IN, T_IN>, count, result);
+                overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex, maskIndex,
+                    MaxFunc<T_IN, T_IN>, count, result);
             } else {
                 throw OmniException("Invalid Arguement",
                     "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
@@ -160,9 +160,9 @@ public:
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 class HashAggregatorTesterTemplateSingleState : public HashAggregatorTesterTemplate<IN_ID, OUT_ID> {
 public:
-    HashAggregatorTesterTemplateSingleState(const std::string aggFuncName_, const int32_t nullPercent_,
-        const bool isDict_, const bool hasMask_, const bool nullWhenOverflow_)
-        : HashAggregatorTesterTemplate<IN_ID, OUT_ID>(aggFuncName_, nullPercent_, isDict_, hasMask_, nullWhenOverflow_)
+    HashAggregatorTesterTemplateSingleState(const std::string aggFuncName, const int32_t nullPercent, const bool isDict,
+        const bool hasMask, const bool nullWhenOverflow)
+        : HashAggregatorTesterTemplate<IN_ID, OUT_ID>(aggFuncName, nullPercent, isDict, hasMask, nullWhenOverflow)
     {}
 
     ~HashAggregatorTesterTemplateSingleState() override = default;
@@ -218,43 +218,43 @@ public:
                 IntVector *orgGroups = static_cast<IntVector *>(VectorHelper::ExpandVectorAndIndex(groups, i, orgIdx));
                 int32_t filterValue = orgGroups->GetValue(orgIdx);
                 int32_t *filterValuePtr = groups->IsValueNull(i) ? nullptr : &filterValue;
-                T_OUT result{};
+                T_OUT result {};
                 int64_t count = 0;
                 bool overflow;
 
                 if (TypeUtil::IsDecimalType(IN_ID) &&
                     (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
                     if (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM) {
-                        overflow = GenerateExpectedResultNumeric<groupByFilter, IN_ID, T_OUT, Decimal128>(vvb,
-                            valueIndex, maskIndex, sumFunc<T_IN, Decimal128>, count, result, filterValuePtr, 0);
+                        overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, T_OUT, Decimal128>(vvb,
+                            valueIndex, maskIndex, SumFunc<T_IN, Decimal128>, count, result, filterValuePtr, 0);
                     } else {
-                        Decimal128 result128{};
-                        overflow = GenerateExpectedResultNumeric<groupByFilter, IN_ID, Decimal128, Decimal128>(vvb,
-                            valueIndex, maskIndex, sumFunc<T_IN, Decimal128>, count, result128, filterValuePtr, 0);
+                        Decimal128 result128 {};
+                        overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, Decimal128, Decimal128>(vvb,
+                            valueIndex, maskIndex, SumFunc<T_IN, Decimal128>, count, result128, filterValuePtr, 0);
                         if (!overflow && count > 0) {
                             // generate actual average from some and count
                             Decimal128Wrapper wrapped =
                                 Decimal128Wrapper(result128).Divide(Decimal128Wrapper(count), 0);
-                            overflow = !doCast<Decimal128, T_OUT>(result, wrapped.ToDecimal128());
+                            overflow = !DoCast<Decimal128, T_OUT>(result, wrapped.ToDecimal128());
                         }
                     }
                 } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM) {
                     using T_MID = std::conditional_t<std::is_floating_point_v<T_IN>, double, int64_t>;
-                    overflow = GenerateExpectedResultNumeric<groupByFilter, IN_ID, T_OUT, T_MID>(vvb, valueIndex,
-                        maskIndex, sumFunc<T_IN, T_MID>, count, result, filterValuePtr, 0);
+                    overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, T_OUT, T_MID>(vvb, valueIndex,
+                        maskIndex, SumFunc<T_IN, T_MID>, count, result, filterValuePtr, 0);
                 } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                    double resultDouble{};
-                    overflow = GenerateExpectedResultNumeric<groupByFilter, IN_ID, double, double>(vvb, valueIndex,
-                        maskIndex, sumFunc<T_IN, double>, count, resultDouble, filterValuePtr, 0);
+                    double resultDouble {};
+                    overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, double, double>(vvb, valueIndex,
+                        maskIndex, SumFunc<T_IN, double>, count, resultDouble, filterValuePtr, 0);
                     if (!overflow && count > 0) {
-                        overflow = !doCast<double, T_OUT>(result, resultDouble /= count);
+                        overflow = !DoCast<double, T_OUT>(result, resultDouble /= count);
                     }
                 } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MIN) {
-                    overflow = GenerateExpectedResultNumeric<groupByFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex,
-                        maskIndex, minFunc<T_IN, T_IN>, count, result, filterValuePtr, 0);
+                    overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex,
+                        maskIndex, MinFunc<T_IN, T_IN>, count, result, filterValuePtr, 0);
                 } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_MAX) {
-                    overflow = GenerateExpectedResultNumeric<groupByFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex,
-                        maskIndex, maxFunc<T_IN, T_IN>, count, result, filterValuePtr, 0);
+                    overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, T_OUT, T_IN>(vvb, valueIndex,
+                        maskIndex, MaxFunc<T_IN, T_IN>, count, result, filterValuePtr, 0);
                 } else {
                     throw OmniException("Invalid Arguement",
                         "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
