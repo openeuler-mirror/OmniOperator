@@ -751,11 +751,11 @@ int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, std::ve
     }
     // The iteration output only contains one result.
     result.resize(1);
-    int32_t curRemainHandleOutput = totalRowCount - outputState.hasBeenOutputNum;
+    int32_t curRemainHandleOutput = totalRowCount - static_cast<int32_t>(outputState.hasBeenOutputNum);
     FillSingleResultVector(curRemainHandleOutput, result[0]);
 
     TraverseHashmapToGetOneResult(deserializeHashmap, groupByCols.size(), result[0]);
-    if (outputState.hasBeenOutputNum == totalRowCount) {
+    if (static_cast<int32_t>(outputState.hasBeenOutputNum) == totalRowCount) {
         SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
     }
     return 1;

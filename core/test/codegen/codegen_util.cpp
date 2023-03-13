@@ -79,7 +79,8 @@ unique_ptr<Filter> GenerateFilterAndProjections(Expr *filterExpr, std::vector<Ex
         projections.push_back(move(projection));
     }
     if (filterExpr == nullptr) {
-        return std::move(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filterExpr));
+        Filter *filter = nullptr;
+        return std::move(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter));
     }
     return std::move(make_unique<Filter>(*filterExpr, inputTypes, nullptr));
 }

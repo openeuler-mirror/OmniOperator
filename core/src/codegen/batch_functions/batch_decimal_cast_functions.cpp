@@ -174,7 +174,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToLong(int64_t contextPtr, Decimal1
         if (isAnyNull[i]) {
             continue;
         }
-        int64_t result;
+        int64_t result = 0;
         auto status = Decimal128Wrapper(x[i]).SetScale(scale).ToLong(result);
         if (status != type::OpStatus::SUCCESS && !HasError(contextPtr)) {
             SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_LONG, x[i].ToInt128(),

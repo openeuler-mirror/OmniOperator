@@ -165,7 +165,6 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
     for (int32_t position = start; position <= end; ++position) {
         uint32_t vectorIndex = UINT32_MAX;
         int64_t sliceAddress = windowIndex->GetPagesIndex()->GetValueAddresses()[position + windowIndex->GetStart()];
-
         if (DecodeSliceIndex(sliceAddress) != vectorIndex) {
             vectorIndex = DecodeSliceIndex(sliceAddress);
             vector = vectors[argumentChannels[0]][vectorIndex];

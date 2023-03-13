@@ -7,6 +7,11 @@ package nova.hetu.omniruntime.constants;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * OperatorType
+ *
+ * @since 2022-12-19
+ */
 public class OperatorType extends Constant {
     /**
      * The constant OMNI_FILTER_AND_PROJECT.

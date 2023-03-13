@@ -5,22 +5,20 @@
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_INNER;
-import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_LEFT_SEMI;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_LEFT_ANTI;
+import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_LEFT_SEMI;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createBlankVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
-import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-import static nova.hetu.omniruntime.util.TestUtils.decodeFetchFlag;
 import static nova.hetu.omniruntime.util.TestUtils.decodeAddFlag;
+import static nova.hetu.omniruntime.util.TestUtils.decodeFetchFlag;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
 import static nova.hetu.omniruntime.util.TestUtils.omniJsonFourArithmeticExpr;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.operator.join.OmniSmjBufferedTableWithExprOperatorFactory;

@@ -14,6 +14,11 @@ import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import java.util.Arrays;
 import java.util.Objects;
 
+/**
+ * The omni fusion operator factory.
+ *
+ * @since 20221219
+ */
 public class OmniFusionOperatorFactory extends OmniOperatorFactory<OmniFusionOperatorFactory.FactoryContext> {
     /**
      * Instantiates a new Omni fusion operator factory.
@@ -53,6 +58,11 @@ public class OmniFusionOperatorFactory extends OmniOperatorFactory<OmniFusionOpe
                 OperatorConfig.serialize(context.operatorConfig));
     }
 
+    /**
+     * The factory context.
+     *
+     * @since 20221219
+     */
     public static class FactoryContext extends OmniOperatorFactoryContext {
         private final OmniOperatorFactory<?>[] operatorFactories;
 
@@ -60,6 +70,13 @@ public class OmniFusionOperatorFactory extends OmniOperatorFactory<OmniFusionOpe
 
         private final OperatorConfig operatorConfig;
 
+        /**
+         * Instantiates a new Context.
+         *
+         * @param operatorFactories the operator factories would be fused
+         * @param operatorTypes the operator types would be fused
+         * @param operatorConfig the operator config
+         */
         public FactoryContext(OmniOperatorFactory<?>[] operatorFactories, OperatorType[] operatorTypes,
                 OperatorConfig operatorConfig) {
             this.operatorFactories = requireNonNull(operatorFactories, "operatorFactories is null.");

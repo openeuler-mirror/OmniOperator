@@ -116,7 +116,7 @@ public:
         this->exprEvaluator->FilterFuncGeneration();
     }
 
-    ~FilterAndProjectOperatorFactory() = default;
+    ~FilterAndProjectOperatorFactory() override = default;
 
     Operator *CreateOperator() override;
 

@@ -77,7 +77,8 @@ public:
         this->exprEvaluator->ProjectFuncGeneration();
     }
 
-    ~ProjectionOperatorFactory() = default;
+    ~ProjectionOperatorFactory() override = default;
+
     omniruntime::op::Operator *CreateOperator() override;
 
 private:

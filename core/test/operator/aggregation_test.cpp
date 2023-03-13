@@ -1171,8 +1171,8 @@ TEST(AggregationOperatorTest, hmpp_min_max_varchar_without_nulls)
     EXPECT_EQ(maxValLen, data1[1].size());
     EXPECT_EQ(data1[1].compare(maxStr), 0);
 
-    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
-    omniruntime::op::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::Operator::DeleteOperator(aggPartial);
     VectorHelper::FreeVecBatches(finalResult);
     delete vectorAllocator;
     ConfigUtil::SetEnableHMPP(false);
@@ -1233,8 +1233,8 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
 
     EXPECT_TRUE(VecBatchMatch(finalResult[0], expVecBatch));
 
-    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
-    omniruntime::op::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::Operator::DeleteOperator(aggPartial);
     VectorHelper::FreeVecBatch(expVecBatch);
     VectorHelper::FreeVecBatches(finalResult);
     ConfigUtil::SetEnableHMPP(false);
@@ -1543,8 +1543,8 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
 
     EXPECT_TRUE(VecBatchMatch(result1[0], expVecBatch1));
 
-    omniruntime::op::op::Operator::DeleteOperator(aggPartial);
-    omniruntime::op::op::Operator::DeleteOperator(aggFinal);
+    omniruntime::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatches(result1);
 }
@@ -1617,7 +1617,7 @@ TEST(AggregationOperatorTest, min_max_varchar_correctness)
     EXPECT_EQ(maxValLen, data1[4].size());
     EXPECT_EQ(data1[4].compare(maxStr), 0);
 
-    omniruntime::op::op::Operator::DeleteOperator(aggOperator);
+    omniruntime::op::Operator::DeleteOperator(aggOperator);
     VectorHelper::FreeVecBatches(result);
 }
 #ifdef DISABLE_TEST_NO_NEED_OCCUPY_BRANCH_TEST
