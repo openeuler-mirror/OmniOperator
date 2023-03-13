@@ -1,10 +1,10 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Aggregation Base Class
  */
 
 #include "aggregation.h"
-
+#include "aggregator/aggregator_factory.h"
 namespace omniruntime {
 namespace op {
 template <class T>

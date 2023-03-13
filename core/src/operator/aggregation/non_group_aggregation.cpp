@@ -1,12 +1,11 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Aggregation Source File
  */
 #include "non_group_aggregation.h"
 #include "vector/vector_common.h"
 #include "operator/status.h"
 #include "util/type_util.h"
-#include "operator/aggregation/aggregator/aggregator_factory.h"
 #ifdef ENABLE_HMPP
 #include "util/config_util.h"
 #endif
@@ -64,9 +63,10 @@ Operator *AggregationOperatorFactory::CreateOperator()
         auto inputTypes = DataTypes(inputDataTypesPtr).Instance();
         auto outputTypes = aggsOutputTypes[i].Instance();
         auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
-            inputRaws[i], outputPartials[i]);
+            inputRaws[i], outputPartials[i], isOverflowAsNull);
         if (aggregator == nullptr) {
-            throw OmniException("create non_group aggregation operator", "return nullptr when create aggregator ");
+            throw OmniException("OPERATOR_RUNTIME_ERROR", "Unable to create aggregator " + std::to_string(i) + " / " +
+                std::to_string(this->aggregatorFactories.size()));
         }
         aggs.push_back(std::move(aggregator));
     }
@@ -77,8 +77,6 @@ Operator *AggregationOperatorFactory::CreateOperator()
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     auto aggCount = aggregators.size();
-    int32_t rowCount = vecBatch->GetRowCount();
-
     for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggsStates[aggIdx];
@@ -87,14 +85,10 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
         if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
             aggregator->ProcessGroupWithHMPP(state, vecBatch);
         } else {
-            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-                aggregator->ProcessGroup(state, vecBatch, rowIdx);
-            }
+            aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
         }
 #else
-        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            aggregator->ProcessGroup(state, vecBatch, rowIdx);
-        }
+        aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
 #endif
     }
     VectorHelper::FreeVecBatch(vecBatch);
@@ -120,13 +114,22 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
     int32_t aggOutputColsStart = 0;
     for (size_t aggIdx = 0; aggIdx < aggregators.size(); ++aggIdx) {
         auto aggregator = aggregators[aggIdx].get();
-        auto state = aggsStates[aggIdx];
+        auto &state = aggsStates[aggIdx];
         std::vector<Vector *> extractVectors;
         for (int i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
             extractVectors.push_back(outputVecBatch->GetVector(aggOutputColsStart + i));
         }
         aggOutputColsStart += aggsOutputTypes[aggIdx].GetSize();
-        aggregator->ExtractValues(state, extractVectors, 0);
+
+        try {
+            aggregator->ExtractValues(state, extractVectors, 0);
+        } catch (const OmniException &oneException) {
+            // release VectorBatch when aggregator.ExtractValues throw exception
+            // when spark hash agg sum/avg decimal overflow, it will throw exception when
+            // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
+            VectorHelper::FreeVecBatch(outputVecBatch);
+            throw oneException;
+        }
     }
 
     result.push_back(outputVecBatch);

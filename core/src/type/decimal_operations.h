@@ -11,15 +11,18 @@
 #include <regex>
 #include <iostream>
 #include <climits>
+#include <cmath>
 #include <huawei_secure_c/include/securec.h>
 #include <boost/multiprecision/cpp_int.hpp>
 #include "util/debug.h"
+#include "util/omni_exception.h"
 #include "decimal_base.h"
 #include "decimal128.h"
 #include "operator/aggregation/aggregator/aggregator.h"
 
 namespace omniruntime {
 namespace type {
+using namespace exception;
 using namespace boost::multiprecision;
 
 enum class Op {
@@ -639,7 +642,10 @@ public:
             }
             res = result.val.convert_to<int32_t>();
         } else {
-            if (result > 1L + INT32_MAX) {
+            // '1L + INT32_MAX', which is positive, is implicitly converted to Decimal128Wrapper with signum_=1,
+            // comparing it with result, which is negative, can never detect overflow
+            // that is why here, we should comapre '1L + INT32_MAX' with result.val_ not result itself
+            if (result.val > 1L + INT32_MAX) {
                 return OpStatus::OP_OVERFLOW;
             }
             res = -result.val.convert_to<int32_t>();
@@ -660,7 +666,10 @@ public:
             }
             res = result.val.convert_to<int64_t>();
         } else {
-            if (result > UNSIGNED_INT64_MIN) {
+            // 'UNSIGNED_INT64_MIN', which is positive, is implicitly converted to Decimal128Wrapper with signum_=1,
+            // comparing it with result, which is negative, can never detect overflow
+            // that is why here, we should comapre 'UNSIGNED_INT64_MIN' with result.val_ not result itself
+            if (result.val > UNSIGNED_INT64_MIN) {
                 return OpStatus::OP_OVERFLOW;
             }
             res = static_cast<int64_t>((-result.val.convert_to<int128_t>()));

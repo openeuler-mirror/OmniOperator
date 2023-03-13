@@ -14,6 +14,8 @@ if [ "$1" = 'release' ] || [ "$1" = 'test' ]; then
   cp -r ../jemalloc ${open_source_dir}
   cp -r ../json ${open_source_dir}
   cp -r ../llvm-project ${open_source_dir}
+  cp -r ../googletest ${open_source_dir}/benchmark
+  cp -r ../boost ${open_source_dir}
 
   echo "Start build open source code for huawei_secure_c, jemalloc and json"
   cd ${open_source_dir}/huawei_secure_c/src
@@ -60,7 +62,7 @@ elif [ "$1" = 'coverage-c++' ]; then
     sh build.sh coverage --enable-hmpp
     ./test/omtest --gtest_output=xml:test_detail.xml
     lcov --d ../ --c --output-file test.info --rc lcov_branch_coverage=1
-    lcov --remove test.info '*/opt/buildtools/include/*' '*/usr/include/*' '*/usr/lib/*' '*/usr/lib64/*' '*/usr/local/include/*' '*/usr/local/lib/*' '*/usr/local/lib64/*' -o final.info --rc lcov_branch_coverage=1
+    lcov --remove test.info '*/opt/buildtools/include/*' '*/usr/include/*' '*/usr/lib/*' '*/usr/lib64/*' '*/usr/local/include/*' '*/usr/local/lib/*' '*/usr/local/lib64/*' '*/test/*' -o final.info --rc lcov_branch_coverage=1
     genhtml final.info -o test_coverage --branch-coverage --rc lcov_branch_coverage=1
 
     cd ../../bindings/java

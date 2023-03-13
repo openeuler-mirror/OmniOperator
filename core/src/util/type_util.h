@@ -35,6 +35,9 @@ public:
     // Helper function for debugging DataType
     static std::string TypeToString(omniruntime::type::DataTypeId id);
 
+    // used in info/error logs
+    static std::string TypeToStringLog(omniruntime::type::DataTypeId id);
+
     static bool IsStringType(omniruntime::type::DataTypeId id);
 
     static bool IsDecimalType(omniruntime::type::DataTypeId type);
@@ -97,4 +100,5 @@ std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
     std::vector<omniruntime::type::DataTypePtr> &&fieldTypes);
 }
 }
+
 #endif // OMNI_RUNTIME_TYPE_INFER_H

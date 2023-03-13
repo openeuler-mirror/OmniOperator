@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Count aggregate
  */
 #ifndef OMNI_MASK_COLUMN_ASSISTANT_AGGREGATOR_H
@@ -26,7 +26,7 @@ public:
     {
         auto rowCount = vectorBatch->GetRowCount();
         for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            ProcessGroup(state, vectorBatch, rowIdx);
+            this->ProcessGroup(state, vectorBatch, rowIdx);
         }
     }
 
@@ -62,7 +62,7 @@ public:
         }
     }
 
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);
     }

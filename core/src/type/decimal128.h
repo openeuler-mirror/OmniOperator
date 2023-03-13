@@ -11,6 +11,7 @@
 #include <cstring>
 #include <boost/multiprecision/cpp_int.hpp>
 #include "decimal_base.h"
+#include "width_integer.h"
 
 namespace omniruntime {
 namespace type {
@@ -27,8 +28,7 @@ public:
 
     explicit Decimal128(const char *s);
 
-    Decimal128() : Decimal128(0, 0)
-    {}
+    Decimal128();
 
     Decimal128(const Decimal128 &rhs) = default;
 
@@ -72,6 +72,11 @@ public:
         this->lowBits = lowBitsField;
     }
 
+    bool IsZero() const
+    {
+        return lowBits == 0 && ((~SIGN_LONG_MASK & highBits) == 0);
+    }
+
     static int64_t Absolute(int64_t bits)
     {
         return bits & ~SIGN_LONG_MASK;
@@ -110,7 +115,7 @@ public:
         return value;
     }
 
-    std::string ToString()
+    std::string ToString() const
     {
         std::string s;
         bool negative = false;

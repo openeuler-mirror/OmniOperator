@@ -9,6 +9,7 @@
 using namespace omniruntime::type;
 
 namespace Decimal128Test {
+#ifdef DIV_CAL_NEED_CHECK
 Decimal128Wrapper Negate(const Decimal128Wrapper &value)
 {
     return Decimal128Wrapper::Negate(value);
@@ -66,6 +67,7 @@ bool AssertDivideAllSign(Decimal128Wrapper &dividend, Decimal128Wrapper &divisor
 
     return allSignResult1 && allSignResult2 && allSignResult3 && allSignResult4;
 }
+#endif
 
 static const int DECIMAL128_HALF_BIT_LENGTH = 64;
 static const __int128 INT_128_MIN = __int128(1) << 127;
@@ -432,8 +434,8 @@ TEST(DecimalTest, compare_after_sum)
     EXPECT_EQ(result, true);
 }
 
-
-TEST(Decimal128, DISABLED_div_roundup_3)
+#ifdef DIV_CAL_NEED_CHECK
+TEST(Decimal128, div_roundup_3)
 {
     Decimal128Wrapper lValue1(0x2, 0x0000000300000004);
     Decimal128Wrapper rValue1(0x100000002, 0x0000000300000004);
@@ -732,22 +734,7 @@ TEST(Decimal128, add)
     result6 = lValue6.Add(rValue6);
     EXPECT_EQ(Decimal128Wrapper(0x0, 0x300000000), result6);
 }
-
-TEST(Decimal128, DISABLED_addReturnOverflow)
-{
-    Decimal128Wrapper result;
-    // 99999999999999999999999999999999999999 + 99999999999999999999999999999999999999
-    Decimal128Wrapper lValue2(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
-    Decimal128Wrapper rValue2(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
-    result = lValue2.Add(rValue2);
-    EXPECT_EQ(result.IsOverflow(), OpStatus::OP_OVERFLOW);
-
-    // -99999999999999999999999999999999999999 + (-99999999999999999999999999999999999999)
-    Decimal128Wrapper lValue5(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
-    Decimal128Wrapper rValue5(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
-    result = rValue5.Add(lValue5);
-    EXPECT_EQ(result.IsOverflow(), OpStatus::OP_OVERFLOW);
-}
+#endif
 
 TEST(Decimal128, addReturnOverflow)
 {
@@ -997,8 +984,8 @@ TEST(Decimal128, rescaleLE18)
     result20 = value20.ReScale(-10);
     EXPECT_EQ(Decimal128Wrapper(0x80000000204FCE5E, 0x3E25026110000000), result20);
 }
-
-TEST(Decimal128, DISABLED_rescaleGT18)
+#ifdef DIV_CAL_NEED_CHECK
+TEST(Decimal128, rescaleGT18)
 {
     // 10  (-20) = 0
     Decimal128Wrapper value2(0x0, 0xA);
@@ -1049,4 +1036,5 @@ TEST(Decimal128, DISABLED_rescaleGT18)
     result23 = value23.ReScale(-37);
     EXPECT_EQ(Decimal128Wrapper(0x0, 0x1), result23);
 }
+#endif
 }

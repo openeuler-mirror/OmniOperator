@@ -42,7 +42,7 @@ void SetValueIntoVector<uint8_t *, vec::VarcharVector>(vec::VectorBatch *vecBatc
     vec->SetValueNull(0, false);
 }
 
-static std::vector<SetValueFunction> setValueFunctions {
+static std::vector<SetValueFunction> setValueFunctions{
     nullptr,                                                     // OMNI_NONE = 0
     SetValueIntoVector<int32_t, vec::IntVector>,                 // OMNI_INT = 1
     SetValueIntoVector<int64_t, vec::LongVector>,                // OMNI_LONG = 2
@@ -133,7 +133,7 @@ private:
             auto id = types[i];
             typeAdaptors.push_back(std::make_shared<DataType>(id));
         }
-        rowVectorBatch->NewVectors(vecAllocator,typeAdaptors);
+        rowVectorBatch->NewVectors(vecAllocator, typeAdaptors);
     }
 
 private:

@@ -1,11 +1,15 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: Max aggregate
  */
 #ifndef OMNI_RUNTIME_MAX_AGGREGATOR_H
 #define OMNI_RUNTIME_MAX_AGGREGATOR_H
 
-#include "aggregator.h"
+#include <cstdint>
+#include <cfloat>
+
+#include "typed_aggregator.h"
+#include "max_varchar_aggregator.h"
 #ifdef ENABLE_HMPP
 #include "aggregator_util.h"
 #include "HMPP/hmpps.h"
@@ -13,146 +17,108 @@
 
 namespace omniruntime {
 namespace op {
-template <typename InputVecType, typename OutputVecType, typename ResultType> class MaxAggregator : public Aggregator {
+template <typename T> T GetMin()
+{
+    if constexpr (std::is_same_v<T, int8_t>) {
+        return 0x81;
+    } else if constexpr (std::is_same_v<T, int16_t>) {
+        return 0x8001;
+    } else if constexpr (std::is_same_v<T, int32_t>) {
+        return 0x80000001;
+    } else if constexpr (std::is_same_v<T, int64_t>) {
+        return 0x8000000000000001;
+    } else if constexpr (std::is_same_v<T, float>) {
+        return -FLT_MAX;
+    } else if constexpr (std::is_same_v<T, double>) {
+        return -DBL_MAX;
+    } else if constexpr (std::is_same_v<T, int128>) {
+        return std::numeric_limits<int128>::min();
+    } else if constexpr (std::is_same_v<T, omniruntime::type::Decimal128>) {
+        return omniruntime::type::Decimal128(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
+    } else {
+        throw OmniException("LogicalError", "Unsupoorted data type");
+    }
+}
+
+template <typename IN, typename OUT>
+SIMD_ALWAYS_INLINE void MaxOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed)
+{
+    const OUT cur = static_cast<OUT>(in);
+    if (*res < cur) {
+        *res = cur;
+    }
+    flag |= 1;
+}
+
+template <typename IN, typename OUT, bool addIf>
+SIMD_ALWAYS_INLINE void MaxConditionalOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed,
+    const uint8_t &condition)
+{
+    if (condition == addIf) {
+        const OUT cur = static_cast<OUT>(in);
+        if (*res < cur) {
+            *res = cur;
+        }
+        flag |= 1;
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxAggregator : public TypedAggregator {
+    using InVector = typename NativeAndVectorType<IN_ID>::vector;
+    using InType = typename NativeAndVectorType<IN_ID>::type;
+    using OutVector = typename NativeAndVectorType<OUT_ID>::vector;
+    using OutType = typename NativeAndVectorType<OUT_ID>::type;
+    // note: for some reason when g++ vectorizes min operation loop, it cannot correctly
+    // evaluate min value for int16_t, so for that type intermediate result is promoted to int32
+    // once we figure out how to resolve this issue in g++m we can set ResultType = InType
+    using ResultType = std::conditional_t<IN_ID == OMNI_SHORT, int32_t, InType>;
+
 public:
-    MaxAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels)
-    {}
-
-    MaxAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw,
-        bool outputPartial)
-        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels, inputRaw, outputPartial)
-    {}
-
-    ~MaxAggregator() override {}
+    ~MaxAggregator() override = default;
 
 #ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        auto vector = vectorBatch->GetVector(channels[0]);
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 
-        auto vectorValues = vector->GetValues();
-        auto positionOffset = vector->GetPositionOffset();
-        auto rowCount = vector->GetSize();
-        auto inputTypeId = inputTypes.GetType(0)->GetId();
-        auto outputTypeId = outputTypes.GetType(0)->GetId();
-
-        HmppResult result = HMPP_STS_NO_ERR;
-        auto maxVal = reinterpret_cast<ResultType *>(executionContext->GetArena()->Allocate(sizeof(ResultType)));
-        switch (inputTypeId) {
-            case OMNI_SHORT: {
-                LogDebug("HMPP-Agg-max");
-                result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<int16_t *>(maxVal));
-                if (outputTypeId == OMNI_LONG) {
-                    *maxVal = *reinterpret_cast<int16_t *>(maxVal);
-                }
-                break;
-            }
-            case OMNI_INT:
-            case OMNI_DATE32: {
-                LogDebug("HMPP-Agg-max");
-                result = HMPPS_Max_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<int32_t *>(maxVal));
-                if (outputTypeId == OMNI_LONG) {
-                    *maxVal = *reinterpret_cast<int32_t *>(maxVal);
-                }
-                break;
-            }
-            case OMNI_LONG:
-            case OMNI_DECIMAL64: {
-                LogDebug("HMPP-Agg-max");
-                result = HMPPS_Max_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<int64_t *>(maxVal));
-                break;
-            }
-            case OMNI_DOUBLE: {
-                LogDebug("HMPP-Agg-max");
-                result = HMPPS_Max_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<double *>(maxVal));
-                break;
-            }
-            case OMNI_DECIMAL128: {
-                LogDebug("HMPP-Agg-max");
-                result = HMPPS_Max_decimal(
-                    static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset),
-                    rowCount, reinterpret_cast<HmppDecimal128 *>(maxVal));
-                break;
-            }
-            default: {
-                throw OmniException("NOT SUPPORT", "Unsupported input type for max aggregate");
-                break;
-            }
-        }
-
-        if (result != HMPP_STS_NO_ERR) {
-            throw OmniException("HMPP ERROR", "max failed for hmpp error");
-        }
-        if (state.val == nullptr) {
-            state.val = maxVal;
-        } else {
-            auto preMaxVal = static_cast<ResultType *>(state.val);
-            *static_cast<ResultType *>(state.val) = (Compare(*preMaxVal, *maxVal) == 1) ? *preMaxVal : *maxVal;
-        }
-    }
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        // just support raw input data and must no null inpout
-        if (!inputRaw || vectorBatch->GetVector(channels[0])->MayHaveNull()) {
-            return false;
-        }
-        // not accept dictionnary vector
-        if (vectorBatch->GetVector(channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-            return false;
-        }
-        // type check with whitelist for max
-        auto inputTypeId = inputTypes.GetType(0)->GetId();
-        return AggregatorUtil::IsHMPPMaxMinSupportDataTypeId(inputTypeId);
-    }
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 #endif
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
+
+    void InitState(AggregateState &state) override;
+
+    static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
-            return;
+        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
+            return MaxVarcharAggregator<IN_ID, OUT_ID>::Create(inputTypes, outputTypes, channels, rawIn, partialOut,
+                isOverflowAsNull);
+        } else if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
+            IN_ID == OMNI_DECIMAL128 || IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_BOOLEAN)) {
+            LogError("Error in max aggregator: Unsupported input type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
+            return nullptr;
+        } else if constexpr (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG ||
+            OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_DECIMAL128 || OUT_ID == OMNI_DECIMAL64 || OUT_ID == OMNI_BOOLEAN)) {
+            LogError("Error in max aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(OUT_ID).c_str());
+            return nullptr;
+        } else {
+            if (!TypedAggregator::CheckTypes("max", inputTypes, outputTypes, IN_ID, OUT_ID)) {
+                return nullptr;
+            }
+
+            return std::unique_ptr<MaxAggregator<IN_ID, OUT_ID>>(new MaxAggregator<IN_ID, OUT_ID>(inputTypes,
+                outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
         }
-        if (state.val == nullptr) {
-            this->InitiateGroup(state, vectorBatch, rowIndex);
-            return;
-        }
-        auto rowVal = static_cast<ResultType>((static_cast<InputVecType *>(vector))->GetValue(offset));
-        auto leftVal = static_cast<ResultType *>(state.val);
-        *leftVal = (Compare(*leftVal, rowVal) == 1) ? *leftVal : rowVal;
     }
 
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
-    {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
-            return;
-        }
-        auto rowVal = static_cast<InputVecType *>(vector)->GetValue(offset);
-        auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
-        *reinterpret_cast<ResultType *>(ptr) = rowVal;
-        state.val = ptr;
-    }
+protected:
+    MaxAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
+        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
-    // TOResultTypeO extract common function for sum/min/max
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
-    {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-        auto v = static_cast<OutputVecType *>(vector);
-        if (state.val == nullptr) {
-            v->SetValueNull(rowIndex);
-            return;
-        }
-        v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
-    }
+    void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
+        const uint8_t *nullMap, const int32_t *indexMap) override;
+
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 };
 }
 }

@@ -18,6 +18,7 @@ using namespace std;
 using namespace TestUtil;
 
 namespace ExpressionTest {
+static constexpr int TEST_EXPR_PERF_TIME = 1;
 template <typename... Ts> struct Arguments {
     int64_t *vals;
     int rowCount;
@@ -105,7 +106,7 @@ void PrintValueLine(const double *valueArray, const int32_t arrLength)
 TEST(ExpressionTest, q1LongType)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     const int32_t numCols = 3;
@@ -205,7 +206,7 @@ TEST(ExpressionTest, q1LongType)
 TEST(ExpressionTest, q1DoubleType)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     const int32_t numCols = 3;
@@ -305,7 +306,7 @@ TEST(ExpressionTest, q1DoubleType)
 TEST(ExpressionTest, q1DoubleFilter)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     double *col1 = new double[numRows];
@@ -397,7 +398,7 @@ TEST(ExpressionTest, q1DoubleFilter)
 TEST(ExpressionTest, q1Decimal64Type)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     const int32_t numCols = 3;
@@ -505,7 +506,7 @@ TEST(ExpressionTest, q1Decimal128Type)
     const int32_t numRows = 20000000;
 
     // prepare data
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
     const int32_t numCols = 3;
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1Decimal128Type");
     Decimal128Vector *col1 = new Decimal128Vector(vecAllocator, numRows);
@@ -610,7 +611,7 @@ TEST(ExpressionTest, q1Decimal128Type)
 TEST(ExpressionTest, q1Decimal64Cast)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     const int32_t numCols = 1;
@@ -694,7 +695,7 @@ TEST(ExpressionTest, q1Decimal64Cast)
 TEST(ExpressionTest, q1DateType)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     const int32_t numCols = 1;
@@ -778,7 +779,7 @@ TEST(ExpressionTest, q1DateType)
 TEST(ExpressionTest, q1Case1)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     const int32_t numCols = 2;
@@ -888,7 +889,7 @@ TEST(ExpressionTest, q1Case1)
 TEST(ExpressionTest, q1SwitchCase)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     const int32_t numCols = 1;
@@ -1110,7 +1111,7 @@ TEST(ExpressionTest, q1SwitchCase)
 TEST(ExpressionTest, q1If)
 {
     const int32_t numRows = 20000000;
-    const int32_t rounds = 10;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
     const int32_t numCols = 1;
