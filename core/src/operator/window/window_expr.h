@@ -37,15 +37,15 @@ public:
 private:
     std::unique_ptr<DataTypes> sourceTypes;
     std::vector<int32_t> argumentChannels;
-    std::vector<std::unique_ptr<RowProjection>> rowProjections;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> projections;
+    std::vector<ProjFunc> projectFuncs;
     WindowOperatorFactory *operatorFactory;
 };
 
 class WindowWithExprOperator : public Operator {
 public:
     WindowWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &argumentChannels,
-        std::vector<RowProjFunc> &projectFuncs, WindowOperator *windowOperator);
+        std::vector<ProjFunc> &projectFuncs, WindowOperator *windowOperator);
 
     ~WindowWithExprOperator() override;
 
@@ -58,7 +58,7 @@ public:
 private:
     type::DataTypes sourceTypes;
     std::vector<int32_t> argumentChannels;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<ProjFunc> projectFuncs;
     WindowOperator *windowOperator;
 };
 }

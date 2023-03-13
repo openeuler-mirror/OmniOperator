@@ -14,37 +14,11 @@
 #include "expression/expressions.h"
 #include "operator/execution_context.h"
 #include "codegen/expr_evaluator.h"
-#include "codegen/row_projection_codegen.h"
 
 namespace omniruntime {
 namespace op {
 using namespace vec;
 using namespace codegen;
-/**
- * vector value addresses
- * vector null value addresses
- * vector offsets addresses
- * row index
- * int pointer to return length of varchar result
- * address of ExecutionContext
- * dictionary vector addresses
- * boolean pointer to return if results is null
- */
-using RowProjFunc = void *(*)(int64_t *, int64_t *, int64_t *, int32_t, int32_t *, int64_t, int64_t *, bool *);
-
-class RowProjection {
-public:
-    explicit RowProjection(const omniruntime::expressions::Expr &expression);
-    ~RowProjection();
-    RowProjFunc Create(OverflowConfig *overflowConfig);
-    DataTypePtr GetReturnType();
-    bool IsColumnProjection();
-    int GetIndexIfColumnProjection();
-
-private:
-    std::unique_ptr<codegen::RowProjectionCodeGen> codegen = nullptr;
-    const expressions::Expr *expression;
-};
 
 class ProjectionOperator : public Operator {
 public:

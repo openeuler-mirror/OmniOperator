@@ -27,15 +27,15 @@ public:
 private:
     std::unique_ptr<DataTypes> sourceTypes;
     std::vector<int32_t> projectCols;
-    std::vector<std::unique_ptr<RowProjection>> rowProjections;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> projections;
+    std::vector<ProjFunc> projectFuncs;
     AggregationOperatorFactory *aggOperatorFactory;
 };
 
 class AggregationWithExprOperator : public Operator {
 public:
     AggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
-        std::vector<RowProjFunc> &projectFuncs, AggregationOperator *AggOperator);
+        std::vector<ProjFunc> &projectFuncs, AggregationOperator *AggOperator);
 
     ~AggregationWithExprOperator() override;
 
@@ -48,7 +48,7 @@ public:
 private:
     DataTypes sourceTypes;
     std::vector<int32_t> projectCols;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<ProjFunc> projectFuncs;
     AggregationOperator *aggOperator;
 };
 }

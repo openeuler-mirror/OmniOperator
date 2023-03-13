@@ -35,7 +35,7 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
-        this->rowProjections, this->projectCols, groupByAndAggColumnarIdx, this->projectFuncs, overflowConfig);
+        this->projections, this->projectCols, groupByAndAggColumnarIdx, this->projectFuncs, overflowConfig);
     uint32_t aggCols[aggColNum];
     for (uint32_t i = 0, j = groupByNum; i < aggColNum; i++, j++) {
         aggCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[j]);
@@ -76,7 +76,7 @@ Operator *AggregationWithExprOperatorFactory::CreateOperator()
 }
 
 AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &sourceTypes,
-    std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs, AggregationOperator *aggOperator)
+    std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs, AggregationOperator *aggOperator)
     : sourceTypes(sourceTypes), projectCols(projectCols), projectFuncs(projectFuncs), aggOperator(aggOperator)
 {}
 

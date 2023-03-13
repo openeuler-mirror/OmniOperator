@@ -26,7 +26,7 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const typ
     int32_t hashTableCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newBuildTypes;
-    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->projections,
         this->buildHashCols, this->projectFuncs, overflowConfig);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes),
@@ -45,7 +45,7 @@ Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 }
 
 HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,
-    const std::vector<int32_t> &buildHashCols, const std::vector<RowProjFunc> &projectFuncs,
+    const std::vector<int32_t> &buildHashCols, const std::vector<ProjFunc> &projectFuncs,
     HashBuilderOperator *hashBuilderOperator)
     : buildTypes(buildTypes),
       buildHashCols(buildHashCols),

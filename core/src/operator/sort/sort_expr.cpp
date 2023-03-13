@@ -38,7 +38,7 @@ SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &
     int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->projections,
         this->sortCols, this->projectFuncs, operatorConfig.GetOverflowConfig());
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes), outputCols,
@@ -58,7 +58,7 @@ Operator *SortWithExprOperatorFactory::CreateOperator()
 }
 
 SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
-    std::vector<RowProjFunc> &projectFuncs, SortOperator *sortOperator)
+    std::vector<ProjFunc> &projectFuncs, SortOperator *sortOperator)
     : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), sortOperator(sortOperator)
 {}
 

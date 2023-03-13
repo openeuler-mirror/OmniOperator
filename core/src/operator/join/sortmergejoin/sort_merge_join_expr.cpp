@@ -26,7 +26,7 @@ StreamedTableWithExprOperatorFactory::StreamedTableWithExprOperatorFactory(const
 {
     std::vector<DataTypePtr> newBuildTypes;
     OperatorUtil::CreateProjectFuncs(streamedTypes, streamedKeyExprCols, streamedKeyExprColsCnt, newBuildTypes,
-        rowProjections, streamedKeyCols, projectFuncs, overflowConfig);
+        Projections, streamedKeyCols, projectFuncs, overflowConfig);
     this->streamedTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->streamedOutputCols.insert(this->streamedOutputCols.end(), streamedOutputCols,
         streamedOutputCols + streamedOutputColsCnt);
@@ -50,7 +50,7 @@ SortMergeJoinOperator *StreamedTableWithExprOperatorFactory::GetSmjOperator()
 }
 
 StreamedTableWithExprOperator::StreamedTableWithExprOperator(const type::DataTypes &streamedTypes,
-    const std::vector<int32_t> &streamedKeyCols, const std::vector<RowProjFunc> &projectFuncs,
+    const std::vector<int32_t> &streamedKeyCols, const std::vector<ProjFunc> &projectFuncs,
     SortMergeJoinOperator *smjOperator)
     : smjOperator(smjOperator),
       streamedTypes(streamedTypes),
@@ -108,8 +108,8 @@ BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const
     reinterpret_cast<StreamedTableWithExprOperatorFactory *>(streamedTableFactoryAddr))
 {
     std::vector<DataTypePtr> newBuildTypes;
-    OperatorUtil::CreateProjectFuncs(bufferedTypes, bufferedKeyExprCols, bufferedKeyExprCnt, newBuildTypes,
-        rowProjections, bufferedKeyCols, projectFuncs, overflowConfig);
+    OperatorUtil::CreateProjectFuncs(bufferedTypes, bufferedKeyExprCols, bufferedKeyExprCnt, newBuildTypes, Projections,
+        bufferedKeyCols, projectFuncs, overflowConfig);
     this->bufferedTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->bufferedOutputCols.insert(this->bufferedOutputCols.end(), bufferedOutputCols,
         bufferedOutputCols + bufferedOutputColsCnt);
@@ -128,7 +128,7 @@ Operator *BufferedTableWithExprOperatorFactory::CreateOperator()
 }
 
 BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes,
-    const std::vector<int32_t> &bufferedKeyCols, const std::vector<RowProjFunc> &projectFuncs,
+    const std::vector<int32_t> &bufferedKeyCols, const std::vector<ProjFunc> &projectFuncs,
     SortMergeJoinOperator *smjOperator)
     : smjOperator(smjOperator),
       bufferedTypes(bufferedTypes),

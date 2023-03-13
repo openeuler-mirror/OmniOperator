@@ -33,7 +33,7 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newProbeTypes;
-    OperatorUtil::CreateProjectFuncs(probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes, this->projections,
         this->probeHashCols, this->projectFuncs, overflowConfig);
     this->probeTypes = std::make_unique<DataTypes>(newProbeTypes);
     auto hashBuilderWithExprOperatorFactory =
@@ -57,7 +57,7 @@ Operator *LookupJoinWithExprOperatorFactory::CreateOperator()
 }
 
 LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &probeTypes,
-    std::vector<int32_t> &probeHashCols, std::vector<RowProjFunc> &projectFuncs, LookupJoinOperator *lookupJoinOperator)
+    std::vector<int32_t> &probeHashCols, std::vector<ProjFunc> &projectFuncs, LookupJoinOperator *lookupJoinOperator)
     : probeTypes(probeTypes),
       probeHashCols(probeHashCols),
       projectFuncs(projectFuncs),

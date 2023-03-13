@@ -25,8 +25,6 @@ public:
 
     friend class SimpleFilterCodeGen;
 
-    friend class RowProjectionCodeGen;
-
     friend class BatchExpressionCodeGen;
 
     friend class CodegenBase;
