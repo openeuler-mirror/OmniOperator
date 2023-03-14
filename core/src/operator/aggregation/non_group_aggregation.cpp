@@ -64,7 +64,7 @@ Operator *AggregationOperatorFactory::CreateOperator()
         auto inputTypes = DataTypes(inputDataTypesPtr).Instance();
         auto outputTypes = aggsOutputTypes[i].Instance();
         auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
-            inputRaws[i], outputPartials[i]);
+            inputRaws[i], outputPartials[i], isOverflowAsNull);
         if (aggregator == nullptr) {
             throw OmniException("create non_group aggregation operator", "return nullptr when create aggregator ");
         }
