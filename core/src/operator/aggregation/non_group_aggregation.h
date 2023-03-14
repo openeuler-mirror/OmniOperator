@@ -43,8 +43,8 @@ public:
     AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypesVector,
         std::vector<std::vector<uint32_t>> &aggsInputColsVector, std::vector<uint32_t> &maskColsVector,
         std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> inputRaws,
-        std::vector<bool> outputPartials)
-        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector),
+        std::vector<bool> outputPartials, bool overflowAsNull = false)
+        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull),
           sourceTypes(sourceTypes),
           aggFuncTypesVector(aggFuncTypesVector),
           aggsInputColsVector(aggsInputColsVector),

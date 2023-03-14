@@ -60,7 +60,7 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
     }
     sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     aggOperatorFactory = new AggregationOperatorFactory(*sourceTypes, aggFuncTypes, aggColIdx, maskColumns,
-        aggOutputTypes, inputRaws, outputPartial);
+        aggOutputTypes, inputRaws, outputPartial, overflowConfig.IsOverflowAsNull());
     aggOperatorFactory->Init();
 }
 
