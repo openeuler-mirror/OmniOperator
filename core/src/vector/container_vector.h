@@ -64,11 +64,6 @@ public:
 
     ~ContainerVector() override;
 
-    VectorEncoding GetEncoding() override
-    {
-        return OMNI_VEC_ENCODING_CONTAINER;
-    }
-
     void SetDataTypes(const std::vector<DataTypePtr> &dataTypes)
     {
         this->dataTypes = dataTypes;

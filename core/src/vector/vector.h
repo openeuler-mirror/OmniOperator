@@ -21,6 +21,8 @@ namespace vec {
 using DataTypeId = type::DataTypeId;
 class Vector {
 public:
+    Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId, VectorEncoding encoding);
+
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId);
 
     virtual ~Vector();
@@ -96,7 +98,7 @@ public:
         hasNull = true;
     }
 
-    virtual void SetValueNull(int index, bool value)
+    void SetValueNull(int index, bool value)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
         hasNull = value || hasNull;
@@ -137,9 +139,9 @@ public:
 
     VectorTracer *GetVectorTracer();
 
-    virtual VectorEncoding GetEncoding()
+    VectorEncoding GetEncoding()
     {
-        return OMNI_VEC_ENCODING_FLAT;
+        return encoding;
     }
 
     virtual bool MayHaveNull() const
@@ -197,6 +199,7 @@ protected:
     int capacityInBytes = 0;
     int size = 0;
     DataTypeId dataTypeId;
+    VectorEncoding encoding;
     VectorReference *reference = nullptr;
     VectorTracer *tracer = nullptr;
     VectorAllocator *allocator = nullptr;

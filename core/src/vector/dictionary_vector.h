@@ -101,11 +101,6 @@ public:
         }
     }
 
-    VectorEncoding GetEncoding() override
-    {
-        return OMNI_VEC_ENCODING_DICTIONARY;
-    }
-
     StringRef SerializeValue(size_t rowId, mem::SimpleArenaAllocator &arenaAllocator,
         const uint8_t *&begin) override
     {
