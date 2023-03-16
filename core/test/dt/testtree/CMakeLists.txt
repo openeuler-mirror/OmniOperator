@@ -16,7 +16,7 @@ set(TARGET ${BUSINESS_LIB}_dt)
 message(DT_FRAME is $ENV{DT_FRAME})
 ## include dtframe utils
 link_directories(${DTFRAME_DIR_ROOT}/lib64)
-include_directories(${DTFRAME_DIR_ROOT}/include)
+include_directories(${DTFRAME_DIR_ROOT}/include ${PROJECT_SOURCE_DIR}/test/util)
 message("cmd: ${DTFRAME_DIR_ROOT}/bin/dt_register register --config ${TEST_CONFIG_FILE}")
 execute_process(
         COMMAND ${DTFRAME_DIR_ROOT}/bin/dt_register register --config ${TEST_CONFIG_FILE}
@@ -29,7 +29,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../sourcetree)
 
 add_library(${TARGET} SHARED ${SOURCE_FILES})
 
-target_link_libraries(${TARGET} ${BUSINESS_LIB})
+target_link_libraries(${TARGET} testutil ${BUSINESS_LIB})
 target_link_libraries(${TARGET} rttr_core_d Secodefuzz)
 
 install(TARGETS ${TARGET}

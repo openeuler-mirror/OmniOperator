@@ -2,10 +2,11 @@
 # build file for OmniOperatorJit
 # Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
 
+set -e
 set -x
 echo "build.sh+"
 
-SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 SRC_ROOT="$(cd $SCRIPT_DIR/../..;pwd)"
 
 echo ${SRC_ROOT}
