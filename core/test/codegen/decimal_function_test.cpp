@@ -13,7 +13,6 @@
 #include "codegen/functions/varcharVectorfunctions.h"
 #include "vector/vector_helper.h"
 
-
 namespace omniruntime {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -26,27 +25,27 @@ TEST(FunctionTest, GetDecimalFromDictionaryVector)
     ConfigUtil::SetEmptySearchStrReplaceRule(EmptySearchStrReplaceRule::REPLACE);
     ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     int size = 5;
-    auto vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DecimalVector_GetDecimalFromDictionaryVector");
-    auto decimalVector = new Decimal128Vector(vecAllocator, size * 2);
-    for (int i = 0; i < decimalVector->GetSize(); i++) {
+    auto *decimalVec = new Vector<Decimal128>(size * 2);
+
+    for (int i = 0; i < decimalVec->GetSize(); i++) {
         Decimal128 x(i * 11, i * 13);
-        decimalVector->SetValue(i, x);
+        decimalVec->SetValue(i, x);
     }
     int32_t ids[] = { 0, 2, 4, 6, 8 };
-    auto dict = new DictionaryVector(decimalVector, ids, size);
+    auto dictionary = VectorHelper::CreateDictionary(ids, size, decimalVec);
+    auto dictionaryPtr = dictionary.release();
     int64_t outHigh = 0;
     uint64_t outLow = 0;
-    int64_t dictptr = reinterpret_cast<int64_t>(dict);
+    int64_t dictptr =
+        reinterpret_cast<int64_t>(reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictionaryPtr));
     for (int i = 0; i < size; i++) {
         GetDecimalFromDictionaryVector(dictptr, i, 38, 0, &outHigh, &outLow);
-        Decimal128 expected = decimalVector->GetValue(ids[i]);
+        Decimal128 expected = decimalVec->GetValue(ids[i]);
         EXPECT_EQ(expected.HighBits(), outHigh);
         EXPECT_EQ(expected.LowBits(), outLow);
     }
-    delete decimalVector;
-    delete dict;
-    delete vecAllocator;
+    delete decimalVec;
+    delete dictionaryPtr;
 }
 
 /*

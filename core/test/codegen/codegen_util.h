@@ -13,12 +13,12 @@
 namespace CodegenUtil {
 using namespace omniruntime::expressions;
 
-void GetDataFromVecBatch(omniruntime::vec::VectorBatch &vecBatch, int64_t valueAddrs[], int64_t nullAddrs[],
-    int64_t offsetAddrs[], int64_t dictionaries[]);
+void GetDataFromVecBatch(omniruntime::vec::VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[],
+    intptr_t offsetAddrs[], intptr_t dictionaries[], const DataTypes &types);
 
-omniruntime::vec::VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::op::Filter> &filter,
-    std::vector<std::unique_ptr<omniruntime::op::Projection>> &projections, int32_t numCols,
-    omniruntime::vec::VectorBatch *vecBatch, int32_t &numSelectedRows, omniruntime::vec::VectorAllocator *vecAllocator);
+omniruntime::vec::VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::codegen::Filter> &filter,
+    std::vector<std::unique_ptr<omniruntime::codegen::Projection>> &projections, int32_t numCols,
+    omniruntime::vec::VectorBatch *vecBatch, int32_t &numSelectedRows, const DataTypes &types);
 
 std::unique_ptr<Filter> GenerateFilterAndProjections(Expr *filterExpr, std::vector<Expr *> &projExprs,
     DataTypes &inputTypes, std::vector<std::unique_ptr<Projection>> &projections, OverflowConfig *overflowConfig);

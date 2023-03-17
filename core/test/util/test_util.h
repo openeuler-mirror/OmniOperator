@@ -28,12 +28,6 @@ bool VecBatchMatch(vec::VectorBatch *outputPages, vec::VectorBatch *expectPage, 
 bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
     std::vector<omniruntime::vec::VectorBatch *> &expectedBatches, std::vector<DataTypePtr> &expectedTypes);
 
-bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
-    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches, std::vector<DataTypePtr> &expectedTypes);
-
-bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
-    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches, std::vector<DataTypePtr> &expectedTypes);
-
 bool ColumnMatch(vec::BaseVector *actualColumn, vec::BaseVector *expectColumn, int32_t typeId);
 
 vec::VectorBatch *CreateVectorBatch(const type::DataTypes &types, int32_t rowCount, ...);

@@ -7,7 +7,6 @@
 #include "vector/vector.h"
 
 using namespace omniruntime::vec;
-using namespace std;
 
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT int32_t BatchWrapVarcharVector(int64_t vectorAddr, uint8_t **data, int32_t *dataLen,

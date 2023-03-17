@@ -109,23 +109,18 @@ TEST(ExpressionTest, q1LongType)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    const int32_t numCols = 3;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1LongType");
-    LongVector *col1 = new LongVector(vecAllocator, numRows);
-    LongVector *col2 = new LongVector(vecAllocator, numRows);
-    LongVector *col3 = new LongVector(vecAllocator, numRows);
+    auto *col1 = new int64_t[numRows];
+    auto *col2 = new int64_t[numRows];
+    auto *col3 = new int64_t[numRows];
+
     for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 100000 + 20;
-        col1->SetValue(i, d);
+        col1[i] = rand() % 100000 + 20;
+        col2[i] = rand() % 50;
+        col3[i] = rand() % 8 + 5;
     }
-    for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 50;
-        col2->SetValue(i, d);
-    }
-    for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 8 + 5;
-        col3->SetValue(i, d);
-    }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ LongType(), LongType(), LongType() });
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     LiteralExpr *subLeft = new LiteralExpr(100L, LongType());
@@ -138,20 +133,13 @@ TEST(ExpressionTest, q1LongType)
     BinaryExpr *mulExpr1 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, LongType());
     BinaryExpr *mulExpr2 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, LongType());
     std::vector<Expr *> exprs = { mulExpr2 };
-    int32_t inputTypeIds[numCols] = {OMNI_LONG, OMNI_LONG, OMNI_LONG};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
 
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col1);
-    t->SetVector(1, col2);
-    t->SetVector(2, col3);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -159,7 +147,7 @@ TEST(ExpressionTest, q1LongType)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     timer.CalculateElapse();
@@ -170,7 +158,7 @@ TEST(ExpressionTest, q1LongType)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t);
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
         VectorBatch *outputVecBatch = nullptr;
 
         timer.Reset();
@@ -183,8 +171,10 @@ TEST(ExpressionTest, q1LongType)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            int64_t result = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(i);
-            int64_t actualLong = col1->GetValue(i) * (100L - col2->GetValue(i)) * (100L + col3->GetValue(i));
+            int64_t result = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+            int64_t actualLong = ((reinterpret_cast<Vector<int64_t> *>(t->Get(0)))->GetValue(i)) *
+                (100L - (reinterpret_cast<Vector<int64_t> *>(t->Get(1)))->GetValue(i)) *
+                (100L + (reinterpret_cast<Vector<int64_t> *>(t->Get(2)))->GetValue(i));
             EXPECT_EQ(result, actualLong);
         }
         VectorHelper::FreeVecBatch(outputVecBatch);
@@ -194,10 +184,12 @@ TEST(ExpressionTest, q1LongType)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
 }
 
 // Test projection on double data type
@@ -209,23 +201,18 @@ TEST(ExpressionTest, q1DoubleType)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    const int32_t numCols = 3;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1DoubleType");
-    DoubleVector *col1 = new DoubleVector(vecAllocator, numRows);
-    DoubleVector *col2 = new DoubleVector(vecAllocator, numRows);
-    DoubleVector *col3 = new DoubleVector(vecAllocator, numRows);
+    auto *col1 = new double[numRows];
+    auto *col2 = new double[numRows];
+    auto *col3 = new double[numRows];
+
     for (int64_t i = 0; i < numRows; i++) {
-        auto d = rand() % 100000 + 20;
-        col1->SetValue(i, d / 100.0);
+        col1[i] = rand() % 100000 + 20;
+        col2[i] = rand() % 50;
+        col3[i] = rand() % 8 + 5;
     }
-    for (int64_t i = 0; i < numRows; i++) {
-        auto d = rand() % 50;
-        col2->SetValue(i, d / 100.0);
-    }
-    for (int64_t i = 0; i < numRows; i++) {
-        auto d = rand() % 8 + 5;
-        col3->SetValue(i, d / 100.0);
-    }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() });
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     LiteralExpr *subLeft = new LiteralExpr(1.0, DoubleType());
@@ -238,20 +225,13 @@ TEST(ExpressionTest, q1DoubleType)
     BinaryExpr *mulExpr1 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, DoubleType());
     BinaryExpr *mulExpr2 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, DoubleType());
     std::vector<Expr *> exprs = { mulExpr2 };
-    int32_t inputTypeIds[numCols] = {OMNI_DOUBLE, OMNI_DOUBLE, OMNI_DOUBLE};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
 
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col1);
-    t->SetVector(1, col2);
-    t->SetVector(2, col3);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -259,7 +239,7 @@ TEST(ExpressionTest, q1DoubleType)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     timer.CalculateElapse();
@@ -270,7 +250,7 @@ TEST(ExpressionTest, q1DoubleType)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t);
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
         VectorBatch *outputVecBatch = nullptr;
 
         timer.Reset();
@@ -283,8 +263,10 @@ TEST(ExpressionTest, q1DoubleType)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            double result = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
-            double actualDouble = col1->GetValue(i) * (1.0 - col2->GetValue(i)) * (1.0 + col3->GetValue(i));
+            double result = (reinterpret_cast<Vector<double> *>(outputVecBatch->Get(0)))->GetValue(i);
+            double actualDouble = ((reinterpret_cast<Vector<double> *>(t->Get(0)))->GetValue(i)) *
+                (1.0 - (reinterpret_cast<Vector<double> *>(t->Get(1)))->GetValue(i)) *
+                (1.0 + (reinterpret_cast<Vector<double> *>(t->Get(2)))->GetValue(i));
             EXPECT_EQ(result, actualDouble);
         }
         VectorHelper::FreeVecBatch(outputVecBatch);
@@ -294,10 +276,12 @@ TEST(ExpressionTest, q1DoubleType)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
 }
 
 // Test filter on double data type
@@ -309,9 +293,9 @@ TEST(ExpressionTest, q1DoubleFilter)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    double *col1 = new double[numRows];
-    double *col2 = new double[numRows];
-    double *col3 = new double[numRows];
+    auto *col1 = new double[numRows];
+    auto *col2 = new double[numRows];
+    auto *col3 = new double[numRows];
     for (int64_t i = 0; i < numRows; i++) {
         auto d = rand() % 100000 + 20;
         col1[i] = d / 100.0;
@@ -401,23 +385,18 @@ TEST(ExpressionTest, q1Decimal64Type)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    const int32_t numCols = 3;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1Decimal64Type");
-    LongVector *col1 = new LongVector(vecAllocator, numRows);
-    LongVector *col2 = new LongVector(vecAllocator, numRows);
-    LongVector *col3 = new LongVector(vecAllocator, numRows);
+    auto *col1 = new int64_t[numRows];
+    auto *col2 = new int64_t[numRows];
+    auto *col3 = new int64_t[numRows];
+
     for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 100000 + 20;
-        col1->SetValue(i, d);
+        col1[i] = rand() % 100000 + 20;
+        col2[i] = rand() % 50;
+        col3[i] = rand() % 8 + 5;
     }
-    for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 50;
-        col2->SetValue(i, d);
-    }
-    for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 8 + 5;
-        col3->SetValue(i, d);
-    }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ LongType(), LongType(), LongType() });
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     LiteralExpr *subLeft = new LiteralExpr(100L, Decimal64Type(12, 2));
@@ -434,20 +413,13 @@ TEST(ExpressionTest, q1Decimal64Type)
     BinaryExpr *mulExpr2 =
         new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, Decimal64Type(12, 2));
     std::vector<Expr *> exprs = { mulExpr2 };
-    int32_t inputTypeIds[numCols] = {OMNI_DECIMAL64, OMNI_DECIMAL64, OMNI_DECIMAL64};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
 
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col1);
-    t->SetVector(1, col2);
-    t->SetVector(2, col3);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -455,7 +427,7 @@ TEST(ExpressionTest, q1Decimal64Type)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
@@ -467,7 +439,7 @@ TEST(ExpressionTest, q1Decimal64Type)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t);
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
         VectorBatch *vectorBatch = nullptr;
 
         timer.Reset();
@@ -480,9 +452,10 @@ TEST(ExpressionTest, q1Decimal64Type)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            double result = ((LongVector *)vectorBatch->GetVector(0))->GetValue(i) / 1000000.0;
-            double actualDecimal64 =
-                col1->GetValue(i) / 100.0 * (1.0 - col2->GetValue(i) / 100.0) * (1 + col3->GetValue(i) / 100.0);
+            double result = (reinterpret_cast<Vector<int64_t> *>(vectorBatch->Get(0)))->GetValue(i) / 1000000.0;
+            double actualDecimal64 = ((reinterpret_cast<Vector<int64_t> *>(t->Get(0)))->GetValue(i)) / 100.0 *
+                (1.0 - (reinterpret_cast<Vector<int64_t> *>(t->Get(1)))->GetValue(i) / 100.0) *
+                (1 + (reinterpret_cast<Vector<int64_t> *>(t->Get(2)))->GetValue(i) / 100.0);
             EXPECT_TRUE(abs(result - actualDecimal64) < 0.1);
         }
         VectorHelper::FreeVecBatch(vectorBatch);
@@ -492,10 +465,12 @@ TEST(ExpressionTest, q1Decimal64Type)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
 }
 
 // Test filter on decimal128 data type
@@ -507,23 +482,21 @@ TEST(ExpressionTest, q1Decimal128Type)
 
     // prepare data
     const int32_t rounds = TEST_EXPR_PERF_TIME;
-    const int32_t numCols = 3;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1Decimal128Type");
-    Decimal128Vector *col1 = new Decimal128Vector(vecAllocator, numRows);
-    Decimal128Vector *col2 = new Decimal128Vector(vecAllocator, numRows);
-    Decimal128Vector *col3 = new Decimal128Vector(vecAllocator, numRows);
+    auto *data1 = new int64_t[numRows * 2];
+    auto *data2 = new int64_t[numRows * 2];
+    auto *data3 = new int64_t[numRows * 2];
+
     for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 100000 + 20;
-        col1->SetValue(i, d);
+        data1[2 * i] = rand() % 100000 + 20;
+        data1[2 * i + 1] = 0;
+        data2[2 * i] = rand() % 50;
+        data2[2 * i + 1] = 0;
+        data3[2 * i] = rand() % 8 + 5;
+        data3[2 * i + 1] = 0;
     }
-    for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 50;
-        col2->SetValue(i, d);
-    }
-    for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 8 + 5;
-        col3->SetValue(i, d);
-    }
+
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type(), Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     LiteralExpr *subLeft = new LiteralExpr(new std::string("100"), Decimal128Type(32, 2));
@@ -540,20 +513,14 @@ TEST(ExpressionTest, q1Decimal128Type)
     BinaryExpr *mulExpr2 =
         new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, Decimal128Type(32, 2));
     std::vector<Expr *> exprs = { mulExpr2 };
-    int32_t inputTypeIds[numCols] = {OMNI_DECIMAL128, OMNI_DECIMAL128, OMNI_DECIMAL128};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
 
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col1);
-    t->SetVector(1, col2);
-    t->SetVector(2, col3);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, data1, data2, data3);
+
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -561,7 +528,7 @@ TEST(ExpressionTest, q1Decimal128Type)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
@@ -573,8 +540,8 @@ TEST(ExpressionTest, q1Decimal128Type)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
@@ -586,11 +553,15 @@ TEST(ExpressionTest, q1Decimal128Type)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            Decimal128 result = ((Decimal128Vector *)vectorBatch->GetVector(0))->GetValue(i);
+            Decimal128 result = reinterpret_cast<Vector<Decimal128> *>(vectorBatch->Get(0))->GetValue(i);
             EXPECT_EQ(result.HighBits(), 0);
 
-            double actualDecimal128 = col1->GetValue(i).LowBits() / 100.0 *
-                (1.0 - col2->GetValue(i).LowBits() / 100.0) * (1.0 + col3->GetValue(i).LowBits() / 100.0);
+            Decimal128 val1 = reinterpret_cast<Vector<Decimal128> *>(t->Get(0))->GetValue(i);
+            Decimal128 val2 = reinterpret_cast<Vector<Decimal128> *>(t->Get(1))->GetValue(i);
+            Decimal128 val3 = reinterpret_cast<Vector<Decimal128> *>(t->Get(2))->GetValue(i);
+
+            double actualDecimal128 =
+                val1.LowBits() / 100.0 * (1.0 - val2.LowBits() / 100.0) * (1.0 + val3.LowBits() / 100.0);
             EXPECT_TRUE(abs(result.LowBits() / 1000000.0 - actualDecimal128) < 0.1);
         }
         VectorHelper::FreeVecBatch(vectorBatch);
@@ -600,10 +571,12 @@ TEST(ExpressionTest, q1Decimal128Type)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] data1;
+    delete[] data2;
+    delete[] data3;
 }
 
 // Test function Cast(decimal64 as double)
@@ -614,13 +587,14 @@ TEST(ExpressionTest, q1Decimal64Cast)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    const int32_t numCols = 1;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1Decimal64Cast");
-    LongVector *col0 = new LongVector(vecAllocator, numRows);
+    auto *col1 = new int64_t[numRows];
+
     for (int64_t i = 0; i < numRows; i++) {
-        int64_t d = rand() % 100000 + 20;
-        col0->SetValue(i, d);
+        col1[i] = rand() % 100000 + 20;
     }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ LongType() });
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     FieldExpr *col0Expr = new FieldExpr(0, Decimal64Type(12, 2));
@@ -631,18 +605,13 @@ TEST(ExpressionTest, q1Decimal64Cast)
     auto cast0 = GetFuncExpr(castStr, args, DoubleType());
 
     std::vector<Expr *> exprs = { cast0 };
-    int32_t inputTypeIds[numCols] = {OMNI_DECIMAL64};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
 
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col0);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -650,7 +619,7 @@ TEST(ExpressionTest, q1Decimal64Cast)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
@@ -662,7 +631,7 @@ TEST(ExpressionTest, q1Decimal64Cast)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t);
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
         VectorBatch *vectorBatch = nullptr;
 
         timer.Reset();
@@ -673,8 +642,8 @@ TEST(ExpressionTest, q1Decimal64Cast)
         cpuTime[i] = timer.GetCpuElapse();
         std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
         for (int i = 0; i < numRows; i++) {
-            double result = ((DoubleVector *)vectorBatch->GetVector(0))->GetValue(i);
-            double actual = col0->GetValue(i) / 100.00;
+            double result = (reinterpret_cast<Vector<double> *>(vectorBatch->Get(0)))->GetValue(i);
+            double actual = ((reinterpret_cast<Vector<int64_t> *>(t->Get(0)))->GetValue(i)) / 100.00;
             EXPECT_EQ(result, actual);
         }
         VectorHelper::FreeVecBatch(vectorBatch);
@@ -684,10 +653,10 @@ TEST(ExpressionTest, q1Decimal64Cast)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] col1;
 }
 
 // Test projection on date data type
@@ -698,14 +667,14 @@ TEST(ExpressionTest, q1DateType)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    const int32_t numCols = 1;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1DateType");
-    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    auto *col1 = new int32_t[numRows];
     for (int64_t i = 0; i < numRows; i++) {
         // 2020-01-01 18262
-        auto d = rand() % 1000 + 18262;
-        col1->SetValue(i, d);
+        col1[i] = rand() % 1000 + 18262;
     }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ IntType() });
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     FieldExpr *ltLeft = new FieldExpr(0, Date32Type());
@@ -713,18 +682,13 @@ TEST(ExpressionTest, q1DateType)
     LiteralExpr *ltRight = new LiteralExpr(19266, Date32Type());
     BinaryExpr *ltExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, ltLeft, ltRight, BooleanType());
     std::vector<Expr *> exprs = { ltExpr };
-    int32_t inputTypeIds[numCols] = {OMNI_DATE32};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
 
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col1);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -732,7 +696,7 @@ TEST(ExpressionTest, q1DateType)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
@@ -745,7 +709,7 @@ TEST(ExpressionTest, q1DateType)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t);
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
 
         timer.Reset();
         op->AddInput(copy);
@@ -757,8 +721,8 @@ TEST(ExpressionTest, q1DateType)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            bool result = ((BooleanVector *)vectorBatch->GetVector(0))->GetValue(i);
-            bool actualBool = col1->GetValue(i) < 19266;
+            bool result = (reinterpret_cast<Vector<bool> *>(vectorBatch->Get(0)))->GetValue(i);
+            bool actualBool = ((reinterpret_cast<Vector<int32_t> *>(t->Get(0)))->GetValue(i)) < 19266;
             EXPECT_EQ(result, actualBool);
         }
         VectorHelper::FreeVecBatch(vectorBatch);
@@ -768,10 +732,10 @@ TEST(ExpressionTest, q1DateType)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] col1;
 }
 
 // Test expression if (l_shipdate >= '2022-01-01' and l_shipdate < '2023-01-01')
@@ -782,19 +746,17 @@ TEST(ExpressionTest, q1Case1)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    const int32_t numCols = 2;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1Case1");
-    IntVector *col1 = new IntVector(vecAllocator, numRows);
-    DoubleVector *col2 = new DoubleVector(vecAllocator, numRows);
+    auto *col1 = new int32_t[numRows];
+    auto *col2 = new double[numRows];
+
     for (int64_t i = 0; i < numRows; i++) {
         // 2020-01-01 18262
-        auto d = rand() % 1000 + 18262;
-        col1->SetValue(i, d);
+        col1[i] = rand() % 1000 + 18262;
+        col2[i] = rand() % 10000000 + 200;
     }
-    for (int64_t i = 0; i < numRows; i++) {
-        auto d = rand() % 10000000 + 200;
-        col2->SetValue(i, d / 100.0);
-    }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ IntType(), DoubleType() });
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     // 2022-01-01 18993 2023-01-01 19358
@@ -810,18 +772,13 @@ TEST(ExpressionTest, q1Case1)
     LiteralExpr *falseExpr = new LiteralExpr(0.0, DoubleType());
     IfExpr *ifExpr = new IfExpr(condition, divExpr, falseExpr);
     std::vector<Expr *> exprs = { ifExpr };
-    int32_t inputTypeIds[numCols] = {OMNI_DATE32, OMNI_DOUBLE};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
+
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col1);
-    t->SetVector(1, col2);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -829,7 +786,8 @@ TEST(ExpressionTest, q1Case1)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
@@ -842,7 +800,7 @@ TEST(ExpressionTest, q1Case1)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t);
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
 
         timer.Reset();
         op->AddInput(copy);
@@ -854,9 +812,11 @@ TEST(ExpressionTest, q1Case1)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            double result = ((DoubleVector *)vectorBatch->GetVector(0))->GetValue(i);
-            double actualDouble =
-                (col1->GetValue(i) >= 18993 && col1->GetValue(i) < 19358) ? col2->GetValue(i) / 10000.0 : 0.0;
+            double result = (reinterpret_cast<Vector<double> *>(vectorBatch->Get(0)))->GetValue(i);
+            double actualDouble = (((reinterpret_cast<Vector<int32_t> *>(t->Get(0)))->GetValue(i)) >= 18993 &&
+                ((reinterpret_cast<Vector<int32_t> *>(t->Get(0)))->GetValue(i)) < 19358) ?
+                ((reinterpret_cast<Vector<double> *>(t->Get(1)))->GetValue(i)) / 10000.0 :
+                0.0;
             EXPECT_EQ(result, actualDouble);
         }
         VectorHelper::FreeVecBatch(vectorBatch);
@@ -866,10 +826,11 @@ TEST(ExpressionTest, q1Case1)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] col1;
+    delete[] col2;
 }
 
 // Use switch case to implement 12 GPA conversion
@@ -892,13 +853,13 @@ TEST(ExpressionTest, q1SwitchCase)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    const int32_t numCols = 1;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1SwitchCase");
-    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    auto *col1 = new int32_t[numRows];
     for (int64_t i = 0; i < numRows; i++) {
-        auto d = rand() % 60 + 40;
-        col1->SetValue(i, d);
+        col1[i] = rand() % 60 + 40;
     }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ IntType() });
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     FieldExpr *gteLeft0 = new FieldExpr(0, IntType());
@@ -1019,18 +980,14 @@ TEST(ExpressionTest, q1SwitchCase)
 
     SwitchExpr *switchExpr = new SwitchExpr(whenClause, literalResult12);
     std::vector<Expr *> exprs = { switchExpr };
-    int32_t inputTypeIds[numCols] = {OMNI_INT};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
+
 
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col1);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -1038,7 +995,7 @@ TEST(ExpressionTest, q1SwitchCase)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
@@ -1051,7 +1008,7 @@ TEST(ExpressionTest, q1SwitchCase)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t);
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
 
         timer.Reset();
         op->AddInput(copy);
@@ -1063,31 +1020,32 @@ TEST(ExpressionTest, q1SwitchCase)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            int32_t result = ((IntVector *)vectorBatch->GetVector(0))->GetValue(i);
+            int32_t result = (reinterpret_cast<Vector<int32_t> *>(vectorBatch->Get(0)))->GetValue(i);
             int32_t actualInt;
-            if (col1->GetValue(i) >= 90) {
+            auto col1Valuei = (reinterpret_cast<Vector<int32_t> *>(t->Get(0)))->GetValue(i);
+            if (col1Valuei >= 90) {
                 actualInt = 12;
-            } else if (col1->GetValue(i) >= 85) {
+            } else if (col1Valuei >= 85) {
                 actualInt = 11;
-            } else if (col1->GetValue(i) >= 80) {
+            } else if (col1Valuei >= 80) {
                 actualInt = 10;
-            } else if (col1->GetValue(i) >= 77) {
+            } else if (col1Valuei >= 77) {
                 actualInt = 9;
-            } else if (col1->GetValue(i) >= 74) {
+            } else if (col1Valuei >= 74) {
                 actualInt = 8;
-            } else if (col1->GetValue(i) >= 70) {
+            } else if (col1Valuei >= 70) {
                 actualInt = 7;
-            } else if (col1->GetValue(i) >= 67) {
+            } else if (col1Valuei >= 67) {
                 actualInt = 6;
-            } else if (col1->GetValue(i) >= 64) {
+            } else if (col1Valuei >= 64) {
                 actualInt = 5;
-            } else if (col1->GetValue(i) >= 60) {
+            } else if (col1Valuei >= 60) {
                 actualInt = 4;
-            } else if (col1->GetValue(i) >= 57) {
+            } else if (col1Valuei >= 57) {
                 actualInt = 3;
-            } else if (col1->GetValue(i) >= 54) {
+            } else if (col1Valuei >= 54) {
                 actualInt = 2;
-            } else if (col1->GetValue(i) >= 50) {
+            } else if (col1Valuei >= 50) {
                 actualInt = 1;
             } else {
                 actualInt = 0;
@@ -1101,10 +1059,10 @@ TEST(ExpressionTest, q1SwitchCase)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] col1;
 }
 
 // use if statement to implement 12 GPA conversion
@@ -1114,13 +1072,14 @@ TEST(ExpressionTest, q1If)
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
-    const int32_t numCols = 1;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Expression_q1SwitchCase");
-    IntVector *col1 = new IntVector(vecAllocator, numRows);
+    auto *col1 = new int32_t[numRows];
+
     for (int64_t i = 0; i < numRows; i++) {
-        auto d = rand() % 60 + 40;
-        col1->SetValue(i, d);
+        col1[i] = rand() % 60 + 40;
     }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ IntType() });
+    DataTypes inputTypes(vecOfTypes);
 
     // prepare expression
     FieldExpr *gteLeft0 = new FieldExpr(0, IntType());
@@ -1201,18 +1160,13 @@ TEST(ExpressionTest, q1If)
     IfExpr *ifExpr1 = new IfExpr(gteExpr0, literalResult0, ifExpr2);
 
     std::vector<Expr *> exprs = { ifExpr1 };
-    int32_t inputTypeIds[numCols] = {OMNI_INT};
-    vector<DataTypePtr> inputTypes;
-    ToVectorTypes(inputTypeIds, numCols, inputTypes);
-    DataTypes dataTypes(inputTypes);
 
     Timer timer;
     timer.SetStart();
 
     // make row vector
     timer.Reset();
-    VectorBatch *t = new VectorBatch(numCols, numRows);
-    t->SetVector(0, col1);
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
     timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
@@ -1220,7 +1174,7 @@ TEST(ExpressionTest, q1If)
     // prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
@@ -1233,7 +1187,7 @@ TEST(ExpressionTest, q1If)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t);
+        auto copy = DuplicateVectorBatch(t, vecOfTypes);
 
         timer.Reset();
         op->AddInput(copy);
@@ -1245,31 +1199,32 @@ TEST(ExpressionTest, q1If)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            int32_t result = ((IntVector *)vectorBatch->GetVector(0))->GetValue(i);
+            int32_t result = (reinterpret_cast<Vector<int32_t> *>(vectorBatch->Get(0)))->GetValue(i);
             int32_t actualInt;
-            if (col1->GetValue(i) >= 90) {
+            auto col1Value = ((reinterpret_cast<Vector<int32_t> *>(t->Get(0)))->GetValue(i));
+            if (col1Value >= 90) {
                 actualInt = 12;
-            } else if (col1->GetValue(i) >= 85) {
+            } else if (col1Value >= 85) {
                 actualInt = 11;
-            } else if (col1->GetValue(i) >= 80) {
+            } else if (col1Value >= 80) {
                 actualInt = 10;
-            } else if (col1->GetValue(i) >= 77) {
+            } else if (col1Value >= 77) {
                 actualInt = 9;
-            } else if (col1->GetValue(i) >= 74) {
+            } else if (col1Value >= 74) {
                 actualInt = 8;
-            } else if (col1->GetValue(i) >= 70) {
+            } else if (col1Value >= 70) {
                 actualInt = 7;
-            } else if (col1->GetValue(i) >= 67) {
+            } else if (col1Value >= 67) {
                 actualInt = 6;
-            } else if (col1->GetValue(i) >= 64) {
+            } else if (col1Value >= 64) {
                 actualInt = 5;
-            } else if (col1->GetValue(i) >= 60) {
+            } else if (col1Value >= 60) {
                 actualInt = 4;
-            } else if (col1->GetValue(i) >= 57) {
+            } else if (col1Value >= 57) {
                 actualInt = 3;
-            } else if (col1->GetValue(i) >= 54) {
+            } else if (col1Value >= 54) {
                 actualInt = 2;
-            } else if (col1->GetValue(i) >= 50) {
+            } else if (col1Value >= 50) {
                 actualInt = 1;
             } else {
                 actualInt = 0;
@@ -1283,10 +1238,10 @@ TEST(ExpressionTest, q1If)
     PrintValueLine(cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
-    DeleteOperatorFactory(factory);
+    delete factory;
     VectorHelper::FreeVecBatch(t);
-    delete vecAllocator;
     delete overflowConfig;
+    delete[] col1;
 }
 
 template <typename T, int Size> static void bm_codegen_between()
@@ -1327,6 +1282,7 @@ template <typename T, int Size> static void bm_codegen_between()
     auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, overflowConfig);
 
     auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
+
     Timer timer;
     timer.SetStart();
     int32_t result = func(args.vals, args.rowCount, args.selected, (int64_t *)args.bitmap, (int64_t *)args.offsets,

@@ -10,7 +10,7 @@
 #include "vector/unsafe_vector.h"
 #include "type/data_type.h"
 #include "type/decimal128.h"
-#include "../omni_id_type_vector_traits.h"
+#include "operator/omni_id_type_vector_traits.h"
 #include "operator/execution_context.h"
 #include "operator/filter/filter_and_project.h"
 

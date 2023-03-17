@@ -56,8 +56,8 @@ bool VecBatchesIgnoreOrderMatch(std::vector<VectorBatch *> &resultBatches, std::
     std::vector<DataTypePtr> &expectedTypes)
 {
     if (resultBatches.size() != expectedBatches.size()) {
-        printf("List of VectorBatches not match. Expecting %ld, got %ld\n",
-               expectedBatches.size(), resultBatches.size());
+        printf("List of VectorBatches not match. Expecting %ld, got %ld\n", expectedBatches.size(),
+            resultBatches.size());
         printf("================ Expected Vector Batch (%ld) ==================\n", expectedBatches.size());
         for (size_t i = 0; i < expectedBatches.size(); ++i) {
             printf("    ---------- Expected Vector Batch %ld / %ld ----------\n", i, expectedBatches.size());
@@ -174,6 +174,45 @@ VectorBatch *CreateVectorBatch(const DataTypes &types, int32_t rowCount, ...)
     }
     va_end(args);
     return vectorBatch;
+}
+
+void AssertStringEquals(std::vector<std::string> &expected, std::vector<uint8_t *> &result,
+    std::vector<int32_t> &outLen)
+{
+    for (size_t i = 0; i < expected.size(); i++) {
+        std::string actual(reinterpret_cast<char *>(result[i]), outLen[i]);
+        EXPECT_EQ(actual, expected[i]);
+    }
+}
+
+void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int32_t rowCnt,
+    std::vector<uint8_t *> &result, std::vector<int32_t> &outLen)
+{
+    for (int32_t i = 0; i < rowCnt; i++) {
+        std::string actual(reinterpret_cast<char *>(result[i]), outLen[i]);
+        EXPECT_EQ(actual, expected[i + offset]);
+    }
+}
+
+void AssertIntEquals(std::vector<int32_t> &expected, std::vector<int32_t> &result)
+{
+    for (size_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result[i], expected[i]);
+    }
+}
+
+void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result)
+{
+    for (size_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result[i], expected[i]);
+    }
+}
+
+void AssertBoolEquals(std::vector<bool> &expected, bool *result)
+{
+    for (size_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result[i], expected[i]);
+    }
 }
 
 std::unique_ptr<BaseVector> CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
@@ -299,7 +338,7 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
 }
 
 bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch,
-                              std::vector<DataTypePtr> &typeVector)
+    std::vector<DataTypePtr> &typeVector)
 {
     if (resultBatch->GetRowCount() != expectedBatch->GetRowCount()) {
         printf("Invalid row count. Expected=%zu, actual=%zu\n", expectedBatch->GetRowCount(),

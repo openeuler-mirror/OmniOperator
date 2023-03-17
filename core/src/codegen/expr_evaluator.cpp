@@ -38,7 +38,7 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
     }
 }
 
-void GetData(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[], intptr_t offsetAddrs[],
+void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[], intptr_t offsetAddrs[],
     intptr_t dictionaries[], const DataTypes &types)
 {
     intptr_t valuesAddress;
@@ -48,7 +48,7 @@ void GetData(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[],
         auto colVec = vecBatch.Get(i);
         dictVecAddress = 0;
         valuesAddress = 0;
-        if (colVec->GetEncoding() == vec::OMNI_DICTIONARY) {
+        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
             dictVecAddress = reinterpret_cast<intptr_t>(reinterpret_cast<void *>(colVec));
         } else {
             valuesAddress = GetRawAddr(types, i, colVec);
@@ -193,7 +193,7 @@ void Projection::ProjectHelperVarWidth(VectorBatch &vecBatch, int64_t *valueAddr
     ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &outTypeId) const
 {
     outVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(numSelectedRows);
-    this->projector(valueAddrs, static_cast<int32_t>(vecBatch.GetRowCount()), reinterpret_cast<int64_t>(outVec.get()),
+    this->projector(valueAddrs, vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec.get()),
         selectedRows, numSelectedRows, nullAddrs, offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(outVec.get()),
         nullptr, reinterpret_cast<int64_t>(context), dictionaryVectors);
 }
@@ -241,7 +241,7 @@ void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAd
             outValueAddr = 0;
     }
 
-    this->projector(valueAddrs, static_cast<int32_t>(vecBatch.GetRowCount()), outValueAddr, selectedRows,
+    this->projector(valueAddrs, vecBatch.GetRowCount(), outValueAddr, selectedRows,
         numSelectedRows, nullAddrs, offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(outVec.get()), nullptr,
         reinterpret_cast<int64_t>(context), dictionaryVectors);
 }
@@ -249,7 +249,7 @@ void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAd
 std::unique_ptr<BaseVector> Projection::Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
     int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds) const
 {
-    return this->Project(vecBatch, nullptr, static_cast<int32_t>(vecBatch->GetRowCount()), valueAddrs, nullAddrs,
+    return this->Project(vecBatch, nullptr, vecBatch->GetRowCount(), valueAddrs, nullAddrs,
         offsetAddrs, context, dictionaryVectors, typeIds);
 }
 
@@ -285,9 +285,9 @@ std::unique_ptr<BaseVector> Projection::ColumnProjectionHelper(VectorBatch *vecB
     int32_t numSelectedRows) const
 {
     auto colVec = vecBatch->Get(this->columnProjectionIndex);
-    auto rowCnt = static_cast<int32_t>(vecBatch->GetRowCount());
+    auto rowCnt = vecBatch->GetRowCount();
     if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
-        if (colVec->GetEncoding() == vec::OMNI_DICTIONARY) {
+        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
             return ColumnProjectionDictionaryVectorSliceHelper<T>(numSelectedRows, colVec);
         } else {
             return ColumnProjectionFlatVectorSliceHelper<T>(numSelectedRows, colVec);
@@ -295,7 +295,7 @@ std::unique_ptr<BaseVector> Projection::ColumnProjectionHelper(VectorBatch *vecB
     }
 
     if (selectedRows != nullptr && numSelectedRows != 0) {
-        if (colVec->GetEncoding() == vec::OMNI_DICTIONARY) {
+        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
             return ColumnProjectionDictionaryVectorCopyPositionsHelper<T>(selectedRows, numSelectedRows, colVec);
         } else {
             return ColumnProjectionFlatVectorCopyPositionsHelper<T>(selectedRows, numSelectedRows, colVec);
@@ -309,9 +309,9 @@ std::unique_ptr<BaseVector> Projection::ColumnProjectionVarCharVectorHelper(Vect
     const int32_t *selectedRows, int32_t numSelectedRows) const
 {
     auto colVec = vecBatch->Get(this->columnProjectionIndex);
-    auto rowCnt = static_cast<int32_t>(vecBatch->GetRowCount());
+    auto rowCnt = vecBatch->GetRowCount();
     if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
-        if (colVec->GetEncoding() == vec::OMNI_DICTIONARY) {
+        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
             return ColumnProjectionDictionaryVectorSliceHelper<T>(numSelectedRows, colVec);
         } else {
             return ColumnProjectionFlatVectorSliceHelper<LargeStringContainer<std::string_view>>(numSelectedRows,
@@ -320,7 +320,7 @@ std::unique_ptr<BaseVector> Projection::ColumnProjectionVarCharVectorHelper(Vect
     }
 
     if (selectedRows != nullptr && numSelectedRows != 0) {
-        if (colVec->GetEncoding() == vec::OMNI_DICTIONARY) {
+        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
             return ColumnProjectionDictionaryVectorCopyPositionsHelper<T>(selectedRows, numSelectedRows, colVec);
         } else {
             return ColumnProjectionFlatVectorCopyPositionsHelper<LargeStringContainer<std::string_view>>(selectedRows,
@@ -374,7 +374,7 @@ VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionConte
     intptr_t nullAddrs[vectorCount];
     intptr_t offsetAddrs[vectorCount];
     intptr_t dictionaries[vectorCount];
-    GetData(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
+    GetAddr(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
     if (hasFilter) {
         return ProcessFilterAndProject(vecBatch, context, valueAddrs, nullAddrs, offsetAddrs, dictionaries);
     } else {

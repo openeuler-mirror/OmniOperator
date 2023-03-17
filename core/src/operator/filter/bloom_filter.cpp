@@ -10,6 +10,7 @@ namespace omniruntime {
 namespace op {
 using namespace std;
 using namespace omniruntime::codegen::function;
+using namespace omniruntime::type;
 
 BloomFilter::BloomFilter(int8_t *in, int32_t versionJava) : version(versionJava)
 {
@@ -118,7 +119,7 @@ int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
         throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "vecBatch col should be 1 for bloom filter");
     }
     BaseVector *colVec = inputVecBatch->Get(0);
-    int64_t valuesAddress = reinterpret_cast<int64_t>(VectorHelper::GetValues(colVec, OMNI_INT));
+    auto valuesAddress = reinterpret_cast<int64_t>(VectorHelper::UnsafeGetValues(colVec, OMNI_INT));
 
     // init BloomFilter
     bloomFilterAddress = new BloomFilter(reinterpret_cast<int8_t *>((uintptr_t)valuesAddress), version);
@@ -128,7 +129,7 @@ int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
 int32_t BloomFilterOperator::GetOutput(VectorBatch **blOutPut)
 {
     auto outPut = new VectorBatch(1);
-    Vector<int64_t> *col = new Vector<int64_t>(1);
+    auto *col = new Vector<int64_t>(1);
     col->SetValue(0, reinterpret_cast<int64_t>(bloomFilterAddress));
     outPut->Append(col);
     *blOutPut = outPut;

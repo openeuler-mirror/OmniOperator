@@ -12,60 +12,107 @@ using namespace std;
 using namespace omniruntime::vec;
 
 namespace CodegenUtil {
-void GetDataFromVecBatch(VectorBatch &vecBatch, int64_t valueAddrs[], int64_t nullAddrs[], int64_t offsetAddrs[],
-    int64_t dictionaries[])
+int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
 {
-    int64_t valuesAddress;
-    int64_t dictVecAddress;
-    int32_t vectorCount = vecBatch.GetVectorCount();
-    for (int32_t i = 0; i < vectorCount; i++) {
-        Vector *colVec = vecBatch.GetVector(i);
-        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
-            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
-        }
-        dictVecAddress = 0;
-        valuesAddress = 0;
-        if (colVec->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-            dictVecAddress = reinterpret_cast<int64_t>(reinterpret_cast<void *>(colVec));
-        } else {
-            valuesAddress = VectorHelper::GetValuesAddr(colVec);
-        }
-
-        dictionaries[i] = dictVecAddress;
-        valueAddrs[i] = valuesAddress;
-
-        nullAddrs[i] = VectorHelper::GetNullsAddr(colVec);
-
-        offsetAddrs[i] = VectorHelper::GetOffsetsAddr(colVec);
+    switch (types.GetIds()[i]) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            return reinterpret_cast<int64_t>(
+                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(colVec)));
+        case OMNI_SHORT:
+            return reinterpret_cast<int64_t>(
+                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(colVec)));
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+            return reinterpret_cast<int64_t>(
+                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(colVec)));
+        case OMNI_DOUBLE:
+            return reinterpret_cast<int64_t>(
+                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<double> *>(colVec)));
+        case OMNI_BOOLEAN:
+            return reinterpret_cast<int64_t>(
+                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<bool> *>(colVec)));
+        case OMNI_DECIMAL128:
+            return reinterpret_cast<int64_t>(
+                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<Decimal128> *>(colVec)));
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+            return reinterpret_cast<int64_t>(unsafe::UnsafeStringVector::GetValues(
+                reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(colVec)));
+        default:
+            LogError("Do not support such vector type %d", types.GetIds()[i]);
+            return 0;
     }
 }
 
-VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::op::Filter> &filter,
-    std::vector<std::unique_ptr<omniruntime::op::Projection>> &projections, int32_t numCols, VectorBatch *vecBatch,
-    int32_t &numSelectedRows, VectorAllocator *vecAllocator)
+void GetDataFromVecBatch(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[], intptr_t offsetAddrs[],
+    intptr_t dictionaries[], const DataTypes &types)
 {
-    int32_t numRows = vecBatch->GetRowCount();
-    int32_t selectedRows[numRows];
-    int64_t dictionaries[numCols];
-    int64_t valueAddrs[numCols];
-    int64_t nullAddrs[numCols];
-    int64_t offsetAddrs[numCols];
-    GetDataFromVecBatch(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries);
+    intptr_t valuesAddress;
+    intptr_t dictVecAddress;
+    auto vectorCount = static_cast<int32_t>(vecBatch.GetVectorCount());
+    for (int32_t i = 0; i < vectorCount; i++) {
+        auto colVec = vecBatch.Get(i);
+        dictVecAddress = 0;
+        valuesAddress = 0;
+        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+            dictVecAddress = reinterpret_cast<intptr_t>(reinterpret_cast<void *>(colVec));
+        } else {
+            valuesAddress = GetRawAddr(types, i, colVec);
+        }
+        dictionaries[i] = dictVecAddress;
+        valueAddrs[i] = valuesAddress;
+        nullAddrs[i] = reinterpret_cast<intptr_t>(unsafe::UnsafeBaseVector::GetNulls(colVec));
+        offsetAddrs[i] = reinterpret_cast<intptr_t>(VectorHelper::UnsafeGetOffsetsAddr(colVec, types.GetIds()[i]));
+    }
+}
+
+VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::codegen::Filter> &filter,
+    std::vector<std::unique_ptr<omniruntime::codegen::Projection>> &projections, int32_t numCols, VectorBatch *vecBatch,
+    int32_t &numSelectedRows, const DataTypes &types)
+{
+    const int vectorCount = static_cast<int32_t>(vecBatch->GetVectorCount());
+    int64_t valueAddrs[vectorCount];
+    int64_t nullAddrs[vectorCount];
+    int64_t offsetAddrs[vectorCount];
+    int64_t dictionaries[vectorCount];
+
+    const int rowCount = static_cast<int32_t>(vecBatch->GetRowCount());
+    auto *selectedRows = new int32_t[rowCount];
+    GetDataFromVecBatch(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, types);
 
     auto context = new omniruntime::op::ExecutionContext();
-    if (filter.get() != nullptr) {
-        numSelectedRows = filter->GetFilterFunc()(valueAddrs, numRows, selectedRows, nullAddrs, offsetAddrs,
+    if (filter != nullptr) {
+        numSelectedRows = filter->GetFilterFunc()(valueAddrs, rowCount, selectedRows, nullAddrs, offsetAddrs,
             reinterpret_cast<int64_t>(context), dictionaries);
     }
 
-    auto ret = (projections.size() > 0) ? new VectorBatch(projections.size(), numSelectedRows) : nullptr;
+    if (context->HasError()) {
+        delete[] selectedRows;
+        context->GetArena()->Reset();
+        VectorHelper::FreeVecBatch(vecBatch);
+        std::string errorMessage = context->GetError();
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+    }
+
+    auto ret = (!projections.empty()) ? new VectorBatch(numSelectedRows) : nullptr;
     for (uint32_t i = 0; i < projections.size(); i++) {
-        Vector *col =
-            projections[i]->Project(vecAllocator, vecBatch, (filter.get() != nullptr) ? selectedRows : nullptr,
-            numSelectedRows, valueAddrs, nullAddrs, offsetAddrs, context, dictionaries);
-        ret->SetVector(i, col);
+        std::unique_ptr<BaseVector> col =
+            projections[i]->Project(vecBatch, (filter != nullptr) ? selectedRows : nullptr, numSelectedRows, valueAddrs,
+            nullAddrs, offsetAddrs, context, dictionaries, types.GetIds());
+        if (context->HasError()) {
+            VectorHelper::FreeVecBatch(ret);
+            VectorHelper::FreeVecBatch(vecBatch);
+            delete[] selectedRows;
+            context->GetArena()->Reset();
+
+            std::string errorMessage = context->GetError();
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+        }
+        ret->Append(col.release());
     }
     context->GetArena()->Reset();
+    delete[] selectedRows;
     delete context;
     return ret;
 }

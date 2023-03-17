@@ -50,30 +50,17 @@ extern "C" DLLEXPORT void BatchGetVarcharFromDictionaryVector(int64_t contextPtr
     int32_t *rowIdxArray, int32_t rowCnt, uint8_t **str, int32_t *length)
 {
     auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(dictionaryVectorAddr);
-    uint8_t *result = nullptr;
-    errno_t err;
-    char *ret;
     for (int i = 0; i < rowCnt; ++i) {
-        length[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]).length();
-        if (length[i] == 0) {
-            str[i] = (uint8_t *)"";
-            continue;
-        }
-        ret = ArenaAllocatorMalloc(contextPtr, length[i]);
-        err = memcpy_s(ret, length[i], result, length[i]);
-        if (err != EOK) {
-            SetError(contextPtr, "Get string from dictionary vector failed");
-            str[i] = nullptr;
-            continue;
-        }
-        str[i] = reinterpret_cast<uint8_t *>(ret);
+        auto stringView = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
+        length[i] = stringView.length();
+        str[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(stringView.data()));
     }
 }
 
 extern "C" DLLEXPORT void BatchGetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, Decimal128 *output)
 {
-    auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictionaryVectorAddr);
+    auto dictionaryVectorPtr = reinterpret_cast<Vector<DictionaryContainer<type::Decimal128>> *>(dictionaryVectorAddr);
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = dictionaryVectorPtr->GetValue(rowIdxArray[i]);
     }

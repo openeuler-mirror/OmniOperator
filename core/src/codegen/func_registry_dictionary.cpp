@@ -17,15 +17,14 @@ std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
         "DictionaryGetInt", {}, paramTypes, OMNI_INT),
         Function(reinterpret_cast<void *>(GetLongFromDictionaryVector), "DictionaryGetLong", {}, paramTypes, OMNI_LONG),
         Function(reinterpret_cast<void *>(GetDoubleFromDictionaryVector), "DictionaryGetDouble", {}, paramTypes,
-        OMNI_DOUBLE),
+            OMNI_DOUBLE),
         Function(reinterpret_cast<void *>(GetBooleanFromDictionaryVector), "DictionaryGetBoolean", {}, paramTypes,
-        OMNI_BOOLEAN),
+            OMNI_BOOLEAN),
         Function(reinterpret_cast<void *>(GetVarcharFromDictionaryVector), "DictionaryGetVarchar", {}, paramTypes,
-        OMNI_VARCHAR),
+            OMNI_VARCHAR),
         Function(reinterpret_cast<void *>(GetDecimalFromDictionaryVector), "DictionaryGetDecimal", {}, paramTypes,
-        OMNI_DECIMAL128),
-        Function(reinterpret_cast<void *>(GetStringViewValueAndLength), "getStringValueAndLength", {},
-        getStringParamTypes, OMNI_VARCHAR) };
+            OMNI_DECIMAL128)
+    };
     return dictionaryFnRegistry;
 }
 }
