@@ -22,7 +22,9 @@ import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.OptionalInt;
 
 /**
@@ -53,12 +55,16 @@ public class OmniPartionOutOperatorTest {
         omniOperator.addInput(vecBatch);
 
         Iterator<VecBatch> results = omniOperator.getOutput();
-        VecBatch result = results.next();
-        assertEquals(result.getRowCount(), 3);
+        List<VecBatch> resultList = new ArrayList<>();
+        while (results.hasNext()) {
+            resultList.add(results.next());
+        }
+
+        assertEquals(resultList.get(0).getRowCount(), 3);
 
         Object[][] expectedDatas = {{"abc", "de", "f"}};
-        assertVecBatchEquals(result, expectedDatas);
-        TestUtils.freeVecBatch(result);
+        assertVecBatchEquals(resultList.get(0), expectedDatas);
+        TestUtils.freeVecBatch(resultList.get(0));
         omniOperator.close();
         omniPartitionedOutPutOperatorFactory.close();
     }
@@ -84,12 +90,16 @@ public class OmniPartionOutOperatorTest {
         omniOperator.addInput(vecBatch);
 
         Iterator<VecBatch> results = omniOperator.getOutput();
-        VecBatch result = results.next();
-        assertEquals(result.getRowCount(), 3);
+        List<VecBatch> resultList = new ArrayList<>();
+        while (results.hasNext()) {
+            resultList.add(results.next());
+        }
+
+        assertEquals(resultList.get(0).getRowCount(), 3);
 
         Object[][] expectedDatas = {{"abc", "de", null}};
-        assertVecBatchEquals(result, expectedDatas);
-        TestUtils.freeVecBatch(result);
+        assertVecBatchEquals(resultList.get(0), expectedDatas);
+        TestUtils.freeVecBatch(resultList.get(0));
         omniOperator.close();
         omniPartitionedOutPutOperatorFactory.close();
     }
@@ -115,12 +125,16 @@ public class OmniPartionOutOperatorTest {
         omniOperator.addInput(vecBatch);
 
         Iterator<VecBatch> results = omniOperator.getOutput();
-        VecBatch result = results.next();
-        assertEquals(result.getRowCount(), 3);
+        List<VecBatch> resultList = new ArrayList<>();
+        while (results.hasNext()) {
+            resultList.add(results.next());
+        }
+
+        assertEquals(resultList.get(0).getRowCount(), 3);
 
         Object[][] expectedDatas = {{"abc", "de", "f"}};
-        assertVecBatchEquals(result, expectedDatas);
-        TestUtils.freeVecBatch(result);
+        assertVecBatchEquals(resultList.get(0), expectedDatas);
+        TestUtils.freeVecBatch(resultList.get(0));
         omniOperator.close();
         omniPartitionedOutPutOperatorFactory.close();
     }
