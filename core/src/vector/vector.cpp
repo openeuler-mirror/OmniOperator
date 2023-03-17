@@ -7,11 +7,13 @@
 
 namespace omniruntime {
 namespace vec {
-Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId)
+Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId,
+    VectorEncoding encoding)
     : positionOffset(0),
       capacityInBytes(capacityInBytes),
       size(size),
       dataTypeId(dataTypeId),
+      encoding(encoding),
       reference(nullptr),
       allocator(allocator),
       hasNull(false)
@@ -23,11 +25,16 @@ Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTy
     valueOffsetsAddress = reference->GetValueOffsetsAddress();
 }
 
+Vector::Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId)
+    : Vector(allocator, capacityInBytes, size, dataTypeId, OMNI_VEC_ENCODING_FLAT)
+{}
+
 Vector::Vector(Vector *vector, int size, int positionOffset)
     : positionOffset(vector->positionOffset + positionOffset),
       capacityInBytes(vector->GetCapacityInBytes()),
       size(size),
       dataTypeId(vector->dataTypeId),
+      encoding(vector->encoding),
       reference(vector->reference),
       allocator(vector->allocator),
       hasNull(vector->hasNull)

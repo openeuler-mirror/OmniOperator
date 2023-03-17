@@ -5,9 +5,9 @@
 #include "batch_mathfunctions.h"
 #include <iostream>
 #include <cfloat>
-#include "util/engine.h"
-#include "codegen/functions/context_helper.h"
+#include "codegen/context_helper.h"
 #include "codegen/functions/mathfunctions.h"
+#include "util/config_util.h"
 
 
 #ifdef _WIN32
@@ -16,8 +16,7 @@
 #define DLLEXPORT
 #endif
 
-using namespace omniruntime::codegen;
-
+namespace omniruntime::codegen::function {
 static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
 
 extern "C" DLLEXPORT void BatchCastInt32ToInt64(int32_t *x, bool *resIsNull, int64_t *output, int32_t rowCnt)
@@ -48,33 +47,34 @@ extern "C" DLLEXPORT void BatchCastInt64ToDouble(int64_t *x, bool *resIsNull, do
     }
 }
 
-extern "C" DLLEXPORT void BatchCastDoubleToInt32(double *x, bool *resIsNull, int32_t *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchCastDoubleToInt32HalfUp(double *x, bool *resIsNull, int32_t *output, int32_t rowCnt)
 {
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (engineType == EngineType::Spark) {
-        for (int i = 0; i < rowCnt; i++) {
-            output[i] = static_cast<int32_t>(x[i]);
-        }
-    } else {
-        for (int i = 0; i < rowCnt; i++) {
-            output[i] = static_cast<int32_t>(Round(x[i], 0));
-        }
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = static_cast<int32_t>(Round(x[i], 0));
     }
 }
 
-extern "C" DLLEXPORT void BatchCastDoubleToInt64(double *x, bool *resIsNull, int64_t *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchCastDoubleToInt64HalfUp(double *x, bool *resIsNull, int64_t *output, int32_t rowCnt)
 {
-    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
-    if (engineType == EngineType::Spark) {
-        for (int i = 0; i < rowCnt; i++) {
-            output[i] = static_cast<int64_t>(x[i]);
-        }
-    } else {
-        for (int i = 0; i < rowCnt; i++) {
-            output[i] = static_cast<int64_t>(Round(x[i], 0));
-        }
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = static_cast<int64_t>(Round(x[i], 0));
     }
 }
+
+extern "C" DLLEXPORT void BatchCastDoubleToInt32Down(double *x, bool *resIsNull, int32_t *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = static_cast<int32_t>(x[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastDoubleToInt64Down(double *x, bool *resIsNull, int64_t *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = static_cast<int64_t>(x[i]);
+    }
+}
+
 
 extern "C" DLLEXPORT void BatchAddDouble(double *left, double *right, int32_t rowCnt)
 {
@@ -361,4 +361,5 @@ extern "C" DLLEXPORT void BatchPmod(int32_t *x, int32_t *y, bool *isAnyNull, int
             output[i] = r;
         }
     }
+}
 }

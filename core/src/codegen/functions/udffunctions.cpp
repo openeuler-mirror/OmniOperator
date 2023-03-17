@@ -3,13 +3,13 @@
  * Description: udf functions.
  */
 #include <mutex>
-#include "context_helper.h"
+#include "codegen/context_helper.h"
 #include "udf/cplusplus/java_udf_functions.h"
 #include "udffunctions.h"
 
-using namespace omniruntime::codegen;
 using namespace omniruntime::udf;
 
+namespace omniruntime::codegen::function {
 namespace {
 std::once_flag init_udf_flag;
 bool g_isUdfInited;
@@ -50,4 +50,5 @@ extern DLLEXPORT void EvaluateHiveUdfBatch(int64_t contextPtr, const char *udfCl
     }
     ExecuteHiveUdfBatch(contextPtr, udfClass, inputTypes, retType, vecCount, rowCount, inputValues, inputNulls,
         inputLengths, outputValue, outputNull, outputLength);
+}
 }

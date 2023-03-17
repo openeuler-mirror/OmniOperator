@@ -11,8 +11,7 @@
 #include "type/decimal128.h"
 using namespace omniruntime::type;
 
-namespace omniruntime {
-namespace codegen {
+namespace omniruntime::codegen::function {
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
@@ -42,7 +41,6 @@ extern "C" DLLEXPORT void BatchMm3Decimal128(Decimal128 *x, int32_t precision, i
 
 extern "C" DLLEXPORT void BatchMm3Boolean(bool *val, bool *isValNull, int32_t *seed, bool *isSeedNull, bool *resIsNull,
     int32_t *output, int32_t rowCnt);
-}
 }
 
 #endif // OMNI_RUNTIME_BATCH_MURMUR3_HASH_H

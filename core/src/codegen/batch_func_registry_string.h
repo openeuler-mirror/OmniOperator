@@ -9,8 +9,38 @@
 #include "func_registry_base.h"
 #include "util/type_util.h"
 
-namespace omniruntime {
+namespace omniruntime::codegen {
 class BatchStringFunctionRegistry : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchStringFunctionRegistryNotAllowReducePrecison : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchStringFunctionRegistryAllowReducePrecison : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchStringFunctionRegistryNotReplace : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchStringFunctionRegistryReplace : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchStringFunctionRegistryReplaceEmptyString : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchStringFunctionRegistryReplaceInterceptFromBeyond : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };

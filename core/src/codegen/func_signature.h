@@ -11,6 +11,7 @@
 #include <type/data_type.h>
 #include "operator/config/operator_config.h"
 
+namespace omniruntime::codegen {
 class FunctionSignature {
 public:
     FunctionSignature();
@@ -34,5 +35,6 @@ private:
     omniruntime::type::DataTypeId retType;
     void *funcAddress = nullptr;
 };
+}
 
 #endif

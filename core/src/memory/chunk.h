@@ -23,9 +23,9 @@ public:
         return allocator;
     }
 
-    static Chunk *NewChunk(BaseAllocator *allocator, int64_t sizeInBytes)
+    static Chunk* NewChunk(BaseAllocator *allocator, int64_t sizeInBytes, bool zeroFill = false)
     {
-        void *data = allocator->alloc(sizeInBytes);
+        void *data = allocator->alloc(sizeInBytes, zeroFill);
         if (data != nullptr) {
             return new Chunk(allocator, data, sizeInBytes);
         }

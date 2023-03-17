@@ -1457,7 +1457,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNShortColumn)
     int32_t nullFirsts[2] = {true, true};
 
     omniruntime::op::TopNOperatorFactory *topNOperatorFactory =
-            new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1470,7 +1470,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNShortColumn)
     int16_t expectData2[expectedDataSize] = {11, 44, 22, 55, 33};
     DataTypes expectedTypes(std::vector<DataTypePtr>({ ShortType(), LongType(), ShortType() }));
     VectorBatch *expectVecBatch =
-            CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
+        CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
 

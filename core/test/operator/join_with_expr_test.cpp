@@ -401,4 +401,90 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory,
         lookupOuterJoinWithExprFactory);
 }
+
+TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
+{
+    // construct input data
+    const int32_t dataSize = 4;
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType(), VarcharType(500000) }));
+    int64_t buildData0[] = {1, 2, 3, 4};
+    int64_t buildData1[] = {22, 11, 44, 33};
+    std::string buildData2[] = {"hello", "world", "bye", "bye"};
+    auto buildVecBatch = TestUtil::CreateVectorBatch(buildTypes, dataSize, buildData0, buildData1, buildData2);
+
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
+    int32_t hashKeysCount = 1;
+    std::string filter = "";
+    int32_t hashTableCount = 1;
+    HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
+        hashKeysCount, filter, hashTableCount, nullptr);
+    auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
+    hashBuilderWithExprOperator->AddInput(buildVecBatch);
+    std::vector<VectorBatch *> hashBuilderOutput;
+    hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType(), VarcharType(500000) }));
+    int64_t probeData00[] = {1, 2};
+    int64_t probeData01[] = {11, 22};
+    std::string probeData02[] = {"join", "with"};
+    auto probeVecBatch0 = TestUtil::CreateVectorBatch(probeTypes, 2, probeData00, probeData01, probeData02);
+
+    int64_t probeData10[] = {3, 4};
+    int64_t probeData11[] = {33, 44};
+    std::string probeData12[] = {"expression", "test"};
+    auto probeVecBatch1 = TestUtil::CreateVectorBatch(probeTypes, 2, probeData10, probeData11, probeData12);
+
+    int32_t probeOutputCols[3]= {0, 1, 2};
+    int32_t probeOutputColsCount = 3;
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys = CreateProbeHashKeys();
+    int32_t probeHashKeysCount = 1;
+    int32_t buildOutputCols[3] = {0, 1, 2};
+    int32_t buildOutputColsCount = 3;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), VarcharType(500000) }));
+    auto overflowConfig = new OverflowConfig();
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, overflowConfig);
+    auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
+
+    std::vector<VectorBatch *> lookupJoinOutput;
+    lookupJoinWithExprOperator->AddInput(probeVecBatch0);
+    while (lookupJoinWithExprOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);
+    }
+    lookupJoinWithExprOperator->AddInput(probeVecBatch1);
+    while (lookupJoinWithExprOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);
+    }
+
+    EXPECT_EQ(lookupJoinOutput.size(), 2);
+    const int32_t expectedDataSize = 2;
+    int64_t expectedData00[] = {1, 2};
+    int64_t expectedData01[] = {11, 22};
+    std::string expectedData02[] = {"join", "with"};
+    int64_t expectedData03[] = {2, 1};
+    int64_t expectedData04[] = {11, 22};
+    std::string expectedData05[] = {"world", "hello"};
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedData00, expectedData01, expectedData02, expectedData03, expectedData04, expectedData05);
+
+    int64_t expectedData10[] = {3, 4};
+    int64_t expectedData11[] = {33, 44};
+    std::string expectedData12[] = {"expression", "test"};
+    int64_t expectedData13[] = {4, 3};
+    int64_t expectedData14[] = {33, 44};
+    std::string expectedData15[] = {"bye", "bye"};
+    AssertVecBatchEquals(lookupJoinOutput[1], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedData10, expectedData11, expectedData12, expectedData13, expectedData14, expectedData15);
+
+    Expr::DeleteExprs(buildHashKeys);
+    Expr::DeleteExprs(probeHashKeys);
+    VectorHelper::FreeVecBatches(lookupJoinOutput);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
+    DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
+    delete overflowConfig;
+}
 }

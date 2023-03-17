@@ -15,7 +15,7 @@ using namespace std;
 using namespace omniruntime::type;
 namespace omniruntime {
 namespace op {
-static void DoubleCheckEqualFuncImp(Vector *inputColVector, const uint32_t rowIndex, AggregateState &existedRow,
+static void DoubleCheckEqualFuncImp(Vector *inputColVector, const uint32_t rowIndex, const AggregateState &existedRow,
     bool &isSame)
 {
     auto *typeVector = static_cast<DoubleVector *>(inputColVector);
@@ -53,9 +53,9 @@ static void FillVarcharFuncImp(VectorBatch *resultBatch, std::vector<AggregateSt
         return;
     }
 
-    uint8_t *existedStr = reinterpret_cast<uint8_t *>(rowVector[colIndex].strVal);
+    uint8_t *existedStr = reinterpret_cast<uint8_t *>(rowVector[colIndex].val);
     auto varcharVector = reinterpret_cast<VarcharVector *>(resultBatch->GetVector(colIndex));
-    varcharVector->SetValue(rowIndex, existedStr, rowVector[colIndex].strLen);
+    varcharVector->SetValue(rowIndex, existedStr, rowVector[colIndex].count);
 }
 
 static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUNT] = {

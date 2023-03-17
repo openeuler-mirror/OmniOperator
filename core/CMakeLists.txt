@@ -5,6 +5,9 @@ project(omni-runtime)
 cmake_minimum_required(VERSION 3.10)
 
 message(STATUS "Now processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+
+find_package(Boost 1.79 REQUIRED)
+
 # omniruntime version
 set(OMNI_RUNTIME_VERSION 1.2.0)
 set(OS_ARCHITECTURES aarch64)
@@ -39,8 +42,14 @@ if (CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -O2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
+#-ffast-math
+#-fopt-info-vec-optimized
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -fno-var-tracking-assignments -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
+
+if(ENABLE_COMPILE_TIME_REPORT)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftime-report")
+endif()
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 

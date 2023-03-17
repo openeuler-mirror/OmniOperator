@@ -103,14 +103,12 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     // 5 -> operator produced the result data, we should fetch data
     int32_t resultCode = 0;
     if (streamedTypes == nullptr) {
-        resultCode =
-            SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_STREAM_TBL_INFO), resultCode);
+        resultCode = SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_STREAM_TBL_INFO), resultCode);
         return resultCode;
     }
 
     if (bufferedTypes == nullptr) {
-        resultCode =
-            SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_BUFFER_TBL_INFO), resultCode);
+        resultCode = SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_NEED_BUFFER_TBL_INFO), resultCode);
         return resultCode;
     }
 
@@ -140,20 +138,13 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     // 1)put matched rows to result builder, and cache the result
     auto matchResultRet = DecodeJoinResult(joinScannerRet);
     if (static_cast<JoinResultCode>(matchResultRet) == JoinResultCode::HAS_RESULT) {
-        std::vector<bool> isPreKeyMatched;
-        std::vector<int64_t> streamedTblMatchedValueAddresses;
-        std::vector<int64_t> bufferedTblMatchedValueAddresses;
-        std::vector<bool> &isSameBufferedKeyMatched = smjScanner->GetMatchedBufferedKeyFlag();
-        smjScanner->GetMatchedValueAddresses(isPreKeyMatched, streamedTblMatchedValueAddresses,
-            bufferedTblMatchedValueAddresses);
-        auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses(isPreKeyMatched,
-            streamedTblMatchedValueAddresses, bufferedTblMatchedValueAddresses, isSameBufferedKeyMatched);
-        // clear smjScanner current matched result for next match
-        smjScanner->Clear();
+        smjScanner->GetMatchedValueAddresses(joinResultBuilder->GetPreKeyMatched(),
+            joinResultBuilder->GetStreamedTableValueAddresses(), joinResultBuilder->GetBufferedTableValueAddresses(),
+            joinResultBuilder->GetSameBufferedKeyMatched());
+        auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses();
         if (joinResultBuilderRet == 1) {
             joinResultBuilder->GetOutput(returnVectorBatchs);
-            resultCode =
-                SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
+            resultCode = SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
         }
     }
 
@@ -198,6 +189,7 @@ int32_t SortMergeJoinOperator::AddStreamedTableInput(omniruntime::vec::VectorBat
         vecBatchVector.push_back(vecBatch);
         streamedTblPagesIndex->AddVecBatches(vecBatchVector);
     }
+    SetStatus(OMNI_STATUS_NORMAL);
     return GetJoinResult();
 }
 
@@ -210,6 +202,7 @@ int32_t SortMergeJoinOperator::AddBufferedTableInput(omniruntime::vec::VectorBat
         vecBatchVector.push_back(vecBatch);
         bufferedTblPagesIndex->AddVecBatches(vecBatchVector);
     }
+    SetStatus(OMNI_STATUS_NORMAL);
     return GetJoinResult();
 }
 
@@ -222,6 +215,13 @@ int32_t SortMergeJoinOperator::GetOutput(std::vector<omniruntime::vec::VectorBat
 {
     outputPages.assign(returnVectorBatchs.begin(), returnVectorBatchs.end());
     returnVectorBatchs.clear();
+    joinResultBuilder->AddJoinValueAddresses();
+    if (joinResultBuilder->HasNext()) {
+        joinResultBuilder->GetOutput(returnVectorBatchs);
+    } else {
+        joinResultBuilder->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+    }
     return 0;
 }
 

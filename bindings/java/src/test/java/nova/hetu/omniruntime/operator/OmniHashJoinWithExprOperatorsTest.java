@@ -91,6 +91,97 @@ public class OmniHashJoinWithExprOperatorsTest {
         hashBuilderOperatorFactory.close();
     }
 
+    @Test
+    public void testInnerEqualityJoinOneColumnWithMultiVectorBatch() {
+        DataType[] buildTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
+        Object[][] buildDatas = {{1, 2, 1, 2, 3, 4, 5, 6, 7, 1}, {79, 79, 70, 70, 70, 70, 70, 70, 70, 70}};
+        VecBatch buildVecBatch = createVecBatch(buildTypes, buildDatas);
+
+        String[] buildHashKeys = {omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0),
+                getOmniJsonLiteral(1, false, 50))};
+        int operatorCount = 1;
+        OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
+                buildTypes, buildHashKeys, Optional.empty(), operatorCount);
+        OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
+        hashBuilderOperator.addInput(buildVecBatch);
+        hashBuilderOperator.getOutput();
+
+        DataType[] probeTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
+
+        int[] probeOutputCols = {1};
+        String[] probeHashKeys = {omniJsonFourArithmeticExpr("ADD", 1, getOmniJsonFieldReference(1, 0),
+                getOmniJsonLiteral(1, false, 50))};
+        int[] buildOutputCols = {1};
+        DataType[] buildOutputTypes = {IntDataType.INTEGER};
+        OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
+                probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
+                hashBuilderOperatorFactory);
+        OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
+
+        Object[][] baseDatas = {{1, 3, 4, 5, 6, 1, 1, 2, 3}, {78, 78, 78, 78, 78, 78, 82, 82, 65}};
+        int baseDataLen = 9;
+
+        Object[][] probeDatas = new Object[2][];
+        int baseRowCnt = 16;
+        int maxRowCntPerBatch = 131072; // 1M / (4+4)
+        // each batch of baseData will generate 16 row of records, and each vectorBatch
+        // output will have a maximum of 131072 rows.The final result here will output 3 vectorBatch
+        probeDatas[0] = new Object[3 * (maxRowCntPerBatch / baseRowCnt) * baseDataLen];
+        probeDatas[1] = new Object[3 * (maxRowCntPerBatch / baseRowCnt) * baseDataLen];
+        for (int i = 0; i < probeDatas[0].length; i++) {
+            probeDatas[0][i] = baseDatas[0][i % baseDataLen];
+            probeDatas[1][i] = baseDatas[1][i % baseDataLen];
+        }
+
+        VecBatch probeVecBatch = createVecBatch(probeTypes, probeDatas);
+        lookupJoinOperator.addInput(probeVecBatch);
+        Iterator<VecBatch> results = lookupJoinOperator.getOutput();
+        int actualRowCnt = 0;
+        Object[][] baseExpectedDatas = {{78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 82, 82, 82, 82, 82, 65},
+                {70, 70, 79, 70, 70, 70, 70, 70, 70, 79, 70, 70, 79, 70, 79, 70}};
+        while (results.hasNext()) {
+            VecBatch resultVecBatch = results.next();
+            int rowCnt = resultVecBatch.getRowCount();
+            actualRowCnt += rowCnt;
+            Object[][] expectedDatas = new Object[2][];
+            expectedDatas[0] = new Object[rowCnt];
+            expectedDatas[1] = new Object[rowCnt];
+            for (int i = 0; i < rowCnt; i++) {
+                expectedDatas[0][i] = baseExpectedDatas[0][i % baseRowCnt];
+                expectedDatas[1][i] = baseExpectedDatas[1][i % baseRowCnt];
+            }
+            assertVecBatchEquals(resultVecBatch, expectedDatas);
+            freeVecBatch(resultVecBatch);
+        }
+        assertEquals(actualRowCnt, 393216);
+
+        // the next batch of probe data
+        VecBatch probeVecBatch1 = createVecBatch(probeTypes, probeDatas);
+        lookupJoinOperator.addInput(probeVecBatch1);
+        results = lookupJoinOperator.getOutput();
+        actualRowCnt = 0;
+        while (results.hasNext()) {
+            VecBatch resultVecBatch = results.next();
+            int rowCnt = resultVecBatch.getRowCount();
+            actualRowCnt += rowCnt;
+            Object[][] expectedDatas = new Object[2][];
+            expectedDatas[0] = new Object[rowCnt];
+            expectedDatas[1] = new Object[rowCnt];
+            for (int i = 0; i < rowCnt; i++) {
+                expectedDatas[0][i] = baseExpectedDatas[0][i % baseRowCnt];
+                expectedDatas[1][i] = baseExpectedDatas[1][i % baseRowCnt];
+            }
+            assertVecBatchEquals(resultVecBatch, expectedDatas);
+            freeVecBatch(resultVecBatch);
+        }
+        assertEquals(actualRowCnt, 393216);
+
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
+    }
+
     /**
      * Test inner hash join one dictionary column .
      */
@@ -253,11 +344,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();
         assertEquals(appendBatch.getRowCount(), 1);
-        Object[][] expectedData = {
-                {null},
-                {null},
-                {7L},
-                {70L}};
+        Object[][] expectedData = {{null}, {null}, {7L}, {70L}};
         assertVecBatchEquals(appendBatch, expectedData);
         freeVecBatch(resultVecBatch);
         freeVecBatch(appendBatch);
@@ -328,9 +415,7 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 1);
-        Object[][] expectedData = {
-                {null},
-                {70L}};
+        Object[][] expectedData = {{null}, {70L}};
         assertVecBatchEquals(appendBatch, expectedData);
         freeVecBatch(resultVecBatch);
         freeVecBatch(appendBatch);
@@ -396,10 +481,8 @@ public class OmniHashJoinWithExprOperatorsTest {
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();
         assertEquals(appendBatch.getRowCount(), 7);
-        Object[][] expectedData =
-                {{null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null},
-                {19, 14, 7, 1, 10, 13, 20},
+        Object[][] expectedData = {{null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null}, {19, 14, 7, 1, 10, 13, 20},
                 {"35709", "31904", "35709", "35709", "35709", "31904", "35709"}};
         assertVecBatchEquals(appendBatch, expectedData);
         freeVecBatch(resultVecBatch);

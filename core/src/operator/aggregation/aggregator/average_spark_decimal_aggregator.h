@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  * Description: Average aggregate for short decimal
  */
 #ifndef OMNI_RUNTIME_AVERAGE_SPARK_DECIMAL_AGGREGATOR_H
@@ -10,14 +10,16 @@
 
 namespace omniruntime {
 namespace op {
-class AverageSparkDecimalAggregator : public Aggregator {
+static constexpr int32_t PARTIAL_AVG_OUTPUT_LENGTH = sizeof(DecimalAverageState);
+template <bool INPUT_RAW, bool OUT_PARTIAL> class AverageSparkDecimalAggregator : public Aggregator {
 public:
-    AverageSparkDecimalAggregator(const DataTypes & inputTypes, const DataTypes & outputTypes, std::vector<int32_t> &channels)
+    AverageSparkDecimalAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
     {}
 
-    AverageSparkDecimalAggregator(const DataTypes & inputTypes, const DataTypes & outputTypes, std::vector<int32_t> &channels,
-        bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+    AverageSparkDecimalAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw, outputPartial,
         isOverflowAsNull)
     {}
@@ -37,16 +39,15 @@ public:
             return;
         }
 
-        if (inputRaw) {
+        if constexpr (INPUT_RAW) {
             ProcessGroupInputRaw(state, vector, offset);
         } else {
             // get value from containerVector
-            Decimal128 curVal;
+            int128 curVal;
             if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                curVal = DecimalOperations::UnscaledDecimal(
-                    reinterpret_cast<LongVector *>(vectorBatch->GetVector(channels[0]))->GetValue(offset));
+                curVal = reinterpret_cast<LongVector *>(vectorBatch->GetVector(channels[0]))->GetValue(offset);
             } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
-                curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset);
+                curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset).ToInt128();
             }
             int32_t avgCountOffset;
             Vector *avgCountVector =
@@ -54,7 +55,7 @@ public:
             int64_t avgCnt = reinterpret_cast<LongVector *>(avgCountVector)->GetValue(avgCountOffset);
 
             // 2. decode current state and intermediate state
-            Decimal128 leftVal;
+            int128 leftVal;
             int64_t oldOverflow = 0;
             int64_t oldCount = 0;
             DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
@@ -67,9 +68,8 @@ public:
                 return;
             }
             // 4. do calculation
-            int64_t newOverflow = DecimalOperations::AddWithOverflow(leftVal, curVal, leftVal);
             oldCount += avgCnt;
-            oldOverflow += newOverflow;
+            oldOverflow += static_cast<int64_t>(AddCheckedOverflow(leftVal, curVal, leftVal));
 
             DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
                 oldCount);
@@ -83,23 +83,23 @@ public:
         if (vector->IsValueNull(offset)) {
             return;
         }
-        if (inputRaw) {
-            Decimal128 initState;
+        if constexpr (INPUT_RAW) {
+            int128 initState;
             if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                initState = DecimalOperations::UnscaledDecimal((static_cast<LongVector *>(vector))->GetValue(offset));
+                initState = (static_cast<LongVector *>(vector))->GetValue(offset);
             } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
-                initState = (static_cast<Decimal128Vector *>(vector))->GetValue(offset);
+                initState = (static_cast<Decimal128Vector *>(vector))->GetValue(offset).ToInt128();
             }
 
             state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
             DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), initState, 0, 1);
         } else {
             // get value from containerVector
-            Decimal128 curVal;
+            int128 curVal;
             if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                curVal = DecimalOperations::UnscaledDecimal(reinterpret_cast<LongVector *>(vector)->GetValue(offset));
+                curVal = reinterpret_cast<LongVector *>(vector)->GetValue(offset);
             } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
-                curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset);
+                curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset).ToInt128();
             }
 
             int32_t avgCountOffset;
@@ -112,7 +112,7 @@ public:
         }
     }
 
-    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
@@ -123,53 +123,51 @@ public:
 
         int64_t overflowAccumulator = 0;
         int64_t count = 0;
-        Decimal128 decodedDec;
+        int128 decodedDec;
         DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), decodedDec,
             overflowAccumulator, count);
-        Decimal128 countDec = count;
+        int128 countDec = count;
 
         auto outputDecimalType = static_cast<DecimalDataType *>(outputTypes.GetType(0).get());
         auto inputDecimalType = static_cast<DecimalDataType *>(inputTypes.GetType(0).get());
 
         if (overflowAccumulator > 0) {
-            SetNullOrThrowException(vector, rowIndex);
+            this->SetNullOrThrowException(vector, rowIndex);
             return;
         }
 
-        if (outputPartial) {
+        if constexpr (OUT_PARTIAL) {
             int32_t scaleDiff = outputDecimalType->GetScale() - inputDecimalType->GetScale();
-            Decimal128 resultDec;
+            int128 resultDec;
             // rescale dividend and divisor to output scale.
             // In Partial mode, if input type is Decimal(p,s), then, output type is Decimal(p+10,s).
             // So, it can not be overflowed.
-            DecimalOperations::Rescale128(decodedDec, scaleDiff, resultDec);
+            MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
 
             if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 auto longVector = reinterpret_cast<LongVector *>(vector);
-                int64_t low = resultDec.LowBits();
-                int64_t shortResult = DecimalOperations::IsNegative(resultDec) ? -low : low;
+                int64_t shortResult = static_cast<int64_t>(resultDec);
                 longVector->SetValue(rowIndex, shortResult);
             } else {
                 auto decimal128Vector = reinterpret_cast<Decimal128Vector *>(vector);
-                static_cast<Decimal128Vector *>(decimal128Vector)->SetValue(rowIndex, resultDec);
+                static_cast<Decimal128Vector *>(decimal128Vector)->SetValue(rowIndex, Decimal128(resultDec));
             }
             int32_t avgCountOffset;
             Vector *avgCountVector = VectorHelper::ExpandVectorAndIndex(vectors[1], rowIndex, avgCountOffset);
             reinterpret_cast<LongVector *>(avgCountVector)
                 ->SetValue(rowIndex, static_cast<DecimalAverageState *>(state.val)->count);
         } else {
-            Decimal128 finalResultDec;
+            int128 finalResultDec;
             OpStatus status = CalcAvg(inputDecimalType, decodedDec, countDec, outputDecimalType, finalResultDec);
             if (status == OpStatus::OP_OVERFLOW) {
-                SetNullOrThrowException(vector, rowIndex);
+                this->SetNullOrThrowException(vector, rowIndex);
                 return;
             }
             if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                int64_t low = finalResultDec.LowBits();
-                int64_t shortResult = DecimalOperations::IsNegative(finalResultDec) ? -low : low;
+                int64_t shortResult = static_cast<int64_t>(finalResultDec);
                 static_cast<LongVector *>(vector)->SetValue(rowIndex, shortResult);
             } else {
-                static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, finalResultDec);
+                static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, Decimal128(finalResultDec));
             }
         }
     }
@@ -182,13 +180,13 @@ private:
         // 1. get a new value
         int64_t oldOverflow = 0;
         int64_t oldCount = 0;
-        Decimal128 curVal;
+        int128 curVal;
         if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-            curVal = DecimalOperations::UnscaledDecimal(static_cast<LongVector *>(vector)->GetValue(offset));
+            curVal = static_cast<LongVector *>(vector)->GetValue(offset);
         } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
-            curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset);
+            curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset).ToInt128();
         }
-        Decimal128 leftVal;
+        int128 leftVal;
         // 2. decode current state
         DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
             oldCount);
@@ -200,8 +198,7 @@ private:
             return;
         }
         // 4. do calculation
-        int64_t newOverflow = DecimalOperations::AddWithOverflow(leftVal, curVal, leftVal);
-        oldOverflow += newOverflow;
+        oldOverflow += static_cast<int64_t>(AddCheckedOverflow(leftVal, curVal, leftVal));
         ++oldCount;
         // 5. encode to state
         DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
@@ -209,8 +206,8 @@ private:
     }
 
     // calculate avg=sum/count, and rescale to the result Decimal Type
-    OpStatus CalcAvg(DecimalDataType *sumType, Decimal128 &sumDec, Decimal128 &countDec,
-        DecimalDataType *outputDecimalType, Decimal128 &finalResultDec)
+    OpStatus CalcAvg(DecimalDataType *sumType, int128 &sumDec, int128 &countDec, DecimalDataType *outputDecimalType,
+        int128 &finalResultDec)
     {
         int32_t sumPrec = sumType->GetPrecision();
         int32_t sumScale = sumType->GetScale();
@@ -229,18 +226,19 @@ private:
         int32_t divideResultPrec = 0;
         int32_t divideResultScale = 0;
         GetDivideResultDecimalType(sumPrec, sumScale, divideResultPrec, divideResultScale);
-        Decimal128 dividend;
+        int128 dividend;
         // rescale dividend and divisor to divideResultScale(see GetDivideResultDecimalType)
-        OpStatus dividendRescalStatus = DecimalOperations::Rescale128(sumDec, divideResultScale - sumScale, dividend);
-        Decimal128 avgResultDec;
-        OpStatus divideStatus = DecimalOperations::DivideRoundUp(dividend, countDec, 0, 0, avgResultDec);
+        bool isOverflow = MulCheckedOverflow(sumDec, TenOfInt128[divideResultScale - sumScale], dividend);
+        int128 avgResultDec;
+        DivideRoundUp(dividend, countDec, avgResultDec);
 
         // avg = sum/count 's result should rescale to the output DecimalType
-        OpStatus resultRescaleStatus = DecimalOperations::Rescale128(avgResultDec,
-            outputDecimalType->GetScale() - divideResultScale, finalResultDec);
-
-        bool isOverflow =
-            dividendRescalStatus == OP_OVERFLOW || divideStatus == OP_OVERFLOW || resultRescaleStatus == OP_OVERFLOW;
+        int32_t diffScale = outputDecimalType->GetScale() - divideResultScale;
+        if (diffScale >= 0) {
+            isOverflow = isOverflow || MulCheckedOverflow(avgResultDec, TenOfInt128[diffScale], finalResultDec);
+        } else {
+            DivideRoundUp(avgResultDec, TenOfInt128[-diffScale], finalResultDec);
+        }
 
         return isOverflow ? OpStatus::OP_OVERFLOW : OpStatus::SUCCESS;
     }
@@ -281,19 +279,19 @@ private:
 
     // try to cast sum and count to the wider Decimal Type, return true if overflowed; return false if normal
     // the input sum and count will never be changed.
-    bool IsCastToWiderTypeOverflow(Decimal128 &sum, int32_t sumPrec, int32_t sumScale, Decimal128 &count)
+    bool IsCastToWiderTypeOverflow(int128 &sum, int32_t sumPrec, int32_t sumScale, int128 &count)
     {
         int32_t scale = std::max(sumScale, COUNT_SCALE);
         int32_t widerScale = std::min(scale, MAX_SCALE);
 
-        Decimal128 sumRescale;
-        OpStatus sumStatus = DecimalOperations::Rescale128(sum, widerScale - sumScale, sumRescale);
-        if (sumStatus == OpStatus::OP_OVERFLOW) {
+        int128 sumRescale;
+        bool sumStatus = MulCheckedOverflow(sum, TenOfInt128[widerScale - sumScale], sumRescale);
+        if (sumStatus) {
             return true;
         }
-        Decimal128 countRescale;
-        OpStatus countStatus = DecimalOperations::Rescale128(count, widerScale - COUNT_SCALE, countRescale);
-        return countStatus == OpStatus::OP_OVERFLOW;
+        int128 countRescale;
+        bool countStatus = MulCheckedOverflow(count, TenOfInt128[widerScale - COUNT_SCALE], countRescale);
+        return countStatus;
     }
 
 private:
