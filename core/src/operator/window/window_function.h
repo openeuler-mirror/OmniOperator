@@ -9,7 +9,8 @@
 #include <memory>
 #include "vector/vector.h"
 #include "operator/pages_index.h"
-#include "operator/aggregation/aggregator/only_aggregator_factory.h"
+#include "operator/aggregation/aggregator/aggregator.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 namespace omniruntime {
 namespace op {

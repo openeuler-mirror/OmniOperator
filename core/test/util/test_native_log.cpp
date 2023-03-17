@@ -6,7 +6,6 @@
 #include <regex>
 #include "gtest/gtest.h"
 #include "util/global_log.h"
-#include "util/debug.h"
 
 TEST(NativeLog, TestError)
 {
@@ -56,12 +55,4 @@ TEST(NativeLog, TestWarn)
     Log(warnLog, LogType::LOG_WARN);
     ASSERT_EQ(genLog == newStr, true);
     stringStream.str("");
-}
-
-TEST(NativeLog, AllLog)
-{
-    LogDebug("denig log %d,%f,%s\n", 123, 123.0f, "hello");
-    LogWarn("warn log %d,%f,%s\n", 123, 123.0f, "hello");
-    LogError("error log %d,%f,%s\n", 123, 123.0f, "hello");
-    LogInfo("info log %d,%f,%s\n", 123, 123.0f, "hello");
 }

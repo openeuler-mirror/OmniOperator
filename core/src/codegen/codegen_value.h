@@ -7,7 +7,6 @@
 
 #include <llvm/IR/Value.h>
 
-namespace omniruntime::codegen {
 class CodeGenValue {
 public:
     explicit CodeGenValue(llvm::Value *data, llvm::Value *isNull, llvm::Value *length = nullptr)
@@ -15,21 +14,14 @@ public:
     {}
 
     virtual ~CodeGenValue() = default;
-
     bool IsValidValue()
     {
         return this->data != nullptr;
     }
 
     friend class ExpressionCodeGen;
-
-    friend class SimpleFilterCodeGen;
-
-    friend class RowProjectionCodeGen;
-
+    friend class RowExpressionCodeGen;
     friend class BatchExpressionCodeGen;
-
-    friend class CodegenBase;
 
 private:
     llvm::Value *data;
@@ -42,15 +34,12 @@ public:
     explicit DecimalValue(llvm::Value *data, llvm::Value *isNull, llvm::Value *precision, llvm::Value *scale)
         : CodeGenValue(data, isNull), precision(precision), scale(scale)
     {}
-
     virtual ~DecimalValue() = default;
-
-    llvm::Value *GetPrecision() const
+    const llvm::Value *GetPrecision()
     {
         return precision;
     }
-
-    llvm::Value *GetScale() const
+    const llvm::Value *GetScale()
     {
         return scale;
     }
@@ -80,5 +69,6 @@ private:
     llvm::Value *high;
     llvm::Value *low;
 };
-}
+
+
 #endif // OMNI_RUNTIME_CODEGEN_VALUE_H

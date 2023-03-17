@@ -7,18 +7,8 @@
 #include "function.h"
 #include "func_registry_base.h"
 
-namespace omniruntime::codegen {
+namespace omniruntime {
 class MathFunctionRegistry : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class MathFunctionRegistryHalfUp : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class MathFunctionRegistryDown : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };

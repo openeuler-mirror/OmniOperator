@@ -47,7 +47,7 @@ using GenerateHashFunc = void (*)(Vector *vector, const uint32_t rowCount, const
     uint64_t *combinedHash);
 using GenerateHashFuncVect = void (*)(Vector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
-using CheckEqualFunc = void (*)(Vector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame);
+using CheckEqualFunc = void (*)(Vector *vector, const uint32_t offset, AggregateState &slot, bool &isSame);
 using FillOutputFunc = void (*)(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector, int32_t rowIndex,
     int32_t colIndex);
 

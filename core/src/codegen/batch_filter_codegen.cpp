@@ -7,10 +7,10 @@
 
 #include <utility>
 
-namespace omniruntime::codegen {
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
+using namespace omniruntime;
 
 namespace {
 const int INPUT_INDEX = 0;
@@ -22,16 +22,31 @@ const int EXECUTION_CONTEXT_IDX = 5;
 const int DICTIONARY_VECTORS_IDX = 6;
 }
 
-intptr_t BatchFilterCodeGen::GetFunction()
+std::unique_ptr<BatchFilterCodeGen> BatchFilterCodeGen::Create(std::string name,
+    const omniruntime::expressions::Expr &expression, omniruntime::op::OverflowConfig *overflowConfig)
 {
-    llvm::Function *func = CreateBatchFunction();
+    std::unique_ptr<BatchFilterCodeGen> codegen { new BatchFilterCodeGen(std::move(name), expression, overflowConfig) };
+    LLVMEngine::Create(&(codegen->llvmEngine));
+    codegen->context = codegen->GetContext();
+    codegen->builder = codegen->GetIRBuilder();
+    codegen->module = codegen->GetModule();
+    codegen->jit = codegen->GetJit();
+    codegen->llvmTypes = codegen->GetTypes();
+    codegen->decimalIRBuilder = codegen->GetDecimalIRBuilder();
+    codegen->ExtractVectorIndexes();
+    return codegen;
+}
+
+int64_t BatchFilterCodeGen::GetFunction()
+{
+    llvm::Function *func = this->CreateBatchFunction();
     if (func == nullptr) {
         return 0;
     }
-    return CreateBatchWrapper(*func);
+    return this->CreateBatchWrapper(*func);
 }
 
-intptr_t BatchFilterCodeGen::CreateBatchWrapper(llvm::Function &filter)
+int64_t BatchFilterCodeGen::CreateBatchWrapper(llvm::Function &filter)
 {
     llvm::Function *filterFunc = &filter;
     std::vector<Type *> args;
@@ -45,7 +60,7 @@ intptr_t BatchFilterCodeGen::CreateBatchWrapper(llvm::Function &filter)
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "WRAPPER_FUNC", modulePtr);
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "BATCH_FILTER_WRAPPER", module);
     BasicBlock *filterMain = BasicBlock::Create(*context, "FILTER_MAIN", funcDecl);
     // set arg names
     Argument *data = funcDecl->getArg(INPUT_INDEX);
@@ -68,7 +83,7 @@ intptr_t BatchFilterCodeGen::CreateBatchWrapper(llvm::Function &filter)
     AllocaInst *isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), numRows, "IS_NULL_PTR");
     AllocaInst *rowIdxArray = builder->CreateAlloca(llvmTypes->I32Type(), numRows, "ROW_INDEX_ARRAY");
     std::vector<Value *> funcArgs { rowIdxArray, numRows };
-    CallExternFunction("fill_rowIdx", { OMNI_INT, OMNI_INT }, OMNI_INT, funcArgs, nullptr, "fill_rowIdx");
+    llvmEngine->CallExternFunction("fill_rowIdx", { OMNI_INT, OMNI_INT }, OMNI_INT, funcArgs, nullptr, "fill_rowIdx");
     // in the form of {0, 1, 1, ...}. 1 indicates passing the filter, 0 otherwise.
     auto filterResArray = builder->CreateAlloca(llvmTypes->I1Type(), numRows, "FILTER_RES_PTR");
 
@@ -79,9 +94,16 @@ intptr_t BatchFilterCodeGen::CreateBatchWrapper(llvm::Function &filter)
 
     std::vector<DataTypeId> paramTypes = { OMNI_BOOLEAN, OMNI_BOOLEAN, OMNI_INT, OMNI_INT };
     funcArgs = { filterResArray, isNullPtr, selectedRows, numRows };
-    auto res = CallExternFunction("batch_and_not", paramTypes, OMNI_INT, funcArgs, nullptr, "fill_filter_result");
+    auto res =
+        llvmEngine->CallExternFunction("batch_and_not", paramTypes, OMNI_INT, funcArgs, nullptr, "fill_filter_result");
     builder->CreateRet(res);
-    OptimizeFunctionsAndModule();
-    return Compile();
-}
+
+    llvmEngine->OptimizeFunctionsAndModule();
+    jit->getMainJITDylib().addGenerator(
+        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
+    auto resTracker = jit->getMainJITDylib().createResourceTracker();
+    llvmEngine->MakeThreadSafe(&resTracker);
+    rt = resTracker;
+    auto sym = eoe(jit->lookup("BATCH_FILTER_WRAPPER"));
+    return sym.getAddress();
 }

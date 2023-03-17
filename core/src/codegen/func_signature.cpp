@@ -6,7 +6,6 @@
 #include "util/type_util.h"
 #include "func_signature.h"
 
-namespace omniruntime::codegen {
 using namespace omniruntime::type;
 
 FunctionSignature::FunctionSignature() = default;
@@ -96,11 +95,10 @@ std::string FunctionSignature::ToString(omniruntime::op::OverflowConfig *overflo
     if (overflowConfig != nullptr && overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
         result += "_null";
     }
-    for (auto const & param : this->paramTypes) {
+    for (auto const &param : this->paramTypes) {
         result += "_";
         result += TypeUtil::TypeToString(param);
     }
     result = result + "_" + TypeUtil::TypeToString(this->retType);
     return result;
-}
 }

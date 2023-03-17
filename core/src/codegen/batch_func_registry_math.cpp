@@ -5,138 +5,106 @@
 #include "batch_func_registry_math.h"
 #include "batch_functions/batch_mathfunctions.h"
 
-namespace omniruntime::codegen {
+using namespace omniruntime;
 using namespace omniruntime::type;
-using namespace codegen::function;
-
-namespace {
-const std::string ABS_FN_STR = "batch_abs";
-const std::string CAST_FN_STR = "batch_CAST";
-const std::string ROUND_FN_STR = "batch_round";
-const std::string ADD_FN_STR = "batch_add";
-const std::string SUBTRACT_FN_STR = "batch_subtract";
-const std::string MULTIPLY_FN_STR = "batch_multiply";
-const std::string DIVIDE_FN_STR = "batch_divide";
-const std::string MODULUS_FN_STR = "batch_modulus";
-const std::string LESS_THAN_FN_STR = "batch_lessThan";
-const std::string LESS_THAN_EQUAL_FN_STR = "batch_lessThanEqual";
-const std::string GREATER_THAN_FN_STR = "batch_greaterThan";
-const std::string GREATER_THAN_EQUAL_FN_STR = "batch_greaterThanEqual";
-const std::string EQUAL_FN_STR = "batch_equal";
-const std::string NOT_EQUAL_FN_STR = "batch_notEqual";
-const std::string PMOD_FN_STR = "batch_pmod";
-}
 
 std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
 {
+    std::string absFnStr = "batch_abs";
+    std::string castFnStr = "batch_CAST";
+    std::string roundFnStr = "batch_round";
+    std::string addFnStr = "batch_add";
+    std::string subtractFnStr = "batch_subtract";
+    std::string multiplyFnStr = "batch_multiply";
+    std::string divideFnStr = "batch_divide";
+    std::string modulusFnStr = "batch_modulus";
+    std::string lessThanFnStr = "batch_lessThan";
+    std::string lessThanEqualFnStr = "batch_lessThanEqual";
+    std::string greaterThanFnStr = "batch_greaterThan";
+    std::string greaterThanEqualFnStr = "batch_greaterThanEqual";
+    std::string equalFnStr = "batch_equal";
+    std::string notEqualFnStr = "batch_notEqual";
+
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
     const std::vector<omniruntime::type::DataTypeId> longParams = { OMNI_LONG, OMNI_LONG };
     const std::vector<omniruntime::type::DataTypeId> intParams = { OMNI_INT, OMNI_INT };
     const std::vector<omniruntime::type::DataTypeId> boolParams = { OMNI_BOOLEAN, OMNI_BOOLEAN };
 
     std::vector<Function> batchMathFunctions = {
-        Function(reinterpret_cast<void *>(BatchAbs<int32_t>), ABS_FN_STR, {}, { OMNI_INT }, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchAbs<int64_t>), ABS_FN_STR, {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchAbs<double>), ABS_FN_STR, {}, { OMNI_DOUBLE }, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchAbs<int32_t>), absFnStr, {}, { OMNI_INT }, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchAbs<int64_t>), absFnStr, {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchAbs<double>), absFnStr, {}, { OMNI_DOUBLE }, OMNI_DOUBLE, INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(BatchCastInt32ToDouble), CAST_FN_STR, {}, { OMNI_INT }, OMNI_DOUBLE,
+        Function(reinterpret_cast<void *>(BatchCastInt32ToDouble), castFnStr, {}, { OMNI_INT }, OMNI_DOUBLE,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchCastInt64ToDouble), CAST_FN_STR, {}, { OMNI_LONG }, OMNI_DOUBLE,
+        Function(reinterpret_cast<void *>(BatchCastInt64ToDouble), castFnStr, {}, { OMNI_LONG }, OMNI_DOUBLE,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchCastInt32ToInt64), CAST_FN_STR, {}, { OMNI_INT }, OMNI_LONG, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchCastInt64ToInt32), CAST_FN_STR, {}, { OMNI_LONG }, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchCastInt32ToInt64), castFnStr, {}, { OMNI_INT }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchCastInt64ToInt32), castFnStr, {}, { OMNI_LONG }, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchCastDoubleToInt64), castFnStr, {}, { OMNI_DOUBLE }, OMNI_LONG,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchCastDoubleToInt32), castFnStr, {}, { OMNI_DOUBLE }, OMNI_INT,
+            INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(BatchAddDouble), ADD_FN_STR, {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchSubtractDouble), SUBTRACT_FN_STR, {}, doubleParams, OMNI_DOUBLE,
+        Function(reinterpret_cast<void *>(BatchAddDouble), addFnStr, {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchSubtractDouble), subtractFnStr, {}, doubleParams, OMNI_DOUBLE,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchMultiplyDouble), MULTIPLY_FN_STR, {}, doubleParams, OMNI_DOUBLE,
+        Function(reinterpret_cast<void *>(BatchMultiplyDouble), multiplyFnStr, {}, doubleParams, OMNI_DOUBLE,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchDivideDouble), DIVIDE_FN_STR, {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchModulusDouble), MODULUS_FN_STR, {}, doubleParams, OMNI_DOUBLE,
+        Function(reinterpret_cast<void *>(BatchDivideDouble), divideFnStr, {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchModulusDouble), modulusFnStr, {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchLessThanDouble), lessThanFnStr, {}, doubleParams, OMNI_BOOLEAN,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchLessThanDouble), LESS_THAN_FN_STR, {}, doubleParams, OMNI_BOOLEAN,
+        Function(reinterpret_cast<void *>(BatchLessThanEqualDouble), lessThanEqualFnStr, {}, doubleParams, OMNI_BOOLEAN,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchLessThanEqualDouble), LESS_THAN_EQUAL_FN_STR, {}, doubleParams,
+        Function(reinterpret_cast<void *>(BatchGreaterThanDouble), greaterThanFnStr, {}, doubleParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchGreaterThanEqualDouble), greaterThanEqualFnStr, {}, doubleParams,
             OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchGreaterThanDouble), GREATER_THAN_FN_STR, {}, doubleParams, OMNI_BOOLEAN,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchGreaterThanEqualDouble), GREATER_THAN_EQUAL_FN_STR, {}, doubleParams,
-            OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchEqualDouble), EQUAL_FN_STR, {}, doubleParams, OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchNotEqualDouble), NOT_EQUAL_FN_STR, {}, doubleParams, OMNI_BOOLEAN,
+        Function(reinterpret_cast<void *>(BatchEqualDouble), equalFnStr, {}, doubleParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNotEqualDouble), notEqualFnStr, {}, doubleParams, OMNI_BOOLEAN,
             INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(BatchAddInt64), ADD_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchSubtractInt64), SUBTRACT_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchMultiplyInt64), MULTIPLY_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchDivideInt64), DIVIDE_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA,
+        Function(reinterpret_cast<void *>(BatchAddInt64), addFnStr, {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchSubtractInt64), subtractFnStr, {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchMultiplyInt64), multiplyFnStr, {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchDivideInt64), divideFnStr, {}, longParams, OMNI_LONG, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchModulusInt64), modulusFnStr, {}, longParams, OMNI_LONG, INPUT_DATA,
             true),
-        Function(reinterpret_cast<void *>(BatchModulusInt64), MODULUS_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(BatchLessThanInt64), LESS_THAN_FN_STR, {}, longParams, OMNI_BOOLEAN,
+        Function(reinterpret_cast<void *>(BatchLessThanInt64), lessThanFnStr, {}, longParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchLessThanEqualInt64), lessThanEqualFnStr, {}, longParams, OMNI_BOOLEAN,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchLessThanEqualInt64), LESS_THAN_EQUAL_FN_STR, {}, longParams,
+        Function(reinterpret_cast<void *>(BatchGreaterThanInt64), greaterThanFnStr, {}, longParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchGreaterThanEqualInt64), greaterThanEqualFnStr, {}, longParams,
             OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchGreaterThanInt64), GREATER_THAN_FN_STR, {}, longParams, OMNI_BOOLEAN,
+        Function(reinterpret_cast<void *>(BatchEqualInt64), equalFnStr, {}, longParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNotEqualInt64), notEqualFnStr, {}, longParams, OMNI_BOOLEAN, INPUT_DATA),
+
+        Function(reinterpret_cast<void *>(BatchAddInt32), addFnStr, {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchSubtractInt32), subtractFnStr, {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchMultiplyInt32), multiplyFnStr, {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchDivideInt32), divideFnStr, {}, intParams, OMNI_INT, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchModulusInt32), modulusFnStr, {}, intParams, OMNI_INT, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchLessThanInt32), lessThanFnStr, {}, intParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchLessThanEqualInt32), lessThanEqualFnStr, {}, intParams, OMNI_BOOLEAN,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchGreaterThanEqualInt64), GREATER_THAN_EQUAL_FN_STR, {}, longParams,
+        Function(reinterpret_cast<void *>(BatchGreaterThanInt32), greaterThanFnStr, {}, intParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchGreaterThanEqualInt32), greaterThanEqualFnStr, {}, intParams,
             OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchEqualInt64), EQUAL_FN_STR, {}, longParams, OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchNotEqualInt64), NOT_EQUAL_FN_STR, {}, longParams, OMNI_BOOLEAN,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchEqualInt32), equalFnStr, {}, intParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNotEqualInt32), notEqualFnStr, {}, intParams, OMNI_BOOLEAN, INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(BatchAddInt32), ADD_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchSubtractInt32), SUBTRACT_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchMultiplyInt32), MULTIPLY_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchDivideInt32), DIVIDE_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchModulusInt32), MODULUS_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA,
-            true),
-        Function(reinterpret_cast<void *>(BatchLessThanInt32), LESS_THAN_FN_STR, {}, intParams, OMNI_BOOLEAN,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchLessThanEqualInt32), LESS_THAN_EQUAL_FN_STR, {}, intParams, OMNI_BOOLEAN,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchGreaterThanInt32), GREATER_THAN_FN_STR, {}, intParams, OMNI_BOOLEAN,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchGreaterThanEqualInt32), GREATER_THAN_EQUAL_FN_STR, {}, intParams,
-            OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchEqualInt32), EQUAL_FN_STR, {}, intParams, OMNI_BOOLEAN, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchNotEqualInt32), NOT_EQUAL_FN_STR, {}, intParams, OMNI_BOOLEAN,
-            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchEqualBool), equalFnStr, {}, boolParams, OMNI_BOOLEAN, INPUT_DATA),
 
-        Function(reinterpret_cast<void *>(BatchEqualBool), EQUAL_FN_STR, {}, boolParams, OMNI_BOOLEAN, INPUT_DATA),
-
-        Function(reinterpret_cast<void *>(BatchPmod), PMOD_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchRound<int32_t>), ROUND_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchRound<int64_t>), ROUND_FN_STR, {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,
+        Function(reinterpret_cast<void *>(BatchPmod), "batch_pmod", {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchRound<int32_t>), roundFnStr, {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchRound<int64_t>), roundFnStr, {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,
             INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchRound<double>), ROUND_FN_STR, {}, { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE,
+        Function(reinterpret_cast<void *>(BatchRound<double>), roundFnStr, {}, { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE,
             INPUT_DATA)
+
     };
-
     return batchMathFunctions;
-}
-
-std::vector<Function> BatchMathFunctionRegistryHalfUp::GetFunctions()
-{
-    std::vector<Function> batchMathFunctions = {
-        Function(reinterpret_cast<void *>(BatchCastDoubleToInt64HalfUp), CAST_FN_STR, {}, { OMNI_DOUBLE }, OMNI_LONG,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchCastDoubleToInt32HalfUp), CAST_FN_STR, {}, { OMNI_DOUBLE }, OMNI_INT,
-            INPUT_DATA),
-    };
-
-    return batchMathFunctions;
-}
-
-std::vector<Function> BatchMathFunctionRegistryDown::GetFunctions()
-{
-    std::vector<Function> batchMathFunctions = {
-        Function(reinterpret_cast<void *>(BatchCastDoubleToInt64Down), CAST_FN_STR, {}, { OMNI_DOUBLE }, OMNI_LONG,
-            INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchCastDoubleToInt32Down), CAST_FN_STR, {}, { OMNI_DOUBLE }, OMNI_INT,
-            INPUT_DATA),
-    };
-
-    return batchMathFunctions;
-}
 }

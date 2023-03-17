@@ -8,7 +8,7 @@
 #include "func_registry_base.h"
 #include "util/type_util.h"
 
-namespace omniruntime::codegen {
+namespace omniruntime {
 class BatchUtilFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;

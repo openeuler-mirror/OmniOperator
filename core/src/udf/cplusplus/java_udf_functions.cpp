@@ -6,13 +6,12 @@
 #include "jni_util.h"
 #include "util/error_code.h"
 #include "util/type_util.h"
-#include "codegen/context_helper.h"
+#include "codegen/functions/context_helper.h"
 #include "java_udf_functions.h"
 
 namespace omniruntime {
 namespace udf {
 using namespace omniruntime::op;
-using namespace omniruntime::type;
 using namespace omniruntime::codegen;
 
 const std::string GET_ENV_FAILED = "Get env from JVM failed.";
@@ -49,12 +48,12 @@ void ExecuteHiveUdfSingle(int64_t contextPtr, const char *udfClass, int32_t *inp
     // prepare udf name for jni call
     auto env = JniUtil::GetJNIEnv();
     if (env == nullptr) {
-        SetError(contextPtr, GET_ENV_FAILED);
+        codegen::SetError(contextPtr, GET_ENV_FAILED);
         return;
     }
     jstring jUdfClassName = env->NewStringUTF(udfClass);
     if (jUdfClassName == nullptr) {
-        SetError(contextPtr, JVM_OOM);
+        codegen::SetError(contextPtr, JVM_OOM);
         return;
     }
 
@@ -67,7 +66,7 @@ void ExecuteHiveUdfSingle(int64_t contextPtr, const char *udfClass, int32_t *inp
         inputNullAddr, inputLengthAddr, outputValueAddr, outputNullAddr, outputLengthAddr);
     if (env->ExceptionCheck()) {
         auto msg = JniUtil::GetExceptionMsg(env);
-        SetError(contextPtr, msg);
+        codegen::SetError(contextPtr, msg);
     }
     env->DeleteLocalRef(jUdfClassName);
 }
@@ -82,12 +81,12 @@ static void ExecHiveUdfOutputString(int64_t contextPtr, const char *udfClass, in
     // prepare udf name for jni call
     auto env = JniUtil::GetJNIEnv();
     if (env == nullptr) {
-        SetError(contextPtr, GET_ENV_FAILED);
+        codegen::SetError(contextPtr, GET_ENV_FAILED);
         return;
     }
     jstring jUdfClassName = env->NewStringUTF(udfClass);
     if (jUdfClassName == nullptr) {
-        SetError(contextPtr, JVM_OOM);
+        codegen::SetError(contextPtr, JVM_OOM);
         return;
     }
 
@@ -113,7 +112,7 @@ static void ExecHiveUdfOutputString(int64_t contextPtr, const char *udfClass, in
             outputStateAddr);
         if (env->ExceptionCheck()) {
             auto msg = JniUtil::GetExceptionMsg(env);
-            SetError(contextPtr, msg);
+            codegen::SetError(contextPtr, msg);
             env->DeleteLocalRef(jUdfClassName);
             delete outputState;
             return;
@@ -139,12 +138,12 @@ static void ExecHiveUdfOutputNonString(int64_t contextPtr, const char *udfClass,
     // prepare udf name for jni call
     auto env = JniUtil::GetJNIEnv();
     if (env == nullptr) {
-        SetError(contextPtr, GET_ENV_FAILED);
+        codegen::SetError(contextPtr, GET_ENV_FAILED);
         return;
     }
     jstring jUdfClassName = env->NewStringUTF(udfClass);
     if (jUdfClassName == nullptr) {
-        SetError(contextPtr, JVM_OOM);
+        codegen::SetError(contextPtr, JVM_OOM);
         return;
     }
 
@@ -158,7 +157,7 @@ static void ExecHiveUdfOutputNonString(int64_t contextPtr, const char *udfClass,
         reinterpret_cast<int64_t>(inputLengths), rowCount, outputValueAddr, outputNullAddr, outputLengthAddr, 0);
     if (env->ExceptionCheck()) {
         auto msg = JniUtil::GetExceptionMsg(env);
-        SetError(contextPtr, msg);
+        codegen::SetError(contextPtr, msg);
     }
     env->DeleteLocalRef(jUdfClassName);
 }

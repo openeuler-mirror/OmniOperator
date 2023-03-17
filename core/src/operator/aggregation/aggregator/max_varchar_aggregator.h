@@ -1,82 +1,138 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Max aggregate for varchar
  */
 #ifndef OMNI_RUNTIME_MAX_VARCHAR_AGGREGATOR_H
 #define OMNI_RUNTIME_MAX_VARCHAR_AGGREGATOR_H
 
-#include "min_varchar_aggregator.h"
+#include "aggregator.h"
+#ifdef ENABLE_HMPP
+#include "HMPP/hmpps.h"
+#endif
 
 namespace omniruntime {
 namespace op {
-inline uint8_t *MaxCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector *vector, const int32_t idx)
-{
-    uint8_t *curVal = nullptr;
-    int32_t curLen = vector->GetValue(idx, &curVal);
-    int32_t len = static_cast<int32_t>(lenAndFlag & VALUE_FLAG);
-    auto result = memcmp(res, curVal, std::min(len, curLen));
-    if (result < 0 || (result == 0 && len < curLen)) {
-        lenAndFlag = curLen;
-        lenAndFlag |= UPDATE_FLAG;
-        return curVal;
-    } else {
-        return res;
-    }
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxVarcharAggregator : public TypedAggregator {
+class MaxVarcharAggregator : public Aggregator {
 public:
-    ~MaxVarcharAggregator() override = default;
+    MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels)
+    {}
+
+    MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
+        bool inputRaw, bool outputPartial)
+        : Aggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels, inputRaw, outputPartial)
+    {}
+
+    ~MaxVarcharAggregator() override {}
 
 #ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-#endif
-
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
-
-    static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
-        std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
+    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
     {
-        if constexpr (!(IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR)) {
-            LogError("Error in max_varchar aggregator: Unsupported input type %s",
-                TypeUtil::TypeToStringLog(IN_ID).c_str());
-            return nullptr;
-        } else if constexpr (!(OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)) {
-            LogError("Error in max_varchar aggregator: Unsupported output type %s",
-                TypeUtil::TypeToStringLog(OUT_ID).c_str());
-            return nullptr;
-        } else if constexpr (IN_ID != OUT_ID) {
-            LogError(
-                "Error in max_varchar aggregator: Expecting same input output type. Got %s input and %s output types",
-                TypeUtil::TypeToStringLog(IN_ID).c_str(), TypeUtil::TypeToStringLog(OUT_ID).c_str());
-            return nullptr;
-        } else {
-            if (!TypedAggregator::CheckTypes("max_varchar", inputTypes, outputTypes, IN_ID, OUT_ID)) {
-                return nullptr;
-            }
+        auto vector = vectorBatch->GetVector(channels[0]);
 
-            return std::unique_ptr<MaxVarcharAggregator<IN_ID, OUT_ID>>(new MaxVarcharAggregator<IN_ID, OUT_ID>(
-                inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
+        auto offsets =
+            static_cast<int32_t *>(static_cast<int32_t *>(vector->GetValueOffsets()) + vector->GetPositionOffset());
+        auto width = static_cast<VarcharDataType *>(inputTypes.GetType(0).get())->GetWidth();
+        int32_t maxLen = 0;
+        uint8_t *maxVal = executionContext->GetArena()->Allocate(3 * width);
+
+        LogDebug("HMPP-Agg-max");
+        auto result =
+            HMPPS_Max_varchar(static_cast<uint8_t *>(vector->GetValues()), offsets, vector->GetSize(), maxVal, &maxLen);
+        if (result != HMPP_STS_NO_ERR) {
+            throw OmniException("HMPP ERROR", "max failed for hmpp error");
+        }
+
+        if (state.strVal == nullptr) {
+            state.strVal = maxVal;
+            state.strLen = maxLen;
+        } else {
+            auto preMaxVal = reinterpret_cast<char *>(state.strVal);
+
+            int32_t result = memcmp(preMaxVal, reinterpret_cast<char *>(maxVal), std::min(state.strLen, maxLen));
+            if (result < 0 || (result == 0 && state.strLen < maxLen)) {
+                state.strVal = maxVal;
+                state.strLen = maxLen;
+            }
         }
     }
 
-protected:
-    MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-        const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
-        : TypedAggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels, inputRaw, outputPartial,
-        isOverflowAsNull)
-    {}
+    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
+    {
+        // must no null inpout
+        if (vectorBatch->GetVector(channels[0])->MayHaveNull()) {
+            return false;
+        }
+        // not accept dictionnary vector
+        if (vectorBatch->GetVector(channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            return false;
+        }
+        return true;
+    }
+#endif
 
-    void ProcessSingleInternal(AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override;
+    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
+        if (vector->IsValueNull(offset)) {
+            return;
+        }
+        if (state.val == nullptr) {
+            this->InitiateGroup(state, vectorBatch, rowIndex);
+            return;
+        }
+        uint8_t *rowVal = nullptr;
+        int valLen = (static_cast<VarcharVector *>(vector))->GetValue(offset, &rowVal);
+        auto leftVal = reinterpret_cast<char *>(state.strVal);
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
+        int32_t result = memcmp(leftVal, (char *)rowVal, std::min(state.strLen, valLen));
+        if (result < 0 && state.strLen == valLen) {
+            auto err = memcpy_s(leftVal, valLen, rowVal, valLen);
+            if (err != EOK) {
+                LogError("set data failed in variable vector. %d", err);
+            }
+        }
+        if ((result < 0 && state.strLen != valLen) || (result == 0 && state.strLen < valLen)) {
+            uint8_t *ptr = executionContext->GetArena()->Allocate(valLen);
+            auto err = memcpy_s(ptr, valLen, rowVal, valLen);
+            if (err != EOK) {
+                LogError("set data failed in variable vector. %d", err);
+            }
+            state.strVal = ptr;
+            state.strLen = valLen;
+        }
+    }
 
-private:
-    void SaveState(AggregateState &state);
+    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
+        if (vector->IsValueNull(offset)) {
+            return;
+        }
+        uint8_t *data = nullptr;
+        int valLen = static_cast<VarcharVector *>(vector)->GetValue(offset, &data);
+        auto ptr = executionContext->GetArena()->Allocate(valLen);
+        auto err = memcpy_s(ptr, valLen, data, valLen);
+        if (err != EOK) {
+            LogError("set data failed in variable vector. %d", err);
+        }
+        state.strVal = ptr;
+        state.strLen = valLen;
+    }
+
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    {
+        int32_t offset;
+        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
+        auto v = static_cast<VarcharVector *>(vector);
+        if (state.val == nullptr) {
+            v->SetValueNull(rowIndex);
+            return;
+        }
+        v->SetValue(rowIndex, reinterpret_cast<uint8_t *>(state.strVal), state.strLen);
+    }
 };
 }
 }

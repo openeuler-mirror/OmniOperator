@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Aggregation Base Class
  */
 #ifndef AGGREGATION_H
@@ -8,7 +8,8 @@
 #include <vector>
 #include <thread>
 #include "operator/operator_factory.h"
-#include "operator/aggregation/aggregator/only_aggregator_factory.h"
+#include "operator/aggregation/aggregator/aggregator.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "memory/memory_pool.h"
 #include "operator/status.h"
 

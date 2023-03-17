@@ -5,7 +5,8 @@
 #include "mathfunctions.h"
 #include <iostream>
 #include <cfloat>
-#include "codegen/context_helper.h"
+#include "context_helper.h"
+#include "util/engine.h"
 
 
 #ifdef _WIN32
@@ -14,7 +15,8 @@
 #define DLLEXPORT
 #endif
 
-namespace omniruntime::codegen::function {
+using namespace omniruntime::codegen;
+
 static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
 
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
@@ -37,24 +39,24 @@ extern "C" DLLEXPORT double CastInt64ToDouble(int64_t x)
     return static_cast<double>(x);
 }
 
-extern "C" DLLEXPORT int32_t CastDoubleToInt32Down(double x)
+extern "C" DLLEXPORT int32_t CastDoubleToInt32(double x)
 {
-    return static_cast<int32_t>(x);
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    if (engineType == EngineType::Spark) {
+        return static_cast<int32_t>(x);
+    } else {
+        return static_cast<int32_t>(Round(x, 0));
+    }
 }
 
-extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x)
+extern "C" DLLEXPORT int64_t CastDoubleToInt64(double x)
 {
-    return static_cast<int64_t>(x);
-}
-
-extern "C" DLLEXPORT int32_t CastDoubleToInt32HalfUp(double x)
-{
-    return static_cast<int32_t>(Round(x, 0));
-}
-
-extern "C" DLLEXPORT int64_t CastDoubleToInt64HalfUp(double x)
-{
-    return static_cast<int64_t>(Round(x, 0));
+    EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+    if (engineType == EngineType::Spark) {
+        return static_cast<int64_t>(x);
+    } else {
+        return static_cast<int64_t>(Round(x, 0));
+    }
 }
 
 // double functions
@@ -255,5 +257,4 @@ extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
     } else {
         return r;
     }
-}
 }

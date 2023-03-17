@@ -7,9 +7,48 @@
 #define OMNI_RUNTIME_CONFIG_UTIL_H
 
 #include <map>
-#include <string>
-#include "policy.h"
-#include "property.h"
+#include <utility>
+
+class Properties {
+public:
+    Properties() : isEnableBatchExprEvaluate(false), isEnableHMPP(false) {}
+    ~Properties() = default;
+
+    void SetEnableBatchExprEvaluate(bool isEnable)
+    {
+        isEnableBatchExprEvaluate = isEnable;
+    }
+
+    bool IsEnableBatchExprEvaluate()
+    {
+        return isEnableBatchExprEvaluate;
+    }
+
+    void SetEnableHMPP(bool isEnable)
+    {
+        isEnableHMPP = isEnable;
+    }
+
+    bool IsEnableHMPP()
+    {
+        return isEnableHMPP;
+    }
+
+    void SetHiveUdfPropertyFilePath(std::string udfPath)
+    {
+        hiveUdfPropertyFilePath = std::move(udfPath);
+    }
+
+    std::string &GetHiveUdfPropertyFilePath()
+    {
+        return hiveUdfPropertyFilePath;
+    }
+
+private:
+    bool isEnableBatchExprEvaluate;
+    bool isEnableHMPP;
+    std::string hiveUdfPropertyFilePath {};
+};
 
 class ConfigUtil {
 public:
@@ -18,37 +57,6 @@ public:
     static bool IsEnableBatchExprEvaluate();
 
     static std::string &GetHiveUdfPropertyFilePath();
-
-    // for test
-    static void SetRoundingRule(RoundingRule rule);
-
-    static RoundingRule GetRoundingRule();
-
-    static void SetCheckReScaleRule(CheckReScaleRule rule);
-
-    static CheckReScaleRule GetCheckReScaleRule();
-
-    static void SetEmptySearchStrReplaceRule(EmptySearchStrReplaceRule rule);
-
-    static EmptySearchStrReplaceRule GetEmptySearchStrReplaceRule();
-
-    static void SetCastDecimalToDoubleRule(CastDecimalToDoubleRule rule);
-
-    static CastDecimalToDoubleRule GetCastDecimalToDoubleRule();
-
-    static void SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule rule);
-
-    static NegativeStartIndexOutOfBoundsRule GetNegativeStartIndexOutOfBoundsRule();
-
-    static void SetSupportContainerVecRule(SupportContainerVecRule rule);
-
-    static SupportContainerVecRule GetSupportContainerVecRule();
-
-    static void SetStringToDateFormatRule(StringToDateFormatRule rule);
-
-    static StringToDateFormatRule GetStringToDateFormatRule();
-
-    static Policy *GetPolicy();
 
     // for test
     static void SetEnableBatchExprEvaluate(bool isEnable);
@@ -62,30 +70,7 @@ private:
     static std::map<std::string, std::string> configMap;
 
     static void SetProperties(Properties &tmpProperties);
-
     template <typename T> static bool GetProperty(const char *key, T &value);
-
-    static void InitRoundingRule(Policy *policy, const std::string &ruleValueStr);
-
-    static void InitCheckReScaleRule(Policy *policy, const std::string &ruleValueStr);
-
-    static void InitEmptySearchStrReplaceRule(Policy *policy, const std::string &ruleValueStr);
-
-    static void InitCastDecimalToDoubleRule(Policy *policy, const std::string &ruleValueStr);
-
-    static void InitNegativeStartIndexOutOfBoundsRule(Policy *policy, const std::string &ruleValueStr);
-
-    static void InitSupportContainerVecRule(Policy *policy, const std::string &ruleValueStr);
-
-    static void InitStringToDateFormatRule(Policy *policy, const std::string &ruleValueStr);
-
-    static Policy *InitializePolicy();
 };
-
-static Properties g_properties = ConfigUtil::CreateProperties();
-static Properties &GetProperties()
-{
-    return g_properties;
-}
 
 #endif // OMNI_RUNTIME_CONFIG_UTIL_H

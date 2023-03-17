@@ -12,11 +12,11 @@
 #include <codecvt>
 #include <huawei_secure_c/include/securec.h>
 #include "util/utf8_util.h"
-#include "codegen/context_helper.h"
+#include "util/engine.h"
+#include "codegen/functions/context_helper.h"
 #include "codegen/string_util.h"
 #include "type/decimal128.h"
 #include "type/decimal_operations.h"
-#include "util/config_util.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -25,7 +25,7 @@
 #endif
 
 using namespace omniruntime::type;
-namespace omniruntime::codegen::function {
+
 // string compare functions
 extern "C" DLLEXPORT void BatchStrCompare(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, int32_t *res,
     int32_t rowCnt);
@@ -48,17 +48,11 @@ extern "C" DLLEXPORT void BatchEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **
 extern "C" DLLEXPORT void BatchNotEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
     int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToDateAllowReducePrecison(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    bool *isAnyNull, int32_t *output, int32_t rowCnt);
-
-extern "C" DLLEXPORT void BatchCastStringToDateNotAllowReducePrecison(int64_t contextPtr, uint8_t **str,
-    int32_t *strLen, bool *isAnyNull, int32_t *output, int32_t rowCnt);
-
-extern "C" DLLEXPORT void BatchCastStringToDateRetNullNotAllowReducePrecison(bool *isNull, uint8_t **str,
-    int32_t *strLen, int32_t *output, int32_t rowCnt);
-
-extern "C" DLLEXPORT void BatchCastStringToDateRetNullAllowReducePrecison(bool *isNull, uint8_t **str, int32_t *strLen,
+extern "C" DLLEXPORT void BatchCastStringToDate(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     int32_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDateRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
+    int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastIntToString(int64_t contextPtr, int32_t *value, bool *isAnyNull, uint8_t **output,
     int32_t *outLen, int32_t rowCnt);
@@ -96,14 +90,14 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64(int64_t contextPtr, uint8_t
 extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
-    int32_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int32_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
-    int64_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int64_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
-    double *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, double *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDecimal64RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
     int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
@@ -165,16 +159,12 @@ extern "C" DLLEXPORT void BatchConcatStrCharRetNull(bool *isNull, int64_t contex
 extern "C" DLLEXPORT void BatchCastStrWithDiffWidths(int64_t contextPtr, uint8_t **str, int32_t srcWidth,
     int32_t *strLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t dstWidth, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastStrWithDiffWidthsRetNull(bool *isNull, int64_t contextPtr, uint8_t **str,
+extern "C" DLLEXPORT void BatchCastStrWithDiffWidthsRetNull(bool *isNull, int64_t contextPtr, uint8_t **srcStr,
     int32_t srcWidth, int32_t *strLen, uint8_t **output, int32_t *outLen, int32_t dstWidth, int32_t rowCnt);
 
-/**
- * Intercept substring from beyond.
- * e.g., str="apple", strLength=5, startIndex=-7, subStringLength=3, Result="a".
- */
 template <typename T>
-extern DLLEXPORT void BatchSubstrInterceptFromBeyond(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx,
-    T *length, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
+extern DLLEXPORT void BatchSubstr(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx, T *length,
+    bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; i++) {
         if (isAnyNull[i]) {
@@ -188,7 +178,7 @@ extern DLLEXPORT void BatchSubstrInterceptFromBeyond(int64_t contextPtr, uint8_t
         int64_t startCodePoint = startIdx[i];
         int64_t lengthCodePoint = length[i];
         int32_t len = strLen[i];
-        output[i] = const_cast<uint8_t *>(EMPTY);
+        output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
         if (startCodePoint == 0 || (lengthCodePoint <= 0) || (len == 0) || startCodePoint > len) {
             outLen[i] = 0;
             continue;
@@ -212,6 +202,11 @@ extern DLLEXPORT void BatchSubstrInterceptFromBeyond(int64_t contextPtr, uint8_t
             startCodePoint += codePoints;
             // before beginning of string
             if (startCodePoint < 0) {
+                EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+                if (engineType != EngineType::Spark || startCodePoint + lengthCodePoint <= 0) {
+                    outLen[i] = 0;
+                    continue;
+                }
                 lengthCodePoint += startCodePoint;
                 startCodePoint = 0;
             }
@@ -227,15 +222,15 @@ extern DLLEXPORT void BatchSubstrInterceptFromBeyond(int64_t contextPtr, uint8_t
 }
 
 template <typename T>
-extern DLLEXPORT void BatchSubstrCharInterceptFromBeyond(int64_t contextPtr, uint8_t **str, int32_t width,
-    int32_t *strLen, T *startIdx, T *length, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
+extern DLLEXPORT void BatchSubstrChar(int64_t contextPtr, uint8_t **str, int32_t width, int32_t *strLen, T *startIdx,
+    T *length, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    BatchSubstrInterceptFromBeyond<T>(contextPtr, str, strLen, startIdx, length, isAnyNull, output, outLen, rowCnt);
+    BatchSubstr<T>(contextPtr, str, strLen, startIdx, length, isAnyNull, output, outLen, rowCnt);
 }
 
 template <typename T>
-extern DLLEXPORT void BatchSubstrWithStartInterceptFromBeyond(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    T *startIdx, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
+extern DLLEXPORT void BatchSubstrWithStart(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx,
+    bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     int64_t startIndex;
     for (int32_t i = 0; i < rowCnt; i++) {
@@ -246,7 +241,7 @@ extern DLLEXPORT void BatchSubstrWithStartInterceptFromBeyond(int64_t contextPtr
         }
         int64_t startCodePoint = startIdx[i];
         int32_t len = strLen[i];
-        output[i] = const_cast<uint8_t *>(EMPTY);
+        output[i] = const_cast<uint8_t *>(omniruntime::codegen::EMPTY);
         if (startCodePoint == 0 || len == 0 || startCodePoint > len) {
             outLen[i] = 0;
             continue;
@@ -264,6 +259,11 @@ extern DLLEXPORT void BatchSubstrWithStartInterceptFromBeyond(int64_t contextPtr
             int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(charStr, len);
             startCodePoint += codePoints;
             if (startCodePoint < 0) {
+                EngineType engineType = EngineUtil::GetInstance().GetEngineType();
+                if (engineType != EngineType::Spark) {
+                    outLen[i] = 0;
+                    continue;
+                }
                 startCodePoint = 0;
             }
 
@@ -276,121 +276,10 @@ extern DLLEXPORT void BatchSubstrWithStartInterceptFromBeyond(int64_t contextPtr
 }
 
 template <typename T>
-extern DLLEXPORT void BatchSubstrCharWithStartInterceptFromBeyond(int64_t contextPtr, uint8_t **str, int32_t width,
-    int32_t *strLen, T *startIdx, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
+extern DLLEXPORT void BatchSubstrCharWithStart(int64_t contextPtr, uint8_t **str, int32_t width, int32_t *strLen,
+    T *startIdx, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    BatchSubstrWithStartInterceptFromBeyond(contextPtr, str, strLen, startIdx, isAnyNull, output, outLen, rowCnt);
-}
-
-template <typename T>
-extern DLLEXPORT void BatchSubstrEmptyString(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx, T *length,
-    bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
-{
-    for (int32_t i = 0; i < rowCnt; i++) {
-        if (isAnyNull[i]) {
-            outLen[i] = 0;
-            output[i] = nullptr;
-            continue;
-        }
-
-        int64_t endIdx;
-        int64_t startIndex;
-        int64_t startCodePoint = startIdx[i];
-        int64_t lengthCodePoint = length[i];
-        int32_t len = strLen[i];
-        output[i] = const_cast<uint8_t *>(EMPTY);
-        if (startCodePoint == 0 || (lengthCodePoint <= 0) || (len == 0) || startCodePoint > len) {
-            outLen[i] = 0;
-            continue;
-        }
-        const char *charStr = reinterpret_cast<const char *>(str[i]);
-        if (startCodePoint > 0) {
-            startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startCodePoint - 1);
-            if (startIndex < 0) {
-                // before beginning of string
-                outLen[i] = 0;
-                continue;
-            }
-            endIdx = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startIndex, lengthCodePoint);
-            if (endIdx < 0) {
-                // after end of string
-                endIdx = len;
-            }
-        } else {
-            // negative start is relative to end of string
-            int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(charStr, len);
-            startCodePoint += codePoints;
-            // before beginning of string
-            if (startCodePoint < 0) {
-                outLen[i] = 0;
-                continue;
-            }
-            startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startCodePoint);
-            endIdx = startCodePoint + lengthCodePoint < codePoints ?
-                omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startIndex, lengthCodePoint) :
-                len;
-        }
-
-        outLen[i] = endIdx - startIndex;
-        output[i] = str[i] + startIndex;
-    }
-}
-
-template <typename T>
-extern DLLEXPORT void BatchSubstrCharEmptyString(int64_t contextPtr, uint8_t **str, int32_t width, int32_t *strLen,
-    T *startIdx, T *length, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
-{
-    BatchSubstrEmptyString<T>(contextPtr, str, strLen, startIdx, length, isAnyNull, output, outLen, rowCnt);
-}
-
-template <typename T>
-extern DLLEXPORT void BatchSubstrWithStartEmptyString(int64_t contextPtr, uint8_t **str, int32_t *strLen, T *startIdx,
-    bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
-{
-    int64_t startIndex;
-    for (int32_t i = 0; i < rowCnt; i++) {
-        if (isAnyNull[i]) {
-            outLen[i] = 0;
-            output[i] = nullptr;
-            continue;
-        }
-        int64_t startCodePoint = startIdx[i];
-        int32_t len = strLen[i];
-        output[i] = const_cast<uint8_t *>(EMPTY);
-        if (startCodePoint == 0 || len == 0 || startCodePoint > len) {
-            outLen[i] = 0;
-            continue;
-        }
-
-        const char *charStr = reinterpret_cast<const char *>(str[i]);
-        if (startCodePoint > 0) {
-            startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startCodePoint - 1);
-            if (startIndex < 0) {
-                outLen[i] = 0;
-                continue;
-            }
-        } else {
-            // negative start is relative to end of string
-            int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(charStr, len);
-            startCodePoint += codePoints;
-            if (startCodePoint < 0) {
-                outLen[i] = 0;
-                continue;
-            }
-
-            startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(charStr, len, startCodePoint);
-        }
-
-        outLen[i] = len - startIndex;
-        output[i] = str[i] + startIndex;
-    }
-}
-
-template <typename T>
-extern DLLEXPORT void BatchSubstrCharWithStartEmptyString(int64_t contextPtr, uint8_t **str, int32_t width,
-    int32_t *strLen, T *startIdx, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
-{
-    BatchSubstrWithStartEmptyString(contextPtr, str, strLen, startIdx, isAnyNull, output, outLen, rowCnt);
+    BatchSubstrWithStart(contextPtr, str, strLen, startIdx, isAnyNull, output, outLen, rowCnt);
 }
 
 extern "C" DLLEXPORT void BatchLengthChar(uint8_t **str, const int32_t width, int32_t *strLen, bool *isAnyNull,
@@ -405,18 +294,11 @@ extern "C" DLLEXPORT void BatchLengthStr(uint8_t **str, int32_t *strLen, bool *i
 extern "C" DLLEXPORT void BatchLengthStrReturnInt32(uint8_t **str, int32_t *strLen, bool *isAnyNull, int32_t *output,
     int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRepNotReplace(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRep(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     uint8_t **searchStr, int32_t *searchLen, uint8_t **replaceStr, int32_t *replaceLen, bool *isAnyNull,
     uint8_t **output, int32_t *outLen, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRepNotReplace(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    uint8_t **searchStr, int32_t *searchLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
-
-extern "C" DLLEXPORT void BatchReplaceStrStrStrWithRepReplace(int64_t contextPtr, uint8_t **str, int32_t *strLen,
-    uint8_t **searchStr, int32_t *searchLen, uint8_t **replaceStr, int32_t *replaceLen, bool *isAnyNull,
-    uint8_t **output, int32_t *outLen, int32_t rowCnt);
-
-extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRepReplace(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRep(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     uint8_t **searchStr, int32_t *searchLen, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt);
 
 template <typename L>
@@ -436,14 +318,14 @@ static inline void ReplaceWithReplaceNotEmpty(int64_t contextPtr, uint8_t **str,
         if (searchLen[i] == 0) {
             ret = lambda(&hasErr, i);
         } else {
-            auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<const char *>(str[i]),
-                strLen[i], reinterpret_cast<const char *>(searchStr[i]), searchLen[i],
-                reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
+            auto result = omniruntime::codegen::StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
+                reinterpret_cast<const char *>(str[i]), strLen[i], reinterpret_cast<const char *>(searchStr[i]),
+                searchLen[i], reinterpret_cast<const char *>(replaceStr[i]), replaceLen[i], &hasErr, outLen + i);
             ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         }
 
         if (hasErr) {
-            SetError(contextPtr, REPLACE_ERR_MSG);
+            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG);
         }
         output[i] = ret;
     }
@@ -465,18 +347,17 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
         if (searchLen[i] == 0) {
             ret = lambda(&hasErr, i);
         } else {
-            auto result = StringUtil::ReplaceWithSearchNotEmpty(contextPtr, reinterpret_cast<char *>(str[i]), strLen[i],
-                reinterpret_cast<char *>(searchStr[i]), searchLen[i], reinterpret_cast<const char *>(EMPTY), 0, &hasErr,
-                outLen + i);
+            auto result = omniruntime::codegen::StringUtil::ReplaceWithSearchNotEmpty(contextPtr,
+                reinterpret_cast<char *>(str[i]), strLen[i], reinterpret_cast<char *>(searchStr[i]), searchLen[i],
+                reinterpret_cast<const char *>(omniruntime::codegen::EMPTY), 0, &hasErr, outLen + i);
             ret = reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         }
 
         if (hasErr) {
-            SetError(contextPtr, REPLACE_ERR_MSG);
+            omniruntime::codegen::SetError(contextPtr, omniruntime::codegen::REPLACE_ERR_MSG);
         }
         output[i] = ret;
     }
-}
 }
 
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

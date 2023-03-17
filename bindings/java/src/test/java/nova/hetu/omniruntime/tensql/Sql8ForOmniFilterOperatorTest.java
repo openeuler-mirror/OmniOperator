@@ -109,7 +109,7 @@ public class Sql8ForOmniFilterOperatorTest {
     private static final String MUST_TEST_EXP5_JSON = omniJsonGreaterThanExpr(
             omniJsonIfExpr(omniJsonNotEqualExpr(getOmniJsonFieldReference(3, 10), getOmniJsonLiteral(3, false, 0.0)), 3,
                     omniJsonFourArithmeticExpr("DIVIDE", 3, omniJsonAbsExpr(3, omniJsonFourArithmeticExpr("SUBTRACT", 3,
-                            omniJsonCastExpr(3, getOmniJsonFieldReference(2, 9)), getOmniJsonFieldReference(3, 10))),
+                            omniJsonCastExpr(3, getOmniJsonFieldReference(3, 9)), getOmniJsonFieldReference(3, 10))),
                             getOmniJsonFieldReference(3, 10)),
                     getOmniJsonFieldReference(3, 10)),
             getOmniJsonLiteral(3, false, 0.1));

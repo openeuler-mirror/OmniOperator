@@ -7,7 +7,7 @@
 
 #include <vector>
 
-namespace omniruntime::codegen {
+namespace omniruntime {
 class BaseFunctionRegistry {
 public:
     virtual std::vector<Function> GetFunctions() = 0;

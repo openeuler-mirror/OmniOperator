@@ -34,7 +34,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     int nullFirsts[3] = {true, true, true};
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 3,
-        sortExprs, ascendings, nullFirsts, 3, OperatorConfig());
+        sortExprs, ascendings, nullFirsts, 3, nullptr);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -72,7 +72,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     int nullFirsts[2] = {true, true};
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, OperatorConfig());
+        sortExprs, ascendings, nullFirsts, 2, nullptr);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -111,7 +111,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     int nullFirsts[2] = {true, true};
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, OperatorConfig());
+        sortExprs, ascendings, nullFirsts, 2, nullptr);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -159,7 +159,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int32_t nullFirsts[2] = {true, true};
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, OperatorConfig());
+        sortExprs, ascendings, nullFirsts, 2, nullptr);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -202,7 +202,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     int32_t nullFirsts[vecCount] = {true};
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols,
-        vecCount, sortExprs, ascendings, nullFirsts, vecCount, OperatorConfig());
+        vecCount, sortExprs, ascendings, nullFirsts, vecCount, nullptr);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -270,7 +270,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     int32_t ascendings[2] = {false, true};
     int32_t nullFirsts[2] = {true, true};
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, OperatorConfig());
+        sortExprs, ascendings, nullFirsts, 2, nullptr);
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     std::vector<VectorBatch *> outputVecBatches;
@@ -318,7 +318,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
     OperatorConfig operatorConfig(spillConfig);
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
-        sortExprs, ascendings, nullFirsts, 1, operatorConfig);
+        sortExprs, ascendings, nullFirsts, 1, operatorConfig, nullptr);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch1);
@@ -362,7 +362,7 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
     OperatorConfig operatorConfig(spillConfig);
 
     auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
-        sortExprs, ascendings, nullFirsts, 1, operatorConfig);
+        sortExprs, ascendings, nullFirsts, 1, operatorConfig, nullptr);
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch1);

@@ -14,7 +14,6 @@
 #define DLLEXPORT
 #endif
 
-namespace omniruntime::codegen::function {
 template <typename T> extern DLLEXPORT void BatchAbs(T *x, bool *resIsNull, T *output, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
@@ -30,13 +29,9 @@ extern "C" DLLEXPORT void BatchCastInt32ToInt64(int32_t *x, bool *resIsNull, int
 
 extern "C" DLLEXPORT void BatchCastInt64ToInt32(int64_t *x, bool *resIsNull, int32_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastDoubleToInt32HalfUp(double *x, bool *resIsNull, int32_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastDoubleToInt32(double *x, bool *resIsNull, int32_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchCastDoubleToInt64HalfUp(double *x, bool *resIsNull, int64_t *output, int32_t rowCnt);
-
-extern "C" DLLEXPORT void BatchCastDoubleToInt32Down(double *x, bool *resIsNull, int32_t *output, int32_t rowCnt);
-
-extern "C" DLLEXPORT void BatchCastDoubleToInt64Down(double *x, bool *resIsNull, int64_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchCastDoubleToInt64(double *x, bool *resIsNull, int64_t *output, int32_t rowCnt);
 
 // double functions
 extern "C" DLLEXPORT void BatchAddDouble(double *left, double *right, int32_t rowCnt);
@@ -135,5 +130,5 @@ extern DLLEXPORT void BatchRound(T *num, int32_t *decimals, bool *isAnyNull, T *
         output[i] = std::round(num[i] * factor) / factor;
     }
 }
-}
+
 #endif // OMNI_RUNTIME_BATCH_MATHFUNCTIONS_H

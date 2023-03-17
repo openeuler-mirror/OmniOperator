@@ -8,7 +8,8 @@
 #include <iostream>
 #include <huawei_secure_c/include/securec.h>
 
-namespace omniruntime::codegen::function {
+namespace omniruntime {
+namespace codegen {
 // All extern functions go here temporarily
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -44,6 +45,7 @@ uint32_t Fmix(uint32_t h1, uint32_t length);
 uint32_t MixH1(uint32_t h1, uint32_t k1);
 uint32_t MixK1(uint32_t k1);
 uint32_t RotateLeft(uint32_t i, uint32_t distance);
+}
 }
 // OMNI_RUNTIME_MURMUR3_HASH_H
 #endif

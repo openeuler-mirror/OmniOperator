@@ -19,7 +19,6 @@ using namespace omniruntime::type;
 #define DLLEXPORT
 #endif
 
-namespace omniruntime::codegen::function {
 // make an array like {0, 1, 2, 3, ..., rowCnt - 1}
 extern "C" DLLEXPORT void FillRowIndexArray(int32_t *dataArray, int32_t rowCnt);
 
@@ -167,6 +166,6 @@ extern DLLEXPORT void InExpr(int32_t cmpCnt, int64_t *cmpValues, int64_t *cmpBoo
 
 extern "C" DLLEXPORT void InExprString(int32_t cmpCnt, int64_t *cmpValues, int64_t *cmpBools, int64_t *cmpLengths,
     uint8_t **toCmpValue, bool *toCmpBool, int32_t *toCmpLength, bool *finalResult, bool *finalNull, int32_t rowCnt);
-}
+
 
 #endif // OMNI_RUNTIME_BATCH_UTILFUNCTIONS_H

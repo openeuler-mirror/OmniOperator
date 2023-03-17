@@ -5,7 +5,6 @@
 #include <string>
 #include "expr_info_extractor.h"
 
-namespace omniruntime::codegen {
 using namespace omniruntime::expressions;
 using namespace std;
 
@@ -76,5 +75,4 @@ void ExprInfoExtractor::Visit(const FuncExpr &e)
 std::set<int32_t> ExprInfoExtractor::GetVectorIndexes()
 {
     return this->vectorIndexes;
-}
 }

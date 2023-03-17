@@ -355,12 +355,12 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
         retType = std::make_shared<DataType>(retTypeId);
     }
     auto signature = FunctionSignature(funcName, argTypes, retTypeId);
-    auto function = omniruntime::codegen::FunctionRegistry::LookupFunction(&signature);
+    auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
         return new FuncExpr(funcName, args, std::move(retType), function);
     }
 
-    auto &hiveUdfClass = omniruntime::codegen::FunctionRegistry::LookupHiveUdf(funcName);
+    auto &hiveUdfClass = omniruntime::FunctionRegistry::LookupHiveUdf(funcName);
     if (!hiveUdfClass.empty()) {
         return new FuncExpr(hiveUdfClass, args, std::move(retType), HIVE_UDF);
     }

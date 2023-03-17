@@ -62,44 +62,44 @@ using fsec = std::chrono::duration<float>;
 #define LogTrace(format, ...)
 #endif
 
-template <typename T>
-void LogInner(T logLevel, const char *fileName, const char *funcName, int line, const char *format, ...)
-{
-    if (static_cast<int>(logLevel) >= GetLogLevel()) {
-        va_list argPtr;
-        char logBuf[GLOBAL_LOG_BUF_SIZE];
-
-        auto ret1 = snprintf_s(logBuf, GLOBAL_LOG_BUF_SIZE - 1, GLOBAL_LOG_BUF_SIZE - 1, "[%s][%s][%d]:", fileName,
-            funcName, line);
-        va_start(argPtr, format);
-        auto ret2 =
-            vsnprintf_s(logBuf + ret1, GLOBAL_LOG_BUF_SIZE - 1 - ret1, GLOBAL_LOG_BUF_SIZE - 1 - ret1, format, argPtr);
-        va_end(argPtr);
-        logBuf[ret1 + ret2 + 1] = '\0';
-
-        Log(logBuf, logLevel);
-        return;
-    }
-}
-
-#define LogDebug(...)                                                                \
-    do {                                                                             \
-        LogInner(LogType::LOG_DEBUG, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__); \
+#define LogDebug(format, ...)                                        \
+    do {                                                             \
+        if (static_cast<int>(LogType::LOG_DEBUG) >= GetLogLevel()) { \
+            char logBuf[GLOBAL_LOG_BUF_SIZE];                        \
+            LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);        \
+            std::string logString(logBuf);                           \
+            Log(logString, LogType::LOG_DEBUG);                      \
+        }                                                            \
     } while (0)
 
-#define LogInfo(...)                                                                \
-    do {                                                                            \
-        LogInner(LogType::LOG_INFO, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__); \
+#define LogInfo(format, ...)                                        \
+    do {                                                            \
+        if (static_cast<int>(LogType::LOG_INFO) >= GetLogLevel()) { \
+            char logBuf[GLOBAL_LOG_BUF_SIZE];                       \
+            LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);       \
+            std::string logString(logBuf);                          \
+            Log(logString, LogType::LOG_INFO);                      \
+        }                                                           \
     } while (0)
 
-#define LogWarn(...)                                                                \
-    do {                                                                            \
-        LogInner(LogType::LOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__); \
+#define LogWarn(format, ...)                                        \
+    do {                                                            \
+        if (static_cast<int>(LogType::LOG_WARN) >= GetLogLevel()) { \
+            char logBuf[GLOBAL_LOG_BUF_SIZE];                       \
+            LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);       \
+            std::string logString(logBuf);                          \
+            Log(logString, LogType::LOG_WARN);                      \
+        }                                                           \
     } while (0)
 
-#define LogError(...)                                                                \
-    do {                                                                             \
-        LogInner(LogType::LOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__); \
+#define LogError(format, ...)                                        \
+    do {                                                             \
+        if (static_cast<int>(LogType::LOG_ERROR) >= GetLogLevel()) { \
+            char logBuf[GLOBAL_LOG_BUF_SIZE];                        \
+            LogsInfoVargMacro(logBuf, format, ##__VA_ARGS__);        \
+            std::string logString(logBuf);                           \
+            Log(logString, LogType::LOG_ERROR);                      \
+        }                                                            \
     } while (0)
 
 #if defined(DEBUG) || defined(TRACE)

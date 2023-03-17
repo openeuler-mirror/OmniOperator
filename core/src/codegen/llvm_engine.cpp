@@ -3,50 +3,20 @@
  * Description: Expression code generation utilities
  */
 
-#include "llvm_engine.h"
-
-#include <llvm/Transforms/Utils/Cloning.h>
-
+#include <utility>
 #include "expr_info_extractor.h"
 #include "func_registry.h"
-#include "util/config_util.h"
+#include "llvm_engine.h"
 
-namespace omniruntime {
-namespace codegen {
+using namespace llvm;
+using namespace std;
+using namespace orc;
+using namespace omniruntime;
+using namespace omniruntime::expressions;
+using namespace omniruntime::type;
+
 namespace {
-std::once_flag g_codegenTargetInitFlag;
-constexpr unsigned SMALL_VECTOR_DEFAULT_INLINED_ELEMENTS_COUNT = 20;
-static llvm::StringRef CPU_NAME;
-static llvm::SmallVector<std::string, SMALL_VECTOR_DEFAULT_INLINED_ELEMENTS_COUNT> CPU_ATTRS;
-}
-
-LLVMEngine::LLVMEngine()
-{
-    std::call_once(g_codegenTargetInitFlag, InitializeCodegenTargets);
-    llvm::ExitOnError eoe;
-    context = std::make_unique<LLVMContext>();
-    jit = eoe(LLJITBuilder().create());
-    builder = std::make_unique<IRBuilder<>>(*context);
-    auto module = std::make_unique<Module>("the_module", *context);
-    module->setDataLayout(jit->getDataLayout());
-    modulePtr = module.get();
-    llvmTypes = std::make_unique<LLVMTypes>(*context);
-    fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
-
-    auto optLevel = llvm::CodeGenOpt::Aggressive;
-    std::string builderError;
-    llvm::EngineBuilder engine_builder(std::move(module));
-    engine_builder.setEngineKind(llvm::EngineKind::JIT).setOptLevel(optLevel).setErrorStr(&builderError);
-    engine_builder.setMCPU(CPU_NAME);
-    engine_builder.setMAttrs(CPU_ATTRS);
-    std::unique_ptr<llvm::ExecutionEngine> exec_engine { engine_builder.create() };
-    execution_engine = std::move(exec_engine);
-
-    if (ConfigUtil::IsEnableBatchExprEvaluate()) {
-        RegisterFunctions(FunctionRegistry::GetBatchFunctions());
-    } else {
-        RegisterFunctions(FunctionRegistry::GetRowFunctions());
-    }
+std::once_flag codegen_target_init_flag;
 }
 
 llvm::IRBuilder<> *LLVMEngine::GetIRBuilder()
@@ -56,7 +26,7 @@ llvm::IRBuilder<> *LLVMEngine::GetIRBuilder()
 
 Module *LLVMEngine::GetModule()
 {
-    return modulePtr;
+    return module.get();
 }
 
 LLVMContext *LLVMEngine::GetContext()
@@ -64,28 +34,45 @@ LLVMContext *LLVMEngine::GetContext()
     return context.get();
 }
 
+LLJIT *LLVMEngine::GetJit()
+{
+    return jit.get();
+}
+
 LLVMTypes *LLVMEngine::GetTypes()
 {
     return llvmTypes.get();
 }
 
-int64_t LLVMEngine::Compile()
+ExitOnError LLVMEngine::GetEoe()
 {
-    jit->getMainJITDylib().addGenerator(
-        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
-    auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    MakeThreadSafe(&resTracker);
-    rt = resTracker;
-    auto sym = eoe(jit->lookup("WRAPPER_FUNC"));
-    return sym.getAddress();
+    return eoe;
 }
 
 void LLVMEngine::MakeThreadSafe(ResourceTrackerSP *resTracker)
 {
-    execution_engine->removeModule(modulePtr);
-    std::unique_ptr<Module> module(modulePtr);
     auto threadSafeModule = llvm::orc::ThreadSafeModule(move(module), move(context));
     eoe(jit->addIRModule(*resTracker, std::move(threadSafeModule)));
+}
+
+void LLVMEngine::Create(std::unique_ptr<LLVMEngine> *out)
+{
+    std::call_once(codegen_target_init_flag, InitializeCodegenTargets);
+    llvm::ExitOnError eoe;
+    auto jit = eoe(LLJITBuilder().create());
+
+    auto context = std::make_unique<LLVMContext>();
+    auto llvmTypes = std::make_unique<LLVMTypes>(*context);
+    // Create module called the_module
+    auto module = std::make_unique<Module>("the_module", *context);
+    module->setDataLayout(jit->getDataLayout());
+    // Create IR builder to create IR instructions
+    auto builder = std::make_unique<IRBuilder<>>(*context);
+    auto fpm = std::make_unique<legacy::FunctionPassManager>(module.get());
+    std::unique_ptr<LLVMEngine> engine { new LLVMEngine(std::move(context), std::move(jit), std::move(builder),
+        std::move(module), std::move(llvmTypes), std::move(fpm)) };
+    engine->RegisterFunctions(FunctionRegistry::GetFunctions());
+    *out = std::move(engine);
 }
 
 void LLVMEngine::InitializeCodegenTargets()
@@ -95,18 +82,9 @@ void LLVMEngine::InitializeCodegenTargets()
     llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetDisassembler();
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
-
-    CPU_NAME = llvm::sys::getHostCPUName();
-    llvm::StringMap<bool> host_features;
-    if (llvm::sys::getHostCPUFeatures(host_features)) {
-        for (auto &f : host_features) {
-            std::string attr = f.second ? std::string("+") + f.first().str() : std::string("-") + f.first().str();
-            CPU_ATTRS.push_back(attr);
-        }
-    }
 }
 
-void LLVMEngine::RegisterFunctions(const std::vector<Function> &functions)
+void LLVMEngine::RegisterFunctions(const std::vector<omniruntime::Function> &functions)
 {
     std::set<std::string> jitRegisteredFuncs;
     for (auto &func : functions) {
@@ -125,8 +103,8 @@ void LLVMEngine::RegisterFunctions(const std::vector<Function> &functions)
         llvm::Type *ret = (retType == OMNI_DECIMAL128) ? llvmTypes->VoidType() : llvmTypes->ToLLVMType(retType);
         llvm::FunctionType *ft = llvm::FunctionType::get(ret, args, false);
         auto linkage = llvm::Function::ExternalLinkage;
-        llvm::Function::Create(ft, linkage, func.GetId(), *modulePtr);
-        modulePtr->getOrInsertFunction(func.GetId(), ft);
+        llvm::Function::Create(ft, linkage, func.GetId(), *module);
+        module->getOrInsertFunction(func.GetId(), ft);
     }
 }
 
@@ -139,14 +117,17 @@ std::vector<Type *> LLVMEngine::GetFunctionArgTypeVector(std::vector<DataTypeId>
     }
     for (auto type : params) {
         if (type == OMNI_DECIMAL128) {
+            // add high and low
             args.push_back(llvmTypes->I64Type());
             args.push_back(llvmTypes->I64Type());
         } else {
             args.push_back(llvmTypes->ToLLVMType(type));
             if (TypeUtil::IsStringType(type)) {
                 if (type == OMNI_CHAR) {
+                    // Add Type for width support
                     args.push_back(llvmTypes->I32Type());
                 }
+                // Add Type for Length of the string
                 args.push_back(llvmTypes->I32Type());
             }
         }
@@ -164,37 +145,34 @@ std::vector<Type *> LLVMEngine::GetFunctionArgTypeVector(std::vector<DataTypeId>
 
 void LLVMEngine::OptimizeFunctionsAndModule()
 {
-    auto machine = execution_engine->getTargetMachine();
-    llvm::TargetIRAnalysis target_analysis = machine->getTargetIRAnalysis();
+    fpm->add(createSCCPPass());
+    fpm->add(createNewGVNPass());
+    fpm->add(createInductiveRangeCheckEliminationPass());
+    fpm->add(createIndVarSimplifyPass());
 
-    mpm.add(llvm::createTargetTransformInfoWrapperPass(target_analysis));
-    mpm.add(llvm::createFunctionInliningPass());
-    mpm.add(llvm::createInstructionCombiningPass());
-    mpm.add(llvm::createPromoteMemoryToRegisterPass());
-    mpm.add(llvm::createGVNPass());
-    mpm.add(llvm::createNewGVNPass());
-    mpm.add(llvm::createCFGSimplificationPass());
-    mpm.add(llvm::createLoopVectorizePass());
-    mpm.add(llvm::createSLPVectorizerPass());
-    mpm.add(llvm::createGlobalOptimizerPass());
-    mpm.add(llvm::createStripDeadPrototypesPass());
+    fpm->add(createLICMPass());
+    fpm->add(createLoopUnrollPass());
+    fpm->add(createLoopUnswitchPass());
 
-    fpm->add(llvm::createTargetTransformInfoWrapperPass(target_analysis));
+    fpm->add(createLoopLoadEliminationPass());
+    fpm->add(createInductiveRangeCheckEliminationPass());
+    fpm->add(createIndVarSimplifyPass());
+    fpm->add(createLoopInstSimplifyPass());
+    fpm->add(createLoopSimplifyCFGPass());
+    fpm->add(createMergedLoadStoreMotionPass());
+    fpm->add(createMergeICmpsLegacyPass());
+    fpm->add(createAggressiveDCEPass());
+    fpm->add(createDeadStoreEliminationPass());
+    fpm->add(createPromoteMemoryToRegisterPass());
 
-    // run the optimiser
-    llvm::PassManagerBuilder pass_builder;
-    pass_builder.OptLevel = llvm::CodeGenOpt::Aggressive;
-
-    pass_builder.populateFunctionPassManager(*fpm);
-
-    pass_builder.populateModulePassManager(mpm);
+    mpm.add(createFunctionInliningPass());
+    mpm.add(createPruneEHPass());
 
     fpm->doInitialization();
-    for (auto &f : *modulePtr)
-        fpm->run(f);
-    fpm->doFinalization();
-
-    mpm.run(*modulePtr);
+    for (auto &F : *module) {
+        fpm->run(F);
+    }
+    mpm.run(*module);
 }
 
 void LLVMEngine::OptimizeModule()
@@ -202,33 +180,30 @@ void LLVMEngine::OptimizeModule()
     mpm.add(createFunctionInliningPass());
     mpm.add(createPruneEHPass());
 
-    mpm.run(*modulePtr);
+    mpm.run(*module);
 }
 
-CallInst *LLVMEngine::CreateCall(llvm::Function *func, const std::vector<llvm::Value *> &argsVals,
-    const std::string &name)
+CallInst *LLVMEngine::CreateCall(llvm::Function *func, std::vector<llvm::Value *> argsVals, string name)
 {
     return builder->CreateCall(func, argsVals, name);
 }
 
-llvm::Value *LLVMEngine::CallExternFunction(const std::string &fn_name, const std::vector<DataTypeId> &params,
-    const DataTypeId returnType, const std::vector<Value *> &args, llvm::Value *executionContextPtr,
-    const std::string &msg, omniruntime::op::OverflowConfig *overflowConfig, llvm::Value *overflowNull)
+llvm::Value *LLVMEngine::CallExternFunction(const string fn_name, vector<DataTypeId> params,
+    const DataTypeId returnType, vector<Value *> args, llvm::Value *executionContextPtr, const string msg,
+    omniruntime::op::OverflowConfig *overflowConfig, llvm::Value *overflowNull)
 {
-    std::vector<Value *> funcArgs;
-    funcArgs.insert(funcArgs.begin(), args.begin(), args.end());
     if (executionContextPtr != nullptr) {
         if (overflowConfig != nullptr &&
             overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
-            funcArgs.insert(funcArgs.begin(), overflowNull);
+            args.insert(args.begin(), overflowNull);
         } else {
-            funcArgs.insert(funcArgs.begin(), executionContextPtr);
+            args.insert(args.begin(), executionContextPtr);
         }
     }
 
-    std::string funcId = FunctionSignature(fn_name, params, returnType).ToString(overflowConfig);
-    auto f = modulePtr->getFunction(funcId);
-    auto ret = CreateCall(f, funcArgs, msg);
+    std::string funcId = FunctionSignature(fn_name, std::move(params), returnType).ToString(overflowConfig);
+    auto f = module->getFunction(funcId);
+    auto ret = CreateCall(f, args, msg);
     return ret;
 }
 
@@ -243,91 +218,4 @@ void LLVMEngine::RemoveUnusedFunctions()
     mpm.add(llvm::createInternalizePass(
         [preserved](const llvm::GlobalValue &func) { return (func.getName().str() == preserved->getName().str()); }));
     mpm.add(llvm::createGlobalDCEPass());
-}
-
-DecimalSplitValue LLVMEngine::Split(llvm::Value *fullValue)
-{
-    LLVMTypes types(*context);
-    const int32_t intValue = 64;
-    auto high = builder->CreateLShr(fullValue, types.CreateConstant128(intValue), "split_high");
-    high = builder->CreateTrunc(high, types.I64Type(), "split_high");
-    auto low = builder->CreateTrunc(fullValue, types.I64Type(), "split_low");
-    return DecimalSplitValue(high, low);
-}
-
-llvm::Value *LLVMEngine::ToInt128(llvm::Value *high, llvm::Value *low) const
-{
-    LLVMTypes types(*context);
-    auto value = builder->CreateSExt(high, types.I128Type());
-    const int32_t intValue = 64;
-    value = builder->CreateShl(value, types.CreateConstant128(intValue));
-    value = builder->CreateAdd(value, builder->CreateZExt(low, types.I128Type()));
-    return value;
-}
-
-std::shared_ptr<DecimalValue> LLVMEngine::BuildDecimalValue(llvm::Value *data, omniruntime::type::DataType &retType,
-    llvm::Value *isNull)
-{
-    LLVMTypes llvmTypes(*context);
-    llvm::Value *precision;
-    llvm::Value *scale;
-    if (TypeUtil::IsDecimalType(retType.GetId())) {
-        precision = llvmTypes.CreateConstantInt(static_cast<DecimalDataType &>(retType).GetPrecision());
-        scale = llvmTypes.CreateConstantInt(static_cast<DecimalDataType &>(retType).GetScale());
-    } else {
-        precision = llvmTypes.CreateConstantInt(0);
-        scale = llvmTypes.CreateConstantInt(0);
-    }
-    return std::make_shared<DecimalValue>(data, isNull, precision, scale);
-}
-
-llvm::Value *LLVMEngine::CallDecimalFunction(const std::string &fnName, llvm::Type *retType,
-    const std::vector<llvm::Value *> &args, llvm::Value *executionContextPtr,
-    omniruntime::op::OverflowConfig *overflowConfig, llvm::Value *overflowNull)
-{
-    LLVMTypes llvmTypes(*context);
-    std::vector<llvm::Value *> disassembledArgs;
-
-    if (executionContextPtr != nullptr) {
-        if (overflowConfig != nullptr &&
-            overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
-            disassembledArgs.push_back(overflowNull);
-        } else {
-            disassembledArgs.push_back(executionContextPtr);
-        }
-    }
-    for (auto &arg : args) {
-        if (arg->getType() == llvmTypes.I128Type()) {
-            auto split = Split(arg);
-            disassembledArgs.push_back(const_cast<llvm::Value *>(split.GetHigh()));
-            disassembledArgs.push_back(const_cast<llvm::Value *>(split.GetLow()));
-        } else {
-            disassembledArgs.push_back(arg);
-        }
-    }
-    auto f = modulePtr->getFunction(fnName);
-    llvm::Value *result = nullptr;
-    if (f) {
-        if (retType == llvmTypes.I128Type()) {
-            auto outHighPtr = builder->CreateAlloca(llvmTypes.I64Type(), nullptr, "out_high");
-            auto outLowPtr = builder->CreateAlloca(llvmTypes.I64Type(), nullptr, "out_low");
-            disassembledArgs.push_back(outHighPtr);
-            disassembledArgs.push_back(outLowPtr);
-
-            CreateCall(f, disassembledArgs, const_cast<std::string &>(fnName));
-
-            auto outHigh = builder->CreateLoad(outHighPtr);
-            auto outLow = builder->CreateLoad(outLowPtr);
-            result = ToInt128(outHigh, outLow);
-        } else {
-            result = CreateCall(f, disassembledArgs, const_cast<std::string &>(fnName));
-        }
-        llvm::InlineFunctionInfo inlineFunctionInfo;
-        llvm::InlineFunction(*((llvm::CallInst *)result), inlineFunctionInfo);
-    } else {
-        LogWarn("Unable to generate function : %s", fnName.c_str());
-    }
-    return result;
-}
-}
 }

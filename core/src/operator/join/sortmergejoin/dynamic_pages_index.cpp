@@ -45,7 +45,7 @@ int32_t DynamicPagesIndex::AddVecBatches(const std::vector<VectorBatch *> &vecBa
             this->valueAddressesDeque.push_back(valueAddress);
         }
 
-        std::vector<Vector *> vectorBatchColumns;
+        std::deque<Vector *> vectorBatchColumns;
         for (int32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
             vectorBatchColumns.push_back(vecBatch->GetVector(colIdx));
         }
