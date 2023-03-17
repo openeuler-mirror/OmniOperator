@@ -250,7 +250,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         }
     }
     auto signature = FunctionSignature(opStr, argTypes, type->GetId());
-    auto function = omniruntime::codegen::FunctionRegistry::LookupFunction(&signature);
+    auto function = omniruntime::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {
         return new FuncExpr(opStr, args, std::move(type), function);
     }

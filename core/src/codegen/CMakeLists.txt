@@ -1,3 +1,6 @@
+add_subdirectory(functions)
+add_subdirectory(batch_functions)
+
 file(GLOB_RECURSE CODE_GEN_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
 set(CODEGEN_TARGET ${OMNI_CODEGEN_SO})
 add_library(${CODEGEN_TARGET} SHARED ${CODE_GEN_LIST})

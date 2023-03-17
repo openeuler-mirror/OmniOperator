@@ -7,7 +7,7 @@
 
 using namespace omniruntime::type;
 
-namespace omniruntime::codegen {
+namespace omniruntime {
 Function::Function(void *address, const std::string &name, const std::vector<std::string> &aliases,
     const std::vector<DataTypeId> &paramTypes, const DataTypeId &retType, NullableResultType nullableResultType,
     bool setExecutionContext)

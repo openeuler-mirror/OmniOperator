@@ -3,7 +3,6 @@
  * @Description: window implementations
  */
 #include "window_expr.h"
-#include "operator/util/function_type.h"
 
 using namespace std;
 namespace omniruntime {

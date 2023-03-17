@@ -5,11 +5,12 @@
 
 #include "batch_dictionaryfunctions.h"
 #include "vector/dictionary_vector.h"
-#include "codegen/context_helper.h"
+#include "codegen/functions/context_helper.h"
 
 using namespace omniruntime::vec;
 
-namespace omniruntime::codegen::function {
+namespace omniruntime {
+namespace codegen {
 extern "C" DLLEXPORT void BatchGetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t *rowIdxArray,
     int32_t rowCnt, int32_t *output)
 {
@@ -135,5 +136,6 @@ extern "C" DLLEXPORT void BatchGetDecimalFromVector(Decimal128 *vector, int32_t 
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = vector[rowIdxArray[i]];
     }
+}
 }
 }

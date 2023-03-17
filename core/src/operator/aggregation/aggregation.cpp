@@ -1,10 +1,10 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * Description: Aggregation Base Class
  */
 
 #include "aggregation.h"
-#include "aggregator/aggregator_factory.h"
+
 namespace omniruntime {
 namespace op {
 template <class T>
@@ -27,7 +27,7 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
     for (uint32_t i = 0; i < funcTypesContext.size(); ++i) {
         switch (funcTypesContext[i]) {
             case OMNI_AGGREGATION_TYPE_SUM: {
-                if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NOT_SUPPORT) {
+                if (EngineUtil::GetInstance().IsSparkEngine()) {
                     CreateAggregatorFactory<SumSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 } else {
                     CreateAggregatorFactory<SumAggregatorFactory>(aggregatorFactories, maskCols[i]);
@@ -51,7 +51,7 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 break;
             }
             case OMNI_AGGREGATION_TYPE_AVG: {
-                if (ConfigUtil::GetSupportContainerVecRule() == SupportContainerVecRule::NOT_SUPPORT) {
+                if (EngineUtil::GetInstance().IsSparkEngine()) {
                     CreateAggregatorFactory<AverageSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 } else {
                     CreateAggregatorFactory<AverageAggregatorFactory>(aggregatorFactories, maskCols[i]);

@@ -1,7 +1,6 @@
-/*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
- * @Description: OmniStatus declaring
- */
+//
+// Created by root on 5/31/21.
+//
 
 #ifndef OMNI_RUNTIME_STATUS_H
 #define OMNI_RUNTIME_STATUS_H

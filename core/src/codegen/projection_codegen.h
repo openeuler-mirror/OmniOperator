@@ -5,45 +5,36 @@
 #ifndef PROJECTION_CODEGEN_H
 #define PROJECTION_CODEGEN_H
 
+#include <utility>
+
 #include "expression_codegen.h"
 #include "util/type_util.h"
-#include "vector/vector_batch.h"
 
-namespace omniruntime {
-namespace codegen {
 class ProjectionCodeGen : public ExpressionCodeGen {
 public:
-    /**
-     * Method to initialize a ProjectionCodeGen instance
-     * @param name ProjectionCodeGen module name
-     * @param expr the projection expression to code generation
-     * @param filter whether to support filter
-     * @param overflowConfig config of overflow
+    /* *
+     * Method to create and initialize a ProjectionCodeGen instance
+     *
+     * @param name Name for ProjectionCodeGen module
+     * @param expression the projection expression
+     * @return unique_ptr to the ProjectionCodeGen instance
      */
+    static std::unique_ptr<ProjectionCodeGen> Create(std::string name, const omniruntime::expressions::Expr &expression,
+        bool filter, omniruntime::op::OverflowConfig *overflowConfig);
+
+    ~ProjectionCodeGen() override = default;
+
+    int64_t GetFunction() override;
+
+    int64_t GetExpressionEvaluator();
+
+private:
     ProjectionCodeGen(std::string name, const omniruntime::expressions::Expr &expr, bool filter,
         omniruntime::op::OverflowConfig *overflowConfig)
         : ExpressionCodeGen(std::move(name), expr, overflowConfig), filter(filter)
     {}
-
-    ~ProjectionCodeGen() override = default;
-
-    /**
-     * Method to get function of processing projection expression
-     * @param inputDataTypes is used to provide data type when preload data
-     * @return the address of function
-     */
-    intptr_t GetFunction(const DataTypes &inputDataTypes) override;
-
-private:
-    /**
-     * Method to generate function by using LLVM API which processes projection expression line by line
-     * @return the address of function
-     */
-    intptr_t CreateWrapper();
-
+    int64_t CreateWrapper(llvm::Function &proj);
     bool filter;
 };
-}
-}
 
 #endif

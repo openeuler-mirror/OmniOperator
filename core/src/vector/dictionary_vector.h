@@ -101,12 +101,9 @@ public:
         }
     }
 
-    StringRef SerializeValue(size_t rowId, mem::SimpleArenaAllocator &arenaAllocator,
-        const uint8_t *&begin) override
+    VectorEncoding GetEncoding() override
     {
-        int32_t originId = 0;
-        auto *originVector = ExtractDictionaryAndId(static_cast<int32_t>(rowId), originId);
-        return originVector->SerializeValue(originId, arenaAllocator, begin);
+        return OMNI_VEC_ENCODING_DICTIONARY;
     }
 
 private:

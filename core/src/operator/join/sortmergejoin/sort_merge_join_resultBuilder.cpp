@@ -7,7 +7,6 @@
 #include "expression/jsonparser/jsonparser.h"
 #include "operator/pages_index.h"
 #include "sort_merge_join_scanner.h"
-#include "util/compiler_util.h"
 
 namespace omniruntime {
 namespace op {
@@ -131,7 +130,7 @@ void AddValueToBuildVector(Vector *inputVector, int32_t inputRowId, Vector *outp
     }
 }
 
-bool ALWAYS_INLINE IsNullFlagBatchAndRow(int32_t batchId, int32_t rowId)
+bool IsNullFlagBatchAndRow(int32_t batchId, int32_t rowId)
 {
     return batchId == JOIN_NULL_FLAG && rowId == JOIN_NULL_FLAG;
 }
@@ -139,12 +138,10 @@ bool ALWAYS_INLINE IsNullFlagBatchAndRow(int32_t batchId, int32_t rowId)
 void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId,
     vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount)
 {
-    if (IsNullFlagBatchAndRow(leftBatchId, leftRowId)) {
-        for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+    for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+        if (IsNullFlagBatchAndRow(leftBatchId, leftRowId)) {
             buildVectorBatch->GetVector(columnIdx)->SetValueNull(buildRowCount);
-        }
-    } else {
-        for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+        } else {
             AddValueToBuildVector(leftTablePagesIndex->GetColumns(leftBatchId, leftTableOutputCols[columnIdx]),
                 leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
         }
@@ -154,14 +151,11 @@ void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBa
 void JoinResultBuilder::ParsingAndOrganizationResultsForRightTable(int32_t rightBatchId, int32_t rightRowId,
     vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount)
 {
-    if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
-        for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
-            int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+    for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
+        int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+        if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
             buildVectorBatch->GetVector(buildColumnIdx)->SetValueNull(buildRowCount);
-        }
-    } else {
-        for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
-            int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+        } else {
             AddValueToBuildVector(rightTablePagesIndex->GetColumns(rightBatchId, rightTableOutputCols[columnIdx]),
                 rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
         }
@@ -186,18 +180,27 @@ void JoinResultBuilder::PaddingRightTableNull(int64_t leftTableRowAddress, vec::
     buildRowCount++;
 }
 
-int32_t JoinResultBuilder::AddJoinValueAddresses()
+int32_t JoinResultBuilder::AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched,
+    std::vector<int64_t> &streamedTableValueAddresses, std::vector<int64_t> &bufferedTableValueAddresses,
+    std::vector<bool> &isSameBufferedKeyMatched)
 {
-    // 1 represents the rowCount of buildVectorBatch has reached the maxRowCount
-    // 0 represents the rowCount of buildVectorBatch doesn't reached the maxRowCount
-    int32_t fillStatus = 0;
+    bool isFillOneBatch = false;
+    int32_t buildRowCount = 0;
     int32_t inputSize = streamedTableValueAddresses.size();
-    if (buildVectorBatch == nullptr) {
+    vec::VectorBatch *buildVectorBatch = nullptr;
+
+    if (buildVectorBatchCount == 0) {
         buildVectorBatch = NewEmptyVectorBatch();
-        buildRowCount = 0;
+        buildVectorBatchs.push_back(buildVectorBatch);
+        buildVectorBatchRowCount.push_back(0);
+        buildVectorBatchCount++;
+    } else {
+        buildVectorBatch = buildVectorBatchs[buildVectorBatchCount - 1];
+        buildRowCount = buildVectorBatchRowCount[buildVectorBatchCount - 1];
     }
 
-    for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
+    bool isPreRowMatched = false;
+    for (int32_t addressPosition = 0; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
         if (preStreamedRowAddress != INT64_MAX && preStreamedRowAddress != streamedRowAddress &&
@@ -217,23 +220,23 @@ int32_t JoinResultBuilder::AddJoinValueAddresses()
         PaddingNullAndVerifyingTheOutput(isPreKeyMatched, streamedRowAddress, bufferedRowAddress, buildVectorBatch,
             buildRowCount, isSameBufferedKeyMatched, isPreRowMatched, addressPosition);
         preStreamedRowAddress = streamedRowAddress;
-        addressOffset++;
         if (buildRowCount >= maxRowCount) {
-            fillStatus = 1;
-            buildVectorBatchRowCount = buildRowCount;
-            return fillStatus;
+            isFillOneBatch = true;
+            buildVectorBatch = NewEmptyVectorBatch();
+            buildVectorBatchs.push_back(buildVectorBatch);
+            buildVectorBatchRowCount.push_back(0);
+            buildVectorBatchRowCount[buildVectorBatchCount - 1] = buildRowCount;
+            buildRowCount = 0;
+            buildVectorBatchCount++;
         }
     }
     if (preStreamedRowAddress != INT64_MAX && !preLeftTableRowMatchedOut) {
         PaddingRightTableNull(preStreamedRowAddress, buildVectorBatch,
             buildRowCount); // pad NULL for last mismatch row
     }
-    buildVectorBatchRowCount = buildRowCount;
     preStreamedRowAddress = INT64_MAX;
-    if (buildRowCount >= maxRowCount) {
-        fillStatus = 1;
-    }
-    return fillStatus;
+    buildVectorBatchRowCount[buildVectorBatchCount - 1] = buildRowCount;
+    return isFillOneBatch ? 1 : 0;
 }
 
 void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId)
@@ -258,21 +261,22 @@ VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, int32_t rowCount)
 
 int32_t JoinResultBuilder::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
-    if (buildVectorBatchRowCount > 0) {
-        if (buildVectorBatchRowCount == maxRowCount) {
-            outputPages.push_back(buildVectorBatch);
+    for (int32_t batchIdx = 0; batchIdx < buildVectorBatchCount; batchIdx++) {
+        if (buildVectorBatchRowCount[batchIdx] > 0) {
+            if (buildVectorBatchRowCount[batchIdx] == maxRowCount) {
+                outputPages.push_back(buildVectorBatchs[batchIdx]);
+            } else {
+                outputPages.push_back(
+                    GetVectorBatchFromSlice(buildVectorBatchs[batchIdx], buildVectorBatchRowCount[batchIdx]));
+                VectorHelper::FreeVecBatch(buildVectorBatchs[batchIdx]);
+            }
         } else {
-            outputPages.push_back(GetVectorBatchFromSlice(buildVectorBatch, buildVectorBatchRowCount));
-            VectorHelper::FreeVecBatch(buildVectorBatch);
-        }
-    } else {
-        if (buildVectorBatch != nullptr) {
-            VectorHelper::FreeVecBatch(buildVectorBatch);
+            VectorHelper::FreeVecBatch(buildVectorBatchs[batchIdx]);
         }
     }
-
-    buildVectorBatchRowCount = 0;
-    buildVectorBatch = nullptr;
+    this->buildVectorBatchCount = 0;
+    this->buildVectorBatchs.clear();
+    this->buildVectorBatchRowCount.clear();
 
     return 0;
 }

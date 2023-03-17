@@ -27,8 +27,7 @@ DictionaryVector::DictionaryVector(Vector *dictionary, int32_t *ids, int32_t ids
 }
 
 DictionaryVector::DictionaryVector(VectorAllocator *allocator, int32_t dataTypeId, int32_t idsCount)
-    : Vector(allocator, idsCount * sizeof(int32_t), idsCount, DataTypeId(dataTypeId), OMNI_VEC_ENCODING_DICTIONARY),
-      dictionary(nullptr)
+    : Vector(allocator, idsCount * sizeof(int32_t), idsCount, DataTypeId(dataTypeId)), dictionary(nullptr)
 {}
 
 DictionaryVector::~DictionaryVector()

@@ -5,39 +5,30 @@
 #ifndef FILTER_CODEGEN_H
 #define FILTER_CODEGEN_H
 
+#include <utility>
 #include "expression_codegen.h"
 
-namespace omniruntime {
-namespace codegen {
 class FilterCodeGen : public ExpressionCodeGen {
 public:
-    /**
-     * Method to initialize a FilterCodeGen instance
-     * @param name FilterCodeGen module name
-     * @param expression the filter expression to code generation
-     * @param overflowConfig config of overflow
+    /* *
+     * Method to create and initialize a FilterCodeGen instance
+     *
+     * @param name Name for FilterCodeGen module
+     * @param expression the filter expression
+     * @return unique_ptr to the FilterCodeGen instance
      */
+    static std::unique_ptr<FilterCodeGen> Create(std::string name, const omniruntime::expressions::Expr &expression,
+        omniruntime::op::OverflowConfig *overflowConfig);
+
+    ~FilterCodeGen() override = default;
+
+    int64_t GetFunction() override;
+
+private:
     FilterCodeGen(std::string name, const omniruntime::expressions::Expr &expression,
         omniruntime::op::OverflowConfig *overflowConfig)
         : ExpressionCodeGen(std::move(name), expression, overflowConfig)
     {}
-
-    ~FilterCodeGen() override = default;
-
-    /**
-     * Method to get function of processing filter expression
-     * @param inputDataTypes is used to provide data type when preload data
-     * @return the address of function
-     */
-    intptr_t GetFunction(const DataTypes &inputDataTypes) override;
-
-private:
-    /**
-     * Method to generate function by using LLVM API which processes filter expression line by line
-     * @return the address of function
-     */
-    intptr_t CreateWrapper();
+    int64_t CreateWrapper(llvm::Function &filter);
 };
-}
-}
 #endif

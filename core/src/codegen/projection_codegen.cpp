@@ -4,8 +4,6 @@
  */
 #include "projection_codegen.h"
 
-namespace omniruntime {
-namespace codegen {
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
@@ -23,37 +21,80 @@ const int NEW_NULL_VALUES_INDEX = 7;
 const int OUTPUT_OFFSETS_INDEX = 8;
 const int EXECUTION_CONTEXT_IDX = 9;
 const int DICTIONARY_VECTORS_IDX = 10;
+const int ROW_PROJ_INPUT_INDEX = 0;
+const int ROW_PROJ_NULL_BITMAP_INDEX = 1;
+const int ROW_PROJ_OFFSETS_INDEX = 2;
+const int ROW_PROJ_ROW_IDX_INDEX = 3;
+const int ROW_PROJ_LENGTH_INDEX = 4;
+const int ROW_PROJ_EXECUTION_CONTEXT_INDEX = 5;
+const int ROW_PROJ_DICT_VECTORS_INDEX = 6;
+const int ROW_PROJ_IS_NULL_INDEX = 7;
 }
 
-intptr_t ProjectionCodeGen::GetFunction(const DataTypes &inputDataTypes)
+std::unique_ptr<ProjectionCodeGen> ProjectionCodeGen::Create(std::string name,
+    const omniruntime::expressions::Expr &expression, bool filter, omniruntime::op::OverflowConfig *overflowConfig)
 {
-    llvm::Function *func = CreateFunction(inputDataTypes);
+    std::unique_ptr<ProjectionCodeGen> codegen { new ProjectionCodeGen(std::move(name), expression, filter,
+        overflowConfig) };
+    LLVMEngine::Create(&(codegen->llvmEngine));
+    codegen->context = codegen->GetContext();
+    codegen->builder = codegen->GetIRBuilder();
+    codegen->module = codegen->GetModule();
+    codegen->jit = codegen->GetJit();
+    codegen->llvmTypes = codegen->GetTypes();
+    codegen->decimalIRBuilder = codegen->GetDecimalIRBuilder();
+    codegen->ExtractVectorIndexes();
+    return codegen;
+}
+
+int64_t ProjectionCodeGen::GetFunction()
+{
+    Function *func = this->CreateFunction();
     if (func == nullptr) {
         return 0;
     }
-    return CreateWrapper();
+    return this->CreateWrapper(*func);
 }
 
-intptr_t ProjectionCodeGen::CreateWrapper()
+int64_t ProjectionCodeGen::CreateWrapper(llvm::Function &projFunc)
 {
-    // The args indicates the type of the function parameter list.
-    std::vector<Type *> args {
-        llvmTypes->I64PtrType(), // data address array
-        llvmTypes->I32Type(),    // the num of rows
-        llvmTypes->I64Type(),    // output array address
-        llvmTypes->I32PtrType(), // selected array
-        llvmTypes->I32Type(),    // the num of selected rows
-        llvmTypes->I64PtrType(), // bitmap address array
-        llvmTypes->I64PtrType(), // offset address array
-        llvmTypes->I1PtrType(),  // output null values array
-        llvmTypes->I32PtrType(), // output offset array
-        llvmTypes->I64Type(),    // execution content address
-        llvmTypes->I64PtrType()  // dictionary address array
-    };
+    llvm::Function *proj = &projFunc;
+
+    std::vector<Type *> args;
+    /*
+    For filter enabled:
+    def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr)
+    For filter disabled:
+    def wrapper_func(i64* input_array, i32 num_rows, i64 out_addr, i32* selected_array, i32 num_selected)
+    */
+    // Input table, array of addresses
+    args.push_back(llvmTypes->I64PtrType());
+    // Number of rows in input
+    args.push_back(llvmTypes->I32Type());
+    // Results column to write to
+    args.push_back(llvmTypes->I64Type());
+    // These two arguments will not be used if filter is disabled
+    // Array of indices from input to select
+    args.push_back(llvmTypes->I32PtrType());
+    // Number of selected rows
+    args.push_back(llvmTypes->I32Type());
+    // bitmap is a 2d array of booleans
+    Type *bitmapArg = llvmTypes->I64PtrType();
+    args.push_back(bitmapArg);
+    // Offsets for columns
+    args.push_back(llvmTypes->I64PtrType());
+    // bool array to return evaluated null status
+    args.push_back(llvmTypes->I1PtrType());
+    // int array to hold output values
+    args.push_back(llvmTypes->I32PtrType());
+    // execution context with allocator to allocate, free and track memory
+    args.push_back(llvmTypes->I64Type());
+    // dictionary vectors
+    args.push_back(llvmTypes->I64PtrType());
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "WRAPPER_FUNC", modulePtr);
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "PROJECT_WRAPPER", module);
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *addToOutput = BasicBlock::Create(*context, "ADD_OUTPUT", funcDecl);
@@ -67,7 +108,7 @@ intptr_t ProjectionCodeGen::CreateWrapper()
     Argument *outputAddress = funcDecl->getArg(OUTPUT_ADDRESS_INDEX);
     outputAddress->setName("OUTPUT_ADDRESS");
 
-    RecordMainFunction(funcDecl);
+    llvmEngine->RecordMainFunction(funcDecl);
 
     // Only use these values if filter enabled
     Argument *selected = nullptr;
@@ -99,34 +140,34 @@ intptr_t ProjectionCodeGen::CreateWrapper()
 
     Value *zero = llvmTypes->CreateConstantInt(0);
     Value *one = llvmTypes->CreateConstantInt(1);
+    Value *gep;
 
+    CallInst *ret;
     // pre loop body
     builder->SetInsertPoint(preLoop);
-    // i32* ptrToCounter,Pointer to counter
+    // Pointer to counter
+    // i32* ptrToCounter
     AllocaInst *indexStore = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "INDEX_COUNTER");
     // Initialize row index to 0.
     builder->CreateStore(zero, indexStore);
     AllocaInst *offsetStore = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "CURRENT_OFFSET");
     // Initialize offset to 0.
     builder->CreateStore(zero, offsetStore);
-    // i32 counter, Counter variable value.
+    // Counter variable value.
+    // i32 counter
     Value *curIndexVal;
-    // i32 rowIndex,Index of row to be processed.
+    // Index of row to be processed.
+    // i32 rowIndex
     Value *rowIndexVal;
-    // i32 nextCounterValue,Temp value for next row index.
+    // Temp value for next row index.
+    // i32 nextCounterValue
     Value *nextIndexVal;
 
-    // i64 selectedAddress,Only use if filter enabled
+    // Only use if filter enabled
+    // i64 selectedAddress
     Value *selectedAddress;
 
     // Type of output column
-    llvm::Function *varcharVectorFunc = nullptr;
-    if (expr->GetReturnTypeId() == OMNI_CHAR || expr->GetReturnTypeId() == OMNI_VARCHAR) {
-        std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
-        FunctionSignature varcharVectorFuncSignature = FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_INT);
-        varcharVectorFunc =
-            modulePtr->getFunction(FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetId());
-    }
     Type *outPtrType = llvmTypes->ToPointerType(expr->GetReturnTypeId());
     if (outPtrType == nullptr) {
         return 0;
@@ -136,18 +177,15 @@ intptr_t ProjectionCodeGen::CreateWrapper()
     AllocaInst *outputLenPtr = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "OUTPUT_LENGTH");
     auto isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), nullptr, "IS_NULL");
 
-    auto columnArgs = exprFunc->ToColumnArgs(input);
-    auto dicArgs = exprFunc->ToDicArgs(dictionaryVectors);
-    auto nullArgs = exprFunc->ToNullArgs(bitmap);
-    auto offsetArgs = exprFunc->ToOffsetArgs(offsets);
-
     builder->CreateBr(loopBody);
     // loop body
     builder->SetInsertPoint(loopBody);
-    // i32 counter = *ptrToCounter, Get the value of the current row index to process.
+    // Get the value of the current row index to process.
+    // i32 counter = *ptrToCounter
     curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
     if (filter) {
-        // i32* selectedAddress = gep i32* selected, i32 counter, Get address of selected index.
+        // Get address of selected index.
+        // i32* selectedAddress = gep i32* selected, i32 counter
         selectedAddress = builder->CreateGEP(selected, curIndexVal, "SELECTED_ADDRESS");
         // i32 rowIndexVal = *selectedAddress
         rowIndexVal = builder->CreateLoad(selectedAddress);
@@ -158,37 +196,40 @@ intptr_t ProjectionCodeGen::CreateWrapper()
 
     builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
 
-    // projFuncArgs contains the values of the arguments to the projection function
     std::vector<Value *> projFuncArgs;
-    int32_t argsSize = exprFunc->GetArgumentCount() + exprFunc->GetInputColumnCount() * 4;
+    // projFuncArgs contains the values of the arguments to the projection function
+    // value*, bitmap*, offset*, rowIdx, outputLength*, executionContext, dictionaryVectors, isNullPtr
+    int32_t argsSize = 8;
     projFuncArgs.reserve(argsSize);
 
+    projFuncArgs.push_back(input);
+    projFuncArgs.push_back(bitmap);
+    projFuncArgs.push_back(offsets);
     projFuncArgs.push_back(rowIndexVal);
     projFuncArgs.push_back(outputLenPtr);
     projFuncArgs.push_back(executionContext);
+    projFuncArgs.push_back(dictionaryVectors);
     projFuncArgs.push_back(isNullPtr);
-
-    projFuncArgs.insert(projFuncArgs.end(), columnArgs.begin(), columnArgs.end());
-    projFuncArgs.insert(projFuncArgs.end(), dicArgs.begin(), dicArgs.end());
-    projFuncArgs.insert(projFuncArgs.end(), nullArgs.begin(), nullArgs.end());
-    projFuncArgs.insert(projFuncArgs.end(), offsetArgs.begin(), offsetArgs.end());
 
     // Get the boolean response for this row from the filter function.
     // ret = column value after applying projection
-    CallInst *ret = builder->CreateCall(func, projFuncArgs, "ROW_PROCESS");
+    ret = builder->CreateCall(proj, projFuncArgs, "ROW_PROCESS");
 
     // Add the processed value to output column.
     builder->CreateBr(addToOutput);
     // Add row index to results array
     builder->SetInsertPoint(addToOutput);
 
-    Value *gep;
     if (TypeUtil::IsStringType(expr->GetReturnTypeId())) {
         auto outputLen = builder->CreateLoad(outputLenPtr, "OUTPUT_LENGTH");
         auto stringPtr = builder->CreateIntToPtr(ret, Type::getInt8PtrTy(*context));
         // call wrap_varchar_vector function
+        std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_INT, OMNI_VARCHAR };
+        FunctionSignature varcharVectorFuncSignature = FunctionSignature(WrapVarcharVectorStr, paramTypes, OMNI_INT);
+        auto varcharVectorFunc =
+            module->getFunction(omniruntime::FunctionRegistry::LookupFunction(&varcharVectorFuncSignature)->GetId());
         std::vector<Value *> argVals { outColPtr, curIndexVal, stringPtr, outputLen };
-        auto call = builder->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
+        auto call = llvmEngine->CreateCall(varcharVectorFunc, argVals, "wrap_varchar_vector");
         InlineFunctionInfo inlineFunctionInfo;
         InlineFunction(*call, inlineFunctionInfo);
     } else {
@@ -216,13 +257,98 @@ intptr_t ProjectionCodeGen::CreateWrapper()
     }
     Value *cond = builder->CreateICmpSLT(nextIndexVal, sentinel, "END_LOOP_COND");
     builder->CreateCondBr(cond, loopBody, endBlock);
-
     // Return results
     builder->SetInsertPoint(endBlock);
     builder->CreateRet(nextIndexVal);
-    OptimizeFunctionsAndModule();
+    llvmEngine->OptimizeFunctionsAndModule();
 
-    return Compile();
+    jit->getMainJITDylib().addGenerator(
+        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
+    auto resTracker = jit->getMainJITDylib().createResourceTracker();
+    llvmEngine->MakeThreadSafe(&resTracker);
+    rt = resTracker;
+    auto sym = eoe(jit->lookup("PROJECT_WRAPPER"));
+    return sym.getAddress();
 }
+
+std::vector<Type *> GetSingleProjectArguments(LLVMContext &context)
+{
+    std::vector<Type *> args = { Type::getInt64PtrTy(context), Type::getInt64PtrTy(context),
+                                 Type::getInt64PtrTy(context), Type::getInt32Ty(context),
+                                 Type::getInt32PtrTy(context), Type::getInt64Ty(context),
+                                 Type::getInt64PtrTy(context), Type::getInt1PtrTy(context) };
+    return args;
 }
+
+/*
+Apply the row expression on a single row in the table.
+Returns the address of a function with the signature void* (*) (int64_t*, bool*, int32_t, bool*, int32_t*)
+Takes the following arguments
+- An array of addresses representing the input table, where each address points to a vec column.
+- A 1D array of bools representing the null values in the table.
+- An integer representing the row index to select and perform the row expression for.
+- A Boolean pointer to represent the null status of the row expression output
+- A integer pointer to represent the length if the row expression output is a string
+
+In reality the function returns a pointer of appropriate type depending on the row expression
+and input types-> For example if the expected output is an int32, the function will return int32_t*
+but since this type is not known at compile time it can be treated as void* or int64_t or any 8 byte
+datatype and casted appropriately.
+*/
+int64_t ProjectionCodeGen::GetExpressionEvaluator()
+{
+    // Array of addresses, bitmap, row index
+    std::vector<Type *> args = GetSingleProjectArguments(*context);
+    llvm::Function *baseFunc = this->CreateFunction();
+    if (baseFunc == nullptr) {
+        return 0;
+    }
+
+    FunctionType *funcSignature = FunctionType::get(llvmTypes->ToPointerType(expr->GetReturnTypeId()), args, false);
+    llvm::Function *funcDecl =
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FUNC_WRAPPER", module);
+    llvmEngine->RecordMainFunction(funcDecl);
+    builder->SetInsertPoint(BasicBlock::Create(*context, "DATA_ACCESS", funcDecl));
+    // Name the arguments
+    Argument *inputData = funcDecl->getArg(ROW_PROJ_INPUT_INDEX);
+    inputData->setName("INPUT_DATA");
+    Argument *nulls = funcDecl->getArg(ROW_PROJ_NULL_BITMAP_INDEX);
+    nulls->setName("NULLS");
+    Argument *offsets = funcDecl->getArg(ROW_PROJ_OFFSETS_INDEX);
+    offsets->setName("OFFSETS");
+    Argument *rowIndex = funcDecl->getArg(ROW_PROJ_ROW_IDX_INDEX);
+    rowIndex->setName("ROW_INDEX");
+    Argument *lengthPtr = funcDecl->getArg(ROW_PROJ_LENGTH_INDEX);
+    lengthPtr->setName("LENGTH_PTR");
+    Argument *executionContext = funcDecl->getArg(ROW_PROJ_EXECUTION_CONTEXT_INDEX);
+    executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
+    Argument *dictionaryVectors = funcDecl->getArg(ROW_PROJ_DICT_VECTORS_INDEX);
+    dictionaryVectors->setName("DICTIONARY_VECTOR_ADDRESSES");
+    Argument *isNullPtr = funcDecl->getArg(ROW_PROJ_IS_NULL_INDEX);
+    isNullPtr->setName("IS_NULL_PTR");
+
+    std::vector<Value *> funcArgs;
+    funcArgs.push_back(inputData);
+    funcArgs.push_back(nulls);
+    funcArgs.push_back(offsets);
+    funcArgs.push_back(rowIndex);
+    funcArgs.push_back(lengthPtr);
+    funcArgs.push_back(executionContext);
+    funcArgs.push_back(dictionaryVectors);
+    funcArgs.push_back(isNullPtr);
+
+    // Store the result
+    AllocaInst *retStore = builder->CreateAlloca(baseFunc->getReturnType(), nullptr, "RET_STORE");
+    builder->CreateStore(builder->CreateCall(baseFunc, funcArgs, "ROW_EVAL"), retStore);
+
+    builder->CreateRet(retStore);
+    llvmEngine->OptimizeModule();
+    llvm::verifyFunction(*func);
+#ifdef DEBUG_LLVM
+    GetModule()->print(errs(), nullptr);
+#endif
+    auto resTracker = jit->getMainJITDylib().createResourceTracker();
+    llvmEngine->MakeThreadSafe(&resTracker);
+    rt = resTracker;
+    return eoe(jit->lookup("FUNC_WRAPPER")).getAddress();
 }

@@ -111,6 +111,10 @@ JoinHashTable *JoinHashTables::GetHashTable(uint32_t partitionIndex) const
 bool JoinHashTables::IsJoinPositionEligible(uint64_t partitionedJoinPosition, uint32_t probePosition,
     Vector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const
 {
+    if (!simpleFilter) {
+        return true;
+    }
+
     auto partition = DecodePartition(partitionedJoinPosition);
     auto joinPosition = DecodeJoinPosition(partitionedJoinPosition);
     auto hashTable = hashTables[partition];

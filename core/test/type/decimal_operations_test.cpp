@@ -19,11 +19,13 @@ TEST(DecimalOperations, sum_encode_and_decode_decimal)
     state.val = executionContext.GetArena()->Allocate(24);
 
     // encode phase
-    int128 oldDec = CreateInt128(1, 2);
+    Decimal128 oldDec;
     int64_t oldOverflow = 1;
+    oldDec.SetValue(1, 2);
     DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), oldDec, oldOverflow);
     // decode phase
-    int128 newDec = 0;
+    Decimal128 newDec;
+    newDec.SetValue(0, 0);
     int64_t newOverflow = 1;
     DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), newDec, newOverflow);
 
@@ -33,78 +35,77 @@ TEST(DecimalOperations, sum_encode_and_decode_decimal)
 
 TEST(DecimalOperations, add_with_overflow)
 {
-    Decimal128Wrapper left = 3;
-    Decimal128Wrapper right = 6;
-    Decimal128Wrapper result = 0;
+    Decimal128 left = 3;
+    Decimal128 right = 6;
+    Decimal128 result = 0;
     int64_t expectValue = 9;
-    result = left.Add(right);
-    OpStatus overflow = result.IsOverflow();
+    long overflow = DecimalOperations::AddWithOverflow(left, right, result);
     EXPECT_EQ(result, expectValue);
-    EXPECT_EQ(overflow, OpStatus::SUCCESS);
+    EXPECT_EQ(overflow, 0);
 
-    Decimal128Wrapper left1;
-    Decimal128Wrapper right1 = 2;
-    Decimal128Wrapper result1 = 0;
+    Decimal128 left1;
+    Decimal128 right1 = 2;
+    Decimal128 result1 = 0;
     int64_t c = 1LL << 63;
     left1.SetValue(c, 3);
-    Decimal128Wrapper expectValue1(0x8000000000000000LL, 1);
-    result1 = left1.Add(right1);
-    OpStatus overflow1 = result1.IsOverflow();
+    Decimal128 expectValue1(0x8000000000000000LL, 1);
+    long overflow1 = DecimalOperations::AddWithOverflow(left1, right1, result1);
     EXPECT_EQ(result1.HighBits(), expectValue1.HighBits());
     EXPECT_EQ(result1.LowBits(), expectValue1.LowBits());
-    EXPECT_EQ(overflow1, OpStatus::SUCCESS);
+    EXPECT_EQ(overflow1, 0);
 
-    Decimal128Wrapper left2;
-    Decimal128Wrapper right2 = 2;
-    Decimal128Wrapper result2 = 0;
+    Decimal128 left2;
+    Decimal128 right2 = 2;
+    Decimal128 result2 = 0;
     int64_t c2 = 1LL << 63;
     left2.SetValue(c2, 1);
     int64_t expectValue3 = 1;
-    result2 = left2.Add(right2);
-    OpStatus overflow2 = result2.IsOverflow();
+    long overflow2 = DecimalOperations::AddWithOverflow(left2, right2, result2);
     EXPECT_EQ(result2, expectValue3);
-    EXPECT_EQ(overflow2, OpStatus::SUCCESS);
+    EXPECT_EQ(overflow2, 0);
 
-    Decimal128Wrapper left3;
-    Decimal128Wrapper right3;
-    Decimal128Wrapper result3 = 0;
+    Decimal128 left3;
+    Decimal128 right3;
+    Decimal128 result3 = 0;
     int64_t c3 = 1LL << 63;
     left3.SetValue(c3, 1);
     right3.SetValue(c3, 1);
     int64_t expectValue4 = 2;
     int64_t expectValue5 = 0x8000000000000000;
-    result3 = left3.Add(right3);
-    OpStatus overflow3 = result3.IsOverflow();
+    long overflow3 = DecimalOperations::AddWithOverflow(left3, right3, result3);
     EXPECT_EQ(result3.HighBits(), expectValue5);
     EXPECT_EQ(result3.LowBits(), expectValue4);
-    EXPECT_EQ(overflow3, OpStatus::SUCCESS);
+    EXPECT_EQ(overflow3, 0);
 
-    Decimal128Wrapper one;
-    Decimal128Wrapper negativeOne;
+    Decimal128 one;
+    Decimal128 negativeOne;
     one.SetValue(0, 1);
     negativeOne.SetValue(1LL << 63, 1);
-    Decimal128Wrapper expected(0, 0);
-    Decimal128Wrapper result4 = one.Add(negativeOne);
-    OpStatus overflow4 = result4.IsOverflow();
+    Decimal128 expected(0, 0);
+    Decimal128 result4;
+    int64_t overflow4 = DecimalOperations::AddWithOverflow(one, negativeOne, result4);
     EXPECT_EQ(result4.HighBits(), expected.HighBits());
     EXPECT_EQ(result4.LowBits(), expected.LowBits());
-    EXPECT_EQ(overflow4, OpStatus::SUCCESS);
+    EXPECT_EQ(overflow4, 0);
 }
 
 TEST(DecimalOperations, exceeds_or_equal_ten_to_thirty_eight)
 {
-    Decimal128Wrapper result;
+    Decimal128 result;
     int64_t c3 = 0;
     result.SetValue(c3, 1);
-    EXPECT_EQ(result.IsOverflow(), OpStatus::SUCCESS);
+    bool overflow = DecimalOperations::ExceedsOrEqualTenToThirtyEight(result);
+    EXPECT_EQ(overflow, false);
 
     int64_t c4 = -1;
     result.SetValue(c4, 1);
-    EXPECT_EQ(result.IsOverflow(), OpStatus::OP_OVERFLOW);
+    bool re = DecimalOperations::ExceedsOrEqualTenToThirtyEight(result);
+    EXPECT_EQ(re, true);
 
     int64_t c5 = 0x4b3b4ca85a86c47aL;
     result.SetValue(c5, 1);
-    EXPECT_EQ(result.IsOverflow(), OpStatus::SUCCESS);
+    bool flag = DecimalOperations::ExceedsOrEqualTenToThirtyEight(result);
+    EXPECT_EQ(flag, false);
 }
 
 TEST(DecimalOperations, decode_avg_decimal)
@@ -114,13 +115,15 @@ TEST(DecimalOperations, decode_avg_decimal)
     ExecutionContext executionContext;
     state.val = executionContext.GetArena()->Allocate(24);
 
-    int128 oldDec = CreateInt128(2, 3);
+    Decimal128 oldDec;
     int64_t oldOther = 1;
     int64_t oldOverflow = 1;
+    oldDec.SetValue(2, 3);
     DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), oldDec, oldOverflow, oldOther);
 
     // decode phase
-    int128 newDec = 0;
+    Decimal128 newDec;
+    newDec.SetValue(0, 0);
     int64_t newOverflow = 0;
     int64_t newOther = 0;
     DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), newDec, newOverflow, newOther);
@@ -132,91 +135,113 @@ TEST(DecimalOperations, unscaled_decimal)
 {
     int64_t newOverflow = 1;
     int64_t oldOverflow = -1;
-    Decimal128Wrapper decimal128 = Decimal128Wrapper(newOverflow);
-    Decimal128Wrapper decimal = Decimal128Wrapper(oldOverflow);
+    Decimal128 decimal128 = DecimalOperations::UnscaledDecimal(newOverflow);
+    Decimal128 decimal = DecimalOperations::UnscaledDecimal(oldOverflow);
     EXPECT_EQ(decimal128.LowBits(), decimal.LowBits());
 }
 
 TEST(DecimalOperations, divide)
 {
-    Decimal128Wrapper dividend(Decimal128::SIGN_LONG_MASK, 200'0000'0000'0163'5618);
-    Decimal128Wrapper divisor(0, 4);
-    Decimal128Wrapper result;
-    result = dividend.Divide(divisor, 0);
+    Decimal128 dividend(Decimal128::SIGN_LONG_MASK, 200'0000'0000'0163'5618);
+    Decimal128 divisor(0, 4);
+    Decimal128 result;
+    DecimalOperations::DivideRoundUp(dividend, divisor, 0, 0, result);
     int64_t low = result.LowBits();
-    int64_t shortResult = result.IsNegative() ? -low : low;
+    int64_t shortResult = DecimalOperations::IsNegative(result) ? -low : low;
     int64_t expectedVal = -50'0000'0000'0040'8905;
     EXPECT_EQ(expectedVal, shortResult);
 }
 
+TEST(DecimalOperations, divide_unsigned)
+{
+    int64_t dividend = 783'4062'5600;
+    int64_t divisor = -15'6566'6771;
+    int64_t quotient = DecimalOperations::DivideUnsignedLong(dividend, divisor);
+    EXPECT_EQ(28, quotient);
+}
+
 TEST(DecimalOperations, rescale_decimal64)
 {
-    Decimal64 d(10);
-    d.ReScale(2);
-    EXPECT_EQ(1000LL, d.GetValue());
+    int64_t val = 10LL;
+    int64_t rescaled;
+    DecimalOperations::Rescale64(val, 2, rescaled);
+    EXPECT_EQ(1000LL, rescaled);
 }
 
 TEST(DecimalOperations, rescale_decimal128)
 {
-    Decimal128Wrapper val = 10LL;
-    val.ReScale(2);
-    Decimal128Wrapper expected(0, 1000LL);
-    EXPECT_EQ(expected, val);
+    Decimal128 val = 10LL;
+    Decimal128 result;
+    DecimalOperations::Rescale128(val, 2, result);
+    Decimal128 expected(0, 1000LL);
+    EXPECT_EQ(expected, result);
 }
 
 TEST(DecimalOperations, rescale_decimal64_to_128)
 {
-    Decimal128Wrapper result(10);
-    result.ReScale(2);
-    Decimal128Wrapper expected(0, 1000LL);
+    int64_t val = 10LL;
+    Decimal128 result;
+    DecimalOperations::Rescale64To128(val, 2, result);
+    Decimal128 expected(0, 1000LL);
     EXPECT_EQ(expected, result);
 }
 
 TEST(DecimalOperations, rescale_decimal128_round_to_zero_when_rescale_larger_than_0)
 {
-    Decimal128Wrapper input("1234567891234567891234");
-    Decimal128Wrapper output;
+    Decimal128 input;
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal128("1234567891234567891234", input, scale, precision);
+    Decimal128 output;
     int32_t rescale = 5;
-    output = input;
-    output.ReScale(rescale, RoundingMode::ROUND_FLOOR);
-    EXPECT_EQ(output.IsOverflow(), OpStatus::SUCCESS);
-    Decimal128Wrapper expect = ("123456789123456789123400000");
+    auto status = DecimalOperations::Rescale128RoundToZero(input, rescale, output);
+    EXPECT_EQ(status, SUCCESS);
+    Decimal128 expect;
+    precision = 0;
+    scale = 0;
+    DecimalOperations::StringToDecimal128("123456789123456789123400000", expect, scale, precision);
     EXPECT_EQ(expect, output);
-    input = Decimal128Wrapper("1234567891234567891234");
+    precision = 0;
+    scale = 0;
+    DecimalOperations::StringToDecimal128("1234567891234567891234", input, scale, precision);
     rescale = -5;
-    output = input;
-    output.ReScale(rescale, RoundingMode::ROUND_FLOOR);
-    EXPECT_EQ(output.IsOverflow(), OpStatus::SUCCESS);
-    expect = Decimal128Wrapper("12345678912345678");
+    status = DecimalOperations::Rescale128RoundToZero(input, rescale, output);
+    EXPECT_EQ(status, SUCCESS);
+    precision = 0;
+    scale = 0;
+    DecimalOperations::StringToDecimal128("12345678912345678", expect, scale, precision);
     EXPECT_EQ(expect, output);
-    input = Decimal128Wrapper("1234567891234567891234");
+    precision = 0;
+    scale = 0;
+    DecimalOperations::StringToDecimal128("1234567891234567891234", input, scale, precision);
     rescale = 0;
-    output = input;
-    output.ReScale(rescale, RoundingMode::ROUND_FLOOR);
-    EXPECT_EQ(output.IsOverflow(), OpStatus::SUCCESS);
+    status = DecimalOperations::Rescale128RoundToZero(input, rescale, output);
+    EXPECT_EQ(status, SUCCESS);
     EXPECT_EQ(input, output);
 }
 
 TEST(DecimalOperations, rescale_decimal64_round_to_zero_when_rescale_larger_than_0)
 {
     int64_t input = 1234'5678'9123L;
+    int64_t output;
     int32_t rescale = 5;
-    Decimal64 output = Decimal64(input).ReScale(rescale, RoundingMode::ROUND_FLOOR);
-    EXPECT_EQ(output.IsOverflow(), OpStatus::SUCCESS);
+    auto status = DecimalOperations::Rescale64RoundToZero(input, rescale, output);
+    EXPECT_EQ(status, SUCCESS);
     int64_t expect = 1'2345'6789'1230'0000L;
-    EXPECT_EQ(expect, output.GetValue());
+    EXPECT_EQ(expect, output);
     input = 1234'5678'9123L;
     rescale = -5;
-    output = Decimal64(input).ReScale(rescale, RoundingMode::ROUND_FLOOR);
-    EXPECT_EQ(output.IsOverflow(), OpStatus::SUCCESS);
+    status = DecimalOperations::Rescale64RoundToZero(input, rescale, output);
+    EXPECT_EQ(status, SUCCESS);
     expect = 1234567L;
-    EXPECT_EQ(expect, output.GetValue());
-    std::string s = "123456789123";
-    Decimal64 res(s);
+    EXPECT_EQ(expect, output);
+    int32_t precision = 0;
+    int32_t scale = 0;
+    DecimalOperations::StringToDecimal64("123456789123", input, scale, precision);
     rescale = 0;
-    output = res.SetScale(rescale).ReScale(rescale, RoundingMode::ROUND_FLOOR);
-    EXPECT_EQ(output.IsOverflow(), OpStatus::SUCCESS);
-    EXPECT_EQ(input, output.GetValue());
+    status = DecimalOperations::Rescale64RoundToZero(input, rescale, output);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_EQ(input, output);
 }
 
 TEST(DecimalOperations, is_unscaled_long_overflow)

@@ -8,7 +8,7 @@ namespace omniruntime {
 namespace vec {
 ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCount,
     std::vector<uintptr_t> &fieldVectors, int32_t vectorCount, std::vector<DataTypePtr> &dataTypes)
-    : Vector(allocator, vectorCount * BYTES, positionCount, type::OMNI_CONTAINER, OMNI_VEC_ENCODING_CONTAINER),
+    : Vector(allocator, vectorCount * BYTES, positionCount, type::OMNI_CONTAINER),
       dataTypes(dataTypes),
       vectorCount(vectorCount),
       positionCount(positionCount)
@@ -19,7 +19,7 @@ ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t positionCou
 }
 
 ContainerVector::ContainerVector(VectorAllocator *allocator, int32_t capacityInBytes, int32_t positionCount)
-    : Vector(allocator, capacityInBytes, positionCount, type::OMNI_CONTAINER, OMNI_VEC_ENCODING_CONTAINER),
+    : Vector(allocator, capacityInBytes, positionCount, type::OMNI_CONTAINER),
       vectorCount(capacityInBytes / BYTES),
       positionCount(positionCount)
 {

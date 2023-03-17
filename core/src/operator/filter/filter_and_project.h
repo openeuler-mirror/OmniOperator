@@ -13,15 +13,29 @@
 #include "operator/operator_factory.h"
 #include "operator/status.h"
 #include "vector/vector_batch.h"
+#include "operator/projection/projection.h"
+#include "codegen/batch_filter_codegen.h"
+#include "codegen/filter_codegen.h"
 #include "expression/expressions.h"
-#include "codegen/simple_filter_codegen.h"
+#include "codegen/row_expression_codegen.h"
 #include "operator/execution_context.h"
 #include "operator/config/operator_config.h"
-#include "codegen/expr_evaluator.h"
+
+/*
+ * FilterFunc is retrieved from FilterCodeGen
+ * arguments to func are (data, rowCount, selectedRows, bitmap, offsets, context, dictionaries)
+ * data: 2D array containing vector values
+ * rowCount: number of rows in data
+ * selectedRows: array of row numbers which pass the Filter; is modified in func
+ * bitmap: 2d boolean array where bitmap[col][row] is true if data[row][col] is null
+ * offsets: used by char and varchar, size = rowCount + 1
+ * context: store some error message
+ * dictionaries: contains dictionary vec, will be restored inside codegen
+ */
+using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
 
 namespace omniruntime {
 namespace op {
-using namespace omniruntime::codegen;
 using SimpleRowExprEvalFunc = bool (*)(int64_t *, bool *, int32_t *, bool *, int32_t *, int64_t);
 
 /**
@@ -32,6 +46,7 @@ class SimpleFilter {
 public:
     /* *
      * Simple Filter constructor
+     *
      * @param expression the filter expression, must return evaluates to boolean type
      */
     explicit SimpleFilter(const omniruntime::expressions::Expr &expression);
@@ -40,18 +55,21 @@ public:
 
     /* *
      * Initialize the filter, this method must be called after the construct
+     *
      * @return if the expression and types can be supported or not
      */
     bool Initialize(OverflowConfig *overflowConfig);
 
     /* *
      * Get all the vector indexes used in the expression
+     *
      * @return set including the indexes, or empty set if filter not supported or initialized
      */
     std::set<int32_t> GetVectorIndexes();
 
     /* *
      * Evaluate the filter
+     *
      * To make it consistent and simplify the evaluation logic, please make sure
      * index of the value, isNull and length matches with the index in expression
      * for example:
@@ -73,7 +91,7 @@ public:
     }
 
 private:
-    std::unique_ptr<codegen::SimpleFilterCodeGen> codegen;
+    std::unique_ptr<ExpressionCodeGen> codegen;
     const expressions::Expr *expression;
     SimpleRowExprEvalFunc func;
     bool *isResultNull;
@@ -81,18 +99,64 @@ private:
     bool initialized;
 };
 
+class Filter {
+public:
+    explicit Filter(const expressions::Expr &expression, OverflowConfig *overflowConfig);
+    ~Filter()
+    {
+        this->codeGen.reset();
+        this->batchCodeGen.reset();
+    }
+    bool IsSupported() const
+    {
+        return isSupported;
+    }
+    FilterFunc apply;
+
+private:
+    std::unique_ptr<FilterCodeGen> codeGen;
+    std::unique_ptr<BatchFilterCodeGen> batchCodeGen;
+    const expressions::Expr *expr;
+    bool isSupported;
+};
+
 class FilterAndProjectOperator : public Operator {
 public:
-    FilterAndProjectOperator(ExecutionContext *context, std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
-        : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
+    FilterAndProjectOperator(std::unique_ptr<Filter> const & filter, int32_t const * inputDataTypes, int32_t vecCount,
+        const std::vector<std::unique_ptr<Projection>> &projections, int32_t projectVecCount, ExecutionContext *context)
+        : filter(filter),
+          projections(projections),
+          projectVecCount(projectVecCount),
+          inputTypes(inputDataTypes),
+          vecCount(vecCount),
+          projectedVecs(nullptr),
+          dictsAddrs(new int64_t[vecCount]),
+          offsetsAddrs(new int64_t[vecCount]),
+          nullsAddrs(new int64_t[vecCount])
     {
         this->context = context;
         this->context->GetArena()->SetAllocator(vecAllocator);
+
+        for (int i = 0; i < vecCount; ++i) {
+            dictsAddrs[i] = 0; // Spark's TableScan will not produce dictionary.
+            auto null = new bool[1];
+            nullsAddrs[i] = reinterpret_cast<int64_t>(null);
+            auto offset = new int32_t[2]; // offset[1] - offset[0] = length
+            offsetsAddrs[i] = reinterpret_cast<int64_t>(offset);
+        }
     }
 
     ~FilterAndProjectOperator() override
     {
         delete context;
+
+        for (int i = 0; i < vecCount; ++i) {
+            delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
+            delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);
+        }
+        delete[] dictsAddrs;
+        delete[] nullsAddrs;
+        delete[] offsetsAddrs;
     }
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
@@ -104,24 +168,40 @@ public:
     OmniStatus Close() override;
 
 private:
+    const std::unique_ptr<Filter> &filter;
+    const std::vector<std::unique_ptr<Projection>> &projections;
+    int32_t projectVecCount;
+    const int32_t *inputTypes;
+    int32_t vecCount;
     omniruntime::vec::VectorBatch *projectedVecs;
-    std::shared_ptr<ExpressionEvaluator> &exprEvaluator;
+    int64_t *dictsAddrs;
+    int64_t *offsetsAddrs;
+    int64_t *nullsAddrs;
 };
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
 public:
-    explicit FilterAndProjectOperatorFactory(std::shared_ptr<ExpressionEvaluator> &&exprEvaluator)
-        : exprEvaluator(std::move(exprEvaluator))
-    {
-        this->exprEvaluator->FilterFuncGeneration();
-    }
+    FilterAndProjectOperatorFactory(omniruntime::expressions::Expr *parsedExpr, const DataTypes &inputDataTypes,
+        int32_t inputVecCount, const std::vector<omniruntime::expressions::Expr *> &projections,
+        int32_t projectVecCount, OverflowConfig *overflowConfig);
 
-    ~FilterAndProjectOperatorFactory() override = default;
+    ~FilterAndProjectOperatorFactory() override;
 
     Operator *CreateOperator() override;
 
+    bool IsSupportedExpr() const
+    {
+        return isSupportedExpr;
+    }
+
 private:
-    std::shared_ptr<ExpressionEvaluator> exprEvaluator;
+    std::string expression;
+    DataTypes inputDataTypes;
+    int32_t inputVecCount;
+    int32_t projectVecCount;
+    std::unique_ptr<Filter> filter;
+    std::vector<std::unique_ptr<Projection>> projections;
+    bool isSupportedExpr = true;
 };
 } // end of op
 } // end of omniruntime

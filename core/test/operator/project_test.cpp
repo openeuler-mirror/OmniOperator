@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <climits>
 #include "gtest/gtest.h"
 #include "operator/projection/projection.h"
 #include "util/test_util.h"
@@ -24,6 +25,7 @@ TEST(ProjectionTest, Cast)
     const int32_t numRows = 1000;
     int64_t *col1 = MakeLongs(numRows);
     int32_t *col2 = MakeInts(numRows);
+    const int32_t numCols = 2;
     std::vector<DataTypePtr> vecOfTypes = { LongType(), IntType() };
     auto data1 = new FieldExpr(0, LongType());
     std::string castStr = "CAST";
@@ -40,8 +42,7 @@ TEST(ProjectionTest, Cast)
 
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Cast");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
@@ -61,6 +62,7 @@ TEST(ProjectionTest, Cast)
         EXPECT_EQ(val1, i);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
@@ -76,6 +78,7 @@ TEST(ProjectionTest, CastDouble)
     const int32_t numRows = 1000;
     double *col1 = MakeDoubles(numRows);
     double *col2 = MakeDoubles(numRows);
+    const int32_t numCols = 2;
     std::vector<DataTypePtr> vecOfTypes = { DoubleType(), DoubleType() };
 
     auto data1 = new FieldExpr(0, DoubleType());
@@ -93,8 +96,7 @@ TEST(ProjectionTest, CastDouble)
 
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
@@ -114,6 +116,7 @@ TEST(ProjectionTest, CastDouble)
         EXPECT_EQ(val1, i);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
@@ -128,6 +131,7 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1000;
     int64_t *col1 = MakeLongs(numRows);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     auto data1 = new FieldExpr(0, LongType());
     std::string castStr = "CAST";
@@ -138,8 +142,7 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
 
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastInt64ToDecimal128");
@@ -158,6 +161,7 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
         EXPECT_EQ(val0.LowBits(), i);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -171,6 +175,7 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1000;
     int64_t *col1 = MakeLongs(numRows);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(7, 2) };
     auto data1 = new FieldExpr(0, Decimal64Type(7, 2));
     auto data2 = new FieldExpr(0, Decimal64Type(7, 2));
@@ -182,8 +187,7 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
 
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("MakeDecimal64ToDiffScale");
@@ -205,6 +209,7 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
         EXPECT_EQ(val1, i / 100);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -218,6 +223,7 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1000;
     int64_t *col1 = MakeDecimals(numRows);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(38, 2) };
     auto data1 = new FieldExpr(0, Decimal128Type(38, 2));
     auto data2 = new FieldExpr(0, Decimal128Type(7, 2));
@@ -229,8 +235,7 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
 
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128ToDiffScale");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
@@ -250,6 +255,7 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
         EXPECT_EQ(val1.LowBits(), round((double)i / 100));
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -263,6 +269,7 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1000;
     int64_t *col1 = MakeLongs(numRows);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(7, 2) };
     auto data1 = new FieldExpr(0, Decimal64Type(7, 2));
     auto data2 = new FieldExpr(0, Decimal64Type(7, 2));
@@ -275,8 +282,7 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
 
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("MakeDecimal64To128WithDiffScale");
@@ -300,6 +306,7 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
         EXPECT_EQ(val2.LowBits(), round((double)i / 100));
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -313,6 +320,7 @@ TEST(ProjectionTest, Simple)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1000;
     int32_t *col = MakeInts(numRows);
+    const int32_t numCols = 1;
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     LiteralExpr *addRight = new LiteralExpr(5, IntType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
@@ -320,8 +328,7 @@ TEST(ProjectionTest, Simple)
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Simple");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -348,6 +355,7 @@ TEST(ProjectionTest, Simple)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -363,6 +371,7 @@ TEST(ProjectionTest, AbsWithNullValues)
     int32_t *col1 = MakeInts(numRows, -5);
     int64_t *col2 = MakeLongs(numRows, -5);
     int64_t *col3 = MakeLongs(numRows, -5);
+    const int32_t numCols = 3;
     std::vector<DataTypePtr> vecOfTypes = { IntType(), LongType(), Decimal64Type() };
     auto data1 = new FieldExpr(0, IntType());
     std::string funcStr = "abs";
@@ -384,8 +393,7 @@ TEST(ProjectionTest, AbsWithNullValues)
 
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_AbsWithNullValues");
@@ -419,6 +427,7 @@ TEST(ProjectionTest, AbsWithNullValues)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
@@ -434,6 +443,7 @@ TEST(ProjectionTest, Negatives)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1000;
     int32_t *col = MakeInts(numRows, -5);
+    const int32_t numCols = 1;
     FieldExpr *subLeft = new FieldExpr(0, IntType());
     LiteralExpr *subRight = new LiteralExpr(500, IntType());
     BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, IntType());
@@ -441,8 +451,7 @@ TEST(ProjectionTest, Negatives)
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Negatives");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -455,6 +464,7 @@ TEST(ProjectionTest, Negatives)
         EXPECT_EQ(val0, i - 505);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -468,6 +478,7 @@ TEST(ProjectionTest, Longs)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10000;
     int64_t *col = MakeLongs(numRows, -5000);
+    const int32_t numCols = 1;
     FieldExpr *mulLeft = new FieldExpr(0, LongType());
     LiteralExpr *mulRight = new LiteralExpr(5000000L, LongType());
     BinaryExpr *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, LongType());
@@ -475,8 +486,7 @@ TEST(ProjectionTest, Longs)
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Longs");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -489,6 +499,7 @@ TEST(ProjectionTest, Longs)
         EXPECT_EQ(val0, static_cast<int64_t>(i - 5000) * 5000000);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -502,6 +513,7 @@ TEST(ProjectionTest, Doubles)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10000;
     double *col = MakeDoubles(numRows, -5000.5);
+    const int32_t numCols = 1;
 
     FieldExpr *divLeft = new FieldExpr(0, DoubleType());
     LiteralExpr *divRight = new LiteralExpr(2.0, DoubleType());
@@ -510,8 +522,7 @@ TEST(ProjectionTest, Doubles)
     std::vector<DataTypePtr> vecOfTypes = { DoubleType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -525,6 +536,7 @@ TEST(ProjectionTest, Doubles)
         EXPECT_TRUE(val0 > expected - 0.1 && val0 < expected + 0.1);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -539,6 +551,7 @@ TEST(ProjectionTest, Doubles_DivideByZero)
     int32_t numRows = 5;
     double *col1 = MakeDoubles(numRows, -4.0);
     double *col2 = MakeDoubles(numRows, -3.0);
+    const int32_t numCols = 2;
 
     FieldExpr *divLeft = new FieldExpr(0, DoubleType());
     FieldExpr *divRight = new FieldExpr(1, DoubleType());
@@ -547,8 +560,7 @@ TEST(ProjectionTest, Doubles_DivideByZero)
     std::vector<DataTypePtr> vecOfTypes = { DoubleType(), DoubleType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
@@ -557,6 +569,7 @@ TEST(ProjectionTest, Doubles_DivideByZero)
     op->GetOutput(ret);
     EXPECT_TRUE(isinf(((DoubleVector *)ret[0]->GetVector(0))->GetValue(3)));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
@@ -572,6 +585,7 @@ TEST(ProjectionTest, testModDoubles)
     const int32_t numRows = 10000;
     double *col1 = MakeDoubles(numRows, -5000.5);
     double *col2 = MakeDoubles(numRows, -124.45);
+    const int32_t numCols = 2;
 
     FieldExpr *modLeft = new FieldExpr(0, DoubleType());
     FieldExpr *modRight = new FieldExpr(1, DoubleType());
@@ -580,8 +594,7 @@ TEST(ProjectionTest, testModDoubles)
     std::vector<DataTypePtr> vecOfTypes = { DoubleType(), DoubleType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testModDoubles");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
@@ -602,6 +615,7 @@ TEST(ProjectionTest, testModDoubles)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
@@ -616,6 +630,7 @@ TEST(ProjectionTest, testModDoubles2)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10000;
     double *col = MakeDoubles(numRows, -1273.37);
+    const int32_t numCols = 1;
 
     FieldExpr *modLeft = new FieldExpr(0, DoubleType());
     LiteralExpr *modRight = new LiteralExpr(-45.8, DoubleType());
@@ -624,8 +639,7 @@ TEST(ProjectionTest, testModDoubles2)
     std::vector<DataTypePtr> vecOfTypes = { DoubleType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testModDoubles2");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -644,6 +658,7 @@ TEST(ProjectionTest, testModDoubles2)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col;
     delete op;
@@ -657,6 +672,7 @@ TEST(ProjectionTest, DoublesModulusByZero)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     int32_t numRows = 10;
     double *col1 = MakeDoubles(numRows, -4.0);
+    const int32_t numCols = 1;
 
     FieldExpr *divLeft = new FieldExpr(0, DoubleType());
     LiteralExpr *divRight = new LiteralExpr(0, DoubleType());
@@ -665,8 +681,7 @@ TEST(ProjectionTest, DoublesModulusByZero)
     std::vector<DataTypePtr> vecOfTypes = { DoubleType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
@@ -677,6 +692,7 @@ TEST(ProjectionTest, DoublesModulusByZero)
         EXPECT_TRUE(-isnan(((DoubleVector *)ret[0]->GetVector(0))->GetValue(i)));
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete op;
@@ -692,6 +708,7 @@ TEST(ProjectionTest, MultipleColumns)
     int32_t *col1 = MakeInts(numRows);
     int32_t *col2 = MakeInts(numRows, -100);
     int64_t *col3 = MakeLongs(numRows, -10);
+    const int32_t numProject = 2;
     FieldExpr *subLeft = new FieldExpr(0, IntType());
     LiteralExpr *subRight = new LiteralExpr(10, IntType());
     BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, IntType());
@@ -702,11 +719,11 @@ TEST(ProjectionTest, MultipleColumns)
 
     std::vector<Expr *> exprs = { subExpr, addExpr };
 
+    const int32_t numCols = 3;
     std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), LongType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_MultipleColumns");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
@@ -721,6 +738,7 @@ TEST(ProjectionTest, MultipleColumns)
         EXPECT_EQ(val1, i - 9);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
@@ -749,6 +767,7 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
         }
     }
 
+    const int32_t numProject = 2;
     FieldExpr *subLeft = new FieldExpr(0, IntType());
     LiteralExpr *subRight = new LiteralExpr(10, IntType());
     BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, IntType());
@@ -758,11 +777,11 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, LongType());
 
     std::vector<Expr *> exprs = { subExpr, addExpr };
+    const int32_t numCols = 4;
     std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), LongType(), VarcharType(1000) };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_BenchmarkMultipleColumns");
@@ -782,6 +801,7 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
         std::cout << "BenchmarkMultipleColumns round " << i << " elapsed " << elapsed.count() << " ms\n";
     }
 
+    Expr::DeleteExprs(exprs);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
 
@@ -802,8 +822,7 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
     auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
     std::vector<Expr *> exprs2 = { subExpr2, substrExpr };
 
-    auto exprEvaluator2 = std::make_shared<ExpressionEvaluator>(exprs2, inputTypes, overflowConfig);
-    factory = new ProjectionOperatorFactory(move(exprEvaluator2));
+    factory = new ProjectionOperatorFactory(exprs2, numProject, inputTypes, numCols, overflowConfig);
     op = factory->CreateOperator();
 
     for (int i = 0; i < 10; i++) {
@@ -819,6 +838,7 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
         std::cout << "BenchmarkMultipleColumns round " << i << " elapsed " << elapsed.count() << " ms\n";
     }
 
+    Expr::DeleteExprs(exprs2);
     VectorHelper::FreeVecBatch(t);
     delete[] col1;
     delete[] col2;
@@ -837,6 +857,7 @@ TEST(ProjectionTest, DependOtherColumn)
     int32_t *col1 = MakeInts(numRows);
     int32_t *col2 = MakeInts(numRows, -100);
     int64_t *col3 = MakeLongs(numRows, 0);
+    const int32_t numProject = 2;
     FieldExpr *mulLeft = new FieldExpr(0, IntType());
     FieldExpr *mulRight = new FieldExpr(1, IntType());
     BinaryExpr *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, IntType());
@@ -853,11 +874,11 @@ TEST(ProjectionTest, DependOtherColumn)
     IfExpr *ifExpr = new IfExpr(condition, texp, fexp);
 
     std::vector<Expr *> exprs = { mulExpr, ifExpr };
+    const int32_t numCols = 3;
     std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), LongType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DependOtherColumn");
@@ -873,6 +894,7 @@ TEST(ProjectionTest, DependOtherColumn)
         EXPECT_EQ(val1, (int64_t)(i < 500 ? 4000000000 : i));
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
@@ -887,6 +909,7 @@ TEST(ProjectionTest, ProjectString1)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     vector<string> strings;
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { VarcharType() };
     DataTypes inputTypes(vecOfTypes);
     const int32_t numRows = 100;
@@ -906,6 +929,8 @@ TEST(ProjectionTest, ProjectString1)
     std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
     auto *t = CreateVectorBatch(numRows, cols);
 
+    const int32_t numProject = 2;
+
     FieldExpr *substrData = new FieldExpr(0, VarcharType());
     LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
     LiteralExpr *substrLen = new LiteralExpr(3, IntType());
@@ -919,8 +944,7 @@ TEST(ProjectionTest, ProjectString1)
     FieldExpr *col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { substrExpr, col0 };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
@@ -943,6 +967,7 @@ TEST(ProjectionTest, ProjectString1)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -977,6 +1002,7 @@ TEST(ProjectionTest, DictionaryVecTest)
     t->SetVector(1, col2);
     t->SetVector(2, dictionaryVector);
 
+    const int32_t numProject = 3;
     FieldExpr *addLeft1 = new FieldExpr(0, IntType());
     LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
     BinaryExpr *addExpr1 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft1, addRight1, IntType());
@@ -991,8 +1017,7 @@ TEST(ProjectionTest, DictionaryVecTest)
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1008,6 +1033,7 @@ TEST(ProjectionTest, DictionaryVecTest)
         EXPECT_EQ(val2, dictionaryVector->GetInt(i) + 10);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
     delete col3;
@@ -1036,12 +1062,12 @@ TEST(ProjectionTest, DictionaryVecDoubleTest)
     DataTypes dataTypes(inputTypes);
     t->SetVector(0, doubleDicVector);
 
+    const int32_t numProject = 1;
     LiteralExpr *addRight = new LiteralExpr(10.0, DoubleType());
     std::vector<Expr *> exprs = { new BinaryExpr(omniruntime::expressions::Operator::ADD,
         new FieldExpr(0, DoubleType()), addRight, DoubleType()) };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1053,6 +1079,7 @@ TEST(ProjectionTest, DictionaryVecDoubleTest)
         EXPECT_EQ(val0, doubleDicVector->GetDouble(i) + 10);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
     delete col1;
@@ -1088,6 +1115,7 @@ TEST(ProjectionTest, DictionaryVecVarcharTest)
     DataTypes dataTypes(inputTypes);
     t->SetVector(0, varCharDicVector);
 
+    const int32_t numProject = 1;
     std::string funcStr = "substr";
     DataTypePtr retType = VarcharType();
 
@@ -1098,8 +1126,7 @@ TEST(ProjectionTest, DictionaryVecVarcharTest)
     auto substrExpr = GetFuncExpr(funcStr, args, VarcharType());
     std::vector<Expr *> exprs = { substrExpr };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
@@ -1118,6 +1145,7 @@ TEST(ProjectionTest, DictionaryVecVarcharTest)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1146,13 +1174,13 @@ TEST(ProjectionTest, DictionaryVecDecimal128Test)
     DataTypes dataTypes(inputTypes);
     t->SetVector(0, decimal128DicVector);
 
+    const int32_t numProject = 1;
     LiteralExpr *addRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD,
         new FieldExpr(0, Decimal128Type(38, 0)), addRight, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { addExpr };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1165,6 +1193,7 @@ TEST(ProjectionTest, DictionaryVecDecimal128Test)
         EXPECT_EQ(val0.LowBits(), decimal128DicVector->GetDecimal128(i).LowBits() + 20);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
     delete col1;
@@ -1202,6 +1231,7 @@ TEST(ProjectionTest, DictionaryVecNestedTest)
     t->SetVector(1, col2);
     t->SetVector(2, dictionaryNested);
 
+    const int32_t numProjs = 3;
     FieldExpr *addLeft1 = new FieldExpr(0, IntType());
     LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
     BinaryExpr *addExpr1 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft1, addRight1, IntType());
@@ -1216,8 +1246,7 @@ TEST(ProjectionTest, DictionaryVecNestedTest)
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, dataTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProjs, dataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1233,6 +1262,7 @@ TEST(ProjectionTest, DictionaryVecNestedTest)
         EXPECT_EQ(val2, dictionaryNested->GetInt(i) + 10);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
     delete col3;
@@ -1248,17 +1278,19 @@ TEST(ProjectionTest, Decimal128Arithmetic)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
+    const int32_t numProject = 1;
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *addRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *addExpr =
         new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { addExpr };
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Decimal128Arithmetic");
@@ -1273,6 +1305,7 @@ TEST(ProjectionTest, Decimal128Arithmetic)
         EXPECT_EQ(val0.LowBits(), i + 20);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1287,6 +1320,7 @@ TEST(ProjectionTest, Decimal128Arithmetic2)
     const int32_t numRows = 10;
     int64_t *col0 = MakeDecimals(numRows, -5);
     int64_t *col1 = MakeDecimals(numRows, -7);
+    const int32_t numCols = 2;
 
     FieldExpr *subLeft0 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *subRight0 = new LiteralExpr(new string("1"), Decimal128Type(38, 0));
@@ -1302,8 +1336,8 @@ TEST(ProjectionTest, Decimal128Arithmetic2)
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DISABLED_Decimal128Arithmetic2");
@@ -1336,6 +1370,7 @@ TEST(ProjectionTest, Decimal128Arithmetic2)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(t);
     delete[] col0;
@@ -1352,6 +1387,7 @@ TEST(ProjectionTest, Decimal128Arithmetic3)
     const int32_t numRows = 10;
     int64_t *col0 = MakeDecimals(numRows, -5);
     int64_t *col1 = MakeDecimals(numRows, -7);
+    const int32_t numCols = 2;
 
     FieldExpr *addLeft0 = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *addRight0 = new LiteralExpr(new string("-1"), Decimal128Type(38, 0));
@@ -1367,8 +1403,8 @@ TEST(ProjectionTest, Decimal128Arithmetic3)
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_DISABLED_Decimal128Arithmetic3");
@@ -1404,6 +1440,7 @@ TEST(ProjectionTest, Decimal128Arithmetic3)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(t);
     delete[] col0;
@@ -1419,17 +1456,19 @@ TEST(ProjectionTest, Decimal128Multiply)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
+    const int32_t numProject = 1;
     FieldExpr *mulLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *mulRight = new LiteralExpr(new std::string("3"), Decimal128Type(38, 0));
     BinaryExpr *mulExpr =
         new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, Decimal128Type(38, 0));
 
     std::vector<Expr *> exprs = { mulExpr };
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Decimal128Multiply");
@@ -1444,6 +1483,7 @@ TEST(ProjectionTest, Decimal128Multiply)
         EXPECT_EQ(val0.LowBits(), i * 3);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1457,16 +1497,18 @@ TEST(ProjectionTest, Decimal128Divide)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10;
     int64_t *col1 = MakeDecimals(numRows);
+    const int32_t numProject = 1;
     LiteralExpr *divRight = new LiteralExpr(new std::string("20"), Decimal128Type(38, 0));
     BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV,
         new FieldExpr(0, Decimal128Type(38, 0)), divRight, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { divExpr };
 
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Decimal128Divide");
@@ -1481,6 +1523,7 @@ TEST(ProjectionTest, Decimal128Divide)
         EXPECT_EQ(val0.LowBits(), i / 20);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1495,6 +1538,7 @@ TEST(ProjectionTest, MultipleDecimal128Columns)
     const int32_t numRows = 100;
     int64_t *col1 = MakeDecimals(numRows);
     int64_t *col2 = MakeDecimals(numRows, 100);
+    const int32_t numProject = 2;
     FieldExpr *addLeft = new FieldExpr(0, Decimal128Type(38, 0));
     LiteralExpr *addRight = new LiteralExpr(new std::string("50"), Decimal128Type(38, 0));
     BinaryExpr *addExpr =
@@ -1507,11 +1551,12 @@ TEST(ProjectionTest, MultipleDecimal128Columns)
 
     std::vector<Expr *> exprs = { addExpr, mulExpr };
 
+    const int32_t numCols = 2;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_MultipleDecimal128Columns");
@@ -1533,6 +1578,7 @@ TEST(ProjectionTest, MultipleDecimal128Columns)
         idx++;
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     delete[] col2;
@@ -1547,6 +1593,7 @@ TEST(ProjectionTest, StringSubstr)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     vector<string> strings;
 
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { VarcharType() };
     DataTypes inputTypes(vecOfTypes);
 
@@ -1569,6 +1616,7 @@ TEST(ProjectionTest, StringSubstr)
     std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
     auto *t = CreateVectorBatch(numRows, cols);
 
+    const int32_t numProject = 2;
     FieldExpr *substrData = new FieldExpr(0, VarcharType());
     LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
     LiteralExpr *substrLen = new LiteralExpr(5, IntType());
@@ -1589,8 +1637,7 @@ TEST(ProjectionTest, StringSubstr)
     auto col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { concatExpr, col0 };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
@@ -1609,8 +1656,10 @@ TEST(ProjectionTest, StringSubstr)
         } else {
             EXPECT_EQ(actualStr, expected2);
         }
+        std::cout << "string " << i << ": '" << actualStr << "' has length " << len << std::endl;
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1654,6 +1703,8 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
     t->SetVector(1, slicedCol2);
     t->SetVector(2, slicedCol3);
 
+    const int32_t numProject = 3;
+
     FieldExpr *addLeft1 = new FieldExpr(0, IntType());
     LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
     BinaryExpr *addExpr1 = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft1, addRight1, IntType());
@@ -1668,8 +1719,7 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
 
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3 };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputDataTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputDataTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1685,6 +1735,7 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
         EXPECT_EQ(val2, slicedCol3->GetInt(i) + 10);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1722,14 +1773,14 @@ TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
 
     t->SetVector(0, slicedCol1);
     DataTypes inputVecTypes(inputTypes);
+    const int32_t numProject = 1;
 
     FieldExpr *addLeft = new FieldExpr(0, IntType());
     FieldExpr *addRight = new FieldExpr(0, IntType());
     BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, IntType());
     std::vector<Expr *> exprs = { addExpr };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputVecTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputVecTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     auto copy = DuplicateVectorBatch(t);
@@ -1746,6 +1797,7 @@ TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1776,6 +1828,7 @@ TEST(ProjectionTest, Tpcds96)
         col3[i] = v3[i];
     }
 
+    const int32_t numCols = 4;
     FieldExpr *addCol0 = new FieldExpr(0, LongType());
     FieldExpr *addCol1 = new FieldExpr(1, LongType());
     FieldExpr *addCol2_0 = new FieldExpr(2, LongType());
@@ -1789,8 +1842,7 @@ TEST(ProjectionTest, Tpcds96)
     std::vector<DataTypePtr> vecOfTypes = { LongType(), LongType(), LongType(), LongType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Tpcds96");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0, col1, col2, col3);
@@ -1827,6 +1879,7 @@ TEST(ProjectionTest, Tpcds96)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col0;
     delete[] col1;
@@ -1860,6 +1913,7 @@ TEST(ProjectionTest, Round)
             col5[idx++] = i / 0.0;
         }
     }
+    const int32_t numCols = 6;
     std::vector<DataTypePtr> vecOfTypes = { IntType(),    LongType(),   DoubleType(),
         DoubleType(), DoubleType(), DoubleType() };
     std::string funcStr = "round";
@@ -1919,8 +1973,7 @@ TEST(ProjectionTest, Round)
 
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Round");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0, col1, col2, col3, col4, col5);
@@ -1958,6 +2011,7 @@ TEST(ProjectionTest, Round)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatches(ret);
     delete[] col0;
@@ -1975,6 +2029,7 @@ TEST(ProjectionTest, Round)
 TEST(ProjectionTest, ConcatStrAndChar)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { CharType() };
     DataTypes inputTypes(vecOfTypes);
     const int32_t numRows = 1;
@@ -1992,6 +2047,7 @@ TEST(ProjectionTest, ConcatStrAndChar)
     std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
     auto *t = CreateVectorBatch(numRows, cols);
 
+    const int32_t numProject = 2;
     std::vector<Expr *> concatArgs1, concatArgs2;
     std::string concatStr = "concat";
     concatArgs1.push_back(new LiteralExpr(new std::string("store"), VarcharType()));
@@ -2003,8 +2059,7 @@ TEST(ProjectionTest, ConcatStrAndChar)
     auto concatCharStr = GetFuncExpr(concatStr, concatArgs2, CharType(21));
     std::vector<Expr *> exprs = { concatStrChar, concatCharStr };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
     std::vector<VectorBatch *> ret;
@@ -2026,6 +2081,7 @@ TEST(ProjectionTest, ConcatStrAndChar)
         EXPECT_EQ(actualStr2, expected2);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2036,6 +2092,7 @@ TEST(ProjectionTest, ConcatStrAndChar)
 TEST(ProjectionTest, varcharExpand)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { VarcharType() };
     DataTypes inputTypes(vecOfTypes);
     const int32_t numRows = 100;
@@ -2056,6 +2113,7 @@ TEST(ProjectionTest, varcharExpand)
     std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
     auto *t = CreateVectorBatch(numRows, cols);
 
+    const int32_t numProject = 2;
     FieldExpr *substrData = new FieldExpr(0, VarcharType());
     LiteralExpr *substrIndex = new LiteralExpr(1, IntType());
     LiteralExpr *substrLen = new LiteralExpr(5, IntType());
@@ -2083,8 +2141,7 @@ TEST(ProjectionTest, varcharExpand)
     FieldExpr *col0 = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { concatExpr, col0 };
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
@@ -2108,6 +2165,7 @@ TEST(ProjectionTest, varcharExpand)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2119,6 +2177,7 @@ TEST(ProjectionTest, testDivDecimal128)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto addLeft = new LiteralExpr(new std::string("10357"), Decimal128Type(5, 2));
     auto addRight = new LiteralExpr(new std::string("95942"), Decimal128Type(5, 2));
 
@@ -2126,11 +2185,12 @@ TEST(ProjectionTest, testDivDecimal128)
         new BinaryExpr(omniruntime::expressions::Operator::DIV, addLeft, addRight, Decimal128Type(38, 2));
 
     std::vector<Expr *> exprs = { divExpr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDivDecimal");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2141,6 +2201,7 @@ TEST(ProjectionTest, testDivDecimal128)
     EXPECT_EQ(val0.LowBits(), 11);
     EXPECT_EQ(val0.HighBits(), 0);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2153,6 +2214,7 @@ TEST(ProjectionTest, testAddDecimal128)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto addLeft = new LiteralExpr(new std::string("478193"), Decimal128Type(6, 3));
     auto addRight = new LiteralExpr(new std::string("54356783"), Decimal128Type(8, 5));
 
@@ -2160,11 +2222,12 @@ TEST(ProjectionTest, testAddDecimal128)
         new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, Decimal128Type(9, 5));
 
     std::vector<Expr *> exprs = { addExpr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testAddDecimal128");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2175,6 +2238,7 @@ TEST(ProjectionTest, testAddDecimal128)
     EXPECT_EQ(val0.LowBits(), 102176083);
     EXPECT_EQ(val0.HighBits(), 0);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2186,6 +2250,7 @@ TEST(ProjectionTest, testDecimal128Between)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto value = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 0));
     auto lowerBound = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 3));
     auto upperBound = new LiteralExpr(new std::string("1234"), Decimal128Type(4, 1));
@@ -2193,11 +2258,12 @@ TEST(ProjectionTest, testDecimal128Between)
     auto expr = new BetweenExpr(value, lowerBound, upperBound);
 
     std::vector<Expr *> exprs = { expr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimal128Between");
@@ -2208,6 +2274,7 @@ TEST(ProjectionTest, testDecimal128Between)
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2219,6 +2286,7 @@ TEST(ProjectionTest, testDecimal128In)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto arg0 = new LiteralExpr(new std::string("1234"), Decimal128Type(6, 0));
     auto arg1 = new LiteralExpr(new std::string("12345"), Decimal128Type(6, 0));
     auto arg2 = new LiteralExpr(new std::string("123456"), Decimal128Type(6, 0));
@@ -2226,11 +2294,12 @@ TEST(ProjectionTest, testDecimal128In)
     auto expr = new InExpr(args);
     std::vector<Expr *> exprs = { expr };
 
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimal128In");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2240,6 +2309,7 @@ TEST(ProjectionTest, testDecimal128In)
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2251,6 +2321,7 @@ TEST(ProjectionTest, testDecimal128Comprehensive)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto condition = new LiteralExpr(true, BooleanType());
     auto v1 = new LiteralExpr(new std::string("123400"), Decimal128Type(7, 3));
     v1->isNull = true;
@@ -2263,11 +2334,12 @@ TEST(ProjectionTest, testDecimal128Comprehensive)
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, ifExpr, right, BooleanType());
 
     std::vector<Expr *> exprs = { expr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimalComprehensive");
@@ -2278,6 +2350,7 @@ TEST(ProjectionTest, testDecimal128Comprehensive)
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2292,6 +2365,7 @@ TEST(ProjectionTest, TestAndExprWithNull)
     bool col1[numRows] = { true, true, true, false, false, false, true, false, false };
     bool col2[numRows] = { true, false, true, true, false, false, true, false, false };
 
+    const int32_t numCols = 2;
     auto andLeft = new FieldExpr(0, BooleanType());
     auto andRight = new FieldExpr(1, BooleanType());
     auto andLeft1 = new FieldExpr(0, BooleanType());
@@ -2309,8 +2383,7 @@ TEST(ProjectionTest, TestAndExprWithNull)
     std::vector<DataTypePtr> vecOfTypes = { BooleanType(), BooleanType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_TestAndExprWithNull");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
@@ -2348,6 +2421,7 @@ TEST(ProjectionTest, TestAndExprWithNull)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2362,6 +2436,7 @@ TEST(ProjectionTest, TestOrExprWithNull)
     bool col1[numRows] = { true, true, true, false, false, false, true, false, false };
     bool col2[numRows] = { true, false, true, true, false, false, true, false, false };
 
+    const int32_t numCols = 2;
     auto orLeft = new FieldExpr(0, BooleanType());
     auto orRight = new FieldExpr(1, BooleanType());
     BinaryExpr *orExpr = new BinaryExpr(omniruntime::expressions::Operator::OR, orLeft, orRight, BooleanType());
@@ -2369,8 +2444,7 @@ TEST(ProjectionTest, TestOrExprWithNull)
     std::vector<DataTypePtr> vecOfTypes = { BooleanType(), BooleanType() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_TestOrExprWithNull");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
@@ -2400,6 +2474,7 @@ TEST(ProjectionTest, TestOrExprWithNull)
         }
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2411,6 +2486,7 @@ TEST(ProjectionTest, testSubDecimal64)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto subLeft = new LiteralExpr(4321563L, Decimal64Type(7, 3));
     auto subRight = new LiteralExpr(123468L, Decimal64Type(6, 4));
 
@@ -2418,11 +2494,12 @@ TEST(ProjectionTest, testSubDecimal64)
         new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal64Type(8, 4));
 
     std::vector<Expr *> exprs = { subExpr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testSubDecimal64");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2432,6 +2509,7 @@ TEST(ProjectionTest, testSubDecimal64)
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 43092162);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2443,6 +2521,7 @@ TEST(ProjectionTest, testMulDecimal64)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto mulLeft = new LiteralExpr(100L, Decimal64Type(7, 2));
     auto mulRight = new LiteralExpr(100L, Decimal64Type(7, 2));
 
@@ -2450,11 +2529,12 @@ TEST(ProjectionTest, testMulDecimal64)
         new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, Decimal64Type(7, 4));
 
     std::vector<Expr *> exprs = { mulExpr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testMulDecimal64");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2464,6 +2544,7 @@ TEST(ProjectionTest, testMulDecimal64)
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 10000L);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2475,17 +2556,19 @@ TEST(ProjectionTest, testDivDecimal64)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto left = new LiteralExpr(1225L, Decimal64Type(4, 2));
     auto right = new LiteralExpr(125L, Decimal64Type(3, 2));
 
     BinaryExpr *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, left, right, Decimal64Type(2, 1));
 
     std::vector<Expr *> exprs = { divExpr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDivDecimal64");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2495,6 +2578,7 @@ TEST(ProjectionTest, testDivDecimal64)
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 98L);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2506,17 +2590,19 @@ TEST(ProjectionTest, testModDecimal64)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto left = new LiteralExpr(12250L, Decimal64Type(5, 3));
     auto right = new LiteralExpr(125L, Decimal64Type(3, 2));
 
     BinaryExpr *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, left, right, Decimal64Type(4, 3));
 
     std::vector<Expr *> exprs = { modExpr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testModDecimal64");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2526,6 +2612,7 @@ TEST(ProjectionTest, testModDecimal64)
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 1000L);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2548,13 +2635,14 @@ TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
         new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, Decimal128Type(19, 0));
     std::vector<Expr *> exprs = { addExpr, subExpr };
 
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
 
+    omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64ArithOutputDecimal128");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2569,6 +2657,7 @@ TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
     EXPECT_EQ(val1.HighBits(), 1L << 63);
     EXPECT_EQ(val1.LowBits(), 1000000000000000001);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2580,6 +2669,7 @@ TEST(ProjectionTest, testDecimal64In)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto arg0 = new LiteralExpr(65781L, Decimal64Type(6, 2));
     auto arg1 = new LiteralExpr(120945L, Decimal64Type(6, 2));
     auto arg2 = new LiteralExpr(65781L, Decimal64Type(6, 2));
@@ -2588,11 +2678,12 @@ TEST(ProjectionTest, testDecimal64In)
     auto expr = new InExpr(args);
     std::vector<Expr *> exprs = { expr };
 
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64In");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2602,6 +2693,7 @@ TEST(ProjectionTest, testDecimal64In)
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2613,17 +2705,19 @@ TEST(ProjectionTest, testDecimal64Between)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto value = new LiteralExpr(76582L, Decimal64Type(5, 2));
     auto lowerBound = new LiteralExpr(87230L, Decimal64Type(5, 4));
     auto upperBound = new LiteralExpr(876903L, Decimal64Type(6, 1));
     auto expr = new BetweenExpr(value, lowerBound, upperBound);
     std::vector<Expr *> exprs = { expr };
 
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Between");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
@@ -2633,6 +2727,7 @@ TEST(ProjectionTest, testDecimal64Between)
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2644,6 +2739,7 @@ TEST(ProjectionTest, testDecimal64Comprehensive)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto condition = new LiteralExpr(true, BooleanType());
     auto v1 = new LiteralExpr(123400L, Decimal64Type(7, 3));
     v1->isNull = true;
@@ -2659,11 +2755,12 @@ TEST(ProjectionTest, testDecimal64Comprehensive)
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, ifExpr, right, BooleanType());
 
     std::vector<Expr *> exprs = { expr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     VectorAllocator *vecAllocator =
@@ -2675,6 +2772,7 @@ TEST(ProjectionTest, testDecimal64Comprehensive)
     bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2692,11 +2790,12 @@ TEST(ProjectionTest, Decimal64ColDivide)
         divRight, Decimal64Type(8, 4));
     std::vector<Expr *> exprs = { divExpr };
 
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Decimal64ColDivide");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
@@ -2710,6 +2809,7 @@ TEST(ProjectionTest, Decimal64ColDivide)
         EXPECT_EQ(val0, expect);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -2793,13 +2893,12 @@ TEST(ProjectionTest, ConcatStrCharTest)
     std::vector<DataTypePtr> vecOfTypes = { CharType(20), VarcharType(30) };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatStrCharTest");
     auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     std::vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -2811,6 +2910,7 @@ TEST(ProjectionTest, ConcatStrCharTest)
     auto expect = CreateExpectVecBatchForConcat(CharDataType(100), vecAllocator, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete op;
@@ -2827,13 +2927,12 @@ TEST(ProjectionTest, ConcatCharStrTest)
     std::vector<DataTypePtr> vecOfTypes = { VarcharType(20), CharType(30) };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatCharStrTest");
     auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     std::vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -2849,6 +2948,7 @@ TEST(ProjectionTest, ConcatCharStrTest)
     auto expect = CreateExpectVecBatchForConcat(CharDataType(100), vecAllocator, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete op;
@@ -2865,13 +2965,12 @@ TEST(ProjectionTest, ConcatStrStrTest)
     std::vector<DataTypePtr> vecOfTypes = { VarcharType(20), VarcharType(30) };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatStrStrTest");
     auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     std::vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -2883,6 +2982,7 @@ TEST(ProjectionTest, ConcatStrStrTest)
     auto expect = CreateExpectVecBatchForConcat(VarcharDataType(100), vecAllocator, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete op;
@@ -2899,13 +2999,12 @@ TEST(ProjectionTest, ConcatCharCharTest)
     std::vector<DataTypePtr> vecOfTypes = { CharType(20), CharType(30) };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_ConcatCharCharTest");
     auto input = CreateInputVecBatchForConcat(vecOfTypes, vecAllocator);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     std::vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -2921,6 +3020,7 @@ TEST(ProjectionTest, ConcatCharCharTest)
     auto expect = CreateExpectVecBatchForConcat(CharDataType(51), vecAllocator, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete op;
@@ -2949,15 +3049,14 @@ TEST(ProjectionTest, ReplaceStrWithRep)
     vector<Expr *> exprs = { replaceFuncExpr };
     DataTypes inputTypes(vecTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "varchar100", "varchar200", "varchar300" };
     string search[] = { "char1", "char2", "char3" };
     string replace[] = { "opera", "*#", "VARCHAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str, search, replace);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -2968,6 +3067,7 @@ TEST(ProjectionTest, ReplaceStrWithRep)
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
@@ -2984,14 +3084,13 @@ TEST(ProjectionTest, ReplaceStrWithoutRep)
     vector<Expr *> exprs = { replaceFuncExpr };
     DataTypes inputTypes(vecTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "varchar100", "varchar200", "varchar300" };
     string search[] = { "char1", "char2", "char3" };
     auto input = CreateVectorBatch(inputTypes, 3, str, search);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -3002,6 +3101,7 @@ TEST(ProjectionTest, ReplaceStrWithoutRep)
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
@@ -3018,13 +3118,12 @@ TEST(ProjectionTest, LowerStr)
     vector<Expr *> exprs = { lowerFuncExpr };
     DataTypes inputTypes(vecTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -3035,6 +3134,7 @@ TEST(ProjectionTest, LowerStr)
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
@@ -3051,13 +3151,12 @@ TEST(ProjectionTest, LowerChar)
     vector<Expr *> exprs = { lowerFuncExpr };
     DataTypes inputTypes(vecTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -3068,6 +3167,7 @@ TEST(ProjectionTest, LowerChar)
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
@@ -3084,13 +3184,12 @@ TEST(ProjectionTest, LengthChar)
     vector<Expr *> exprs = { lenFuncExpr };
     DataTypes inputTypes(vecTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -3101,6 +3200,7 @@ TEST(ProjectionTest, LengthChar)
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
@@ -3117,13 +3217,12 @@ TEST(ProjectionTest, LengthStr)
     vector<Expr *> exprs = { lenFuncExpr };
     DataTypes inputTypes(vecTypes);
     auto overflowConfig = new OverflowConfig();
+    auto factory = new ProjectionOperatorFactory(exprs, exprs.size(), inputTypes, inputTypes.GetSize(), overflowConfig);
 
     string str[] = { "VARchar100", "Char200", "var**VAR" };
     auto input = CreateVectorBatch(inputTypes, 3, str);
 
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto op = factory->CreateOperator();
     op->AddInput(input);
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
@@ -3134,6 +3233,7 @@ TEST(ProjectionTest, LengthStr)
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
     EXPECT_TRUE(VecBatchMatch(ret[0], expect));
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
@@ -3145,6 +3245,7 @@ TEST(ProjectionTest, testDecimal128NegativeLiteral)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numProject = 1;
     auto literalLeft = new LiteralExpr(new std::string("0"), Decimal128Type(38, 16));
     auto literalRight =
         new LiteralExpr(new std::string("-99999999999999999999999999999999999999"), Decimal128Type(38, 16));
@@ -3153,11 +3254,12 @@ TEST(ProjectionTest, testDecimal128NegativeLiteral)
         new BinaryExpr(omniruntime::expressions::Operator::SUB, literalLeft, literalRight, Decimal128Type(38, 16));
 
     std::vector<Expr *> exprs = { subExpr };
+    const int32_t numCols = 0;
     std::vector<DataTypePtr> vecOfTypes = {};
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
@@ -3169,6 +3271,7 @@ TEST(ProjectionTest, testDecimal128NegativeLiteral)
     EXPECT_EQ(val0.LowBits(), 687399551400673279);
     EXPECT_EQ(val0.HighBits(), 5421010862427522170);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete op;
     delete factory;
@@ -3181,6 +3284,7 @@ TEST(ProjectionTest, ProjectCastIntToString)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 3;
     auto *col = new int[3] { 123, 312, 456 };
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
 
     auto data = new FieldExpr(0, IntType());
@@ -3192,8 +3296,7 @@ TEST(ProjectionTest, ProjectCastIntToString)
     std::vector<Expr *> exprs = { castExpr };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -3214,6 +3317,7 @@ TEST(ProjectionTest, ProjectCastIntToString)
         EXPECT_EQ(actualStr, to_string(col[i]));
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(t);
     delete[] col;
@@ -3228,6 +3332,7 @@ TEST(ProjectionTest, ProjectCastDecimal128ToString)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 3;
     auto *col = MakeDecimals(numRows, 10);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
 
     auto data = new FieldExpr(0, Decimal128Type(38, 0));
@@ -3239,8 +3344,7 @@ TEST(ProjectionTest, ProjectCastDecimal128ToString)
     std::vector<Expr *> exprs = { castExpr };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -3257,6 +3361,7 @@ TEST(ProjectionTest, ProjectCastDecimal128ToString)
         EXPECT_EQ(actualStr, to_string(col[i * 2]));
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(t);
     delete[] col;
@@ -3271,6 +3376,7 @@ TEST(ProjectionTest, ProjectCastDoubleToString)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 3;
     auto *col = MakeDoubles(numRows, 10);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { DoubleType() };
 
     auto data = new FieldExpr(0, DoubleType());
@@ -3282,8 +3388,7 @@ TEST(ProjectionTest, ProjectCastDoubleToString)
     std::vector<Expr *> exprs = { castExpr };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig(omniruntime::op::OVERFLOW_CONFIG_NULL);
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -3301,6 +3406,7 @@ TEST(ProjectionTest, ProjectCastDoubleToString)
         EXPECT_EQ(actualStr, res[i]);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(t);
     delete[] col;
@@ -3314,6 +3420,7 @@ TEST(ProjectionTest, ProjectCastStringToString)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    const int32_t numCols = 1;
     vector<string> strings;
     for (int32_t i = 0; i < numRows; i++) {
         strings.emplace_back("CastStringToString");
@@ -3337,9 +3444,8 @@ TEST(ProjectionTest, ProjectCastStringToString)
 
     std::vector<DataTypePtr> vecOfTypes = { VarcharType(18) };
     DataTypes inputTypes(vecOfTypes);
-    auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastStringToString");
@@ -3366,17 +3472,18 @@ TEST(ProjectionTest, ProjectCastStringToString)
     EXPECT_EQ(len2, 10);
     EXPECT_EQ(actualStr2, expected2);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
-    delete overflowConfig;
 }
 
 TEST(ProjectionTest, ProjectCastStrStrZh)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    int32_t numCols = 1;
 
     std::string castStr = "CAST";
     std::vector<Expr *> args1 = { new FieldExpr(0, VarcharType(18)) };
@@ -3388,9 +3495,8 @@ TEST(ProjectionTest, ProjectCastStrStrZh)
 
     std::vector<DataTypePtr> vecOfTypes = { VarcharType(18) };
     DataTypes inputTypes(vecOfTypes);
-    auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     string *col0 = new string[numRows];
@@ -3404,6 +3510,7 @@ TEST(ProjectionTest, ProjectCastStrStrZh)
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
 
+    numCols = 2;
     string *expected1 = new string[numRows];
     for (int32_t i = 0; i < numRows; i++) {
         col0[i] = "cast乌s斯侧后解";
@@ -3418,6 +3525,7 @@ TEST(ProjectionTest, ProjectCastStrStrZh)
 
     VecBatchMatch(ret[0], expectedRet);
 
+    Expr::DeleteExprs(exprs);
     delete[] col0;
     delete[] expected1;
     delete[] expected2;
@@ -3426,13 +3534,13 @@ TEST(ProjectionTest, ProjectCastStrStrZh)
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
-    delete overflowConfig;
 }
 
 TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
+    int32_t numCols = 1;
 
     std::string castStr = "CAST";
     std::vector<Expr *> args1 = { new FieldExpr(0, VarcharType(18)) };
@@ -3446,8 +3554,7 @@ TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
     DataTypes inputTypes(vecOfTypes);
 
     auto overflowConfig = new OverflowConfig(omniruntime::op::OVERFLOW_CONFIG_NULL);
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     string *col0 = new string[numRows];
@@ -3461,6 +3568,7 @@ TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
     vector<VectorBatch *> ret;
     op->GetOutput(ret);
 
+    numCols = 2;
     string *expected1 = new string[numRows];
     for (int32_t i = 0; i < numRows; i++) {
         col0[i] = "cast乌s斯侧后解";
@@ -3475,6 +3583,7 @@ TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
 
     VecBatchMatch(ret[0], expectedRet);
 
+    Expr::DeleteExprs(exprs);
     delete[] col0;
     delete[] expected1;
     delete[] expected2;
@@ -3491,6 +3600,7 @@ TEST(ProjectionTest, ProjectCastIntToDecimal)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10;
     auto *col1 = MakeInts(numRows);
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
 
     auto data = new FieldExpr(0, IntType());
@@ -3502,8 +3612,7 @@ TEST(ProjectionTest, ProjectCastIntToDecimal)
     std::vector<Expr *> exprs = { castExpr };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
@@ -3517,6 +3626,7 @@ TEST(ProjectionTest, ProjectCastIntToDecimal)
         EXPECT_EQ(val0.LowBits(), i);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -3530,6 +3640,7 @@ TEST(ProjectionTest, ProjectCastIntToDecimal64)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 3;
     auto *col = new int[3] { 123, 312, 456 };
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
 
     auto data = new FieldExpr(0, IntType());
@@ -3541,8 +3652,7 @@ TEST(ProjectionTest, ProjectCastIntToDecimal64)
     std::vector<Expr *> exprs = { castExpr };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(exprs, numCols, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_CastDouble");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
@@ -3560,6 +3670,7 @@ TEST(ProjectionTest, ProjectCastIntToDecimal64)
         EXPECT_EQ(val0, col[i] * 100);
     }
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     VectorHelper::FreeVecBatch(t);
     delete[] col;
@@ -3582,11 +3693,11 @@ TEST(ProjectionTest, ProjectSparkConfig)
     auto *addExprs = new BinaryExpr(omniruntime::expressions::Operator::ADD, subLeft, subRight, Decimal64Type(8, 0));
 
     std::vector<Expr *> exprs = { addExprs };
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig(OVERFLOW_CONFIG_NULL);
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
@@ -3597,6 +3708,7 @@ TEST(ProjectionTest, ProjectSparkConfig)
     int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 246);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -3618,11 +3730,11 @@ TEST(ProjectionTest, ProjectMulDecimal64)
         new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExprs1, mulRight2, Decimal64Type(7, 0));
 
     std::vector<Expr *> exprs = { mulExprs2 };
+    const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig(OVERFLOW_CONFIG_NULL);
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, 1, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
@@ -3633,6 +3745,7 @@ TEST(ProjectionTest, ProjectMulDecimal64)
     bool isNull = (ret[0]->GetVector(0))->IsValueNull(0);
     EXPECT_EQ(isNull, true);
 
+    Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -3647,6 +3760,7 @@ TEST(ProjectionTest, AddDecimal)
     const int32_t numRows = 2;
     int64_t *col1 = new int64_t[4] { 1, 0, 2, 0 };
     int64_t *col2 = new int64_t[2] { 1, 2 };
+    const int32_t numProject = 1;
     FieldExpr *right1 = new FieldExpr(0, Decimal128Type(38, 0));
     FieldExpr *left1 = new FieldExpr(0, Decimal128Type(38, 0));
     BinaryExpr *addExpr1 =
@@ -3665,11 +3779,10 @@ TEST(ProjectionTest, AddDecimal)
         new BinaryExpr(omniruntime::expressions::Operator::ADD, right4, left4, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3, addExpr4 };
 
+    const int32_t numCols = 2;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal64Type() };
     DataTypes inputTypes(vecOfTypes);
-    auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory = new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, nullptr);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_BatchAddDecimal128");
@@ -3685,13 +3798,13 @@ TEST(ProjectionTest, AddDecimal)
         }
     }
 
+    Expr::DeleteExprs({ exprs });
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete[] col1;
     delete[] col2;
     delete vecAllocator;
-    delete overflowConfig;
 }
 
 TEST(ProjectionTest, AddDecimalReturnNull)
@@ -3700,6 +3813,7 @@ TEST(ProjectionTest, AddDecimalReturnNull)
     const int32_t numRows = 1;
     int64_t *col1 = new int64_t[2] { -1, INT64_MAX };
     int64_t *col2 = new int64_t[1] { INT64_MAX };
+    const int32_t numProject = 1;
     FieldExpr *right1 = new FieldExpr(0, Decimal128Type(38, 0));
     FieldExpr *left1 = new FieldExpr(0, Decimal128Type(38, 0));
     BinaryExpr *addExpr1 =
@@ -3718,11 +3832,12 @@ TEST(ProjectionTest, AddDecimalReturnNull)
         new BinaryExpr(omniruntime::expressions::Operator::ADD, right4, left4, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { addExpr1, addExpr2, addExpr3, addExpr4 };
 
+    const int32_t numCols = 2;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal64Type() };
     DataTypes inputTypes(vecOfTypes);
     auto overflowConfig = new OverflowConfig(OVERFLOW_CONFIG_NULL);
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    ProjectionOperatorFactory *factory =
+        new ProjectionOperatorFactory(exprs, numProject, inputTypes, numCols, overflowConfig);
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_BatchAddDecimal128");
@@ -3741,6 +3856,7 @@ TEST(ProjectionTest, AddDecimalReturnNull)
         EXPECT_TRUE(isNull);
     }
 
+    Expr::DeleteExprs({ exprs });
     VectorHelper::FreeVecBatches(ret);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);

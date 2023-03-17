@@ -15,7 +15,7 @@ const std::string dictionaryGetBooleanStr = "DictionaryGetBoolean";
 const std::string dictionaryGetVarcharStr = "DictionaryGetVarchar";
 const std::string dictionaryGetDecimalStr = "DictionaryGetDecimal";
 
-namespace omniruntime::codegen {
+namespace omniruntime {
 class DictionaryFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;

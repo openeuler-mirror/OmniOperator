@@ -1,12 +1,13 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: CodegenUtil Class
  */
 
-#include "codegen_util.h"
+#include "gtest/gtest.h"
 
 #include <string>
 #include <vector>
+#include "operator/filter/filter_and_project.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -54,7 +55,7 @@ VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::op::Filter> &filter,
 
     auto context = new omniruntime::op::ExecutionContext();
     if (filter.get() != nullptr) {
-        numSelectedRows = filter->GetFilterFunc()(valueAddrs, numRows, selectedRows, nullAddrs, offsetAddrs,
+        numSelectedRows = filter->apply(valueAddrs, numRows, selectedRows, nullAddrs, offsetAddrs,
             reinterpret_cast<int64_t>(context), dictionaries);
     }
 
@@ -68,20 +69,5 @@ VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::op::Filter> &filter,
     context->GetArena()->Reset();
     delete context;
     return ret;
-}
-
-unique_ptr<Filter> GenerateFilterAndProjections(Expr *filterExpr, std::vector<Expr *> &projExprs, DataTypes &inputTypes,
-    std::vector<std::unique_ptr<Projection>> &projections, OverflowConfig *overflowConfig)
-{
-    for (uint32_t i = 0; i < projExprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(projExprs[i]), filterExpr != nullptr, projExprs[i]->GetReturnType(),
-            inputTypes, overflowConfig);
-        projections.push_back(move(projection));
-    }
-    if (filterExpr == nullptr) {
-        Filter *filter = nullptr;
-        return std::move(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter));
-    }
-    return std::move(make_unique<Filter>(*filterExpr, inputTypes, nullptr));
 }
 }

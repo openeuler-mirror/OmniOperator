@@ -11,7 +11,7 @@ namespace omniruntime {
 namespace mem {
 class MemoryPool {
 public:
-    virtual int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false) = 0;
+    virtual int Allocate(int64_t size, uint8_t **buffer) = 0;
 
     virtual int Release(uint8_t *buffer) = 0;
 

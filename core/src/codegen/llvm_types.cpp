@@ -8,7 +8,6 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LLVMContext.h>
 
-namespace omniruntime::codegen {
 using namespace omniruntime::type;
 using namespace llvm;
 
@@ -164,12 +163,12 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
             return DoublePtrType();
         case OMNI_CHAR:
         case OMNI_VARCHAR:
-            return I8PtrType();
+            return I64PtrType();
         case OMNI_DECIMAL128:
             return I128PtrType();
         default:
             LLVM_DEBUG_LOG("Unsupported column data type %d", typeId);
-            return I64PtrType();
+            return nullptr;
     }
 }
 
@@ -204,5 +203,4 @@ llvm::Type *LLVMTypes::GetFunctionReturnType(DataTypeId typeId)
     } else {
         return ToLLVMType(typeId);
     }
-}
 }
