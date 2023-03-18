@@ -263,6 +263,13 @@ void SortMergeJoinScanner::RunFullOuterJoin()
 
 bool SortMergeJoinScanner::FindMatchingRows()
 {
+    while (CurBufferedHasNull()) { // skip buffered null value
+        if (!AdvancedBufferedJoinKey()) {
+            preStatus->TransToNeedBufferedData(HasResult());
+            return false;
+        }
+    }
+
     auto comp = FindNextMatchPos();
     if (NeedBufferedData()) {
         preStatus->TransToNeedBufferedData(HasResult());
