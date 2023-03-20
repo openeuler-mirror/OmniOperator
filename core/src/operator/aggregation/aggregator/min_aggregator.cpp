@@ -24,7 +24,9 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
     auto outputTypeId = this->outputTypes.GetType(0)->GetId();
 
     HmppResult result = HMPP_STS_NO_ERR;
-    auto minVal = reinterpret_cast<InType *>(this->executionContext->GetArena()->Allocate(sizeof(InType)));
+    auto minVal = reinterpret_cast<ResultType *>(this->executionContext->GetArena()->Allocate(sizeof(ResultType)));
+    memset_sp((void*)minVal, sizeof(ResultType), 0,sizeof(ResultType));
+
     if constexpr (IN_ID == OMNI_SHORT) {
         LogDebug("HMPP-Agg-min");
         result = HMPPS_Min_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset), rowCount,
@@ -62,8 +64,8 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
     if (state.val == nullptr) {
         state.val = minVal;
     } else {
-        auto preMinVal = static_cast<InType *>(state.val);
-        *static_cast<InType *>(state.val) = (Compare(*preMinVal, *minVal) == -1) ? *preMinVal : *minVal;
+        auto preMinVal = static_cast<ResultType *>(state.val);
+        *static_cast<ResultType *>(state.val) = (Compare(*preMinVal, *minVal) == -1) ? *preMinVal : *minVal;
     }
     // hmpp only works on not nullable columns, so it always find min
     state.count = 1;
