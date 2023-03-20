@@ -131,9 +131,9 @@ void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t 
     // no need to delete inputVecBatch, it will be reused when this interface call again
 }
 
-int32_t HashAggregationWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatches)
+int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    int32_t status = hashAggOperator->GetOutput(outputVecBatches);
+    int32_t status = hashAggOperator->GetOutput(outputVecBatch);
     SetStatus(hashAggOperator->GetStatus());
     return status;
 }

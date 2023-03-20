@@ -264,11 +264,11 @@ void HashAggregationOperator::SetVectors(VectorAllocator *vecAllocator, VectorBa
     }
 }
 
-int32_t HashAggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
+int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t expectedBatchSize = 0;
     if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
-        expectedBatchSize = Output(serialize, result);
+        expectedBatchSize = Output(serialize, outputVecBatch);
     } else {
         SetStatus(OMNI_STATUS_ERROR);
         LogError("other groupby field handle type %d not implement now ", groupByColumnsHandleType);
@@ -541,7 +541,7 @@ void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnInd
     std::vector<uintptr_t> vectorAddresses(op::AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
+    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
     auto containerVector =
         new ContainerVector(vecAllocator, rowCount, vectorAddresses, op::AVG_VECTOR_COUNT, dataTypes);
     vecBatch->SetVector(columnIndex, containerVector);
@@ -732,7 +732,7 @@ void HashAggregationOperator::TraverseHashmapToGetOneResult(Deserialize &deseria
 }
 
 template <typename Deserialize>
-int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, std::vector<VectorBatch *> &result)
+int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch)
 {
     auto &hashmap = deserializeHashmap->hashmap;
     int32_t totalRowCount = hashmap.GetElementsSize();
@@ -747,8 +747,8 @@ int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, std::ve
     SetVectors(this->vecAllocator, output, outputTypes, curRowCount);
 
     TraverseHashmapToGetOneResult(deserializeHashmap, groupByCols.size(), output);
-    result.emplace_back(output);
 
+    *outputVecBatch = output;
     if (static_cast<int32_t>(outputState.hasBeenOutputNum) == totalRowCount) {
         SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
     }

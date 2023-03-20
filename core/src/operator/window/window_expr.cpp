@@ -128,9 +128,9 @@ int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t WindowWithExprOperator::GetOutput(vector<VectorBatch *> &outputPages)
+int32_t WindowWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    int32_t status = windowOperator->GetOutput(outputPages);
+    int32_t status = windowOperator->GetOutput(outputVecBatch);
     SetStatus(windowOperator->GetStatus());
     return status;
 }

@@ -220,7 +220,7 @@ void WindowOperator::PrepareOutput()
     hasPrepare = true;
 }
 
-int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
+int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (!hasPrepare) {
         PrepareOutput();
@@ -245,12 +245,10 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
      * This is mainly to avoid using location information to copy data and construct a continuous vectorBatch when
      * calling agg interface.
      */
+    int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
+    auto output = new VectorBatch(finalOutputColsCount, rowCount);
     try {
-        int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
-        auto *vecBatch = new VectorBatch(finalOutputColsCount, rowCount);
-        outputPages.push_back(vecBatch);
-        ProcessData(vecBatch, rowCount);
-        rowCountOutputted += rowCount;
+        ProcessData(output, rowCount);
     } catch (const OmniException &e) {
         // in ProcessData, WindowFunction may be throw exception:
         // when spark sum/avg decimal overflow, it will throw exception when
@@ -263,6 +261,9 @@ int32_t WindowOperator::GetOutput(vector<VectorBatch *> &outputPages)
         pagesIndex->Clear();
         throw e;
     }
+
+    *outputVecBatch = output;
+    rowCountOutputted += rowCount;
 
     if (totalRowCount == rowCountOutputted) {
         totalRowCount = 0;
@@ -286,7 +287,7 @@ void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
     // build the output data with original input vecBatch, input data are not changed in window operator
     // we add extra columns of window result to the output vecBatch in window partition
     pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(), rowCountOutputted,
-                          rowCount, GetVecAllocator());
+        rowCount, GetVecAllocator());
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {
             int32_t partitionStart = partition == nullptr ? 0 : partition->GetPartitionEnd();

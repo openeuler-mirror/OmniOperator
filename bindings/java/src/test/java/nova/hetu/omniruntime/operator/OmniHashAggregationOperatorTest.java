@@ -271,7 +271,7 @@ public class OmniHashAggregationOperatorTest {
         String[] aggChannels = {"#2", "#3"};
         DataType[] aggTypes = {LongDataType.LONG, LongDataType.LONG};
         FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
+        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
         OmniHashAggregationOperatorFactory factory = new OmniHashAggregationOperatorFactory(groupByChanel, groupByTypes,
                 aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false);
 

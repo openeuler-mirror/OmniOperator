@@ -186,15 +186,15 @@ TEST(FilterTest, LessThan)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val < 2000);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -227,15 +227,15 @@ TEST(FilterTest, LessThanWihtoutParsing)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val < 2000);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -270,17 +270,17 @@ TEST(FilterTest, GreaterThan)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 800);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_TRUE(val0 > 20);
         EXPECT_EQ(val1, 3e9L);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -317,17 +317,17 @@ TEST(FilterTest, EqualTo)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 50);
     for (int32_t i = 0; i < numReturned; i++) {
-        double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        double val0 = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0, 50);
         EXPECT_EQ(val0, val1);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -367,15 +367,15 @@ TEST(FilterTest, GreaterThanOrEqualTo)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 834);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 >= 30);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -409,16 +409,16 @@ TEST(FilterTest, NotEqualTo)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 4999);
     double cnt = 1;
     for (int32_t i = 0; i < numReturned; i++) {
-        double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+        double val0 = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, cnt++);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -450,11 +450,11 @@ TEST(FilterTest, AllPass)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 20000);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -490,18 +490,20 @@ TEST(FilterTest, MultipleInputs)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter1));
+    VectorBatch *outputVecBatch1 = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch1);
+    EXPECT_TRUE(CheckOutput(outputVecBatch1, numReturned, Filter1));
     EXPECT_EQ(numReturned, 500);
 
     VectorBatch *in2 = CreateVectorBatch(inputTypes, numRows, data2);
     op->AddInput(in2);
-    numReturned = op->GetOutput(ret);
-    EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter1));
+    VectorBatch *outputVecBatch2 = nullptr;
+    numReturned = op->GetOutput(&outputVecBatch2);
+    EXPECT_TRUE(CheckOutput(outputVecBatch2, numReturned, Filter1));
     EXPECT_EQ(numReturned, 668);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch1);
+    VectorHelper::FreeVecBatch(outputVecBatch2);
     delete[] data1;
     delete[] data2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -552,13 +554,13 @@ TEST(FilterTest, NegativeValues)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter2));
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    EXPECT_TRUE(CheckOutput(outputVecBatch, numReturned, Filter2));
     // Both values are negative for every multiple of 35.
     EXPECT_EQ(numReturned, 286);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] data1;
     delete[] data2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -611,12 +613,12 @@ TEST(FilterTest, AllTypes)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter3));
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    EXPECT_TRUE(CheckOutput(outputVecBatch, numReturned, Filter3));
     EXPECT_EQ(numReturned, 100);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] data1;
     delete[] data2;
     delete[] data3;
@@ -678,11 +680,11 @@ TEST(FilterTest, Compile)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numSelectedRows = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numSelectedRows = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numSelectedRows, 100);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] data1;
     delete[] data2;
     delete[] data3;
@@ -754,12 +756,12 @@ TEST(FilterTest, LogicalOperators1)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 543);
-    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter4));
+    EXPECT_TRUE(CheckOutput(outputVecBatch, numReturned, Filter4));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -820,12 +822,12 @@ TEST(FilterTest, LogicalOperators2)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 3498);
-    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter5));
+    EXPECT_TRUE(CheckOutput(outputVecBatch, numReturned, Filter5));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -903,18 +905,18 @@ TEST(FilterTest, LogicalOperators3)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 6);
     for (int32_t i = 0; i < 6; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_TRUE(val0 != 0);
         EXPECT_TRUE(val1 != 0);
         EXPECT_TRUE(val1 == 1);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -948,15 +950,15 @@ TEST(FilterTest, ArithmeticAdd)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 + 1 > 4);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -991,15 +993,15 @@ TEST(FilterTest, ArithmeticSubtract)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 4000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 - 5 > 0);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1042,17 +1044,17 @@ TEST(FilterTest, ArithmeticMultiply)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2000);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0, 0);
         EXPECT_TRUE(val1 * 2 < 7);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1097,11 +1099,11 @@ TEST(FilterTest, Conditional)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 5000);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1150,11 +1152,11 @@ TEST(FilterTest, Conditional2)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2000);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1197,15 +1199,15 @@ TEST(FilterTest, In)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 3000);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 == 1 || val0 == 3 || val0 == 5);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1250,15 +1252,15 @@ TEST(FilterTest, testLongIn)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 3000);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 == target1 || val0 == target2 || val0 == target3);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1303,15 +1305,15 @@ TEST(FilterTest, testDoubleIn)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 3000);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_TRUE(val0 == target1 || val0 == target2 || val0 == target3);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1356,11 +1358,11 @@ TEST(FilterTest, testStringIn1)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 4);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
@@ -1402,11 +1404,11 @@ TEST(FilterTest, testStringIn2)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 5000);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
@@ -1443,11 +1445,11 @@ TEST(FilterTest, testDecimal128In)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] data1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1481,17 +1483,17 @@ TEST(FilterTest, Between)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 4705);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_TRUE((val0 <= val1) && (val1 <= val2));
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1529,11 +1531,11 @@ TEST(FilterTest, NotEqualToAbs)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 99998);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1592,19 +1594,19 @@ TEST(FilterTest, MathFunctionFilter1)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
 
     EXPECT_EQ(numReturned, 1000);
     std::cout << "numReturned: " << numReturned << std::endl;
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_TRUE((std::abs(val0) == std::abs(val1)) && (std::abs(val1) == std::abs(val2)));
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1655,11 +1657,11 @@ TEST(FilterTest, MathFunctionFilter2)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2000);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1700,12 +1702,12 @@ TEST(FilterTest, FilterString1)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
 
     EXPECT_EQ(numReturned, 25);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
@@ -1748,11 +1750,11 @@ TEST(FilterTest, Coalesce1)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1795,11 +1797,11 @@ TEST(FilterTest, Coalesce2)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
@@ -1836,18 +1838,20 @@ TEST(FilterTest, Coalesce3)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter6));
+    VectorBatch *outputVecBatch1 = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch1);
+    EXPECT_TRUE(CheckOutput(outputVecBatch1, numReturned, Filter6));
     EXPECT_EQ(numReturned, 500);
 
     VectorBatch *in2 = CreateVectorBatch(inputTypes, numRows, data2);
     op->AddInput(in2);
-    numReturned = op->GetOutput(ret);
-    EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter6));
+    VectorBatch *outputVecBatch2 = nullptr;
+    numReturned = op->GetOutput(&outputVecBatch2);
+    EXPECT_TRUE(CheckOutput(outputVecBatch2, numReturned, Filter6));
     EXPECT_EQ(numReturned, 1000);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch1);
+    VectorHelper::FreeVecBatch(outputVecBatch2);
     delete[] data1;
     delete[] data2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1888,11 +1892,11 @@ TEST(FilterTest, Coalesce4)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vectorAllocator;
@@ -1934,11 +1938,11 @@ TEST(FilterTest, Coalesce5)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1982,11 +1986,11 @@ TEST(FilterTest, Coalesce6)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 500);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -1998,11 +2002,10 @@ TEST(FilterTest, Coalesce6)
 
 // Testing multithreading
 // Two operators running at once
-void process(omniruntime::op::Operator *op, VectorBatch *t, std::vector<VectorBatch *> ret, int32_t *numReturned)
+void process(omniruntime::op::Operator *op, VectorBatch *t, VectorBatch **outputVecBatch, int32_t *numReturned)
 {
     op->AddInput(t);
-    *numReturned = op->GetOutput(ret);
-    VectorHelper::FreeVecBatches(ret);
+    *numReturned = op->GetOutput(outputVecBatch);
     std::cout << "numSelectedRows: " << *numReturned << std::endl;
 }
 
@@ -2029,8 +2032,8 @@ TEST(FilterTest, Multithreading)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
     VectorBatch *t2 = CreateVectorBatch(inputTypes2, numRows, col1, col2, col3);
 
-    std::vector<VectorBatch *> ret;
-    std::vector<VectorBatch *> ret2;
+    VectorBatch *outputVecBatch1 = nullptr;
+    VectorBatch *outputVecBatch2 = nullptr;
     int32_t *numReturned = new int32_t;
     int32_t *numReturned2 = new int32_t;
 
@@ -2063,7 +2066,7 @@ TEST(FilterTest, Multithreading)
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr1, projections1, inputTypes, overflowConfig);
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
-    std::thread thread1(process, op, t, ret, numReturned);
+    std::thread thread1(process, op, t, &outputVecBatch1, numReturned);
 
     // filter2
     auto eqRight2 = new LiteralExpr(4L, LongType());
@@ -2075,7 +2078,7 @@ TEST(FilterTest, Multithreading)
     auto exprEvaluator2 = std::make_shared<ExpressionEvaluator>(filterExpr2, projections2, inputTypes, overflowConfig);
     auto *factory2 = new FilterAndProjectOperatorFactory(move(exprEvaluator2));
     omniruntime::op::Operator *op2 = factory2->CreateOperator();
-    std::thread thread2(process, op2, t2, ret2, numReturned2);
+    std::thread thread2(process, op2, t2, &outputVecBatch2, numReturned2);
 
     thread2.join();
     thread1.join();
@@ -2086,8 +2089,8 @@ TEST(FilterTest, Multithreading)
     std::cout << "Total time for multithreading test: ";
     std::cout << std::chrono::duration<double, std::milli>(end - start).count() << std::endl;
 
-    VectorHelper::FreeVecBatches(ret);
-    VectorHelper::FreeVecBatches(ret2);
+    VectorHelper::FreeVecBatch(outputVecBatch1);
+    VectorHelper::FreeVecBatch(outputVecBatch2);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -2135,20 +2138,20 @@ TEST(FilterTest, TestFilterDictionaryVec)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
     op->AddInput(copiedBatch);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 7);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col1->GetValue(i));
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, col2->GetValue(i));
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, dictionaryVector->GetInt(i));
     }
 
     VectorHelper::FreeVecBatch(batch);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete col3;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2187,14 +2190,14 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
     op->AddInput(copiedBatch);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col1->GetValue(i));
         uint8_t *data = nullptr;
-        int32_t len = ((VarcharVector *)ret[0]->GetVector(1))->GetValue(i, &data);
+        int32_t len = ((VarcharVector *)outputVecBatch->GetVector(1))->GetValue(i, &data);
         std::string result(data, data + len);
         data = nullptr;
         len = dictionaryVector->GetVarchar(i, &data);
@@ -2203,7 +2206,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
     }
 
     VectorHelper::FreeVecBatch(batch);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete col2;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2248,20 +2251,20 @@ TEST(FilterTest, TestFilterDictionaryVecNested)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(batch);
     op->AddInput(copiedBatch);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 6);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col1->GetValue(i));
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, col2->GetValue(i));
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, dictionaryNested->GetInt(i));
     }
 
     VectorHelper::FreeVecBatch(batch);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete col3;
     delete dictionaryVector;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -2299,18 +2302,20 @@ TEST(FilterTest, DecimalFilterBinaryTest)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
-    EXPECT_TRUE(CheckOutput(ret[0], numReturned, Filter6));
+    VectorBatch *outputVecBatch1 = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch1);
+    EXPECT_TRUE(CheckOutput(outputVecBatch1, numReturned, Filter6));
     EXPECT_EQ(numReturned, 500);
 
     VectorBatch *in2 = CreateVectorBatch(inputTypes, numRows, data2);
     op->AddInput(in2);
-    numReturned = op->GetOutput(ret);
-    EXPECT_TRUE(CheckOutput(ret[1], numReturned, Filter6));
+    VectorBatch *outputVecBatch2 = nullptr;
+    numReturned = op->GetOutput(&outputVecBatch2);
+    EXPECT_TRUE(CheckOutput(outputVecBatch2, numReturned, Filter6));
     EXPECT_EQ(numReturned, 1000);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch1);
+    VectorHelper::FreeVecBatch(outputVecBatch2);
     delete[] data1;
     delete[] data2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -2374,15 +2379,15 @@ TEST(FilterTest, DecimalFilterAbsTest)
 
     auto start = std::chrono::system_clock::now();
     op->AddInput(in1);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "BenchmarkDecimalColumn round - elapsed: " << elapsed.count() << " ms\n";
     EXPECT_EQ(numReturned, 1000);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] data1;
     delete[] data2;
     delete[] data3;
@@ -2415,13 +2420,13 @@ TEST(FilterTest, FilterStringWithNull)
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(batch);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
 
     EXPECT_EQ(numReturned, 1);
 
     for (int32_t i = 0; i < numReturned; i++) {
-        VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+        VarcharVector *vcVec = ((VarcharVector *)outputVecBatch->GetVector(0));
 
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
@@ -2429,7 +2434,7 @@ TEST(FilterTest, FilterStringWithNull)
         EXPECT_EQ(actualStr, "hello");
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2478,20 +2483,20 @@ TEST(FilterTest, TestFilterSlicedDictionaryVec)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(input);
     op->AddInput(copiedBatch);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 2);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, slicedCol1->GetValue(i));
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, slicedCol2->GetValue(i));
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, slicedCol3->GetInt(i));
     }
 
     VectorHelper::FreeVecBatch(input);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2544,20 +2549,20 @@ TEST(FilterTest, TestFilterSlicedDictionaryVecWithNull)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *copiedBatch = DuplicateVectorBatch(input);
     op->AddInput(copiedBatch);
-    std::vector<VectorBatch *> ret;
-    int32_t numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
     EXPECT_EQ(numReturned, 4);
     for (int i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, slicedCol1->GetValue(i + 2));
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, slicedCol2->GetValue(i + 2));
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, slicedCol3->GetInt(i + 2));
     }
 
     VectorHelper::FreeVecBatch(input);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2905,16 +2910,16 @@ void OperatorAddInput(struct MultiThreadArgs *multiThreadArgs)
     double cpuTimeSum = 0;
     for (int i = 0; i < multiThreadArgs->rounds; ++i) {
         for (const auto &vb : vvb) {
-            std::vector<VectorBatch *> outputVecBatches;
+            VectorBatch *outputVecBatch = nullptr;
             VectorBatch *copiedBatch = DuplicateVectorBatch(vb);
             Timer timer;
             timer.SetStart();
             op->AddInput(copiedBatch);
-            op->GetOutput(outputVecBatches);
+            op->GetOutput(&outputVecBatch);
             timer.CalculateElapse();
             wallTimeSum += timer.GetWallElapse();
             cpuTimeSum += timer.GetCpuElapse();
-            VectorHelper::FreeVecBatches(outputVecBatches);
+            VectorHelper::FreeVecBatch(outputVecBatch);
         }
     }
 

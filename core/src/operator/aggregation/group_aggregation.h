@@ -104,7 +104,7 @@ public:
 
     int32_t AddInput(VectorBatch *data) override;
 
-    int32_t GetOutput(std::vector<VectorBatch *> &data) override;
+    int32_t GetOutput(VectorBatch **outputVecBatch) override;
 
     OmniStatus Init() override;
 
@@ -118,7 +118,7 @@ private:
     void SetVectors(VectorAllocator *vecAllocator, VectorBatch *vectorBatch, const std::vector<DataTypePtr> &types,
         int32_t rowCount);
 
-    template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, std::vector<VectorBatch *> &result);
+    template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
     void SetGroupByColumnsHandleType(GroupByFieldHandleType t);
 
     friend class HashAggregationOperatorFactory;

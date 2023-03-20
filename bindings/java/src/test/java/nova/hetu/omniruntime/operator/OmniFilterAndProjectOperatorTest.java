@@ -782,8 +782,7 @@ public class OmniFilterAndProjectOperatorTest {
                 "{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":3,\"colVal\":2}");
         OmniFilterAndProjectOperatorFactory factory = new OmniFilterAndProjectOperatorFactory(
                 "AND:4($operator$EQUAL:4(#0, 0:1), AND:4($operator$EQUAL:4(#1, 3000000000:2), "
-                        + "$operator$GREATER_THAN_OR_EQUAL:4(#2, 0.4:3)))",
-                types, projections);
+                        + "$operator$GREATER_THAN_OR_EQUAL:4(#2, 0.4:3)))", types, projections);
         OmniFilterAndProjectOperatorFactory factoryJSON = new OmniFilterAndProjectOperatorFactory(
                 "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"AND\","
                         + "\"left\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\","
@@ -826,6 +825,7 @@ public class OmniFilterAndProjectOperatorTest {
         }
 
         freeVecBatch(res);
+        freeVecBatch(resJSON);
         op.close();
         opJSON.close();
         factory.close();

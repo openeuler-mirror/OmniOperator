@@ -67,8 +67,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
     hashAggWithExprOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatchs;
-    hashAggWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
 
     int64_t expData1[] = {2};
     int32_t expData2[] = {5};
@@ -78,14 +78,14 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -143,8 +143,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
     hashAggWithExprOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatchs;
-    hashAggWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
 
     int64_t expData1[] = {2};
     int32_t expData2[] = {10};
@@ -154,14 +154,14 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -207,8 +207,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
     hashAggWithExprOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatchs;
-    hashAggWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
 
     int64_t expData1[] = {2};
     int32_t expData2[] = {5};
@@ -219,14 +219,14 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -280,8 +280,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
 
     hashAggWithExprOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatchs;
-    hashAggWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
 
     int64_t expData1[] = {2};
     int32_t expData2[] = {5};
@@ -294,14 +294,14 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5, expData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
     ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
 }
@@ -351,8 +351,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_final_flat_input_expr)
         dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprFinalOperatorFactory));
 
     hashAggWithExprFinalOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatchs;
-    hashAggWithExprFinalOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprFinalOperator->GetOutput(&outputVecBatch);
 
     int64_t expData1[] = {2};
     int32_t expData2[] = {5};
@@ -362,15 +362,15 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_final_flat_input_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    VectorHelper::PrintVecBatch(outputVecBatch);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprFinalOperator);
     DeleteOperatorFactory(hashAggWithExprFinalOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 
     ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
@@ -393,7 +393,6 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_expr)
     DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), IntType() }));
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
-
 
     std::vector<Expr *> groupByKeys = {};
 
@@ -419,24 +418,23 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_expr)
         static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
 
     aggWithExprOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatchs;
-    aggWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch = nullptr;
+    aggWithExprOperator->GetOutput(&outputVecBatch);
 
     int64_t expData1[] = {180};
-
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    VectorHelper::PrintVecBatch(outputVecBatch);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
     omniruntime::op::Operator::DeleteOperator(aggWithExprOperator);
     DeleteOperatorFactory(aggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -475,22 +473,22 @@ TEST(AggregationWithExprOperatorTest, test_agg_first_expr)
         static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
 
     aggWithExprOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatchs;
-    aggWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch = nullptr;
+    aggWithExprOperator->GetOutput(&outputVecBatch);
 
     int64_t expData1[] = {5};
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    VectorHelper::PrintVecBatch(outputVecBatch);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
     omniruntime::op::Operator::DeleteOperator(aggWithExprOperator);
     DeleteOperatorFactory(aggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -623,8 +621,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_by_proces_row)
         hashAggWithExprOperator->ProcessRow(dataAddress, dataLens);
     }
 
-    std::vector<VectorBatch *> outputVecBatchs;
-    hashAggWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
 
     int64_t expData1[] = {2};
     int32_t expData2[] = {10};
@@ -634,16 +632,16 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_by_proces_row)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
+    VectorHelper::PrintVecBatch(outputVecBatch);
     VectorHelper::PrintVecBatch(expectVecorBatch);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     DeleteOperatorFactory(hashAggWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 }

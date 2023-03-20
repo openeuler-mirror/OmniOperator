@@ -929,13 +929,14 @@ void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const J
     int32_t columnCount = probeOutputColsCount + buildOutputColsCount;
 
     int32_t currentRowToReturn = std::min(maxRowCount, static_cast<int32_t>(probeIndex.size()) - positionReturned);
-    *outputVecBatch = new VectorBatch(columnCount, currentRowToReturn);
-    ConstructProbeColumns(*outputVecBatch, probeAllColumns, probeOutputCols, probeOutputColsCount,
+    auto output = new VectorBatch(columnCount, currentRowToReturn);
+    ConstructProbeColumns(output, probeAllColumns, probeOutputCols, probeOutputColsCount,
         isSequentialProbeIndices, probeIndex, positionReturned, currentRowToReturn);
-    ConstructBuildColumns(*outputVecBatch, hashTables, buildOutputTypes.Get(), buildOutputTypes.GetIds(),
+    ConstructBuildColumns(output, hashTables, buildOutputTypes.Get(), buildOutputTypes.GetIds(),
         buildOutputCols, buildOutputColsCount, probeOutputColsCount, buildIndex, positionReturned, currentRowToReturn,
         vecAllocator);
 
+    *outputVecBatch = output;
     positionReturned += currentRowToReturn;
 }
 } // end of op

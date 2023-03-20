@@ -297,7 +297,7 @@ void PartitionedOutputOperator::BuildVecBatch(int32_t vecCount, int32_t rowCount
     vecBatchCount++;
 }
 
-int32_t PartitionedOutputOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
+int32_t PartitionedOutputOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
     if (vecBatchCount == 0 || vecBatchIndex == vecBatchCount) {
         vecBatchCount = 0;
@@ -308,7 +308,7 @@ int32_t PartitionedOutputOperator::GetOutput(std::vector<omniruntime::vec::Vecto
         return OMNI_STATUS_FINISHED;
     }
 
-    outputPages.push_back(vectorBatches[vecBatchIndex]);
+    *outputVecBatch = vectorBatches[vecBatchIndex];
     vecBatchIndex++;
 
     if (vecBatchIndex == vecBatchCount) {

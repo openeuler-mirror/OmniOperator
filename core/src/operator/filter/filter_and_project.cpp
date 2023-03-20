@@ -62,7 +62,7 @@ set<int32_t> SimpleFilter::GetVectorIndexes()
 {
     if (!this->initialized) {
         LogWarn("SimpleFilter not initialized or failed to initialize.");
-        return set<int32_t> {};
+        return set<int32_t>{};
     }
     return this->codegen->vectorIndexes;
 }
@@ -84,14 +84,14 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t FilterAndProjectOperator::GetOutput(std::vector<VectorBatch *> &data)
+int32_t FilterAndProjectOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (this->projectedVecs == nullptr) {
         return 0;
     }
 
     int rowCount = this->projectedVecs->GetRowCount();
-    data.push_back(this->projectedVecs);
+    *outputVecBatch = this->projectedVecs;
     this->projectedVecs = nullptr;
 
     return rowCount;
