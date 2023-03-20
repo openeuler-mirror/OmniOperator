@@ -8,6 +8,7 @@
 #include <queue>
 #include <memory>
 #include <vector>
+#include "unordered_set"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "vector/vector_common.h"
@@ -82,13 +83,17 @@ private:
     std::vector<int32_t> sortAscendings;
     std::vector<int32_t> sortNullFirsts;
     int32_t sortColCount = 0;
+    int64_t maxRowCount = 0;
+    int64_t totalRowCount = 0;
+    int64_t outputtedRowCount = 0;
+    bool hasFilledResult = false;
     std::priority_queue<RowComparator, std::vector<RowComparator>, std::less<std::vector<RowComparator>::value_type>>
         pq;
-    std::vector<omniruntime::vec::VectorBatch *> singleRowVectorBatchList;
+    std::unordered_set<omniruntime::vec::VectorBatch *> singleRowVectorBatchSet;
+
+    std::vector<omniruntime::vec::VectorBatch *> resultVectorBatchList;
 
     vec::VectorBatch *CreateSingleRowVecBatch(omniruntime::vec::VectorBatch *vectorBatch, int32_t position) const;
-
-    void HandleVarchar(int64_t positionCount, vec::VectorBatch *tmpVecBatch) const;
 
     void SetValueForVectorBatch(int32_t typeId, int64_t index, vec::Vector *pqVector, vec::Vector *tmpVector) const;
 
@@ -97,6 +102,13 @@ private:
 
     void UpdateSingleRowVectorBatch(vec::VectorBatch *vectorBatch, vec::VectorBatch *singleRowVecBatch,
         int32_t position) const;
+
+    void FillResultVectorBatchList();
+
+    bool HasNext()
+    {
+        return outputtedRowCount < totalRowCount;
+    }
 };
 }
 }
