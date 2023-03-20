@@ -24,7 +24,8 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
     auto outputTypeId = this->outputTypes.GetType(0)->GetId();
 
     HmppResult result = HMPP_STS_NO_ERR;
-    auto maxVal = reinterpret_cast<InType *>(this->executionContext->GetArena()->Allocate(sizeof(InType)));
+    auto maxVal = reinterpret_cast<ResultType *>(this->executionContext->GetArena()->Allocate(sizeof(ResultType)));
+    memset_sp((void*)maxVal, sizeof(ResultType), 0,sizeof(ResultType));
 
     if constexpr (IN_ID == OMNI_SHORT) {
         LogDebug("HMPP-Agg-max");
@@ -63,8 +64,8 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
     if (state.val == nullptr) {
         state.val = maxVal;
     } else {
-        auto preMaxVal = static_cast<InType *>(state.val);
-        *static_cast<InType *>(state.val) = (Compare(*preMaxVal, *maxVal) == 1) ? *preMaxVal : *maxVal;
+        auto preMaxVal = static_cast<ResultType *>(state.val);
+        *static_cast<ResultType *>(state.val) = (Compare(*preMaxVal, *maxVal) == 1) ? *preMaxVal : *maxVal;
     }
     // hmpp only works on not nullable columns, so it always find max
     state.count = 1;

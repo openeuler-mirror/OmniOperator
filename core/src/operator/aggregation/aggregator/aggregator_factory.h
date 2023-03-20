@@ -71,7 +71,56 @@ protected:
 
     template <DataTypeId OUT_ID>
     std::unique_ptr<Aggregator> FromKnownOutput(const DataTypes &inputTypes, const DataTypes &outputTypes,
-        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull);
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+    {
+        auto inputTypeId = inputTypes.GetType(0)->GetId();
+        switch (inputTypeId) {
+            case OMNI_BOOLEAN:
+                return T<OMNI_BOOLEAN, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_SHORT:
+                return T<OMNI_SHORT, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+            case OMNI_INT:
+                return T<OMNI_INT, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return T<OMNI_LONG, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_DOUBLE:
+                return T<OMNI_DOUBLE, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL64:
+                return T<OMNI_DECIMAL64, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_DECIMAL128:
+                return T<OMNI_DECIMAL128, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CONTAINER:
+                return T<OMNI_CONTAINER, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_VARCHAR:
+                return T<OMNI_VARCHAR, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_CHAR:
+                return T<OMNI_CHAR, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_NONE:
+                return T<OMNI_NONE, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
+            case OMNI_INVALID:
+                return T<OMNI_INVALID, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
+            default:
+                LogError("Unsupported input type %s", TypeUtil::TypeToStringLog(inputTypeId).c_str());
+                return nullptr;
+        }
+    }
 };
 
 template <template <bool, bool, typename...> class T, typename... Args>
