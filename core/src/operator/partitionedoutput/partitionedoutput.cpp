@@ -294,15 +294,33 @@ void PartitionedOutputOperator::BuildVecBatch(int32_t vecCount, int32_t rowCount
     VectorBatch *vectorBatch = new VectorBatch(vecCount, rowCount);
     vectorBatch->NewVectors(this->vecAllocator, sourceTypes.Get());
     vectorBatches.push_back(vectorBatch);
+    vecBatchCount++;
 }
 
 int32_t PartitionedOutputOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
-    outputPages = vectorBatches;
-    vectorBatches.clear();
-    partitionedMap.clear();
-    SetStatus(OMNI_STATUS_FINISHED);
-    return OMNI_STATUS_FINISHED;
+    if (vecBatchCount == 0 || vecBatchIndex == vecBatchCount) {
+        vecBatchCount = 0;
+        vecBatchIndex = 0;
+        vectorBatches.clear();
+        partitionedMap.clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+        return OMNI_STATUS_FINISHED;
+    }
+
+    outputPages.push_back(vectorBatches[vecBatchIndex]);
+    vecBatchIndex++;
+
+    if (vecBatchIndex == vecBatchCount) {
+        vecBatchCount = 0;
+        vecBatchIndex = 0;
+        vectorBatches.clear();
+        partitionedMap.clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+        return OMNI_STATUS_FINISHED;
+    }
+
+    return OMNI_STATUS_NORMAL;
 }
 
 OmniStatus PartitionedOutputOperator::Close()
