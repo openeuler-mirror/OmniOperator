@@ -19,13 +19,13 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t ProjectionOperator::GetOutput(std::vector<VectorBatch *> &data)
+int32_t ProjectionOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (this->projectedVecs == nullptr) {
         return -1;
     }
     int rowCount = this->projectedVecs->GetRowCount();
-    data.push_back(this->projectedVecs);
+    *outputVecBatch = this->projectedVecs;
     this->projectedVecs = nullptr;
     return rowCount;
 }

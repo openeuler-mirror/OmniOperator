@@ -489,6 +489,7 @@ public class OmniHashJoinWithExprOperatorsTest {
                 {"35709", "31904", "35709", "35709", "35709", "31904", "35709"}};
         assertVecBatchEquals(appendBatch, expectedData);
         freeVecBatch(resultVecBatch);
+        freeVecBatch(appendBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
         lookupJoinOperatorFactory.close();

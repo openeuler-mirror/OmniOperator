@@ -52,16 +52,16 @@ TEST(ProjectionTest, Cast)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0, i);
         EXPECT_EQ(val1, i);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -105,16 +105,16 @@ TEST(ProjectionTest, CastDouble)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0, i);
         EXPECT_EQ(val1, i);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -150,15 +150,15 @@ TEST(ProjectionTest, CastInt64ToDecimal128)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -193,11 +193,11 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        long val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
-        long val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        long val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        long val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0, i * 100);
         if (i % 100 >= 50) {
             i = i + 50;
@@ -205,7 +205,7 @@ TEST(ProjectionTest, MakeDecimal64ToDiffScale)
         EXPECT_EQ(val1, i / 100);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -239,18 +239,18 @@ TEST(ProjectionTest, MakeDecimal128ToDiffScale)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
-        Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
+        Decimal128 val1 = ((Decimal128Vector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val1.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i * 100);
         EXPECT_EQ(val1.LowBits(), round((double)i / 100));
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -286,12 +286,12 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
-        Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
-        Decimal128 val2 = ((Decimal128Vector *)ret[0]->GetVector(2))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
+        Decimal128 val1 = ((Decimal128Vector *)outputVecBatch->GetVector(1))->GetValue(i);
+        Decimal128 val2 = ((Decimal128Vector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val1.HighBits(), 0);
         EXPECT_EQ(val2.HighBits(), 0);
@@ -300,7 +300,7 @@ TEST(ProjectionTest, MakeDecimal64To128WithDiffScale)
         EXPECT_EQ(val2.LowBits(), round((double)i / 100));
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -335,11 +335,11 @@ TEST(ProjectionTest, Simple)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        bool isNull = ((IntVector *)ret[0]->GetVector(0))->IsValueNull(i);
+        int32_t val = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        bool isNull = ((IntVector *)outputVecBatch->GetVector(0))->IsValueNull(i);
         if (i % 2 == 0) {
             EXPECT_EQ(val, i + 5);
             EXPECT_FALSE(isNull);
@@ -348,7 +348,7 @@ TEST(ProjectionTest, Simple)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -399,27 +399,27 @@ TEST(ProjectionTest, AbsWithNullValues)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
-            EXPECT_TRUE(ret[0]->GetVector(0)->IsValueNull(i));
-            EXPECT_TRUE(ret[0]->GetVector(1)->IsValueNull(i));
-            EXPECT_TRUE(ret[0]->GetVector(2)->IsValueNull(i));
+            EXPECT_TRUE(outputVecBatch->GetVector(0)->IsValueNull(i));
+            EXPECT_TRUE(outputVecBatch->GetVector(1)->IsValueNull(i));
+            EXPECT_TRUE(outputVecBatch->GetVector(2)->IsValueNull(i));
         } else {
-            EXPECT_FALSE(ret[0]->GetVector(0)->IsValueNull(i));
-            EXPECT_FALSE(ret[0]->GetVector(1)->IsValueNull(i));
-            EXPECT_FALSE(ret[0]->GetVector(2)->IsValueNull(i));
-            int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-            int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
-            int64_t val2 = ((LongVector *)ret[0]->GetVector(2))->GetValue(i);
+            EXPECT_FALSE(outputVecBatch->GetVector(0)->IsValueNull(i));
+            EXPECT_FALSE(outputVecBatch->GetVector(1)->IsValueNull(i));
+            EXPECT_FALSE(outputVecBatch->GetVector(2)->IsValueNull(i));
+            int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+            int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
+            int64_t val2 = ((LongVector *)outputVecBatch->GetVector(2))->GetValue(i);
             EXPECT_EQ(val0, abs(i - 5));
             EXPECT_EQ(val1, abs(i - 5));
             EXPECT_EQ(val2, abs(i - 5));
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -448,14 +448,14 @@ TEST(ProjectionTest, Negatives)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, i - 505);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -482,14 +482,14 @@ TEST(ProjectionTest, Longs)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, static_cast<int64_t>(i - 5000) * 5000000);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -517,15 +517,15 @@ TEST(ProjectionTest, Doubles)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+        double val0 = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
         double expected = (i - 5000.5) / 2;
         EXPECT_TRUE(val0 > expected - 0.1 && val0 < expected + 0.1);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -553,11 +553,11 @@ TEST(ProjectionTest, Doubles_DivideByZero)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    EXPECT_TRUE(isinf(((DoubleVector *)ret[0]->GetVector(0))->GetValue(3)));
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    EXPECT_TRUE(isinf(((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(3)));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete op;
@@ -590,19 +590,19 @@ TEST(ProjectionTest, testModDoubles)
     t->GetVector(1)->SetValueNull(2456);
     t->GetVector(1)->SetValueNull(8000);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
         if (i == 5 || i == 2456 || i == 8000) {
-            EXPECT_TRUE(ret[0]->GetVector(0)->IsValueNull(i));
+            EXPECT_TRUE(outputVecBatch->GetVector(0)->IsValueNull(i));
         } else {
-            double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+            double val0 = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
             double expected = std::fmod((i - 5000.5), (i - 124.45));
             EXPECT_DOUBLE_EQ(val0, expected);
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete op;
@@ -632,19 +632,19 @@ TEST(ProjectionTest, testModDoubles2)
     t->GetVector(0)->SetValueNull(0);
     t->GetVector(0)->SetValueNull(9999);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
         if (i == 0 || i == 9999) {
-            EXPECT_TRUE(ret[0]->GetVector(0)->IsValueNull(i));
+            EXPECT_TRUE(outputVecBatch->GetVector(0)->IsValueNull(i));
         } else {
-            double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+            double val0 = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
             double expected = std::fmod((i - 1273.37), -45.8);
             EXPECT_DOUBLE_EQ(val0, expected);
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col;
     delete op;
     delete factory;
@@ -671,13 +671,13 @@ TEST(ProjectionTest, DoublesModulusByZero)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_Doubles");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        EXPECT_TRUE(-isnan(((DoubleVector *)ret[0]->GetVector(0))->GetValue(i)));
+        EXPECT_TRUE(-isnan(((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i)));
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete op;
     delete factory;
@@ -712,16 +712,16 @@ TEST(ProjectionTest, MultipleColumns)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, i - 10);
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, i - 9);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -773,9 +773,9 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
         auto start = std::chrono::system_clock::now();
         auto copy = DuplicateVectorBatch(t);
         op->AddInput(copy);
-        vector<VectorBatch *> ret;
-        op->GetOutput(ret);
-        VectorHelper::FreeVecBatches(ret);
+        VectorBatch *outputVecBatch = nullptr;
+        op->GetOutput(&outputVecBatch);
+        VectorHelper::FreeVecBatch(outputVecBatch);
 
         auto end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -810,9 +810,9 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
         auto start = std::chrono::system_clock::now();
         auto copy = DuplicateVectorBatch(t);
         op->AddInput(copy);
-        vector<VectorBatch *> ret;
-        op->GetOutput(ret);
-        VectorHelper::FreeVecBatches(ret);
+        VectorBatch *outputVecBatch = nullptr;
+        op->GetOutput(&outputVecBatch);
+        VectorHelper::FreeVecBatch(outputVecBatch);
 
         auto end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -864,16 +864,16 @@ TEST(ProjectionTest, DependOtherColumn)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, i * (i - 100));
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, (int64_t)(i < 500 ? 4000000000 : i));
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -924,10 +924,10 @@ TEST(ProjectionTest, ProjectString1)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
-    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+    VarcharVector *vcVec = ((VarcharVector *)outputVecBatch->GetVector(0));
     uint8_t *actualChar = nullptr;
     int len;
     for (int32_t i = 0; i < numRows; i++) {
@@ -943,7 +943,7 @@ TEST(ProjectionTest, ProjectString1)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -997,19 +997,19 @@ TEST(ProjectionTest, DictionaryVecTest)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col1->GetValue(i) + 1);
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, col2->GetValue(i) + 2);
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, dictionaryVector->GetInt(i) + 10);
     }
 
     VectorHelper::FreeVecBatch(t);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete col3;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1046,15 +1046,15 @@ TEST(ProjectionTest, DictionaryVecDoubleTest)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        double val0 = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+        double val0 = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, doubleDicVector->GetDouble(i) + 10);
     }
 
     VectorHelper::FreeVecBatch(t);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1103,10 +1103,10 @@ TEST(ProjectionTest, DictionaryVecVarcharTest)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+        VarcharVector *vcVec = ((VarcharVector *)outputVecBatch->GetVector(0));
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
         std::string actualStr(actualChar, actualChar + len);
@@ -1118,7 +1118,7 @@ TEST(ProjectionTest, DictionaryVecVarcharTest)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1157,16 +1157,16 @@ TEST(ProjectionTest, DictionaryVecDecimal128Test)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), decimal128DicVector->GetDecimal128(i).HighBits());
         EXPECT_EQ(val0.LowBits(), decimal128DicVector->GetDecimal128(i).LowBits() + 20);
     }
 
     VectorHelper::FreeVecBatch(t);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1222,19 +1222,19 @@ TEST(ProjectionTest, DictionaryVecNestedTest)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col1->GetValue(i) + 1);
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, col2->GetValue(i) + 2);
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, dictionaryNested->GetInt(i) + 10);
     }
 
     VectorHelper::FreeVecBatch(t);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete col3;
     delete dictionaryVector;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1265,15 +1265,15 @@ TEST(ProjectionTest, Decimal128Arithmetic)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int64_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i + 20);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1310,11 +1310,11 @@ TEST(ProjectionTest, Decimal128Arithmetic2)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0, col1);
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
-        Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
+        Decimal128 val1 = ((Decimal128Vector *)outputVecBatch->GetVector(1))->GetValue(i);
         Decimal128 old0 = ((Decimal128Vector *)t->GetVector(0))->GetValue(i);
         Decimal128 old1 = ((Decimal128Vector *)t->GetVector(1))->GetValue(i);
         if (i <= 5) {
@@ -1336,7 +1336,7 @@ TEST(ProjectionTest, Decimal128Arithmetic2)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(t);
     delete[] col0;
     delete[] col1;
@@ -1376,11 +1376,11 @@ TEST(ProjectionTest, Decimal128Arithmetic3)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
-        Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
+        Decimal128 val1 = ((Decimal128Vector *)outputVecBatch->GetVector(1))->GetValue(i);
         Decimal128 old0 = ((Decimal128Vector *)t->GetVector(0))->GetValue(i);
         Decimal128 old1 = ((Decimal128Vector *)t->GetVector(1))->GetValue(i);
 
@@ -1404,7 +1404,7 @@ TEST(ProjectionTest, Decimal128Arithmetic3)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(t);
     delete[] col0;
     delete[] col1;
@@ -1436,15 +1436,15 @@ TEST(ProjectionTest, Decimal128Multiply)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int64_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i * 3);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1473,15 +1473,15 @@ TEST(ProjectionTest, Decimal128Divide)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int64_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i / 20);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1518,22 +1518,22 @@ TEST(ProjectionTest, MultipleDecimal128Columns)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i + 50);
     }
     int idx = 0;
     for (int32_t i = 100; i < 100 + 100; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(idx);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(1))->GetValue(idx);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i * 20);
         idx++;
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     delete[] col2;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -1594,12 +1594,12 @@ TEST(ProjectionTest, StringSubstr)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     string expected1 = "hello world";
     string expected2 = "Bonjo world";
-    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+    VarcharVector *vcVec = ((VarcharVector *)outputVecBatch->GetVector(0));
     uint8_t *actualChar = nullptr;
     for (int32_t i = 0; i < numRows; i++) {
         int len = vcVec->GetValue(i, &actualChar);
@@ -1611,7 +1611,7 @@ TEST(ProjectionTest, StringSubstr)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -1674,19 +1674,19 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    int numReturned = op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    int numReturned = op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numReturned; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, slicedCol1->GetValue(i) + 1);
-        int32_t val1 = ((IntVector *)ret[0]->GetVector(1))->GetValue(i);
+        int32_t val1 = ((IntVector *)outputVecBatch->GetVector(1))->GetValue(i);
         EXPECT_EQ(val1, slicedCol2->GetValue(i) + 2);
-        int32_t val2 = ((IntVector *)ret[0]->GetVector(2))->GetValue(i);
+        int32_t val2 = ((IntVector *)outputVecBatch->GetVector(2))->GetValue(i);
         EXPECT_EQ(val2, slicedCol3->GetInt(i) + 10);
     }
 
     VectorHelper::FreeVecBatch(t);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -1734,9 +1734,9 @@ TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    int numReturned = op->GetOutput(ret);
-    auto retVec = (IntVector *)(ret[0]->GetVector(0));
+    VectorBatch *outputVecBatch = nullptr;
+    int numReturned = op->GetOutput(&outputVecBatch);
+    auto retVec = (IntVector *)(outputVecBatch->GetVector(0));
     for (int32_t i = 0; i < numReturned; i++) {
         if (i == 0) {
             EXPECT_TRUE(retVec->IsValueNull(i));
@@ -1747,7 +1747,7 @@ TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
     }
 
     VectorHelper::FreeVecBatch(t);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -1814,20 +1814,20 @@ TEST(ProjectionTest, Tpcds96)
     }
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
-        bool b0 = ((LongVector *)ret[0]->GetVector(0))->IsValueNull(i);
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
-        bool b1 = ((LongVector *)ret[0]->GetVector(1))->IsValueNull(i);
+        int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        bool b0 = ((LongVector *)outputVecBatch->GetVector(0))->IsValueNull(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
+        bool b1 = ((LongVector *)outputVecBatch->GetVector(1))->IsValueNull(i);
         EXPECT_EQ(b0, b1);
         if (!b0) {
             EXPECT_EQ(val0, val1);
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col0;
     delete[] col1;
     delete[] col2;
@@ -1927,15 +1927,15 @@ TEST(ProjectionTest, Round)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
-        int64_t val1 = ((LongVector *)ret[0]->GetVector(1))->GetValue(i);
-        double val2 = ((DoubleVector *)ret[0]->GetVector(2))->GetValue(i);
-        double val3 = ((DoubleVector *)ret[0]->GetVector(3))->GetValue(i);
-        double val4 = ((DoubleVector *)ret[0]->GetVector(4))->GetValue(i);
-        double val5 = ((DoubleVector *)ret[0]->GetVector(5))->GetValue(i);
+        int32_t val0 = ((IntVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        int64_t val1 = ((LongVector *)outputVecBatch->GetVector(1))->GetValue(i);
+        double val2 = ((DoubleVector *)outputVecBatch->GetVector(2))->GetValue(i);
+        double val3 = ((DoubleVector *)outputVecBatch->GetVector(3))->GetValue(i);
+        double val4 = ((DoubleVector *)outputVecBatch->GetVector(4))->GetValue(i);
+        double val5 = ((DoubleVector *)outputVecBatch->GetVector(5))->GetValue(i);
 
         int32_t old0 = ((IntVector *)t->GetVector(0))->GetValue(i);
         int64_t old1 = ((LongVector *)t->GetVector(1))->GetValue(i);
@@ -1959,7 +1959,7 @@ TEST(ProjectionTest, Round)
     }
 
     VectorHelper::FreeVecBatch(t);
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col0;
     delete[] col1;
     delete[] col2;
@@ -2007,26 +2007,26 @@ TEST(ProjectionTest, ConcatStrAndChar)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     string expected1 = "storeAAAA";
     string expected2 = "AAAA            store";
     for (int32_t i = 0; i < numRows; i++) {
-        VarcharVector *vcVec1 = ((VarcharVector *)ret[0]->GetVector(0));
+        VarcharVector *vcVec1 = ((VarcharVector *)outputVecBatch->GetVector(0));
         uint8_t *actualChar1 = nullptr;
         int len1 = vcVec1->GetValue(i, &actualChar1);
         string actualStr1(reinterpret_cast<char *>(actualChar1), len1);
         EXPECT_EQ(actualStr1, expected1);
 
-        VarcharVector *vcVec2 = ((VarcharVector *)ret[0]->GetVector(1));
+        VarcharVector *vcVec2 = ((VarcharVector *)outputVecBatch->GetVector(1));
         uint8_t *actualChar2 = nullptr;
         int len2 = vcVec2->GetValue(i, &actualChar2);
         string actualStr2(reinterpret_cast<char *>(actualChar2), len2);
         EXPECT_EQ(actualStr2, expected2);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2088,14 +2088,14 @@ TEST(ProjectionTest, varcharExpand)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     op->AddInput(t);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
-    EXPECT_GT(ret[0]->GetVector(0)->GetCapacityInBytes(), avgStrLen * numRows);
+    EXPECT_GT(outputVecBatch->GetVector(0)->GetCapacityInBytes(), avgStrLen * numRows);
     string expected1 = "hello" + baseStr;
     string expected2 = "Bonjo" + baseStr;
     for (int32_t i = 0; i < numRows; i++) {
-        VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+        VarcharVector *vcVec = ((VarcharVector *)outputVecBatch->GetVector(0));
 
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
@@ -2108,7 +2108,7 @@ TEST(ProjectionTest, varcharExpand)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2135,13 +2135,13 @@ TEST(ProjectionTest, testDivDecimal128)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDivDecimal");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0.LowBits(), 11);
     EXPECT_EQ(val0.HighBits(), 0);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2169,13 +2169,13 @@ TEST(ProjectionTest, testAddDecimal128)
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testAddDecimal128");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0.LowBits(), 102176083);
     EXPECT_EQ(val0.HighBits(), 0);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2203,12 +2203,12 @@ TEST(ProjectionTest, testDecimal128Between)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimal128Between");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    bool val0 = ((BooleanVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2235,12 +2235,12 @@ TEST(ProjectionTest, testDecimal128In)
     auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimal128In");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    bool val0 = ((BooleanVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2273,12 +2273,12 @@ TEST(ProjectionTest, testDecimal128Comprehensive)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_testDecimalComprehensive");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    bool val0 = ((BooleanVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2324,13 +2324,13 @@ TEST(ProjectionTest, TestAndExprWithNull)
     t->GetVector(1)->SetValueNull(8);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        bool val = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(i);
-        bool isValNull = ((BooleanVector *)ret[0]->GetVector(0))->IsValueNull(i);
-        bool val1 = ((BooleanVector *)ret[0]->GetVector(1))->GetValue(i);
-        bool val2 = ((BooleanVector *)ret[0]->GetVector(2))->GetValue(i);
+        bool val = ((BooleanVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        bool isValNull = ((BooleanVector *)outputVecBatch->GetVector(0))->IsValueNull(i);
+        bool val1 = ((BooleanVector *)outputVecBatch->GetVector(1))->GetValue(i);
+        bool val2 = ((BooleanVector *)outputVecBatch->GetVector(2))->GetValue(i);
         if (i == 0) {
             EXPECT_TRUE(val);
             EXPECT_FALSE(isValNull);
@@ -2348,7 +2348,7 @@ TEST(ProjectionTest, TestAndExprWithNull)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2384,11 +2384,11 @@ TEST(ProjectionTest, TestOrExprWithNull)
     t->GetVector(1)->SetValueNull(8);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        bool val = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(i);
-        bool isValNull = ((BooleanVector *)ret[0]->GetVector(0))->IsValueNull(i);
+        bool val = ((BooleanVector *)outputVecBatch->GetVector(0))->GetValue(i);
+        bool isValNull = ((BooleanVector *)outputVecBatch->GetVector(0))->IsValueNull(i);
         if (i == 4) {
             EXPECT_FALSE(val);
             EXPECT_FALSE(isValNull);
@@ -2400,7 +2400,7 @@ TEST(ProjectionTest, TestOrExprWithNull)
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2427,12 +2427,12 @@ TEST(ProjectionTest, testSubDecimal64)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testSubDecimal64");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 43092162);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2459,12 +2459,12 @@ TEST(ProjectionTest, testMulDecimal64)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testMulDecimal64");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 10000L);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2490,12 +2490,12 @@ TEST(ProjectionTest, testDivDecimal64)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDivDecimal64");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 98L);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2521,12 +2521,12 @@ TEST(ProjectionTest, testModDecimal64)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testModDecimal64");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 1000L);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2560,16 +2560,16 @@ TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0.HighBits(), 1L << 63);
     EXPECT_EQ(val0.LowBits(), 999999999999999997L);
-    Decimal128 val1 = ((Decimal128Vector *)ret[0]->GetVector(1))->GetValue(0);
+    Decimal128 val1 = ((Decimal128Vector *)outputVecBatch->GetVector(1))->GetValue(0);
     EXPECT_EQ(val1.HighBits(), 1L << 63);
     EXPECT_EQ(val1.LowBits(), 1000000000000000001);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2597,12 +2597,12 @@ TEST(ProjectionTest, testDecimal64In)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64In");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    bool val0 = ((BooleanVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2628,12 +2628,12 @@ TEST(ProjectionTest, testDecimal64Between)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Between");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    bool val0 = ((BooleanVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2670,12 +2670,12 @@ TEST(ProjectionTest, testDecimal64Comprehensive)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal64Comprehensive");
     VectorBatch *input = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    bool val0 = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    bool val0 = ((BooleanVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_FALSE(val0);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -2702,15 +2702,15 @@ TEST(ProjectionTest, Decimal64ColDivide)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int64_t i = 0; i < numRows; i++) {
-        int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(i);
         int64_t expect = round(double(col1[i] * 10000) / 92122);
         EXPECT_EQ(val0, expect);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -2801,17 +2801,17 @@ TEST(ProjectionTest, ConcatStrCharTest)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     std::vector<std::string> expectedDatas = { "NULL",        "NULL",
         "NULL",        "",
         "John",        "Rebecca",
         "RebeccaJohn", "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     auto expect = CreateExpectVecBatchForConcat(CharDataType(100), vecAllocator, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete op;
     delete factory;
@@ -2835,8 +2835,8 @@ TEST(ProjectionTest, ConcatCharStrTest)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     std::vector<std::string> expectedDatas = { "NULL",
         "NULL",
@@ -2847,9 +2847,9 @@ TEST(ProjectionTest, ConcatCharStrTest)
         "Rebecca                       John",
         "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     auto expect = CreateExpectVecBatchForConcat(CharDataType(100), vecAllocator, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete op;
     delete factory;
@@ -2873,17 +2873,17 @@ TEST(ProjectionTest, ConcatStrStrTest)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     std::vector<std::string> expectedDatas = { "NULL",        "NULL",
         "NULL",        "",
         "John",        "Rebecca",
         "RebeccaJohn", "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     auto expect = CreateExpectVecBatchForConcat(VarcharDataType(100), vecAllocator, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete op;
     delete factory;
@@ -2907,8 +2907,8 @@ TEST(ProjectionTest, ConcatCharCharTest)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     std::vector<std::string> expectedDatas = { "NULL",
         "NULL",
@@ -2919,9 +2919,9 @@ TEST(ProjectionTest, ConcatCharCharTest)
         "Rebecca                       John",
         "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     auto expect = CreateExpectVecBatchForConcat(CharDataType(51), vecAllocator, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete op;
     delete factory;
@@ -2959,16 +2959,16 @@ TEST(ProjectionTest, ReplaceStrWithRep)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { VarcharType(100) };
     string expectedDatas[] = { "varopera00", "var*#00", "varVARCHAR00" };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -2993,16 +2993,16 @@ TEST(ProjectionTest, ReplaceStrWithoutRep)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { VarcharType(100) };
     string expectedDatas[] = { "var00", "var00", "var00" };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3026,16 +3026,16 @@ TEST(ProjectionTest, LowerStr)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { VarcharType(20) };
     string expectedDatas[] = { "varchar100", "char200", "var**var" };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3059,16 +3059,16 @@ TEST(ProjectionTest, LowerChar)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { CharType(20) };
     string expectedDatas[] = { "varchar100", "char200", "var**var" };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3092,16 +3092,16 @@ TEST(ProjectionTest, LengthChar)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { LongType() };
     int64_t expectedDatas[] = { 20, 20, 20 };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3125,16 +3125,16 @@ TEST(ProjectionTest, LengthStr)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { LongType() };
     int64_t expectedDatas[] = { 10, 7, 8 };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3164,16 +3164,16 @@ TEST(ProjectionTest, XxH64Int)
 
     auto op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { LongType() };
     int64_t expectedDatas[] = { -6698625589789238999, 8420071140774656230, 6258084186791473711 };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3203,16 +3203,16 @@ TEST(ProjectionTest, XxH64Long)
 
     auto op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { LongType() };
     int64_t expectedDatas[] = { -7001672635703045582, -3341702809300393011, 3188756510806108107 };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3242,16 +3242,16 @@ TEST(ProjectionTest, XxH64Double)
 
     auto op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { LongType() };
     int64_t expectedDatas[] = { -8572681829277995901, -8568427336103557548, -5412156501924286366};
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3281,16 +3281,16 @@ TEST(ProjectionTest, XxH64Boolean)
 
     auto op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { LongType() };
     int64_t expectedDatas[] = { 3614696996920510707, -6698625589789238999, 3614696996920510707 };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3320,16 +3320,16 @@ TEST(ProjectionTest, XxH64Str)
 
     auto op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { LongType() };
     int64_t expectedDatas[] = { 7620854247404556961, -8961370173016112133, 1148854020565811068 };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3361,16 +3361,16 @@ TEST(ProjectionTest, XxH64Decimal128)
 
     auto op = factory->CreateOperator();
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     vector<DataTypePtr> expectedTypes = { LongType() };
     int64_t expectedDatas[] = { 6365211361990375607, 2903581947191644088, 6893535756916194581};
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
     delete overflowConfig;
     delete op;
@@ -3399,13 +3399,13 @@ TEST(ProjectionTest, testDecimal128NegativeLiteral)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0.LowBits(), 687399551400673279);
     EXPECT_EQ(val0.HighBits(), 5421010862427522170);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete op;
     delete factory;
     delete vecAllocator;
@@ -3440,9 +3440,9 @@ TEST(ProjectionTest, ProjectCastIntToString)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    VarcharVector *vcVec = ((VarcharVector *)outputVecBatch->GetVector(0));
     for (int32_t i = 0; i < numRows; i++) {
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
@@ -3450,7 +3450,7 @@ TEST(ProjectionTest, ProjectCastIntToString)
         EXPECT_EQ(actualStr, to_string(col[i]));
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(t);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -3483,9 +3483,9 @@ TEST(ProjectionTest, ProjectCastDecimal128ToString)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    VarcharVector *vcVec = ((VarcharVector *)outputVecBatch->GetVector(0));
     for (int32_t i = 0; i < numRows; i++) {
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
@@ -3493,7 +3493,7 @@ TEST(ProjectionTest, ProjectCastDecimal128ToString)
         EXPECT_EQ(actualStr, to_string(col[i * 2]));
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(t);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -3526,10 +3526,10 @@ TEST(ProjectionTest, ProjectCastDoubleToString)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     string res[] = { "10.0", "11.0", "12.0" };
-    VarcharVector *vcVec = ((VarcharVector *)ret[0]->GetVector(0));
+    VarcharVector *vcVec = ((VarcharVector *)outputVecBatch->GetVector(0));
     for (int32_t i = 0; i < numRows; i++) {
         uint8_t *actualChar = nullptr;
         int len = vcVec->GetValue(i, &actualChar);
@@ -3537,7 +3537,7 @@ TEST(ProjectionTest, ProjectCastDoubleToString)
         EXPECT_EQ(actualStr, res[i]);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(t);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -3583,26 +3583,26 @@ TEST(ProjectionTest, ProjectCastStringToString)
     auto *t = CreateVectorBatch(numRows, cols);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     string expected1 = "CastStringToString";
     string expected2 = "CastString";
 
-    VarcharVector *vcVec1 = ((VarcharVector *)ret[0]->GetVector(0));
+    VarcharVector *vcVec1 = ((VarcharVector *)outputVecBatch->GetVector(0));
     uint8_t *actualChar1 = nullptr;
     int len1 = vcVec1->GetValue(0, &actualChar1);
     string actualStr1(reinterpret_cast<char *>(actualChar1), len1);
     EXPECT_EQ(len1, 18);
     EXPECT_EQ(actualStr1, expected1);
 
-    VarcharVector *vcVec2 = ((VarcharVector *)ret[0]->GetVector(1));
+    VarcharVector *vcVec2 = ((VarcharVector *)outputVecBatch->GetVector(1));
     uint8_t *actualChar2 = nullptr;
     int len2 = vcVec2->GetValue(0, &actualChar2);
     string actualStr2(reinterpret_cast<char *>(actualChar2), len2);
     EXPECT_EQ(len2, 10);
     EXPECT_EQ(actualStr2, expected2);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete vecAllocator;
@@ -3637,8 +3637,8 @@ TEST(ProjectionTest, ProjectCastStrStrZh)
     VectorBatch *input = CreateVectorBatch(inputTypes, numRows, col0);
 
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     string *expected1 = new string[numRows];
     for (int32_t i = 0; i < numRows; i++) {
@@ -3652,12 +3652,12 @@ TEST(ProjectionTest, ProjectCastStrStrZh)
     DataTypes outputTypes({ VarcharType(1024), VarcharType(7) });
     VectorBatch *expectedRet = CreateVectorBatch(inputTypes, numRows, expected1, expected2);
 
-    VecBatchMatch(ret[0], expectedRet);
+    VecBatchMatch(outputVecBatch, expectedRet);
 
     delete[] col0;
     delete[] expected1;
     delete[] expected2;
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectedRet);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -3694,8 +3694,8 @@ TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
     VectorBatch *input = CreateVectorBatch(inputTypes, numRows, col0);
 
     op->AddInput(input);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
 
     string *expected1 = new string[numRows];
     for (int32_t i = 0; i < numRows; i++) {
@@ -3709,12 +3709,12 @@ TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
     DataTypes outputTypes({ VarcharType(1024), VarcharType(7) });
     VectorBatch *expectedRet = CreateVectorBatch(inputTypes, numRows, expected1, expected2);
 
-    VecBatchMatch(ret[0], expectedRet);
+    VecBatchMatch(outputVecBatch, expectedRet);
 
     delete[] col0;
     delete[] expected1;
     delete[] expected2;
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectedRet);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -3745,15 +3745,15 @@ TEST(ProjectionTest, ProjectCastIntToDecimal)
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1);
 
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+        Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
@@ -3789,14 +3789,14 @@ TEST(ProjectionTest, ProjectCastIntToDecimal64)
 
     auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
+        int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(i);
         EXPECT_EQ(val0, col[i] * 100);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(t);
     delete[] col;
     omniruntime::op::Operator::DeleteOperator(op);
@@ -3828,12 +3828,12 @@ TEST(ProjectionTest, ProjectSparkConfig)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
     VectorBatch *t = CreateVectorBatch(inputTypes, 1, col);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    int64_t val0 = ((LongVector *)ret[0]->GetVector(0))->GetValue(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    int64_t val0 = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(0);
     EXPECT_EQ(val0, 246);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete[] col;
@@ -3864,12 +3864,12 @@ TEST(ProjectionTest, ProjectMulDecimal64)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testDecimal128NegativeLiteral");
     VectorBatch *t = CreateVectorBatch(inputTypes, 1, col);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
-    bool isNull = (ret[0]->GetVector(0))->IsValueNull(0);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    bool isNull = (outputVecBatch->GetVector(0))->IsValueNull(0);
     EXPECT_EQ(isNull, true);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete[] col;
@@ -3911,17 +3911,17 @@ TEST(ProjectionTest, AddDecimal)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_BatchAddDecimal128");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
         for (int32_t j = 0; i < numRows; i++) {
-            Decimal128 val0 = ((Decimal128Vector *)ret[0]->GetVector(j))->GetValue(i);
+            Decimal128 val0 = ((Decimal128Vector *)outputVecBatch->GetVector(j))->GetValue(i);
             EXPECT_EQ(val0.HighBits(), 0);
             EXPECT_EQ(val0.LowBits(), (i + 1) * 2);
         }
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete[] col1;
@@ -3964,20 +3964,20 @@ TEST(ProjectionTest, AddDecimalReturnNull)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("project_BatchAddDecimal128");
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
     op->AddInput(t);
-    vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
     for (int32_t i = 0; i < numRows; i++) {
-        bool isNull = (ret[0]->GetVector(0))->IsValueNull(i);
+        bool isNull = (outputVecBatch->GetVector(0))->IsValueNull(i);
         EXPECT_TRUE(isNull);
-        isNull = (ret[0]->GetVector(1))->IsValueNull(i);
+        isNull = (outputVecBatch->GetVector(1))->IsValueNull(i);
         EXPECT_FALSE(isNull);
-        isNull = (ret[0]->GetVector(2))->IsValueNull(i);
+        isNull = (outputVecBatch->GetVector(2))->IsValueNull(i);
         EXPECT_TRUE(isNull);
-        isNull = (ret[0]->GetVector(3))->IsValueNull(i);
+        isNull = (outputVecBatch->GetVector(3))->IsValueNull(i);
         EXPECT_TRUE(isNull);
     }
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete[] col1;

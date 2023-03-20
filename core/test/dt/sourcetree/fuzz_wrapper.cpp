@@ -217,10 +217,10 @@ void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     auto lookupJoinFactory = dynamic_cast<LookupJoinOperatorFactory *>(operatorFactories[1]);
     auto lookupJoinOperator = lookupJoinFactory->CreateOperator();
     lookupJoinOperator->AddInput(probeVecBatch);
-    std::vector<VectorBatch *> output;
-    lookupJoinOperator->GetOutput(output);
+    VectorBatch *outputVecBatch = nullptr;
+    lookupJoinOperator->GetOutput(&outputVecBatch);
 
-    VectorHelper::FreeVecBatches(output);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     for (auto operatorFactory : operatorFactories) {
@@ -307,10 +307,10 @@ void TestProject(void **testData, omniruntime::type::DataTypes &sourceTypes, int
         dynamic_cast<ProjectionOperatorFactory *>(CreateProjectFactory(sourceTypes, exprs, overflowConfig));
     auto projectOperator = operatorFactory->CreateOperator();
     projectOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> ret;
-    projectOperator->GetOutput(ret);
+    VectorBatch *resultVecBatch = nullptr;
+    projectOperator->GetOutput(&resultVecBatch);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(resultVecBatch);
     omniruntime::op::Operator::DeleteOperator(projectOperator);
     DeleteOperatorFactory(operatorFactory);
     delete vecAllocator;
