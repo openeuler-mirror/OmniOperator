@@ -9,6 +9,7 @@ import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_INNER;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatches;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
@@ -32,7 +33,9 @@ import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -470,6 +473,8 @@ public class OmniHashJoinWithExprOperatorsTest {
         lookupJoinOperatorFactory.close();
         hashBuilderOperatorFactory.close();
         lookupOuterJoinOperatorFactory.close();
+        freeVecBatch(resultVecBatch);
+        freeVecBatch(appendBatch);
     }
 
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp =
@@ -572,5 +577,165 @@ public class OmniHashJoinWithExprOperatorsTest {
         assertEquals(lookupJoinOperatorFactory2, lookupJoinOperatorFactory1);
         assertEquals(lookupJoinOperatorFactory1, lookupJoinOperatorFactory1);
         assertNotEquals(lookupJoinOperatorFactory3, lookupJoinOperatorFactory1);
+    }
+
+    private void buildLookupJoinExpectedData(Object[][] lookupJoinData1, Object[][] lookupJoinData2,
+        Object[][] lookupJoinData3, int tableSize, int maxRowCount) {
+        for (int i = 0; i < maxRowCount; i++) {
+            lookupJoinData1[0][i] = tableSize / 2 + i + 1L;
+            lookupJoinData1[1][i] = i + 200L;
+            lookupJoinData1[2][i] = i + 201L;
+            lookupJoinData1[3][i] = i + 202L;
+
+            lookupJoinData1[4][i] = tableSize / 2 + i + 1L;
+            lookupJoinData1[5][i] = tableSize / 2 + i + 100L;
+            lookupJoinData1[6][i] = tableSize / 2 + i + 101L;
+            lookupJoinData1[7][i] = tableSize / 2 + i + 102L;
+
+            lookupJoinData2[0][i] = tableSize / 2 + maxRowCount + i + 1L;
+            lookupJoinData2[1][i] = maxRowCount + i + 200L;
+            lookupJoinData2[2][i] = maxRowCount + i + 201L;
+            lookupJoinData2[3][i] = maxRowCount + i + 202L;
+
+            if (i < 6) {
+                lookupJoinData2[4][i] = tableSize / 2 + maxRowCount + i + 1L;
+                lookupJoinData2[5][i] = tableSize / 2 + maxRowCount + i + 100L;
+                lookupJoinData2[6][i] = tableSize / 2 + maxRowCount + i + 101L;
+                lookupJoinData2[7][i] = tableSize / 2 + maxRowCount + i + 102L;
+            } else {
+                lookupJoinData2[4][i] = null;
+                lookupJoinData2[5][i] = null;
+                lookupJoinData2[6][i] = null;
+                lookupJoinData2[7][i] = null;
+            }
+        }
+
+        for (int i = 0; i < tableSize - 2 * maxRowCount; i++) {
+            lookupJoinData3[0][i] = tableSize / 2 + 2 * maxRowCount + i + 1L;
+            lookupJoinData3[1][i] = 2 * maxRowCount + i + 200L;
+            lookupJoinData3[2][i] = 2 * maxRowCount + i + 201L;
+            lookupJoinData3[3][i] = 2 * maxRowCount + i + 202L;
+            lookupJoinData3[4][i] = null;
+            lookupJoinData3[5][i] = null;
+            lookupJoinData3[6][i] = null;
+            lookupJoinData3[7][i] = null;
+        }
+    }
+
+    private void buildFullOuterExpectedData(Object[][] fullOuterData1, Object[][] fullOuterData2, int tableSize,
+        int maxRowCount) {
+        for (int i = 0; i < maxRowCount; i++) {
+            fullOuterData1[0][i] = null;
+            fullOuterData1[1][i] = null;
+            fullOuterData1[2][i] = null;
+            fullOuterData1[3][i] = null;
+            fullOuterData1[4][i] = i + 1L;
+            fullOuterData1[5][i] = i + 100L;
+            fullOuterData1[6][i] = i + 101L;
+            fullOuterData1[7][i] = i + 102L;
+        }
+
+        for (int i = 0; i < tableSize / 2 - maxRowCount; i++) {
+            fullOuterData2[0][i] = null;
+            fullOuterData2[1][i] = null;
+            fullOuterData2[2][i] = null;
+            fullOuterData2[3][i] = null;
+            fullOuterData2[4][i] = maxRowCount + i + 1L;
+            fullOuterData2[5][i] = maxRowCount + i + 100L;
+            fullOuterData2[6][i] = maxRowCount + i + 101L;
+            fullOuterData2[7][i] = maxRowCount + i + 102L;
+        }
+    }
+
+    private void buildFullOuterAddInputData(Object[][] buildData, Object[][]probeData) {
+        int tableSize = buildData[0].length;
+        for (int i = 0; i < tableSize; i++) {
+            buildData[0][i] = i + 1L;
+            buildData[1][i] = i + 100L;
+            buildData[2][i] = i + 101L;
+            buildData[3][i] = i + 102L;
+            probeData[0][i] = tableSize / 2 + i + 1L;
+            probeData[1][i] = i + 200L;
+            probeData[2][i] = i + 201L;
+            probeData[3][i] = i + 202L;
+        }
+    }
+
+    /**
+     * Test full hash join multiple build batch.
+     */
+    @Test
+    public void testFullOuterJoinIterativeGetOutput() {
+        DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        String[] buildHashKeys = {getOmniJsonFieldReference(2, 0)};
+        OmniHashBuilderWithExprOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderWithExprOperatorFactory(
+                buildTypes, buildHashKeys, Optional.empty(), 1);
+        OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
+        int tableSize = 32780;
+        Object[][] buildData = new Object[4][tableSize];
+        Object[][] probeData = new Object[4][tableSize];
+        buildFullOuterAddInputData(buildData, probeData);
+        hashBuilderOperator.addInput(createVecBatch(buildTypes, buildData));
+        hashBuilderOperator.getOutput();
+
+        DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG, LongDataType.LONG, LongDataType.LONG};
+        int[] probeOutputCols = {0, 1, 2, 3};
+        String[] probeHashKeys = {getOmniJsonFieldReference(2, 0)};
+        int[] buildOutputCols = {0, 1, 2, 3};
+        OmniLookupJoinWithExprOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinWithExprOperatorFactory(
+            probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildTypes, OMNI_JOIN_TYPE_FULL,
+            hashBuilderOperatorFactory);
+        OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
+
+        OmniLookupOuterJoinWithExprOperatorFactory lookupOuterJoinOperatorFactory =
+            new OmniLookupOuterJoinWithExprOperatorFactory(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols,
+            buildTypes, hashBuilderOperatorFactory, new OperatorConfig());
+        OmniOperator lookupOuterJoinOperator = lookupOuterJoinOperatorFactory.createOperator();
+        VecBatch probeVecBatch = createVecBatch(probeTypes, probeData);
+        lookupJoinOperator.addInput(probeVecBatch);
+
+        VecBatch vecBatch = null;
+        List<VecBatch> lookupJoinList = new ArrayList<>();
+        Iterator<VecBatch> resultIterator = lookupJoinOperator.getOutput();
+        while (resultIterator.hasNext()) {
+            vecBatch = resultIterator.next();
+            lookupJoinList.add(vecBatch);
+        }
+
+        List<VecBatch> fullOuterList = new ArrayList<>();
+        Iterator<VecBatch> fullOuterIterator = lookupOuterJoinOperator.getOutput();
+        while (fullOuterIterator.hasNext()) {
+            vecBatch = fullOuterIterator.next();
+            fullOuterList.add(vecBatch);
+        }
+
+        int maxRowCount = 16384; // 1M / (8 * 8)
+        Object[][] lookupJoinData1 = new Object[8][maxRowCount];
+        Object[][] lookupJoinData2 = new Object[8][maxRowCount];
+        Object[][] lookupJoinData3 = new Object[8][tableSize - 2 * maxRowCount];
+        Object[][] fullOuterData1 = new Object[8][maxRowCount];
+        Object[][] fullOuterData2 = new Object[8][tableSize / 2 - maxRowCount];
+
+        buildLookupJoinExpectedData(lookupJoinData1, lookupJoinData2, lookupJoinData3, tableSize, maxRowCount);
+        buildFullOuterExpectedData(fullOuterData1, fullOuterData2, tableSize, maxRowCount);
+
+        assertEquals(lookupJoinList.size(), 3);
+        assertEquals(fullOuterList.size(), 2);
+
+        assertVecBatchEquals(lookupJoinList.get(0), lookupJoinData1);
+        assertVecBatchEquals(lookupJoinList.get(1), lookupJoinData2);
+        assertVecBatchEquals(lookupJoinList.get(2), lookupJoinData3);
+        assertVecBatchEquals(fullOuterList.get(0), fullOuterData1);
+        assertVecBatchEquals(fullOuterList.get(1), fullOuterData2);
+
+        lookupJoinOperator.close();
+        hashBuilderOperator.close();
+        lookupOuterJoinOperator.close();
+        lookupJoinOperatorFactory.close();
+        hashBuilderOperatorFactory.close();
+        lookupOuterJoinOperatorFactory.close();
+
+        freeVecBatches(lookupJoinList);
+        freeVecBatches(fullOuterList);
     }
 }
