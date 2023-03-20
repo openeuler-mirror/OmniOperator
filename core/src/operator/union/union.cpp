@@ -45,16 +45,30 @@ int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
     }
     inputVecBatches.push_back(outBatch);
     VectorHelper::FreeVecBatch(vecBatch);
+    vecBatchCount++;
     return 0;
 }
 
 int32_t UnionOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
-    for (auto item : inputVecBatches) {
-        outputPages.push_back(item);
+    if (vecBatchCount == 0 || vecBatchIndex == vecBatchCount) {
+        vecBatchCount = 0;
+        vecBatchIndex = 0;
+        inputVecBatches.clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+        return 0;
     }
-    inputVecBatches.clear();
-    SetStatus(OMNI_STATUS_FINISHED);
+
+    auto outVecBatch = inputVecBatches[vecBatchIndex];
+    outputPages.push_back(outVecBatch);
+    vecBatchIndex++;
+    if (vecBatchIndex == vecBatchCount) {
+        vecBatchCount = 0;
+        vecBatchIndex = 0;
+        inputVecBatches.clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+    }
+    
     return 0;
 }
 
