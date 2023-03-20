@@ -129,9 +129,9 @@ int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
 
 int32_t WindowWithExprOperator::GetOutput(vector<VectorBatch *> &outputPages)
 {
-    windowOperator->GetOutput(outputPages);
-    SetStatus(OMNI_STATUS_FINISHED);
-    return 0;
+    int32_t status = windowOperator->GetOutput(outputPages);
+    SetStatus(windowOperator->GetStatus());
+    return status;
 }
 
 OmniStatus WindowWithExprOperator::Close()
