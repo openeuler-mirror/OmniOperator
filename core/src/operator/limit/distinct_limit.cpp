@@ -368,7 +368,7 @@ void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowV
     }
 }
 
-int32_t DistinctLimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
+int32_t DistinctLimitOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (distinctRowInfo.size() > 0) {
         resultBatch = new VectorBatch(outColsCount, distinctRowInfo.size());
@@ -381,7 +381,7 @@ int32_t DistinctLimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages
             FillOutPutValue(resultBatch, rowVector, outTypes, rowIndex++);
         }
 
-        outputPages.push_back(resultBatch);
+        *outputVecBatch = resultBatch;
         resultBatch = nullptr;
         ReleaseRowInfo(distinctRowInfo);
     }
