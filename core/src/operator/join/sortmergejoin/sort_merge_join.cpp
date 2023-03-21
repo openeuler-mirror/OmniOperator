@@ -225,9 +225,9 @@ int32_t SortMergeJoinOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
     return -1;
 }
 
-int32_t SortMergeJoinOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
+int32_t SortMergeJoinOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
-    outputPages.assign(returnVectorBatches.begin(), returnVectorBatches.end());
+    *outputVecBatch = returnVectorBatches[0];
     returnVectorBatches.clear();
     joinResultBuilder->AddJoinValueAddresses();
     if (joinResultBuilder->HasNext()) {
