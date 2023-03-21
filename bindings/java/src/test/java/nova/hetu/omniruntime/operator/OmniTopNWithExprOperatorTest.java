@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatches;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonFieldReference;
 import static nova.hetu.omniruntime.util.TestUtils.getOmniJsonLiteral;
 import static nova.hetu.omniruntime.util.TestUtils.omniFunctionExpr;
@@ -252,9 +253,7 @@ public class OmniTopNWithExprOperatorTest {
         assertVecBatchEquals(resultList.get(0), expectedData1);
         assertVecBatchEquals(resultList.get(1), expectedData2);
 
-        for (int i = 0; i < resultList.size(); i++) {
-            freeVecBatch(resultList.get(i));
-        }
+        freeVecBatches(resultList);
         operator.close();
         omniTopNOperatorFactory.close();
     }

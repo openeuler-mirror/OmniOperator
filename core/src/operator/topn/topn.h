@@ -73,7 +73,7 @@ public:
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vectorBatch) override;
 
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
 private:
     type::DataTypes sourceTypes;
