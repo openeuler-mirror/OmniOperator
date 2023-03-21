@@ -6,7 +6,6 @@
 #include <iostream>
 #include <regex>
 #include "type/data_operations.h"
-#include "batch_stringfunctions.h"
 #include "type/date32.h"
 
 #ifdef _WIN32
@@ -126,6 +125,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateNotAllowReducePrecison(int64_t co
             continue;
         }
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         if (!regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)")) && !HasError(contextPtr)) {
             SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
             output[i] = 0;
@@ -153,6 +153,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateAllowReducePrecison(int64_t conte
             continue;
         }
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1 &&
             !HasError(contextPtr)) {
             SetError(contextPtr, "Value cannot be cast to date: " + s);
@@ -317,6 +318,7 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64(int64_t contextPtr, uint8_t
             continue;
         }
         std::string s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         Decimal64 result(s);
         if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS && !HasError(contextPtr)) {
             std::ostringstream errorMessage;
@@ -339,6 +341,7 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_
             continue;
         }
         std::string s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         Decimal128Wrapper result(s.c_str());
         result.ReScale(outScale);
         if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS && !HasError(contextPtr)) {
@@ -363,6 +366,7 @@ extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str
             continue;
         }
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         int status = StringToInt(s, result);
         if (status == -1 && !HasError(contextPtr)) {
             std::ostringstream errorMessage;
@@ -391,6 +395,7 @@ extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **st
             continue;
         }
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         int status = StringToLong(s, result);
         if (status == -1 && !HasError(contextPtr)) {
             std::ostringstream errorMessage;
@@ -419,6 +424,7 @@ extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **
             continue;
         }
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         int status = StringToDouble(s, result);
         if (status == -1 && !HasError(contextPtr)) {
             std::ostringstream errorMessage;
@@ -445,6 +451,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNullNotAllowReducePrecison(boo
     int32_t result;
     for (int i = 0; i < rowCnt; ++i) {
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         if (!regex_match(s, std::regex(R"(\d{4}-\d{2}-\d{2}$)"))) {
             output[i] = 0;
             isNull[i] = true;
@@ -469,6 +476,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNullAllowReducePrecison(bool *
     int32_t result;
     for (int i = 0; i < rowCnt; ++i) {
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
             output[i] = 0;
             isNull[i] = true;
@@ -599,6 +607,7 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64RetNull(bool *isNull, uint8_
 {
     for (int i = 0; i < rowCnt; ++i) {
         std::string s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         Decimal64 result(s);
         if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
             output[i] = 0;
@@ -615,6 +624,7 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8
 {
     for (int i = 0; i < rowCnt; ++i) {
         std::string s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         Decimal128Wrapper result(s.c_str());
         result.ReScale(outScale);
         if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
@@ -633,6 +643,7 @@ extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **st
     std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         if (StringToInt(s, result) != 0) {
             output[i] = 0;
             isNull[i] = true;
@@ -650,6 +661,7 @@ extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **s
     std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         if (StringToLong(s, result) != 0) {
             output[i] = 0;
             isNull[i] = true;
@@ -667,6 +679,7 @@ extern "C" DLLEXPORT void BatchCastStringToDoubleRetNull(bool *isNull, uint8_t *
     std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
         if (StringToDouble(s, result) != 0) {
             output[i] = 0;
             isNull[i] = true;
