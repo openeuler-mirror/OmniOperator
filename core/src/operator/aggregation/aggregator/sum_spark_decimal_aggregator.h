@@ -17,6 +17,7 @@ using SparkDecimalSumState = struct SparkDecimalSumState {
     int128 val;
     bool isOverflow; // isOverflow is true when it has had an overflow
     bool isEmpty;    // isEmpty is true when all row in a vector are NULL
+    bool isUnprocessed;
 };
 
 static constexpr int32_t SPARK_DECIMAL_SUM_STATE_LENGTH = sizeof(SparkDecimalSumState);
@@ -45,48 +46,32 @@ public:
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
+        SparkDecimalSumState *stateVal = static_cast<SparkDecimalSumState *>(state.val);
         if (vector->IsValueNull(offset)) {
-            return;
-        }
-        if (state.val == nullptr) {
-            InitiateGroup(state, vectorBatch, rowIndex);
+            static_cast<SparkDecimalSumState *>(state.val)->isEmpty = true;
             return;
         }
 
         // The inputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128
         int32_t inputType = inputTypes.GetIds()[0];
         if constexpr (INPUT_RAW) {
-            // For decimal type, the initial value of `sum` is 0. We need to keep `sum` unchanged if
-            // the input is null, as SUM function ignores null input. The `sum` can only be null if
-            // overflow happens under non-ansi mode.
-            if (vector->IsValueNull(offset)) {
-                return;
-            }
             // 1. get a new value
             int128 curVal;
             GetValFromVector(vector, offset, inputType, curVal);
 
             // 2. decode current state
-            int128 stateVal;
-            bool isOverflow;
-            bool isEmpty;
-            DecodeSumState(static_cast<SparkDecimalSumState *>(state.val), stateVal, isOverflow, isEmpty);
+            int128 decodedDec = stateVal->val;
+            bool isOverflow = stateVal->isOverflow;
+            bool isEmpty = stateVal->isEmpty || stateVal->isUnprocessed;
             // 3. if overflowed, no need to do calculation
             if (isOverflow) {
                 return;
             }
             // 4. do calculation
-            isOverflow = isOverflow || AddCheckedOverflow(stateVal, curVal, stateVal);
+            isOverflow = isOverflow || AddCheckedOverflow(decodedDec, curVal, decodedDec);
             // 5. encode to state, the isEmpty is always false because the row is not NULL
-            EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), stateVal, isOverflow, false);
+            EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), decodedDec, isOverflow, false);
         } else {
-            if (vector->IsValueNull(offset)) {
-                // in final mode, input vector is partial sum. if partial sum is null, it means we have had an overflow
-                // and isEmptyInVec is always false.
-                EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), 0, true, false);
-                return;
-            }
-
             // 1. get partial sum and isEmptyInVec
             int128 curVal;
             GetValFromVector(vector, offset, inputType, curVal);
@@ -96,10 +81,9 @@ public:
             bool isEmptyInVec = reinterpret_cast<BooleanVector *>(emptyVector)->GetValue(emptyOffset);
 
             // 2. decode current state and intermediate state
-            int128 stateVal;
-            bool isEmptyInState;
-            bool isOverflow;
-            DecodeSumState(static_cast<SparkDecimalSumState *>(state.val), stateVal, isOverflow, isEmptyInState);
+            int128 decodedDec = stateVal->val;
+            bool isOverflow = stateVal->isOverflow;
+            bool isEmptyInState = stateVal->isEmpty || stateVal->isUnprocessed;
 
             // 3. if overflowed, no need to do calculation
             if (isOverflow) {
@@ -107,11 +91,11 @@ public:
             }
 
             // 4. do calculation
-            isOverflow = isOverflow || AddCheckedOverflow(stateVal, curVal, stateVal);
+            isOverflow = isOverflow || AddCheckedOverflow(decodedDec, curVal, decodedDec);
             // 5. encode to state.
             // isEmptyInVec will Set to false if either one of the left or right is set to false.
             // This means we have seen at least a value that was not null.
-            EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), stateVal, isOverflow,
+            EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), decodedDec, isOverflow,
                 isEmptyInState && isEmptyInVec);
         }
     }
@@ -134,7 +118,7 @@ public:
 
             int64_t oldOverflow = 0;
             state.val = executionContext->GetArena()->Allocate(SPARK_DECIMAL_SUM_STATE_LENGTH);
-            EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), initState, oldOverflow, false);
+            EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), initState, oldOverflow, false, true);
         } else {
             // in final mode, input vector is partial sum. if partial sum is null, it means we have had an overflow.
             if (vector->IsValueNull(offset)) {
@@ -158,17 +142,15 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
+
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-        if (state.val == nullptr) {
-            vector->SetValueNull(rowIndex);
-            return;
-        }
+        SparkDecimalSumState *stateVal = static_cast<SparkDecimalSumState *>(state.val);
 
-        int128 decodedDec;
-        bool isOverflow;
-        bool isEmpty;
-        DecodeSumState(static_cast<SparkDecimalSumState *>(state.val), decodedDec, isOverflow, isEmpty);
+        int128 decodedDec = stateVal->val;
+        bool isOverflow = stateVal->isOverflow;
+        bool isEmpty = stateVal->isEmpty;
+        bool isUnprocessed = stateVal->isUnprocessed;
 
         int128 resultDec;
         // only support output scale >= input scale
@@ -191,7 +173,8 @@ public:
 
             int32_t emptyOffset;
             Vector *emptyVector = VectorHelper::ExpandVectorAndIndex(vectors[1], rowIndex, emptyOffset);
-            reinterpret_cast<BooleanVector *>(emptyVector)->SetValue(rowIndex, isEmpty);
+            reinterpret_cast<BooleanVector *>(emptyVector)->SetValue(rowIndex,
+                isEmpty || isUnprocessed);
         } else {
             if (isOverflow) {
                 SetNullOrThrowException(vector, rowIndex);
@@ -206,6 +189,12 @@ public:
         }
     }
 
+    void InitState(AggregateState &state)
+    {
+        state.val = executionContext->GetArena()->Allocate(SPARK_DECIMAL_SUM_STATE_LENGTH);
+        EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), 0, false, false, true);
+    }
+
 private:
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(Vector *vector, int index)
@@ -216,18 +205,13 @@ private:
         vector->SetValueNull(index);
     }
 
-    void EncodeSumState(SparkDecimalSumState *statePtr, const int128 &val, const bool isOverflow, const bool isEmpty)
+    void EncodeSumState(SparkDecimalSumState *statePtr, const int128 &val, const bool isOverflow, const bool isEmpty,
+        const bool isUnprocessed = false)
     {
         statePtr->val = val;
         statePtr->isOverflow = isOverflow;
         statePtr->isEmpty = isEmpty;
-    }
-
-    void DecodeSumState(SparkDecimalSumState *statePtr, int128 &val, bool &isOverflow, bool &isEmpty)
-    {
-        isOverflow = statePtr->isOverflow;
-        isEmpty = statePtr->isEmpty;
-        val = statePtr->val;
+        statePtr->isUnprocessed = isUnprocessed;
     }
 
     // Set decimal val to output vector in Extract function. The outputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128.
