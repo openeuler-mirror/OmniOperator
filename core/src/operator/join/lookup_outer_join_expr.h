@@ -41,7 +41,7 @@ public:
     LookupOuterJoinWithExprOperator(LookupOuterJoinOperator *lookupJoinOperator);
     ~LookupOuterJoinWithExprOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
     OmniStatus Close() override;
 
 private:

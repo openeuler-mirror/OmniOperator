@@ -263,8 +263,8 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
-    std::vector<VectorBatch *> appendOutput;
-    lookupOuterJoinWithExprOperator->GetOutput(appendOutput);
+    VectorBatch *appendOutput;
+    lookupOuterJoinWithExprOperator->GetOutput(&appendOutput);
 
     const int32_t expectedDatasSize = 2;
     int64_t expectedData0[expectedDatasSize] = {0, 0};
@@ -284,12 +284,12 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     vectorBatch->GetVector(0)->SetValueNull(1);
     vectorBatch->GetVector(1)->SetValueNull(0);
     vectorBatch->GetVector(1)->SetValueNull(1);
-    EXPECT_TRUE(VecBatchMatch(appendOutput[0], vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
     VectorHelper::FreeVecBatches(lookupJoinOutput);
-    VectorHelper::FreeVecBatches(appendOutput);
+    VectorHelper::FreeVecBatch(appendOutput);
     VectorHelper::FreeVecBatch(vectorBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
@@ -364,8 +364,8 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
-    std::vector<VectorBatch *> appendOutput;
-    lookupOuterJoinWithExprOperator->GetOutput(appendOutput);
+    VectorBatch *appendOutput;
+    lookupOuterJoinWithExprOperator->GetOutput(&appendOutput);
 
     const int32_t expectedDatasSize = 2;
     int64_t expectedData0[expectedDatasSize] = {0, 0};
@@ -385,12 +385,12 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     vectorBatch->GetVector(0)->SetValueNull(1);
     vectorBatch->GetVector(1)->SetValueNull(0);
     vectorBatch->GetVector(1)->SetValueNull(1);
-    EXPECT_TRUE(VecBatchMatch(appendOutput[0], vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
     VectorHelper::FreeVecBatches(lookupJoinOutput);
-    VectorHelper::FreeVecBatches(appendOutput);
+    VectorHelper::FreeVecBatch(appendOutput);
     VectorHelper::FreeVecBatch(vectorBatch);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);

@@ -71,7 +71,7 @@ int32_t LookupOuterJoinOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t LookupOuterJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
+int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     totalRowCount = hashTables->GetTotalVisitedCounts() - hashTables->GetVisitedCounts();
     if (totalRowCount <= 0) {
@@ -83,7 +83,7 @@ int32_t LookupOuterJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPag
     outputtedRowCount += rowCount;
     auto result = new VectorBatch(outputColsCount, rowCount);
     BuildVecBatch(result);
-    outputPages.push_back(result);
+    *outputVecBatch = result;
     if (!HasNext()) {
         SetStatus(OMNI_STATUS_FINISHED);
         iterator->Reset();
