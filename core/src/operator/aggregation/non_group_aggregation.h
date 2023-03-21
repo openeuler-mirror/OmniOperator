@@ -22,6 +22,7 @@ public:
         aggsStates.reserve(aggregators.size());
         for (uint32_t i = 0; i < aggregators.size(); i++) {
             aggsStates.push_back(AggregateState());
+            aggregators[i]->InitState(aggsStates[i]);
         }
     }
 
