@@ -2524,8 +2524,9 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
     vecBatch->SetVector(0, deci18_6Vec);
     vecBatch->SetVector(1, isOverflowVec);
 
-    AggregateState state { nullptr };
-    sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
+    AggregateState state{ nullptr };
+    sumDeciAggPartial->InitState(state);
+    sumDeciAggPartial->ProcessGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
     Decimal128Wrapper expected1("999999999999.999999");
@@ -2581,8 +2582,9 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
     vecBatch->SetVector(0, deci25_8Vec);
     vecBatch->SetVector(1, isOverflowVec);
 
-    AggregateState state { nullptr };
-    sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
+    AggregateState state{ nullptr };
+    sumDeciAggPartial->InitState(state);
+    sumDeciAggPartial->ProcessGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
     Decimal128 expected1("99999999999999999.99999999");
@@ -2637,8 +2639,9 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
     vecBatch->SetVector(0, deci38_0Vec);
     vecBatch->SetVector(1, isOverflowVec);
 
-    AggregateState state { nullptr };
-    sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
+    AggregateState state{ nullptr };
+    sumDeciAggPartial->InitState(state);
+    sumDeciAggPartial->ProcessGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
     Decimal128 expected1("99999999999999999999999999999999999999");
@@ -2697,8 +2700,9 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
     vecBatch->SetVector(0, deci38_0Vec);
     vecBatch->SetVector(1, isOverflowVec);
 
-    AggregateState state { nullptr };
-    sumDeciAggPartial->InitiateGroup(state, vecBatch, 0);
+    AggregateState state{ nullptr };
+    sumDeciAggPartial->InitState(state);
+    sumDeciAggPartial->ProcessGroup(state, vecBatch, 0);
     sumDeciAggPartial->ExtractValues(state, extractVec, 0);
 
     Decimal128 expected1("99999999999999999999999999999999999999");
@@ -3028,7 +3032,8 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
     vecBatch->SetVector(0, deci22_0Vec);
     vecBatch->SetVector(1, avgCountVec);
 
-    AggregateState state { nullptr };
+    AggregateState state{ nullptr };
+    avgDeciWindow->InitState(state);
     avgDeciWindow->ProcessGroup(state, vecBatch, 0);
     avgDeciWindow->ProcessGroup(state, vecBatch, 1);
     avgDeciWindow->ExtractValues(state, extractVec, 0);
