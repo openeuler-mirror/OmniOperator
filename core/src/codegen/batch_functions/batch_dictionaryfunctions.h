@@ -9,7 +9,8 @@
 #include "type/decimal128.h"
 using namespace omniruntime::type;
 
-namespace omniruntime::codegen::function {
+namespace omniruntime {
+namespace codegen {
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
@@ -49,6 +50,7 @@ extern "C" DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t 
 
 extern "C" DLLEXPORT void BatchGetDecimalFromVector(Decimal128 *vector, int32_t *rowIdxArray, int32_t rowCnt,
     Decimal128 *output);
+}
 }
 
 #endif // OMNI_RUNTIME_BATCH_DICTIONARYFUNCTIONS_H

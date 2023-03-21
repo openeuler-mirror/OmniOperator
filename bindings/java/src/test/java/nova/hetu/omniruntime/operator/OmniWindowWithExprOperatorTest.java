@@ -50,6 +50,67 @@ import java.util.List;
  */
 public class OmniWindowWithExprOperatorTest {
     /**
+     * Test iterative output
+     */
+    @Test
+    public void testOutputMultiVecBatch() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE};
+        int[] outputChannels = {0, 1, 2};
+        FunctionType[] windowFunction = {FunctionType.OMNI_AGGREGATION_TYPE_MAX};
+        OmniWindowFrameType[] windowFrameTypes = {OMNI_FRAME_TYPE_RANGE};
+        OmniWindowFrameBoundType[] windowFrameStartTypes = {OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING};
+        int[] winddowFrameStartChannels = {-1};
+        OmniWindowFrameBoundType[] windowFrameEndTypes = {OMNI_FRAME_BOUND_CURRENT_ROW};
+        int[] winddowFrameEndChannels = {-1};
+        int[] partitionChannels = {0};
+        int[] preGroupedChannels = {};
+        int[] sortChannels = {1};
+        int[] sortOrder = {0};
+        int[] sortNullFirsts = {0};
+        int preSortedChannelPrefix = 0;
+        String[] argumentKeys = {omniJsonFourArithmeticExpr("ADD", 3, getOmniJsonFieldReference(3, 2),
+                getOmniJsonLiteral(3, false, 50.0))};
+        DataType[] windowFunctionReturnType = {DoubleDataType.DOUBLE};
+        OmniWindowWithExprOperatorFactory omniWindowOperatorFactory = new OmniWindowWithExprOperatorFactory(sourceTypes,
+                outputChannels, windowFunction, partitionChannels, preGroupedChannels, sortChannels, sortOrder,
+                sortNullFirsts, preSortedChannelPrefix, 10000, argumentKeys, windowFunctionReturnType, windowFrameTypes,
+                windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels);
+        OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
+
+        int column = 5;
+        int rowNum = 30000;
+        VecBatch vecBatch = new VecBatch(buildDataForOutputMultiVectorBatch(rowNum));
+        omniOperator.addInput(vecBatch);
+
+        // the value rowsPerBatch = (1M / 36) + 1
+        int rowsPerBatch = 29128;
+        Object[][] expectedData1 = new Object[column][rowsPerBatch];
+        Object[][] expectedData2 = new Object[column][rowNum - rowsPerBatch];
+        buildIterativeExpectedData(expectedData1, expectedData2, rowsPerBatch, rowNum);
+        Iterator<VecBatch> outputVecBatch = omniOperator.getOutput();
+        List<VecBatch> resultList = new ArrayList<>();
+        while (outputVecBatch.hasNext()) {
+            resultList.add(outputVecBatch.next());
+        }
+
+        int totalRowCount = 0;
+        for (int i = 0; i < resultList.size(); i++) {
+            totalRowCount += resultList.get(i).getRowCount();
+        }
+
+        assertEquals(totalRowCount, rowNum);
+        assertVecBatchEquals(resultList.get(0), expectedData1);
+        assertVecBatchEquals(resultList.get(1), expectedData2);
+
+        for (int i = 0; i < resultList.size(); i++) {
+            freeVecBatch(resultList.get(i));
+        }
+
+        omniOperator.close();
+        omniWindowOperatorFactory.close();
+    }
+
+    /**
      * Test max.
      */
     @Test
@@ -217,5 +278,63 @@ public class OmniWindowWithExprOperatorTest {
         columns.add(vec2);
         columns.add(vec3);
         return new VecBatch(columns);
+    }
+
+    private List<Vec> buildDataForOutputMultiVectorBatch(int rowNum) {
+        IntVec c1 = new IntVec(rowNum);
+        for (int i = 0; i < rowNum / 2; i++) {
+            c1.set(i, i);
+        }
+
+        for (int i = rowNum / 2; i < rowNum; i++) {
+            c1.set(i, i - rowNum / 2);
+        }
+
+        LongVec c2 = new LongVec(rowNum);
+        DoubleVec c3 = new DoubleVec(rowNum);
+        for (int i = 0; i < rowNum; i++) {
+            c2.set(i, i);
+            c3.set(i, i);
+        }
+
+        List<Vec> columns = new ArrayList<>();
+        columns.add(c1);
+        columns.add(c2);
+        columns.add(c3);
+
+        return columns;
+    }
+
+    private void buildIterativeExpectedData(Object[][] expectedData1, Object[][] expectedData2, int maxRowCount,
+                                            int expectedRowSize) {
+        int offset1 = maxRowCount / 2;
+        int offset2 = expectedRowSize / 2;
+        for (int i = 0; i < offset1; i++) {
+            expectedData1[0][i * 2] = i;
+            expectedData1[0][i * 2 + 1] = i;
+            expectedData1[1][i * 2] = (long) (i + offset2);
+            expectedData1[1][i * 2 + 1] = (long) i;
+            expectedData1[2][i * 2] = (double) (i + offset2);
+            expectedData1[2][i * 2 + 1] = (double) i;
+            expectedData1[3][i * 2] = (double) (i + offset2 + 50);
+            expectedData1[3][i * 2 + 1] = (double) (i + 50);
+            expectedData1[4][i * 2] = (double) (i + offset2 + 50);
+            expectedData1[4][i * 2 + 1] = (double) (i + offset2 + 50);
+        }
+
+        int offset3 = offset1 + offset2;
+        int offset4 = (expectedRowSize - maxRowCount) / 2;
+        for (int i = 0; i < offset4; i++) {
+            expectedData2[0][i * 2] = i + offset1;
+            expectedData2[0][i * 2 + 1] = i + offset1;
+            expectedData2[1][i * 2] = (long) (i + offset3);
+            expectedData2[1][i * 2 + 1] = (long) (i + offset1);
+            expectedData2[2][i * 2] = (double) (i + offset3);
+            expectedData2[2][i * 2 + 1] = (double) (i + offset1);
+            expectedData2[3][i * 2] = (double) (i + 50 + offset3);
+            expectedData2[3][i * 2 + 1] = (double) (i + 50 + offset1);
+            expectedData2[4][i * 2] = (double) (i + 50 + offset3);
+            expectedData2[4][i * 2 + 1] = (double) (i + 50 + offset3);
+        }
     }
 }

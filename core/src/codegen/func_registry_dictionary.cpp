@@ -4,10 +4,9 @@
  */
 #include "func_registry_dictionary.h"
 #include "functions/dictionaryfunctions.h"
-
-namespace omniruntime::codegen {
+using namespace omniruntime;
 using namespace omniruntime::type;
-using namespace omniruntime::codegen::function;
+using namespace omniruntime::codegen;
 
 std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
 {
@@ -24,5 +23,4 @@ std::vector<Function> DictionaryFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(GetDecimalFromDictionaryVector), "DictionaryGetDecimal", {}, paramTypes,
         OMNI_DECIMAL128) };
     return dictionaryFnRegistry;
-}
 }

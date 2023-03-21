@@ -53,13 +53,14 @@ int32_t TopNWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     } else {
         topNOperator->AddInput(inputVecBatch);
     }
+    SetStatus(topNOperator->GetStatus());
     return 0;
 }
 
 int32_t TopNWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatches)
 {
     topNOperator->GetOutput(outputVecBatches);
-    SetStatus(OMNI_STATUS_FINISHED);
+    SetStatus(topNOperator->GetStatus());
     return 0;
 }
 

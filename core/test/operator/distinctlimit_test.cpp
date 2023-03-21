@@ -35,8 +35,7 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitBasic)
 
     std::vector<DataTypePtr> types = { IntType(),       DoubleType(),          VarcharType(10),
         LongType(),      Decimal128Type(10, 2), Date32Type(),
-        Decimal64Type(), BooleanType(),         CharType(),
-        ShortType() };
+        Decimal64Type(), BooleanType(),         CharType(), ShortType() };
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 =
         CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6, data7, data8, data9, data10);
@@ -258,8 +257,8 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypesCover)
                                   Decimal128(0, -2)};
     int16_t data6[dataSize] = {0, 1, 2, 3, 4, 5};
 
-    std::vector<DataTypePtr> types = { IntType(),       LongType(),       DoubleType(),
-        VarcharType(10), Decimal128Type(), ShortType() };
+    std::vector<DataTypePtr> types = { IntType(), LongType(), DoubleType(), VarcharType(10),
+        Decimal128Type(), ShortType() };
     DataTypes sourceTypes(types);
 
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4, data5, data6);
@@ -275,7 +274,7 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypesCover)
     std::vector<VectorBatch *> outputVecBatches;
     distinctLimitOperator->GetOutput(outputVecBatches);
 
-    std::vector<DataTypePtr> outTypes = { IntType(), DoubleType(), VarcharType(10), Decimal128Type(), ShortType() };
+    std::vector<DataTypePtr> outTypes = { IntType(), DoubleType(), VarcharType(10), Decimal128Type(), ShortType()};
     DataTypes expectedTypes(outTypes);
     VectorBatch *expVecBatch1 = CreateVectorBatch(expectedTypes, resultDataSize, data1, data3, data4, data5, data6);
 

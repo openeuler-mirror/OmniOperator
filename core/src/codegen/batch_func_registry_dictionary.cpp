@@ -5,10 +5,9 @@
 
 #include "batch_func_registry_dictionary.h"
 #include "batch_functions/batch_dictionaryfunctions.h"
-
-namespace omniruntime::codegen {
+using namespace omniruntime;
 using namespace omniruntime::type;
-using namespace codegen::function;
+using namespace omniruntime::codegen;
 
 std::vector<Function> BatchDictionaryFunctionRegistry::GetFunctions()
 {
@@ -38,5 +37,4 @@ std::vector<Function> BatchDictionaryFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchGetDecimalFromVector), "batch_GetData", {}, paramTypes, OMNI_DECIMAL128)
     };
     return batchDictionaryFnRegistry;
-}
 }

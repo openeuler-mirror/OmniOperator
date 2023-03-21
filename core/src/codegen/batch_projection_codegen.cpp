@@ -5,7 +5,6 @@
 
 #include "batch_projection_codegen.h"
 
-namespace omniruntime::codegen {
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
@@ -24,8 +23,33 @@ const int NEW_NULL_VALUES_INDEX = 7;
 const int OUTPUT_OFFSETS_INDEX = 8;
 const int EXECUTION_CONTEXT_IDX = 9;
 const int DICTIONARY_VECTORS_IDX = 10;
+const int ROW_PROJ_INPUT_INDEX = 0;
+const int ROW_PROJ_NULL_BITMAP_INDEX = 1;
+const int ROW_PROJ_OFFSETS_INDEX = 2;
+const int ROW_PROJ_ROW_IDX_INDEX = 3;
+const int ROW_PROJ_LENGTH_INDEX = 4;
+const int ROW_PROJ_EXECUTION_CONTEXT_INDEX = 5;
+const int ROW_PROJ_DICT_VECTORS_INDEX = 6;
+const int ROW_PROJ_IS_NULL_INDEX = 7;
 }
-intptr_t BatchProjectionCodeGen::GetFunction()
+
+std::unique_ptr<BatchProjectionCodeGen> BatchProjectionCodeGen::Create(std::string name,
+    const omniruntime::expressions::Expr &expression, bool filter, omniruntime::op::OverflowConfig *overflowConfig)
+{
+    std::unique_ptr<BatchProjectionCodeGen> codegen { new BatchProjectionCodeGen(std::move(name), expression, filter,
+        overflowConfig) };
+    LLVMEngine::Create(&(codegen->llvmEngine));
+    codegen->context = codegen->GetContext();
+    codegen->builder = codegen->GetIRBuilder();
+    codegen->module = codegen->GetModule();
+    codegen->jit = codegen->GetJit();
+    codegen->llvmTypes = codegen->GetTypes();
+    codegen->decimalIRBuilder = codegen->GetDecimalIRBuilder();
+    codegen->ExtractVectorIndexes();
+    return codegen;
+}
+
+int64_t BatchProjectionCodeGen::GetFunction()
 {
     llvm::Function *func = this->CreateBatchFunction();
     if (func == nullptr) {
@@ -34,27 +58,28 @@ intptr_t BatchProjectionCodeGen::GetFunction()
     return this->CreateBatchWrapper(*func);
 }
 
-intptr_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
+int64_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
 {
     llvm::Function *proj = &projFunc;
 
-    // The args indicates the type of the function parameter list.
     std::vector<Type *> args;
-    args.push_back(llvmTypes->I64PtrType()); // data address array
-    args.push_back(llvmTypes->I32Type());    // the num of rows
-    args.push_back(llvmTypes->I64Type());    // output array address
-    args.push_back(llvmTypes->I32PtrType()); // selected array
-    args.push_back(llvmTypes->I32Type());    // the num of selected rows
-    args.push_back(llvmTypes->I64PtrType()); // bitmap address array
-    args.push_back(llvmTypes->I64PtrType()); // offset address array
-    args.push_back(llvmTypes->I1PtrType());  // output null values array
-    args.push_back(llvmTypes->I32PtrType()); // output offset array
-    args.push_back(llvmTypes->I64Type());    // execution content address
-    args.push_back(llvmTypes->I64PtrType()); // dictionary address array
+    // data, rowCnt, outputData, (selectedRows, numSelected), bitmap, offsets, outputNull, outputOffsets, execution
+    // context, dictionary vectors,
+    args.push_back(llvmTypes->I64PtrType());
+    args.push_back(llvmTypes->I32Type());
+    args.push_back(llvmTypes->I64Type());
+    args.push_back(llvmTypes->I32PtrType());
+    args.push_back(llvmTypes->I32Type());
+    args.push_back(llvmTypes->I64PtrType());
+    args.push_back(llvmTypes->I64PtrType());
+    args.push_back(llvmTypes->I1PtrType());
+    args.push_back(llvmTypes->I32PtrType());
+    args.push_back(llvmTypes->I64Type());
+    args.push_back(llvmTypes->I64PtrType());
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "WRAPPER_FUNC", modulePtr);
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "BATCH_PROJECT_WRAPPER", module);
     BasicBlock *projectionMain = BasicBlock::Create(*context, "PROJECTION_MAIN", funcDecl);
 
     // set args names
@@ -99,8 +124,8 @@ intptr_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
         numRows = numSelected;
     } else {
         rowIdxArray = builder->CreateAlloca(llvmTypes->I32Type(), numRows, "ROW_IDX_ARRAY");
-        CallExternFunction("fill_rowIdx", { OMNI_INT, OMNI_INT }, OMNI_INT, { rowIdxArray, numRows }, nullptr,
-            "fill_rowIdx");
+        llvmEngine->CallExternFunction("fill_rowIdx", { OMNI_INT, OMNI_INT }, OMNI_INT, { rowIdxArray, numRows },
+            nullptr, "fill_rowIdx");
     }
     // generate output array for inner function
     AllocaInst *outputLenPtr = builder->CreateAlloca(llvmTypes->I32Type(), numRows, "OUTPUT_LENGTH");
@@ -115,18 +140,25 @@ intptr_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
     if (TypeUtil::IsStringType(expr->GetReturnTypeId())) {
         std::vector<DataTypeId> paramTypes = { OMNI_LONG, OMNI_VARCHAR, OMNI_INT, OMNI_INT };
         funcArgs = { outColPtr, resArray, outputLenPtr, numRows };
-        CallExternFunction("batch_WrapVarcharVector", paramTypes, OMNI_INT, funcArgs, nullptr, "copy_varchar_result");
+        llvmEngine->CallExternFunction("batch_WrapVarcharVector", paramTypes, OMNI_INT, funcArgs, nullptr,
+            "copy_varchar_result");
     } else {
         funcArgs = { outColPtr, resArray, numRows };
-        CallExternFunction("batch_copy", { this->expr->GetReturnTypeId() }, this->expr->GetReturnTypeId(), funcArgs,
-            nullptr, "copy_result");
+        llvmEngine->CallExternFunction("batch_copy", { this->expr->GetReturnTypeId() }, this->expr->GetReturnTypeId(),
+            funcArgs, nullptr, "copy_result");
     }
 
     auto dstNullPtr = builder->CreateIntToPtr(nullValuesAddress, llvmTypes->I1PtrType());
     funcArgs = { dstNullPtr, isNullPtr, numRows };
-    CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr, "copy_null");
+    llvmEngine->CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr, "copy_null");
     builder->CreateRet(numRows);
-    OptimizeFunctionsAndModule();
-    return Compile();
-}
+
+    llvmEngine->OptimizeFunctionsAndModule();
+    jit->getMainJITDylib().addGenerator(
+        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
+    auto resTracker = jit->getMainJITDylib().createResourceTracker();
+    llvmEngine->MakeThreadSafe(&resTracker);
+    rt = resTracker;
+    auto sym = eoe(jit->lookup("BATCH_PROJECT_WRAPPER"));
+    return sym.getAddress();
 }

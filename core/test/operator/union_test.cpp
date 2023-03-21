@@ -37,7 +37,9 @@ TEST(NativeOmniUnionOperator, TestUnionByThreeColumn)
     unionOperator->AddInput(vecBatch1);
     unionOperator->AddInput(vecBatch2);
     std::vector<VectorBatch *> outputVecBatches;
-    unionOperator->GetOutput(outputVecBatches);
+    while (unionOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        unionOperator->GetOutput(outputVecBatches);
+    }
 
     int32_t expData1[dataSize] = {0, 1, 2, 0, 1, 2};
     double expData2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
@@ -48,6 +50,7 @@ TEST(NativeOmniUnionOperator, TestUnionByThreeColumn)
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, dataSize, expData1, expData2, expData3);
     VectorBatch *expVecBatch2 = CreateVectorBatch(sourceTypes, dataSize, expData4, expData5, expData6);
 
+    EXPECT_EQ(outputVecBatches.size(), 2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
     EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2));
 

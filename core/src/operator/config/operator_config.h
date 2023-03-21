@@ -131,6 +131,7 @@ enum OverflowConfigId {
 
 NLOHMANN_JSON_SERIALIZE_ENUM(OverflowConfigId,
     { { OVERFLOW_CONFIG_EXCEPTION, "OVERFLOW_CONFIG_EXCEPTION" }, { OVERFLOW_CONFIG_NULL, "OVERFLOW_CONFIG_NULL" } })
+
 class OverflowConfig {
 public:
     OverflowConfig() : OverflowConfig(OVERFLOW_CONFIG_EXCEPTION) {}
@@ -153,38 +154,23 @@ private:
 
 class OperatorConfig {
 public:
-    OperatorConfig() : spillConfig(new SpillConfig()), overflowConfig(new OverflowConfig()), isSkipVerify(false) {}
+    OperatorConfig() : spillConfig(new SpillConfig()) {}
 
     OperatorConfig(const OperatorConfig &operatorConfig);
 
-    OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig, bool isSkipVerify)
-        : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig()),
-          overflowConfig((overflowConfig != nullptr) ? overflowConfig : new OverflowConfig()),
-          isSkipVerify(isSkipVerify)
+    explicit OperatorConfig(SpillConfig *spillConfig)
+        : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig())
     {}
 
-    OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig)
-        : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig()),
-          overflowConfig((overflowConfig != nullptr) ? overflowConfig : new OverflowConfig()),
-          isSkipVerify(false)
-    {}
-
-    explicit OperatorConfig(const OverflowConfig &overflowConfig)
-        : spillConfig(new SpillConfig()), overflowConfig(new OverflowConfig(overflowConfig)), isSkipVerify(false)
-    {}
-
-    explicit OperatorConfig(const SpillConfig &spillConfig)
-        : spillConfig(new SpillConfig(spillConfig)), overflowConfig(new OverflowConfig()), isSkipVerify(false)
-    {}
+    explicit OperatorConfig(const SpillConfig &spillConfig) : spillConfig(new SpillConfig(spillConfig)) {}
 
     explicit OperatorConfig(const SparkSpillConfig &sparkSpillConfig)
-        : spillConfig(new SparkSpillConfig(sparkSpillConfig)), overflowConfig(new OverflowConfig()), isSkipVerify(false)
+        : spillConfig(new SparkSpillConfig(sparkSpillConfig))
     {}
 
     ~OperatorConfig()
     {
         delete spillConfig;
-        delete overflowConfig;
     }
 
     SpillConfig *GetSpillConfig() const
@@ -197,34 +183,19 @@ public:
         this->spillConfig = pSpillConfig;
     }
 
-    OverflowConfig *GetOverflowConfig() const
-    {
-        return overflowConfig;
-    }
-
-    void SetOverflowConfig(OverflowConfig *pOverflowConfig)
-    {
-        this->overflowConfig = pOverflowConfig;
-    }
-
-    bool IsSkipVerify() const
-    {
-        return isSkipVerify;
-    }
-
-    void SetSkipVerify(bool needSkipVerify)
-    {
-        this->isSkipVerify = needSkipVerify;
-    }
-
     static OperatorConfig DeserializeOperatorConfig(const std::string &configString);
+
+    static std::pair<OperatorConfig, OverflowConfig *> DeserializeOperatorAndOverflowConfig(
+        const std::string &configString);
+
+    static OverflowConfig *DeserializeOverflowConfig(const std::string &configString);
+
+    static std::pair<bool, OverflowConfig *> DeserializeIsSkipVerifyAndOverflowConfig(const std::string &configString);
 
     static void CheckOperatorConfig(const OperatorConfig &operatorConfig);
 
 private:
-    SpillConfig *spillConfig = nullptr;
-    OverflowConfig *overflowConfig = nullptr;
-    bool isSkipVerify = false;
+    SpillConfig *spillConfig;
 };
 }
 }

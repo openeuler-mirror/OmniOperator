@@ -8,7 +8,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Value.h"
 
-namespace omniruntime::codegen {
 class CodegenContext {
 public:
     explicit CodegenContext()
@@ -35,12 +34,7 @@ public:
     ~CodegenContext() = default;
 
     friend class ExpressionCodeGen;
-
-    friend class SimpleFilterCodeGen;
-
-    friend class RowProjectionCodeGen;
-
-    friend class CodegenBase;
+    friend class RowExpressionCodeGen;
 
 private:
     llvm::Value *data;
@@ -51,6 +45,5 @@ private:
     llvm::Value *dictionaryVectors;
     llvm::FunctionCallee print;
 };
-}
 
 #endif // OMNI_RUNTIME_CODEGEN_CONTEXT_H

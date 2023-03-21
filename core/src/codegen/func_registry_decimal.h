@@ -23,28 +23,8 @@ const std::string mulDec64Str = "Mul_decimal64";
 const std::string divDec64Str = "Div_decimal64";
 const std::string modDec64Str = "Mod_decimal64";
 
-namespace omniruntime::codegen {
+namespace omniruntime {
 class DecimalFunctionRegistry : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class DecimalFunctionRegistryDown : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class DecimalFunctionRegistryHalfUp : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class DecimalFunctionRegistryNotReScale : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class DecimalFunctionRegistryReScale : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };

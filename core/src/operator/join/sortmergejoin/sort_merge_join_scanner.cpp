@@ -53,20 +53,16 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
 }
 
 int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<bool> &isMatched,
-    std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
-    std::vector<bool> &isBufferedKeyMatched)
+    std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses)
 {
     isMatched.insert(isMatched.end(), isPreKeyMatched.begin(), isPreKeyMatched.end());
     streamedTblValueAddresses.insert(streamedTblValueAddresses.end(), streamedValueAddress.begin(),
         streamedValueAddress.end());
     bufferedTblValueAddresses.insert(bufferedTblValueAddresses.end(), bufferedValueAddress.begin(),
         bufferedValueAddress.end());
-    isBufferedKeyMatched.insert(isBufferedKeyMatched.end(), isSameBufferedKeyMatched.begin(),
-        isSameBufferedKeyMatched.end());
     isPreKeyMatched.clear();
     streamedValueAddress.clear();
     bufferedValueAddress.clear();
-    isSameBufferedKeyMatched.clear();
     return 0;
 }
 
@@ -267,6 +263,13 @@ void SortMergeJoinScanner::RunFullOuterJoin()
 
 bool SortMergeJoinScanner::FindMatchingRows()
 {
+    while (CurBufferedHasNull()) { // skip buffered null value
+        if (!AdvancedBufferedJoinKey()) {
+            preStatus->TransToNeedBufferedData(HasResult());
+            return false;
+        }
+    }
+
     auto comp = FindNextMatchPos();
     if (NeedBufferedData()) {
         preStatus->TransToNeedBufferedData(HasResult());
@@ -689,7 +692,7 @@ void SortMergeJoinScanner::SavePrevMatchingRows(bool isMatched)
     bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
         preBufferedValueAddress.end());
     isSameBufferedKeyMatched.insert(isSameBufferedKeyMatched.end(), preBufferedKeyMatched.begin(),
-        preBufferedKeyMatched.end());
+                                    preBufferedKeyMatched.end());
     auto valueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), valueAddr);
     isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);

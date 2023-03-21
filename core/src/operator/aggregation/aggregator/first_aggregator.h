@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: Returns the first value of `child` for a group of rows.
  * Caution: The function is non-deterministic.
  * Returns the first value of `child` for a group of rows.
@@ -18,23 +18,19 @@
 
 namespace omniruntime {
 namespace op {
-static constexpr int32_t PARTIAL_FIRST_OUTPUT_LENGTH = sizeof(FirstState);
-
 // First Aggregator date type information:
 // input: InputType
 // intermediate: InputType + bool(wrap with ContainerDataType and ContainerVector)
 // final: InputType
-template <bool INPUT_RAW, bool OUT_PARTIAL, typename InputVecType, typename InputType>
-class FirstAggregator : public Aggregator {
+template <typename InputVecType, typename InputType> class FirstAggregator : public Aggregator {
 public:
-    FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out,
-        std::vector<int32_t> &channels)
+    FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out, std::vector<int32_t> &channels)
         : Aggregator(aggregateType, in, out, channels),
           isIgnoreNull(aggregateType == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL)
     {}
 
-    FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out,
-        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+    FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out, std::vector<int32_t> &channels,
+        bool inputRaw, bool outputPartial, bool isOverflowAsNull)
         : Aggregator(aggregateType, in, out, channels, inputRaw, outputPartial, isOverflowAsNull),
           isIgnoreNull(aggregateType == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL)
     {}
@@ -57,7 +53,7 @@ public:
         }
         int32_t offset;
         auto firstState = static_cast<FirstState *>(state.val);
-        if constexpr (INPUT_RAW) {
+        if (inputRaw) {
             Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
             if (isIgnoreNull) {
                 if (!firstState->valueSet && !vector->IsValueNull(offset)) {
@@ -89,18 +85,18 @@ public:
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
         auto firstVector =
-            reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+                reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
         if (state.val == nullptr) {
             firstVector->SetValueNull(rowIndex);
             return;
         }
         auto firstState = static_cast<FirstState *>(state.val);
-        if constexpr (OUT_PARTIAL) {
-            firstVector =
+        if (outputPartial) {
+             firstVector =
                 reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
 
             if (firstState->valIsNull) {

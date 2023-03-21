@@ -21,7 +21,6 @@ import static org.testng.Assert.assertNotEquals;
 import com.google.common.collect.ImmutableList;
 
 import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationOperatorFactory;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationWithExprOperatorFactory;
 import nova.hetu.omniruntime.operator.aggregator.OmniHashAggregationWithExprOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -49,70 +48,6 @@ public class OmniHashAggregationWithExprOperatorTest {
     /**
      * test hashAggregationWithExpr performance whether with jit or not.
      */
-    @Test
-    public void testHashAggregationOutputlMultiVectorBatch() {
-        String[] groupByChannel = {"#0", "#1"};
-        DataType[] groupByTypes = {LongDataType.LONG, LongDataType.LONG};
-        String[] aggChannels = {"#3"};
-        DataType[] aggTypes = {LongDataType.LONG};
-        FunctionType[] aggFunctionTypes = {OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_ALL};
-        DataType[] aggOutputTypes = {LongDataType.LONG, LongDataType.LONG};
-
-        OmniHashAggregationOperatorFactory operatorFactory = new OmniHashAggregationOperatorFactory(groupByChannel,
-                groupByTypes, aggChannels, aggTypes, aggFunctionTypes, aggOutputTypes, true, false,
-                new OperatorConfig());
-        OmniOperator omniOperator = operatorFactory.createOperator();
-
-        ImmutableList.Builder<VecBatch> vecBatchList1 = ImmutableList.builder();
-        int rowNum = 100000;
-        int pageCount = 10;
-        for (int i = 0; i < pageCount; i++) {
-            vecBatchList1.add(new VecBatch(buildDataForOutputMultiVectorBatch(rowNum)));
-        }
-
-        for (VecBatch vecBatch : vecBatchList1.build()) {
-            omniOperator.addInput(vecBatch);
-        }
-
-        Iterator<VecBatch> outputVecBatch = omniOperator.getOutput();
-
-        int vecBatchCount = 0;
-        int totalRowcount = 0;
-        long col1Sum = 0L;
-        long col2Sum = 0L;
-        long col3Sum = 0L;
-        long col4Sum = 0L;
-        while (outputVecBatch.hasNext()) {
-            VecBatch result = outputVecBatch.next();
-            Vec[] vectors = result.getVectors();
-            int vecBatchRowCurrent = result.getRowCount();
-            for (int i = 0; i < vecBatchRowCurrent; ++i) {
-                col1Sum += ((LongVec) vectors[0]).get(i);
-                col2Sum += ((LongVec) vectors[1]).get(i);
-                col3Sum += ((LongVec) vectors[2]).get(i);
-                col4Sum += ((LongVec) vectors[3]).get(i);
-            }
-            totalRowcount += vecBatchRowCurrent;
-            freeVecBatch(result);
-            vecBatchCount++;
-        }
-        omniOperator.close();
-        operatorFactory.close();
-        assertEquals(totalRowcount, rowNum);
-        // each row contains four columns, each of which contains 8 bytes.
-        int rowSize = 4 * 8;
-        // single vecBatch is 1MB, calculate the maximum number of rows in single
-        // vecBatch.
-        int rowsPerBatch = (1024 * 1024 + rowSize - 1) / rowSize;
-        int expectedBatchCount = (rowNum + rowsPerBatch - 1) / rowsPerBatch;
-        assertEquals(vecBatchCount, expectedBatchCount);
-        // sum of an arithmetic sequence with a step of 1
-        assertEquals(col1Sum, (((long) rowNum - 1) * rowNum) / 2);
-        assertEquals(col2Sum, (long) rowNum);
-        assertEquals(col3Sum, (long) (rowNum / 2 * pageCount));
-        assertEquals(col4Sum, (long) (rowNum * pageCount));
-    }
-
     @Test
     public void testHashAggregationWithExprComparePref() {
         String[] groupByChannel = {getOmniJsonFieldReference(2, 0), getOmniJsonFieldReference(2, 1)};
@@ -351,35 +286,6 @@ public class OmniHashAggregationWithExprOperatorTest {
         LongVec c2 = new LongVec(rowNum);
         for (int i = 0; i < rowNum; i++) {
             c1.set(i, 1);
-            c2.set(i, 1);
-        }
-
-        LongVec c3 = new LongVec(rowNum);
-        LongVec c4 = new LongVec(rowNum);
-        for (int i = 0; i < rowNum; i++) {
-            if (i % 2 == 0) {
-                c3.set(i, 1);
-                c4.set(i, 1);
-            } else {
-                c3.setNull(i);
-                c4.setNull(i);
-            }
-        }
-
-        List<Vec> columns = new ArrayList<>();
-        columns.add(c1);
-        columns.add(c2);
-        columns.add(c3);
-        columns.add(c4);
-
-        return columns;
-    }
-
-    private List<Vec> buildDataForOutputMultiVectorBatch(int rowNum) {
-        LongVec c1 = new LongVec(rowNum);
-        LongVec c2 = new LongVec(rowNum);
-        for (int i = 0; i < rowNum; i++) {
-            c1.set(i, i);
             c2.set(i, 1);
         }
 

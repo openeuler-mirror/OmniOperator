@@ -36,16 +36,20 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
         return 0;
     }
 
-    int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t rowCount = vecBatch->GetRowCount();
-    int32_t fetchSize = (remainingLimit >= rowCount) ? rowCount : remainingLimit;
+    if (remainingLimit >= rowCount) {
+        outputVecBatch = vecBatch;
+        remainingLimit -= rowCount;
+        return 0;
+    }
 
-    outputVecBatch = new VectorBatch(vectorCount, fetchSize);
+    int32_t vectorCount = vecBatch->GetVectorCount();
+    outputVecBatch = new VectorBatch(vectorCount, remainingLimit);
     for (int32_t i = 0; i < vectorCount; ++i) {
         Vector *inputVector = vecBatch->GetVector(i);
-        outputVecBatch->SetVector(i, inputVector->Slice(0, fetchSize));
+        outputVecBatch->SetVector(i, inputVector->Slice(0, remainingLimit));
     }
-    remainingLimit -= fetchSize;
+    remainingLimit = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }

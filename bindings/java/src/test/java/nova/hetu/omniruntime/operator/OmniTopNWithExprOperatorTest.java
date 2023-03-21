@@ -27,7 +27,9 @@ import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * The type Omni TopN with expression operator test.
@@ -170,5 +172,90 @@ public class OmniTopNWithExprOperatorTest {
         assertEquals(factory2, factory1);
         assertEquals(factory1, factory1);
         assertNotEquals(factory3, factory1);
+    }
+
+    private void buildIterativeExpectedData(Object[][] expectedData1, Object[][] expectedData2, int sourceDataSize,
+            int maxRowCount, int expectedRowSize) {
+        for (int i = 0; i < maxRowCount; i++) {
+            if (i % 2 == 0) {
+                expectedData1[0][i] = sourceDataSize - 1L - i;
+                expectedData1[1][i] = sourceDataSize - 1L - i;
+            } else {
+                expectedData1[0][i] = expectedData1[0][i - 1];
+                expectedData1[1][i] = (long) expectedData1[1][i - 1] + 1L;
+            }
+            expectedData1[2][i] = (long) expectedData1[0][i] + 5L;
+            expectedData1[3][i] = (long) expectedData1[1][i] + 2L;
+        }
+
+        for (int i = 0; i < expectedRowSize - maxRowCount; i++) {
+            if (i % 2 == 0) {
+                expectedData2[0][i] = sourceDataSize - maxRowCount - 1L - i;
+                expectedData2[1][i] = sourceDataSize - maxRowCount - 1L - i;
+            } else {
+                expectedData2[0][i] = expectedData2[0][i - 1];
+                expectedData2[1][i] = (long) expectedData2[1][i - 1] + 1L;
+            }
+            expectedData2[2][i] = (long) expectedData2[0][i] + 5L;
+            expectedData2[3][i] = (long) expectedData2[1][i] + 2L;
+        }
+    }
+
+    @Test
+    public void testTopNIterativeGetOutput() {
+        DataType[] sourceTypes = {LongDataType.LONG, LongDataType.LONG};
+        String[] sortKeys = {
+                omniJsonFourArithmeticExpr("ADD", 2, getOmniJsonFieldReference(2, 0), getOmniJsonLiteral(2, false, 5)),
+                omniJsonFourArithmeticExpr("ADD", 2, getOmniJsonFieldReference(2, 1), getOmniJsonLiteral(2, false, 2))};
+        int[] sortAsc = {0, 1};
+        int[] nullFirst = {0, 0};
+
+        int sourceDataSize = 33000;
+        int expectedRowSize = 32800;
+
+        OmniTopNWithExprOperatorFactory omniTopNOperatorFactory = new OmniTopNWithExprOperatorFactory(sourceTypes,
+                expectedRowSize, sortKeys, sortAsc, nullFirst);
+        OmniOperator operator = omniTopNOperatorFactory.createOperator();
+
+        Object[][] sourceData = new Object[2][sourceDataSize];
+        for (int i = 0; i < sourceDataSize; i++) {
+            if (i % 2 == 0) {
+                sourceData[0][i] = i + 1L;
+            } else {
+                sourceData[0][i] = sourceData[0][i - 1];
+            }
+            sourceData[1][i] = i + 1L;
+        }
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceData);
+
+        operator.addInput(vecBatch);
+        Iterator<VecBatch> topNIterator = operator.getOutput();
+        List<VecBatch> resultList = new ArrayList<>();
+        while (topNIterator.hasNext()) {
+            resultList.add(topNIterator.next());
+        }
+
+        int resultRowCount = 0;
+        int resultVectorCount = 0;
+        for (int i = 0; i < resultList.size(); i++) {
+            resultRowCount += resultList.get(i).getRowCount();
+            resultVectorCount = resultList.get(i).getVectorCount();
+        }
+        assertEquals(resultRowCount, expectedRowSize);
+        assertEquals(resultVectorCount, sourceTypes.length + sortKeys.length);
+
+        int maxRowCount = 32768; // 1M / (4 * 8)
+        Object[][] expectedData1 = new Object[resultVectorCount][maxRowCount];
+        Object[][] expectedData2 = new Object[resultVectorCount][expectedRowSize - maxRowCount];
+        buildIterativeExpectedData(expectedData1, expectedData2, sourceDataSize, maxRowCount, expectedRowSize);
+
+        assertVecBatchEquals(resultList.get(0), expectedData1);
+        assertVecBatchEquals(resultList.get(1), expectedData2);
+
+        for (int i = 0; i < resultList.size(); i++) {
+            freeVecBatch(resultList.get(i));
+        }
+        operator.close();
+        omniTopNOperatorFactory.close();
     }
 }

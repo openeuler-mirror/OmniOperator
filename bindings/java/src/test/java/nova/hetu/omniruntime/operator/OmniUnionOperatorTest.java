@@ -27,7 +27,9 @@ import nova.hetu.omniruntime.vector.VecBatch;
 
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * The type Omni union operator test.
@@ -57,13 +59,19 @@ public class OmniUnionOperatorTest {
         Object[][] expectedDatas2 = {{15, 13, 12, 16, 11, 14, 17, 18},
                 {15.0, 13.0, 12.0, 16.0, 11.0, 14.0, 17.0, 18.0}};
 
-        VecBatch resultVecBatch1 = results.next();
-        assertVecBatchEquals(resultVecBatch1, expectedDatas1);
-        VecBatch resultVecBatch2 = results.next();
-        assertVecBatchEquals(resultVecBatch2, expectedDatas2);
+        List<VecBatch> resultList = new ArrayList<>();
+        while (results.hasNext()) {
+            resultList.add(results.next());
+        }
 
-        freeVecBatch(resultVecBatch1);
-        freeVecBatch(resultVecBatch2);
+        assertEquals(resultList.size(), 2);
+        assertVecBatchEquals(resultList.get(0), expectedDatas1);
+        assertVecBatchEquals(resultList.get(1), expectedDatas2);
+
+        for (int i = 0; i < resultList.size(); i++) {
+            freeVecBatch(resultList.get(i));
+        }
+
         unionOperator.close();
         unionOperatorFactory.close();
     }
@@ -87,17 +95,22 @@ public class OmniUnionOperatorTest {
         unionOperator.addInput(vecBatch2);
         Iterator<VecBatch> results = unionOperator.getOutput();
 
+        List<VecBatch> resultList = new ArrayList<>();
+        while (results.hasNext()) {
+            resultList.add(results.next());
+        }
+
         Object[][] expectedDatas1 = {{null, 3, 2, 6, 1, 4, 7, 8}, {5.0, 3.0, 2.0, 6.0, 1.0, 4.0, null, 8.0}};
         Object[][] expectedDatas2 = {{15, 13, null, 16, 11, 14, 17, 18},
                 {15.0, null, 12.0, 16.0, 11.0, 14.0, 17.0, 18.0}};
 
-        VecBatch resultVecBatch1 = results.next();
-        assertVecBatchEquals(resultVecBatch1, expectedDatas1);
-        VecBatch resultVecBatch2 = results.next();
-        assertVecBatchEquals(resultVecBatch2, expectedDatas2);
+        assertEquals(resultList.size(), 2);
+        assertVecBatchEquals(resultList.get(0), expectedDatas1);
+        assertVecBatchEquals(resultList.get(1), expectedDatas2);
 
-        freeVecBatch(resultVecBatch1);
-        freeVecBatch(resultVecBatch2);
+        for (int i = 0; i < resultList.size(); i++) {
+            freeVecBatch(resultList.get(i));
+        }
         unionOperator.close();
         unionOperatorFactory.close();
     }
@@ -128,17 +141,21 @@ public class OmniUnionOperatorTest {
         unionOperator.addInput(vecBatch1);
         unionOperator.addInput(vecBatch2);
         Iterator<VecBatch> results = unionOperator.getOutput();
+        List<VecBatch> resultList = new ArrayList<>();
+        while (results.hasNext()) {
+            resultList.add(results.next());
+        }
 
         Object[][] expectedDatas1 = {{1L, null, 3L, null}, {111L, 11L, 333L, 33L}};
         Object[][] expectedDatas2 = {{null, 2L, null, 4L}, {11L, 22L, 33L, 44L}};
 
-        VecBatch resultVecBatch1 = results.next();
-        assertVecBatchEquals(resultVecBatch1, expectedDatas1);
-        VecBatch resultVecBatch2 = results.next();
-        assertVecBatchEquals(resultVecBatch2, expectedDatas2);
+        assertEquals(resultList.size(), 2);
+        assertVecBatchEquals(resultList.get(0), expectedDatas1);
+        assertVecBatchEquals(resultList.get(1), expectedDatas2);
 
-        freeVecBatch(resultVecBatch1);
-        freeVecBatch(resultVecBatch2);
+        for (int i = 0; i < resultList.size(); i++) {
+            freeVecBatch(resultList.get(i));
+        }
         unionOperator.close();
         unionOperatorFactory.close();
     }

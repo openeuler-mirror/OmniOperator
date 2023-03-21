@@ -5,74 +5,30 @@
 #include "func_registry.h"
 #include <algorithm>
 #include "util/debug.h"
-#include "util/config_util.h"
 
-namespace omniruntime::codegen {
 using namespace std;
-
+using namespace omniruntime;
+using omniruntime::Function;
 const std::string INVALID_HIVE_UDF = "";
 
-vector<Function> FunctionRegistry::registeredBatchFunctions = InitializeBatchFunc();
-vector<Function> FunctionRegistry::registeredRowFunctions = InitializeRowFunc();
+vector<Function> FunctionRegistry::registeredFunctions = Initialize();
 FunctionMapPtr FunctionRegistry::functionRegistry;
 FunctionMapPtr FunctionRegistry::functionNullRegistry;
 HiveUdfMapPtr FunctionRegistry::hiveUdfMap;
 std::once_flag FunctionRegistry::initHiveUdfMap;
 
-vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistries()
+vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetFunctionRegistries()
 {
     vector<unique_ptr<BaseFunctionRegistry>> functionRegistries;
-
-    auto policy = GetProperties().GetPolicy();
     functionRegistries.push_back(make_unique<ContextFunctionRegistry>());
     functionRegistries.push_back(make_unique<DecimalFunctionRegistry>());
     functionRegistries.push_back(make_unique<DictionaryFunctionRegistry>());
     functionRegistries.push_back(make_unique<MathFunctionRegistry>());
+    functionRegistries.push_back(make_unique<StringFunctionRegistry>());
     functionRegistries.push_back(make_unique<HashFunctionRegistry>());
     functionRegistries.push_back(make_unique<VarcharVectorFunctionRegistry>());
     functionRegistries.push_back(make_unique<HiveUdfRegistry>());
-    functionRegistries.push_back(make_unique<StringFunctionRegistry>());
 
-    if (policy->GetRoundingRule() == RoundingRule::HALF_UP) {
-        functionRegistries.push_back(make_unique<MathFunctionRegistryHalfUp>());
-        functionRegistries.push_back(make_unique<DecimalFunctionRegistryHalfUp>());
-    } else {
-        functionRegistries.push_back(make_unique<MathFunctionRegistryDown>());
-        functionRegistries.push_back(make_unique<DecimalFunctionRegistryDown>());
-    }
-
-    if (policy->GetCheckReScaleRule() == CheckReScaleRule::NOT_CHECK_RESCALE) {
-        functionRegistries.push_back(make_unique<DecimalFunctionRegistryNotReScale>());
-    } else {
-        functionRegistries.push_back(make_unique<DecimalFunctionRegistryReScale>());
-    }
-
-    if (policy->GetEmptySearchStrReplaceRule() == EmptySearchStrReplaceRule::REPLACE) {
-        functionRegistries.push_back(make_unique<StringFunctionRegistryReplace>());
-    } else {
-        functionRegistries.push_back(make_unique<StringFunctionRegistryNotReplace>());
-    }
-
-    if (policy->GetStringToDateFormatRule() == StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION) {
-        functionRegistries.push_back(make_unique<StringFunctionRegistryNotAllowReducePrecison>());
-    } else {
-        functionRegistries.push_back(make_unique<StringFunctionRegistryAllowReducePrecison>());
-    }
-
-    if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::EMPTY_STRING) {
-        functionRegistries.push_back(make_unique<StringFunctionRegistryReplaceEmptyString>());
-    } else {
-        functionRegistries.push_back(make_unique<StringFunctionRegistryReplaceInterceptFromBeyond>());
-    }
-
-    return functionRegistries;
-}
-
-vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetBatchFunctionRegistries()
-{
-    vector<unique_ptr<BaseFunctionRegistry>> functionRegistries;
-
-    auto policy = GetProperties().GetPolicy();
     functionRegistries.push_back(make_unique<BatchDecimalFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchDictionaryFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchMathFunctionRegistry>());
@@ -81,42 +37,13 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetBatchFunctionRegis
     functionRegistries.push_back(make_unique<BatchVarcharVectorFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchUtilFunctionRegistry>());
 
-    if (policy->GetRoundingRule() == RoundingRule::HALF_UP) {
-        functionRegistries.push_back(make_unique<BatchMathFunctionRegistryHalfUp>());
-        functionRegistries.push_back(make_unique<BatchDecimalFunctionRegistryHalfUp>());
-    } else {
-        functionRegistries.push_back(make_unique<BatchMathFunctionRegistryDown>());
-        functionRegistries.push_back(make_unique<BatchDecimalFunctionRegistryDown>());
-    }
-
-    if (policy->GetCheckReScaleRule() == CheckReScaleRule::NOT_CHECK_RESCALE) {
-        functionRegistries.push_back(make_unique<BatchDecimalFunctionRegistryNotReScale>());
-    } else {
-        functionRegistries.push_back(make_unique<BatchDecimalFunctionRegistryReScale>());
-    }
-
-    if (policy->GetStringToDateFormatRule() == StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION) {
-        functionRegistries.push_back(make_unique<BatchStringFunctionRegistryNotAllowReducePrecison>());
-    } else {
-        functionRegistries.push_back(make_unique<BatchStringFunctionRegistryAllowReducePrecison>());
-    }
-
-    if (policy->GetEmptySearchStrReplaceRule() == EmptySearchStrReplaceRule::REPLACE) {
-        functionRegistries.push_back(make_unique<BatchStringFunctionRegistryReplace>());
-    } else {
-        functionRegistries.push_back(make_unique<BatchStringFunctionRegistryNotReplace>());
-    }
-
-    if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::EMPTY_STRING) {
-        functionRegistries.push_back(make_unique<BatchStringFunctionRegistryReplaceEmptyString>());
-    } else {
-        functionRegistries.push_back(make_unique<BatchStringFunctionRegistryReplaceInterceptFromBeyond>());
-    }
+    // External functions
+    functionRegistries.push_back(make_unique<ExternalFunctionRegistry>());
 
     return functionRegistries;
 }
 
-std::vector<Function> FunctionRegistry::InitializeRowFunc()
+std::vector<Function> FunctionRegistry::Initialize()
 {
     hiveUdfMap = std::make_unique<std::unordered_map<std::string, std::string>>();
 
@@ -126,37 +53,7 @@ std::vector<Function> FunctionRegistry::InitializeRowFunc()
     functionNullRegistry =
         std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
 
-    auto registries = GetRowFunctionRegistries();
-    for (auto const & registry : registries) {
-        auto functions = registry->GetFunctions();
-        allFunctions.insert(std::end(allFunctions), functions.begin(), functions.end());
-    }
-    for (auto &function : allFunctions) {
-        for (auto &signature : function.GetSignatures()) {
-            if (functionRegistry->find(&signature) != functionRegistry->end()) {
-                LogWarn("Trying to register functions with same signature: %s", signature.ToString().c_str());
-            }
-            functionRegistry->insert(std::make_pair(&signature, &function));
-            if (function.GetNullableResultType() == INPUT_DATA_AND_OVERFLOW_NULL) {
-                functionNullRegistry->insert(std::make_pair(&signature, &function));
-            }
-        }
-    }
-
-    return allFunctions;
-}
-
-std::vector<Function> FunctionRegistry::InitializeBatchFunc()
-{
-    hiveUdfMap = std::make_unique<std::unordered_map<std::string, std::string>>();
-
-    std::vector<Function> allFunctions;
-    functionRegistry =
-        std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
-    functionNullRegistry =
-        std::make_unique<std::unordered_map<const FunctionSignature *, const Function *, Hash, Equals>>();
-
-    auto registries = GetBatchFunctionRegistries();
+    auto registries = GetFunctionRegistries();
     for (auto const & registry : registries) {
         auto functions = registry->GetFunctions();
         allFunctions.insert(std::end(allFunctions), functions.begin(), functions.end());
@@ -220,13 +117,7 @@ const std::string &FunctionRegistry::LookupHiveUdf(const std::string &udfName)
     return result->second;
 }
 
-std::vector<Function> &FunctionRegistry::GetRowFunctions()
+std::vector<Function> &FunctionRegistry::GetFunctions()
 {
-    return registeredRowFunctions;
-}
-
-std::vector<Function> &FunctionRegistry::GetBatchFunctions()
-{
-    return registeredBatchFunctions;
-}
+    return registeredFunctions;
 }

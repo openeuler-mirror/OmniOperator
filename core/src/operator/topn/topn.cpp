@@ -38,14 +38,17 @@ TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::v
     this->sortAscendings = sortAscendings;
     this->sortNullFirsts = sortNullFirsts;
     this->sortColCount = sortColCount;
+    int32_t eachRowSize = OperatorUtil::GetRowSize(sourceTypes.Get());
+    maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
 }
 
 TopNOperator::~TopNOperator()
 {
-    for (const auto &item : singleRowVectorBatchList) {
+    for (const auto &item : singleRowVectorBatchSet) {
         item->ReleaseAllVectors();
         delete item;
     }
+    resultVectorBatchList.clear();
 }
 
 int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPosition, VectorBatch *right,
@@ -94,7 +97,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
         VectorBatch *singleRowVecBatch = CreateSingleRowVecBatch(vectorBatch, position);
         pq.emplace(typeIds, sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount,
             singleRowVecBatch);
-        singleRowVectorBatchList.push_back(singleRowVecBatch);
+        singleRowVectorBatchSet.insert(singleRowVecBatch);
     }
     for (; position < vectorBatch->GetRowCount(); ++position) {
         VectorBatch *top = pq.top().GetVecBatch();
@@ -106,6 +109,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
         }
     }
     VectorHelper::FreeVecBatch(vectorBatch);
+    SetStatus(OMNI_STATUS_NORMAL);
     return 0;
 }
 
@@ -225,34 +229,50 @@ template <typename T> static void ALWAYS_INLINE SetValueForVector(Vector *pqVect
     (static_cast<T *>(tmpVector))->SetValue(index, (static_cast<T *>(pqVector))->GetValue(0));
 }
 
-int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
+void TopNOperator::FillResultVectorBatchList()
 {
-    int64_t positionCount = static_cast<int64_t>(pq.size());
-    if (positionCount <= 0) {
-        return 0;
-    }
-    auto tmpVecBatch = new VectorBatch(sourceTypesCount, pq.size());
-    tmpVecBatch->NewVectors(vecAllocator, sourceTypes.Get());
-    int64_t rowNum = 0;
-    auto typeIds = sourceTypes.GetIds();
-    while (!pq.empty()) {
-        VectorBatch *pqVecBatch = pq.top().GetVecBatch();
-        int64_t index = positionCount - rowNum - 1;
-        for (int i = 0; i < sourceTypesCount; ++i) {
-            Vector *pqVector = pqVecBatch->GetVector(i);
-            Vector *tmpVector = tmpVecBatch->GetVector(i);
-            if (typeIds[i] == OMNI_VARCHAR || typeIds[i] == OMNI_CHAR) {
-                SetVarcharValueForVectorBatch(rowNum, static_cast<VarcharVector *>(pqVector),
-                    static_cast<VarcharVector *>(tmpVector));
-            } else {
-                SetValueForVectorBatch(typeIds[i], index, pqVector, tmpVector);
-            }
-        }
-        rowNum++;
+    totalRowCount = static_cast<int64_t>(pq.size());
+    resultVectorBatchList.resize(totalRowCount);
+    for (int32_t i = totalRowCount; i > 0; i--) {
+        resultVectorBatchList[i - 1] = pq.top().GetVecBatch();
         pq.pop();
     }
-    HandleVarchar(positionCount, tmpVecBatch);
-    outputVecBatch.push_back(tmpVecBatch);
+}
+
+int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
+{
+    if (!hasFilledResult) {
+        if (pq.size() <= 0) {
+            SetStatus(OMNI_STATUS_FINISHED);
+            return 0;
+        }
+        FillResultVectorBatchList();
+        hasFilledResult = true;
+    }
+    int64_t rowCount = std::min(maxRowCount, totalRowCount - outputtedRowCount);
+    auto resultVecBatch = new VectorBatch(sourceTypesCount, rowCount);
+    resultVecBatch->NewVectors(vecAllocator, sourceTypes.Get());
+    auto typeIds = sourceTypes.GetIds();
+    for (size_t i = 0; i < rowCount; i++) {
+        VectorBatch *singleVecBatch = resultVectorBatchList[i + outputtedRowCount];
+        for (int j = 0; j < sourceTypesCount; ++j) {
+            Vector *singleVector = singleVecBatch->GetVector(j);
+            Vector *resultVector = resultVecBatch->GetVector(j);
+            if (typeIds[j] == OMNI_VARCHAR || typeIds[j] == OMNI_CHAR) {
+                SetVarcharValueForVectorBatch(i, static_cast<VarcharVector *>(singleVector),
+                    static_cast<VarcharVector *>(resultVector));
+            } else {
+                SetValueForVectorBatch(typeIds[j], i, singleVector, resultVector);
+            }
+        }
+        VectorHelper::FreeVecBatch(singleVecBatch);
+        singleRowVectorBatchSet.erase(singleVecBatch);
+    }
+    outputtedRowCount += rowCount;
+    outputVecBatch.push_back(resultVecBatch);
+    if (!HasNext()) {
+        SetStatus(OMNI_STATUS_FINISHED);
+    }
     return 0;
 }
 
@@ -298,32 +318,6 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, VarcharVector *
     uint8_t *value = nullptr;
     int32_t valueLength = pqVector->GetValue(0, &value);
     tmpVector->SetValue(rowNum, reinterpret_cast<const uint8_t *>(value), valueLength);
-}
-
-void TopNOperator::HandleVarchar(int64_t positionCount, VectorBatch *tmpVecBatch) const
-{
-    int vecIndex = 0;
-    for (const DataTypePtr &dataTypePtr : sourceTypes.Get()) {
-        if (dataTypePtr->GetId() != OMNI_VARCHAR && dataTypePtr->GetId() != OMNI_CHAR) {
-            vecIndex++;
-            continue;
-        }
-
-        auto varcharVector = new VarcharVector(vecAllocator, positionCount);
-        auto tempVarcharVec = static_cast<VarcharVector *>(tmpVecBatch->GetVector(vecIndex));
-        for (int32_t i = 0; i < positionCount; ++i) {
-            if (tempVarcharVec->IsValueNull(positionCount - i - 1)) {
-                varcharVector->SetValueNull(i);
-            } else {
-                uint8_t *value = nullptr;
-                int32_t valueLength = tempVarcharVec->GetValue(positionCount - i - 1, &value);
-                varcharVector->SetValue(i, value, valueLength);
-            }
-        }
-        delete tmpVecBatch->GetVector(vecIndex);
-        tmpVecBatch->SetVector(vecIndex, varcharVector);
-        vecIndex++;
-    }
 }
 
 RowComparator::RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings,

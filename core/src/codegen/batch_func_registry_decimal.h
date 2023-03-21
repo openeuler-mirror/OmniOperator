@@ -8,28 +8,8 @@
 #include "function.h"
 #include "func_registry_base.h"
 
-namespace omniruntime::codegen {
+namespace omniruntime {
 class BatchDecimalFunctionRegistry : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class BatchDecimalFunctionRegistryDown : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class BatchDecimalFunctionRegistryHalfUp : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class BatchDecimalFunctionRegistryReScale : public BaseFunctionRegistry {
-public:
-    std::vector<Function> GetFunctions() override;
-};
-
-class BatchDecimalFunctionRegistryNotReScale : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };

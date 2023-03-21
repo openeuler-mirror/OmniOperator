@@ -51,10 +51,12 @@ LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, st
       buildOutputCols(buildOutputCols),
       buildOutputTypes(buildOutputTypes),
       hashTables(hashTables),
+      outputColsCount(probeOutputCols.size() + buildOutputCols.size()),
       iterator(new LookupOuterPositionIterator(hashTables))
 {
-    outputRowSize =
+    int32_t outputRowSize =
         OperatorUtil::GetRowSize(this->buildOutputTypes.Get()) + OperatorUtil::GetRowSize(this->probeOutputTypes.Get());
+    maxRowCount = OperatorUtil::GetMaxRowCount((outputColsCount == 0) ? DEFAULT_ROW_SIZE : outputRowSize);
 }
 
 LookupOuterJoinOperator::~LookupOuterJoinOperator()
@@ -71,20 +73,23 @@ int32_t LookupOuterJoinOperator::AddInput(VectorBatch *vecBatch)
 
 int32_t LookupOuterJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
-    int32_t outputColsCount = this->probeOutputCols.size() + this->buildOutputCols.size();
-    int32_t maxRowCount = OperatorUtil::GetMaxRowCount((outputColsCount == 0) ? DEFAULT_ROW_SIZE : outputRowSize);
-    uint32_t outputRowCount = hashTables->GetTotalVisitedCounts() - hashTables->GetVisitedCounts();
-    int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(outputRowCount, maxRowCount);
-    int32_t offset = 0;
-    for (int32_t j = 0; j < vecBatchCount; j++) {
-        int32_t rowCount = std::min(maxRowCount, static_cast<int32_t>(outputRowCount) - offset);
-        auto result = new VectorBatch(outputColsCount, rowCount);
-        BuildVecBatch(result);
-        offset += rowCount;
-        outputPages.push_back(result);
+    totalRowCount = hashTables->GetTotalVisitedCounts() - hashTables->GetVisitedCounts();
+    if (totalRowCount <= 0) {
+        SetStatus(OMNI_STATUS_FINISHED);
+        iterator->Reset();
+        return 0;
     }
-    SetStatus(OMNI_STATUS_FINISHED);
-    iterator->Reset();
+    int32_t rowCount = std::min(maxRowCount, static_cast<int32_t>(totalRowCount) - outputtedRowCount);
+    outputtedRowCount += rowCount;
+    auto result = new VectorBatch(outputColsCount, rowCount);
+    BuildVecBatch(result);
+    outputPages.push_back(result);
+    if (!HasNext()) {
+        SetStatus(OMNI_STATUS_FINISHED);
+        iterator->Reset();
+        totalRowCount = 0;
+        outputtedRowCount = 0;
+    }
     return 0;
 }
 

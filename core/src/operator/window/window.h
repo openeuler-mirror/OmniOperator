@@ -253,12 +253,19 @@ private:
 
     void Initialization();
 
-    void ProcessData(omniruntime::vec::VectorBatch *&inputVecBatchForAgg, int finalOutputColsCount,
-        std::vector<type::DataTypePtr> &outputTypes, int32_t position, omniruntime::vec::VectorBatch *&outputVecBatch,
-        int32_t rowCount);
+    void ProcessData(omniruntime::vec::VectorBatch *&outputVecBatch, int32_t rowCount);
 
-    void InitResultVectors(const std::vector<DataTypePtr> &outputTypesField, VectorBatch *&vecBatchField,
-        const int32_t &rowCountField, const int32_t outputColsCountField, const int finalOutputColsCountField) const;
+    void InitResultVectors(VectorBatch *&vecBatchField, const int32_t &rowCountField) const;
+
+    // for output single vecBatch
+    void PrepareOutput();
+    bool hasPrepare = false;
+    size_t totalRowCount = 0;
+    size_t rowCountOutputted = 0;
+    size_t maxRowCount;
+    int finalOutputColsCount = 0;
+    VectorBatch *inputVecBatchForAgg = nullptr;
+    std::vector<DataTypePtr> finalOutputTypes;
 };
 
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);

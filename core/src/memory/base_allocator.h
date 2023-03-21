@@ -30,13 +30,13 @@ public:
         return scope;
     }
 
-    void *alloc(int64_t size, bool zeroFill = false)
+    void *alloc(int64_t size)
     {
         int64_t preferredSize = pool->GetPreferredSize(size);
         // try allocate
         TryAllocate(preferredSize);
         uint8_t *data = nullptr;
-        pool->Allocate(preferredSize, &data, zeroFill);
+        pool->Allocate(preferredSize, &data);
         return data;
     }
 

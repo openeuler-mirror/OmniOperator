@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: average aggregate for intermedia data vector are multi vectors
  *
  *
@@ -11,8 +11,7 @@
 
 namespace omniruntime {
 namespace op {
-template <bool INPUT_RAW, bool OUT_PARTIAL, typename RawInputVectorType, typename ResultType = double>
-class AverageFlatIMAggregator : public Aggregator {
+template <typename RawInputVectorType, typename ResultType = double> class AverageFlatIMAggregator : public Aggregator {
 public:
     AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
@@ -39,11 +38,11 @@ public:
             return;
         }
 
-        if constexpr (INPUT_RAW) {
-            auto currentVal = static_cast<ResultType *>(state.val);
-            *reinterpret_cast<ResultType *>(state.val) =
+        if (inputRaw) {
+            auto currentVal = static_cast<ResultType *>(state.avgVal);
+            *reinterpret_cast<ResultType *>(state.avgVal) =
                 (static_cast<RawInputVectorType *>(vector))->GetValue(offset) + *currentVal;
-            ++state.count;
+            ++state.avgCnt;
         } else {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(
@@ -55,8 +54,8 @@ public:
                 VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[1]), rowIndex, avgCountOffset));
             int64_t avgCnt = avgCountVector->GetValue(avgCountOffset);
 
-            auto currentVal = static_cast<ResultType *>(state.val);
-            state.count += avgCnt;
+            auto currentVal = static_cast<ResultType *>(state.avgVal);
+            state.avgCnt += avgCnt;
             *currentVal += avgVal;
         }
     }
@@ -70,12 +69,12 @@ public:
         }
 
         // for partial aggregation
-        if constexpr (INPUT_RAW) {
+        if (inputRaw) {
             auto rowVal = (static_cast<RawInputVectorType *>(vector))->GetValue(offset);
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             *reinterpret_cast<ResultType *>(ptr) = rowVal;
-            state.val = ptr;
-            state.count = 1;
+            state.avgVal = ptr;
+            state.avgCnt = 1;
         } else {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(
@@ -89,14 +88,14 @@ public:
 
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             *reinterpret_cast<ResultType *>(ptr) = avgVal;
-            state.val = ptr;
-            state.count = avgCnt;
+            state.avgVal = ptr;
+            state.avgCnt = avgCnt;
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
-        if constexpr (OUT_PARTIAL) {
+        if (outputPartial) {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(
                 VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, avgValOffset));
@@ -111,18 +110,18 @@ public:
                 return;
             }
 
-            avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
-            avgCountVector->SetValue(rowIndex, state.count);
+            avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.avgVal));
+            avgCountVector->SetValue(rowIndex, state.avgCnt);
         } else {
             int32_t avgValOffset;
             auto avgValVector = reinterpret_cast<DoubleVector *>(
                 VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, avgValOffset));
-            if (state.count <= 0 || state.val == nullptr) {
+            if (state.avgCnt <= 0 || state.val == nullptr) {
                 avgValVector->SetValueNull(rowIndex);
                 return;
             }
-            auto currentVal = *(static_cast<ResultType *>(state.val));
-            auto result = currentVal / state.count;
+            auto currentVal = *(static_cast<ResultType *>(state.avgVal));
+            auto result = currentVal / state.avgCnt;
             avgValVector->SetValue(rowIndex, result);
         }
     }

@@ -46,6 +46,8 @@ private:
     int32_t sourceTypesCount;
     bool isDistinct;
     std::vector<vec::VectorBatch *> inputVecBatches;
+    int32_t vecBatchCount = 0;
+    int32_t vecBatchIndex = 0;
 };
 }
 }

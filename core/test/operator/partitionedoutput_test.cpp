@@ -41,7 +41,10 @@ TEST(PartitionedOutputOperatorTest, TestOnePartitionedOutput)
         static_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 6); // 6 row
@@ -82,7 +85,11 @@ TEST(PartitionedOutputOperatorTest, TestMultiPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
+
     EXPECT_EQ(outputVecBatch.size(), 2);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 4); // 4 row
     EXPECT_EQ(outputVecBatch[1]->GetRowCount(), 3); // 3 row
@@ -128,7 +135,10 @@ TEST(PartitionedOutputOperatorTest, TestHashIntPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 6); // 6 row
@@ -170,7 +180,10 @@ TEST(PartitionedOutputOperatorTest, TestHashVarcharPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 4 row
@@ -212,7 +225,10 @@ TEST(PartitionedOutputOperatorTest, TestHashCharPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 4 row
@@ -258,7 +274,10 @@ TEST(PartitionedOutputOperatorTest, TestNullPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
@@ -302,7 +321,10 @@ TEST(PartitionedOutputOperatorTest, TestDecimalPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
@@ -344,7 +366,10 @@ TEST(PartitionedOutputOperatorTest, TestDoublePartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
@@ -386,7 +411,10 @@ TEST(PartitionedOutputOperatorTest, TestShortPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
@@ -428,7 +456,10 @@ TEST(PartitionedOutputOperatorTest, TestBoolPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
@@ -470,7 +501,10 @@ TEST(PartitionedOutputOperatorTest, TestDecimal128PartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 3); // 3 row
@@ -520,7 +554,10 @@ TEST(PartitionedOutputOperatorTest, TestDictionaryPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vecBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 6); // 6 row
@@ -564,7 +601,10 @@ TEST(PartitionedOutputOperatorTest, TestContainerPartitionedOutput)
         dynamic_cast<PartitionedOutputOperator *>(partitionedOutputOperatorFactory->CreateOperator());
     partitionedOperator->AddInput(vectorBatch);
     std::vector<omniruntime::vec::VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+
+    while (partitionedOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        partitionedOperator->GetOutput(outputVecBatch);
+    }
 
     EXPECT_EQ(outputVecBatch.size(), 1);
     EXPECT_EQ(outputVecBatch[0]->GetRowCount(), 6);

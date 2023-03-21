@@ -19,7 +19,7 @@ template <DataTypeId TYPE_ID> class VariableWidthVector : public Vector {
 public:
     static const int32_t initCapacityInBytes = 32 * 1024; // 32K
 
-    VariableWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset){};
+    VariableWidthVector(Vector *vector, int size, int positionOffset) : Vector(vector, size, positionOffset) {};
 
     VariableWidthVector(VectorAllocator *pAllocator, int capacityInBytes, int size)
         : Vector(pAllocator, capacityInBytes, size, TYPE_ID)
@@ -28,9 +28,7 @@ public:
     VariableWidthVector(VectorAllocator *pAllocator, int size) : Vector(pAllocator, initCapacityInBytes, size, TYPE_ID)
     {}
 
-    ~VariableWidthVector() override = default;
-
-    int ALWAYS_INLINE GetValue(int index, T **dst) const
+    int ALWAYS_INLINE GetValue(int index, T **dst)
     {
         int actualIndex = index + positionOffset;
         int startOffset = GetValueOffset(actualIndex);
@@ -59,7 +57,7 @@ public:
         lastOffsetPosition = index;
     }
 
-    void ALWAYS_INLINE SetValueNull(int index, bool value)
+    void ALWAYS_INLINE SetValueNull(int index, bool value) override
     {
         Vector::SetValueNull(index, value);
         FillSlots(index);
@@ -184,54 +182,6 @@ public:
         return newAddress;
     }
 
-    /* *
-     * if nth value is null,we will set -1 as value 's length to distinguish 0 byte varchar
-     * @param rowId
-     * @param executionContext
-     * @param begin
-     * @return
-     */
-    virtual StringRef SerializeValue(size_t rowId, mem::SimpleArenaAllocator &arenaAllocator,
-        const uint8_t *&begin) override final
-    {
-        T *str = nullptr;
-        StringRef res{};
-        int stringLen;
-        auto isNull = Vector::IsValueNull((int)rowId);
-        if (not isNull) {
-            stringLen = GetValue(rowId, &str);
-            res.size = sizeof(stringLen) + stringLen;
-        } else {
-            stringLen = -1;
-            res.size = sizeof(stringLen);
-        }
-        auto *pos = arenaAllocator.AllocateContinue(res.size, begin);
-        std::copy(reinterpret_cast<uint8_t *>(&stringLen),
-                  reinterpret_cast<uint8_t *>(&stringLen) + sizeof(stringLen), pos);
-        if (stringLen > 0) {
-            std::copy(str, str + stringLen, pos + sizeof(stringLen));
-            res.data = reinterpret_cast<char *>(pos);
-        }
-        return res;
-    }
-
-    const uint8_t *DeserializeValueIntoThis(size_t rowId, const uint8_t *pos) override final
-    {
-        int stringSize = 0;
-        std::copy(pos, pos + sizeof(int), reinterpret_cast<uint8_t *>(&stringSize));
-        pos += sizeof(stringSize);
-
-        if (stringSize >= 0) {
-            auto *copyPointer = reinterpret_cast<const T *>(pos);
-            SetValue(rowId, copyPointer, stringSize);
-            return pos + stringSize;
-        } else {
-            // string_size < 0 means null pointer
-            SetValueNull(rowId);
-            return pos;
-        }
-    }
-
 private:
     static const int32_t expandFactor = 2;
 
@@ -263,7 +213,6 @@ private:
         errno_t ret = memcpy_s(data + startOffset, capacityInBytes, value + start, dataLen);
         if (ret != EOK) {
             LogError("set data failed in variable vector. %d", ret);
-            throw OmniException("memcpy_s error", " when SetData");
         }
     }
 

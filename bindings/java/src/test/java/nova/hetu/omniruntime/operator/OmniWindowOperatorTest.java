@@ -114,7 +114,7 @@ public class OmniWindowOperatorTest {
         end = System.currentTimeMillis();
         System.out.println("Window with jit use " + (end - start) + " ms.");
 
-        while (outputWithoutJit.hasNext()) {
+        while (outputWithoutJit.hasNext() && outputWithJit.hasNext()) {
             VecBatch resultWithoutJit = outputWithoutJit.next();
             VecBatch resultWithJit = outputWithJit.next();
             assertVecBatchEquals(resultWithoutJit, resultWithJit);

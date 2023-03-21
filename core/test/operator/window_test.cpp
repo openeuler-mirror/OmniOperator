@@ -11,7 +11,6 @@
 #include "util/test_util.h"
 #include "vector/vector_helper.h"
 #include "perf_util.h"
-#include "util/config_util.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -2093,14 +2092,16 @@ TEST(NativeOmniWindowOperatorTest, testWindowPerf)
     }
 
     std::vector<VectorBatch *> result;
-    windowOperator->GetOutput(result);
+    while (windowOperator->GetStatus() == OMNI_STATUS_NORMAL) {
+        windowOperator->GetOutput(result);
+    }
 
     timer.CalculateElapse();
     double wallElapsed = timer.GetWallElapse();
     double cpuElapsed = timer.GetCpuElapse();
     std::cout << "Window with Omni, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    op::Operator::DeleteOperator(windowOperator);
+    Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
 
     delete[] input;
@@ -2159,7 +2160,9 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
     }
 
     std::vector<VectorBatch *> resultWithJit;
-    windowOperatorWithJit->GetOutput(resultWithJit);
+    while (windowOperatorWithJit->GetStatus() == OMNI_STATUS_NORMAL) {
+        windowOperatorWithJit->GetOutput(resultWithJit);
+    }
 
     timer.CalculateElapse();
     double wallElapsed = timer.GetWallElapse();
@@ -2196,7 +2199,9 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
     }
 
     std::vector<VectorBatch *> resultWithoutJit;
-    windowOperatorWithoutJit->GetOutput(resultWithoutJit);
+    while (windowOperatorWithoutJit->GetStatus() == OMNI_STATUS_NORMAL) {
+        windowOperatorWithoutJit->GetOutput(resultWithoutJit);
+    }
     delete perfUtil;
 
     timer.CalculateElapse();
@@ -2205,8 +2210,8 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
 
     std::cout << "Window without OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    op::Operator::DeleteOperator(windowOperatorWithJit);
-    op::Operator::DeleteOperator(windowOperatorWithoutJit);
+    Operator::DeleteOperator(windowOperatorWithJit);
+    Operator::DeleteOperator(windowOperatorWithoutJit);
     DeleteOperatorFactory(operatorFactoryWithJit);
     DeleteOperatorFactory(operatorFactoryWithoutJit);
 

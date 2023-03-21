@@ -12,7 +12,6 @@
 
 using namespace std;
 using namespace omniruntime::type;
-using namespace omniruntime::codegen;
 
 namespace omniruntime {
 namespace expressions {
@@ -332,7 +331,7 @@ FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, D
     std::transform(arguments.begin(), arguments.end(), argTypes.begin(),
         [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(funcName, argTypes, dataType->GetId());
-    this->function = FunctionRegistry::LookupFunction(&signature);
+    this->function = omniruntime::FunctionRegistry::LookupFunction(&signature);
 }
 
 FuncExpr::FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,

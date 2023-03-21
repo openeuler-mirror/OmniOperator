@@ -99,6 +99,10 @@ private:
 
     void ALWAYS_INLINE InsertContainer(Vector *originVector, int32_t originRowIndex, Vector *currentVector,
         int32_t currentRowIndex);
+
+    // for iterative getOutput
+    int32_t vecBatchCount = 0;
+    int32_t vecBatchIndex = 0;
 };
 }
 }

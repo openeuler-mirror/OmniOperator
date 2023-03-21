@@ -5,9 +5,9 @@
 #include "batch_func_registry_hash.h"
 #include "batch_functions/batch_murmur3_hash.h"
 
-namespace omniruntime::codegen {
+using namespace omniruntime;
 using namespace omniruntime::type;
-using namespace codegen::function;
+using namespace omniruntime::codegen;
 
 std::vector<Function> BatchHashFunctionRegistry::GetFunctions()
 {
@@ -31,5 +31,4 @@ std::vector<Function> BatchHashFunctionRegistry::GetFunctions()
             INPUT_DATA_AND_NULL) };
 
     return batchHashFunctions;
-}
 }
