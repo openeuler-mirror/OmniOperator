@@ -200,10 +200,8 @@ extern "C" DLLEXPORT void MulDec128Dec128Dec128ReScale(int64_t contextPtr, int64
     int32_t xPrecision, int32_t xScale, int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale,
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
-    Decimal128Wrapper result;
-    DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(xHigh, xLow).SetScale(xScale), xScale, xPrecision,
-        Decimal128Wrapper(yHigh, yLow).SetScale(yScale), yScale, yPrecision, result);
-    result.ReScale(outScale);
+    Decimal128Wrapper result =
+        Decimal128Wrapper(xHigh, xLow).MultiplyRoundUp(Decimal128Wrapper(yHigh, yLow), xScale + yScale - outScale);
     CHECK_OVERFLOW(result, outPrecision);
     *outHighPtr = result.HighBits();
     *outLowPtr = result.LowBits();

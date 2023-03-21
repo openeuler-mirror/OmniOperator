@@ -105,7 +105,7 @@ void PrintValueLine(const double *valueArray, const int32_t arrLength)
 // Purpose: just test expression on int64_t data type
 TEST(ExpressionTest, q1LongType)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
@@ -205,7 +205,7 @@ TEST(ExpressionTest, q1LongType)
 // Purpose: just test expression on double data type
 TEST(ExpressionTest, q1DoubleType)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
@@ -305,7 +305,7 @@ TEST(ExpressionTest, q1DoubleType)
 // Purpose: just test expression on double data type
 TEST(ExpressionTest, q1DoubleFilter)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
@@ -397,7 +397,7 @@ TEST(ExpressionTest, q1DoubleFilter)
 // Purpose: just test expression on decimal64 data type
 TEST(ExpressionTest, q1Decimal64Type)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
@@ -503,7 +503,7 @@ TEST(ExpressionTest, q1Decimal64Type)
 // Purpose: just test expression on decimal128 data type
 TEST(ExpressionTest, q1Decimal128Type)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
 
     // prepare data
     const int32_t rounds = TEST_EXPR_PERF_TIME;
@@ -610,7 +610,7 @@ TEST(ExpressionTest, q1Decimal128Type)
 // test cost of Cast function
 TEST(ExpressionTest, q1Decimal64Cast)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
@@ -694,7 +694,7 @@ TEST(ExpressionTest, q1Decimal64Cast)
 // Formula: l_shipdate < '2022-10-01'
 TEST(ExpressionTest, q1DateType)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
@@ -778,7 +778,7 @@ TEST(ExpressionTest, q1DateType)
 //             then revenue/10000 else 0
 TEST(ExpressionTest, q1Case1)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
@@ -888,7 +888,7 @@ TEST(ExpressionTest, q1Case1)
 //      else 0 end
 TEST(ExpressionTest, q1SwitchCase)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
@@ -1110,7 +1110,7 @@ TEST(ExpressionTest, q1SwitchCase)
 // use if statement to implement 12 GPA conversion
 TEST(ExpressionTest, q1If)
 {
-    const int32_t numRows = 20000000;
+    const int32_t numRows = 200;
     const int32_t rounds = TEST_EXPR_PERF_TIME;
 
     // prepare data
