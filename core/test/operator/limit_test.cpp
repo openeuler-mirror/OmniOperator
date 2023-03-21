@@ -50,8 +50,8 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
     limitOperator->AddInput(vecBatch1);
-    std::vector<VectorBatch *> outputVecBatches;
-    limitOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch;
+    limitOperator->GetOutput(&outputVecBatch);
 
     int32_t expData1[resultDataSize] = {0, 1, 2};
     double expData2[resultDataSize] = {0.1, 1.1, 2.1};
@@ -67,10 +67,10 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2, expData3, expData4,
         expData5, expData6, expData7, expData8, expData9, expData10);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);
 }
@@ -92,9 +92,9 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data01, data02);
     LimitOperatorFactory *operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
     LimitOperator *limitOperator = dynamic_cast<LimitOperator *>(CreateTestOperator(operatorFactory));
-    std::vector<VectorBatch *> outputVecBatches;
+    VectorBatch *outputVecBatch1;
     limitOperator->AddInput(vecBatch1);
-    limitOperator->GetOutput(outputVecBatches);
+    limitOperator->GetOutput(&outputVecBatch1);
 
     // input vecBatch2
     int32_t data11[dataSize] = {3, 4, 5};
@@ -102,7 +102,8 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
 
     VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, dataSize, data11, data12);
     limitOperator->AddInput(vecBatch2);
-    limitOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch2;
+    limitOperator->GetOutput(&outputVecBatch2);
 
     int32_t expData01[dataSize] = {0, 1, 2};
     double expData02[dataSize] = {6.6, 5.5, 4.4};
@@ -112,12 +113,13 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     double expData12[dataSize] = {3.3, 2.2, 1.1};
     VectorBatch *expVecBatch2 = CreateVectorBatch(sourceTypes, (dataSize), expData11, expData12);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch1, expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch2, expVecBatch2));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(expVecBatch2);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch1);
+    VectorHelper::FreeVecBatch(outputVecBatch2);
     Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);
 }
@@ -147,8 +149,8 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     colVector1->SetValueNull(4);
 
     limitOperator->AddInput(vecBatch1);
-    std::vector<VectorBatch *> outputVecBatches;
-    limitOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch;
+    limitOperator->GetOutput(&outputVecBatch);
 
     int32_t expData1[dataSize] = {0, 1, 2, 0, 1};          // expData1[2],expData1[3] simulate to null
     double expData2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2}; // expData2[3],expData2[4] simulate to null
@@ -162,10 +164,10 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     colVector01->SetValueNull(3);
     colVector01->SetValueNull(4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);
 }
