@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
  */
 
 #include <gtest/gtest.h>
@@ -9,6 +9,7 @@
 #include "operator/aggregation/non_group_aggregation_expr.h"
 #include "vector/vector_helper.h"
 #include "util/test_util.h"
+#include "util/config_util.h"
 
 namespace omniruntime {
 using namespace omniruntime::vec;
@@ -18,6 +19,8 @@ using namespace omniruntime::expressions;
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
 {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
     const int32_t expectDataSize = 1;
@@ -75,7 +78,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
@@ -152,7 +154,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
@@ -218,7 +219,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
@@ -232,8 +232,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
 {
-    char sparkEngine[] = "Spark";
-    EngineUtil::GetInstance().SetEngineType(sparkEngine);
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
     const int32_t dataSize = 8;
     const int32_t groupByNum = 2;
     const int32_t expectDataSize = 1;
@@ -295,7 +294,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5, expData6);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
     EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
@@ -305,14 +303,12 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatches(outputVecBatchs);
     delete overflowConfig;
-    char olkEngine[] = "OLK";
-    EngineUtil::GetInstance().SetEngineType(olkEngine);
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_final_flat_input_expr)
 {
-    char sparkEngine[] = "Spark";
-    EngineUtil::GetInstance().SetEngineType(sparkEngine);
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
 
     const int32_t dataSize = 1;
     const int32_t groupByNum = 2;
@@ -377,8 +373,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_final_flat_input_expr)
     VectorHelper::FreeVecBatches(outputVecBatchs);
     delete overflowConfig;
 
-    char olkEngine[] = "OLK";
-    EngineUtil::GetInstance().SetEngineType(olkEngine);
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
 }
 
 

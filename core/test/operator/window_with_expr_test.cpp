@@ -6,6 +6,7 @@
 #include "operator/window/window_expr.h"
 #include "util/test_util.h"
 #include "vector/vector_helper.h"
+#include "util/config_util.h"
 
 using namespace std;
 using namespace omniruntime::vec;

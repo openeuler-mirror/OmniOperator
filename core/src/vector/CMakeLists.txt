@@ -9,7 +9,7 @@ install(TARGETS ${VEC_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 file(GLOB VECTOR_HEAD_FILES ${PROJECT_SOURCE_DIR}/src/vector/*.h)
 install(FILES ${VECTOR_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vector)
-install(FILES ${PROJECT_SOURCE_DIR}/src/memory/chunk.h ${PROJECT_SOURCE_DIR}/src/memory/memory_pool.h ${PROJECT_SOURCE_DIR}/src/memory/memory_statistic.h ${PROJECT_SOURCE_DIR}/src/memory/base_allocator.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/memory)
+install(FILES ${PROJECT_SOURCE_DIR}/src/memory/chunk.h ${PROJECT_SOURCE_DIR}/src/memory/memory_pool.h ${PROJECT_SOURCE_DIR}/src/memory/memory_statistic.h ${PROJECT_SOURCE_DIR}/src/memory/base_allocator.h ${PROJECT_SOURCE_DIR}/src/memory/simple_arena_allocator.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/memory)
 install(FILES ${PROJECT_SOURCE_DIR}/src/vector/loader/vector_loader.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vector/loader)
 install(FILES ${PROJECT_SOURCE_DIR}/src/vector/tracer/vector_tracer.h ${PROJECT_SOURCE_DIR}/src/vector/tracer/vector_leak_detector.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vector/tracer)
 install(FILES ${PROJECT_SOURCE_DIR}/src/util/debug.h ${PROJECT_SOURCE_DIR}/src/util/global_log.h ${PROJECT_SOURCE_DIR}/src/util/compiler_util.h ${PROJECT_SOURCE_DIR}/src/util/trace_util.h ${PROJECT_SOURCE_DIR}/src/util/omni_exception.h ${PROJECT_SOURCE_DIR}/src/util/error_code.h ${PROJECT_SOURCE_DIR}/src/util/bit_map.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/util)

@@ -45,30 +45,44 @@ OperatorConfig::OperatorConfig(const OperatorConfig &operatorConfig)
 
 OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &configString)
 {
-    auto result = nlohmann::json::parse(configString);
-    auto spillConfigId = result.at("spillConfig").at("spillConfigId").get<SpillConfigId>();
-    auto spillEnabled = result.at("spillConfig").at("spillEnabled").get<bool>();
-    auto spillPath = result.at("spillConfig").at("spillPath").get<std::string>();
-    auto maxSpillBytes = result.at("spillConfig").at("maxSpillBytes").get<uint64_t>();
-
     SpillConfig *resultSpillConfig = nullptr;
-    switch (spillConfigId) {
-        case SPILL_CONFIG_NONE:
-        case SPILL_CONFIG_OLK:
-        case SPILL_CONFIG_INVALID: {
-            resultSpillConfig = new SpillConfig(spillConfigId, spillEnabled, spillPath, maxSpillBytes);
-            break;
-        }
-        case SPILL_CONFIG_SPARK: {
-            auto numElementsForSpillThreshold =
-                result.at("spillConfig").at("numElementsForSpillThreshold").get<int32_t>();
-            resultSpillConfig =
-                new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes, numElementsForSpillThreshold);
-            break;
+    OverflowConfig *resultOverflowConfig = nullptr;
+    bool needSkipVerify = false;
+
+    auto result = nlohmann::json::parse(configString);
+    if (result.contains("overflowConfig")) {
+        auto overflowConfigId = result.at("overflowConfig").at("overflowConfigId").get<OverflowConfigId>();
+        resultOverflowConfig = new OverflowConfig(overflowConfigId);
+    }
+
+    if (result.contains("spillConfig")) {
+        auto spillConfigId = result.at("spillConfig").at("spillConfigId").get<SpillConfigId>();
+        auto spillEnabled = result.at("spillConfig").at("spillEnabled").get<bool>();
+        auto spillPath = result.at("spillConfig").at("spillPath").get<std::string>();
+        auto maxSpillBytes = result.at("spillConfig").at("maxSpillBytes").get<uint64_t>();
+
+        switch (spillConfigId) {
+            case SPILL_CONFIG_NONE:
+            case SPILL_CONFIG_OLK:
+            case SPILL_CONFIG_INVALID: {
+                resultSpillConfig = new SpillConfig(spillConfigId, spillEnabled, spillPath, maxSpillBytes);
+                break;
+            }
+            case SPILL_CONFIG_SPARK: {
+                auto numElementsForSpillThreshold =
+                    result.at("spillConfig").at("numElementsForSpillThreshold").get<int32_t>();
+                resultSpillConfig =
+                    new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes, numElementsForSpillThreshold);
+                break;
+            }
         }
     }
 
-    return OperatorConfig { resultSpillConfig };
+    if (result.contains("skipExpressionVerify")) {
+        needSkipVerify = result.at("skipExpressionVerify").get<bool>();
+    }
+
+    return OperatorConfig { resultSpillConfig, resultOverflowConfig, needSkipVerify };
 }
 
 void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)
@@ -145,55 +159,6 @@ void OperatorConfig::CheckOperatorConfig(const OperatorConfig &operatorConfig)
     CheckHasEnoughDiskSpace(spillPathChars, *inputSpillConfig);
 
     InitRootSpillTracker(spillPath, inputSpillConfig->GetMaxSpillBytes());
-}
-
-OverflowConfig *OperatorConfig::DeserializeOverflowConfig(const std::string &configString)
-{
-    auto result = nlohmann::json::parse(configString);
-    auto overflowConfigId = result.at("overflowConfig").at("overflowConfigId").get<OverflowConfigId>();
-    return new OverflowConfig(overflowConfigId);
-}
-
-std::pair<bool, OverflowConfig *> OperatorConfig::DeserializeIsSkipVerifyAndOverflowConfig(
-    const std::string &configString)
-{
-    auto result = nlohmann::json::parse(configString);
-    bool isSkipVerify = result.at("skipExpressionVerify").get<bool>();
-    auto overflowConfigId = result.at("overflowConfig").at("overflowConfigId").get<OverflowConfigId>();
-    return std::make_pair(isSkipVerify, new OverflowConfig(overflowConfigId));
-}
-
-std::pair<OperatorConfig, OverflowConfig *> OperatorConfig::DeserializeOperatorAndOverflowConfig(
-    const std::string &configString)
-{
-    auto result = nlohmann::json::parse(configString);
-    auto spillConfigId = result.at("spillConfig").at("spillConfigId").get<SpillConfigId>();
-    auto spillEnabled = result.at("spillConfig").at("spillEnabled").get<bool>();
-    auto spillPath = result.at("spillConfig").at("spillPath").get<std::string>();
-    auto maxSpillBytes = result.at("spillConfig").at("maxSpillBytes").get<uint64_t>();
-
-    SpillConfig *resultSpillConfig = nullptr;
-    switch (spillConfigId) {
-        case SPILL_CONFIG_NONE:
-        case SPILL_CONFIG_OLK:
-        case SPILL_CONFIG_INVALID: {
-            resultSpillConfig = new SpillConfig(spillConfigId, spillEnabled, spillPath, maxSpillBytes);
-            break;
-        }
-        case SPILL_CONFIG_SPARK: {
-            auto numElementsForSpillThreshold =
-                result.at("spillConfig").at("numElementsForSpillThreshold").get<int32_t>();
-            resultSpillConfig =
-                new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes, numElementsForSpillThreshold);
-            break;
-        }
-        default: {
-            LogWarn("Unsupported spillConfigId %d", spillConfigId);
-            break;
-        }
-    }
-    auto overflowConfigId = result.at("overflowConfig").at("overflowConfigId").get<OverflowConfigId>();
-    return std::make_pair(OperatorConfig { resultSpillConfig }, new OverflowConfig(overflowConfigId));
 }
 }
 }

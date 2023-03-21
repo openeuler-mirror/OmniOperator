@@ -139,6 +139,7 @@ private:
     OutputState outputState;
 
     void FillOutputResultVectors(const int32_t totalRowCount, std::vector<VectorBatch *> &result);
+    void FillSingleResultVector(int32_t remainRowCount, VectorBatch *&result);
 
     template <typename Deserialize>
     void TraverseHashmapToGetResults(Deserialize &deserializeHashmap, const int32_t groupByColSize,

@@ -8,10 +8,8 @@
 #include <string>
 #include <vector>
 #include "expression/jsonparser/jsonparser.h"
-#include "codegen/expression_codegen.h"
-#include "codegen/filter_codegen.h"
-#include "codegen/projection_codegen.h"
 #include "operator/filter/filter_and_project.h"
+#include "operator/projection/projection.h"
 #include "codegen/functions/murmur3_hash.h"
 #include "util/test_util.h"
 
@@ -22,7 +20,7 @@ using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace omniruntime::mem;
 using namespace omniruntime::op;
-using namespace omniruntime::codegen;
+using namespace omniruntime::codegen::function;
 using namespace TestUtil;
 
 const string defaultTestFunctionName = "test-function";
@@ -713,11 +711,13 @@ TEST(CodeGenTest, Operators1)
         offsets[col] = new int32_t[1];
     }
 
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), IntType() };
+    DataTypes inputTypes(vecOfTypes);
+
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
-
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     // number of rows that passed filter
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
@@ -746,7 +746,6 @@ TEST(CodeGenTest, Operators1)
     delete[] offsets;
     delete[] vals;
     delete[] selected;
-    codegen.reset();
     delete expr;
     delete context;
 }
@@ -801,11 +800,15 @@ TEST(CodeGenTest, MathFunctions1)
     for (int col = 0; col < 3; col++) {
         offsets[col] = new int32_t[1];
     }
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), IntType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
 
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -835,7 +838,6 @@ TEST(CodeGenTest, MathFunctions1)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    codegen.reset();
     delete expr;
     delete context;
 }
@@ -873,11 +875,14 @@ TEST(CodeGenTest, MathFunctions2)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType(), IntType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -917,7 +922,6 @@ TEST(CodeGenTest, MathFunctions2)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    codegen.reset();
     delete expr;
     delete context;
 }
@@ -962,11 +966,14 @@ TEST(CodeGenTest, MathFunctions3)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1017,7 +1024,6 @@ TEST(CodeGenTest, MathFunctions3)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    codegen.reset();
     delete expr;
     delete context;
 }
@@ -1057,11 +1063,14 @@ TEST(CodeGenTest, MathFunctions4)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1123,7 +1132,6 @@ TEST(CodeGenTest, MathFunctions4)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    codegen.reset();
     delete expr;
     delete context;
 }
@@ -1177,11 +1185,14 @@ TEST(CodeGenTest, CastNumbers1)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), IntType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1220,7 +1231,6 @@ TEST(CodeGenTest, CastNumbers1)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    codegen.reset();
     delete expr;
     delete context;
 }
@@ -1261,11 +1271,14 @@ TEST(CodeGenTest, CastNumbers2)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), LongType(), DoubleType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1304,7 +1317,6 @@ TEST(CodeGenTest, CastNumbers2)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    codegen.reset();
     delete expr;
     delete context;
 }
@@ -1352,11 +1364,14 @@ TEST(CodeGenTest, Like)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), VarcharType(), VarcharType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1386,7 +1401,6 @@ TEST(CodeGenTest, Like)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -1434,11 +1448,14 @@ TEST(CodeGenTest, DateCast)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), VarcharType(), VarcharType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1484,7 +1501,6 @@ TEST(CodeGenTest, DateCast)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -1544,11 +1560,14 @@ TEST(CodeGenTest, SubstrIn)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), VarcharType(), VarcharType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1595,7 +1614,6 @@ TEST(CodeGenTest, SubstrIn)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -1643,11 +1661,14 @@ TEST(CodeGenTest, ConcatStr)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), VarcharType(), VarcharType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1694,7 +1715,6 @@ TEST(CodeGenTest, ConcatStr)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -1746,11 +1766,14 @@ TEST(CodeGenTest, ConcatChars)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), CharType(), CharType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1797,7 +1820,6 @@ TEST(CodeGenTest, ConcatChars)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -1839,12 +1861,15 @@ TEST(CodeGenTest, ToUpper)
     offsets[1][0] = 0;
     offsets[1][1] = s1[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), VarcharType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[2] = {};
 
     auto context = new ExecutionContext();
 
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1862,7 +1887,6 @@ TEST(CodeGenTest, ToUpper)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -1904,12 +1928,15 @@ TEST(CodeGenTest, ToUpperChar)
     offsets[1][0] = 0;
     offsets[1][1] = s1[0].length();
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), CharType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[2] = {};
 
     auto context = new ExecutionContext();
 
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -1927,7 +1954,6 @@ TEST(CodeGenTest, ToUpperChar)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -1977,10 +2003,13 @@ TEST(CodeGenTest, StringWithOps)
     offsets[2][0] = 0;
     offsets[2][1] = s2[0].length();
 
-    auto codegen = FilterCodeGen::Create("stringTest1", *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), VarcharType(), VarcharType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen("stringTest1", *expr, nullptr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -2023,7 +2052,6 @@ TEST(CodeGenTest, StringWithOps)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2063,11 +2091,14 @@ TEST(CodeGenTest, Coalesce)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { LongType(), LongType(), LongType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -2090,7 +2121,6 @@ TEST(CodeGenTest, Coalesce)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2121,15 +2151,19 @@ TEST(CodeGenTest, ProjectionCoalesce)
     for (int col = 0; col < 1; col++) {
         offsets[col] = new int32_t[3];
     }
+
+    std::vector<DataTypePtr> vecOfTypes = { LongType() };
+    DataTypes inputTypes(vecOfTypes);
+
     bool newNullValues[3];
     int newLengths[3];
 
-    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false, nullptr);
+    auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
     int64_t dictionaryVectors[1] = {};
 
     bool oVec[3];
     auto context = new ExecutionContext();
-    auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
+    auto func = (ProjectFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
         newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
@@ -2164,7 +2198,6 @@ TEST(CodeGenTest, ProjectionCoalesce)
     delete[] offsets;
     delete[] vals;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2188,15 +2221,19 @@ TEST(CodeGenTest, ProjectionIsNull)
     for (int col = 0; col < 1; col++) {
         offsets[col] = new int32_t[3];
     }
+
+    std::vector<DataTypePtr> vecOfTypes = { LongType() };
+    DataTypes inputTypes(vecOfTypes);
+
     bool newNullValues[3];
     int newLengths[3];
 
-    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false, nullptr);
+    auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
     int64_t dictionaryVectors[1] = {};
 
     bool oVec[3];
     auto context = new ExecutionContext();
-    auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
+    auto func = (ProjectFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
         newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
@@ -2231,7 +2268,6 @@ TEST(CodeGenTest, ProjectionIsNull)
     delete[] offsets;
     delete[] vals;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2257,11 +2293,14 @@ TEST(CodeGenTest, IsNull)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { LongType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -2282,7 +2321,6 @@ TEST(CodeGenTest, IsNull)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2308,11 +2346,15 @@ TEST(CodeGenTest, IsNotNull)
     for (int col = 0; col < 1; col++) {
         offsets[col] = new int32_t[1];
     }
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+
+    std::vector<DataTypePtr> vecOfTypes = { LongType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -2333,7 +2375,6 @@ TEST(CodeGenTest, IsNotNull)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2369,11 +2410,14 @@ TEST(CodeGenTest, DecimalOperators1)
         offsets[col] = new int32_t[2];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -2389,7 +2433,6 @@ TEST(CodeGenTest, DecimalOperators1)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2430,10 +2473,13 @@ TEST(CodeGenTest, DecimalOperators2)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type(), Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -2448,7 +2494,6 @@ TEST(CodeGenTest, DecimalOperators2)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2497,11 +2542,14 @@ TEST(CodeGenTest, DecimalOperators3)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type(), Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -2517,7 +2565,6 @@ TEST(CodeGenTest, DecimalOperators3)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2571,10 +2618,14 @@ TEST(CodeGenTest, DecimalNegate)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type(), Decimal128Type(), Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
+
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[4] = {};
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -2589,7 +2640,6 @@ TEST(CodeGenTest, DecimalNegate)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2637,10 +2687,13 @@ TEST(CodeGenTest, Decimal128AbsAndCompare)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type(), Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[2] = {};
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -2655,7 +2708,6 @@ TEST(CodeGenTest, Decimal128AbsAndCompare)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2684,10 +2736,14 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     for (int col = 0; col < 1; col++) {
         offsets[col] = new int32_t[3];
     }
+
+    std::vector<DataTypePtr> vecOfTypes = { LongType() };
+    DataTypes inputTypes(vecOfTypes);
+
     bool newNullValues[3];
     int newLengths[3];
 
-    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false, nullptr);
+    auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
     int64_t dictionaryVectors[1] = {};
 
     vector<int64_t> oVec(6);
@@ -2695,7 +2751,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     auto context = new ExecutionContext();
-    auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
+    auto func = (ProjectFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
         newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
@@ -2726,7 +2782,6 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     delete[] offsets;
     delete[] vals;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2757,10 +2812,14 @@ TEST(CodeGenTest, ProjectionCodeGen)
     for (int col = 0; col < 1; col++) {
         offsets[col] = new int32_t[3];
     }
+
+    std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
+    DataTypes inputTypes(vecOfTypes);
+
     bool newNullValues[3];
     int newLengths[3];
 
-    auto codegen = ProjectionCodeGen::Create(defaultTestFunctionName, *expr, false, nullptr);
+    auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
     int64_t dictionaryVectors[1] = {};
 
     vector<int64_t> oVec(6);
@@ -2768,7 +2827,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     void *vecVals = &ov;
     auto cvecVals = static_cast<int64_t *>(vecVals);
     auto context = new ExecutionContext();
-    auto func = (ProjectFunc)(intptr_t)codegen->GetFunction();
+    auto func = (ProjectFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
         newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
@@ -2803,7 +2862,6 @@ TEST(CodeGenTest, ProjectionCodeGen)
     delete[] offsets;
     delete[] vals;
     delete expr;
-    codegen.reset();
     delete context;
 }
 
@@ -2936,11 +2994,14 @@ TEST(CodeGenTest, CastNumbers3)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType(), DoubleType(), DoubleType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -2980,7 +3041,6 @@ TEST(CodeGenTest, CastNumbers3)
     delete[] bitmap;
     delete[] vals;
     delete[] selected;
-    codegen.reset();
     delete expr;
     delete context;
 }
@@ -3016,12 +3076,15 @@ TEST(CodeGenTest, Mm3HashDate32)
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
 
-    auto codegen = FilterCodeGen::Create("mm3hashTest", *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { Date32Type() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen("mm3hashTest", *expr, nullptr);
 
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -3036,7 +3099,6 @@ TEST(CodeGenTest, Mm3HashDate32)
     delete[] selected;
     delete context;
     delete expr;
-    codegen.reset();
 }
 
 TEST(CodeGenTest, Mm3HashInt)
@@ -3070,12 +3132,15 @@ TEST(CodeGenTest, Mm3HashInt)
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
 
-    auto codegen = FilterCodeGen::Create("mm3hashTest", *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { IntType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen("mm3hashTest", *expr, nullptr);
 
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -3090,7 +3155,6 @@ TEST(CodeGenTest, Mm3HashInt)
     delete[] selected;
     delete context;
     delete expr;
-    codegen.reset();
 }
 
 TEST(CodeGenTest, Mm3HashLong)
@@ -3411,16 +3475,18 @@ TEST(CodeGenTest, Pmod)
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
 
+    std::vector<DataTypePtr> vecOfTypes = { IntType() };
+    DataTypes inputTypes(vecOfTypes);
 
     string testName = "pmodTest";
-    auto codegen = FilterCodeGen::Create(testName, *expr, nullptr);
+    auto codegen = FilterCodeGen(testName, *expr, nullptr);
     int32_t (*func)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
     int64_t dictionaries[1] = {};
 
     auto context = new ExecutionContext();
 
     func = (int32_t(*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *))(
-        intptr_t)codegen->GetFunction();
+        intptr_t)codegen.GetFunction(inputTypes);
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
     EXPECT_EQ(result, true);
@@ -3473,10 +3539,13 @@ TEST(CodeGenTest, CombineHash)
         offsets[i][0] = false;
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { LongType(), LongType(), LongType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -3497,7 +3566,6 @@ TEST(CodeGenTest, CombineHash)
     delete[] selected;
     delete context;
     delete expr;
-    codegen.reset();
 }
 TEST(CodeGenTest, JSONFunc)
 {
@@ -3566,10 +3634,13 @@ TEST(CodeGenTest, JSONFunc)
         offsets[col] = new int32_t[1];
     }
 
-    auto codegen = FilterCodeGen::Create(defaultTestFunctionName, *expr, nullptr);
+    std::vector<DataTypePtr> vecOfTypes = { LongType(), LongType(), LongType() };
+    DataTypes inputTypes(vecOfTypes);
+
+    auto codegen = FilterCodeGen(defaultTestFunctionName, *expr, nullptr);
     int64_t dictionaries[3] = {};
     auto context = new ExecutionContext();
-    auto func = (FilterFunc)(intptr_t)codegen->GetFunction();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
     int32_t result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int64_t>(context), dictionaries);
@@ -3596,5 +3667,4 @@ TEST(CodeGenTest, JSONFunc)
     delete[] vals;
     delete[] selected;
     delete expr;
-    codegen.reset();
 }

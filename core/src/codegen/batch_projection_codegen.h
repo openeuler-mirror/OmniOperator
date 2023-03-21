@@ -8,23 +8,25 @@
 #include <utility>
 
 #include "batch_expression_codegen.h"
-#include "util/type_util.h"
 
+namespace omniruntime {
+namespace codegen {
 class BatchProjectionCodeGen : public BatchExpressionCodeGen {
 public:
-    static std::unique_ptr<BatchProjectionCodeGen> Create(std::string name,
-        const omniruntime::expressions::Expr &expression, bool filter, omniruntime::op::OverflowConfig *overflowConfig);
-
-    ~BatchProjectionCodeGen() override = default;
-
-    int64_t GetFunction() override;
-
-private:
     BatchProjectionCodeGen(std::string name, const omniruntime::expressions::Expr &expr, bool filter,
         omniruntime::op::OverflowConfig *overflowConfig)
         : BatchExpressionCodeGen(std::move(name), expr, overflowConfig), filter(filter)
     {}
-    int64_t CreateBatchWrapper(llvm::Function &projFunc);
+
+    ~BatchProjectionCodeGen() override = default;
+
+    intptr_t GetFunction() override;
+
+private:
+    intptr_t CreateBatchWrapper(llvm::Function &projFunc);
+
     bool filter;
 };
+}
+}
 #endif // OMNI_RUNTIME_BATCH_PROJECTION_CODEGEN_H

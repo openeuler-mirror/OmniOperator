@@ -55,7 +55,11 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
             break;
         }
         case OMNI_DOUBLE: {
-            std::cout << static_cast<DoubleVector *>(vector)->GetValue(originalRowIndex) << "\t";
+            std::streamsize ss = std::cout.precision();
+            std::cout << std::fixed << std::setprecision(std::numeric_limits<double>::max_digits10) <<
+                static_cast<DoubleVector *>(vector)->GetValue(originalRowIndex) << "\t";
+            std::cout.precision(ss);
+            std::cout.unsetf(std::ios_base::fixed);
             break;
         }
         case OMNI_BOOLEAN: {
@@ -72,7 +76,7 @@ void VectorHelper::PrintVectorValue(Vector *vector, int32_t rowIndex)
         }
         case OMNI_DECIMAL128: {
             Decimal128 result = static_cast<Decimal128Vector *>(vector)->GetValue(originalRowIndex);
-            std::cout << result.HighBits() << " " << result.LowBits() << "\t";
+            std::cout << result.ToString() << "\t";
             break;
         }
         case OMNI_CONTAINER: {

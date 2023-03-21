@@ -34,6 +34,10 @@ public:
         if (vector->IsValueNull(offset)) {
             return;
         }
+        if (state.val == nullptr) {
+            InitiateGroup(state, vectorBatch, rowIndex);
+            return;
+        }
 
         if constexpr (INPUT_RAW) {
             ProcessGroupInputRaw(state, vector, offset);
@@ -108,16 +112,14 @@ public:
         }
     }
 
-    void InitState(AggregateState &state)
-    {
-        state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
-        DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), 0, 0, 0);
-    }
-
     void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
     {
         int32_t offset;
         Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
+        if (state.val == nullptr) {
+            vector->SetValueNull(rowIndex);
+            return;
+        }
 
         int64_t overflowAccumulator = 0;
         int64_t count = 0;
@@ -156,11 +158,6 @@ public:
                 ->SetValue(rowIndex, static_cast<DecimalAverageState *>(state.val)->count);
         } else {
             int128 finalResultDec;
-            // if count is zero, it means all input is null
-            if (countDec == 0) {
-                vector->SetValueNull(rowIndex);
-                return;
-            }
             OpStatus status = CalcAvg(inputDecimalType, decodedDec, countDec, outputDecimalType, finalResultDec);
             if (status == OpStatus::OP_OVERFLOW) {
                 this->SetNullOrThrowException(vector, rowIndex);

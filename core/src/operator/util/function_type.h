@@ -6,6 +6,8 @@
 #ifndef OMNI_RUNTIME_FUNCTION_TYPE_H
 #define OMNI_RUNTIME_FUNCTION_TYPE_H
 
+namespace omniruntime {
+namespace op {
 using FunctionType = enum FunctionType {
     OMNI_AGGREGATION_TYPE_SUM = 0,
     OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
@@ -21,4 +23,11 @@ using FunctionType = enum FunctionType {
     OMNI_WINDOW_TYPE_RANK
 };
 
+template <typename Enumeration>
+auto as_integer(Enumeration const value) -> typename std::underlying_type<Enumeration>::type
+{
+    return static_cast<typename std::underlying_type<Enumeration>::type>(value);
+}
+}
+}
 #endif // OMNI_RUNTIME_FUNCTION_TYPE_H

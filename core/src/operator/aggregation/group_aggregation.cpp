@@ -214,7 +214,8 @@ OmniStatus HashAggregationOperator::Init()
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     auto groupColNum = this->groupByCols.size();
-    VectorBatch groupVectors(static_cast<int32_t>(groupColNum));
+
+    VectorBatch groupVectors(groupColNum);
     for (size_t i = 0; i < groupColNum; ++i) {
         groupVectors.SetVector(i, vecBatch->GetVector(this->groupByCols[i].idx));
     }
@@ -679,6 +680,14 @@ void HashAggregationOperator::TraverseHashmapToGetResults(Deserialize &deseriali
     }
 }
 
+void HashAggregationOperator::FillSingleResultVector(int32_t remainRowCount, VectorBatch *&result)
+{
+    // create only one output vector batches
+    auto curRowCount = std::min(rowsPerBatch, remainRowCount);
+    result = new VectorBatch(outputTypes.size(), curRowCount);
+    SetVectors(this->vecAllocator, result, outputTypes, curRowCount);
+}
+
 template <typename Deserialize>
 void HashAggregationOperator::TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap,
     const int32_t groupByColSize, VectorBatch *result)
@@ -740,15 +749,12 @@ int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, std::ve
         SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
         return 0;
     }
-    // The iteration output only contains one result, create only one output vector batches
+    // The iteration output only contains one result.
+    result.resize(1);
     int32_t curRemainHandleOutput = totalRowCount - static_cast<int32_t>(outputState.hasBeenOutputNum);
-    auto curRowCount = std::min(rowsPerBatch, curRemainHandleOutput);
-    auto output = new VectorBatch(outputTypes.size(), curRowCount);
-    SetVectors(this->vecAllocator, output, outputTypes, curRowCount);
+    FillSingleResultVector(curRemainHandleOutput, result[0]);
 
-    TraverseHashmapToGetOneResult(deserializeHashmap, groupByCols.size(), output);
-    result.emplace_back(output);
-
+    TraverseHashmapToGetOneResult(deserializeHashmap, groupByCols.size(), result[0]);
     if (static_cast<int32_t>(outputState.hasBeenOutputNum) == totalRowCount) {
         SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
     }

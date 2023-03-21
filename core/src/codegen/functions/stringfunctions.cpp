@@ -134,7 +134,6 @@ extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t cont
     // Should be ok just for dates
     int32_t result;
     std::string s(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_dateRegex)) {
         SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
         return -1;
@@ -157,7 +156,6 @@ extern "C" DLLEXPORT int32_t CastStringToDateAllowReducePrecison(int64_t context
     // Should be ok just for dates
     int32_t result;
     std::string s(str, strLen);
-    StringUtil::TrimString(s);
     if (Date32::StringToDate32(str, strLen, result) == -1) {
         SetError(contextPtr, "Value cannot be cast to date: " + std::string(str, strLen));
         return -1;
@@ -430,7 +428,6 @@ extern "C" DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str
     }
     int32_t result;
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_intRegex)) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
@@ -457,7 +454,6 @@ extern "C" DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *st
     }
     int64_t result;
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_intRegex)) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value is not a number.";
@@ -484,7 +480,6 @@ extern "C" DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *s
     }
     double result;
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_doubleRegex)) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value is not a number.";
@@ -510,7 +505,6 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const cha
         return 0;
     }
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_decimalRegex)) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
@@ -537,7 +531,6 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
         return;
     }
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_decimalRegex)) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
@@ -589,7 +582,6 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullNotAllowReducePrecison(bool 
     // Should be ok just for dates
     int32_t result;
     std::string s(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_dateRegex)) {
         *isNull = true;
         return -1;
@@ -608,7 +600,7 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullAllowReducePrecison(bool *is
     // Should be ok just for dates
     int32_t result;
     std::string s(str, strLen);
-    StringUtil::TrimString(s);
+
     if (Date32::StringToDate32(str, strLen, result) == -1) {
         *isNull = true;
         return -1;
@@ -707,7 +699,6 @@ extern "C" DLLEXPORT int32_t CastStringToIntRetNull(bool *isNull, const char *st
 {
     int32_t result;
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_intRegex)) {
         *isNull = true;
         return 0;
@@ -727,7 +718,6 @@ extern "C" DLLEXPORT int64_t CastStringToLongRetNull(bool *isNull, const char *s
 {
     int64_t result;
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_intRegex)) {
         *isNull = true;
         return 0;
@@ -747,7 +737,6 @@ extern "C" DLLEXPORT double CastStringToDoubleRetNull(bool *isNull, const char *
 {
     double result;
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_doubleRegex)) {
         *isNull = true;
         return 0;
@@ -766,7 +755,6 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RetNull(bool *isNull, const ch
     int32_t outPrecision, int32_t outScale)
 {
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_decimalRegex)) {
         *isNull = true;
         return 0;
@@ -784,7 +772,6 @@ extern "C" DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
     if (!regex_match(s, g_decimalRegex)) {
         *isNull = true;
         return;

@@ -14,7 +14,7 @@ namespace vec {
 class LazyVector : public Vector {
 public:
     LazyVector(VectorAllocator *allocator, int32_t size)
-        : Vector(allocator, -1, size, type::OMNI_NONE), loader(nullptr), loadedVector(nullptr)
+        : Vector(allocator, -1, size, type::OMNI_NONE, OMNI_VEC_ENCODING_LAZY), loader(nullptr), loadedVector(nullptr)
     {}
 
     void SetLoader(VectorLoader *vectorLoader)
@@ -72,11 +72,6 @@ public:
         if (loadedVector != nullptr) {
             delete loadedVector;
         }
-    }
-
-    VectorEncoding GetEncoding() override
-    {
-        return OMNI_VEC_ENCODING_LAZY;
     }
 
     bool MayHaveNull() const override

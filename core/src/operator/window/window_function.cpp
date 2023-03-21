@@ -4,6 +4,7 @@
  */
 
 #include "window_function.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -90,7 +91,7 @@ AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannel, int32_
       isOverflowAsNull(isOverflowAsNull)
 {
     this->argumentChannels.push_back(argumentChannel);
-    this->aggregatorFactory = omniruntime::op::CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
+    this->aggregatorFactory = CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
 }
 
 void AggregateWindowFunction::Reset(WindowIndex *pWindowIndex)
@@ -155,9 +156,7 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
         vector = new LongVector(allocator, rowCount);
         inputVecBatchForAgg->SetVector(0, vector);
-        for (int32_t position = start; position <= end; ++position) {
-            aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, position - start);
-        }
+        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, start, rowCount);
         delete vector;
         vector = nullptr;
         return;
@@ -172,7 +171,8 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
             inputVecBatchForAgg->SetVector(0, vector);
         }
         uint32_t vectorPosition = DecodePosition(sliceAddress);
-        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, static_cast<int32_t>(vectorPosition));
+        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, static_cast<int32_t>(vectorPosition),
+            1);
     }
 }
 }

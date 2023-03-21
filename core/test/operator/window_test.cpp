@@ -11,6 +11,7 @@
 #include "util/test_util.h"
 #include "vector/vector_helper.h"
 #include "perf_util.h"
+#include "util/config_util.h"
 
 using namespace std;
 using namespace omniruntime::vec;
@@ -2101,7 +2102,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowPerf)
     double cpuElapsed = timer.GetCpuElapse();
     std::cout << "Window with Omni, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    Operator::DeleteOperator(windowOperator);
+    op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
 
     delete[] input;
@@ -2210,8 +2211,8 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
 
     std::cout << "Window without OmniJit, wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
 
-    Operator::DeleteOperator(windowOperatorWithJit);
-    Operator::DeleteOperator(windowOperatorWithoutJit);
+    op::Operator::DeleteOperator(windowOperatorWithJit);
+    op::Operator::DeleteOperator(windowOperatorWithoutJit);
     DeleteOperatorFactory(operatorFactoryWithJit);
     DeleteOperatorFactory(operatorFactoryWithoutJit);
 

@@ -12,7 +12,6 @@
 #include <vector>
 #include <algorithm>
 #include <thread>
-#include <mutex>
 
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/APFloat.h>
@@ -44,17 +43,25 @@
 #include "expression/expr_printer.h"
 #include "util/debug.h"
 #include "llvm_types.h"
-#include "decimal_ir_builder.h"
 #include "llvm_engine.h"
 #include "operator/config/operator_config.h"
+#include "type/data_type.h"
+#include "vector/vector_batch.h"
+#include "codegen_base.h"
 
+namespace omniruntime::codegen {
+using namespace llvm;
+using namespace orc;
+using namespace omniruntime;
+using namespace omniruntime::expressions;
+using namespace omniruntime::type;
 using CodeGenValuePtr = std::shared_ptr<CodeGenValue>;
 
-// Given an expression, generate a batch function for it.
-class BatchExpressionCodeGen : public ExprVisitor {
+class BatchExpressionCodeGen : public ExprVisitor, public CodegenBase {
 public:
     BatchExpressionCodeGen(std::string name, const omniruntime::expressions::Expr &cpExpr,
-        omniruntime::op::OverflowConfig *overflowConfig);
+        op::OverflowConfig *ofConfig);
+
     ~BatchExpressionCodeGen() override
     {
         if (rt) {
@@ -62,112 +69,88 @@ public:
         }
     }
 
-    virtual int64_t GetFunction() = 0;
-    void Visit(const omniruntime::expressions::LiteralExpr &e) override;
-    void Visit(const omniruntime::expressions::FieldExpr &e) override;
-    void Visit(const omniruntime::expressions::UnaryExpr &e) override;
-    void Visit(const omniruntime::expressions::BinaryExpr &e) override;
-    void Visit(const omniruntime::expressions::InExpr &e) override;
-    void Visit(const omniruntime::expressions::BetweenExpr &e) override;
-    void Visit(const omniruntime::expressions::IfExpr &e) override;
-    void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
-    void Visit(const omniruntime::expressions::IsNullExpr &e) override;
-    void Visit(const omniruntime::expressions::FuncExpr &e) override;
-    void Visit(const omniruntime::expressions::SwitchExpr &e) override;
+    virtual intptr_t GetFunction() = 0;
 
-    CodeGenValuePtr VisitExpr(const omniruntime::expressions::Expr &e);
-    void ExtractVectorIndexes();
-    std::set<int32_t> vectorIndexes;
-    std::vector<llvm::Value *> GetFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::AllocaInst *isAnyNull, bool &isInvalidExpr);
+    void Visit(const LiteralExpr &e) override;
+
+    void Visit(const FieldExpr &e) override;
+
+    void Visit(const UnaryExpr &e) override;
+
+    void Visit(const BinaryExpr &e) override;
+
+    void Visit(const InExpr &e) override;
+
+    void Visit(const BetweenExpr &e) override;
+
+    void Visit(const IfExpr &e) override;
+
+    void Visit(const CoalesceExpr &e) override;
+
+    void Visit(const IsNullExpr &e) override;
+
+    void Visit(const FuncExpr &e) override;
+
+    void Visit(const SwitchExpr &e) override;
+
+    CodeGenValuePtr VisitExpr(const Expr &e);
+
+    std::vector<llvm::Value *> GetFunctionArgValues(const FuncExpr &fExpr, llvm::AllocaInst *isAnyNull,
+        bool &isInvalidExpr);
 
 protected:
-    llvm::AllocaInst *GetResultArray(omniruntime::type::DataTypeId dataTypeId, llvm::Value *rowCnt);
-    llvm::Constant *CreateConstantString(std::string s);
-    CodeGenValue *LiteralExprConstantHelper(const omniruntime::expressions::LiteralExpr &lExpr);
+    AllocaInst *GetResultArray(DataTypeId dataTypeId, Value *rowCnt);
 
     virtual llvm::Function *CreateBatchFunction();
 
-    llvm::LLVMContext *GetContext()
-    {
-        return llvmEngine->GetContext();
-    }
-
-    llvm::IRBuilder<> *GetIRBuilder()
-    {
-        return llvmEngine->GetIRBuilder();
-    }
-
-    llvm::Module *GetModule()
-    {
-        return llvmEngine->GetModule();
-    }
-
-    llvm::orc::LLJIT *GetJit()
-    {
-        return llvmEngine->GetJit();
-    }
-
-    LLVMTypes *GetTypes()
-    {
-        return llvmEngine->GetTypes();
-    }
-
-    std::unique_ptr<DecimalIRBuilder> GetDecimalIRBuilder()
-    {
-        return std::make_unique<DecimalIRBuilder>(*llvmEngine);
-    }
-
-    const omniruntime::expressions::Expr *expr;
-    std::unique_ptr<LLVMEngine> llvmEngine;
-    llvm::LLVMContext *context = nullptr;
-    llvm::IRBuilder<> *builder = nullptr;
-    llvm::Module *module = nullptr;
-    llvm::orc::LLJIT *jit = nullptr;
-    llvm::ExitOnError eoe;
-    LLVMTypes *llvmTypes = nullptr;
-    std::unique_ptr<DecimalIRBuilder> decimalIRBuilder;
-    llvm::orc::ResourceTrackerSP rt;
-    llvm::Function *func = nullptr;
-    CodeGenValuePtr value = nullptr;
-    std::unique_ptr<BatchCodegenContext> batchCodegenContext;
-    int numGlobalValues = 0;
-    omniruntime::op::OverflowConfig *overflowConfig;
-
 private:
-    std::string funcName;
     bool InitializeBatchCodegenContext(llvm::iterator_range<llvm::Function::arg_iterator> args);
-    llvm::Value *GetDictionaryVectorValue(const omniruntime::expressions::DataType &dataType, llvm::Value *rowIdxArray,
-        llvm::Value *rowCnt, llvm::Value *dictionaryVectorPtr, llvm::AllocaInst *lengthArrayPtr);
-    llvm::Value *GetVectorValue(const omniruntime::expressions::DataType &dataType, llvm::Value *rowIdxArray,
-        llvm::Value *rowCnt, llvm::Value *dataVectorPtr, llvm::Value *offsetArray, llvm::Value *lengthArrayPtr);
-    void BinaryExprIntLongHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    void BinaryExprDoubleHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    void BinaryExprStringHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, llvm::Value *left,
-        llvm::Value *leftLen, llvm::Value *right, llvm::Value *rightLen, llvm::Value *leftIsNull,
-        llvm::Value *rightIsNull);
-    void BinaryExprDecimalHelper(const omniruntime::expressions::BinaryExpr *binaryExpr, DecimalValue &left,
-        DecimalValue &right, llvm::Value *leftIsNull, llvm::Value *rightIsNull);
-    bool VisitBetweenExprHelper(omniruntime::expressions::BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
-        const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
-        std::pair<llvm::AllocaInst **, llvm::AllocaInst **> cmpPair);
-    std::vector<llvm::Value *> GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr, llvm::AllocaInst *isAnyNull,
-        bool &isInvalidExpr);
-    std::vector<llvm::Value *> GetDataAndNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::AllocaInst *isAnyNull, bool &isInvalidExpr);
-    std::vector<llvm::Value *> GetDefaultFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::AllocaInst *isAnyNull, bool &isInvalidExpr);
-    std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::AllocaInst *isAnyNull, bool &isInvalidExpr, llvm::AllocaInst *overflowNull);
-    void FuncExprOverflowNullHelper(const omniruntime::expressions::FuncExpr &e);
-    llvm::Value *ArenaAlloc(llvm::Value *sizeInBytes);
-    llvm::Value *GetTypeSize(omniruntime::type::DataTypeId dataTypeId);
-    std::vector<llvm::Value *> GetHiveUdfArgValues(const omniruntime::expressions::FuncExpr &fExpr,
-        bool &isInvalidExpr);
-    llvm::Value *CreateHiveUdfArgTypes(const omniruntime::expressions::FuncExpr &fExpr);
-    void CallHiveUdfFunction(const omniruntime::expressions::FuncExpr &fExpr);
-};
 
+    Value *GetDictionaryVectorValue(const DataType &dataType, llvm::Value *rowIdxArray, Value *rowCnt,
+        Value *dictionaryVectorPtr, AllocaInst *lengthArrayPtr);
+
+    Value *GetVectorValue(const DataType &dataType, Value *rowIdxArray, Value *rowCnt, Value *dataVectorPtr,
+        Value *offsetArray, Value *lengthArrayPtr);
+
+    CodeGenValue *BatchLiteralExprConstantHelper(const LiteralExpr &lExpr);
+
+    void BatchBinaryExprIntLongHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull);
+
+    void BatchBinaryExprDoubleHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull);
+
+    void BatchBinaryExprStringHelper(const BinaryExpr *binaryExpr, Value *left, Value *leftLen, Value *right,
+        Value *rightLen, Value *leftIsNull, Value *rightIsNull);
+
+    void BatchBinaryExprDecimalHelper(const BinaryExpr *binaryExpr, DecimalValue &left, DecimalValue &right,
+        Value *leftIsNull, Value *rightIsNull);
+
+    void BatchVisitBetweenExprHelper(BetweenExpr &bExpr, const std::shared_ptr<CodeGenValue> &val,
+        const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
+        std::pair<llvm::AllocaInst **, AllocaInst **> cmpPair);
+
+    std::vector<llvm::Value *> GetDataArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull, bool &isInvalidExpr);
+
+    std::vector<llvm::Value *> GetDataAndNullArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull, bool &isInvalidExpr);
+
+    std::vector<llvm::Value *> GetDefaultFunctionArgValues(const FuncExpr &fExpr, AllocaInst *isAnyNull,
+        bool &isInvalidExpr);
+
+    std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull,
+        bool &isInvalidExpr, AllocaInst *overflowNull);
+
+    void FuncExprOverflowNullHelper(const FuncExpr &e);
+
+    Value *ArenaAlloc(Value *sizeInBytes);
+
+    Value *GetTypeSize(DataTypeId dataTypeId);
+
+    std::vector<Value *> GetHiveUdfArgValues(const FuncExpr &fExpr, bool &isInvalidExpr);
+
+    llvm::Value *CreateHiveUdfArgTypes(const FuncExpr &fExpr);
+
+    void CallHiveUdfFunction(const FuncExpr &fExpr);
+};
+}
 #endif // OMNI_RUNTIME_BATCH_EXPRESSION_CODEGEN_H
