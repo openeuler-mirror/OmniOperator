@@ -61,6 +61,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
             } else {
                 Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
                 preSumVal = preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
+                *reinterpret_cast<Decimal128 *>(state.val) = preSumVal.ToDecimal128();
                 overflow |= (preSumVal.IsOverflow() != OpStatus::SUCCESS);
             }
         }
