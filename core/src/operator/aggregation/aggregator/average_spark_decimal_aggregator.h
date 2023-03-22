@@ -108,7 +108,7 @@ public:
         }
     }
 
-    void InitState(AggregateState &state)
+    void InitState(AggregateState &state) override
     {
         state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
         DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), 0, 0, 0);

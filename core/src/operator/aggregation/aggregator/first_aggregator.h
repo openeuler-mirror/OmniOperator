@@ -124,8 +124,7 @@ public:
         }
     }
 
-private:
-    void InitState(AggregateState &state)
+    void InitState(AggregateState &state) override
     {
         state.val = executionContext->GetArena()->Allocate(PARTIAL_FIRST_OUTPUT_LENGTH);
         auto ptr = executionContext->GetArena()->Allocate(sizeof(InputType));
@@ -134,6 +133,8 @@ private:
         firstState->valueSet = false;
         firstState->valIsNull = true;
     }
+
+private:
     bool isIgnoreNull;
 };
 }

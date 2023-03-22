@@ -131,6 +131,7 @@ void AggregateWindowFunction::ResetAccumulator()
             *DataTypes::GenerateDataTypes(outputType), winChannels, true, false, isOverflowAsNull);
         aggregator->SetExecutionContextAllocator(allocator);
         aggregateState = std::make_unique<omniruntime::op::AggregateState>();
+        aggregator->InitState(*aggregateState);
         currentStart = -1;
         currentEnd = -1;
     }
