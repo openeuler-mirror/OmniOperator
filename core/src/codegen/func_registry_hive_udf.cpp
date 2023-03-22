@@ -9,8 +9,9 @@
 #include "functions/udffunctions.h"
 #include "func_registry_hive_udf.h"
 
-namespace omniruntime {
+namespace omniruntime::codegen {
 using namespace omniruntime::type;
+using namespace codegen::function;
 
 std::vector<Function> HiveUdfRegistry::GetFunctions()
 {

@@ -36,13 +36,6 @@ TEST(BatchCodeGenTest, IntIn)
     auto *projExpr2 = new FieldExpr(2, IntType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -57,6 +50,9 @@ TEST(BatchCodeGenTest, IntIn)
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_IntIn");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
+
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
     auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
@@ -95,13 +91,6 @@ TEST(BatchCodeGenTest, LongIn)
     auto *projExpr2 = new FieldExpr(2, LongType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int64_t *col1 = new int64_t[numRows];
@@ -116,6 +105,9 @@ TEST(BatchCodeGenTest, LongIn)
     DataTypes inputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType() }));
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LongIn");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
+
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
     auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
@@ -155,12 +147,6 @@ TEST(BatchCodeGenTest, DoubleIn)
     auto *projExpr2 = new FieldExpr(2, DoubleType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     double *col1 = new double[numRows];
@@ -174,6 +160,9 @@ TEST(BatchCodeGenTest, DoubleIn)
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() }));
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_DoubleIn");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
+
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
     auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
@@ -208,14 +197,6 @@ TEST(BatchCodeGenTest, StringIn)
     auto *projExpr = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { projExpr };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 1;
     const int32_t numRows = 10;
     vector<string> strings;
@@ -236,9 +217,11 @@ TEST(BatchCodeGenTest, StringIn)
     std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
     auto *vecBatch = CreateVectorBatch(numRows, cols);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 4);
 
     Expr::DeleteExprs({ filterExpr });
@@ -259,13 +242,6 @@ TEST(BatchCodeGenTest, Decimal64In)
     std::vector<Expr *> args = { arg0, arg1, arg2, arg3 };
     auto expr = new InExpr(args);
     std::vector<Expr *> exprs = { expr };
-    Filter *filter = nullptr;
-
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
 
     const int32_t numRows = 1;
     const int32_t numCols = 1;
@@ -276,9 +252,11 @@ TEST(BatchCodeGenTest, Decimal64In)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64In");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 1;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
 
     bool val0 = ((BooleanVector *)ret->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
@@ -305,13 +283,6 @@ TEST(BatchCodeGenTest, Decimal128In)
     auto *projExpr = new FieldExpr(0, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { projExpr };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     int64_t *data1 = new int64_t[numRows * 2];
@@ -323,9 +294,11 @@ TEST(BatchCodeGenTest, Decimal128In)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128In");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, data1);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 2);
 
     Expr::DeleteExprs({ filterExpr });
@@ -348,12 +321,6 @@ TEST(BatchCodeGenTest, IntBetween)
     auto *projExpr2 = new FieldExpr(2, IntType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int32_t *col1 = new int32_t[numRows];
@@ -369,9 +336,11 @@ TEST(BatchCodeGenTest, IntBetween)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_IntBetween");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 4705);
     for (int i = 0; i < numSelectedRows; i++) {
         int32_t val0 = ((IntVector *)ret->GetVector(0))->GetValue(i);
@@ -402,12 +371,6 @@ TEST(BatchCodeGenTest, LongBetween)
     auto *projExpr2 = new FieldExpr(2, LongType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     int64_t *col1 = new int64_t[numRows];
@@ -423,9 +386,11 @@ TEST(BatchCodeGenTest, LongBetween)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LongBetween");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 4705);
     for (int i = 0; i < numSelectedRows; i++) {
         int64_t val0 = ((LongVector *)ret->GetVector(0))->GetValue(i);
@@ -456,12 +421,6 @@ TEST(BatchCodeGenTest, DoubleBetween)
     auto *projExpr2 = new FieldExpr(2, DoubleType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
     const int32_t numCols = 3;
     const int32_t numRows = 10000;
     double *col1 = new double[numRows];
@@ -477,9 +436,11 @@ TEST(BatchCodeGenTest, DoubleBetween)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_DoubleBetween");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 4705);
 
     for (int i = 0; i < numSelectedRows; i++) {
@@ -509,13 +470,6 @@ TEST(BatchCodeGenTest, Decimal64Between)
     auto expr = new BetweenExpr(value, lowerBound, upperBound);
 
     std::vector<Expr *> exprs = { expr };
-    Filter *filter = nullptr;
-    std::vector<std::unique_ptr<Projection>> projections;
-
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
 
     const int32_t numRows = 1;
     const int32_t numCols = 1;
@@ -526,9 +480,11 @@ TEST(BatchCodeGenTest, Decimal64Between)
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Between");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 1;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
 
     bool val0 = ((BooleanVector *)ret->GetVector(0))->GetValue(0);
     EXPECT_TRUE(val0);
@@ -552,14 +508,6 @@ TEST(BatchCodeGenTest, Decimal128Between)
     auto *projExpr = new FieldExpr(0, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { projExpr };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 1;
     const int32_t numRows = 100;
     int64_t *data1 = new int64_t[numRows * 2];
@@ -572,9 +520,11 @@ TEST(BatchCodeGenTest, Decimal128Between)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128Between");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, data1);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 3);
 
     Expr::DeleteExprs({ filterExpr });
@@ -598,13 +548,6 @@ TEST(BatchCodeGenTest, DoubleCoalesce)
     auto *projExpr2 = new FieldExpr(2, DoubleType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
     double *col1 = new double[numRows];
@@ -620,16 +563,17 @@ TEST(BatchCodeGenTest, DoubleCoalesce)
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() }));
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_DoubleCoalesce");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
-
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
             vecBatch->GetVector(1)->SetValueNull(i);
         }
     }
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 500);
 
     Expr::DeleteExprs({ filterExpr });
@@ -655,13 +599,6 @@ TEST(BatchCodeGenTest, IntCoalesce)
     auto *projExpr2 = new FieldExpr(2, IntType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
     auto *col1 = new int32_t[numRows];
@@ -677,7 +614,6 @@ TEST(BatchCodeGenTest, IntCoalesce)
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_IntCoalesce");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
-
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
             vecBatch->GetVector(1)->SetValueNull(i);
@@ -686,9 +622,11 @@ TEST(BatchCodeGenTest, IntCoalesce)
         }
     }
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
 
     EXPECT_EQ(numSelectedRows, 500);
 
@@ -714,13 +652,6 @@ TEST(BatchCodeGenTest, StringCoalesce)
     auto *projExpr = new FieldExpr(0, VarcharType());
     std::vector<Expr *> exprs = { projExpr };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     vector<string> strings;
@@ -741,9 +672,11 @@ TEST(BatchCodeGenTest, StringCoalesce)
     std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
     auto *vecBatch = CreateVectorBatch(numRows, cols);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 500);
 
     Expr::DeleteExprs({ filterExpr });
@@ -767,13 +700,6 @@ TEST(BatchCodeGenTest, LongCoalesce)
     auto *projExpr2 = new FieldExpr(2, LongType());
     std::vector<Expr *> exprs = { projExpr, projExpr1, projExpr2 };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 3;
     const int32_t numRows = 1000;
     auto *col1 = new int64_t[numRows];
@@ -789,7 +715,6 @@ TEST(BatchCodeGenTest, LongCoalesce)
     DataTypes inputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType() }));
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LongCoalesce");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
-
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
             vecBatch->GetVector(1)->SetValueNull(i);
@@ -798,9 +723,11 @@ TEST(BatchCodeGenTest, LongCoalesce)
         }
     }
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 500);
 
     Expr::DeleteExprs({ filterExpr });
@@ -832,13 +759,6 @@ TEST(BatchCodeGenTest, Decimal64Coalesce)
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::GT, ifExpr, right, BooleanType());
 
     std::vector<Expr *> exprs = { expr };
-    Filter *filter = nullptr;
-
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), false, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
 
     const int32_t numRows = 1;
     const int32_t numCols = 1;
@@ -850,11 +770,13 @@ TEST(BatchCodeGenTest, Decimal64Coalesce)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Coalesce");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
     bool val0 = ((BooleanVector *)ret->GetVector(0))->GetValue(0);
-    EXPECT_FALSE(val0);
+    EXPECT_TRUE(val0);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
@@ -877,13 +799,6 @@ TEST(BatchCodeGenTest, Decimal128Coalesce)
     auto *projExpr = new FieldExpr(0, Decimal128Type(38, 0));
     std::vector<Expr *> exprs = { projExpr };
 
-    auto filter = make_unique<Filter>(*filterExpr, nullptr);
-    std::vector<std::unique_ptr<Projection>> projections;
-    for (uint32_t i = 0; i < exprs.size(); i++) {
-        auto projection = make_unique<Projection>(*(exprs[i]), true, exprs[i]->GetReturnType(), nullptr);
-        projections.push_back(move(projection));
-    }
-
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
     int64_t *data1 = new int64_t[numRows * 2];
@@ -897,9 +812,11 @@ TEST(BatchCodeGenTest, Decimal128Coalesce)
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128Coalesce");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, data1);
 
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
+
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(reinterpret_cast<unique_ptr<omniruntime::op::Filter> &>(filter), projections, numCols,
-        vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
     EXPECT_EQ(numSelectedRows, 500);
 
     delete[] data1;

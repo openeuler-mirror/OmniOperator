@@ -8,10 +8,11 @@
 
 using namespace omniruntime::vec;
 using namespace std;
-
+namespace omniruntime::codegen::function {
 extern DLLEXPORT int32_t WrapVarcharVector(int64_t vectorAddr, int32_t index, uint8_t *data, int32_t dataLen)
 {
     auto *varcharVectorPtr = reinterpret_cast<VarcharVector *>(vectorAddr);
     varcharVectorPtr->SetValue(index, reinterpret_cast<uint8_t *>(data), dataLen);
     return 0;
+}
 }

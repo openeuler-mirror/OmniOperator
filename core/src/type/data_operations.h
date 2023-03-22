@@ -11,9 +11,15 @@
 
 namespace omniruntime {
 namespace type {
+static std::regex g_decimalRegex("[+-]?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?");
+static std::regex g_intRegex("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*");
+static std::regex g_doubleRegex(
+    "[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
+static std::regex g_dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
+
 inline int StringToInt(const std::string &s, int32_t &result)
 {
-    if (!regex_match(s, std::regex("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*"))) {
+    if (!regex_match(s, g_intRegex)) {
         return -1;
     }
     int status = 0;
@@ -27,7 +33,7 @@ inline int StringToInt(const std::string &s, int32_t &result)
 
 inline int StringToLong(const std::string &s, int64_t &result)
 {
-    if (!regex_match(s, std::regex("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*"))) {
+    if (!regex_match(s, g_intRegex)) {
         return -1;
     }
     int status = 0;
@@ -41,8 +47,7 @@ inline int StringToLong(const std::string &s, int64_t &result)
 
 inline int StringToDouble(const std::string &s, double &result)
 {
-    if (!regex_match(s,
-        std::regex("[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*"))) {
+    if (!regex_match(s, g_doubleRegex)) {
         return -1;
     }
     int status = 0;

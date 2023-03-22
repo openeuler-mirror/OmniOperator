@@ -497,6 +497,11 @@ public:
         return width;
     }
 
+    void SetWidth(const uint32_t newWidth)
+    {
+        width = newWidth;
+    }
+
     bool operator == (const DataType &right) const override
     {
         if (id != right.GetId()) {

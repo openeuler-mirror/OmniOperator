@@ -14,8 +14,7 @@
 #include <huawei_secure_c/include/securec.h>
 #include "util/utf8_util.h"
 
-namespace omniruntime {
-namespace codegen {
+namespace omniruntime::codegen::function {
 static std::string REPLACE_ERR_MSG = "Replace failed";
 static std::string CONCAT_ERR_MSG = "Concat failed";
 static constexpr uint8_t EMPTY[] = "";
@@ -61,7 +60,7 @@ public:
 
         // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
         // both empty strings, the security function will not return an error.
-        auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
         errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
         errno_t res3 = memcpy_s(ret + apLen + aPaddingCount, *outLen - (apLen + aPaddingCount) + 1, bp, bpLen);
@@ -83,7 +82,7 @@ public:
         }
         // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
         // both empty strings, the security function will not return an error.
-        auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
         errno_t res2 = memcpy_s(ret + apLen, *outLen - apLen + 1, bp, bpLen);
         if (res1 != EOK || res2 != EOK) {
@@ -118,7 +117,7 @@ public:
         }
 
         *outLen = static_cast<int32_t>(s.length());
-        auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         error_t res = memcpy_s(ret, *outLen + 1, s.c_str(), s.length());
         if (res != EOK) {
             *hasErr = true;
@@ -133,7 +132,7 @@ public:
     {
         int32_t strCodePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
         *outLen = strLen + (strCodePoints + 1) * replaceLen;
-        auto ret = omniruntime::codegen::ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         int32_t indexBuffer = 0;
         errno_t res;
         for (int32_t index = 0; index < strLen;) {
@@ -162,8 +161,13 @@ public:
         }
         return ret;
     }
+
+    static inline void TrimString(std::string &str)
+    {
+        str.erase(0, str.find_first_not_of(' '));
+        str.erase(str.find_last_not_of(' ') + 1);
+    }
 }; // class stringUtils
-} // namespace codegen
-} // namespace runtime
+} // namespace codegen function
 
 #endif // OMNI_RUNTIME_STRING_UTIL_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  * Description: aggregator tool class
  */
 #include "aggregator_util.h"
@@ -34,12 +34,12 @@ std::vector<bool> AggregatorUtil::WrapWithVector(bool value, int num)
     return retVector;
 }
 
-std::vector<std::vector<uint32_t>> AggregatorUtil::WrapWithVector(std::vector<uint32_t> &values)
+std::vector<std::vector<uint32_t>> AggregatorUtil::WrapWithVector(const std::vector<uint32_t> &values)
 {
     std::vector<std::vector<uint32_t>> twoLayerVectors;
     twoLayerVectors.reserve(values.size());
     for (auto value : values) {
-        twoLayerVectors.push_back({value});
+        twoLayerVectors.push_back({ value });
     }
     return twoLayerVectors;
 }
@@ -50,7 +50,7 @@ std::vector<std::vector<int32_t>> AggregatorUtil::WrapWithVector(std::vector<int
     std::vector<std::vector<int32_t>> twoLayerVectors;
     twoLayerVectors.reserve(values.size());
     for (auto value : values) {
-        twoLayerVectors.push_back({value});
+        twoLayerVectors.push_back({ value });
     }
     return twoLayerVectors;
 }

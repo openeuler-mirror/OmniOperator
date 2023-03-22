@@ -13,12 +13,16 @@
 #include "vector_encoding.h"
 #include "tracer/vector_tracer.h"
 #include "util/bit_map.h"
+#include "type/string_ref.h"
+#include "memory/simple_arena_allocator.h"
 
 namespace omniruntime {
 namespace vec {
 using DataTypeId = type::DataTypeId;
 class Vector {
 public:
+    Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId, VectorEncoding encoding);
+
     Vector(VectorAllocator *allocator, int capacityInBytes, int size, DataTypeId dataTypeId);
 
     virtual ~Vector();
@@ -83,7 +87,7 @@ public:
         return valueOffsetsAddress;
     }
 
-    bool IsValueNull(int index)
+    bool IsValueNull(int index) const
     {
         return (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset];
     }
@@ -94,7 +98,7 @@ public:
         hasNull = true;
     }
 
-    virtual void SetValueNull(int index, bool value)
+    void SetValueNull(int index, bool value)
     {
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = value;
         hasNull = value || hasNull;
@@ -105,7 +109,7 @@ public:
         (reinterpret_cast<bool *>(valueNullsAddress))[index + positionOffset] = false;
     }
 
-    int GetValueOffset(int index)
+    int GetValueOffset(int index) const
     {
         return static_cast<int32_t *>(valueOffsetsAddress)[index];
     }
@@ -135,9 +139,9 @@ public:
 
     VectorTracer *GetVectorTracer();
 
-    virtual VectorEncoding GetEncoding()
+    VectorEncoding GetEncoding()
     {
-        return OMNI_VEC_ENCODING_FLAT;
+        return encoding;
     }
 
     virtual bool MayHaveNull() const
@@ -156,6 +160,31 @@ public:
             BitMap::ComputeBitCount(static_cast<const uint8_t *>(valueNullsAddress), positionOffset, size) :
             0;
     }
+    /* *
+     *
+     * @param rowId   Serialize the rowId element of the current vector.
+     * @param executionContext Allocate the memory for the serialization result through executionContent.
+     * @param begin stores the serialization result of the previous vector.
+     * If begin is nullptr, the rowId element of the current vector is the first element in the current row.
+     * After the serialization is complete, the value of @begin changes to pos + the number of bytes serialized.
+     * @return Serialized Results
+     */
+    virtual StringRef SerializeValue(size_t rowId, mem::SimpleArenaAllocator &executionContext,
+        const uint8_t *&begin)
+    {
+        return {};
+    }
+
+    /* *
+     *
+     * @param rowId The deserialization result is stored in the rowId element of the vector.
+     * @param pos Pointer to serialized data
+     * @return Pointer to next serialized data
+     */
+    virtual const uint8_t *DeserializeValueIntoThis(size_t rowId, const uint8_t *pos)
+    {
+        return nullptr;
+    }
 
 protected:
     // this method is mainly used for vector slice
@@ -170,6 +199,7 @@ protected:
     int capacityInBytes = 0;
     int size = 0;
     DataTypeId dataTypeId;
+    VectorEncoding encoding;
     VectorReference *reference = nullptr;
     VectorTracer *tracer = nullptr;
     VectorAllocator *allocator = nullptr;

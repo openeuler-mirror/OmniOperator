@@ -7,7 +7,7 @@
 #include "function.h"
 #include "func_registry_base.h"
 
-namespace omniruntime {
+namespace omniruntime::codegen {
 class ContextFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;

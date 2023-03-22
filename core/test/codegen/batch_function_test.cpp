@@ -7,14 +7,14 @@
 #include "gtest/gtest.h"
 #include "codegen/batch_functions/batch_mathfunctions.h"
 #include "codegen/batch_functions/batch_murmur3_hash.h"
-#include "codegen/batch_functions/batch_decimalfunctions.h"
+#include "codegen/batch_functions/batch_decimal_arithmetic_functions.h"
+#include "codegen/batch_functions/batch_decimal_cast_functions.h"
 #include "operator/execution_context.h"
-#include "engine.h"
 #include "codegen/batch_functions/batch_stringfunctions.h"
 #include "util/test_util.h"
 
 using namespace omniruntime::op;
-using namespace omniruntime::codegen;
+using namespace omniruntime::codegen::function;
 using namespace std;
 using namespace TestUtil;
 
@@ -30,55 +30,56 @@ template <typename T> bool CmpArray(T *x, T *y, int32_t rowCnt)
 
 TEST(BatchFunctionTest, CastBasicTypes)
 {
+    ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     int32_t rowCnt = 2;
-    int32_t col1[2] = {-10, 10};
-    int64_t col2[2] = {-20L, 20L};
-    double col3[2] = {-30.0, 30.0};
-    bool resIsNull[2] = {false, false};
+    int32_t col1[2] = { -10, 10 };
+    int64_t col2[2] = { -20L, 20L };
+    double col3[2] = { -30.0, 30.0 };
+    bool resIsNull[2] = { false, false };
 
     double outDouble[2];
     BatchCastInt32ToDouble(col1, resIsNull, outDouble, rowCnt);
-    double expectDouble1[2] = {-10.0, 10.0};
+    double expectDouble1[2] = { -10.0, 10.0 };
     EXPECT_TRUE(CmpArray<double>(outDouble, expectDouble1, rowCnt));
 
     BatchCastInt64ToDouble(col2, resIsNull, outDouble, rowCnt);
-    double expectDouble2[2] = {-20.0, 20.0};
+    double expectDouble2[2] = { -20.0, 20.0 };
     EXPECT_TRUE(CmpArray<double>(outDouble, expectDouble2, rowCnt));
 
     int32_t outInt[2];
     BatchCastInt64ToInt32(col2, resIsNull, outInt, rowCnt);
-    int32_t expectInt1[2] = {-20, 20};
+    int32_t expectInt1[2] = { -20, 20 };
     EXPECT_TRUE(CmpArray<int32_t>(outInt, expectInt1, rowCnt));
 
-    BatchCastDoubleToInt32(col3, resIsNull, outInt, rowCnt);
-    int32_t expectInt2[2] = {-30, 30};
+    BatchCastDoubleToInt32HalfUp(col3, resIsNull, outInt, rowCnt);
+    int32_t expectInt2[2] = { -30, 30 };
     EXPECT_TRUE(CmpArray<int32_t>(outInt, expectInt2, rowCnt));
 
     int64_t outLong[2];
     BatchCastInt32ToInt64(col1, resIsNull, outLong, rowCnt);
-    int64_t expectLong1[2] = {-10L, 10L};
+    int64_t expectLong1[2] = { -10L, 10L };
     EXPECT_TRUE(CmpArray<int64_t>(outLong, expectLong1, rowCnt));
 
-    BatchCastDoubleToInt64(col3, resIsNull, outLong, rowCnt);
-    int64_t expectLong2[2] = {-30L, 30L};
+    BatchCastDoubleToInt64HalfUp(col3, resIsNull, outLong, rowCnt);
+    int64_t expectLong2[2] = { -30L, 30L };
     EXPECT_TRUE(CmpArray<int64_t>(outLong, expectLong2, rowCnt));
 }
 
 TEST(BatchFunctionTest, Abs)
 {
     int32_t rowCnt = 2;
-    int32_t col1[2] = {-10, 10};
-    int64_t col2[2] = {-20L, 20L};
-    double col3[2] = {-30.0, 30.0};
-    bool resIsNull[2] = {false, false};
+    int32_t col1[2] = { -10, 10 };
+    int64_t col2[2] = { -20L, 20L };
+    double col3[2] = { -30.0, 30.0 };
+    bool resIsNull[2] = { false, false };
 
     BatchAbs<int32_t>(col1, resIsNull, col1, rowCnt);
     BatchAbs<int64_t>(col2, resIsNull, col2, rowCnt);
     BatchAbs<double>(col3, resIsNull, col3, rowCnt);
 
-    int32_t expectCol1[2] = {10, 10};
-    int64_t expectCol2[2] = {20L, 20L};
-    double expectCol3[2] = {30.0, 30.0};
+    int32_t expectCol1[2] = { 10, 10 };
+    int64_t expectCol2[2] = { 20L, 20L };
+    double expectCol3[2] = { 30.0, 30.0 };
 
     EXPECT_TRUE(CmpArray<int32_t>(col1, expectCol1, rowCnt));
     EXPECT_TRUE(CmpArray<int64_t>(col2, expectCol2, rowCnt));
@@ -88,8 +89,8 @@ TEST(BatchFunctionTest, Abs)
 TEST(BatchFunctionTest, IntCmp)
 {
     int32_t rowCnt = 2;
-    int32_t left[2] = {-10, 20};
-    int32_t right[2] = {-20, 10};
+    int32_t left[2] = { -10, 20 };
+    int32_t right[2] = { -20, 10 };
     bool output[2];
     bool expect[2];
 
@@ -127,10 +128,10 @@ TEST(BatchFunctionTest, IntCmp)
 TEST(BatchFunctionTest, IntArith)
 {
     int32_t rowCnt = 2;
-    int32_t left[2] = {-10, 10};
-    int32_t right[2] = {-20, 20};
+    int32_t left[2] = { -10, 10 };
+    int32_t right[2] = { -20, 20 };
     int32_t expect[2];
-    bool isNull[2] = {false, false};
+    bool isNull[2] = { false, false };
     auto context = new ExecutionContext();
     int64_t contextPtr = reinterpret_cast<int64_t>(context);
 
@@ -165,8 +166,8 @@ TEST(BatchFunctionTest, IntArith)
 TEST(BatchFunctionTest, LongCmp)
 {
     int32_t rowCnt = 2;
-    int64_t left[2] = {-10L, 20L};
-    int64_t right[2] = {-20L, 10L};
+    int64_t left[2] = { -10L, 20L };
+    int64_t right[2] = { -20L, 10L };
     bool output[2];
     bool expect[2];
 
@@ -204,10 +205,10 @@ TEST(BatchFunctionTest, LongCmp)
 TEST(BatchFunctionTest, LongArith)
 {
     int32_t rowCnt = 2;
-    int64_t left[2] = {-10L, 10L};
-    int64_t right[2] = {-20L, 20L};
+    int64_t left[2] = { -10L, 10L };
+    int64_t right[2] = { -20L, 20L };
     int64_t expect[2];
-    bool isNull[2] = {false, false};
+    bool isNull[2] = { false, false };
     auto context = new ExecutionContext();
     int64_t contextPtr = reinterpret_cast<int64_t>(context);
 
@@ -242,8 +243,8 @@ TEST(BatchFunctionTest, LongArith)
 TEST(BatchFunctionTest, DoubleCmp)
 {
     int32_t rowCnt = 2;
-    double left[2] = {-10.0, 20.0};
-    double right[2] = {-20.0, 10.0};
+    double left[2] = { -10.0, 20.0 };
+    double right[2] = { -20.0, 10.0 };
     bool output[2];
     bool expect[2];
 
@@ -281,8 +282,8 @@ TEST(BatchFunctionTest, DoubleCmp)
 TEST(BatchFunctionTest, DoubleArith)
 {
     int32_t rowCnt = 2;
-    double left[2] = {-10.0, 10.0};
-    double right[2] = {-20.0, 20.0};
+    double left[2] = { -10.0, 10.0 };
+    double right[2] = { -20.0, 20.0 };
     double expect[2];
 
     expect[0] = -30.0;
@@ -314,22 +315,22 @@ TEST(BatchFunctionTest, DoubleArith)
 TEST(BatchFunctionTest, Mm3Hash)
 {
     int32_t rowCnt = 1;
-    int32_t intVal[1] = {-2147483648};
-    int64_t longVal[1] = {-2147483648L};
-    double doubleVal[1] = {123.456};
-    int64_t decimal64Val[1] = {-2147483648L};
+    int32_t intVal[1] = { -2147483648 };
+    int64_t longVal[1] = { -2147483648L };
+    double doubleVal[1] = { 123.456 };
+    int64_t decimal64Val[1] = { -2147483648L };
     uint8_t *strVal[1];
-    bool boolVal[1] = {true};
+    bool boolVal[1] = { true };
     string str = "hello world";
     strVal[0] = reinterpret_cast<uint8_t *>(const_cast<char *>(str.c_str()));
-    int32_t strLen[1] = {11};
+    int32_t strLen[1] = { 11 };
     Decimal128 decimal128Val[1];
     decimal128Val[0].SetValue(0, 4000);
 
-    int32_t seed[1] = {42};
-    bool isValNull[1] = {false};
-    bool isSeedNull[1] = {false};
-    bool resIsNull[1] = {false};
+    int32_t seed[1] = { 42 };
+    bool isValNull[1] = { false };
+    bool isSeedNull[1] = { false };
+    bool resIsNull[1] = { false };
     int32_t output[1];
 
     BatchMm3Int32(intVal, isValNull, seed, isSeedNull, resIsNull, output, rowCnt);
@@ -358,8 +359,8 @@ TEST(BatchFunctionTest, Mm3Hash)
 TEST(BatchFunctionTest, Decimal64Cmp)
 {
     int32_t rowCnt = 2;
-    int64_t col1[2] = {12345678L, 123456L};
-    int64_t col2[2] = {12345678L, 1234567890L};
+    int64_t col1[2] = { 12345678L, 123456L };
+    int64_t col2[2] = { 12345678L, 1234567890L };
     bool output[2];
 
     BatchLessThanDecimal64(col1, 8, 2, col2, 9, 2, output, rowCnt);
@@ -429,12 +430,12 @@ TEST(BatchFunctionTest, CastDecimalToDecimal)
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
 
-    int64_t decimal64Val[2] = {1234567L, INT64_MAX};
+    int64_t decimal64Val[2] = { 1234567L, INT64_MAX };
     Decimal128 decimal128Val[2];
     decimal128Val[0].SetValue(0, 1234567);
     decimal128Val[1].SetValue(1LL << 63, 123456);
-    bool isAnyNull[2] = {false, false};
-    bool overflowNull[2] = {false, false};
+    bool isAnyNull[2] = { false, false };
+    bool overflowNull[2] = { false, false };
     int64_t output64[2];
     Decimal128 output128[2];
 
@@ -489,11 +490,11 @@ TEST(BatchFunctionTest, CastBasicTypeToDecimal)
     int32_t rowCnt = 1;
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    int32_t intVal[1] = {1234567};
-    int64_t longVal[1] = {INT32_MAX};
-    double doubleVal[1] = {99999999.99};
-    bool isAnyNull[1] = {false};
-    bool overflowNull[1] = {false};
+    int32_t intVal[1] = { 1234567 };
+    int64_t longVal[1] = { INT32_MAX };
+    double doubleVal[1] = { 99999999.99 };
+    bool isAnyNull[1] = { false };
+    bool overflowNull[1] = { false };
     int64_t output64[1];
     Decimal128 output128[1];
 
@@ -534,38 +535,39 @@ TEST(BatchFunctionTest, CastBasicTypeToDecimal)
     delete context;
 }
 
+// Return null function only adapt to Truncation Rule. Because only spark call this function.
 TEST(BatchFunctionTest, CastDecimalToBasicType)
 {
     int32_t rowCnt = 1;
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    int64_t decimal64Val[1] = {1234567};
+    int64_t decimal64Val[1] = { 1234567 };
     Decimal128 decimal128Val[1];
     decimal128Val[0].SetValue(0, INT64_MAX);
     int32_t outputInt[1];
     int64_t outputLong[1];
     double outputDouble[1];
-    bool isAnyNull[1] = {false};
-    bool overflowNull[1] = {false};
+    bool isAnyNull[1] = { false };
+    bool overflowNull[1] = { false };
 
-    BatchCastDecimal64ToInt(contextPtr, decimal64Val, 7, 2, isAnyNull, outputInt, rowCnt);
+    BatchCastDecimal64ToIntHalfUp(contextPtr, decimal64Val, 7, 2, isAnyNull, outputInt, rowCnt);
     EXPECT_EQ(outputInt[0], 12346);
-    BatchCastDecimal64ToLong(decimal64Val, 7, 2, isAnyNull, outputLong, rowCnt);
+    BatchCastDecimal64ToLongHalfUp(decimal64Val, 7, 2, isAnyNull, outputLong, rowCnt);
     EXPECT_EQ(outputLong[0], 12346L);
-    BatchCastDecimal64ToDouble(decimal64Val, 7, 2, isAnyNull, outputDouble, rowCnt);
+    BatchCastDecimal64ToDoubleHalfUp(decimal64Val, 7, 2, isAnyNull, outputDouble, rowCnt);
     EXPECT_EQ(outputDouble[0], 12345.67);
 
     BatchCastDecimal128ToInt(contextPtr, decimal128Val, 19, 2, isAnyNull, outputInt, rowCnt);
     EXPECT_TRUE(context->HasError());
     BatchCastDecimal128ToLong(contextPtr, decimal128Val, 19, 2, isAnyNull, outputLong, rowCnt);
     EXPECT_EQ(outputLong[0], INT64_MAX / 100L);
-    BatchCastDecimal128ToDouble(decimal128Val, 19, 2, isAnyNull, outputDouble, rowCnt);
+    BatchCastDecimal128ToDoubleHalfUp(decimal128Val, 19, 2, isAnyNull, outputDouble, rowCnt);
     EXPECT_EQ(outputDouble[0], INT64_MAX / (double)100);
 
     BatchCastDecimal64ToIntRetNull(overflowNull, decimal64Val, 7, 2, outputInt, rowCnt);
-    EXPECT_EQ(outputInt[0], 12346);
+    EXPECT_EQ(outputInt[0], 12345);
     BatchCastDecimal64ToLongRetNull(overflowNull, decimal64Val, 7, 2, outputLong, rowCnt);
-    EXPECT_EQ(outputLong[0], 12346L);
+    EXPECT_EQ(outputLong[0], 12345L);
     BatchCastDecimal64ToDoubleRetNull(overflowNull, decimal64Val, 7, 2, outputDouble, rowCnt);
     EXPECT_EQ(outputDouble[0], 12345.67);
 
@@ -584,10 +586,10 @@ TEST(BatchFunctionTest, MakeDecimal)
     int32_t rowCnt = 1;
     auto context = new ExecutionContext();
     int64_t contextPtr = reinterpret_cast<int64_t>(context);
-    int64_t col[1] = {12345678L};
+    int64_t col[1] = { 12345678L };
     int64_t output[1];
-    bool isAnyNull[1] = {false};
-    bool overflowNull[1] = {false};
+    bool isAnyNull[1] = { false };
+    bool overflowNull[1] = { false };
 
     BatchUnscaledValue64(col, 7, 2, isAnyNull, output, rowCnt);
     EXPECT_EQ(output[0], 12345678L);
@@ -606,16 +608,17 @@ TEST(BatchFunctionTest, DecimalAdd)
     int32_t rowCnt = 2;
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    bool isAnyNull[2] = {false, false};
+    bool isAnyNull[2] = { false, false };
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {1234567, 98765};
-    int64_t decimal64Val2[2] = {9999999, -1111111};
-    BatchAddDec64Dec64Dec64(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 9, 2, rowCnt);
+    int64_t decimal64Val1[2] = { 1234567, 98765 };
+    int64_t decimal64Val2[2] = { 9999999, -1111111 };
+    BatchAddDec64Dec64Dec64ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 9, 2, rowCnt);
     EXPECT_EQ(decimal64Val1[0], 11234566);
     EXPECT_EQ(decimal64Val1[1], -1012346);
 
-    BatchAddDec64Dec64Dec128(contextPtr, isAnyNull, decimal64Val1, 9, 2, decimal64Val2, 7, 2, output128, 19, 9, rowCnt);
+    BatchAddDec64Dec64Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 9, 2, decimal64Val2, 7, 2, output128, 19, 9,
+        rowCnt);
     EXPECT_EQ(output128[0].HighBits(), 0);
     EXPECT_EQ(output128[0].LowBits(), 212345650000000);
     EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
@@ -627,20 +630,22 @@ TEST(BatchFunctionTest, DecimalAdd)
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 123456789);
     decimal128Val2[1].SetValue(1LL << 63, 987654321);
-    BatchAddDec128Dec128Dec128(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal128Val2, 19, 9, 38, 9, rowCnt);
+    BatchAddDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal128Val2, 19, 9, 38, 9,
+        rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 9'223'372'036'978'232'596UL);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 99'999'999'012'345'678UL);
 
-    BatchAddDec64Dec128Dec128(contextPtr, isAnyNull, decimal64Val1, 8, 2, decimal128Val1, 38, 9, 38, 9, rowCnt);
+    BatchAddDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 8, 2, decimal128Val1, 38, 9, 38, 9, rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 9'223'484'382'638'232'596UL);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 99'989'875'552'345'678UL);
 
     decimal64Val1[0] = 823'484'382'638'232'596L;
-    BatchAddDec128Dec64Dec128(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 19, 19, rowCnt);
+    BatchAddDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 19, 19,
+        rowCnt);
     EXPECT_TRUE(context->HasError());
 
     delete context;
@@ -649,11 +654,11 @@ TEST(BatchFunctionTest, DecimalAdd)
 TEST(BatchFunctionTest, DecimalAddRetNull)
 {
     int32_t rowCnt = 2;
-    bool overflowNull[2] = {false};
+    bool overflowNull[2] = { false };
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {1234567, 98765};
-    int64_t decimal64Val2[2] = {9999999, -1111111};
+    int64_t decimal64Val1[2] = { 1234567, 98765 };
+    int64_t decimal64Val2[2] = { 9999999, -1111111 };
     BatchAddDec64Dec64Dec64RetNull(overflowNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 9, 2, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal64Val1[0], 11234566);
@@ -701,16 +706,17 @@ TEST(BatchFunctionTest, DecimalSubtract)
     int32_t rowCnt = 2;
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    bool isAnyNull[2] = {false, false};
+    bool isAnyNull[2] = { false, false };
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {1234567, -34567};
-    int64_t decimal64Val2[2] = {9999999, 1111111};
-    BatchSubDec64Dec64Dec64(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 9, 2, rowCnt);
+    int64_t decimal64Val1[2] = { 1234567, -34567 };
+    int64_t decimal64Val2[2] = { 9999999, 1111111 };
+    BatchSubDec64Dec64Dec64ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 9, 2, rowCnt);
     EXPECT_EQ(decimal64Val1[0], -8765432);
     EXPECT_EQ(decimal64Val1[1], -1145678);
 
-    BatchSubDec64Dec64Dec128(contextPtr, isAnyNull, decimal64Val1, 9, 2, decimal64Val2, 7, 2, output128, 19, 9, rowCnt);
+    BatchSubDec64Dec64Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 9, 2, decimal64Val2, 7, 2, output128, 19, 9,
+        rowCnt);
     EXPECT_EQ(output128[0].HighBits(), 1LL << 63);
     EXPECT_EQ(output128[0].LowBits(), 187'654'310'000'000L);
     EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
@@ -722,19 +728,22 @@ TEST(BatchFunctionTest, DecimalSubtract)
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 100'000);
     decimal128Val2[1].SetValue(1LL << 63 | 1234, 987654321);
-    BatchSubDec128Dec128Dec128(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal128Val2, 30, 9, 38, 9, rowCnt);
+    BatchSubDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal128Val2, 30, 9, 38, 9,
+        rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[0].LowBits(), INT64_MAX - 100'000);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0x9A4);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 0x0000'0002'8EDB'0A71);
 
-    BatchSubDec64Dec128Dec128(contextPtr, isAnyNull, decimal64Val1, 18, 9, decimal128Val1, 38, 9, 19, 12, rowCnt);
+    BatchSubDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 18, 9, decimal128Val1, 38, 9, 19, 12,
+        rowCnt);
     EXPECT_TRUE(context->HasError());
 
     context->SetError();
     decimal64Val1[0] = 823'484'382'638'232'596L;
     decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
-    BatchSubDec128Dec64Dec128(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 19, 19, rowCnt);
+    BatchSubDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 19, 19,
+        rowCnt);
     EXPECT_TRUE(context->HasError());
 
     delete context;
@@ -743,11 +752,11 @@ TEST(BatchFunctionTest, DecimalSubtract)
 TEST(BatchFunctionTest, DecimalSubtractRetNull)
 {
     int32_t rowCnt = 2;
-    bool overflowNull[2] = {false, false};
+    bool overflowNull[2] = { false, false };
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {1234567, -34567};
-    int64_t decimal64Val2[2] = {9999999, 1111111};
+    int64_t decimal64Val1[2] = { 1234567, -34567 };
+    int64_t decimal64Val2[2] = { 9999999, 1111111 };
     BatchSubDec64Dec64Dec64RetNull(overflowNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 9, 2, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal64Val1[0], -8765432);
@@ -793,16 +802,16 @@ TEST(BatchFunctionTest, DecimalMultiply)
     int32_t rowCnt = 2;
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    bool isAnyNull[2] = {false, false};
+    bool isAnyNull[2] = { false, false };
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {1234567, -987654};
-    int64_t decimal64Val2[2] = {9999999, 1010101};
-    BatchMulDec64Dec64Dec64(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
+    int64_t decimal64Val1[2] = { 1234567, -987654 };
+    int64_t decimal64Val2[2] = { 9999999, 1010101 };
+    BatchMulDec64Dec64Dec64ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
     EXPECT_EQ(decimal64Val1[0], 123'456'687'654L);
     EXPECT_EQ(decimal64Val1[1], -9'976'302'931L);
 
-    BatchMulDec64Dec64Dec128(contextPtr, isAnyNull, decimal64Val1, 12, 2, decimal64Val2, 7, 2, output128, 19, 4,
+    BatchMulDec64Dec64Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 12, 2, decimal64Val2, 7, 2, output128, 19, 4,
         rowCnt);
     EXPECT_EQ(output128[0].HighBits(), 0);
     EXPECT_EQ(output128[0].LowBits(), 123'456'687'654L * 9999999L);
@@ -815,14 +824,15 @@ TEST(BatchFunctionTest, DecimalMultiply)
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 10000L);
     decimal128Val2[1].SetValue(0, 314159L);
-    BatchMulDec128Dec128Dec128(contextPtr, isAnyNull, decimal128Val1, 20, 9, decimal128Val2, 19, 0, 38, 9, rowCnt);
+    BatchMulDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 20, 9, decimal128Val2, 19, 0, 38, 9,
+        rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 1234560000);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 1LL << 63);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 314158685841);
 
     decimal128Val1[0].SetValue(INT64_MAX, INT64_MAX);
-    BatchMulDec64Dec128Dec128(contextPtr, isAnyNull, decimal64Val1, 8, 2, decimal128Val1, 38, 9, 38, 9, rowCnt);
+    BatchMulDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 8, 2, decimal128Val1, 38, 9, 38, 9, rowCnt);
     EXPECT_TRUE(context->HasError());
 
     context->SetError();
@@ -830,7 +840,8 @@ TEST(BatchFunctionTest, DecimalMultiply)
     decimal64Val1[1] = 314159;
     decimal128Val1[0].SetValue(0, 823'484'382'638'232'596UL);
     decimal128Val1[1].SetValue((1LL << 63) | 123, 1UL);
-    BatchMulDec128Dec64Dec128(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 38, 18, rowCnt);
+    BatchMulDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 38, 18,
+        rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0x541858);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 0x78F3'8F5D'A9D8'69A4);
     EXPECT_EQ(decimal128Val1[1].HighBits(), (1LL << 63) | 0x24D'9F95);
@@ -842,11 +853,11 @@ TEST(BatchFunctionTest, DecimalMultiply)
 TEST(BatchFunctionTest, DecimalMultiplyRetNull)
 {
     int32_t rowCnt = 2;
-    bool overflowNull[2] = {false, false};
+    bool overflowNull[2] = { false, false };
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {-1234567, -314159};
-    int64_t decimal64Val2[2] = {9999999, 65432};
+    int64_t decimal64Val1[2] = { -1234567, -314159 };
+    int64_t decimal64Val2[2] = { 9999999, 65432 };
     BatchMulDec64Dec64Dec64RetNull(overflowNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal64Val1[0], -123'456'687'654L);
@@ -891,29 +902,29 @@ TEST(BatchFunctionTest, DecimalDivide)
     int32_t rowCnt = 2;
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    bool isAnyNull[2] = {false, false};
+    bool isAnyNull[2] = { false, false };
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {-1234567, 9999999};
-    int64_t decimal64Val2[2] = {100000, 33333};
-    BatchDivDec64Dec64Dec64(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
+    int64_t decimal64Val1[2] = { -1234567, 9999999 };
+    int64_t decimal64Val2[2] = { 100000, 33333 };
+    BatchDivDec64Dec64Dec64ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
     EXPECT_EQ(decimal64Val1[0], -1235);
     EXPECT_EQ(decimal64Val1[1], 30000);
 
     Decimal128 decimal128Val1[2];
     decimal128Val1[0].SetValue(0, 100000);
     decimal128Val1[1].SetValue(1LL << 63, 999);
-    BatchDivDec64Dec128Dec64(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal128Val1, 19, 2, 14, 2, rowCnt);
+    BatchDivDec64Dec128Dec64ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal128Val1, 19, 2, 14, 2, rowCnt);
     EXPECT_EQ(decimal64Val1[0], -1);
     EXPECT_EQ(decimal64Val1[1], -3003);
 
     decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
     decimal128Val1[1].SetValue(0, 1234567890);
-    BatchDivDec128Dec64Dec64(contextPtr, isAnyNull, decimal128Val1, 20, 6, decimal64Val2, 7, 2, 18, 8, rowCnt);
+    BatchDivDec128Dec64Dec64ReScale(contextPtr, isAnyNull, decimal128Val1, 20, 6, decimal64Val2, 7, 2, 18, 8, rowCnt);
     EXPECT_EQ(decimal64Val2[0], -922337203685477581);
     EXPECT_EQ(decimal64Val2[1], 370374071);
 
-    BatchDivDec64Dec64Dec128(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 18, 8, output128, 20, 2,
+    BatchDivDec64Dec64Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 18, 8, output128, 20, 2,
         rowCnt);
     EXPECT_EQ(output128[0].HighBits(), 0);
     EXPECT_EQ(output128[0].LowBits(), 0);
@@ -923,7 +934,8 @@ TEST(BatchFunctionTest, DecimalDivide)
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 1);
     decimal128Val2[1].SetValue(123, 456);
-    BatchDivDec128Dec128Dec128(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, 38, 6, rowCnt);
+    BatchDivDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, 38, 6,
+        rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), (1LL << 63) | 0x7A11F);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 0xFFFF'FFFF'FFF0'BDC0);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
@@ -931,14 +943,14 @@ TEST(BatchFunctionTest, DecimalDivide)
 
     decimal128Val1[0].SetValue(0, 1111111);
     decimal128Val1[1].SetValue(0, 31415);
-    BatchDivDec64Dec128Dec128(contextPtr, isAnyNull, decimal64Val2, 18, 2, decimal128Val1, 19, 2, 19, 6, rowCnt);
+    BatchDivDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val2, 18, 2, decimal128Val1, 19, 2, 19, 6, rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 1LL << 63);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 0x0B85'1ECB'A5B9'0AB8);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 11789720548);
 
     decimal64Val1[0] = 0;
-    BatchDivDec128Dec64Dec128(contextPtr, isAnyNull, decimal128Val1, 38, 2, decimal64Val1, 7, 2, 38, 2, rowCnt);
+    BatchDivDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 38, 2, decimal64Val1, 7, 2, 38, 2, rowCnt);
     EXPECT_TRUE(context->HasError());
 
     delete context;
@@ -947,11 +959,11 @@ TEST(BatchFunctionTest, DecimalDivide)
 TEST(BatchFunctionTest, DecimalDivideRetNull)
 {
     int32_t rowCnt = 2;
-    bool overflowNull[2] = {false, false};
+    bool overflowNull[2] = { false, false };
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {-9999999, 3141592};
-    int64_t decimal64Val2[2] = {1234567, 1010};
+    int64_t decimal64Val1[2] = { -9999999, 3141592 };
+    int64_t decimal64Val2[2] = { 1234567, 1010 };
     BatchDivDec64Dec64Dec64RetNull(overflowNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal64Val1[0], -810);
@@ -977,7 +989,7 @@ TEST(BatchFunctionTest, DecimalDivideRetNull)
     EXPECT_FALSE(overflowNull[1]);
     EXPECT_EQ(decimal64Val1[1], -57'833'850'629UL);
 
-    BatchDivDec128Dec64Dec64RetNull(overflowNull, decimal128Val1, 38, 0, decimal64Val2, 7, 2, 7, 4, rowCnt);
+    BatchDivDec128Dec64Dec64RetNull(overflowNull, decimal128Val1, 38, 0, decimal64Val2, 7, 2, 17, 4, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal64Val2[0], 81000);
     EXPECT_FALSE(overflowNull[1]);
@@ -1020,13 +1032,13 @@ TEST(BatchFunctionTest, DecimalModulus)
     int32_t rowCnt = 2;
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
-    bool isAnyNull[2] = {false, false};
+    bool isAnyNull[2] = { false, false };
     int64_t output64[2];
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {-1234567, 3141592};
-    int64_t decimal64Val2[2] = {100000, 10101};
-    BatchModDec64Dec64Dec64(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
+    int64_t decimal64Val1[2] = { -1234567, 3141592 };
+    int64_t decimal64Val2[2] = { 100000, 10101 };
+    BatchModDec64Dec64Dec64ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
     EXPECT_EQ(decimal64Val1[0], -34567);
     EXPECT_EQ(decimal64Val1[1], 181);
 
@@ -1036,34 +1048,35 @@ TEST(BatchFunctionTest, DecimalModulus)
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 1111111);
     decimal128Val2[1].SetValue(1LL << 63, 1111111);
-    BatchModDec128Dec128Dec128(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, 38, 2, rowCnt);
+    BatchModDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, 38, 2,
+        rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 531573);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 999);
 
-    BatchModDec64Dec128Dec64(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal128Val1, 19, 10, 14, 10, rowCnt);
+    BatchModDec64Dec128Dec64ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal128Val1, 19, 10, 14, 10, rowCnt);
     EXPECT_EQ(decimal64Val1[0], -384925);
     EXPECT_EQ(decimal64Val1[1], 118);
 
     decimal128Val1[0].SetValue(0, 0);
-    BatchModDec64Dec128Dec128(contextPtr, isAnyNull, decimal64Val1, 18, 2, decimal128Val1, 38, 2, 38, 2, rowCnt);
+    BatchModDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 18, 2, decimal128Val1, 38, 2, 38, 2, rowCnt);
     EXPECT_TRUE(context->HasError());
 
     decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
     decimal128Val1[1].SetValue(0, 31415927);
-    BatchModDec128Dec64Dec64(contextPtr, isAnyNull, decimal128Val1, 20, 6, decimal64Val2, 7, 2, 18, 6, rowCnt);
+    BatchModDec128Dec64Dec64ReScale(contextPtr, isAnyNull, decimal128Val1, 20, 6, decimal64Val2, 7, 2, 18, 6, rowCnt);
     EXPECT_EQ(decimal64Val2[0], -854775807);
     EXPECT_EQ(decimal64Val2[1], 31415927);
 
-    BatchModDec128Dec64Dec128(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal64Val2, 9, 2, 20, 2, rowCnt);
+    BatchModDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal64Val2, 9, 2, 20, 2, rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 1LL << 63);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 698836018);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 0);
 
-    BatchModDec128Dec128Dec64(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, output64, 18, 2,
-        rowCnt);
+    BatchModDec128Dec128Dec64ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, output64, 18,
+        2, rowCnt);
     EXPECT_EQ(output64[0], -1058310);
     EXPECT_EQ(output64[1], 0);
 
@@ -1073,12 +1086,12 @@ TEST(BatchFunctionTest, DecimalModulus)
 TEST(BatchFunctionTest, DecimalModulusRetNull)
 {
     int32_t rowCnt = 2;
-    bool overflowNull[2] = {false, false};
+    bool overflowNull[2] = { false, false };
     int64_t output64[2];
     Decimal128 output128[2];
 
-    int64_t decimal64Val1[2] = {-1234567, 3141592};
-    int64_t decimal64Val2[2] = {100000, 10101};
+    int64_t decimal64Val1[2] = { -1234567, 3141592 };
+    int64_t decimal64Val2[2] = { 100000, 10101 };
     BatchModDec64Dec64Dec64RetNull(overflowNull, decimal64Val1, 7, 2, decimal64Val2, 7, 2, 14, 2, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal64Val1[0], -34567);
@@ -1153,8 +1166,8 @@ TEST(BatchFunctionTest, SubstrZh)
     for (int32_t i = 0; i < rowCnt; i++) {
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
-    bool isAnyNull[] = {false, false, false, false, false, false, false, false};
-    BatchSubstr(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull,
+    bool isAnyNull[] = { false, false, false, false, false, false, false, false };
+    BatchSubstrEmptyString(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull,
         outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, "时欧基乌斯", "hello! 回复哦", "色的圣诞袜", "", "袜", "", str };
@@ -1183,9 +1196,9 @@ TEST(BatchFunctionTest, SubstrCharZh)
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
 
-    bool isAnyNull[] = {false, false, false, false, false, false, false, false};
-    BatchSubstrChar(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(), length.data(), isAnyNull,
-        outResult.data(), outLen.data(), rowCnt);
+    bool isAnyNull[] = { false, false, false, false, false, false, false, false };
+    BatchSubstrCharEmptyString(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(), length.data(),
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, "时欧基乌斯", "hello! 回复哦", "色的圣诞袜", "", "袜", "", str };
     AssertStringEquals(expected, outResult, outLen);
@@ -1211,9 +1224,9 @@ TEST(BatchFunctionTest, SubstrWithStartZh)
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
 
-    bool isAnyNull[] = {false, false, false, false, false, false, false};
-    BatchSubstrWithStart(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull, outResult.data(),
-        outLen.data(), rowCnt);
+    bool isAnyNull[] = { false, false, false, false, false, false, false };
+    BatchSubstrWithStartEmptyString(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
+        outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, " hello! 回复哦黑色的and magic粉色的圣诞袜", "圣诞袜", "", "袜", "", str };
     AssertStringEquals(expected, outResult, outLen);
@@ -1223,8 +1236,7 @@ TEST(BatchFunctionTest, SubstrWithStartZh)
 
 TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::string str = "时欧基乌斯侧后解 h";
@@ -1241,22 +1253,20 @@ TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
 
-    bool isAnyNull[] = {false};
-    BatchSubstrWithStart(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull, outResult.data(),
-        outLen.data(), rowCnt);
+    bool isAnyNull[] = { false };
+    BatchSubstrWithStartInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
+        outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected(1, str);
     AssertStringEquals(expected, outResult, outLen);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
 TEST(BatchFunctionTest, SubstrWithStartEnForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::string str = "apple";
@@ -1266,29 +1276,27 @@ TEST(BatchFunctionTest, SubstrWithStartEnForSpark)
     std::vector<int32_t> inputLen(1, strLen);
     std::vector<int32_t> outLen(inputStr.size());
     std::vector<uint8_t *> outResult(inputStr.size());
-    std::vector<int32_t> startIndexs {-7};
+    std::vector<int32_t> startIndexs { -7 };
     int32_t rowCnt = inputStr.size();
     std::vector<uint8_t *> strAddr(rowCnt);
     for (int32_t i = 0; i < rowCnt; i++) {
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
 
-    bool isAnyNull[] = {false};
-    BatchSubstrWithStart(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull, outResult.data(),
-                         outLen.data(), rowCnt);
+    bool isAnyNull[] = { false };
+    BatchSubstrWithStartInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
+        outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected(1, str);
     AssertStringEquals(expected, outResult, outLen);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
 TEST(BatchFunctionTest, SubstrWithZhForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::string str = "时欧基乌斯侧后解 h";
@@ -1307,21 +1315,19 @@ TEST(BatchFunctionTest, SubstrWithZhForSpark)
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
 
-    bool isAnyNull1[] = {false, false, false, false};
-    BatchSubstr(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull1,
-        outResult.data(), outLen.data(), rowCnt);
+    bool isAnyNull1[] = { false, false, false, false };
+    BatchSubstrInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(),
+        isAnyNull1, outResult.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "", "时", "时欧基乌斯侧后解 ", "时欧基乌斯侧后解 h" };
     AssertStringEquals(expected, outResult, outLen);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
 TEST(BatchFunctionTest, SubstrWithEnForSpark)
 {
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::string str = "apple";
@@ -1332,22 +1338,21 @@ TEST(BatchFunctionTest, SubstrWithEnForSpark)
     std::vector<int32_t> inputLen(1, strLen);
     std::vector<int32_t> outLen(inputStr.size());
     std::vector<uint8_t *> outResult(inputStr.size());
-    std::vector<int32_t> startIndexs {-7};
-    std::vector<int32_t> length {3};
+    std::vector<int32_t> startIndexs { -7 };
+    std::vector<int32_t> length { 3 };
     std::vector<uint8_t *> strAddr(rowCnt);
 
     for (int32_t i = 0; i < rowCnt; i++) {
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
 
-    bool isAnyNull1[] = {false};
-    BatchSubstr(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull1,
-                outResult.data(), outLen.data(), rowCnt);
-    std::vector<std::string> expected {"a"};
+    bool isAnyNull1[] = { false };
+    BatchSubstrInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(),
+        isAnyNull1, outResult.data(), outLen.data(), rowCnt);
+    std::vector<std::string> expected { "a" };
     AssertStringEquals(expected, outResult, outLen);
 
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     delete context;
 }
 
@@ -1370,9 +1375,9 @@ TEST(BatchFunctionTest, SubstrCharWithStartZh)
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
 
-    bool isAnyNull[] = {false, false, false, false, false, false, false};
-    BatchSubstrCharWithStart(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(), isAnyNull,
-        outResult.data(), outLen.data(), rowCnt);
+    bool isAnyNull[] = { false, false, false, false, false, false, false };
+    BatchSubstrCharWithStartEmptyString(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(),
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, " hello! 回复哦黑色的and magic粉色的圣诞袜", "圣诞袜", "", "袜", "", str };
     AssertStringEquals(expected, outResult, outLen);
@@ -1394,7 +1399,7 @@ TEST(BatchFunctionTest, LengthStrZh)
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
 
-    bool isAnyNull[] = {false, false};
+    bool isAnyNull[] = { false, false };
     BatchLengthStr(strAddr.data(), inputLen.data(), isAnyNull, outLen.data(), rowCnt);
     std::vector<int64_t> expected { 37, 15 };
     AssertEquals(expected, outLen);
@@ -1423,7 +1428,7 @@ TEST(BatchFunctionTest, LikeStrZh)
         patternLen[i] = static_cast<int32_t>(patternStr[i].length());
     }
 
-    bool isAnyNull[] = {false, false, false, false};
+    bool isAnyNull[] = { false, false, false, false };
     BatchLikeStr(strAddr.data(), inputLen.data(), patternAddr.data(), patternLen.data(), isAnyNull, output, rowCnt);
 
     std::vector<bool> expected { true, false, true, false };
@@ -1447,7 +1452,7 @@ TEST(BatchFunctionTest, LikeCharZh)
         std::vector<uint8_t *> patternAddr { reinterpret_cast<uint8_t *>(const_cast<char *>(patternStr[i].c_str())) };
         std::vector<int32_t> patternLen { static_cast<int32_t>(patternStr[i].length()) };
 
-        bool isAnyNull[] = {false};
+        bool isAnyNull[] = { false };
         BatchLikeChar(strAddr.data(), width[i], inputLen.data(), patternAddr.data(), patternLen.data(), isAnyNull,
             output, rowCnt);
         EXPECT_EQ(output[0], expected[i]);
@@ -1477,9 +1482,9 @@ TEST(BatchFunctionTest, ReplaceStrStrStrZh)
         replaceStrAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(replaceStr[i].c_str()));
     }
 
-    bool isAnyNull[] = {false, false, false, false, false, false, false };
-    BatchReplaceStrStrStrWithRep(contextPtr, strAddr.data(), strLen.data(), searchStrAddr.data(), searchLen.data(),
-        replaceStrAddr.data(), replaceLen.data(), isAnyNull, output.data(), outLen.data(), rowCnt);
+    bool isAnyNull[] = { false, false, false, false, false, false, false };
+    BatchReplaceStrStrStrWithRepReplace(contextPtr, strAddr.data(), strLen.data(), searchStrAddr.data(),
+        searchLen.data(), replaceStrAddr.data(), replaceLen.data(), isAnyNull, output.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "*w*a*w*p*w*p*w*l*w*e*w*",
         "*w*粉*w*色*w*的*w*圣*w*诞*w*袜*w*",
         "*w*粉*w*色*w*d*w*e*w*圣*w*诞*w*袜*w*",
@@ -1509,9 +1514,9 @@ TEST(BatchFunctionTest, ReplaceWithoutRepZh)
         searchStrAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(searchStr[i].c_str()));
     }
 
-    bool isAnyNull[] = {false, false, false, false, false, false};
-    BatchReplaceStrStrWithoutRep(contextPtr, strAddr.data(), strLen.data(), searchStrAddr.data(), searchLen.data(),
-        isAnyNull, output.data(), outLen.data(), rowCnt);
+    bool isAnyNull[] = { false, false, false, false, false, false };
+    BatchReplaceStrStrWithoutRepNotReplace(contextPtr, strAddr.data(), strLen.data(), searchStrAddr.data(),
+        searchLen.data(), isAnyNull, output.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected {
         "apple", "ale", "粉色的圣诞袜", "粉色的袜", "粉色de圣诞袜", "粉圣诞袜",
     };
@@ -1536,7 +1541,7 @@ TEST(BatchFunctionTest, ConcatStrStrZh)
         apAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ap[i].c_str()));
         bpAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(bp[i].c_str()));
     }
-    bool isAnyNull[] = {false, false, false};
+    bool isAnyNull[] = { false, false, false };
     BatchConcatStrStr(contextPtr, apAddr.data(), apLen.data(), bpAddr.data(), bpLen.data(), isAnyNull, output.data(),
         outLen.data(), rowCnt);
     std::vector<std::string> expected { "你是Chinese?Yes我是", "粉色de圣诞袜", "pink圣诞袜" };
@@ -1558,14 +1563,22 @@ TEST(BatchFunctionTest, ConcatCharCharZh)
         "Oh我很好   ", "   ",         "   ",          "Hei你好吗",   "",
         "Hei你好" };
     std::vector<int32_t> bWidth { 4, 8, 8, 12, 8, 12, 5, 5 };
-    std::vector<std::string> expected { "粉色de圣诞袜*黑色*", "*黑色*   粉色de",
-        "Hei你好吗  Oh我很好", "Oh我很好   Hei你好吗",
-        "Hei你好吗    Oh我很好  ", "Oh我很好     Hei你好吗  ",
-        "   Hei你好吗      Oh我很好", "   Oh我很好       Hei你好吗",
-        "Hei   你好吗   Oh   我很好", "Oh   我很好    Hei   你好",
-        "     Oh我很好   ", "Oh我很好   ",
-        "Hei你好吗     ", "        Hei你好吗",
-        "Hei你好吗", "        Hei你好" };
+    std::vector<std::string> expected { "粉色de圣诞袜*黑色*",
+        "*黑色*   粉色de",
+        "Hei你好吗  Oh我很好",
+        "Oh我很好   Hei你好吗",
+        "Hei你好吗    Oh我很好  ",
+        "Oh我很好     Hei你好吗  ",
+        "   Hei你好吗      Oh我很好",
+        "   Oh我很好       Hei你好吗",
+        "Hei   你好吗   Oh   我很好",
+        "Oh   我很好    Hei   你好",
+        "     Oh我很好   ",
+        "Oh我很好   ",
+        "Hei你好吗     ",
+        "        Hei你好吗",
+        "Hei你好吗",
+        "        Hei你好" };
     int32_t batch = 8;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -1582,7 +1595,7 @@ TEST(BatchFunctionTest, ConcatCharCharZh)
             apAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(ap[index].c_str()));
             bpAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(bp[index].c_str()));
         }
-        bool isAnyNull[] = {false, false};
+        bool isAnyNull[] = { false, false };
         BatchConcatCharChar(contextPtr, apAddr.data(), aWidth[i], apLen.data(), bpAddr.data(), bWidth[i], bpLen.data(),
             isAnyNull, output.data(), outLen.data(), rowCnt);
         AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
@@ -1616,7 +1629,7 @@ TEST(BatchFunctionTest, ConcatCharStrZh)
             bpAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(bp[index].c_str()));
         }
 
-        bool isAnyNull[] = {false, false};
+        bool isAnyNull[] = { false, false };
         BatchConcatCharStr(contextPtr, apAddr.data(), aWidth[i], apLen.data(), bpAddr.data(), bpLen.data(), isAnyNull,
             output.data(), outLen.data(), rowCnt);
         AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
@@ -1650,7 +1663,7 @@ TEST(BatchFunctionTest, ConcatStrCharZh)
             bpAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(bp[index].c_str()));
         }
 
-        bool isAnyNull[] = {false, false};
+        bool isAnyNull[] = { false, false };
         BatchConcatStrChar(contextPtr, apAddr.data(), apLen.data(), bpAddr.data(), bWidth[i], bpLen.data(), isAnyNull,
             output.data(), outLen.data(), rowCnt);
         AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
@@ -1675,7 +1688,7 @@ TEST(BatchFunctionTest, ConcatStrStrRetNull)
         apAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(ap[i].c_str()));
         bpAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(bp[i].c_str()));
     }
-    bool isNull[] = {false, false, false};
+    bool isNull[] = { false, false, false };
     BatchConcatStrStrRetNull(isNull, contextPtr, apAddr.data(), apLen.data(), bpAddr.data(), bpLen.data(),
         output.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "你是Chinese?Yes我是", "粉色de圣诞袜", "pink圣诞袜" };
@@ -1697,14 +1710,22 @@ TEST(BatchFunctionTest, ConcatCharCharRetNull)
         "Oh我很好   ", "   ",         "   ",          "Hei你好吗",   "",
         "Hei你好" };
     std::vector<int32_t> bWidth { 4, 8, 8, 12, 8, 12, 5, 5 };
-    std::vector<std::string> expected { "粉色de圣诞袜*黑色*", "*黑色*   粉色de",
-        "Hei你好吗  Oh我很好", "Oh我很好   Hei你好吗",
-        "Hei你好吗    Oh我很好  ", "Oh我很好     Hei你好吗  ",
-        "   Hei你好吗      Oh我很好", "   Oh我很好       Hei你好吗",
-        "Hei   你好吗   Oh   我很好", "Oh   我很好    Hei   你好",
-        "     Oh我很好   ", "Oh我很好   ",
-        "Hei你好吗     ", "        Hei你好吗",
-        "Hei你好吗", "        Hei你好" };
+    std::vector<std::string> expected { "粉色de圣诞袜*黑色*",
+        "*黑色*   粉色de",
+        "Hei你好吗  Oh我很好",
+        "Oh我很好   Hei你好吗",
+        "Hei你好吗    Oh我很好  ",
+        "Oh我很好     Hei你好吗  ",
+        "   Hei你好吗      Oh我很好",
+        "   Oh我很好       Hei你好吗",
+        "Hei   你好吗   Oh   我很好",
+        "Oh   我很好    Hei   你好",
+        "     Oh我很好   ",
+        "Oh我很好   ",
+        "Hei你好吗     ",
+        "        Hei你好吗",
+        "Hei你好吗",
+        "        Hei你好" };
     int32_t batch = 8;
     int32_t rowCnt = 2;
     for (int32_t i = 0; i < batch; i++) {
@@ -1721,7 +1742,7 @@ TEST(BatchFunctionTest, ConcatCharCharRetNull)
             apAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(ap[index].c_str()));
             bpAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(bp[index].c_str()));
         }
-        bool isNull[] = {false, false};
+        bool isNull[] = { false, false };
         BatchConcatCharCharRetNull(isNull, contextPtr, apAddr.data(), aWidth[i], apLen.data(), bpAddr.data(), bWidth[i],
             bpLen.data(), output.data(), outLen.data(), rowCnt);
         AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
@@ -1755,7 +1776,7 @@ TEST(BatchFunctionTest, ConcatCharStrRetNull)
             bpAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(bp[index].c_str()));
         }
 
-        bool isNull[] = {false, false};
+        bool isNull[] = { false, false };
         BatchConcatCharStrRetNull(isNull, contextPtr, apAddr.data(), aWidth[i], apLen.data(), bpAddr.data(),
             bpLen.data(), output.data(), outLen.data(), rowCnt);
         AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
@@ -1789,7 +1810,7 @@ TEST(BatchFunctionTest, ConcatStrCharRetNull)
             bpAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(bp[index].c_str()));
         }
 
-        bool isNull[] = {false, false};
+        bool isNull[] = { false, false };
         BatchConcatStrCharRetNull(isNull, contextPtr, apAddr.data(), apLen.data(), bpAddr.data(), bWidth[i],
             bpLen.data(), output.data(), outLen.data(), rowCnt);
         AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
@@ -1817,7 +1838,7 @@ TEST(BatchFunctionTest, CastStrWithDiffWidths)
             strLen[row] = static_cast<int32_t>(srcStr[index].length());
             srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[index].c_str()));
         }
-        bool isAnyNull[] = {false, false};
+        bool isAnyNull[] = { false, false };
         BatchCastStrWithDiffWidths(contextPtr, srcAddr.data(), srcWidth[i], strLen.data(), isAnyNull, output.data(),
             outLen.data(), dstWidth[i], rowCnt);
         AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
@@ -1845,7 +1866,7 @@ TEST(BatchFunctionTest, CastStrWithDiffWidthsRetNull)
             strLen[row] = static_cast<int32_t>(srcStr[index].length());
             srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[index].c_str()));
         }
-        bool isNull[] = {false, false};
+        bool isNull[] = { false, false };
         BatchCastStrWithDiffWidthsRetNull(isNull, contextPtr, srcAddr.data(), srcWidth[i], strLen.data(), output.data(),
             outLen.data(), dstWidth[i], rowCnt);
         AssertStringEquals(expected, i * rowCnt, rowCnt, output, outLen);
@@ -1856,8 +1877,7 @@ TEST(BatchFunctionTest, CastStrWithDiffWidthsRetNull)
 TEST(FunctionTest, CastStringToDate)
 {
     // year-month-day
-    std::string engineType("Spark");
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::ALLOW_REDUCED_PRECISION);
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
     std::vector<std::string> srcStr { "1970-01-03", "1969-12-31", "1453-05-29", "   1453-05-29   ",
@@ -1873,12 +1893,11 @@ TEST(FunctionTest, CastStringToDate)
         strLen[row] = static_cast<int32_t>(srcStr[row].length());
         srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[row].c_str()));
     }
-    BatchCastStringToDate(contextPtr, srcAddr.data(), strLen.data(), isNull, output.data(), rowCnt);
+    BatchCastStringToDateAllowReducePrecison(contextPtr, srcAddr.data(), strLen.data(), isNull, output.data(), rowCnt);
     AssertEquals(expected, output);
 
-    BatchCastStringToDateRetNull(isNull, srcAddr.data(), strLen.data(), output.data(), rowCnt);
+    BatchCastStringToDateRetNullAllowReducePrecison(isNull, srcAddr.data(), strLen.data(), output.data(), rowCnt);
     AssertEquals(expected, output);
-    engineType = "OLK";
-    EngineUtil::GetInstance().SetEngineType(const_cast<char *>(engineType.c_str()));
+    ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION);
     delete context;
 }

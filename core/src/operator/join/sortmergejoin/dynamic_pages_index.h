@@ -7,7 +7,6 @@
 
 #include <cstdint>
 #include <vector>
-#include <deque>
 #include "type/data_type.h"
 #include "type/data_types.h"
 #include "vector/vector_batch.h"
@@ -93,13 +92,13 @@ private:
     int32_t lastFreedVecBatchIdx = -1;
 
     int32_t cacheBatchId = -1;
-    std::deque<omniruntime::vec::Vector *> cacheBatch;
+    std::vector<omniruntime::vec::Vector *> cacheBatch;
     // vector  first Level：vectorBatch second Level: columnar vector
-    std::deque<std::deque<omniruntime::vec::Vector *>> columnsDeque;
-    std::deque<int64_t> valueAddressesDeque; // row
+    std::vector<std::vector<omniruntime::vec::Vector *>> columnsDeque;
+    std::vector<int64_t> valueAddressesDeque; // row
     int32_t positionCount;
-    std::deque<bool> vecBatchFreeFlagDeque;                       // vectorBatch free flag
-    std::deque<omniruntime::vec::VectorBatch *> vectorBatchDeque; // vectorBatch
+    std::vector<bool> vecBatchFreeFlagDeque;                       // vectorBatch free flag
+    std::vector<omniruntime::vec::VectorBatch *> vectorBatchDeque; // vectorBatch
     bool finishAddData;
 };
 }

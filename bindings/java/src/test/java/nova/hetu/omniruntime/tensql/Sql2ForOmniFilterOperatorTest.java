@@ -84,10 +84,10 @@ public class Sql2ForOmniFilterOperatorTest {
             omniJsonGreaterThanExpr(omniJsonIfExpr(
                     omniJsonGreaterThanExpr(getOmniJsonFieldReference(3, 13), getOmniJsonLiteral(3, false, 0.0)), 3,
                     omniJsonFourArithmeticExpr("DIVIDE", 3, omniJsonAbsExpr(3, omniJsonFourArithmeticExpr("SUBTRACT", 3,
-                            omniJsonCastExpr(3, getOmniJsonFieldReference(3, 12)), getOmniJsonFieldReference(3, 13))),
+                            omniJsonCastExpr(3, getOmniJsonFieldReference(2, 12)), getOmniJsonFieldReference(3, 13))),
                             getOmniJsonFieldReference(3, 13)),
                     getOmniJsonFieldReference(3, 13)), getOmniJsonLiteral(3, false, 0.1))),
-            omniJsonIsNotNullExpr(getOmniJsonFieldReference(4, 14)));
+            omniJsonIsNotNullExpr(getOmniJsonFieldReference(1, 14)));
 
     Object[][] dataSourceValue = {{1L, 2L, 3L, 4L, 5L, 6L}, // i_item_sk #0 #long
             {"ab", "", "  ", " ab", "ab  ", "a b c"}, // i_brand #1 char(50)

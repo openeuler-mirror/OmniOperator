@@ -9,6 +9,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Value.h"
 
+namespace omniruntime::codegen {
 class BatchCodegenContext {
 public:
     explicit BatchCodegenContext()
@@ -36,6 +37,8 @@ public:
 
     friend class BatchExpressionCodeGen;
 
+    friend class CodegenBase;
+
 private:
     llvm::Value *data;
     llvm::Value *nullBitmap;
@@ -45,5 +48,5 @@ private:
     llvm::Value *executionContext;
     llvm::Value *dictionaryVectors;
 };
-
+}
 #endif // OMNI_RUNTIME_BATCH_CODEGEN_CONTEXT_H

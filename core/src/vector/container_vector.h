@@ -1,6 +1,7 @@
-//
-// Created by root on 6/28/21.
-//
+/*
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Description: container vector implementations
+ */
 #ifndef OMNI_RUNTIME_CONTAINER_VECTOR_H
 #define OMNI_RUNTIME_CONTAINER_VECTOR_H
 
@@ -62,11 +63,6 @@ public:
     void Append(Vector *other, int positionOffset, int length) override;
 
     ~ContainerVector() override;
-
-    VectorEncoding GetEncoding() override
-    {
-        return OMNI_VEC_ENCODING_CONTAINER;
-    }
 
     void SetDataTypes(const std::vector<DataTypePtr> &dataTypes)
     {

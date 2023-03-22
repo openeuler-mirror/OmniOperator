@@ -20,11 +20,53 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
 {
     switch (id) {
         case OMNI_BOOLEAN:
+            return "Bool";
+        case OMNI_DOUBLE:
+            return "Double";
+        case OMNI_DATE32:
+            return "Date32 (int32)";
+        case OMNI_TIME32:
+            return "Time32 (int32)";
+        case OMNI_INT:
+            return "Int32";
+        case OMNI_SHORT:
+            return "Int16";
+        case OMNI_LONG:
+            return "Int64";
+        case OMNI_VARCHAR:
+            return "String";
+        case OMNI_CHAR:
+            return "Char";
+        case OMNI_DECIMAL64:
+            return "Decimal64";
+        case OMNI_DECIMAL128:
+            return "Decimal128";
+        case OMNI_NONE:
+            return "Void";
+        case OMNI_INVALID:
+            return "Invalid";
+        case OMNI_CONTAINER:
+            return "Container";
+        case OMNI_INTERVAL_MONTHS:
+            return "Interval_month";
+        case OMNI_INTERVAL_DAY_TIME:
+            return "Interval_day_time";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+std::string TypeUtil::TypeToStringLog(omniruntime::type::DataTypeId id)
+{
+    switch (id) {
+        case OMNI_BOOLEAN:
             return "bool";
         case OMNI_DOUBLE:
             return "double";
         case OMNI_DATE32:
-            return "date32";
+            return "date32 (int32)";
+        case OMNI_TIME32:
+            return "time32 (int32)";
         case OMNI_INT:
             return "int32";
         case OMNI_SHORT:
@@ -44,10 +86,12 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
         case OMNI_INVALID:
             return "invalid";
         default:
-            return "";
+            return "unknown";
     }
 }
 
+namespace omniruntime {
+namespace type {
 std::shared_ptr<DataType> InvalidType()
 {
     return InvalidDataType::Instance();
@@ -186,4 +230,6 @@ std::shared_ptr<omniruntime::type::DataTypes> BuildDataTypesPtr(std::vector<omni
 std::shared_ptr<omniruntime::type::DataTypes> BuildDataTypesPtr(std::vector<omniruntime::type::DataTypePtr> &dataTypes)
 {
     return std::make_shared<omniruntime::type::DataTypes>(dataTypes);
+}
+}
 }

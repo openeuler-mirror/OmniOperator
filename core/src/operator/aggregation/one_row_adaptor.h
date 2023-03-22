@@ -133,7 +133,7 @@ private:
             auto id = types[i];
             typeAdaptors.push_back(std::make_shared<DataType>(id));
         }
-        rowVectorBatch->NewVectors(vecAllocator,typeAdaptors);
+        rowVectorBatch->NewVectors(vecAllocator, typeAdaptors);
     }
 
 private:

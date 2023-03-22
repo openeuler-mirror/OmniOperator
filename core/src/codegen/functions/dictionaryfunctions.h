@@ -8,8 +8,7 @@
 
 #include <cstdint>
 
-namespace omniruntime {
-namespace codegen {
+namespace omniruntime::codegen::function {
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
@@ -29,6 +28,5 @@ extern DLLEXPORT uint8_t *GetVarcharFromDictionaryVector(int64_t dictionaryVecto
 
 extern DLLEXPORT void GetDecimalFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index, int32_t outPrecision,
     int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
-}
 }
 #endif // OMNI_RUNTIME_DICTIONARYFUNCTIONS_H

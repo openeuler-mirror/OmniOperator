@@ -4,97 +4,83 @@
  */
 #include "filter_codegen.h"
 
-#include <utility>
-
+namespace omniruntime::codegen {
 using namespace llvm;
 using namespace orc;
 using namespace omniruntime::expressions;
 
 namespace {
-const int INPUT_INDEX = 0;
-const int ARGUMENT_ONE = 1;
-const int ARGUMENT_TWO = 2;
-const int ARGUMENT_THREE = 3;
+const int ARGS_ARRAY_INDEX = 0;
+const int NUM_ROWS_INDEX = 1;
+const int RESULTS_INDEX = 2;
+const int BITMAP_INDEX = 3;
 const int OFFSETS_INDEX = 4;
 const int EXECUTION_CONTEXT_IDX = 5;
 const int DICTIONARY_VECTORS_IDX = 6;
 }
 
-std::unique_ptr<FilterCodeGen> FilterCodeGen::Create(std::string name, const omniruntime::expressions::Expr &expression,
-    omniruntime::op::OverflowConfig *overflowConfig)
+intptr_t FilterCodeGen::GetFunction(const DataTypes &inputDataTypes)
 {
-    std::unique_ptr<FilterCodeGen> codegen { new FilterCodeGen(std::move(name), expression, overflowConfig) };
-    LLVMEngine::Create(&(codegen->llvmEngine));
-    codegen->context = codegen->GetContext();
-    codegen->builder = codegen->GetIRBuilder();
-    codegen->module = codegen->GetModule();
-    codegen->jit = codegen->GetJit();
-    codegen->llvmTypes = codegen->GetTypes();
-    codegen->decimalIRBuilder = codegen->GetDecimalIRBuilder();
-    codegen->ExtractVectorIndexes();
-    return codegen;
-}
-
-int64_t FilterCodeGen::GetFunction()
-{
-    Function *func = this->CreateFunction();
+    llvm::Function *func = CreateFunction(inputDataTypes);
     if (func == nullptr) {
         return 0;
     }
-    return this->CreateWrapper(*func);
+    return CreateWrapper();
 }
 
-int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
+intptr_t FilterCodeGen::CreateWrapper()
 {
-    llvm::Function *filterFunc = &filterFn;
-
-    std::vector<Type *> args;
-    Type *ptrArg = llvmTypes->I64PtrType(); // table
-    args.push_back(ptrArg);
-    args.push_back(llvmTypes->I32Type());    // no of rows
-    args.push_back(llvmTypes->I32PtrType()); // output array
-    // bitmap is a 2d array of booleans
-    Type *bitmapArg = llvmTypes->I64PtrType(); // record nullk values
-    args.push_back(bitmapArg);
-    args.push_back(llvmTypes->I64PtrType()); // offsets
-    args.push_back(llvmTypes->I64Type());    // execution_context address
-    args.push_back(llvmTypes->I64PtrType()); // dictionary vectors
+    // The args indicates the type of the function parameter list.
+    std::vector<Type *> args {
+        llvmTypes->I64PtrType(), // data address array
+        llvmTypes->I32Type(),    // the num of rows
+        llvmTypes->I32PtrType(), // output array
+        llvmTypes->I64PtrType(), // bitmap address array
+        llvmTypes->I64PtrType(), // offset address array
+        llvmTypes->I64Type(),    // execution content address
+        llvmTypes->I64PtrType()  // dictionary address array
+    };
 
     FunctionType *funcSignature = FunctionType::get(llvmTypes->I32Type(), args, false);
     llvm::Function *funcDecl =
-        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "FILTER_WRAPPER", module);
+        llvm::Function::Create(funcSignature, llvm::Function::ExternalLinkage, "WRAPPER_FUNC", modulePtr);
     BasicBlock *preLoop = BasicBlock::Create(*context, "PRE_LOOP", funcDecl);
     BasicBlock *loopBody = BasicBlock::Create(*context, "LOOP_BODY", funcDecl);
     BasicBlock *filterPassed = BasicBlock::Create(*context, "FILTER_PASSED", funcDecl);
     BasicBlock *incrementCounter = BasicBlock::Create(*context, "INCREMENT_COUNTER", funcDecl);
     BasicBlock *endBlock = BasicBlock::Create(*context, "END_BLOCK", funcDecl);
     // preprocessing
-    Argument *data = funcDecl->getArg(INPUT_INDEX);
+    Argument *data = funcDecl->getArg(ARGS_ARRAY_INDEX);
     data->setName("ARGS_ARRAY");
-    Argument *numRows = funcDecl->getArg(ARGUMENT_ONE);
+
+    Argument *numRows = funcDecl->getArg(NUM_ROWS_INDEX);
     numRows->setName("NUM_ROWS");
-    Argument *resultsArray = funcDecl->getArg(ARGUMENT_TWO);
+
+    Argument *resultsArray = funcDecl->getArg(RESULTS_INDEX);
     resultsArray->setName("RESULTS");
-    Argument *bitmap = funcDecl->getArg(ARGUMENT_THREE);
+
+    Argument *bitmap = funcDecl->getArg(BITMAP_INDEX);
     bitmap->setName("BITMAP");
+
     Argument *offsets = funcDecl->getArg(OFFSETS_INDEX);
     offsets->setName("OFFSETS");
-    Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
-    offsets->setName("EXECUTION_CONTEXT_ADDRESS");
-    Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
-    offsets->setName("DICTIONARY_VECTORS");
 
-    llvmEngine->RecordMainFunction(funcDecl);
+    Argument *executionContext = funcDecl->getArg(EXECUTION_CONTEXT_IDX);
+    executionContext->setName("EXECUTION_CONTEXT_ADDRESS");
+
+    Argument *dictionaryVectors = funcDecl->getArg(DICTIONARY_VECTORS_IDX);
+    dictionaryVectors->setName("DICTIONARY_VECTORS");
+
+    RecordMainFunction(funcDecl);
 
     Value *zero = llvmTypes->CreateConstantInt(0);
     Value *one = llvmTypes->CreateConstantInt(1);
-    std::vector<Value *> filterFuncArgs;
+
     // filterFuncArgs contains the values of the arguments to the filter function
-    // value*, bitmap*, offset*, rowIdx, length*, execution_context_ptr, dictionary_vectors*, isNull
-    int32_t argsSize = 8;
+    std::vector<Value *> filterFuncArgs;
+    int32_t argsSize = exprFunc->GetArgumentCount() + exprFunc->GetInputColumnCount() * 4;
     filterFuncArgs.reserve(argsSize);
 
-    CallInst *ret;
     // pre loop body
     builder->SetInsertPoint(preLoop);
     // Pointer to the current row index to be processed.
@@ -120,29 +106,40 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     AllocaInst *lengthAllocaInst = builder->CreateAlloca(llvmTypes->I32Type(), nullptr, "DATA_LENGTH");
     auto isNullPtr = builder->CreateAlloca(llvmTypes->I1Type(), nullptr, "IS_NULL_PTR");
 
+    auto columnArgs = exprFunc->ToColumnArgs(data);
+    auto dicArgs = exprFunc->ToDicArgs(dictionaryVectors);
+    auto nullArgs = exprFunc->ToNullArgs(bitmap);
+    auto offsetArgs = exprFunc->ToOffsetArgs(offsets);
+
     builder->CreateBr(loopBody);
     // loop body
     builder->SetInsertPoint(loopBody);
     // Get the value of the current row index to process.
     curIndexVal = builder->CreateLoad(indexStore, "CUR_INDEX");
 
+    // initialize data_length to 0;
     builder->CreateStore(llvmTypes->CreateConstantInt(0), lengthAllocaInst);
+
+    // initialize isNullPtr to false
     builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
 
-    filterFuncArgs.push_back(data);
-    filterFuncArgs.push_back(bitmap);
-    filterFuncArgs.push_back(offsets);
     filterFuncArgs.push_back(curIndexVal);
     filterFuncArgs.push_back(lengthAllocaInst);
     filterFuncArgs.push_back(executionContext);
-    filterFuncArgs.push_back(dictionaryVectors);
     filterFuncArgs.push_back(isNullPtr);
 
+    filterFuncArgs.insert(filterFuncArgs.end(), columnArgs.begin(), columnArgs.end());
+    filterFuncArgs.insert(filterFuncArgs.end(), dicArgs.begin(), dicArgs.end());
+    filterFuncArgs.insert(filterFuncArgs.end(), nullArgs.begin(), nullArgs.end());
+    filterFuncArgs.insert(filterFuncArgs.end(), offsetArgs.begin(), offsetArgs.end());
+
     // Get the boolean response for this row from the filter function.
-    ret = builder->CreateCall(filterFunc, filterFuncArgs, "ROW_EVAL");
+    CallInst *ret = builder->CreateCall(func, filterFuncArgs, "ROW_EVAL");
+
     ret = static_cast<CallInst *>(builder->CreateAnd(builder->CreateNot(builder->CreateLoad(isNullPtr)), ret));
     // If true, add row index to selected array, otherwise, process next row.
     builder->CreateCondBr(ret, filterPassed, incrementCounter);
+
     // Add row index to results array
     builder->SetInsertPoint(filterPassed);
     // Get value of selected index.
@@ -154,6 +151,7 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     // Increment the selected index.
     nextSelectedIndexVal = builder->CreateAdd(selectedIndexVal, one, "NEXT_SELECTED_INDEX");
     builder->CreateStore(nextSelectedIndexVal, selectedIndexStore);
+
     // Increment counter and process next row.
     builder->CreateBr(incrementCounter);
     // Increment loop counter
@@ -165,18 +163,12 @@ int64_t FilterCodeGen::CreateWrapper(llvm::Function &filterFn)
     Value *cond = builder->CreateICmpSLT(nextIndexVal, numRows, "END_LOOP_COND");
     builder->CreateCondBr(cond, loopBody, endBlock);
 
+    // Return results
     builder->SetInsertPoint(endBlock);
-
     nextSelectedIndexVal = builder->CreateLoad(selectedIndexStore);
     builder->CreateRet(nextSelectedIndexVal);
-    llvmEngine->OptimizeFunctionsAndModule();
+    OptimizeFunctionsAndModule();
 
-    jit->getMainJITDylib().addGenerator(
-        eoe(DynamicLibrarySearchGenerator::GetForCurrentProcess(jit->getDataLayout().getGlobalPrefix())));
-    auto resTracker = jit->getMainJITDylib().createResourceTracker();
-    llvmEngine->MakeThreadSafe(&resTracker);
-    rt = resTracker;
-
-    auto sym = eoe(jit->lookup("FILTER_WRAPPER"));
-    return sym.getAddress();
+    return Compile();
+}
 }

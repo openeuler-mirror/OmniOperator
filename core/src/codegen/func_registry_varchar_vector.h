@@ -10,7 +10,7 @@
 // functions called directly from codegen
 const std::string WrapVarcharVectorStr = "WrapVarcharVector";
 
-namespace omniruntime {
+namespace omniruntime::codegen {
 class VarcharVectorFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;

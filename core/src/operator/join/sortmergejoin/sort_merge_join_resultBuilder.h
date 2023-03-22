@@ -35,12 +35,49 @@ public:
 
     void PaddingRightTableNull(int64_t leftTableRowAddress, vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
 
-    int32_t AddJoinValueAddresses(std::vector<bool> &isPreKeyMatched, std::vector<int64_t> &streamedTableValueAddresses,
-        std::vector<int64_t> &bufferedTableValueAddresses, std::vector<bool> &isSameBufferedKeyMatched);
+    int32_t AddJoinValueAddresses();
 
     int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages);
 
     void Finish();
+
+    std::vector<bool> &GetPreKeyMatched()
+    {
+        return isPreKeyMatched;
+    }
+
+    std::vector<int64_t> &GetBufferedTableValueAddresses()
+    {
+        return bufferedTableValueAddresses;
+    }
+
+    std::vector<int64_t> &GetStreamedTableValueAddresses()
+    {
+        return streamedTableValueAddresses;
+    }
+
+    std::vector<bool> &GetSameBufferedKeyMatched()
+    {
+        return isSameBufferedKeyMatched;
+    }
+
+    bool HasNext()
+    {
+        return buildVectorBatchRowCount != 0;
+    }
+
+    void Clear()
+    {
+        VectorHelper::FreeVecBatch(buildVectorBatch);
+        buildVectorBatchRowCount = 0;
+        addressOffset = 0;
+        isPreRowMatched = false;
+        isPreKeyMatched.clear();
+        bufferedTableValueAddresses.clear();
+        streamedTableValueAddresses.clear();
+        isSameBufferedKeyMatched.clear();
+        buildVectorBatch = nullptr;
+    }
 
     ~JoinResultBuilder();
 
@@ -73,13 +110,21 @@ private:
 
     vec::VectorAllocator *vecAllocator;
 
-    int32_t buildVectorBatchCount = 0;
-    std::vector<int32_t> buildVectorBatchRowCount;
-    std::vector<VectorBatch *> buildVectorBatchs;
+    int32_t buildVectorBatchRowCount = 0;
+    VectorBatch *buildVectorBatch = nullptr;
 
     SimpleFilter *simpleFilter = nullptr;
     ExecutionContext *executionContext = nullptr;
     JoinType joinType;
+
+    bool isPreRowMatched = false;
+    int32_t addressOffset = 0;
+    int32_t buildRowCount = 0;
+    std::vector<bool> isPreKeyMatched;
+    // store the matched valueAddress
+    std::vector<int64_t> streamedTableValueAddresses;
+    std::vector<int64_t> bufferedTableValueAddresses;
+    std::vector<bool> isSameBufferedKeyMatched;
 };
 }
 }

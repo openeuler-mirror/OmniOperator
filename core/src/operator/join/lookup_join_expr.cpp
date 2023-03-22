@@ -78,14 +78,15 @@ int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
     } else {
         lookupJoinOperator->AddInput(vecBatch);
     }
+    SetStatus(lookupJoinOperator->GetStatus());
     return 0;
 }
 
 int32_t LookupJoinWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
-    lookupJoinOperator->GetOutput(outputPages);
-    SetStatus(OMNI_STATUS_FINISHED);
-    return 0;
+    int32_t status = lookupJoinOperator->GetOutput(outputPages);
+    SetStatus(lookupJoinOperator->GetStatus());
+    return status;
 }
 
 OmniStatus LookupJoinWithExprOperator::Close()

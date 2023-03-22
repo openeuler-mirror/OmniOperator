@@ -104,18 +104,37 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 
     // start probe
     ProcessProbe();
+    // maybe the data has been pulled after the previous probe, and the operator status will be set to finished
+    // and needs to be reset to normal.
+    SetStatus(OMNI_STATUS_NORMAL);
     return 0;
 }
 
 int32_t LookupJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
 {
+    if (!outputBuilder->HasNext()) {
+        if (joinProbe != nullptr) {
+            delete joinProbe;
+            joinProbe = nullptr;
+        }
+        if (input != nullptr) {
+            VectorHelper::FreeVecBatch(input);
+            input = nullptr;
+        }
+        outputBuilder->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+        return 0;
+    }
     // build output data
     outputBuilder->BuildOutput(vecAllocator, joinProbe, hashTables, outputPages);
-    SetStatus(OMNI_STATUS_FINISHED);
-    delete joinProbe;
-    joinProbe = nullptr;
-    VectorHelper::FreeVecBatch(input);
-    input = nullptr;
+    if (!outputBuilder->HasNext()) {
+        outputBuilder->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+        delete joinProbe;
+        joinProbe = nullptr;
+        VectorHelper::FreeVecBatch(input);
+        input = nullptr;
+    }
     return 0;
 }
 
@@ -677,7 +696,10 @@ LookupJoinOutputBuilder::LookupJoinOutputBuilder(int32_t *probeOutputCols, int32
       buildOutputTypes(buildOutputTypes),
       outputRowSize(outputRowSize),
       isSequentialProbeIndices(true)
-{}
+{
+    // if the probe and build do not have output columns, the row size is setted to DEFAULT_ROW_SIZE
+    this->maxRowCount = OperatorUtil::GetMaxRowCount((outputRowSize != 0) ? outputRowSize : DEFAULT_ROW_SIZE);
+}
 
 void LookupJoinOutputBuilder::AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition)
 {
@@ -880,33 +902,18 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
 void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe,
     const JoinHashTables *hashTables, std::vector<VectorBatch *> &outputVecBatches)
 {
-    auto positionCount = static_cast<int32_t>(probeIndex.size());
-    // if the probe and build do not have output columns, the row size is setted to DEFAULT_ROW_SIZE
-    int32_t maxRowCount = OperatorUtil::GetMaxRowCount((outputRowSize != 0) ? outputRowSize : DEFAULT_ROW_SIZE);
-    int32_t tableCount = OperatorUtil::GetVecBatchCount(positionCount, maxRowCount);
-
     Vector **probeAllColumns = joinProbe->GetProbeAllColumns();
     int32_t columnCount = probeOutputColsCount + buildOutputColsCount;
 
-    VectorBatch *vectorBatch = nullptr;
-    int32_t position = 0;
-    int32_t rowCount = 0;
-    for (int32_t tableIdx = 0; tableIdx < tableCount; tableIdx++) {
-        rowCount = std::min(maxRowCount, positionCount - position);
-        vectorBatch = new VectorBatch(columnCount, rowCount);
+    int32_t currentRowToReturn = std::min(maxRowCount, static_cast<int32_t>(probeIndex.size()) - positionReturned);
+    auto *vectorBatch = new VectorBatch(columnCount, currentRowToReturn);
+    ConstructProbeColumns(vectorBatch, probeAllColumns, probeOutputCols, probeOutputColsCount, isSequentialProbeIndices,
+        probeIndex, positionReturned, currentRowToReturn);
+    ConstructBuildColumns(vectorBatch, hashTables, buildOutputTypes.Get(), buildOutputTypes.GetIds(), buildOutputCols,
+        buildOutputColsCount, probeOutputColsCount, buildIndex, positionReturned, currentRowToReturn, vecAllocator);
 
-        ConstructProbeColumns(vectorBatch, probeAllColumns, probeOutputCols, probeOutputColsCount,
-            isSequentialProbeIndices, probeIndex, position, rowCount);
-        ConstructBuildColumns(vectorBatch, hashTables, buildOutputTypes.Get(), buildOutputTypes.GetIds(),
-            buildOutputCols, buildOutputColsCount, probeOutputColsCount, buildIndex, position, rowCount, vecAllocator);
-
-        position += rowCount;
-        outputVecBatches.push_back(vectorBatch);
-    }
-
-    isSequentialProbeIndices = true;
-    probeIndex.clear();
-    buildIndex.clear();
+    positionReturned += currentRowToReturn;
+    outputVecBatches.push_back(vectorBatch);
 }
 } // end of op
 } // end of omniruntime

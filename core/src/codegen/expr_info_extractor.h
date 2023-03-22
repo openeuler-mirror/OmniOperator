@@ -12,22 +12,35 @@
 #include "func_registry_context.h"
 #include "function.h"
 
+namespace omniruntime::codegen {
 class ExprInfoExtractor : public ExprVisitor {
 public:
     void Visit(const omniruntime::expressions::LiteralExpr &e) override;
+
     void Visit(const omniruntime::expressions::FieldExpr &e) override;
+
     void Visit(const omniruntime::expressions::UnaryExpr &e) override;
+
     void Visit(const omniruntime::expressions::BinaryExpr &e) override;
+
     void Visit(const omniruntime::expressions::InExpr &e) override;
+
     void Visit(const omniruntime::expressions::BetweenExpr &e) override;
+
     void Visit(const omniruntime::expressions::IfExpr &e) override;
+
     void Visit(const omniruntime::expressions::CoalesceExpr &e) override;
+
     void Visit(const omniruntime::expressions::IsNullExpr &e) override;
+
     void Visit(const omniruntime::expressions::FuncExpr &e) override;
+
     void Visit(const omniruntime::expressions::SwitchExpr &e) override;
+
     std::set<int32_t> GetVectorIndexes();
 
 private:
     std::set<int32_t> vectorIndexes;
 };
+}
 #endif
