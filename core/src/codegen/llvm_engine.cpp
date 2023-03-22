@@ -41,12 +41,9 @@ LLVMEngine::LLVMEngine()
     engine_builder.setMAttrs(CPU_ATTRS);
     std::unique_ptr<llvm::ExecutionEngine> exec_engine { engine_builder.create() };
     execution_engine = std::move(exec_engine);
-
-    if (ConfigUtil::IsEnableBatchExprEvaluate()) {
-        RegisterFunctions(FunctionRegistry::GetBatchFunctions());
-    } else {
-        RegisterFunctions(FunctionRegistry::GetRowFunctions());
-    }
+    // Although ConfigUtil::IsEnableBatchExprEvaluate() = true, RowProjection also need row functions.
+    RegisterFunctions(FunctionRegistry::GetBatchFunctions());
+    RegisterFunctions(FunctionRegistry::GetRowFunctions());
 }
 
 llvm::IRBuilder<> *LLVMEngine::GetIRBuilder()
