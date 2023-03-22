@@ -25,7 +25,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
 
     HmppResult result = HMPP_STS_NO_ERR;
     auto maxVal = reinterpret_cast<ResultType *>(this->executionContext->GetArena()->Allocate(sizeof(ResultType)));
-    memset_sp((void*)maxVal, sizeof(ResultType), 0,sizeof(ResultType));
+    memset_sp((void *)maxVal, sizeof(ResultType), 0, sizeof(ResultType));
 
     if constexpr (IN_ID == OMNI_SHORT) {
         LogDebug("HMPP-Agg-max");
