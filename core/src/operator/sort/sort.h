@@ -90,7 +90,7 @@ public:
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
 
@@ -139,8 +139,8 @@ private:
     ErrorCode SpillToDisk();
     void Sort();
     void GetVecBatchesForSpill(std::vector<omniruntime::vec::VectorBatch *> &vecBatchesForSpill);
-    void GetOutputFromMemory(std::vector<VectorBatch *> &outputPages);
-    void MergeFromDiskAndMemory(std::vector<VectorBatch *> &outputPages);
+    void GetOutputFromMemory(VectorBatch **outputVecBatch);
+    void MergeFromDiskAndMemory(VectorBatch **outputVecBatch);
 
     type::DataTypes sourceTypes;
     std::vector<int32_t> outputCols;

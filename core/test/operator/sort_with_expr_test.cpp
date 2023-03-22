@@ -38,17 +38,17 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
     int16_t expectData3[dataSize] = {4, 3, 2, 1, 0};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2, expectData3);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
@@ -76,16 +76,16 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
@@ -115,16 +115,16 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
 
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
@@ -162,17 +162,17 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
         sortExprs, ascendings, nullFirsts, 2, OperatorConfig());
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
     DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), LongType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
@@ -205,18 +205,18 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
         vecCount, sortExprs, ascendings, nullFirsts, vecCount, OperatorConfig());
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
-    VectorHelper::PrintVecBatch(outputVecBatches[0]);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     std::string expectValues[dataSize] = {"hello", "omni", "runtime", "world"};
     auto expectVector = CreateVarcharVector(*type, expectValues, dataSize);
     auto expectVecBatch = new VectorBatch(vecCount, dataSize);
     expectVecBatch->SetVector(0, expectVector);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
@@ -273,8 +273,8 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
         sortExprs, ascendings, nullFirsts, 2, OperatorConfig());
     auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
 
     int64_t expectData1[5] = {0, 0, 5, 1, 3};
     int64_t expectData2[5] = {0, 0, 11, 55, 33};
@@ -284,10 +284,10 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     expectVecBatch->GetVector(0)->SetValueNull(1);
     expectVecBatch->GetVector(1)->SetValueNull(0);
     expectVecBatch->GetVector(1)->SetValueNull(1);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
@@ -324,16 +324,16 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
     sortOperator->AddInput(vecBatch1);
     sortOperator->AddInput(vecBatch2);
     sortOperator->AddInput(vecBatch3);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
 
     auto totalDataSize = dataSize1 + dataSize2 + dataSize3;
     int32_t expectData[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
@@ -368,16 +368,16 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
     sortOperator->AddInput(vecBatch1);
     sortOperator->AddInput(vecBatch2);
     sortOperator->AddInput(vecBatch3);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
 
     auto totalDataSize = dataSize * 3;
     int32_t expectData[] = {3, 6, 8};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
