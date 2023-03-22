@@ -1,0 +1,43 @@
+/*
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * @Description: dt fuzz factory create utils implementations
+ */
+#ifndef OMNI_RUNTIME_DT_FUZZ_FACTORY_CREATE_UTIL_H
+#define OMNI_RUNTIME_DT_FUZZ_FACTORY_CREATE_UTIL_H
+
+using namespace omniruntime::op;
+using namespace omniruntime::expressions;
+
+namespace DtFuzzFactoryCreateUtil {
+OperatorFactory *CreateFilterFactory(omniruntime::type::DataTypes &sourceTypes, BinaryExpr *filterExpr,
+    std::vector<Expr *> projections, OverflowConfig *overflowConfig);
+
+OperatorFactory *CreateSortFactory(omniruntime::type::DataTypes &sourceTypes);
+
+OperatorFactory *CreateAggregationFactory(omniruntime::type::DataTypes &sourceTypes);
+
+OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sourceTypes);
+
+std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataTypes &sourceTypes,
+    OverflowConfig *overflowConfig);
+
+OperatorFactory *CreateLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount);
+
+OperatorFactory *CreateDistinctLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount);
+
+OperatorFactory *CreatePartitionedOutputFactory(omniruntime::type::DataTypes &sourceTypes);
+
+OperatorFactory *CreateProjectFactory(omniruntime::type::DataTypes &sourceTypes,
+    std::vector<Expr *> exprs, OverflowConfig *overflowConfig);
+
+OperatorFactory *CreateUnionFactory(omniruntime::type::DataTypes &sourceTypes);
+
+omniruntime::op::Operator *CreateSortMergeJoinOperator(omniruntime::type::DataTypes &sourceTypes,
+    OverflowConfig *overflowConfig);
+
+OperatorFactory *CreateTopNFactory(omniruntime::type::DataTypes &sourceTypes);
+
+OperatorFactory *CreateWindowFactory(omniruntime::type::DataTypes &sourceTypes);
+}
+
+#endif // OMNI_RUNTIME_DT_FUZZ_FACTORY_CREATE_UTIL_H
