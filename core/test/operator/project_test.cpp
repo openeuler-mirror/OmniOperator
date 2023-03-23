@@ -8,6 +8,7 @@
 #include <chrono>
 #include "gtest/gtest.h"
 #include "operator/projection/projection.h"
+#include "operator/filter/bloom_filter.h"
 #include "util/test_util.h"
 #include "util/config_util.h"
 
@@ -3375,6 +3376,62 @@ TEST(ProjectionTest, XxH64Decimal128)
     delete overflowConfig;
     delete op;
     delete factory;
+}
+
+TEST(ProjectionTest, MightContain)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+
+    int32_t versionJava = 1;
+    int32_t hashFuncNum = 6;
+    int32_t numWords = 1048576; // 1MBytes
+
+    int64_t byteLength = numWords * sizeof(int64_t) + sizeof(versionJava) + sizeof(hashFuncNum) + sizeof(numWords);
+    auto *in = new int8_t[byteLength]{ 0 };
+    (reinterpret_cast<int32_t *>(in))[0] = 1;
+    (reinterpret_cast<int32_t *>(in))[1] = hashFuncNum;
+    (reinterpret_cast<int32_t *>(in))[2] = numWords;
+    auto *bloomFilter = new BloomFilter(in, versionJava);
+    for (int64_t i = 1; i < 100; i += 2) {
+        bloomFilter->PutLong(i);
+    }
+
+    auto bloomFilterAddr = new LiteralExpr(reinterpret_cast<int64_t>(bloomFilter), LongType());
+    auto hashValue = new FieldExpr(0, LongType());
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(bloomFilterAddr);
+    hashArgs.push_back(hashValue);
+    string mightContainFuncStr = "might_contain";
+    auto mightContainFuncExpr = GetFuncExpr(mightContainFuncStr, hashArgs, BooleanType());
+    vector<Expr *> exprs = { mightContainFuncExpr };
+    std::vector<DataTypePtr> vecTypes = { LongType() };
+    DataTypes inputTypes(vecTypes);
+    auto overflowConfig = new OverflowConfig();
+
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    int64_t value[] = { 11L, 30L, 55L};
+    auto input = CreateVectorBatch(inputTypes, 3, value);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+
+    vector<DataTypePtr> expectedTypes = { BooleanType() };
+    bool expectedDatas[] = { true, false, true};
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
+    delete op;
+    delete factory;
+    delete bloomFilter;
+    delete[] in;
 }
 
 TEST(ProjectionTest, testDecimal128NegativeLiteral)

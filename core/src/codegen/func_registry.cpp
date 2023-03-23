@@ -27,6 +27,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
     functionRegistries.push_back(make_unique<DictionaryFunctionRegistry>());
     functionRegistries.push_back(make_unique<MathFunctionRegistry>());
     functionRegistries.push_back(make_unique<HashFunctionRegistry>());
+    functionRegistries.push_back(make_unique<MightContainFunctionRegistry>());
     functionRegistries.push_back(make_unique<VarcharVectorFunctionRegistry>());
     functionRegistries.push_back(make_unique<HiveUdfRegistry>());
     functionRegistries.push_back(make_unique<StringFunctionRegistry>());
