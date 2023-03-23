@@ -5,6 +5,7 @@
 #include <string>
 
 #include "codegen/functions/murmur3_hash.h"
+#include "type/decimal128_utils.h"
 #include "batch_murmur3_hash.h"
 
 using namespace std;
@@ -71,17 +72,13 @@ extern "C" DLLEXPORT void BatchMm3Decimal64(int64_t *val, int32_t precision, int
 extern "C" DLLEXPORT void BatchMm3Decimal128(Decimal128 *x, int32_t precision, int32_t scale, bool *isValNull,
     int32_t *seed, bool *isSeedNull, bool *resIsNull, int32_t *output, int32_t rowCnt)
 {
-    union {
-        char bytesArray[16];
-        int64_t int64Array[2];
-    } uVal = { 0 };
-
+    int32_t byteLen = 0;
     for (int i = 0; i < rowCnt; ++i) {
-        uVal.int64Array[0] = x[i].HighBits() * !isValNull[i];
-        uVal.int64Array[1] = x[i].LowBits() * !isValNull[i];
-        string strVal(uVal.bytesArray, 16);
-        seed[i] = isSeedNull[i] ? 0 : seed[i];
-        output[i] = static_cast<int32_t>(HashUnsafeBytes(strVal, 16, seed[i]));
+        auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(x[i].HighBits(), x[i].LowBits(), &byteLen);
+        string strVal(reinterpret_cast<char *>(bytes), byteLen);
+        output[i] = static_cast<int32_t>(HashUnsafeBytes(strVal, byteLen, seed[i]));
+        delete[] bytes;
+        bytes = nullptr;
     }
 }
 

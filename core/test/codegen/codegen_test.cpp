@@ -11,6 +11,7 @@
 #include "operator/filter/filter_and_project.h"
 #include "operator/projection/projection.h"
 #include "codegen/functions/murmur3_hash.h"
+#include "codegen/functions/xxhash64_hash.h"
 #include "util/test_util.h"
 
 using omniruntime::op::RowProjection;
@@ -1738,7 +1739,7 @@ TEST(CodeGenTest, ConcatChars)
     auto helloExpr = new LiteralExpr(new std::string("hello                         , world"), CharType(52));
     auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, outerConcat, helloExpr, BooleanType());
 
-    Parser parser {};
+    Parser parser{};
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -2970,7 +2971,7 @@ TEST(CodeGenTest, CastNumbers3)
     FieldExpr *col2 = new FieldExpr(2, DoubleType());
     BinaryExpr *expr = new BinaryExpr(omniruntime::expressions::Operator::LT, col1, col2, BooleanType());
 
-    Parser parser {};
+    Parser parser{};
     ExprPrinter printExprTree;
     expr->Accept(printExprTree);
     cout << endl;
@@ -3424,6 +3425,157 @@ TEST(CodeGenTest, Mm3HashBoolean)
     int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
         reinterpret_cast<int64_t>(context), dictionaries, &isNull));
     int32_t expectedRes = Mm3Boolean(v1[0], false, 42, false);
+    EXPECT_EQ(res, expectedRes);
+
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
+    delete[] vals;
+    delete[] dataLength;
+    delete context;
+}
+
+TEST(CodeGenTest, XxH64HashInt)
+{
+    // create expression objects
+    auto col0 = new FieldExpr(0, IntType());
+    auto data = new LiteralExpr(42L, LongType());
+    std::string funcStr = "xxhash64";
+    DataTypePtr retType = LongType();
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(col0);
+    hashArgs.push_back(data);
+    auto xx64hash = GetFuncExpr(funcStr, hashArgs, LongType());
+
+    auto equalRight = new LiteralExpr(8591465006815244696, LongType());
+
+    auto expr = new BinaryExpr(omniruntime::expressions::Operator::EQ, xx64hash, equalRight, BooleanType());
+
+    ExprPrinter printExprTree;
+    expr->Accept(printExprTree);
+
+    int32_t v1[1] = {123456};
+    auto *vals = new int64_t[1];
+    vals[0] = reinterpret_cast<int64_t>(v1);
+    auto *selected = new int32_t[1];
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[1];
+    offsets[0][0] = 0;
+
+    std::vector<DataTypePtr> vecTypes = { IntType() };
+    DataTypes inputTypes{ vecTypes };
+
+    auto codegen = FilterCodeGen("xx64hashTest", *expr, nullptr);
+
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+    auto func = (FilterFunc)(intptr_t)codegen.GetFunction(inputTypes);
+
+    bool result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
+        dictionaries);
+    EXPECT_EQ(result, true);
+    context->GetArena()->Reset();
+
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
+    delete[] vals;
+    delete[] selected;
+    delete context;
+    delete expr;
+}
+
+TEST(CodeGenTest, XxH64HashString)
+{
+    std::string funcStr = "xxhash64";
+    DataTypePtr retType = IntType();
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, VarcharType()));
+    args.push_back(new LiteralExpr(42L, LongType()));
+    auto expr = GetFuncExpr(funcStr, args, LongType());
+
+    std::string v1 = "hello world";
+    auto *vals = new int64_t[1];
+    vals[0] = reinterpret_cast<int64_t>(v1.c_str());
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[2];
+    offsets[0][0] = 0;
+    offsets[0][1] = v1.size();
+
+    RowProjection codegen(*expr);
+    RowProjFunc func = codegen.Create(nullptr);
+    EXPECT_EQ(codegen.GetReturnType()->GetId(), OMNI_LONG);
+
+    auto *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    bool isNull = false;
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+
+    int32_t res = *((int32_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
+        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+    int32_t expectedRes = XxH64String(v1.c_str(), v1.size(), false, 42, false);
+    EXPECT_EQ(res, expectedRes);
+
+    Expr::DeleteExprs({ expr });
+    context->GetArena()->Reset();
+    delete[] bitmap[0];
+    delete[] bitmap;
+    delete[] offsets[0];
+    delete[] offsets;
+    delete[] vals;
+    delete[] dataLength;
+    delete context;
+}
+
+TEST(CodeGenTest, XxH64HashDecimal128)
+{
+    std::string funcStr = "xxhash64";
+    DataTypePtr retType = LongType();
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, Decimal128Type(38, 20)));
+    args.push_back(new LiteralExpr(42L, LongType()));
+    auto expr = GetFuncExpr(funcStr, args, LongType());
+
+    // creating decimal
+    int64_t v1[2] = {4000, 0};
+    auto *vals = new int64_t[1];
+    vals[0] = reinterpret_cast<int64_t>(v1);
+
+    bool **bitmap = new bool *[1];
+    bitmap[0] = new bool[1];
+    bitmap[0][0] = false;
+    auto **offsets = new int32_t *[1];
+    offsets[0] = new int32_t[1];
+    offsets[0][0] = 0;
+
+    RowProjection rowProjection(*expr);
+    RowProjFunc func = rowProjection.Create(nullptr);
+    EXPECT_EQ(rowProjection.GetReturnType()->GetId(), OMNI_LONG);
+    auto *dataLength = new int32_t[1];
+    dataLength[0] = 0;
+    bool isNull = false;
+    int64_t dictionaries[1] = {};
+
+    auto context = new ExecutionContext();
+
+    int64_t res = *((int64_t *)func(vals, (int64_t *)bitmap, (int64_t *)offsets, 0, dataLength,
+        reinterpret_cast<int64_t>(context), dictionaries, &isNull));
+    int64_t expectedRes = XxH64Decimal128(v1[1], v1[0], 38, 20, false, 42, false);
     EXPECT_EQ(res, expectedRes);
 
     Expr::DeleteExprs({ expr });

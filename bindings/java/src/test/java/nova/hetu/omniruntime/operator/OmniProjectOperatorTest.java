@@ -5,6 +5,7 @@
 package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
+import static nova.hetu.omniruntime.util.TestUtils.createVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
@@ -168,21 +169,78 @@ public class OmniProjectOperatorTest {
         assertEquals(((IntVec) res.getVector(0)).get(0), 20);
         assertEquals(((IntVec) res.getVector(1)).get(0), -508695674);
         assertEquals(((IntVec) res.getVector(2)).get(0), 613818021);
-        assertEquals(((IntVec) res.getVector(3)).get(0), 265773344);
+        assertEquals(((IntVec) res.getVector(3)).get(0), 1090190174);
         assertEquals(((IntVec) res.getVector(4)).get(0), -559580957);
         assertEquals(((IntVec) res.getVector(0)).get(1), 25);
         assertEquals(((IntVec) res.getVector(1)).get(1), -1712319331);
         assertEquals(((IntVec) res.getVector(2)).get(1), 352365215);
-        assertEquals(((IntVec) res.getVector(3)).get(1), -127557072);
+        assertEquals(((IntVec) res.getVector(3)).get(1), 2116291453);
         assertEquals(((IntVec) res.getVector(4)).get(1), 933211791);
         // null value check
         assertEquals(((IntVec) res.getVector(0)).get(2), 15);
         assertEquals(((IntVec) res.getVector(1)).get(2), -1670924195);
         assertEquals(((IntVec) res.getVector(2)).get(2), 142593372);
-        assertEquals(((IntVec) res.getVector(3)).get(2), -300363099);
+        assertEquals(((IntVec) res.getVector(3)).get(2), 967293486);
         assertEquals(((IntVec) res.getVector(4)).get(2), 933211791);
 
         freeVecBatch(res);
+        op.close();
+        factory.close();
+    }
+
+    /**
+     * xxHash64 test.
+     */
+    @Test
+    public void xxHash64StringTest() {
+        DataType[] inputTypes = {new VarcharDataType(50)};
+        Object[][] datas = {{"hello world", "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ", "china"}};
+        VecBatch vecBatch = createVecBatch(inputTypes, datas);
+        String[] expressions = {"{\"exprType\":\"FUNCTION\",\"returnType\":2,\"function_name\":\"xxhash64\","
+                + "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":15,\"colVal\":0,\"width\":50},"
+                + "{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":42}]}"};
+
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(expressions, inputTypes, 1,
+                new OperatorConfig());
+
+        OmniOperator op = factory.createOperator();
+        op.addInput(vecBatch);
+
+        Iterator<VecBatch> results = op.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        Object[][] expectDatas = {{7620854247404556961L, -8961370173016112133L, 1148854020565811068L}};
+        assertVecBatchEquals(resultVecBatch, expectDatas);
+
+        freeVecBatch(resultVecBatch);
+        op.close();
+        factory.close();
+    }
+
+    @Test
+    public void xxHash64Decimal128Test() {
+        DataType[] inputTypes = {new Decimal128DataType(38, 16)};
+        Object[][] datas = {{4000L, 0L}, {2000L, 0L}, {1000L, 0L}};
+        Vec[] buildVecs = new Vec[inputTypes.length];
+        buildVecs[0] = createVec(inputTypes[0], datas);
+        VecBatch vecBatch = new VecBatch(buildVecs);
+        String[] expressions = {"{\"exprType\":\"FUNCTION\",\"returnType\":2,\"function_name\":\"xxhash64\","
+                + "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":7,\"precision\":38,\"scale\":16,"
+                + "\"colVal\":0},{\"exprType\":\"LITERAL\",\"dataType\":2,\"isNull\":false,\"value\":42}]}"};
+
+        OmniProjectOperatorFactory factory = new OmniProjectOperatorFactory(expressions, inputTypes, 1,
+                new OperatorConfig());
+
+        OmniOperator op = factory.createOperator();
+        op.addInput(vecBatch);
+
+        Iterator<VecBatch> results = op.getOutput();
+        VecBatch resultVecBatch = results.next();
+
+        Object[][] expectDatas = {{-8641832543871958383L, 5052335482464806674L, 7563124414157642229L}};
+        assertVecBatchEquals(resultVecBatch, expectDatas);
+
+        freeVecBatch(resultVecBatch);
         op.close();
         factory.close();
     }

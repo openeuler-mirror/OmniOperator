@@ -10,6 +10,7 @@
 #include "codegen/functions/stringfunctions.h"
 #include "codegen/functions/mathfunctions.h"
 #include "codegen/functions/murmur3_hash.h"
+#include "codegen/functions/xxhash64_hash.h"
 #include "codegen/functions/dictionaryfunctions.h"
 #include "codegen/functions/varcharVectorfunctions.h"
 #include "codegen/functions/udffunctions.h"
@@ -208,6 +209,53 @@ TEST(FunctionTest, Mm3Double)
 TEST(FunctionTest, Mm3String)
 {
     EXPECT_EQ(Mm3String("hello world", 11, false, 42, false), -1528836094);
+}
+
+/*
+ * XxHash64 hash tests
+ */
+TEST(FunctionTest, XxH64Short)
+{
+    EXPECT_EQ(XxH64Int16(1, false, 42, false), -6698625589789238999);
+}
+
+TEST(FunctionTest, XxH64Int)
+{
+    EXPECT_EQ(XxH64Int32(123, false, 42, false), 5513549449271372758);
+}
+
+TEST(FunctionTest, XxH64Long)
+{
+    EXPECT_EQ(XxH64Int64(123L, false, 42, false), -3178482946328430151);
+}
+
+TEST(FunctionTest, XxH64Double)
+{
+    EXPECT_EQ(XxH64Double(123.456, false, 42, false), -6938331816624033461);
+}
+TEST(FunctionTest, XxH64Boolean)
+{
+    EXPECT_EQ(XxH64Boolean(true, false, 42, false), -6698625589789238999);
+}
+
+TEST(FunctionTest, XxH64String)
+{
+    EXPECT_EQ(XxH64String("hello world", 11, false, 42, false), 7620854247404556961);
+}
+
+TEST(FunctionTest, XxH64Decimal64)
+{
+    EXPECT_EQ(XxH64Decimal64(430, 7, 0, false, 42, false), -3069041474468904433);
+}
+
+TEST(FunctionTest, XxH64Decimal128)
+{
+    std::string s1 = "-8888888888888888888.8000000000000000";
+    std::string s2 = "8888888888888888888.80000000000001";
+    auto value1 = Decimal128(s1);
+    auto value2 = Decimal128(s2);
+    EXPECT_EQ(XxH64Decimal128(value1.HighBits(), value1.LowBits(), 38, 16, false, 42, false), -216624505269361667);
+    EXPECT_EQ(XxH64Decimal128(value2.HighBits(), value2.LowBits(), 38, 16, false, 42, false), 8484287969139273592);
 }
 
 /*
@@ -1288,9 +1336,9 @@ TEST(FunctionTest, ReplaceStrStrStrZh)
     int64_t contextPtr = reinterpret_cast<int64_t>(context);
     int32_t outLen = 0;
 
-    std::vector<std::string> str { "", "粉色的圣诞袜", "apple", "粉色de圣诞袜" };
-    std::vector<std::string> searchStr { "", "粉色", "pp", "de圣" };
-    std::vector<std::string> replaceStr { "", "黑色", "*w*", "*的*" };
+    std::vector<std::string> str{ "", "粉色的圣诞袜", "apple", "粉色de圣诞袜" };
+    std::vector<std::string> searchStr{ "", "粉色", "pp", "de圣" };
+    std::vector<std::string> replaceStr{ "", "黑色", "*w*", "*的*" };
 
     auto result1 = ReplaceStrStrStrWithRepReplace(contextPtr, str[2].c_str(), str[2].length(), searchStr[0].c_str(),
         searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), false, &outLen);
@@ -1623,7 +1671,7 @@ TEST(FunctionTest, EvaluateHiveUdfSingle)
     EXPECT_CALL(*env, GetStaticObjectField(_, _)).WillRepeatedly(Return(nullptr));
     EXPECT_CALL(*env, SetObjectArrayElement(_, _, _)).WillRepeatedly(Return());
 
-    InAndOutputInfos infos {};
+    InAndOutputInfos infos{};
     EXPECT_CALL(*env, CallStaticVoidMethodV(_, _, infos))
         .WillOnce(DoAll(Assign((int32_t *)(&outputValue), 8), Assign((int8_t *)(&outputNull), 0)))
         .WillRepeatedly(Return());

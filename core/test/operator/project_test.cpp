@@ -2062,7 +2062,7 @@ TEST(ProjectionTest, varcharExpand)
 
     std::string substrStr = "substr";
     DataTypePtr retType = VarcharType();
-    std::vector<Expr *> args { substrData, substrIndex, substrLen };
+    std::vector<Expr *> args{ substrData, substrIndex, substrLen };
     auto substrExpr = GetFuncExpr(substrStr, args, VarcharType());
     std::string baseStr(" world");
     int32_t avgStrLen = 200;
@@ -3141,6 +3141,242 @@ TEST(ProjectionTest, LengthStr)
     delete factory;
 }
 
+TEST(ProjectionTest, XxH64Int)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    std::vector<DataTypePtr> vecTypes = { IntType() };
+    auto col = new FieldExpr(0, IntType());
+    auto seed = new LiteralExpr(42L, LongType());
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(col);
+    hashArgs.push_back(seed);
+    string xxH64FuncStr = "xxhash64";
+    auto xxH64FuncExpr = GetFuncExpr(xxH64FuncStr, hashArgs, LongType());
+    vector<Expr *> exprs = { xxH64FuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto overflowConfig = new OverflowConfig();
+
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    int32_t value[] = {1, 2, 3};
+    auto input = CreateVectorBatch(inputTypes, 3, value);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { LongType() };
+    int64_t expectedDatas[] = { -6698625589789238999, 8420071140774656230, 6258084186791473711 };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, XxH64Long)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    std::vector<DataTypePtr> vecTypes = { LongType() };
+    auto col = new FieldExpr(0, LongType());
+    auto seed = new LiteralExpr(42L, LongType());
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(col);
+    hashArgs.push_back(seed);
+    string xxH64FuncStr = "xxhash64";
+    auto xxH64FuncExpr = GetFuncExpr(xxH64FuncStr, hashArgs, LongType());
+    vector<Expr *> exprs = { xxH64FuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto overflowConfig = new OverflowConfig();
+
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    int64_t value[] = {1L, 2L, 3L};
+    auto input = CreateVectorBatch(inputTypes, 3, value);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { LongType() };
+    int64_t expectedDatas[] = { -7001672635703045582, -3341702809300393011, 3188756510806108107 };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, XxH64Double)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    std::vector<DataTypePtr> vecTypes = { DoubleType() };
+    auto col = new FieldExpr(0, DoubleType());
+    auto seed = new LiteralExpr(42L, LongType());
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(col);
+    hashArgs.push_back(seed);
+    string xxH64FuncStr = "xxhash64";
+    auto xxH64FuncExpr = GetFuncExpr(xxH64FuncStr, hashArgs, LongType());
+    vector<Expr *> exprs = { xxH64FuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto overflowConfig = new OverflowConfig();
+
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    double value[] = {12.34, 56.78, 90.12};
+    auto input = CreateVectorBatch(inputTypes, 3, value);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { LongType() };
+    int64_t expectedDatas[] = { -8572681829277995901, -8568427336103557548, -5412156501924286366};
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, XxH64Boolean)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    std::vector<DataTypePtr> vecTypes = { BooleanType() };
+    auto col = new FieldExpr(0, BooleanType());
+    auto seed = new LiteralExpr(42L, LongType());
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(col);
+    hashArgs.push_back(seed);
+    string xxH64FuncStr = "xxhash64";
+    auto xxH64FuncExpr = GetFuncExpr(xxH64FuncStr, hashArgs, LongType());
+    vector<Expr *> exprs = { xxH64FuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto overflowConfig = new OverflowConfig();
+
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    bool value[] = {false, true, false};
+    auto input = CreateVectorBatch(inputTypes, 3, value);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { LongType() };
+    int64_t expectedDatas[] = { 3614696996920510707, -6698625589789238999, 3614696996920510707 };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, XxH64Str)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    std::vector<DataTypePtr> vecTypes = { VarcharType(50) };
+    auto col = new FieldExpr(0, VarcharType(50));
+    auto seed = new LiteralExpr(42L, LongType());
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(col);
+    hashArgs.push_back(seed);
+    string xxH64FuncStr = "xxhash64";
+    auto xxH64FuncExpr = GetFuncExpr(xxH64FuncStr, hashArgs, LongType());
+    vector<Expr *> exprs = { xxH64FuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto overflowConfig = new OverflowConfig();
+
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    string str[] = { "hello world", "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ", "china" };
+    auto input = CreateVectorBatch(inputTypes, 3, str);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { LongType() };
+    int64_t expectedDatas[] = { 7620854247404556961, -8961370173016112133, 1148854020565811068 };
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
+    delete op;
+    delete factory;
+}
+
+TEST(ProjectionTest, XxH64Decimal128)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    std::vector<DataTypePtr> vecTypes = { Decimal128Type(38, 16) };
+    auto col = new FieldExpr(0, Decimal128Type(38, 16));
+    auto seed = new LiteralExpr(42L, LongType());
+    std::vector<Expr *> hashArgs;
+    hashArgs.push_back(col);
+    hashArgs.push_back(seed);
+    string xxH64FuncStr = "xxhash64";
+    auto xxH64FuncExpr = GetFuncExpr(xxH64FuncStr, hashArgs, LongType());
+    vector<Expr *> exprs = { xxH64FuncExpr };
+    DataTypes inputTypes(vecTypes);
+    auto overflowConfig = new OverflowConfig();
+
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto factory = new ProjectionOperatorFactory(move(exprEvaluator));
+
+    Decimal128 value[] = { Decimal128("1111111111111111111.1000000000000000"),
+                               Decimal128("8888888888888888888.8000000000000000"),
+                               Decimal128("9999999999999999999.9000000000000000")};
+    auto input = CreateVectorBatch(inputTypes, 3, value);
+
+    auto op = factory->CreateOperator();
+    op->AddInput(input);
+    vector<VectorBatch *> ret;
+    op->GetOutput(ret);
+
+    vector<DataTypePtr> expectedTypes = { LongType() };
+    int64_t expectedDatas[] = { 6365211361990375607, 2903581947191644088, 6893535756916194581};
+
+    auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
+    EXPECT_TRUE(VecBatchMatch(ret[0], expect));
+
+    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(expect);
+    delete overflowConfig;
+    delete op;
+    delete factory;
+}
+
 TEST(ProjectionTest, testDecimal128NegativeLiteral)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
@@ -3180,7 +3416,7 @@ TEST(ProjectionTest, ProjectCastIntToString)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 3;
-    auto *col = new int[3] { 123, 312, 456 };
+    auto *col = new int[3]{ 123, 312, 456 };
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
 
     auto data = new FieldExpr(0, IntType());
@@ -3529,7 +3765,7 @@ TEST(ProjectionTest, ProjectCastIntToDecimal64)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 3;
-    auto *col = new int[3] { 123, 312, 456 };
+    auto *col = new int[3]{ 123, 312, 456 };
     std::vector<DataTypePtr> vecOfTypes = { IntType() };
 
     auto data = new FieldExpr(0, IntType());
@@ -3573,11 +3809,11 @@ TEST(ProjectionTest, ProjectSparkConfig)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     std::string castStr = "CAST";
-    std::vector<Expr *> argLeft { new FieldExpr(0, Decimal64Type(7, 0)) };
+    std::vector<Expr *> argLeft{ new FieldExpr(0, Decimal64Type(7, 0)) };
     FuncExpr *subLeft = GetFuncExpr(castStr, argLeft, Decimal64Type(8, 0));
     int64_t *col = new int64_t[1];
     col[0] = 123;
-    std::vector<Expr *> argRight { new FieldExpr(0, Decimal64Type(7, 0)) };
+    std::vector<Expr *> argRight{ new FieldExpr(0, Decimal64Type(7, 0)) };
     FuncExpr *subRight = GetFuncExpr(castStr, argRight, Decimal64Type(8, 0));
     auto *addExprs = new BinaryExpr(omniruntime::expressions::Operator::ADD, subLeft, subRight, Decimal64Type(8, 0));
 
@@ -3645,8 +3881,8 @@ TEST(ProjectionTest, AddDecimal)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 2;
-    int64_t *col1 = new int64_t[4] { 1, 0, 2, 0 };
-    int64_t *col2 = new int64_t[2] { 1, 2 };
+    int64_t *col1 = new int64_t[4]{ 1, 0, 2, 0 };
+    int64_t *col2 = new int64_t[2]{ 1, 2 };
     FieldExpr *right1 = new FieldExpr(0, Decimal128Type(38, 0));
     FieldExpr *left1 = new FieldExpr(0, Decimal128Type(38, 0));
     BinaryExpr *addExpr1 =
@@ -3698,8 +3934,8 @@ TEST(ProjectionTest, AddDecimalReturnNull)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1;
-    int64_t *col1 = new int64_t[2] { -1, INT64_MAX };
-    int64_t *col2 = new int64_t[1] { INT64_MAX };
+    int64_t *col1 = new int64_t[2]{ -1, INT64_MAX };
+    int64_t *col2 = new int64_t[1]{ INT64_MAX };
     FieldExpr *right1 = new FieldExpr(0, Decimal128Type(38, 0));
     FieldExpr *left1 = new FieldExpr(0, Decimal128Type(38, 0));
     BinaryExpr *addExpr1 =
