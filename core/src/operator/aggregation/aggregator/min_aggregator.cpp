@@ -34,6 +34,14 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         if constexpr (OUT_ID == OMNI_LONG) {
             *minVal = *reinterpret_cast<int16_t *>(minVal);
         }
+
+        // the negtive int16 value will be 0b1xxx(16bit) ,
+        // but the minVal(int) will be 0x00001xxxx, it is a very big positive num
+        // when int16 cast to int32 the result is not correct,
+        // so we should add 0xFFFF at high 16 pos if *reinterpret_cast<int16_t *>(minVal) is negtive
+        if (*reinterpret_cast<int16_t *>(minVal) < 0) {
+            *reinterpret_cast<int32_t *>(minVal) |= 0xFFFF0000;
+        }
     } else if constexpr (IN_ID == OMNI_INT || IN_ID == OMNI_DATE32) {
         LogDebug("HMPP-Agg-min");
         result = HMPPS_Min_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset), rowCount,
