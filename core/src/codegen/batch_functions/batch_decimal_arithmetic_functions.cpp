@@ -1385,9 +1385,7 @@ extern "C" DLLEXPORT void BatchMulDec128Dec128Dec128RetNull(bool *isNull, Decima
         if (isNull[i]) {
             continue;
         }
-        DecimalOperations::InternalDecimalMultiply(Decimal128Wrapper(x[i]).SetScale(xScale), xScale, xPrecision,
-            Decimal128Wrapper(y[i]).SetScale(yScale), yScale, yPrecision, result);
-        result.ReScale(outScale);
+        result = Decimal128Wrapper(x[i]).MultiplyRoundUp(Decimal128Wrapper(y[i]), xScale + yScale - outScale);
         x[i] = result.ToDecimal128();
         CHECK_OVERFLOW_CONTINUE_NULL(result, outPrecision);
     }

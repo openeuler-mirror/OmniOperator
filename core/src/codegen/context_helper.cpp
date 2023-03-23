@@ -31,7 +31,9 @@ extern "C" DLLEXPORT
     bool SetError(int64_t contextPtr, std::string errorMessage)
     {
         auto context = reinterpret_cast<ExecutionContext *>(contextPtr);
-        context->SetError(errorMessage);
+        if (!context->HasError()) {
+            context->SetError(errorMessage);
+        }
         return true;
     }
 
