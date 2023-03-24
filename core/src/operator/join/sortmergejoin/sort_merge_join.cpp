@@ -157,7 +157,7 @@ int32_t SortMergeJoinOperator::GetJoinResult()
             joinResultBuilder->GetSameBufferedKeyMatched());
         auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses();
         if (joinResultBuilderRet == 1) {
-            joinResultBuilder->GetOutput(returnVectorBatches);
+            joinResultBuilder->GetOutput(&returnVectorBatch);
             resultCode = SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
         }
     }
@@ -181,12 +181,12 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     // 4) scan finished, need to get last builder result
     if (static_cast<JoinTableCode>(streamedRet) == JoinTableCode::SCAN_FINISHED &&
         static_cast<JoinTableCode>(bufferedRet) == JoinTableCode::SCAN_FINISHED) {
-        joinResultBuilder->GetOutput(returnVectorBatches);
+        joinResultBuilder->GetOutput(&returnVectorBatch);
     }
 
     // 5)finish the join scan
     resultCode = SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH), resultCode);
-    if (returnVectorBatches.empty()) {
+    if (returnVectorBatch == nullptr) {
         joinResultBuilder->Finish();
     } else {
         resultCode = SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
@@ -227,11 +227,11 @@ int32_t SortMergeJoinOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 
 int32_t SortMergeJoinOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
-    *outputVecBatch = returnVectorBatches[0];
-    returnVectorBatches.clear();
+    *outputVecBatch = returnVectorBatch;
+    returnVectorBatch = nullptr;
     joinResultBuilder->AddJoinValueAddresses();
     if (joinResultBuilder->HasNext()) {
-        joinResultBuilder->GetOutput(returnVectorBatches);
+        joinResultBuilder->GetOutput(&returnVectorBatch);
     } else {
         joinResultBuilder->Clear();
         SetStatus(OMNI_STATUS_FINISHED);

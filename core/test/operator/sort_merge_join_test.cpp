@@ -1404,26 +1404,24 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
     resultBuilder->AddJoinValueAddresses();
 
-    std::vector<omniruntime::vec::VectorBatch *> outputPages;
+    VectorBatch *outputVecBatch;
 
-    resultBuilder->GetOutput(outputPages);
+    resultBuilder->GetOutput(&outputVecBatch);
     resultBuilder->Finish();
-
-    ASSERT_EQ(outputPages.size(), 1);
 
     int32_t expectedData1[6] = {1, 3, 5, 7, 9, 11};
     double expectedData2[6] = {1.1, 3.3, 5.5, 7.7, 9.9, 11.1};
     double expectedData3[6] = {5.5, 3.3, 1.1, 11.1, 9.9, 7.7};
     string expectedData4[6] = {"555", "33", "1", "111", "99", "7"};
 
-    AssertVecBatchEquals(outputPages[0], 4, 6, expectedData1, expectedData2, expectedData3, expectedData4);
+    AssertVecBatchEquals(outputVecBatch, 4, 6, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
     delete resultBuilder;
     delete leftPagesIndex;
     delete rightPagesIndex;
-    VectorHelper::FreeVecBatches(outputPages);
+    VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
 TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
@@ -1486,26 +1484,24 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
     ASSERT_EQ(resultBuilder->AddJoinValueAddresses(), 0);
 
-    std::vector<omniruntime::vec::VectorBatch *> outputPages;
+    VectorBatch *outputVecBatch;
 
-    resultBuilder->GetOutput(outputPages);
+    resultBuilder->GetOutput(&outputVecBatch);
     resultBuilder->Finish();
-
-    ASSERT_EQ(outputPages.size(), 1);
 
     int32_t expectedData1[2] = {3, 5};
     double expectedData2[2] = {3.3, 5.5};
     double expectedData3[2] = {3.3, 1.1};
     string expectedData4[2] = {"33", "1"};
 
-    AssertVecBatchEquals(outputPages[0], 4, 2, expectedData1, expectedData2, expectedData3, expectedData4);
+    AssertVecBatchEquals(outputVecBatch, 4, 2, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
     delete resultBuilder;
     delete leftPagesIndex;
     delete rightPagesIndex;
-    VectorHelper::FreeVecBatches(outputPages);
+    VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
 TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)

@@ -66,7 +66,7 @@ private:
     SortMergeJoinScanner *smjScanner;
     JoinResultBuilder *joinResultBuilder;
 
-    std::vector<VectorBatch *> returnVectorBatches;
+    VectorBatch *returnVectorBatch = nullptr;
 };
 
 inline int32_t SetAddFlag(int16_t addFlag, int32_t resultCode)

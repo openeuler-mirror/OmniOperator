@@ -4296,16 +4296,15 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, TestBothJoinKeyAndFilterWithExpr)
     VectorBatch *streamedVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes.Get());
     streamedTblWithExprOperator->AddInput(streamedVecBatchEof);
 
-    std::vector<VectorBatch *> result;
-    bufferedTblWithExprOperator->GetOutput(result);
+    VectorBatch *result;
+    bufferedTblWithExprOperator->GetOutput(&result);
 
     // check the join result
-    EXPECT_EQ(result.size(), 1);
     const int32_t expectedDataSize = 3;
     int64_t expectedData0[] = {111, 111, 112};
     int64_t expectedData1[] = {111, 112, 112};
-    AssertVecBatchEquals(result[0], 2, expectedDataSize, expectedData0, expectedData1);
-    VectorHelper::FreeVecBatches(result);
+    AssertVecBatchEquals(result, 2, expectedDataSize, expectedData0, expectedData1);
+    VectorHelper::FreeVecBatch(result);
 
     Expr::DeleteExprs(streamedEqualKeyExprs);
     Expr::DeleteExprs(bufferedEqualKeyExprs);
