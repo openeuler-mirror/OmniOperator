@@ -24,26 +24,27 @@ void SimpleFilterCodeGen::Visit(const omniruntime::expressions::FieldExpr &field
 
     Value *colIdx = llvmTypes->CreateConstantInt(fieldExpr.colVal);
     // Find address of this column in the addresses array argument.
-    Value *gep = builder->CreateGEP(data, colIdx);
+    Value *gep = builder->CreateGEP(llvmTypes->I64Type(), data, colIdx);
     // Load the address value.
-    Value *elementAddr = builder->CreateLoad(gep);
+    Value *elementAddr = builder->CreateLoad(llvmTypes->I64Type(), gep);
     Value *elementPtr = GetPtrTypeFromInt(fieldExpr.GetReturnTypeId(), elementAddr);
 
+    Type *ty = llvmTypes->VectorToLLVMType(*(fieldExpr.GetReturnType()));
     Value *dataValue = nullptr;
     Value *length = nullptr;
     if (TypeUtil::IsStringType(fieldExpr.GetReturnTypeId())) {
         // Get length for varchar/char type
-        auto lengthGEP = builder->CreateGEP(lengths, colIdx);
-        length = builder->CreateLoad(lengthGEP);
+        auto lengthGEP = builder->CreateGEP(llvmTypes->I32Type(), lengths, colIdx);
+        length = builder->CreateLoad(llvmTypes->I32Type(), lengthGEP);
         // For varchar, only need to get the pointer
         dataValue = elementPtr;
     } else {
-        dataValue = builder->CreateLoad(elementPtr);
+        dataValue = builder->CreateLoad(ty, elementPtr);
     }
 
     // Get isNull value
-    auto isNullGEP = builder->CreateGEP(isNulls, colIdx);
-    Value *isNull = builder->CreateLoad(isNullGEP);
+    auto isNullGEP = builder->CreateGEP(llvmTypes->I1Type(), isNulls, colIdx);
+    Value *isNull = builder->CreateLoad(llvmTypes->I1Type(), isNullGEP);
 
     if (TypeUtil::IsDecimalType(fieldExpr.GetReturnTypeId())) {
         Value *precision = llvmTypes->CreateConstantInt(
@@ -126,12 +127,14 @@ llvm::Function *SimpleFilterCodeGen::CreateFunction()
     // Update final output Length
     if (result->length != nullptr) {
         Argument *outputLength = func->getArg(SIMPLE_FILTER_OUTPUT_LENGTH_INDEX);
-        Value *lengthGep = builder->CreateGEP(outputLength, llvmTypes->CreateConstantInt(0), "OUTPUT_LENGTH_ADDRESS");
+        Value *lengthGep = builder->CreateGEP(llvmTypes->I32Type(), outputLength, llvmTypes->CreateConstantInt(0),
+            "OUTPUT_LENGTH_ADDRESS");
         builder->CreateStore(result->length, lengthGep);
     }
 
     Argument *isResultNull = this->func->getArg(SIMPLE_FILTER_OUTPUT_IS_NULL_INDEX);
-    Value *nullGep = builder->CreateGEP(isResultNull, llvmTypes->CreateConstantInt(0), "OUTPUT_NULL_ADDRESS");
+    Value *nullGep =
+        builder->CreateGEP(llvmTypes->I1Type(), isResultNull, llvmTypes->CreateConstantInt(0), "OUTPUT_NULL_ADDRESS");
     builder->CreateStore(result->isNull, nullGep);
 
     // Return value

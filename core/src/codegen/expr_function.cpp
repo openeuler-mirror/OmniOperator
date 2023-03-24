@@ -87,10 +87,11 @@ std::vector<Value *> ExprFunction::ToColumnArgs(Value *data)
 {
     std::vector<Value *> result;
     for (int32_t i = 0; i < columnTypes.GetSize(); i++) {
-        auto colAddr = codegen.GetIRBuilder()->CreateGEP(data, codegen.GetTypes()->CreateConstantInt(i),
-            "column_addr_" + itostr(i));
+        auto colAddr = codegen.GetIRBuilder()->CreateGEP(codegen.GetTypes()->I64Type(), data,
+            codegen.GetTypes()->CreateConstantInt(i), "column_addr_" + itostr(i));
         std::string colName = "column_";
-        auto col = codegen.GetIRBuilder()->CreateLoad(colAddr, colName.append(itostr(i)));
+        auto col =
+            codegen.GetIRBuilder()->CreateLoad(codegen.GetTypes()->I64Type(), colAddr, colName.append(itostr(i)));
         auto columnPtr = codegen.GetPtrTypeFromInt(columnTypes.GetType(i)->GetId(), col);
         result.push_back(columnPtr);
     }
@@ -101,10 +102,11 @@ std::vector<Value *> ExprFunction::ToDicArgs(Value *dictionary)
 {
     std::vector<Value *> result;
     for (int32_t i = 0; i < columnTypes.GetSize(); i++) {
-        auto dicAddr = codegen.GetIRBuilder()->CreateGEP(dictionary, codegen.GetTypes()->CreateConstantInt(i),
-            "dic_addr_" + itostr(i));
+        auto dicAddr = codegen.GetIRBuilder()->CreateGEP(codegen.GetTypes()->I64Type(), dictionary,
+            codegen.GetTypes()->CreateConstantInt(i), "dic_addr_" + itostr(i));
         std::string dicName = "dic_";
-        auto dic = codegen.GetIRBuilder()->CreateLoad(dicAddr, dicName.append(itostr(i)));
+        auto dic =
+            codegen.GetIRBuilder()->CreateLoad(codegen.GetTypes()->I64Type(), dicAddr, dicName.append(itostr(i)));
         auto dicPtr = codegen.GetIRBuilder()->CreateIntToPtr(dic, codegen.GetTypes()->I64Type());
         result.push_back(dicPtr);
     }
@@ -115,10 +117,11 @@ std::vector<Value *> ExprFunction::ToNullArgs(Value *bitmap)
 {
     std::vector<Value *> result;
     for (int32_t i = 0; i < columnTypes.GetSize(); i++) {
-        auto bitmapAddr = codegen.GetIRBuilder()->CreateGEP(bitmap, codegen.GetTypes()->CreateConstantInt(i),
-            "bitmap_addr_" + itostr(i));
+        auto bitmapAddr = codegen.GetIRBuilder()->CreateGEP(codegen.GetTypes()->I64Type(), bitmap,
+            codegen.GetTypes()->CreateConstantInt(i), "bitmap_addr_" + itostr(i));
         std::string bitmapName = "bitmap_";
-        auto bitmapValue = codegen.GetIRBuilder()->CreateLoad(bitmapAddr, bitmapName.append(itostr(i)));
+        auto bitmapValue =
+            codegen.GetIRBuilder()->CreateLoad(codegen.GetTypes()->I64Type(), bitmapAddr, bitmapName.append(itostr(i)));
         auto bitmapPtr = codegen.GetIRBuilder()->CreateIntToPtr(bitmapValue, codegen.GetTypes()->I1PtrType());
         result.push_back(bitmapPtr);
     }
@@ -129,10 +132,11 @@ std::vector<Value *> ExprFunction::ToOffsetArgs(Value *offset)
 {
     std::vector<Value *> result;
     for (int32_t i = 0; i < columnTypes.GetSize(); i++) {
-        auto offsetAddr = codegen.GetIRBuilder()->CreateGEP(offset, codegen.GetTypes()->CreateConstantInt(i),
-            "offset_addr_" + itostr(i));
+        auto offsetAddr = codegen.GetIRBuilder()->CreateGEP(codegen.GetTypes()->I64Type(), offset,
+            codegen.GetTypes()->CreateConstantInt(i), "offset_addr_" + itostr(i));
         std::string offsetName = "offset_";
-        auto offsetValue = codegen.GetIRBuilder()->CreateLoad(offsetAddr, offsetName.append(itostr(i)));
+        auto offsetValue =
+            codegen.GetIRBuilder()->CreateLoad(codegen.GetTypes()->I64Type(), offsetAddr, offsetName.append(itostr(i)));
         auto offsetPtr = codegen.GetIRBuilder()->CreateIntToPtr(offsetValue, codegen.GetTypes()->I32PtrType());
         result.push_back(offsetPtr);
     }
