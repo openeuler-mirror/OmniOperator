@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include "util/compiler_util.h"
+#include "type/decimal128_utils.h"
 #include "murmur3_hash.h"
 
 using namespace std;
@@ -203,17 +204,17 @@ extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, int32_t precision, int32_
 extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, int32_t precision, int32_t scale,
     bool isValNull, int32_t seed, bool isSeedNull)
 {
-    union {
-        char bytesArray[16];
-        int64_t int64Array[2];
-    } uVal = { 0 };
-    uVal.int64Array[0] = xHigh * !isValNull;
-    uVal.int64Array[1] = xLow * !isValNull;
-    string strVal(uVal.bytesArray, 16);
     if (isSeedNull) {
         seed = 0;
     }
-    return static_cast<int32_t>(HashUnsafeBytes(strVal, 16, seed));
+
+    int32_t byteLen = 0;
+    auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(xHigh, xLow, &byteLen);
+    string strVal(reinterpret_cast<char *>(bytes), byteLen);
+    auto result = static_cast<int32_t>(HashUnsafeBytes(strVal, byteLen, seed));
+    delete[] bytes;
+    bytes = nullptr;
+    return result;
 }
 
 extern "C" DLLEXPORT int32_t Mm3Boolean(bool val, bool isValNull, int32_t seed, bool isSeedNull)
