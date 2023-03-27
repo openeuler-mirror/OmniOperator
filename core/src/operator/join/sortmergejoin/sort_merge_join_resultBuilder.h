@@ -82,13 +82,22 @@ public:
     ~JoinResultBuilder();
 
 private:
+    struct LeftAntiJoinHandler {
+        bool hasSameBufferedRow = false;
+        bool printThisStreamRowOutFlag = true; // default this row should be out
+    };
+
     void JoinFilterCodeGen(OverflowConfig *overflowConfig);
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
-    void PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPreKeyMatched, int64_t leftTableRowAddress,
-        int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount,
-        std::vector<bool> &isSameBufferedKeyMatched, bool &isPreRowMatched, int32_t positionAddr);
+    void PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPreKeyMatched, LeftAntiJoinHandler *leftAntiJoinHandler,
+        int64_t leftTableRowAddress, int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch,
+        int32_t &buildRowCount, std::vector<bool> &isSameBufferedKeyMatched, bool &isPreRowMatched,
+        int32_t positionAddr);
     VectorBatch *NewEmptyVectorBatch() const;
+
+    void UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJoinHandler, int32_t addressPosition,
+        std::vector<bool> &isSameBufferedKeyMatched, int32_t inputSize);
 
     type::DataTypes leftTableOutputTypes;
     int32_t *leftTableOutputCols;
@@ -125,6 +134,7 @@ private:
     std::vector<int64_t> streamedTableValueAddresses;
     std::vector<int64_t> bufferedTableValueAddresses;
     std::vector<bool> isSameBufferedKeyMatched;
+    LeftAntiJoinHandler *leftAntiJoinHandler;
 };
 }
 }
