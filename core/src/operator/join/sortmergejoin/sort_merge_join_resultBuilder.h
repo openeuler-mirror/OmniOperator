@@ -19,11 +19,11 @@ namespace omniruntime {
 namespace op {
 class JoinResultBuilder {
 public:
-    JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
-        int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
-        const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
-        DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator,
-        OverflowConfig *overflowConfig, JoinType joinType);
+    JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOutputTypes, int32_t *leftTableOutputCols,
+        int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex *leftTablePagesIndex,
+        const std::vector<DataTypePtr> &rightTableOutputTypes, int32_t *rightTableOutputCols,
+        int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
+        std::string &filter, VectorAllocator *vecAllocator, JoinType joinType, OverflowConfig *overflowConfig);
 
     void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId,
         vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
@@ -95,17 +95,18 @@ private:
         int32_t &buildRowCount, std::vector<bool> &isSameBufferedKeyMatched, bool &isPreRowMatched,
         int32_t positionAddr);
     VectorBatch *NewEmptyVectorBatch() const;
-
     void UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJoinHandler, int32_t addressPosition,
         std::vector<bool> &isSameBufferedKeyMatched, int32_t inputSize);
 
-    type::DataTypes leftTableOutputTypes;
+    std::vector<DataTypePtr> leftTableOutputTypes;
     int32_t *leftTableOutputCols;
     int32_t leftTableOutputColsCount;
+    int32_t originalLeftTableColsCount;
     DynamicPagesIndex *leftTablePagesIndex;
-    type::DataTypes rightTableOutputTypes;
+    std::vector<DataTypePtr> rightTableOutputTypes;
     int32_t *rightTableOutputCols;
     int32_t rightTableOutputColsCount;
+    int32_t originalRightTableColsCount;
     DynamicPagesIndex *rightTablePagesIndex;
     std::string filterExpStr;
 
@@ -122,8 +123,15 @@ private:
     int32_t buildVectorBatchRowCount = 0;
     VectorBatch *buildVectorBatch = nullptr;
 
-    SimpleFilter *simpleFilter = nullptr;
     ExecutionContext *executionContext = nullptr;
+    SimpleFilter *simpleFilter = nullptr;
+    int32_t *streamedColsInFilter = nullptr;
+    int32_t *bufferedColsInFilter = nullptr;
+    int32_t streamedColsCountInFilter = 0;
+    int32_t bufferedColsCountInFilter = 0;
+    int64_t *values = nullptr;
+    bool *nulls = nullptr;
+    int32_t *lengths = nullptr;
     JoinType joinType;
 
     bool isPreRowMatched = false;

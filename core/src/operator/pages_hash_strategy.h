@@ -78,6 +78,12 @@ public:
         return false;
     }
 
+    bool PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex, uint32_t probePosition,
+        Vector **probeJoinColumns);
+
+    bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex, uint32_t rightTableIndex,
+        uint32_t rightRowIndex);
+
     bool PositionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
         int32_t rightRowIndex) const;
 
@@ -110,13 +116,6 @@ private:
     omniruntime::vec::Vector ***buildHashColumns; // Vector *[join colCount][vecBatchCount]
     uint32_t buildHashColsCount;                  // join column count
 };
-
-bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex, uint32_t rightTableIndex,
-    uint32_t rightRowIndex, omniruntime::vec::Vector ***buildHashColumns, const int32_t *hashColTypes,
-    uint32_t hashColCount);
-bool PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex, uint32_t probePosition,
-    omniruntime::vec::Vector **probeJoinColumns, omniruntime::vec::Vector ***buildHashColumns,
-    const int32_t *hashColTypes, uint32_t hashColCount);
 }
 }
 #endif

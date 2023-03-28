@@ -50,12 +50,11 @@ public:
 
     static Policy *GetPolicy();
 
-    // for test
-    static void SetEnableBatchExprEvaluate(bool isEnable);
-
     static bool IsEnableHMPP();
 
     // for test
+    static void SetEnableBatchExprEvaluate(bool isEnable);
+
     static void SetEnableHMPP(bool isEnable);
 
 private:

@@ -192,14 +192,14 @@ omniruntime::op::Operator *CreateSortMergeJoinOperator(omniruntime::type::DataTy
     streamedKeysCols.push_back(1);
     std::vector<int32_t> streamedOutputCols;
     streamedOutputCols.push_back(2);
-    smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols);
+    smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols, sourceTypes.GetSize());
 
     DataTypes bufferedTblTypes(sourceTypes);
     std::vector<int32_t> bufferedKeysCols;
     bufferedKeysCols.push_back(2);
     std::vector<int32_t> bufferedOutputCols;
     bufferedOutputCols.push_back(1);
-    smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols);
+    smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols, sourceTypes.GetSize());
     smjOp->InitScannerAndResultBuilder(overflowConfig);
     return smjOp;
 }

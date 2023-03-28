@@ -15,7 +15,7 @@ void GetData(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[],
     for (int32_t i = 0; i < vectorCount; i++) {
         Vector *colVec = vecBatch.GetVector(i);
         if (colVec->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
-            colVec = dynamic_cast<LazyVector *>(colVec)->GetLoadedVector();
+            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
         }
         dictVecAddress = 0;
         valuesAddress = 0;
@@ -68,7 +68,7 @@ bool Projection::Initialize(bool filter, const DataTypes &inputDataTypes, Overfl
     // short-circuit logic for column projections
     // no need to go through codegen
     if (expr->GetType() == ExprType::FIELD_E) {
-        auto fieldExpr = dynamic_cast<const FieldExpr *>(expr);
+        auto fieldExpr = static_cast<const FieldExpr *>(expr);
         this->isColumnProjection = true;
         this->columnProjectionIndex = fieldExpr->colVal;
         return true;
@@ -142,7 +142,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
     if (this->isColumnProjection) {
         Vector *colVec = vecBatch->GetVector(this->columnProjectionIndex);
         if (colVec->GetEncoding() == OMNI_VEC_ENCODING_LAZY) {
-            colVec = dynamic_cast<LazyVector *>(colVec)->GetLoadedVector();
+            colVec = static_cast<LazyVector *>(colVec)->GetLoadedVector();
         }
         if (numSelectedRows != 0 && numSelectedRows == vecBatch->GetRowCount()) {
             return colVec->Slice(0, numSelectedRows);
@@ -150,7 +150,7 @@ Vector *Projection::Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch
 
         if (selectedRows != nullptr && numSelectedRows != 0) {
             if (colVec->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-                return dynamic_cast<DictionaryVector *>(colVec)->ExtractDictionary(selectedRows, numSelectedRows);
+                return static_cast<DictionaryVector *>(colVec)->ExtractDictionary(selectedRows, numSelectedRows);
             } else {
                 return colVec->CopyPositions(selectedRows, 0, numSelectedRows);
             }

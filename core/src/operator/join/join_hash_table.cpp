@@ -102,12 +102,6 @@ void JoinHashTables::AddHashTable(uint32_t partitionIndex, JoinHashTable *hashTa
     totalVisitedCounts += hashTable->GetVisitedPositionsSize();
 }
 
-JoinHashTable *JoinHashTables::GetHashTable(uint32_t partitionIndex) const
-{
-    JoinHashTable *hashTable = hashTables[partitionIndex];
-    return hashTable;
-}
-
 bool JoinHashTables::IsJoinPositionEligible(uint64_t partitionedJoinPosition, uint32_t probePosition,
     Vector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const
 {
@@ -132,10 +126,10 @@ bool JoinHashTables::IsJoinPositionEligible(uint64_t partitionedJoinPosition, ui
     memset_s(nulls, sizeof(nulls), 0, sizeof(nulls));
     memset_s(lengths, sizeof(lengths), 0, sizeof(lengths));
     for (auto iter = usedVectors.begin(); iter != usedVectors.end(); ++iter) {
-        auto vecIdx = static_cast<uint32_t>(*iter);
-        auto vector =
-            (vecIdx < probeColsCount) ? probeColumns[vecIdx] : buildColumns[vecIdx - probeColsCount][vecBatchIndex];
-        auto position = static_cast<int32_t>((vecIdx < probeColsCount) ? probePosition : buildPosition);
+        auto vecIdx = *iter;
+        auto vector = (vecIdx < originalProbeColsCount) ? probeColumns[vecIdx] :
+                                                          buildColumns[vecIdx - originalProbeColsCount][vecBatchIndex];
+        auto position = static_cast<int32_t>((vecIdx < originalProbeColsCount) ? probePosition : buildPosition);
         nulls[vecIdx] = vector->IsValueNull(position);
         values[vecIdx] = VectorHelper::GetValuePtrAndLength(vector, position, lengths + vecIdx);
     }
@@ -148,7 +142,8 @@ uint64_t JoinHashTables::GetNextJoinPosition(uint64_t currentJoinPosition) const
     auto partition = DecodePartition(currentJoinPosition);
     auto joinPosition = DecodeJoinPosition(currentJoinPosition);
     auto hashTable = hashTables[partition];
-    auto nextJoinPosition = hashTable->GetNextJoinPosition(joinPosition);
+    auto positionLinks = hashTable->GetPositionLinks();
+    auto nextJoinPosition = positionLinks->GetPositionLinks()[joinPosition];
     if (nextJoinPosition == INVALID_POSITION) {
         return INVALID_PARTITION_POSITION;
     } else {
@@ -160,7 +155,7 @@ uint64_t JoinHashTables::GetJoinPosition(uint32_t position, Vector **joinColumns
 {
     auto partition = (hashTableCount != 1) ? HashUtil::GetRawHashPartition(rawHash, partitionMask) : 0U;
     auto hashTable = hashTables[partition];
-    auto joinPosition = hashTable->GetJoinPosition(position, joinColumns, rawHash);
+    auto joinPosition = hashTable->GetPagesHash()->GetAddressIndex(position, joinColumns, rawHash);
     if (joinPosition == INVALID_POSITION) {
         return INVALID_PARTITION_POSITION;
     }
@@ -197,34 +192,6 @@ JoinHashTable::~JoinHashTable()
 {
     delete positionLinks;
     delete pagesHash;
-}
-
-uint32_t JoinHashTable::GetNextJoinPosition(uint32_t currentJoinPosition) const
-{
-    if (positionLinks->GetSize() == 0) {
-        return INVALID_POSITION;
-    }
-
-    return positionLinks->Next(currentJoinPosition);
-}
-
-uint32_t JoinHashTable::GetJoinPosition(uint32_t position, Vector **joinColumns, int64_t rawHash) const
-{
-    auto addressIndex = pagesHash->GetAddressIndex(position, joinColumns, rawHash);
-    return StartJoinPosition(addressIndex);
-}
-
-uint32_t JoinHashTable::StartJoinPosition(uint32_t currentJoinPosition) const
-{
-    if (currentJoinPosition == INVALID_POSITION) {
-        return INVALID_POSITION;
-    }
-
-    if (positionLinks->GetSize() == 0) {
-        return currentJoinPosition;
-    }
-
-    return positionLinks->Start(currentJoinPosition);
 }
 
 void JoinHashTable::PrintHashTable(uint32_t partitionIndex) const
@@ -486,22 +453,33 @@ PagesHash::PagesHash(uint64_t *addresses, uint32_t addressesCount, PagesHashStra
 void PagesHash::SetAddressIndex(ArrayPositionLinks &positionLinks, uint32_t realPosition, int64_t hash,
     uint64_t &totalHashCollisions) const
 {
+    auto links = positionLinks.GetPositionLinks();
+
     uint64_t hashCollisionsLocal = 0;
     auto pos = HashUtil::GetRawHashPosition(hash, mask);
+    auto currentKey = key[pos];
     // look for an empty slot or a slot containing this key
-    while (key[pos] != INVALID_POSITION) {
-        auto currentKey = key[pos];
-        if (static_cast<int8_t>(hash) == positionToHashes[currentKey] &&
-            PositionEqualsPositionIgnoreNulls(currentKey, realPosition)) {
-            // found a slot for this key
-            // link the new key position to the current key position
-            realPosition = positionLinks.Link(realPosition, currentKey);
-
-            // key[pos] updated outside of this loop
-            break;
+    while (currentKey != INVALID_POSITION) {
+        if (static_cast<int8_t>(hash) == positionToHashes[currentKey]) {
+            auto leftAddress = addresses[currentKey];
+            auto leftTableIndex = DecodeSliceIndex(leftAddress);
+            auto leftRowIndex = DecodePosition(leftAddress);
+            auto rightAddress = addresses[realPosition];
+            auto rightTableIndex = DecodeSliceIndex(rightAddress);
+            auto rightRowIndex = DecodePosition(rightAddress);
+            auto result = pagesHashStrategy->PositionEqualsPositionIgnoreNulls(leftTableIndex, leftRowIndex,
+                rightTableIndex, rightRowIndex);
+            if (result) {
+                // found a slot for this key
+                // link the new key position to the current key position
+                links[realPosition] = currentKey;
+                // key[pos] updated outside of this loop
+                break;
+            }
         }
         // increment position and mask to handler wrap around
         pos = (pos + 1) & mask;
+        currentKey = key[pos];
         hashCollisionsLocal++;
     }
     key[pos] = realPosition;
@@ -518,45 +496,27 @@ PagesHash::~PagesHash()
 uint32_t PagesHash::GetAddressIndex(uint32_t probePosition, Vector **joinColumns, int64_t rawHash) const
 {
     auto pos = HashUtil::GetRawHashPosition(rawHash, mask);
-    while (key[pos] != INVALID_POSITION) {
-        if (PositionEqualsCurrentRowIgnoreNulls(key[pos], static_cast<int8_t>(rawHash), probePosition, joinColumns)) {
-            return key[pos];
+    auto buildPosition = key[pos];
+    while (buildPosition != INVALID_POSITION) {
+        if (positionToHashes[buildPosition] != static_cast<int8_t>(rawHash)) {
+            pos = (pos + 1) & mask;
+            buildPosition = key[pos];
+            continue;
         }
 
+        auto address = addresses[buildPosition];
+        auto vecBatchIndex = DecodeSliceIndex(address);
+        auto rowIndex = DecodePosition(address);
+        auto result =
+            pagesHashStrategy->PositionEqualsRowIgnoreNulls(vecBatchIndex, rowIndex, probePosition, joinColumns);
+        if (result) {
+            return buildPosition;
+        }
         pos = (pos + 1) & mask;
+        buildPosition = key[pos];
     }
 
     return INVALID_POSITION;
-}
-
-bool PagesHash::PositionEqualsPositionIgnoreNulls(uint32_t leftPosition, uint32_t rightPosition) const
-{
-    auto leftAddress = addresses[leftPosition];
-    auto leftTableIndex = DecodeSliceIndex(leftAddress);
-    auto leftRowIndex = DecodePosition(leftAddress);
-
-    auto rightAddress = addresses[rightPosition];
-    auto rightTableIndex = DecodeSliceIndex(rightAddress);
-    auto rightRowIndex = DecodePosition(rightAddress);
-
-    return omniruntime::op::PositionEqualsPositionIgnoreNulls(leftTableIndex, leftRowIndex, rightTableIndex,
-        rightRowIndex, pagesHashStrategy->GetBuildHashColumns(), pagesHashStrategy->GetBuildHashColTypes(),
-        pagesHashStrategy->GetBuildHashColsCount());
-}
-
-bool PagesHash::PositionEqualsCurrentRowIgnoreNulls(uint32_t buildPosition, int8_t rawHash, uint32_t probePosition,
-    Vector **joinColumns) const
-{
-    if (positionToHashes[buildPosition] != rawHash) {
-        return false;
-    }
-
-    auto address = addresses[buildPosition];
-    auto vecBatchIndex = DecodeSliceIndex(address);
-    auto rowIndex = DecodePosition(address);
-    return omniruntime::op::PositionEqualsRowIgnoreNulls(vecBatchIndex, rowIndex, probePosition, joinColumns,
-        pagesHashStrategy->GetBuildHashColumns(), pagesHashStrategy->GetBuildHashColTypes(),
-        pagesHashStrategy->GetBuildHashColsCount());
 }
 
 ArrayPositionLinks::ArrayPositionLinks(uint32_t capacity)
@@ -571,22 +531,6 @@ ArrayPositionLinks::~ArrayPositionLinks()
     positionLinks = nullptr;
     capacity = 0;
     size = 0;
-}
-uint32_t ArrayPositionLinks::Link(uint32_t left, uint32_t right)
-{
-    size++;
-    positionLinks[left] = right;
-    return left;
-}
-
-uint32_t ArrayPositionLinks::Start(uint32_t position) const
-{
-    return position;
-}
-
-uint32_t ArrayPositionLinks::Next(uint32_t position) const
-{
-    return positionLinks[position];
 }
 } // end of op
 } // end of omniruntime
