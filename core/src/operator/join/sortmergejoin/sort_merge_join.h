@@ -26,10 +26,11 @@ public:
     ~SortMergeJoinOperator() override;
 
     void ConfigStreamedTblInfo(const DataTypes &streamedTypes, const std::vector<int32_t> &streamedKeysCols,
-        const std::vector<int32_t> &streamedOutputCols);
+        const std::vector<int32_t> &streamedOutputCols, int32_t originalInputStreamColsCount);
 
     void ConfigBufferedTblInfo(const DataTypes &bufferedTypes, std::vector<int32_t> &bufferedKeysCols,
-        std::vector<int32_t> &bufferedOutputCols);
+        std::vector<int32_t> &bufferedOutputCols, int32_t originalInputBufferedColsCount);
+
     // see SortMergeJoinAddInputCode
     int32_t AddStreamedTableInput(omniruntime::vec::VectorBatch *vecBatch);
 
@@ -50,11 +51,13 @@ private:
     type::DataTypes *streamedTypes;
     std::vector<int32_t> streamedKeysCols;
     std::vector<int32_t> streamedOutputCols;
+    int32_t originalStreamedColsCount;
     DynamicPagesIndex *streamedTblPagesIndex;
 
     type::DataTypes *bufferedTypes;
     std::vector<int32_t> bufferedKeysCols;
     std::vector<int32_t> bufferedOutputCols;
+    int32_t originalBufferedColsCount;
     DynamicPagesIndex *bufferedTblPagesIndex;
 
     JoinType joinType;
@@ -63,7 +66,7 @@ private:
     SortMergeJoinScanner *smjScanner;
     JoinResultBuilder *joinResultBuilder;
 
-    std::vector<VectorBatch *> returnVectorBatchs;
+    std::vector<VectorBatch *> returnVectorBatches;
 };
 
 inline int32_t SetAddFlag(int16_t addFlag, int32_t resultCode)

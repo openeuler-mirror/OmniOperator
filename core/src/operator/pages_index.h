@@ -40,27 +40,27 @@ public:
 
     void Clear();
 
-    const DataTypes &GetTypes() const
+    ALWAYS_INLINE const DataTypes &GetTypes() const
     {
         return dataTypes;
     }
 
-    int32_t GetTypesCount() const
+    ALWAYS_INLINE int32_t GetTypesCount() const
     {
         return typesCount;
     }
 
-    uint64_t *GetValueAddresses() const
+    ALWAYS_INLINE uint64_t *GetValueAddresses() const
     {
         return this->valueAddresses;
     }
 
-    int64_t GetRowCount() override
+    ALWAYS_INLINE int64_t GetRowCount() override
     {
         return this->positionCount;
     }
 
-    omniruntime::vec::Vector ***GetColumns() const
+    ALWAYS_INLINE omniruntime::vec::Vector ***GetColumns() const
     {
         return this->columns;
     }
@@ -77,17 +77,17 @@ private:
 };
 
 constexpr uint32_t SHIFT_SIZE_32 = 32;
-inline uint64_t EncodeSyntheticAddress(uint32_t sliceIndex, uint32_t sliceOffset)
+static ALWAYS_INLINE uint64_t EncodeSyntheticAddress(uint32_t sliceIndex, uint32_t sliceOffset)
 {
     return (static_cast<uint64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
 }
 
-inline uint32_t DecodeSliceIndex(uint64_t sliceAddress)
+static ALWAYS_INLINE uint32_t DecodeSliceIndex(uint64_t sliceAddress)
 {
     return static_cast<uint32_t>(sliceAddress >> SHIFT_SIZE_32);
 }
 
-inline uint32_t DecodePosition(uint64_t sliceAddress)
+static ALWAYS_INLINE uint32_t DecodePosition(uint64_t sliceAddress)
 {
     return static_cast<uint32_t>(sliceAddress);
 }

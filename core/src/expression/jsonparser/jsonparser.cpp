@@ -418,3 +418,15 @@ std::vector<omniruntime::expressions::Expr *> JSONParser::ParseJSON(nlohmann::js
     }
     return result;
 }
+
+Expr *JSONParser::ParseJSON(const std::string &exprStr)
+{
+    omniruntime::expressions::Expr *expr = nullptr;
+    if (!exprStr.empty()) {
+        expr = JSONParser::ParseJSON(nlohmann::json::parse(exprStr));
+        if (expr == nullptr) {
+            LogWarn("The expression is not supported: %s", exprStr.c_str());
+        }
+    }
+    return expr;
+}

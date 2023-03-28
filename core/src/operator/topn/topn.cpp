@@ -253,7 +253,7 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
     auto resultVecBatch = new VectorBatch(sourceTypesCount, rowCount);
     resultVecBatch->NewVectors(vecAllocator, sourceTypes.Get());
     auto typeIds = sourceTypes.GetIds();
-    for (size_t i = 0; i < rowCount; i++) {
+    for (int64_t i = 0; i < rowCount; i++) {
         VectorBatch *singleVecBatch = resultVectorBatchList[i + outputtedRowCount];
         for (int j = 0; j < sourceTypesCount; ++j) {
             Vector *singleVector = singleVecBatch->GetVector(j);

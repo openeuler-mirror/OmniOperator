@@ -14,42 +14,68 @@ namespace op {
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
 
-JoinResultBuilder::JoinResultBuilder(const type::DataTypes &leftTableOutputTypes, int32_t *leftTableOutputCols,
-    int32_t leftTableOutputColsCount, DynamicPagesIndex *leftTablePagesIndex,
-    const type::DataTypes &rightTableOutputTypes, int32_t *rightTableOutputCols, int32_t rightTableOutputColsCount,
-    DynamicPagesIndex *rightTablePagesIndex, std::string &filter, VectorAllocator *vecAllocator,
-    OverflowConfig *overflowConfig, JoinType joinType)
+JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOutputTypes, int32_t *leftTableOutputCols,
+    int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex *leftTablePagesIndex,
+    const std::vector<DataTypePtr> &rightTableOutputTypes, int32_t *rightTableOutputCols,
+    int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
+    std::string &filter, VectorAllocator *vecAllocator, JoinType joinType, OverflowConfig *overflowConfig)
     : leftTableOutputTypes(leftTableOutputTypes),
       leftTableOutputCols(leftTableOutputCols),
       leftTableOutputColsCount(leftTableOutputColsCount),
+      originalLeftTableColsCount(originalLeftTableColsCount),
       leftTablePagesIndex(leftTablePagesIndex),
       rightTableOutputTypes(rightTableOutputTypes),
       rightTableOutputCols(rightTableOutputCols),
       rightTableOutputColsCount(rightTableOutputColsCount),
+      originalRightTableColsCount(originalRightTableColsCount),
       rightTablePagesIndex(rightTablePagesIndex),
       filterExpStr(filter),
       vecAllocator(vecAllocator),
       joinType(joinType)
 {
-    int32_t leftRowSize =
-        OperatorUtil::GetOutputRowSize(this->leftTableOutputTypes.Get(), leftTableOutputCols, leftTableOutputColsCount);
-    int32_t rightRowSize = OperatorUtil::GetOutputRowSize(this->rightTableOutputTypes.Get(), rightTableOutputCols,
-        rightTableOutputColsCount);
-    int32_t eachRowSize = leftRowSize + rightRowSize;
-    this->maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
+    int32_t leftRowSize = OperatorUtil::GetRowSize(this->leftTableOutputTypes);
+    int32_t rightRowSize = OperatorUtil::GetRowSize(this->rightTableOutputTypes);
+    int32_t outputRowSize = leftRowSize + rightRowSize;
+    this->maxRowCount = OperatorUtil::GetMaxRowCount(outputRowSize != 0 ? outputRowSize : DEFAULT_ROW_SIZE);
     this->JoinFilterCodeGen(overflowConfig);
 }
 
 void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
 {
-    Parser parser;
-    if (!filterExpStr.empty()) {
-        omniruntime::expressions::Expr *filterExpr = JSONParser::ParseJSON(nlohmann::json::parse(filterExpStr));
-        executionContext = new ExecutionContext();
-        executionContext->GetArena()->SetAllocator(vecAllocator);
-        simpleFilter = new SimpleFilter(*filterExpr);
-        simpleFilter->Initialize(overflowConfig);
+    if (filterExpStr.empty()) {
+        return;
     }
+
+    executionContext = new ExecutionContext();
+    executionContext->GetArena()->SetAllocator(vecAllocator);
+    omniruntime::expressions::Expr *filterExpr = JSONParser::ParseJSON(filterExpStr);
+    simpleFilter = new SimpleFilter(*filterExpr);
+    auto result = simpleFilter->Initialize(overflowConfig);
+    if (!result) {
+        delete simpleFilter;
+        simpleFilter = nullptr;
+        delete filterExpr;
+        throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "The expression is not supported yet.");
+    }
+    delete filterExpr;
+
+    streamedColsInFilter = new int32_t[originalLeftTableColsCount];
+    bufferedColsInFilter = new int32_t[originalRightTableColsCount];
+    auto colsInFilter = simpleFilter->GetVectorIndexes();
+    for (auto col : colsInFilter) {
+        if (col < originalLeftTableColsCount) {
+            streamedColsInFilter[streamedColsCountInFilter++] = col;
+        } else {
+            bufferedColsInFilter[bufferedColsCountInFilter++] = col - originalLeftTableColsCount;
+        }
+    }
+    auto originalAllColsCount = originalLeftTableColsCount + originalRightTableColsCount;
+    values = new int64_t[originalAllColsCount];
+    nulls = new bool[originalAllColsCount];
+    lengths = new int32_t[originalAllColsCount];
+    memset_s(values, sizeof(int64_t) * originalAllColsCount, 0, sizeof(int64_t) * originalAllColsCount);
+    memset_s(nulls, sizeof(bool) * originalAllColsCount, 0, sizeof(bool) * originalAllColsCount);
+    memset_s(lengths, sizeof(int32_t) * originalAllColsCount, 0, sizeof(int32_t) * originalAllColsCount);
 }
 
 VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
@@ -57,15 +83,8 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
     int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
     VectorBatch *vectorBatch = new VectorBatch(outputColCount, maxRowCount);
     std::vector<DataTypePtr> allTypes;
-    allTypes.reserve(outputColCount);
-    std::vector<DataTypePtr> leftTypes = leftTableOutputTypes.Get();
-    for (int idx = 0; idx < leftTableOutputColsCount; idx++) {
-        allTypes.push_back(leftTypes.at(leftTableOutputCols[idx]));
-    }
-    std::vector<DataTypePtr> rightTypes = rightTableOutputTypes.Get();
-    for (int idx = 0; idx < rightTableOutputColsCount; idx++) {
-        allTypes.push_back(rightTypes.at(rightTableOutputCols[idx]));
-    }
+    allTypes.insert(allTypes.cend(), leftTableOutputTypes.cbegin(), leftTableOutputTypes.cend());
+    allTypes.insert(allTypes.cend(), rightTableOutputTypes.cbegin(), rightTableOutputTypes.cend());
     vectorBatch->NewVectors(vecAllocator, allTypes);
     return vectorBatch;
 }
@@ -284,23 +303,18 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
         return true;
     }
 
-    const int32_t allColsCount = leftTableOutputTypes.GetSize() + rightTableOutputTypes.GetSize();
-
-    int64_t values[allColsCount];
-    bool nulls[allColsCount];
-    int32_t lengths[allColsCount];
-
     leftTablePagesIndex->CacheBatch(leftBatchId);
-    rightTablePagesIndex->CacheBatch(rightBatchId);
-    for (int32_t leftColIdx = 0; leftColIdx < leftTableOutputTypes.GetSize(); leftColIdx++) {
-        auto leftVector = leftTablePagesIndex->GetColumnsFormCache(leftColIdx);
-        nulls[leftColIdx] = leftVector->IsValueNull(leftRowId);
-        values[leftColIdx] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + leftColIdx);
+    for (int32_t i = 0; i < streamedColsCountInFilter; i++) {
+        auto col = streamedColsInFilter[i];
+        auto leftVector = leftTablePagesIndex->GetColumnsFromCache(col);
+        nulls[col] = leftVector->IsValueNull(leftRowId);
+        values[col] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + col);
     }
-
-    for (int32_t rightColIdx = 0; rightColIdx < rightTableOutputTypes.GetSize(); rightColIdx++) {
-        int32_t colIdx = leftTableOutputTypes.GetSize() + rightColIdx;
-        auto rightVector = rightTablePagesIndex->GetColumnsFormCache(rightColIdx);
+    rightTablePagesIndex->CacheBatch(rightBatchId);
+    for (int32_t i = 0; i < bufferedColsCountInFilter; i++) {
+        auto col = bufferedColsInFilter[i];
+        auto rightVector = rightTablePagesIndex->GetColumnsFromCache(col);
+        auto colIdx = col + originalLeftTableColsCount;
         nulls[colIdx] = rightVector->IsValueNull(rightRowId);
         values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);
     }
@@ -407,15 +421,15 @@ void JoinResultBuilder::Finish()
 
 JoinResultBuilder::~JoinResultBuilder()
 {
-    if (simpleFilter != nullptr) {
-        delete simpleFilter->GetExpression();
-        delete simpleFilter;
-        simpleFilter = nullptr;
-    }
-    if (executionContext != nullptr) {
-        delete executionContext;
-        executionContext = nullptr;
-    }
+    delete simpleFilter;
+    delete[] streamedColsInFilter;
+    delete[] bufferedColsInFilter;
+    delete[] values;
+    delete[] nulls;
+    delete[] lengths;
+
+    delete executionContext;
+    executionContext = nullptr;
 }
 }
 }

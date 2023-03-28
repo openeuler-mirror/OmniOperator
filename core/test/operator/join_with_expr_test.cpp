@@ -9,6 +9,7 @@
 #include "operator/join/lookup_outer_join_expr.h"
 #include "vector/vector_helper.h"
 #include "util/test_util.h"
+#include "expression/jsonparser/jsonparser.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -110,7 +111,6 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);
 
     EXPECT_EQ(lookupJoinOutput.size(), 1);
-    VectorHelper::PrintVecBatch(lookupJoinOutput[0]);
     const int32_t expectedDataSize = 2;
     int64_t expectedDatas[4][expectedDataSize] = {
             {1, 3},
@@ -182,7 +182,6 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);
 
     EXPECT_EQ(lookupJoinOutput.size(), 1);
-    VectorHelper::PrintVecBatch(lookupJoinOutput[0]);
     const int32_t expectedDataSize = 2;
     int64_t expectedDatas[4][expectedDataSize] = {
             {1, 3},
@@ -255,7 +254,6 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);
 
     EXPECT_EQ(lookupJoinOutput.size(), 1);
-    VectorHelper::PrintVecBatch(lookupJoinOutput[0]);
     const int32_t expectedDataSize = 4;
     int64_t expectedDatas[4][expectedDataSize] = {
         {1, 2, 3, 4},
@@ -357,7 +355,6 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);
 
     EXPECT_EQ(lookupJoinOutput.size(), 1);
-    VectorHelper::PrintVecBatch(lookupJoinOutput[0]);
     const int32_t expectedDataSize = 4;
     int64_t expectedDatas[4][expectedDataSize] = {
         {1, 2, 3, 4},
@@ -479,6 +476,88 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
     AssertVecBatchEquals(lookupJoinOutput[1], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
         expectedData10, expectedData11, expectedData12, expectedData13, expectedData14, expectedData15);
 
+    Expr::DeleteExprs(buildHashKeys);
+    Expr::DeleteExprs(probeHashKeys);
+    VectorHelper::FreeVecBatches(lookupJoinOutput);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWithExprOperator);
+    DeleteJoinExprOperatorFactory(hashBuilderWithExprOperatorFactory, lookupJoinWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
+TEST(JoinWithExprTest, TestBothJoinKeyAndFilterWithExpr)
+{
+    // construct input data
+    DataTypes buildTypes(std::vector<DataTypePtr>({ Decimal64Type(18, 2) }));
+    auto castExpr1 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
+    auto substrExpr1 = new FuncExpr("substr",
+        { castExpr1, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
+    std::vector<omniruntime::expressions::Expr *> buildHashKeys { substrExpr1 };
+    int32_t hashKeysCount = 1;
+    std::string filter =
+        "{\"exprType\":\"IF\",\"returnType\":4,\"condition\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+        "\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}},\"if_true\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\",\"left\":{"
+        "\"exprType\":\"FUNCTION\",\"returnType\":6,\"precision\":18,\"scale\":2,\"function_name\":\"abs\", "
+        "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2}]},\"right\":{\"exprType\":\"FUNCTION\",\"returnType\":6,\"precision\":18,\"scale\":2,\"function_"
+        "name\":\"abs\", "
+        "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}]}},\"if_false\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\",\"left\":{"
+        "\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}}}";
+    int32_t hashTableCount = 1;
+    HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
+        hashKeysCount, filter, hashTableCount, nullptr);
+    auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
+
+    const int32_t dataSize = 2;
+    int64_t buildData[] = {111, 112};
+    auto buildVecBatch = TestUtil::CreateVectorBatch(buildTypes, dataSize, buildData);
+    hashBuilderWithExprOperator->AddInput(buildVecBatch);
+    std::vector<VectorBatch *> hashBuilderOutput;
+    hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
+
+    DataTypes probeTypes(std::vector<DataTypePtr>({ Decimal64Type(18, 2) }));
+    auto hashTables = hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()->GetHashTables();
+    auto filterExpr = JSONParser::ParseJSON(filter);
+    hashTables->SetFilterExpr(filterExpr);
+    int32_t probeOutputCols[]= {0};
+    int32_t probeOutputColsCount = 1;
+    auto castExpr2 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
+    auto substrExpr2 = new FuncExpr("substr",
+        { castExpr2, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
+    std::vector<omniruntime::expressions::Expr *> probeHashKeys { substrExpr2 };
+    int32_t probeHashKeysCount = 1;
+    int32_t buildOutputCols[] = {0};
+    int32_t buildOutputColsCount = 1;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ Decimal64Type(18, 2) }));
+    auto overflowConfig = new OverflowConfig();
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, overflowConfig);
+    auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
+
+    int64_t probeData[] = {111, 112};
+    auto probeVecBatch = TestUtil::CreateVectorBatch(probeTypes, dataSize, probeData);
+    std::vector<VectorBatch *> lookupJoinOutput;
+    lookupJoinWithExprOperator->AddInput(probeVecBatch);
+    while (lookupJoinWithExprOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        lookupJoinWithExprOperator->GetOutput(lookupJoinOutput);
+    }
+
+    EXPECT_EQ(lookupJoinOutput.size(), 1);
+    const int32_t expectedDataSize = 3;
+    int64_t expectedData0[] = {111, 111, 112};
+    int64_t expectedData1[] = {112, 111, 112};
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedData0, expectedData1);
+
+    delete filterExpr;
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
     VectorHelper::FreeVecBatches(lookupJoinOutput);

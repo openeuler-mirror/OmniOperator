@@ -66,22 +66,22 @@ static bool ValueEqualsValueIgnoreNulls(int32_t dataType, Vector *leftVector, ui
     }
 }
 
-bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex, uint32_t rightTableIndex,
-    uint32_t rightRowIndex, Vector ***buildHashColumns, const int32_t *hashColTypes, uint32_t hashColCount)
+bool PagesHashStrategy::PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex,
+    uint32_t rightTableIndex, uint32_t rightRowIndex)
 {
     Vector *leftColumn = nullptr;
     Vector *rightColumn = nullptr;
     bool result = true;
 
     int32_t originalLeftRowIndex, originalRightRowIndex;
-    for (uint32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
+    for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         leftColumn = VectorHelper::ExpandVectorAndIndex(leftColumn, leftRowIndex, originalLeftRowIndex);
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
         rightColumn = VectorHelper::ExpandVectorAndIndex(rightColumn, rightRowIndex, originalRightRowIndex);
 
-        result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], leftColumn, originalLeftRowIndex, rightColumn,
-            originalRightRowIndex);
+        result = ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], leftColumn, originalLeftRowIndex,
+            rightColumn, originalRightRowIndex);
         if (!result) {
             return false;
         }
@@ -89,18 +89,18 @@ bool PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRow
     return true;
 }
 
-bool PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex, uint32_t probePosition,
-    Vector **probeJoinColumns, Vector ***buildHashColumns, const int32_t *hashColTypes, uint32_t hashColCount)
+bool PagesHashStrategy::PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex,
+    uint32_t probePosition, Vector **probeJoinColumns)
 {
     bool result = true;
     int32_t originalBuildRowIndex, originalProbeRowIndex;
-    for (uint32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
+    for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         Vector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
         Vector *probeColumn = probeJoinColumns[columnIdx];
         buildColumn = VectorHelper::ExpandVectorAndIndex(buildColumn, buildRowIndex, originalBuildRowIndex);
         probeColumn = VectorHelper::ExpandVectorAndIndex(probeColumn, probePosition, originalProbeRowIndex);
-        result = ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], buildColumn, originalBuildRowIndex, probeColumn,
-            originalProbeRowIndex);
+        result = ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], buildColumn, originalBuildRowIndex,
+            probeColumn, originalProbeRowIndex);
         if (!result) {
             return false;
         }

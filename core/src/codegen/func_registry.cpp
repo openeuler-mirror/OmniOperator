@@ -22,8 +22,6 @@ std::once_flag FunctionRegistry::initHiveUdfMap;
 vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistries()
 {
     vector<unique_ptr<BaseFunctionRegistry>> functionRegistries;
-
-    auto policy = GetProperties().GetPolicy();
     functionRegistries.push_back(make_unique<ContextFunctionRegistry>());
     functionRegistries.push_back(make_unique<DecimalFunctionRegistry>());
     functionRegistries.push_back(make_unique<DictionaryFunctionRegistry>());
@@ -33,6 +31,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
     functionRegistries.push_back(make_unique<HiveUdfRegistry>());
     functionRegistries.push_back(make_unique<StringFunctionRegistry>());
 
+    auto policy = GetProperties().GetPolicy();
     if (policy->GetRoundingRule() == RoundingRule::HALF_UP) {
         functionRegistries.push_back(make_unique<MathFunctionRegistryHalfUp>());
         functionRegistries.push_back(make_unique<DecimalFunctionRegistryHalfUp>());
@@ -71,8 +70,6 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
 vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetBatchFunctionRegistries()
 {
     vector<unique_ptr<BaseFunctionRegistry>> functionRegistries;
-
-    auto policy = GetProperties().GetPolicy();
     functionRegistries.push_back(make_unique<BatchDecimalFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchDictionaryFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchMathFunctionRegistry>());
@@ -81,6 +78,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetBatchFunctionRegis
     functionRegistries.push_back(make_unique<BatchVarcharVectorFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchUtilFunctionRegistry>());
 
+    auto policy = GetProperties().GetPolicy();
     if (policy->GetRoundingRule() == RoundingRule::HALF_UP) {
         functionRegistries.push_back(make_unique<BatchMathFunctionRegistryHalfUp>());
         functionRegistries.push_back(make_unique<BatchDecimalFunctionRegistryHalfUp>());

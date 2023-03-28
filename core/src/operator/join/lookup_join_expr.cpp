@@ -41,7 +41,8 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes.get()),
         probeOutputCols, probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols,
         buildOutputColsCount, std::move(buildOutputTypes), joinType,
-        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()), overflowConfig);
+        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()), probeTypes.GetSize(),
+        overflowConfig);
 }
 
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()
