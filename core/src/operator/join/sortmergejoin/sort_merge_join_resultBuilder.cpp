@@ -264,6 +264,7 @@ int32_t JoinResultBuilder::AddJoinValueAddresses()
         if (buildRowCount >= maxRowCount) {
             fillStatus = 1;
             buildVectorBatchRowCount = buildRowCount;
+            delete leftAntiJoinHandler;
             return fillStatus;
         }
     }
