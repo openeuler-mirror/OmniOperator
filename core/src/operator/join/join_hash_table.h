@@ -26,18 +26,18 @@ constexpr uint64_t INVALID_PARTITION_POSITION = UINT64_MAX;
 class ArrayPositionLinks {
 public:
     explicit ArrayPositionLinks(uint32_t capacity);
+
     ~ArrayPositionLinks();
-    uint32_t *GetPositionLinks() const
+
+    ALWAYS_INLINE uint32_t *GetPositionLinks() const
     {
         return positionLinks;
     }
-    uint32_t GetSize() const
+
+    ALWAYS_INLINE uint32_t GetSize() const
     {
         return size;
     }
-    uint32_t Link(uint32_t left, uint32_t right);
-    uint32_t Start(uint32_t position) const;
-    uint32_t Next(uint32_t position) const;
 
 private:
     uint32_t capacity;
@@ -50,11 +50,11 @@ public:
     PagesHash(uint64_t *addresses, uint32_t addressesCount, PagesHashStrategy *pagesHashStrategy,
         ArrayPositionLinks *positionLinks);
     ~PagesHash();
-    uint32_t *GetKey() const
+    ALWAYS_INLINE uint32_t *GetKey() const
     {
         return key;
     }
-    uint32_t GetKeySize() const
+    ALWAYS_INLINE uint32_t GetKeySize() const
     {
         return keySize;
     }
@@ -62,29 +62,25 @@ public:
         uint64_t &totalHashCollisions) const;
     uint32_t GetAddressIndex(uint32_t probePosition, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
 
-    int8_t *GetPositionToHashes() const
+    ALWAYS_INLINE int8_t *GetPositionToHashes() const
     {
         return positionToHashes;
     }
-    uint64_t *GetAddresses() const
+    ALWAYS_INLINE uint64_t *GetAddresses() const
     {
         return addresses;
     }
-    uint32_t GetAddressesCount() const
+    ALWAYS_INLINE uint32_t GetAddressesCount() const
     {
         return addressesCount;
     }
 
-    PagesHashStrategy *GetPagesHashStrategy() const
+    ALWAYS_INLINE PagesHashStrategy *GetPagesHashStrategy() const
     {
         return pagesHashStrategy;
     }
 
 private:
-    bool PositionEqualsPositionIgnoreNulls(uint32_t leftPosition, uint32_t rightPosition) const;
-    bool PositionEqualsCurrentRowIgnoreNulls(uint32_t buildPosition, int8_t rawHash, uint32_t probePosition,
-        omniruntime::vec::Vector **joinColumns) const;
-
     PagesHashStrategy *pagesHashStrategy;
     uint64_t *addresses;
     uint32_t addressesCount;
@@ -98,39 +94,37 @@ private:
 class JoinHashTable {
 public:
     JoinHashTable(PagesHashStrategy *pagesHashStrategy, uint64_t *addresses, uint32_t addressesCount);
+
     ~JoinHashTable();
-    PagesHash *GetPagesHash() const
+
+    ALWAYS_INLINE PagesHash *GetPagesHash() const
     {
         return pagesHash;
     }
 
-    ArrayPositionLinks *GetPositionLinks() const
+    ALWAYS_INLINE ArrayPositionLinks *GetPositionLinks() const
     {
         return positionLinks;
     }
 
-    void Visit(uint32_t joinPosition)
+    ALWAYS_INLINE void Visit(uint32_t joinPosition)
     {
         visitedPositions[joinPosition] = true;
     }
 
-    bool HasVisited(uint32_t joinPosition)
+    ALWAYS_INLINE bool HasVisited(uint32_t joinPosition)
     {
         return visitedPositions[joinPosition];
     }
 
-    uint32_t GetVisitedPositionsSize() const
+    ALWAYS_INLINE uint32_t GetVisitedPositionsSize() const
     {
         return visitedPositionsSize;
     }
 
-    uint32_t GetNextJoinPosition(uint32_t currentJoinPosition) const;
-    uint32_t GetJoinPosition(uint32_t position, omniruntime::vec::Vector **joinColumns, int64_t rawHash) const;
     void PrintHashTable(uint32_t partitionIndex) const;
 
 private:
-    uint32_t StartJoinPosition(uint32_t currentJoinPosition) const;
-
     ArrayPositionLinks *positionLinks;
     PagesHash *pagesHash;
     std::vector<bool> visitedPositions;
@@ -143,78 +137,88 @@ public:
 
     ~JoinHashTables();
 
-    uint32_t GetHashTableSize()
+    ALWAYS_INLINE uint32_t GetHashTableSize()
     {
         return hashTableSize;
     }
 
-    uint32_t GetHashTableCount() const
+    ALWAYS_INLINE uint32_t GetHashTableCount() const
     {
         return hashTableCount;
     }
 
-    uint64_t EncodePartitionedJoinPosition(uint32_t partition, uint32_t joinPosition) const
+    ALWAYS_INLINE uint64_t EncodePartitionedJoinPosition(uint32_t partition, uint32_t joinPosition) const
     {
         auto result = static_cast<uint64_t>(joinPosition) << shiftSize;
         result |= partition;
         return result;
     }
 
-    uint32_t DecodePartition(uint64_t partitionedJoinPosition) const
+    ALWAYS_INLINE uint32_t DecodePartition(uint64_t partitionedJoinPosition) const
     {
         auto partition = static_cast<uint32_t>(partitionedJoinPosition & partitionMask);
         return partition;
     }
 
-    uint32_t DecodeJoinPosition(uint64_t partitionedJoinPosition) const
+    ALWAYS_INLINE uint32_t DecodeJoinPosition(uint64_t partitionedJoinPosition) const
     {
         return static_cast<uint32_t>(partitionedJoinPosition >> shiftSize);
     }
 
-    void SetBuildTypes(DataTypes *buildDataTypes)
+    ALWAYS_INLINE void SetBuildTypes(DataTypes *buildDataTypes)
     {
         this->buildTypes = buildDataTypes;
     }
 
-    DataTypes *GetBuildDataTypes()
+    ALWAYS_INLINE DataTypes *GetBuildDataTypes()
     {
         return this->buildTypes;
     }
 
-    void SetProbeTypes(DataTypes *probeDataTypes)
+    ALWAYS_INLINE void SetProbeTypes(DataTypes *probeDataTypes)
     {
         this->probeTypes = probeDataTypes;
     }
 
-    void SetFilterExpression(std::string &expression)
+    ALWAYS_INLINE void SetOriginalProbeColsCount(int32_t originalColsCount)
+    {
+        this->originalProbeColsCount = originalColsCount;
+    }
+
+    ALWAYS_INLINE void SetFilterExpression(std::string &expression)
     {
         this->filterExpression = expression;
     }
 
-    std::string &GetFilterExpression()
+    ALWAYS_INLINE std::string &GetFilterExpression()
     {
         return this->filterExpression;
     }
 
     void JoinFilterCodeGen(OverflowConfig *overflowConfig);
 
-    SimpleFilter *GetSimpleFilter()
+    ALWAYS_INLINE SimpleFilter *GetSimpleFilter()
     {
         return simpleFilter;
     }
 
-    void SetFilterExpr(omniruntime::expressions::Expr *filterExpr)
+    ALWAYS_INLINE void SetFilterExpr(omniruntime::expressions::Expr *filterExpr)
     {
         this->filterExpr = filterExpr;
     }
 
-    uint32_t GetVisitedCounts() const
+    ALWAYS_INLINE uint32_t GetVisitedCounts() const
     {
         return visitedCounts;
     }
 
+    ALWAYS_INLINE JoinHashTable *GetHashTable(uint32_t partitionIndex) const
+    {
+        JoinHashTable *hashTable = hashTables[partitionIndex];
+        return hashTable;
+    }
+
     void AddHashTable(uint32_t partitionIndex, JoinHashTable *hashTable);
-    JoinHashTable *GetHashTable(uint32_t partitionIndex) const;
     bool IsJoinPositionEligible(uint64_t partitionedJoinPosition, uint32_t probePosition,
         omniruntime::vec::Vector **probeColumns, uint32_t probeColsCount, ExecutionContext *executionContext) const;
     uint64_t GetNextJoinPosition(uint64_t currentJoinPosition) const;
@@ -230,6 +234,8 @@ private:
     uint32_t shiftSize;
     DataTypes *probeTypes;
     DataTypes *buildTypes;
+    int32_t originalProbeColsCount; // this is for lookup join with expression operator when join key and join filter
+                                    // both are expressions
     std::string filterExpression;
     omniruntime::expressions::Expr *filterExpr = nullptr;
     SimpleFilter *simpleFilter = nullptr;

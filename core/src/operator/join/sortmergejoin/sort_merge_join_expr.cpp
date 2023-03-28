@@ -30,7 +30,8 @@ StreamedTableWithExprOperatorFactory::StreamedTableWithExprOperatorFactory(const
     this->streamedTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->streamedOutputCols.insert(this->streamedOutputCols.end(), streamedOutputCols,
         streamedOutputCols + streamedOutputColsCnt);
-    smjOperator->ConfigStreamedTblInfo(*(this->streamedTypes), streamedKeyCols, this->streamedOutputCols);
+    smjOperator->ConfigStreamedTblInfo(*(this->streamedTypes), streamedKeyCols, this->streamedOutputCols,
+        streamedTypes.GetSize());
 }
 
 StreamedTableWithExprOperatorFactory::~StreamedTableWithExprOperatorFactory()
@@ -114,7 +115,7 @@ BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const
         bufferedOutputCols + bufferedOutputColsCnt);
 
     streamTblWithExprOperatorFactory->GetSmjOperator()->ConfigBufferedTblInfo(*(this->bufferedTypes), bufferedKeyCols,
-        this->bufferedOutputCols);
+        this->bufferedOutputCols, bufferedTypes.GetSize());
     streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilder(overflowConfig);
 }
 
@@ -136,7 +137,6 @@ BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTyp
 {}
 
 BufferedTableWithExprOperator::~BufferedTableWithExprOperator() {}
-
 
 int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {

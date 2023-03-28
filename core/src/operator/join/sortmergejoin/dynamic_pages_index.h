@@ -68,7 +68,7 @@ public:
         return this->columnsDeque[vectorBatchIndex][columnIndex];
     }
 
-    omniruntime::vec::Vector *GetColumnsFormCache(int32_t columnIndex) const
+    omniruntime::vec::Vector *GetColumnsFromCache(int32_t columnIndex) const
     {
         return this->cacheBatch[columnIndex];
     }

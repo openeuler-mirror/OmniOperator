@@ -18,6 +18,7 @@ public:
     static omniruntime::expressions::Expr *ParseJSON(const nlohmann::json &jsonExpr);
     static std::vector<omniruntime::expressions::Expr *> ParseJSON(nlohmann::json expressions[],
         int32_t numberOfExpressions);
+    static omniruntime::expressions::Expr *ParseJSON(const std::string &expression);
 
 private:
     static omniruntime::expressions::Expr *ParseJSONFieldRef(const nlohmann::json &jsonExpr);

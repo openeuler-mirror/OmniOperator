@@ -51,8 +51,8 @@ LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, st
       buildOutputCols(buildOutputCols),
       buildOutputTypes(buildOutputTypes),
       hashTables(hashTables),
-      outputColsCount(probeOutputCols.size() + buildOutputCols.size()),
-      iterator(new LookupOuterPositionIterator(hashTables))
+      iterator(new LookupOuterPositionIterator(hashTables)),
+      outputColsCount(static_cast<int32_t>(probeOutputCols.size() + buildOutputCols.size()))
 {
     int32_t outputRowSize =
         OperatorUtil::GetRowSize(this->buildOutputTypes.Get()) + OperatorUtil::GetRowSize(this->probeOutputTypes.Get());

@@ -28,19 +28,23 @@ SortMergeJoinOperator::~SortMergeJoinOperator()
 }
 
 void SortMergeJoinOperator::ConfigStreamedTblInfo(const type::DataTypes &streamedDataTypes,
-    const std::vector<int32_t> &streamedKeysCols, const std::vector<int32_t> &streamedOutputCols)
+    const std::vector<int32_t> &streamedKeysCols, const std::vector<int32_t> &streamedOutputCols,
+    int32_t originalInputStreamedColsCount)
 {
     this->streamedTypes = new DataTypes(streamedDataTypes);
     this->streamedKeysCols = streamedKeysCols;
     this->streamedOutputCols = streamedOutputCols;
+    this->originalStreamedColsCount = originalInputStreamedColsCount;
 }
 
 void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &bufferedDataTypes,
-    std::vector<int32_t> &bufferedKeysCols, std::vector<int32_t> &bufferedOutputCols)
+    std::vector<int32_t> &bufferedKeysCols, std::vector<int32_t> &bufferedOutputCols,
+    int32_t originalInputBufferedColsCount)
 {
     this->bufferedTypes = new DataTypes(bufferedDataTypes);
     this->bufferedKeysCols = bufferedKeysCols;
     this->bufferedOutputCols = bufferedOutputCols;
+    this->originalBufferedColsCount = originalInputBufferedColsCount;
 }
 
 void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflowConfig)
@@ -54,9 +58,19 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
         streamedTblPagesIndex, *bufferedTypes, bufferedKeysCols.data(), bufferedTblPagesIndex, joinType,
         onlyBufferedFirstMatch);
 
-    joinResultBuilder = new JoinResultBuilder(*streamedTypes, streamedOutputCols.data(), streamedOutputCols.size(),
-        streamedTblPagesIndex, *bufferedTypes, bufferedOutputCols.data(), bufferedOutputCols.size(),
-        bufferedTblPagesIndex, filter, vecAllocator, overflowConfig, joinType);
+    std::vector<DataTypePtr> streamedOutputTypes;
+    for (auto col : streamedOutputCols) {
+        streamedOutputTypes.emplace_back(streamedTypes->GetType(col));
+    }
+
+    std::vector<DataTypePtr> bufferedOutputTypes;
+    for (auto col : bufferedOutputCols) {
+        bufferedOutputTypes.emplace_back(bufferedTypes->GetType(col));
+    }
+    joinResultBuilder = new JoinResultBuilder(streamedOutputTypes, streamedOutputCols.data(), streamedOutputCols.size(),
+        originalStreamedColsCount, streamedTblPagesIndex, bufferedOutputTypes, bufferedOutputCols.data(),
+        bufferedOutputCols.size(), originalBufferedColsCount, bufferedTblPagesIndex, filter, vecAllocator, joinType,
+        overflowConfig);
 }
 
 int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPagesIndex,
@@ -143,7 +157,7 @@ int32_t SortMergeJoinOperator::GetJoinResult()
             joinResultBuilder->GetSameBufferedKeyMatched());
         auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses();
         if (joinResultBuilderRet == 1) {
-            joinResultBuilder->GetOutput(returnVectorBatchs);
+            joinResultBuilder->GetOutput(returnVectorBatches);
             resultCode = SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
         }
     }
@@ -167,12 +181,12 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     // 4) scan finished, need to get last builder result
     if (static_cast<JoinTableCode>(streamedRet) == JoinTableCode::SCAN_FINISHED &&
         static_cast<JoinTableCode>(bufferedRet) == JoinTableCode::SCAN_FINISHED) {
-        joinResultBuilder->GetOutput(returnVectorBatchs);
+        joinResultBuilder->GetOutput(returnVectorBatches);
     }
 
     // 5)finish the join scan
     resultCode = SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH), resultCode);
-    if (returnVectorBatchs.empty()) {
+    if (returnVectorBatches.empty()) {
         joinResultBuilder->Finish();
     } else {
         resultCode = SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
@@ -213,11 +227,11 @@ int32_t SortMergeJoinOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 
 int32_t SortMergeJoinOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
 {
-    outputPages.assign(returnVectorBatchs.begin(), returnVectorBatchs.end());
-    returnVectorBatchs.clear();
+    outputPages.assign(returnVectorBatches.begin(), returnVectorBatches.end());
+    returnVectorBatches.clear();
     joinResultBuilder->AddJoinValueAddresses();
     if (joinResultBuilder->HasNext()) {
-        joinResultBuilder->GetOutput(returnVectorBatchs);
+        joinResultBuilder->GetOutput(returnVectorBatches);
     } else {
         joinResultBuilder->Clear();
         SetStatus(OMNI_STATUS_FINISHED);

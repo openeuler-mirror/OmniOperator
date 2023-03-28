@@ -20,8 +20,6 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
     auto vectorValues = vector->GetValues();
     auto positionOffset = vector->GetPositionOffset();
     auto rowCount = vector->GetSize();
-    auto inputTypeId = this->inputTypes.GetType(0)->GetId();
-    auto outputTypeId = this->outputTypes.GetType(0)->GetId();
 
     HmppResult result = HMPP_STS_NO_ERR;
     auto maxVal = reinterpret_cast<ResultType *>(this->executionContext->GetArena()->Allocate(sizeof(ResultType)));
