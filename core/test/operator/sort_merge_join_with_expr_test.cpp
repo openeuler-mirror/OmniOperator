@@ -2889,31 +2889,18 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinStreamedWithNullJoinKe
     ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
 
     // check the join result
-    long resultCol1[] =  {1100, 2200, 3300, 4400, 5500, 6600, 7700};
-    double resultCol2[] =  {0, 0, 0, 4.4, 0, 6.6, 0};
-    int32_t index = 0;
-    for (uint32_t i = 0; i < result.size(); i++) {
-        ASSERT_EQ(result[i]->GetVectorCount(), 2);
-        ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
-        ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
-        ASSERT_EQ(result[i]->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
-        for (auto j = 0; j < result[i]->GetRowCount(); j++) {
-            if (resultCol1[index] != 0) {
-                long longValue = (static_cast<LongVector *>(result[i]->GetVector(0)))->GetValue(j);
-                ASSERT_EQ(longValue, resultCol1[index]);
-            } else {
-                ASSERT_EQ((static_cast<LongVector *>(result[i]->GetVector(0)))->IsValueNull(j), true);
-            }
-            if (resultCol2[index] != 0) {
-                double doubleValue = (static_cast<DoubleVector *>(result[i]->GetVector(1)))->GetValue(j);
-                ASSERT_EQ(doubleValue, resultCol2[index]);
-            } else {
-                ASSERT_EQ((static_cast<DoubleVector *>(result[i]->GetVector(1)))->IsValueNull(j), true);
-            }
-            index++;
-        }
-        VectorHelper::FreeVecBatch(result[i]);
-    }
+    long resultCol1[] =  {1100, 2200, 4400, 5500, 6600, 7700};
+    double resultCol2[] =  {0, 0, 4.4, 0, 6.6, 0};
+    std::vector<DataTypePtr> resultTypeVector = { LongType(), DoubleType() };
+    DataTypes resultDataTypes(resultTypeVector);
+    VectorBatch *expectVecBatch = CreateVectorBatch(resultDataTypes, 6, resultCol1, resultCol2);
+    expectVecBatch->GetVector(1)->SetValueNull(0);
+    expectVecBatch->GetVector(1)->SetValueNull(1);
+    expectVecBatch->GetVector(1)->SetValueNull(3);
+    expectVecBatch->GetVector(1)->SetValueNull(5);
+    ASSERT_TRUE(VecBatchMatch(result[0], expectVecBatch));
+    VectorHelper::FreeVecBatch(result[0]);
+    VectorHelper::FreeVecBatch(expectVecBatch);
 
     Expr::DeleteExprs(streamedEqualKeyExprs);
     Expr::DeleteExprs(bufferedEqualKeyExprs);
@@ -4047,9 +4034,9 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinWithMutilRowAndFil
     ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
 
     // check the join result
-    int resultCol1[] =  {0,  1,  2,  3};
-    long resultCol2[] =  {40,  25,  35,  30};
-    VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, resultCol1, resultCol2);
+    int resultCol1[] =  {0,  1,  2};
+    long resultCol2[] =  {40,  25,  35};
+    VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 3, resultCol1, resultCol2);
     expectVecBatch->GetVector(0)->SetValueNull(0);
     ASSERT_TRUE(VecBatchMatch(result[0], expectVecBatch));
     VectorHelper::FreeVecBatch(result[0]);
@@ -4257,6 +4244,80 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, TestBothJoinKeyAndFilterWithExpr)
     int64_t expectedData0[] = {111, 111, 112};
     int64_t expectedData1[] = {111, 112, 112};
     AssertVecBatchEquals(result[0], 2, expectedDataSize, expectedData0, expectedData1);
+    VectorHelper::FreeVecBatches(result);
+
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
+    DeleteOperatorFactory(bufferedWithExprOperatorFactory);
+    DeleteOperatorFactory(streamedWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
+TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinSubStrAndCaseWhen)
+{
+    std::string filter =
+        "{\"exprType\":\"IF\",\"returnType\":4,\"condition\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+        "\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}},\"if_true\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\",\"left\":{"
+        "\"exprType\":\"FUNCTION\",\"returnType\":6,\"precision\":18,\"scale\":2,\"function_name\":\"abs\", "
+        "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2}]},\"right\":{\"exprType\":\"FUNCTION\",\"returnType\":6,\"precision\":18,\"scale\":2,\"function_"
+        "name\":\"abs\", "
+        "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}]}},\"if_false\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\",\"left\":{"
+        "\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}}}";
+    DataTypes streamedTblTypes(std::vector<DataTypePtr>({ Decimal64Type(18, 2) }));
+    auto castExpr1 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
+    auto substrExpr1 = new FuncExpr("substr",
+        { castExpr1, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
+    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs{ substrExpr1 };
+    int32_t streamedOutputCols[]= {0};
+    auto overflowConfig = new OverflowConfig();
+    auto streamedWithExprOperatorFactory =
+        StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
+        streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_LEFT_ANTI, filter, overflowConfig);
+    auto streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
+
+    DataTypes bufferedTblTypes(std::vector<DataTypePtr>{ Decimal64Type(18, 2) });
+    auto castExpr2 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
+    auto substrExpr2 = new FuncExpr("substr",
+        { castExpr2, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
+    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs{ substrExpr2 };
+    int bufferedOutputCols[0] = {};
+    auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
+    auto bufferedWithExprOperatorFactory =
+        BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
+        bufferedEqualKeyExprs, 1, bufferedOutputCols, 0, streamedWithExprOperatorFactoryAddr, overflowConfig);
+    omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
+
+    const int32_t dataSize = 2;
+    int64_t streamedData[] = {111, 112};
+    auto streamedVecBatch = TestUtil::CreateVectorBatch(streamedTblTypes, dataSize, streamedData);
+    streamedTblWithExprOperator->AddInput(streamedVecBatch);
+
+    // need add buffered table data
+    int64_t bufferedData[] = {111, 112};
+    auto bufferedVecBatch = TestUtil::CreateVectorBatch(bufferedTblTypes, dataSize, bufferedData);
+    bufferedTblWithExprOperator->AddInput(bufferedVecBatch);
+
+    // add eof flag to buffered table , need add streamed table data
+    VectorBatch *bufferedVecBatchEof = CreateEmptyVectorBatch(bufferedTblTypes.Get());
+    bufferedTblWithExprOperator->AddInput(bufferedVecBatchEof);
+
+    // add eof flag to streamed table
+    VectorBatch *streamedVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes.Get());
+    streamedTblWithExprOperator->AddInput(streamedVecBatchEof);
+
+    std::vector<VectorBatch *> result;
+    bufferedTblWithExprOperator->GetOutput(result);
+
+    // check the join result
+    EXPECT_EQ(result.size(), 0);
     VectorHelper::FreeVecBatches(result);
 
     Expr::DeleteExprs(streamedEqualKeyExprs);

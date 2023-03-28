@@ -205,6 +205,28 @@ void JoinResultBuilder::PaddingRightTableNull(int64_t leftTableRowAddress, vec::
     buildRowCount++;
 }
 
+void JoinResultBuilder::UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJoinHandler, int32_t addressPosition,
+    std::vector<bool> &isSameBufferedKeyMatched, int32_t inputSize)
+{
+    if (!isSameBufferedKeyMatched.empty()) {
+        if (addressPosition == inputSize - 1) {
+            leftAntiJoinHandler->hasSameBufferedRow = false;
+        } else {
+            if (!isSameBufferedKeyMatched[addressPosition]) {
+                leftAntiJoinHandler->printThisStreamRowOutFlag = true;
+            }
+            if (!isSameBufferedKeyMatched[addressPosition + 1]) {
+                leftAntiJoinHandler->hasSameBufferedRow = false;
+            } else {
+                leftAntiJoinHandler->hasSameBufferedRow = true;
+            }
+        }
+    } else {
+        leftAntiJoinHandler->hasSameBufferedRow = false;
+        leftAntiJoinHandler->printThisStreamRowOutFlag = true;
+    }
+}
+
 int32_t JoinResultBuilder::AddJoinValueAddresses()
 {
     // 1 represents the rowCount of buildVectorBatch has reached the maxRowCount
@@ -216,7 +238,9 @@ int32_t JoinResultBuilder::AddJoinValueAddresses()
         buildRowCount = 0;
     }
 
+    leftAntiJoinHandler = new LeftAntiJoinHandler;
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
+        UpdateLeftAntiJoinHandler(leftAntiJoinHandler, addressPosition, isSameBufferedKeyMatched, inputSize);
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
         if (preStreamedRowAddress != INT64_MAX && preStreamedRowAddress != streamedRowAddress &&
@@ -233,16 +257,18 @@ int32_t JoinResultBuilder::AddJoinValueAddresses()
             FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
         }
 
-        PaddingNullAndVerifyingTheOutput(isPreKeyMatched, streamedRowAddress, bufferedRowAddress, buildVectorBatch,
-            buildRowCount, isSameBufferedKeyMatched, isPreRowMatched, addressPosition);
+        PaddingNullAndVerifyingTheOutput(isPreKeyMatched, leftAntiJoinHandler, streamedRowAddress, bufferedRowAddress,
+            buildVectorBatch, buildRowCount, isSameBufferedKeyMatched, isPreRowMatched, addressPosition);
         preStreamedRowAddress = streamedRowAddress;
         addressOffset++;
         if (buildRowCount >= maxRowCount) {
             fillStatus = 1;
             buildVectorBatchRowCount = buildRowCount;
+            delete leftAntiJoinHandler;
             return fillStatus;
         }
     }
+    delete leftAntiJoinHandler;
     if (preStreamedRowAddress != INT64_MAX && !preLeftTableRowMatchedOut) {
         PaddingRightTableNull(preStreamedRowAddress, buildVectorBatch,
             buildRowCount); // pad NULL for last mismatch row
@@ -323,8 +349,9 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
 }
 
 void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPreKeyMatched,
-    int64_t leftTableRowAddress, int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch,
-    int32_t &buildRowCount, std::vector<bool> &isSameBufferedKeyMatched, bool &isPreRowMatched, int32_t positionAddr)
+    LeftAntiJoinHandler *leftAntiJoinHandler, int64_t leftTableRowAddress, int64_t rightTableRowAddress,
+    vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount, std::vector<bool> &isSameBufferedKeyMatched,
+    bool &isPreRowMatched, int32_t positionAddr)
 {
     int32_t leftBatchId = DecodeSliceIndex(leftTableRowAddress);
     int32_t leftRowId = DecodePosition(leftTableRowAddress);
@@ -368,27 +395,25 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
                 ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
                 ParsingAndOrganizationResultsForRightTable(rightBatchId, rightRowId, buildVectorBatch, buildRowCount);
                 buildRowCount++;
-                preLeftTableRowMatchedOut = true;
             }
+            preLeftTableRowMatchedOut = true;
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI: // left anti join only needs to output the data of the left table
-            if (isSameBufferedKeyMatched[positionAddr]) { // same buffered key match and failed to match the previous
-                if (!isPreRowMatched && !IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
-                    ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
-                    buildRowCount++;
-                    isPreRowMatched = true;
+            if (leftAntiJoinHandler->hasSameBufferedRow) {
+                if (leftAntiJoinHandler->printThisStreamRowOutFlag &&
+                    IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                    leftAntiJoinHandler->printThisStreamRowOutFlag = false;
                 }
-            } else { // not the same buffered key
+            } else {
                 if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
                     ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
                     buildRowCount++;
-                    isPreRowMatched = false;
-                } else if (!IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+                } else if (!IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId) &&
+                    leftAntiJoinHandler->printThisStreamRowOutFlag) {
                     ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
                     buildRowCount++;
-                    isPreRowMatched = true;
                 } else {
-                    isPreRowMatched = false;
+                    leftAntiJoinHandler->printThisStreamRowOutFlag = false;
                 }
             }
             preLeftTableRowMatchedOut = true;
