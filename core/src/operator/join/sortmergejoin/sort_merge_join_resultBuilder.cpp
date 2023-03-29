@@ -395,8 +395,8 @@ void JoinResultBuilder::PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPr
                 ParsingAndOrganizationResultsForLeftTable(leftBatchId, leftRowId, buildVectorBatch, buildRowCount);
                 ParsingAndOrganizationResultsForRightTable(rightBatchId, rightRowId, buildVectorBatch, buildRowCount);
                 buildRowCount++;
+                preLeftTableRowMatchedOut = true;
             }
-            preLeftTableRowMatchedOut = true;
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI: // left anti join only needs to output the data of the left table
             if (leftAntiJoinHandler->hasSameBufferedRow) {
