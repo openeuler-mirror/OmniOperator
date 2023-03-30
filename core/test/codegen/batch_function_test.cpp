@@ -572,7 +572,7 @@ TEST(BatchFunctionTest, CastDecimalToBasicType)
     EXPECT_EQ(outputDouble[0], 12345.67);
 
     BatchCastDecimal128ToIntRetNull(overflowNull, decimal128Val, 7, 2, outputInt, rowCnt);
-    EXPECT_TRUE(overflowNull[0]);
+    EXPECT_EQ(outputInt[0], static_cast<int32_t>(INT64_MAX / 100L));
     BatchCastDecimal128ToLongRetNull(overflowNull, decimal128Val, 7, 2, outputLong, rowCnt);
     EXPECT_EQ(outputLong[0], INT64_MAX / 100L);
     BatchCastDecimal128ToDoubleRetNull(overflowNull, decimal128Val, 7, 2, outputDouble, rowCnt);
