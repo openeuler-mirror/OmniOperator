@@ -85,6 +85,14 @@ namespace omniruntime::codegen {
         }                                                                                      \
     } while (false)
 
+#define CHECK_DIVIDE_BY_ZERO_CONTINUE(dividend)                 \
+    do {                                                        \
+        if ((dividend) == 0) {                                  \
+            SetError(contextPtr, DIVIDE_ZERO);                  \
+            continue;                                           \
+        }                                                       \
+    } while (false)
+
 extern "C" DLLEXPORT
 {
     char *ArenaAllocatorMalloc(int64_t contextPtr, int32_t size);

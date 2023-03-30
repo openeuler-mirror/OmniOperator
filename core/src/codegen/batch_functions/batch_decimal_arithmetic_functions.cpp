@@ -503,6 +503,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec64ReScale(int64_t contextPtr, boo
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -521,6 +522,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec64ReScale(int64_t contextPtr, bo
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -539,6 +541,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec64ReScale(int64_t contextPtr, bo
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -557,6 +560,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec128ReScale(int64_t contextPtr, bo
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -575,6 +579,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec128Dec128ReScale(int64_t contextPtr, 
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -593,6 +598,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec128ReScale(int64_t contextPtr, b
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -611,6 +617,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec128ReScale(int64_t contextPtr, b
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -630,6 +637,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec64Dec64ReScale(int64_t contextPtr, boo
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -648,6 +656,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec64ReScale(int64_t contextPtr, bo
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -666,6 +675,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec64ReScale(int64_t contextPtr, bo
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -684,6 +694,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec128ReScale(int64_t contextPtr, b
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -702,6 +713,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec128ReScale(int64_t contextPtr, 
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -720,6 +732,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec64ReScale(int64_t contextPtr, b
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -738,6 +751,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec128ReScale(int64_t contextPtr, b
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -970,6 +984,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec64NotReScale(int64_t contextPtr, 
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -987,6 +1002,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec64NotReScale(int64_t contextPtr,
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1004,6 +1020,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec64NotReScale(int64_t contextPtr,
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1021,6 +1038,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec64Dec128NotReScale(int64_t contextPtr,
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1038,6 +1056,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec128Dec128NotReScale(int64_t contextPt
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1055,6 +1074,7 @@ extern "C" DLLEXPORT void BatchDivDec64Dec128Dec128NotReScale(int64_t contextPtr
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1072,6 +1092,7 @@ extern "C" DLLEXPORT void BatchDivDec128Dec64Dec128NotReScale(int64_t contextPtr
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1090,6 +1111,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec64Dec64NotReScale(int64_t contextPtr, 
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1107,6 +1129,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec64NotReScale(int64_t contextPtr,
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1124,6 +1147,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec64NotReScale(int64_t contextPtr,
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1141,6 +1165,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec64Dec128NotReScale(int64_t contextPtr
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1158,6 +1183,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec128NotReScale(int64_t contextPt
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1175,6 +1201,7 @@ extern "C" DLLEXPORT void BatchModDec128Dec128Dec64NotReScale(int64_t contextPtr
 {
     Decimal64 result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;
@@ -1192,6 +1219,7 @@ extern "C" DLLEXPORT void BatchModDec64Dec128Dec128NotReScale(int64_t contextPtr
 {
     Decimal128Wrapper result;
     for (int i = 0; i < rowCnt; ++i) {
+        CHECK_DIVIDE_BY_ZERO_CONTINUE(y[i]);
         if (isNull[i]) {
             x[i] = 1;
             continue;

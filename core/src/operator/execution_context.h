@@ -36,7 +36,7 @@ public:
         return errorMessage;
     }
 
-    void SetError()
+    void ResetError()
     {
         hasError = false;
     }

@@ -739,7 +739,7 @@ TEST(BatchFunctionTest, DecimalSubtract)
         rowCnt);
     EXPECT_TRUE(context->HasError());
 
-    context->SetError();
+    context->ResetError();
     decimal64Val1[0] = 823'484'382'638'232'596L;
     decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
     BatchSubDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 19, 19,
@@ -835,7 +835,7 @@ TEST(BatchFunctionTest, DecimalMultiply)
     BatchMulDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 8, 2, decimal128Val1, 38, 9, 38, 9, rowCnt);
     EXPECT_TRUE(context->HasError());
 
-    context->SetError();
+    context->ResetError();
     decimal64Val1[0] = 123456789;
     decimal64Val1[1] = 314159;
     decimal128Val1[0].SetValue(0, 823'484'382'638'232'596UL);
