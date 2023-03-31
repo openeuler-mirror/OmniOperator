@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Description: ...
+ */
+#include "gtest/gtest.h"
+#include "operator/filter/bloom_filter.h"
+#include "util/test_util.h"
+
+using namespace omniruntime::op;
+using namespace omniruntime::vec;
+using namespace omniruntime::expressions;
+using namespace std;
+using namespace TestUtil;
+
+namespace BloomFilterTest {
+TEST(BloomFilterTest, TestBloomFilterInit)
+{
+    std::vector<DataTypePtr> vecOfTypes = { IntType() };
+    DataTypes inputTypes(vecOfTypes);
+    // construct data
+    const int32_t rowNum = 12;
+    int32_t intVecData[rowNum] = {1, 6, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    VectorBatch *inputVectorBatch = CreateVectorBatch(inputTypes, rowNum, intVecData);
+
+    auto *factory = BloomFilterOperatorFactory::CreateBloomFilterOperatorFactory(1);
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(inputVectorBatch);
+
+    std::vector<omniruntime::vec::VectorBatch *> result;
+    op->GetOutput(result);
+    long longValue = (static_cast<LongVector *>(result[0]->GetVector(0)))->GetValue(0);
+    BloomFilter *bfResult = (BloomFilter *)longValue;
+    EXPECT_EQ(bfResult->GetNumHashFunctions(), 6);
+    EXPECT_EQ(bfResult->GetBits()->GetWordsNum(), 4);
+    VectorHelper::FreeVecBatches(result);
+    omniruntime::op::Operator::DeleteOperator(op);
+    DeleteOperatorFactory(factory);
+}
+
+TEST(BloomFilterTest, TestBloomFilterPutLong)
+{
+    int32_t versionJava = 1;
+    int32_t hashFuncNum = 6;
+    int32_t numWords = 1048576; // 1MBytes
+
+    int32_t byteLength = numWords * sizeof(uint64_t) + sizeof(versionJava) + sizeof(hashFuncNum) + sizeof(numWords);
+    byte *in = new byte[byteLength]{(byte)0};
+    ((int32_t *)in)[0] = 1;
+    ((int32_t *)in)[1] = hashFuncNum;
+    ((int32_t *)in)[2] = numWords;
+    BloomFilter *bf = new BloomFilter((int32_t *)in, versionJava);
+    EXPECT_TRUE(bf->PutLong(LONG_MIN));
+    EXPECT_TRUE(bf->PutLong(LONG_MAX));
+    EXPECT_EQ(bf->GetBits()->GetBitCount(), hashFuncNum * 2);
+    delete bf;
+    delete[] in;
+}
+
+TEST(BloomFilterTest, TestBloomFilterMightContain)
+{
+    int32_t versionJava = 1;
+    int32_t hashFuncNum = 6;
+    int32_t numWords = 1048576; // 1MBytes
+
+    int32_t byteLength = numWords * sizeof(uint64_t) + sizeof(versionJava) + sizeof(hashFuncNum) + sizeof(numWords);
+    byte *in = new byte[byteLength]{(byte)0};
+    ((int32_t *)in)[0] = 1;
+    ((int32_t *)in)[1] = hashFuncNum;
+    ((int32_t *)in)[2] = numWords;
+    BloomFilter *bf = new BloomFilter((int32_t *)in, versionJava);
+    for (int i = 1; i < 100; i += 2) {
+        EXPECT_EQ(bf->PutLong(i), true);
+    }
+
+    for (int j = 1; j < 100; j += 2) {
+        EXPECT_TRUE(bf->MightContainLong(j));
+        EXPECT_FALSE(bf->MightContainLong(j - 1));
+    }
+    delete bf;
+    delete[] in;
+}
+}
