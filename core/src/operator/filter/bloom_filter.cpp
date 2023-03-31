@@ -1,0 +1,144 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Description: BloomFilter operator source file
+ */
+
+#include "bloom_filter.h"
+#include "codegen/functions/murmur3_hash.h"
+
+namespace omniruntime {
+namespace op {
+using namespace std;
+using namespace omniruntime::codegen::function;
+
+BloomFilter::BloomFilter(int32_t *in, int32_t versionJava) : version(versionJava)
+{
+    int32_t versionIn = ((int32_t *)in)[0]; // version 4 Bytes
+    if (version != versionIn) {
+        throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "wrong version for bloom filter");
+    }
+
+    numHashFunctions = ((int32_t *)in)[1];   // numHashFunctions 4 Bytes
+    bits = new BitArray((uint64_t *)in + 1); // offset is 8 Bytes
+}
+
+BloomFilter::~BloomFilter()
+{
+    delete bits;
+}
+
+/*
+ * @Func : put long data into BloomFilter struct
+ * @param item : long type data
+ * @return : Returns true if the bit slot is reversed after insertion, Otherwise, false is returned.
+ */
+bool BloomFilter::PutLong(uint64_t item)
+{
+    int32_t h1 = Mm3Int64(item, false, 0, false);
+    int32_t h2 = Mm3Int64(item, false, h1, false);
+
+    uint64_t bitSize = bits->GetBitSize();
+    bool bitsChanged = false;
+    for (int32_t i = 1; i <= numHashFunctions; i++) {
+        int32_t combinedHash = h1 + (i * h2);
+        // Flip all the bits if it's negative (guaranteed positive number)
+        if (combinedHash < 0) {
+            combinedHash = ~combinedHash;
+        }
+        bitsChanged |= bits->Set(combinedHash % bitSize);
+    }
+    return bitsChanged;
+}
+
+/*
+ * @Func : Check whether a item is in the filter.
+ * @param item : long type data
+ * @return : Returns true if the item in the filter, Otherwise, false is returned.
+ */
+bool BloomFilter::MightContainLong(uint64_t item)
+{
+    int32_t h1 = Mm3Int64(item, false, 0, false);
+    int32_t h2 = Mm3Int64(item, false, h1, false);
+
+    uint64_t bitSize = bits->GetBitSize();
+    for (int32_t i = 1; i <= numHashFunctions; i++) {
+        int32_t combinedHash = h1 + (i * h2);
+        // Flip all the bits if it's negative (guaranteed positive number)
+        if (combinedHash < 0) {
+            combinedHash = ~combinedHash;
+        }
+        if (!bits->Get(combinedHash % bitSize)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int32_t BloomFilter::GetNumHashFunctions()
+{
+    return numHashFunctions;
+}
+
+// function implements for class BloomFilterOperatorFactory
+BloomFilterOperatorFactory::BloomFilterOperatorFactory(int32_t version) : version(version) {}
+
+BloomFilterOperatorFactory::~BloomFilterOperatorFactory() = default;
+
+BloomFilterOperatorFactory *BloomFilterOperatorFactory::CreateBloomFilterOperatorFactory(int32_t version)
+{
+    auto pOperatorFactory = new BloomFilterOperatorFactory(version);
+    return pOperatorFactory;
+}
+
+Operator *BloomFilterOperatorFactory::CreateOperator()
+{
+    auto pSortOperator = new BloomFilterOperator(version);
+    return pSortOperator;
+}
+
+// function implements for class BloomFilterOperator
+BloomFilterOperator::BloomFilterOperator(int32_t version) : version(version) {}
+
+BloomFilterOperator::~BloomFilterOperator()
+{
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    delete bloomFilterAddress;
+}
+
+int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
+{
+    if (vecBatch == nullptr) {
+        throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "BloomFilterOperator AddInput can't be nullptr!");
+    }
+
+    inputVecBatch = vecBatch;
+    int32_t vectorCount = inputVecBatch->GetVectorCount();
+    if (vectorCount != 1) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "vecBatch col should be 1 for bloom filter");
+    }
+    Vector *colVec = inputVecBatch->GetVector(0);
+    int64_t valuesAddress = VectorHelper::GetValuesAddr(colVec);
+
+    // init BloomFilter
+    bloomFilterAddress = new BloomFilter((int32_t *)(uintptr_t)valuesAddress, version);
+    return 0;
+}
+
+int32_t BloomFilterOperator::GetOutput(std::vector<VectorBatch *> &blOutPut)
+{
+    outPutVecs = new VectorBatch(1, 1);
+    LongVector *col = new LongVector(vecAllocator, 1);
+    col->SetValue(0, reinterpret_cast<int64_t>(bloomFilterAddress));
+    outPutVecs->SetVector(0, col);
+    blOutPut.push_back(outPutVecs);
+    SetStatus(OMNI_STATUS_FINISHED);
+    return 0;
+}
+
+OmniStatus BloomFilterOperator::Close()
+{
+    return OMNI_STATUS_NORMAL;
+}
+} // end of op
+} // end of omniruntime

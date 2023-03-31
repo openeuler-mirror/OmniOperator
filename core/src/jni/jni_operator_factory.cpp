@@ -13,6 +13,7 @@
 #include "operator/aggregation/non_group_aggregation.h"
 #include "operator/aggregation/non_group_aggregation_expr.h"
 #include "operator/filter/filter_and_project.h"
+#include "operator/filter/bloom_filter.h"
 #include "operator/window/window.h"
 #include "operator/join/hash_builder.h"
 #include "operator/join/lookup_join.h"
@@ -1333,4 +1334,18 @@ Java_nova_hetu_omniruntime_operator_fusion_OmniFusionOperatorFactory_createFusio
 
     auto fusionOperatorFactory = new FusionOperatorFactory(operatorFactories, operatorTypes, overflowConfig);
     return reinterpret_cast<intptr_t>(static_cast<void *>(fusionOperatorFactory));
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_filter_OmniBloomFilterOperatorFactory_createBloomFilterOperatorFactory(JNIEnv *env,
+    jclass jObj, jint jInputVersion)
+{
+    auto inputVersion = (int32_t)jInputVersion;
+
+    BloomFilterOperatorFactory *factory = nullptr;
+    JNI_METHOD_START
+    factory = new BloomFilterOperatorFactory(inputVersion);
+    JNI_METHOD_END(0L)
+
+    return reinterpret_cast<intptr_t>(static_cast<void *>(factory));
 }

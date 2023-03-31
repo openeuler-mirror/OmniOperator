@@ -1,0 +1,81 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Description: BloomFilter operator header
+ */
+#ifndef OMNI_RUNTIME_BLOOM_FILTER_H
+#define OMNI_RUNTIME_BLOOM_FILTER_H
+
+#include "util/bit_array.h"
+#include "util/error_code.h"
+#include "operator/operator_factory.h"
+#include "operator/config/operator_config.h"
+#include "operator/pages_index.h"
+#include "operator/spill/spiller.h"
+#include "operator/spill/vector_batch_merger.h"
+#include "type/data_types.h"
+#include "type/data_type.h"
+
+namespace omniruntime {
+namespace op {
+class BloomFilter {
+public:
+    explicit BloomFilter(int32_t *in, int32_t versionJava);
+
+    ~BloomFilter();
+
+    bool PutLong(uint64_t item);
+
+    bool MightContainLong(uint64_t item);
+
+    int32_t GetNumHashFunctions();
+
+    BitArray *GetBits()
+    {
+        return bits;
+    }
+
+private:
+    int32_t numHashFunctions;
+    BitArray *bits;
+    int32_t version;
+};
+
+class BloomFilterOperatorFactory : public OperatorFactory {
+public:
+    explicit BloomFilterOperatorFactory(int32_t version);
+
+    ~BloomFilterOperatorFactory() override;
+
+    static BloomFilterOperatorFactory *CreateBloomFilterOperatorFactory(int32_t version);
+
+    Operator *CreateOperator() override;
+
+private:
+    int32_t version;
+};
+
+/*
+ * BloomFilterOperator is only used by spark runtimeFilter Feature, It is used independently and cannot cooperate with
+ * other operators. AddInput must be IntVector GetOutput must be LongVector
+ */
+class BloomFilterOperator : public Operator {
+public:
+    explicit BloomFilterOperator(int32_t version);
+
+    ~BloomFilterOperator() override;
+
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
+
+    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &blOutPut) override;
+
+    OmniStatus Close() override;
+
+private:
+    int32_t version;
+    BloomFilter *bloomFilterAddress;
+    omniruntime::vec::VectorBatch *outPutVecs;
+    VectorBatch *inputVecBatch;
+};
+} // end of op
+} // end of omniruntime
+#endif // OMNI_RUNTIME_BLOOM_FILTER_H
