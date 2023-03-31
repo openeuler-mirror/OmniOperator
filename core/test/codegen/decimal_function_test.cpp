@@ -656,11 +656,11 @@ TEST(FunctionTest, CastStringToDecimal64)
     s = "9999999999999999999";
     result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 18, 0);
     EXPECT_TRUE(context->HasError());
-    context->SetError();
+    context->ResetError();
     s = "123a";
     result = CastStringToDecimal64(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 18, 0);
     EXPECT_TRUE(context->HasError());
-    context->SetError();
+    context->ResetError();
     delete context;
 }
 
@@ -696,12 +696,12 @@ TEST(FunctionTest, CastStringToDecimal128)
     EXPECT_TRUE(isNull);
     EXPECT_EQ(context->GetError(), "Cannot cast VARCHAR '-10.1a1' to DECIMAL(21, 1). Value is not a number.");
     s = "9999999999999999999999999999999999999999";
-    context->SetError();
+    context->ResetError();
     CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 21, 1, &high, &low);
     EXPECT_TRUE(isNull);
     EXPECT_EQ(context->GetError(),
         "Cannot cast VARCHAR '9999999999999999999999999999999999999999' to DECIMAL(21, 1). Value too large.");
-    context->SetError();
+    context->ResetError();
     CastStringToDecimal128RetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 17, 0, &high, &low);
     EXPECT_TRUE(isNull);
     delete context;

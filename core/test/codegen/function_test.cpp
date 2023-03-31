@@ -1583,7 +1583,7 @@ TEST(FunctionTest, CastStringToInt)
     s = "2a147483648";
     result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_TRUE(context->HasError());
-    context->SetError();
+    context->ResetError();
     s = "-10078";
     result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, -10078);
@@ -1591,11 +1591,11 @@ TEST(FunctionTest, CastStringToInt)
     s = "2123123123147483648";
     result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_TRUE(context->HasError());
-    context->SetError();
+    context->ResetError();
     s = "-2123123123147483648";
     result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_TRUE(context->HasError());
-    context->SetError();
+    context->ResetError();
     s = "-2123123123147-483648";
     result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_TRUE(context->HasError());

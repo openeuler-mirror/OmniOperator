@@ -237,6 +237,7 @@ extern "C" DLLEXPORT void MulDec128Dec64Dec128ReScale(int64_t contextPtr, int64_
 extern "C" DLLEXPORT int64_t DivDec64Dec64Dec64ReScale(int64_t contextPtr, int64_t x, int32_t xPrecision,
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
+    CHECK_DIVIDE_BY_ZERO_RETURN(y);
     Decimal64 result;
     DecimalOperations::InternalDecimalDivide(Decimal64(x).SetScale(xScale), xScale, xPrecision,
         Decimal64(y).SetScale(yScale), yScale, yPrecision, result, outScale);
@@ -337,6 +338,7 @@ extern "C" DLLEXPORT void DivDec128Dec64Dec128ReScale(int64_t contextPtr, int64_
 extern "C" DLLEXPORT int64_t ModDec64Dec64Dec64ReScale(int64_t contextPtr, int64_t x, int32_t xPrecision,
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
+    CHECK_DIVIDE_BY_ZERO_RETURN(y);
     Decimal64 result;
     DecimalOperations::InternalDecimalMod(Decimal64(x).SetScale(xScale), xScale, xPrecision,
         Decimal64(y).SetScale(yScale), yScale, yPrecision, result);
@@ -680,6 +682,7 @@ extern "C" DLLEXPORT void MulDec128Dec64Dec128NotReScale(int64_t contextPtr, int
 extern "C" DLLEXPORT int64_t DivDec64Dec64Dec64NotReScale(int64_t contextPtr, int64_t x, int32_t xPrecision,
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
+    CHECK_DIVIDE_BY_ZERO_RETURN(y);
     Decimal64 result;
     DecimalOperations::InternalDecimalDivide(Decimal64(x).SetScale(xScale), xScale, xPrecision,
         Decimal64(y).SetScale(yScale), yScale, yPrecision, result, outScale);
@@ -773,6 +776,7 @@ extern "C" DLLEXPORT void DivDec128Dec64Dec128NotReScale(int64_t contextPtr, int
 extern "C" DLLEXPORT int64_t ModDec64Dec64Dec64NotReScale(int64_t contextPtr, int64_t x, int32_t xPrecision,
     int32_t xScale, int64_t y, int32_t yPrecision, int32_t yScale, int32_t outPrecision, int32_t outScale)
 {
+    CHECK_DIVIDE_BY_ZERO_RETURN(y);
     Decimal64 result;
     DecimalOperations::InternalDecimalMod(Decimal64(x).SetScale(xScale), xScale, xPrecision,
         Decimal64(y).SetScale(yScale), yScale, yPrecision, result);
