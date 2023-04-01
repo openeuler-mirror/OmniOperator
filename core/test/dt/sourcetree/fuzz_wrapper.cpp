@@ -146,10 +146,10 @@ void TestSort(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_
     auto operatorFactory = dynamic_cast<SortOperatorFactory *>(CreateSortFactory(sourceTypes));
     auto sortOperator = dynamic_cast<SortOperator *>(operatorFactory->CreateOperator());
     sortOperator->AddInput(sourceVecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    sortOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
 
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
     delete vecAllocator;
@@ -208,8 +208,8 @@ void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     auto hashBuilderFactory = dynamic_cast<HashBuilderOperatorFactory *>(operatorFactories[0]);
     auto hashBuilderOperator = hashBuilderFactory->CreateOperator();
     hashBuilderOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> hashBuildOutput;
-    hashBuilderOperator->GetOutput(hashBuildOutput);
+    VectorBatch *hashBuildOutput = nullptr;
+    hashBuilderOperator->GetOutput(&hashBuildOutput);
 
     VectorBatch *probeVecBatch =
         CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
@@ -240,10 +240,10 @@ void TestLimit(void **testData, omniruntime::type::DataTypes &sourceTypes, int32
     auto operatorFactory = dynamic_cast<LimitOperatorFactory *>(CreateLimitFactory(sourceTypes, loopCount));
     auto limitOperator = operatorFactory->CreateOperator();
     limitOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    limitOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    limitOperator->GetOutput(&outputVecBatch);
 
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(limitOperator);
     DeleteOperatorFactory(operatorFactory);
     delete vecAllocator;
@@ -260,10 +260,10 @@ void TestDistinctLimit(void **testData, omniruntime::type::DataTypes &sourceType
         dynamic_cast<DistinctLimitOperatorFactory *>(CreateDistinctLimitFactory(sourceTypes, loopCount));
     auto distinctLimitOperator = operatorFactory->CreateOperator();
     distinctLimitOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    distinctLimitOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    distinctLimitOperator->GetOutput(&outputVecBatch);
 
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
     DeleteOperatorFactory(operatorFactory);
     delete vecAllocator;
@@ -391,16 +391,14 @@ void TestSortMergeJoin(void **testData, omniruntime::type::DataTypes &sourceType
     VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);
     smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
 
-    std::vector<omniruntime::vec::VectorBatch *> result;
-    smjOp->GetOutput(result);
+    VectorBatch *result = nullptr;
+    smjOp->GetOutput(&result);
 
     auto streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypesVector);
     smjOp->AddStreamedTableInput(streamedTblVecBatchEof1);
 
     // check the join result
-    for (uint32_t i = 0; i < result.size(); i++) {
-        VectorHelper::FreeVecBatch(result[i]);
-    }
+    VectorHelper::FreeVecBatch(result);
 
     omniruntime::op::Operator::DeleteOperator(smjOp);
     delete overflowConfig;
@@ -416,10 +414,10 @@ void TestTopN(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_
     TopNOperatorFactory *topNOperatorFactory = dynamic_cast<TopNOperatorFactory *>(CreateTopNFactory(sourceTypes));
     auto topNOperator = topNOperatorFactory->CreateOperator();
     topNOperator->AddInput(sourceVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch = nullptr;
+    topNOperator->GetOutput(&outputVectorBatch);
 
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
     delete vecAllocator;

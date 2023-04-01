@@ -125,13 +125,13 @@ int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t BloomFilterOperator::GetOutput(std::vector<VectorBatch *> &blOutPut)
+int32_t BloomFilterOperator::GetOutput(VectorBatch **blOutPut)
 {
-    outPutVecs = new VectorBatch(1, 1);
+    auto outPut = new VectorBatch(1, 1);
     LongVector *col = new LongVector(vecAllocator, 1);
     col->SetValue(0, reinterpret_cast<int64_t>(bloomFilterAddress));
-    outPutVecs->SetVector(0, col);
-    blOutPut.push_back(outPutVecs);
+    outPut->SetVector(0, col);
+    *blOutPut = outPut;
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }

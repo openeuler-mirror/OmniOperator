@@ -26,13 +26,13 @@ TEST(BloomFilterTest, TestBloomFilterInit)
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(inputVectorBatch);
 
-    std::vector<omniruntime::vec::VectorBatch *> result;
-    op->GetOutput(result);
-    long longValue = (static_cast<LongVector *>(result[0]->GetVector(0)))->GetValue(0);
+    VectorBatch *result = nullptr;
+    op->GetOutput(&result);
+    long longValue = (static_cast<LongVector *>(result->GetVector(0)))->GetValue(0);
     BloomFilter *bfResult = (BloomFilter *)longValue;
     EXPECT_EQ(bfResult->GetNumHashFunctions(), 6);
     EXPECT_EQ(bfResult->GetBits()->GetWordsNum(), 4);
-    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(result);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
 }
