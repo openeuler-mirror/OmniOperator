@@ -207,28 +207,26 @@ public:
 
     static void CreateProjectFuncs(const DataTypes &inputTypes,
         std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
-        std::vector<DataTypePtr> &newInputTypes, std::vector<std::unique_ptr<RowProjection>> &rowProjections,
-        std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs, OverflowConfig *overflowConfig);
+        std::vector<DataTypePtr> &newInputTypes, std::vector<std::unique_ptr<Projection>> &Projections,
+        std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs, OverflowConfig *overflowConfig);
 
     static void CreateRequiredProjectFuncs(const DataTypes &inputTypes, expressions::Expr *projectKeys[],
         int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
-        std::vector<std::unique_ptr<RowProjection>> &rowProjections, std::vector<int32_t> &projectCols,
-        std::vector<int32_t> &allCols, std::vector<RowProjFunc> &projectFuncs, const OverflowConfig &overflowConfig);
+        std::vector<std::unique_ptr<Projection>> &Projections, std::vector<int32_t> &projectCols,
+        std::vector<int32_t> &allCols, std::vector<ProjFunc> &projectFuncs, const OverflowConfig &overflowConfig);
 
     static VectorBatch *ProjectVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
-        VectorAllocator *allocator);
+        const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator);
 
     static VectorBatch *ProjectRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<RowProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols,
-        VectorAllocator *allocator);
+        const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, VectorAllocator *allocator);
 
 private:
-    static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+    static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<ProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 
-    static void ProjectRequiredVectors(const DataTypes &newInputTypes, const std::vector<RowProjFunc> &projectFuncs,
+    static void ProjectRequiredVectors(const DataTypes &newInputTypes, const std::vector<ProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, VectorBatch *newVecBatch, VectorAllocator *allocator);
 };

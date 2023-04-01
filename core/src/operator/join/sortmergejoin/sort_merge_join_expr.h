@@ -43,14 +43,14 @@ private:
     JoinType joinType;
     std::string filter;
     SortMergeJoinOperator *smjOperator;
-    std::vector<std::unique_ptr<RowProjection>> rowProjections;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> Projections;
+    std::vector<ProjFunc> projectFuncs;
 };
 
 class StreamedTableWithExprOperator : public Operator {
 public:
     StreamedTableWithExprOperator(const type::DataTypes &streamedTypes, const std::vector<int32_t> &streamedKeyCols,
-        const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
+        const std::vector<ProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
 
     ~StreamedTableWithExprOperator() override;
 
@@ -65,7 +65,7 @@ private:
     SortMergeJoinOperator *smjOperator;
     DataTypes streamedTypes;
     std::vector<int32_t> streamedKeyCols;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<ProjFunc> projectFuncs;
 };
 
 class BufferedTableWithExprOperatorFactory : public OperatorFactory {
@@ -88,15 +88,15 @@ private:
     std::unique_ptr<DataTypes> bufferedTypes;
     std::vector<int32_t> bufferedKeyCols;
     std::vector<int32_t> bufferedOutputCols;
-    std::vector<std::unique_ptr<RowProjection>> rowProjections;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> Projections;
+    std::vector<ProjFunc> projectFuncs;
     StreamedTableWithExprOperatorFactory *streamTblWithExprOperatorFactory;
 };
 
 class BufferedTableWithExprOperator : public Operator {
 public:
     BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes, const std::vector<int32_t> &bufferedKeyCols,
-        const std::vector<RowProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
+        const std::vector<ProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
 
     ~BufferedTableWithExprOperator() override;
 
@@ -111,7 +111,7 @@ private:
     SortMergeJoinOperator *smjOperator;
     DataTypes bufferedTypes;
     std::vector<int32_t> bufferedKeyCols;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<ProjFunc> projectFuncs;
 };
 }
 }

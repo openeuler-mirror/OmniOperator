@@ -35,7 +35,7 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
 {
     std::vector<DataTypePtr> newTypes;
     std::vector<int32_t> fullArgumentChannels;
-    OperatorUtil::CreateProjectFuncs(sourceTypes, argumentKeys, argumentChannelsCount, newTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(sourceTypes, argumentKeys, argumentChannelsCount, newTypes, this->projections,
         this->argumentChannels, this->projectFuncs, overflowConfig);
     this->sourceTypes = std::make_unique<DataTypes>(newTypes);
 
@@ -103,7 +103,7 @@ Operator *WindowWithExprOperatorFactory::CreateOperator()
 }
 
 WindowWithExprOperator::WindowWithExprOperator(const type::DataTypes &sourceTypes,
-    std::vector<int32_t> &argumentChannels, std::vector<RowProjFunc> &projectFuncs, WindowOperator *windowOperator)
+    std::vector<int32_t> &argumentChannels, std::vector<ProjFunc> &projectFuncs, WindowOperator *windowOperator)
     : sourceTypes(std::move(sourceTypes)),
       argumentChannels(argumentChannels),
       projectFuncs(projectFuncs),

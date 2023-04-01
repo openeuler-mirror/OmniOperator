@@ -34,15 +34,15 @@ private:
     std::unique_ptr<DataTypes> groupByTypes;
     std::vector<std::unique_ptr<DataTypes>> aggTypes;
     std::vector<int32_t> projectCols;
-    std::vector<std::unique_ptr<RowProjection>> rowProjections;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> projections;
+    std::vector<ProjFunc> projectFuncs;
     HashAggregationOperatorFactory *hashAggOperatorFactory;
 };
 
 class HashAggregationWithExprOperator : public Operator {
 public:
     HashAggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
-        std::vector<RowProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator);
+        std::vector<ProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator);
 
     ~HashAggregationWithExprOperator() override;
 
@@ -60,7 +60,7 @@ private:
     OneRowAdaptor oneRowAdaptor;
     DataTypes sourceTypes;
     std::vector<int32_t> projectCols;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<ProjFunc> projectFuncs;
     HashAggregationOperator *hashAggOperator;
 };
 }

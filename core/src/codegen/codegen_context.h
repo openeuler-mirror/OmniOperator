@@ -38,8 +38,6 @@ public:
 
     friend class SimpleFilterCodeGen;
 
-    friend class RowProjectionCodeGen;
-
     friend class CodegenBase;
 
 private:

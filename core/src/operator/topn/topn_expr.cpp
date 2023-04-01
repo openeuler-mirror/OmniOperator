@@ -16,7 +16,7 @@ TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &
     int32_t sortKeyCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateProjectFuncs(sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->rowProjections,
+    OperatorUtil::CreateProjectFuncs(sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->projections,
         this->sortCols, this->projectFuncs, overflowConfig);
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
@@ -34,7 +34,7 @@ Operator *TopNWithExprOperatorFactory::CreateOperator()
 }
 
 TopNWithExprOperator::TopNWithExprOperator(type::DataTypes sourceTypes, std::vector<int32_t> &sortCols,
-    std::vector<RowProjFunc> &projectFuncs, TopNOperator *topNOperator)
+    std::vector<ProjFunc> &projectFuncs, TopNOperator *topNOperator)
     : sourceTypes(std::move(sourceTypes)), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
 {}
 

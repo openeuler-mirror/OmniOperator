@@ -39,15 +39,15 @@ public:
 private:
     std::unique_ptr<DataTypes> sourceTypes;
     std::vector<int32_t> sortCols;
-    std::vector<std::unique_ptr<RowProjection>> rowProjections;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> projections;
+    std::vector<ProjFunc> projectFuncs;
     SortOperatorFactory *sortOperatorFactory;
 };
 
 class SortWithExprOperator : public Operator {
 public:
     SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
-        std::vector<RowProjFunc> &projectFuncs, SortOperator *sortOperator);
+        std::vector<ProjFunc> &projectFuncs, SortOperator *sortOperator);
 
     ~SortWithExprOperator() override;
 
@@ -60,7 +60,7 @@ public:
 private:
     DataTypes sourceTypes;
     std::vector<int32_t> sortCols;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<ProjFunc> projectFuncs;
     SortOperator *sortOperator;
 };
 }

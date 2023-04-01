@@ -31,8 +31,8 @@ public:
 private:
     std::unique_ptr<DataTypes> probeTypes; // all types for probe
     std::vector<int32_t> probeHashCols;    // join columns for probe
-    std::vector<std::unique_ptr<RowProjection>> rowProjections;
-    std::vector<RowProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> projections;
+    std::vector<ProjFunc> projectFuncs;
     LookupOuterJoinOperatorFactory *operatorFactory;
 };
 

@@ -40,7 +40,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
-        this->rowProjections, this->projectCols, groupByAndAggColumnarIdx, this->projectFuncs, *overflowConfig);
+        this->projections, this->projectCols, groupByAndAggColumnarIdx, this->projectFuncs, *overflowConfig);
     uint32_t groupByCols[groupByNum];
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[i]);
@@ -104,7 +104,7 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &sourceTypes,
-    std::vector<int32_t> &projectCols, std::vector<RowProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator)
+    std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator)
     : sourceTypes(sourceTypes), projectCols(projectCols), projectFuncs(projectFuncs), hashAggOperator(hashAggOperator)
 {}
 
