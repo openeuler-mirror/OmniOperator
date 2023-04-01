@@ -54,10 +54,10 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t LimitOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
+int32_t LimitOperator::GetOutput(VectorBatch **resultVecBatch)
 {
     if (outputVecBatch != nullptr) {
-        outputPages.push_back(outputVecBatch);
+        *resultVecBatch = outputVecBatch;
         outputVecBatch = nullptr;
     }
 

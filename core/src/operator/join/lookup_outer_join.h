@@ -43,7 +43,7 @@ public:
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables);
     ~LookupOuterJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
     void AppendToNext(VectorBatch *vectorBatch, const int32_t *buildOutputIds, int32_t buildOutputColsCount,
         int32_t probeOutputColsCount, int32_t destRowIndex);
 

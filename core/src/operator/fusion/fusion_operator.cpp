@@ -65,7 +65,7 @@ int32_t FusionOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t FusionOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatches)
+int32_t FusionOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
     return 0;
 }

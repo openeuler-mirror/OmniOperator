@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
+import static nova.hetu.omniruntime.util.TestUtils.freeVecBatches;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
@@ -157,8 +158,7 @@ public class OmniLimitOperatorTest {
         assertVecBatchEquals(resultList.get(0), expectedData1);
         assertVecBatchEquals(resultList.get(1), expectedData2);
 
-        freeVecBatch(resultList.get(0));
-        freeVecBatch(resultList.get(1));
+        freeVecBatches(resultList);
         limitOperator.close();
         limitOperatorFactory.close();
     }

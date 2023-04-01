@@ -239,7 +239,7 @@ void TopNOperator::FillResultVectorBatchList()
     }
 }
 
-int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
+int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (!hasFilledResult) {
         if (pq.size() <= 0) {
@@ -269,7 +269,7 @@ int32_t TopNOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatch)
         singleRowVectorBatchSet.erase(singleVecBatch);
     }
     outputtedRowCount += rowCount;
-    outputVecBatch.push_back(resultVecBatch);
+    *outputVecBatch = resultVecBatch;
     if (!HasNext()) {
         SetStatus(OMNI_STATUS_FINISHED);
     }

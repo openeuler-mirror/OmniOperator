@@ -83,7 +83,7 @@ int32_t SortOperator::AddInput(VectorBatch *vecBatch)
 }
 
 // return error code
-int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
+int32_t SortOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     // input data is empty, or all data has been returned.
     if (totalRowCount == 0 || totalRowCount == rowCountOutputted) {
@@ -92,9 +92,9 @@ int32_t SortOperator::GetOutput(vector<VectorBatch *> &outputPages)
         return 0;
     }
     if (spiller == nullptr) {
-        GetOutputFromMemory(outputPages);
+        GetOutputFromMemory(outputVecBatch);
     } else {
-        MergeFromDiskAndMemory(outputPages);
+        MergeFromDiskAndMemory(outputVecBatch);
     }
 
     // through the reference counting mechanism, can vecBatch be released early?
@@ -178,7 +178,7 @@ void SortOperator::PrepareOutput()
     hasSorted = true;
 }
 
-void SortOperator::GetOutputFromMemory(vector<VectorBatch *> &outputPages)
+void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
 {
     // first if has not sorted,need to sort first.
     PrepareOutput();
@@ -190,10 +190,10 @@ void SortOperator::GetOutputFromMemory(vector<VectorBatch *> &outputPages)
     pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
         rowCountToOutput, vecAllocator);
     rowCountOutputted += rowCountToOutput;
-    outputPages.emplace_back(result);
+    *outputVecBatch = result;
 }
 
-void SortOperator::MergeFromDiskAndMemory(vector<VectorBatch *> &outputPages)
+void SortOperator::MergeFromDiskAndMemory(VectorBatch **outputVecBatch)
 {
     if (!hasSorted) {
         std::vector<VectorBatch *> vecBatchesForSpill;
@@ -214,7 +214,7 @@ void SortOperator::MergeFromDiskAndMemory(vector<VectorBatch *> &outputPages)
     if (hasNext) {
         auto *vectorBatchUnit = static_cast<VectorBatchUnit *>(spiller->Next());
         auto *result = vectorBatchUnit->GetVectorBatch();
-        outputPages.push_back(result);
+        *outputVecBatch = result;
         rowCountOutputted += result->GetRowCount();
         delete vectorBatchUnit;
     }

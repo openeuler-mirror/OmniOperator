@@ -45,8 +45,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     auto topNWithExprOperator = static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
     topNWithExprOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatchs;
-    topNWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch;
+    topNWithExprOperator->GetOutput(&outputVecBatch);
 
     int32_t expData1[dataSize] = {15, 13, 8, 8, 8};
     int64_t expData2[dataSize] = {23, 0, 5, 4, 3};
@@ -57,14 +57,14 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4, expData5);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    VectorHelper::PrintVecBatch(outputVecBatch);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
     DeleteOperatorFactory(topNWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -98,8 +98,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
         static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
     topNWithExprOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatchs;
-    topNWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch;
+    topNWithExprOperator->GetOutput(&outputVecBatch);
 
     int32_t expData1[dataSize] = {15, 13, 8, 8, 8};
     int64_t expData2[dataSize] = {23, 0, 5, 4, 3};
@@ -109,14 +109,14 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    VectorHelper::PrintVecBatch(outputVecBatch);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(sortKeys);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
     DeleteOperatorFactory(topNWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -148,8 +148,8 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
         static_cast<TopNWithExprOperator *>(CreateTestOperator(topNWithExprOperatorFactory));
 
     topNWithExprOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatchs;
-    topNWithExprOperator->GetOutput(outputVecBatchs);
+    VectorBatch *outputVecBatch;
+    topNWithExprOperator->GetOutput(&outputVecBatch);
 
     int32_t expData1[dataSize] = {15, 13, 8, 8, 8};
     int64_t expData2[dataSize] = {23, 0, 4, 3, 5};
@@ -157,14 +157,14 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    VectorHelper::PrintVecBatch(outputVecBatchs[0]);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatchs[0], expectVecorBatch));
+    VectorHelper::PrintVecBatch(outputVecBatch);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
     DeleteOperatorFactory(topNWithExprOperatorFactory);
     VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecBatchs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 }

@@ -80,9 +80,9 @@ int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     return 0;
 }
 
-int32_t SortWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatches)
+int32_t SortWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    int32_t status = sortOperator->GetOutput(outputVecBatches);
+    int32_t status = sortOperator->GetOutput(outputVecBatch);
     SetStatus(sortOperator->GetStatus());
     return status;
 }

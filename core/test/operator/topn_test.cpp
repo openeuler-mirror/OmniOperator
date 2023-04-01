@@ -61,8 +61,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
         printf("TopN with OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
 
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
 
     auto e = clock();
     cout << "topn with OmniJit performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
@@ -70,10 +70,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     int32_t expectData1[expectedDataSize] = {1, 2, 3, 4, 5};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     TopNOperatorFactory *topNOperatorFactory2 =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
@@ -92,13 +92,13 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
         printf("TopN without OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
 
-    vector<VectorBatch *> outputVecorBatchs2;
-    topNOperator2->GetOutput(outputVecorBatchs2);
+    VectorBatch *outputVectorBatch2;
+    topNOperator2->GetOutput(&outputVectorBatch2);
 
     auto e2 = clock();
     cout << "topn without OmniJit performance takes: " << (double)(e2 - s2) / CLOCKS_PER_SEC << endl;
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs2[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch2, expectVectorBatch));
 
     delete perfUtil;
     delete[] data0;
@@ -106,9 +106,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     Operator::DeleteOperator(topNOperator2);
     DeleteOperatorFactory(topNOperatorFactory);
     DeleteOperatorFactory(topNOperatorFactory2);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
-    VectorHelper::FreeVecBatches(outputVecorBatchs2);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch2);
     delete vecAllocator;
 }
 
@@ -153,8 +153,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     if (instCount != -1) {
         printf("TopN with OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     auto e = clock();
     cout << "topn with OmniJit performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
@@ -171,16 +171,16 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     if (instCount != -1) {
         printf("TopN without OmniJit, used %lld instructions\n", perfUtil->GetData());
     }
-    vector<VectorBatch *> outputVecorBatchsWithoutJit;
-    topNOp->GetOutput(outputVecorBatchsWithoutJit);
+    VectorBatch *outputVectorBatchWithoutJit;
+    topNOp->GetOutput(&outputVectorBatchWithoutJit);
     auto e2 = clock();
     cout << "topn without OmniJit performance takes: " << (double)(e2 - s2) / CLOCKS_PER_SEC << endl;
 
     int32_t expectData1[expectedDataSize] = {7, 37, 51, 95, 95};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
     delete[] data0;
     Operator::DeleteOperator(topNOperator);
@@ -188,9 +188,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     DeleteOperatorFactory(topNOperatorFactoryWithoutJit);
     Operator::DeleteOperator(topNOp);
     delete perfUtil;
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
-    VectorHelper::FreeVecBatches(outputVecorBatchsWithoutJit);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatchWithoutJit);
     delete vecAllocator;
 }
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
@@ -224,8 +224,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
 
     auto e = clock();
     cout << "topn performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
@@ -236,15 +236,15 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
     }
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -276,20 +276,20 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {0, 1, 2, 2, 3};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -324,23 +324,23 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     string expectData1[expectedDataSize] = {"0", "1", "2", "2", "3"};
     VarcharVector *expectCol1 = new VarcharVector(vecAllocator, expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
     }
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -375,23 +375,23 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     string expectData1[expectedDataSize] = {"0", "1", "2", "2", "3"};
     VarcharVector *expectCol1 = new VarcharVector(vecAllocator, expectedDataSize, expectedDataSize);
     for (int i = 0; i < 5; ++i) {
         string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
     }
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -423,20 +423,20 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {2, 2, 1, 1, 0};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -470,8 +470,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
     VarcharVector *expectCol1 =
         new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumnVarChar"),
@@ -480,15 +480,15 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
         std::string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
     }
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -522,8 +522,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     std::string expectData1[expectedDataSize] = {"2", "2", "1", "1", "0"};
     VarcharVector *expectCol1 =
         new VarcharVector(VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNDescOneColumnChar"),
@@ -532,15 +532,15 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
         std::string str = expectData1[i];
         expectCol1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.size());
     }
-    VectorBatch *expectVecorBatch = new VectorBatch(1);
-    expectVecorBatch->SetVector(0, expectCol1);
+    VectorBatch *expectVectorBatch = new VectorBatch(1);
+    expectVectorBatch->SetVector(0, expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -584,8 +584,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVectorBatchs;
-    topNOperator->GetOutput(outputVectorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -604,12 +604,12 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     expectVectorBatch->SetVector(2, expectCol3);
     expectVectorBatch->SetVector(3, expectCol4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatchs[0], expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
     VectorHelper::FreeVecBatch(expectVectorBatch);
-    VectorHelper::FreeVecBatches(outputVectorBatchs);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -652,8 +652,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -666,17 +666,17 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
     double expectData3[expectedDataSize] = {6.6, 3.3, 5.5, 2.2, 4.4};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
+    VectorBatch *expectVectorBatch = new VectorBatch(3);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -719,8 +719,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -733,17 +733,17 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     double expectData3[expectedDataSize] = {6.6, 3.3, 5.5, 2.2, 4.4};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
+    VectorBatch *expectVectorBatch = new VectorBatch(3);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -787,8 +787,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -801,18 +801,18 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
     int16_t expectData4[expectedDataSize] = {2, 5, 1, 4, 0};
     ShortVector *expectCol4 = new ShortVector(vecAllocator, expectedDataSize);
     expectCol4->SetValues(0, expectData4, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(4);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
-    expectVecorBatch->SetVector(3, expectCol4);
+    VectorBatch *expectVectorBatch = new VectorBatch(4);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
+    expectVectorBatch->SetVector(3, expectCol4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -854,8 +854,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -868,17 +868,17 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
     double expectData3[expectedDataSize] = {3.3, 6.6, 2.2, 5.5, 1.1};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
+    VectorBatch *expectVectorBatch = new VectorBatch(3);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -921,8 +921,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {0, 0, 1, 1, 2};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -935,17 +935,17 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
     double expectData3[expectedDataSize] = {3.3, 6.6, 2.2, 5.5, 1.1};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
+    VectorBatch *expectVectorBatch = new VectorBatch(3);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -995,8 +995,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVectorBatches;
-    topNOperator->GetOutput(outputVectorBatches);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {2, 0, 0, 1, 1};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -1007,20 +1007,20 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     double expectData3[expectedDataSize] = {1.1, 6.6, 3.3, 5.5, 2.2};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
-    expectVecorBatch->GetVector(0)->SetValueNull(0);
+    VectorBatch *expectVectorBatch = new VectorBatch(3);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
+    expectVectorBatch->GetVector(0)->SetValueNull(0);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
-    EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
-    EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
+    EXPECT_TRUE(outputVectorBatch->GetVector(0)->IsValueNull(0));
+    EXPECT_TRUE(!outputVectorBatch->GetVector(0)->IsValueNull(2));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVectorBatches);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -1070,8 +1070,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVectorBatches;
-    topNOperator->GetOutput(outputVectorBatches);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {2, 0, 0, 1, 1};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -1081,20 +1081,20 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     double expectData3[expectedDataSize] = {1.1, 6.6, 3.3, 5.5, 2.2};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
-    expectVecorBatch->GetVector(0)->SetValueNull(0);
+    VectorBatch *expectVectorBatch = new VectorBatch(3);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
+    expectVectorBatch->GetVector(0)->SetValueNull(0);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
-    EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
-    EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
+    EXPECT_TRUE(outputVectorBatch->GetVector(0)->IsValueNull(0));
+    EXPECT_TRUE(!outputVectorBatch->GetVector(0)->IsValueNull(2));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVectorBatches);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -1134,8 +1134,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVecorBatchs;
-    topNOperator->GetOutput(outputVecorBatchs);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {2, 1, 0, 2, 1};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -1145,17 +1145,17 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     double expectData3[expectedDataSize] = {1.1, 2.2, 3.3, 4.4, 5.5};
     DoubleVector *expectCol3 = new DoubleVector(vecAllocator, expectedDataSize);
     expectCol3->SetValues(0, expectData3, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(3);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
+    VectorBatch *expectVectorBatch = new VectorBatch(3);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecorBatchs[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVecorBatchs);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -1193,8 +1193,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator(
         "topn_TestTopNAscMultiColumnNullFirstAndDictionaryVec");
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVectorBatches;
-    topNOperator->GetOutput(outputVectorBatches);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {2, 0, 0, 1, 1};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -1207,22 +1207,22 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     int16_t expectData4[expectedDataSize] = {0, 5, 2, 4, 1};
     ShortVector *expectCol4 = new ShortVector(vecAllocator, expectedDataSize);
     expectCol4->SetValues(0, expectData4, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(4);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
-    expectVecorBatch->SetVector(3, expectCol4);
-    expectVecorBatch->GetVector(0)->SetValueNull(0);
-    expectVecorBatch->GetVector(1)->SetValueNull(0);
+    VectorBatch *expectVectorBatch = new VectorBatch(4);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
+    expectVectorBatch->SetVector(3, expectCol4);
+    expectVectorBatch->GetVector(0)->SetValueNull(0);
+    expectVectorBatch->GetVector(1)->SetValueNull(0);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
-    EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
-    EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
+    EXPECT_TRUE(outputVectorBatch->GetVector(0)->IsValueNull(0));
+    EXPECT_TRUE(!outputVectorBatch->GetVector(0)->IsValueNull(2));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVectorBatches);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -1254,8 +1254,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
 
     VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_AscMultiColumnNull");
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVectorBatches;
-    topNOperator->GetOutput(outputVectorBatches);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {2, 0, 0, 1, 1};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -1268,22 +1268,22 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     int16_t expectData4[expectedDataSize] = {0, 5, 2, 4, 1};
     ShortVector *expectCol4 = new ShortVector(vecAllocator, expectedDataSize);
     expectCol4->SetValues(0, expectData4, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(4);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
-    expectVecorBatch->SetVector(3, expectCol4);
-    expectVecorBatch->GetVector(0)->SetValueNull(0);
-    expectVecorBatch->GetVector(1)->SetValueNull(0);
+    VectorBatch *expectVectorBatch = new VectorBatch(4);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
+    expectVectorBatch->SetVector(3, expectCol4);
+    expectVectorBatch->GetVector(0)->SetValueNull(0);
+    expectVectorBatch->GetVector(1)->SetValueNull(0);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
-    EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(0));
-    EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
+    EXPECT_TRUE(outputVectorBatch->GetVector(0)->IsValueNull(0));
+    EXPECT_TRUE(!outputVectorBatch->GetVector(0)->IsValueNull(2));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVectorBatches);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -1319,8 +1319,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     VectorAllocator *vecAllocator =
         VectorAllocator::GetGlobalAllocator()->NewChildAllocator("topn_TestTopNAscMultiColumnNullLast");
     topNOperator->AddInput(inputVecBatch);
-    std::vector<VectorBatch *> outputVectorBatches;
-    topNOperator->GetOutput(outputVectorBatches);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
     int32_t expectData1[expectedDataSize] = {0, 1, 1, -1, -1};
     IntVector *expectCol1 = new IntVector(vecAllocator, expectedDataSize);
     expectCol1->SetValues(0, expectData1, expectedDataSize);
@@ -1333,24 +1333,24 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     int16_t expectData4[expectedDataSize] = {2, 4, 1, 0, 5};
     ShortVector *expectCol4 = new ShortVector(vecAllocator, expectedDataSize);
     expectCol4->SetValues(0, expectData4, expectedDataSize);
-    VectorBatch *expectVecorBatch = new VectorBatch(4);
-    expectVecorBatch->SetVector(0, expectCol1);
-    expectVecorBatch->SetVector(1, expectCol2);
-    expectVecorBatch->SetVector(2, expectCol3);
-    expectVecorBatch->SetVector(3, expectCol4);
-    expectVecorBatch->GetVector(0)->SetValueNull(3);
-    expectVecorBatch->GetVector(0)->SetValueNull(4);
-    expectVecorBatch->GetVector(1)->SetValueNull(3);
+    VectorBatch *expectVectorBatch = new VectorBatch(4);
+    expectVectorBatch->SetVector(0, expectCol1);
+    expectVectorBatch->SetVector(1, expectCol2);
+    expectVectorBatch->SetVector(2, expectCol3);
+    expectVectorBatch->SetVector(3, expectCol4);
+    expectVectorBatch->GetVector(0)->SetValueNull(3);
+    expectVectorBatch->GetVector(0)->SetValueNull(4);
+    expectVectorBatch->GetVector(1)->SetValueNull(3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatches[0], expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
-    EXPECT_TRUE(outputVectorBatches[0]->GetVector(0)->IsValueNull(3));
-    EXPECT_TRUE(!outputVectorBatches[0]->GetVector(0)->IsValueNull(2));
+    EXPECT_TRUE(outputVectorBatch->GetVector(0)->IsValueNull(3));
+    EXPECT_TRUE(!outputVectorBatch->GetVector(0)->IsValueNull(2));
 
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
-    VectorHelper::FreeVecBatches(outputVectorBatches);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
     delete vecAllocator;
 }
 
@@ -1378,8 +1378,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    topNOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch;
+    topNOperator->GetOutput(&outputVecBatch);
 
     int32_t expectData0[expectedDataSize] = {2, 2, 1, 1, 0};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
@@ -1388,9 +1388,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
@@ -1420,8 +1420,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    topNOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch;
+    topNOperator->GetOutput(&outputVecBatch);
 
     Decimal128 expectData0[expectedDataSize] = {2, 2, 1, 1, 0};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
@@ -1430,9 +1430,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
@@ -1462,8 +1462,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNShortColumn)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    topNOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch;
+    topNOperator->GetOutput(&outputVecBatch);
 
     int16_t expectData0[expectedDataSize] = {2, 2, 1, 1, 0};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
@@ -1472,9 +1472,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNShortColumn)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
@@ -1504,8 +1504,8 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    topNOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch;
+    topNOperator->GetOutput(&outputVecBatch);
 
     std::string expectData0[expectedDataSize]={"2", "2", "1", "1", "0"};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
@@ -1513,9 +1513,9 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     DataTypes expectedTypes(std::vector<DataTypePtr>({ VarcharType(1), LongType(), VarcharType(3) }));
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
@@ -1546,8 +1546,8 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    topNOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch;
+    topNOperator->GetOutput(&outputVecBatch);
 
     std::string expectData0[expectedDataSize]={"2", "2", "1", "1", "0"};
     int64_t expectData1[expectedDataSize] = {5, 2, 4, 1, 3};
@@ -1555,9 +1555,9 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     DataTypes expectedTypes(std::vector<DataTypePtr>({ VarcharType(1), LongType(), BooleanType() }));
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
