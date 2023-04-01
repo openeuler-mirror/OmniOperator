@@ -57,7 +57,7 @@ public:
     // return code see SortMergeJoinAddInputCode
     int32_t AddInput(VectorBatch *vecBatch) override;
 
-    int32_t GetOutput(std::vector<VectorBatch *> &outputPages) override;
+    int32_t GetOutput(VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
 
@@ -103,7 +103,7 @@ public:
     // return code see SortMergeJoinAddInputCode
     int32_t AddInput(VectorBatch *vecBatch) override;
 
-    int32_t GetOutput(std::vector<VectorBatch *> &outputPages) override;
+    int32_t GetOutput(VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
 

@@ -79,9 +79,9 @@ int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     return retCode;
 }
 
-int32_t StreamedTableWithExprOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
+int32_t StreamedTableWithExprOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
-    int32_t retCode = smjOperator->GetOutput(outputPages);
+    int32_t retCode = smjOperator->GetOutput(outputVecBatch);
     SetStatus(smjOperator->GetStatus());
     return retCode;
 }
@@ -156,9 +156,9 @@ int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     return retCode;
 }
 
-int32_t BufferedTableWithExprOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
+int32_t BufferedTableWithExprOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
-    int32_t retCode = smjOperator->GetOutput(outputPages);
+    int32_t retCode = smjOperator->GetOutput(outputVecBatch);
     SetStatus(smjOperator->GetStatus());
     return retCode;
 }

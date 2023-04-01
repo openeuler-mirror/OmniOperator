@@ -301,13 +301,13 @@ VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, int32_t rowCount)
     return sliceBatch;
 }
 
-int32_t JoinResultBuilder::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
+int32_t JoinResultBuilder::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
     if (buildVectorBatchRowCount > 0) {
         if (buildVectorBatchRowCount == maxRowCount) {
-            outputPages.push_back(buildVectorBatch);
+            *outputVecBatch = buildVectorBatch;
         } else {
-            outputPages.push_back(GetVectorBatchFromSlice(buildVectorBatch, buildVectorBatchRowCount));
+            *outputVecBatch = GetVectorBatchFromSlice(buildVectorBatch, buildVectorBatchRowCount);
             VectorHelper::FreeVecBatch(buildVectorBatch);
         }
     } else {

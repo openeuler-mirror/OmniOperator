@@ -37,7 +37,7 @@ public:
 
     int32_t AddJoinValueAddresses();
 
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages);
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch);
 
     void Finish();
 

@@ -188,8 +188,8 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
     ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
-    std::vector<omniruntime::vec::VectorBatch *> result;
-    smjOp->GetOutput(result);
+    VectorBatch *result;
+    smjOp->GetOutput(&result);
 
     auto streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypesVector);
     addInputRetCode = smjOp->AddStreamedTableInput(streamedTblVecBatchEof1);
@@ -197,20 +197,18 @@ TEST(NativeSortMergeJoinTest, TestSmjOneTimeEqualCondition)
 
     // check the join result
     int32_t index = 0;
-    for (uint32_t i = 0; i < result.size(); i++) {
-        ASSERT_EQ(result[i]->GetVectorCount(), 2);
-        ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
-        ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
-        for (auto j = 0; j < result[i]->GetRowCount(); j++) {
-            long longValue = (static_cast<LongVector *>(result[i]->GetVector(0)))->GetValue(j);
-            ASSERT_EQ(longValue, streamedTblDataCol2[index]);
+    ASSERT_EQ(result->GetVectorCount(), 2);
+    ASSERT_EQ(result->GetVector(0)->GetTypeId(), OMNI_LONG);
+    ASSERT_EQ(result->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
+    for (auto j = 0; j < result->GetRowCount(); j++) {
+        long longValue = (static_cast<LongVector *>(result->GetVector(0)))->GetValue(j);
+        ASSERT_EQ(longValue, streamedTblDataCol2[index]);
 
-            double doubleValue = (static_cast<DoubleVector *>(result[i]->GetVector(1)))->GetValue(j);
-            ASSERT_EQ(doubleValue, bufferedTblDataCol1[index]);
-            index++;
-        }
-        VectorHelper::FreeVecBatch(result[i]);
+        double doubleValue = (static_cast<DoubleVector *>(result->GetVector(1)))->GetValue(j);
+        ASSERT_EQ(doubleValue, bufferedTblDataCol1[index]);
+        index++;
     }
+    VectorHelper::FreeVecBatch(result);
 
     omniruntime::op::Operator::DeleteOperator(smjOp);
 }
@@ -1406,26 +1404,24 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
     resultBuilder->AddJoinValueAddresses();
 
-    std::vector<omniruntime::vec::VectorBatch *> outputPages;
+    VectorBatch *outputVecBatch;
 
-    resultBuilder->GetOutput(outputPages);
+    resultBuilder->GetOutput(&outputVecBatch);
     resultBuilder->Finish();
-
-    ASSERT_EQ(outputPages.size(), 1);
 
     int32_t expectedData1[6] = {1, 3, 5, 7, 9, 11};
     double expectedData2[6] = {1.1, 3.3, 5.5, 7.7, 9.9, 11.1};
     double expectedData3[6] = {5.5, 3.3, 1.1, 11.1, 9.9, 7.7};
     string expectedData4[6] = {"555", "33", "1", "111", "99", "7"};
 
-    AssertVecBatchEquals(outputPages[0], 4, 6, expectedData1, expectedData2, expectedData3, expectedData4);
+    AssertVecBatchEquals(outputVecBatch, 4, 6, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
     delete resultBuilder;
     delete leftPagesIndex;
     delete rightPagesIndex;
-    VectorHelper::FreeVecBatches(outputPages);
+    VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
 TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
@@ -1488,26 +1484,24 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
     ASSERT_EQ(resultBuilder->AddJoinValueAddresses(), 0);
 
-    std::vector<omniruntime::vec::VectorBatch *> outputPages;
+    VectorBatch *outputVecBatch;
 
-    resultBuilder->GetOutput(outputPages);
+    resultBuilder->GetOutput(&outputVecBatch);
     resultBuilder->Finish();
-
-    ASSERT_EQ(outputPages.size(), 1);
 
     int32_t expectedData1[2] = {3, 5};
     double expectedData2[2] = {3.3, 5.5};
     double expectedData3[2] = {3.3, 1.1};
     string expectedData4[2] = {"33", "1"};
 
-    AssertVecBatchEquals(outputPages[0], 4, 2, expectedData1, expectedData2, expectedData3, expectedData4);
+    AssertVecBatchEquals(outputVecBatch, 4, 2, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
     delete resultBuilder;
     delete leftPagesIndex;
     delete rightPagesIndex;
-    VectorHelper::FreeVecBatches(outputPages);
+    VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
 TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
@@ -1569,14 +1563,14 @@ TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
 
     std::vector<omniruntime::vec::VectorBatch *> result;
 
-    std::vector<omniruntime::vec::VectorBatch *> result1;
-    smjOp->GetOutput(result1);
-    result.emplace_back(result1[0]);
+    VectorBatch *result1;
+    smjOp->GetOutput(&result1);
+    result.emplace_back(result1);
     ASSERT_EQ(smjOp->GetStatus(), OMNI_STATUS_NORMAL);
 
-    result1.clear();
-    smjOp->GetOutput(result1);
-    result.emplace_back(result1[0]);
+    VectorBatch *result2;
+    smjOp->GetOutput(&result2);
+    result.emplace_back(result2);
     ASSERT_EQ(smjOp->GetStatus(), OMNI_STATUS_FINISHED);
 
     // add eof flag to buffered table , need add streamed table data
@@ -1591,9 +1585,9 @@ TEST(NativeSortMergeJoinTest, TestSmjStreamingGetOutput)
     ASSERT_EQ(DecodeAddFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH));
     ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
-    std::vector<omniruntime::vec::VectorBatch *> result2;
-    smjOp->GetOutput(result2);
-    result.push_back(result2[0]);
+    VectorBatch *result3;
+    smjOp->GetOutput(&result3);
+    result.push_back(result3);
 
     int32_t resultCount = 0;
     for (uint32_t i = 0; i < result.size(); i++) {
@@ -1675,14 +1669,14 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
 
     std::vector<omniruntime::vec::VectorBatch *> result;
 
-    std::vector<omniruntime::vec::VectorBatch *> result1;
-    smjOp->GetOutput(result1);
-    result.emplace_back(result1[0]);
+    VectorBatch *result1;
+    smjOp->GetOutput(&result1);
+    result.emplace_back(result1);
     ASSERT_EQ(smjOp->GetStatus(), OMNI_STATUS_NORMAL);
 
-    result1.clear();
-    smjOp->GetOutput(result1);
-    result.emplace_back(result1[0]);
+    VectorBatch *result2;
+    smjOp->GetOutput(&result2);
+    result.emplace_back(result2);
     ASSERT_EQ(smjOp->GetStatus(), OMNI_STATUS_FINISHED);
 
     // add eof flag to buffered table , need add streamed table data
@@ -1698,9 +1692,9 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
     ASSERT_EQ(DecodeFetchFlag(addInputRetCode), static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA));
 
 
-    std::vector<omniruntime::vec::VectorBatch *> result2;
-    smjOp->GetOutput(result2);
-    result.emplace_back(result2[0]);
+    VectorBatch *result3;
+    smjOp->GetOutput(&result3);
+    result.emplace_back(result3);
     ASSERT_EQ(smjOp->GetStatus(), OMNI_STATUS_FINISHED);
 
     int32_t resultCount = 0;
