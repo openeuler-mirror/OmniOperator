@@ -38,7 +38,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
     vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "(J[J[J[J[J[J[I[I[I[II)V");
     omniResultsCls = createGlobalClassRef(env, "nova/hetu/omniruntime/operator/OmniResults");
     omniResultsInitMethodId =
-        env->GetMethodID(omniResultsCls, "<init>", "([Lnova/hetu/omniruntime/vector/VecBatch;I)V");
+        env->GetMethodID(omniResultsCls, "<init>", "(Lnova/hetu/omniruntime/vector/VecBatch;I)V");
     traceUtilCls = createGlobalClassRef(env, "nova/hetu/omniruntime/utils/TraceUtil");
     traceUtilStackMethodId = env->GetStaticMethodID(traceUtilCls, "stack", "()Ljava/lang/String;");
     lazyVectorCls = createGlobalClassRef(env, "nova/hetu/omniruntime/vector/LazyVec");

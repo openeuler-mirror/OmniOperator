@@ -72,14 +72,15 @@
         return fallBackExpr;                                                                                   \
     }
 
-#define JNI_METHOD_END_WITH_VECBATCHES(fallBackExpr, toDeleteVecBatches) \
-    }                                                                    \
-    catch (const std::exception &e)                                      \
-    {                                                                    \
-        VectorHelper::FreeVecBatches(toDeleteVecBatches);                \
-        toDeleteVecBatches.clear();                                      \
-        env->ThrowNew(omniRuntimeExceptionClass, e.what());              \
-        return fallBackExpr;                                             \
+#define JNI_METHOD_END_WITH_VECBATCHES(fallBackExpr, toDeleteVecBatch) \
+    }                                                                  \
+    catch (const std::exception &e)                                    \
+    {                                                                  \
+        if (toDeleteVecBatch) {                                        \
+            VectorHelper::FreeVecBatch(toDeleteVecBatch);              \
+        }                                                              \
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());            \
+        return fallBackExpr;                                           \
     }
 
 #ifdef __cplusplus

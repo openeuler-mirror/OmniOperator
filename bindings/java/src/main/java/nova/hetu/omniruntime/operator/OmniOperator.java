@@ -90,7 +90,7 @@ public final class OmniOperator implements AutoCloseable {
 
         private OmniResults results;
 
-        private int index;
+        private VecBatch next;
 
         /**
          * Instantiates a new Vec batch iterator.
@@ -113,37 +113,33 @@ public final class OmniOperator implements AutoCloseable {
             // if it first, the results is null,
             // or index reach the count of vector batches but it don't finished,
             // then advanced().
-            if (results == null || (index == results.getVecBatches().length && !isFinished())) {
+            if (results == null || (next == results.getVecBatch() && !isFinished())) {
                 resetIterator();
                 advanced();
             }
 
             // after advanced(), if results is still null,
+            // or vectorBatch hash been pulled, or vecBatch is null
             // means there is no more data.
-            if (results == null) {
-                hasNext = false;
-                return false;
-            }
-
-            // if index reach the count of vector batches
-            // means it finished, return and clean the context.
-            if (index == results.getVecBatches().length) {
+            if (results == null || next == results.getVecBatch()) {
                 resetIterator();
                 hasNext = false;
                 return false;
             }
+
             hasNext = true;
             return true;
         }
 
         @Override
         public VecBatch next() {
-            return results.getVecBatches()[index++];
+            next = results.getVecBatch();
+            return next;
         }
 
         private void resetIterator() {
             results = null;
-            index = 0;
+            next = null;
         }
 
         private void advanced() {

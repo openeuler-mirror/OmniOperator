@@ -11,9 +11,11 @@
 #include "status.h"
 #include "vector/vector_batch.h"
 #include "vector/vector_allocator.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
+using namespace omniruntime::vec;
 class Operator {
 public:
     Operator()
@@ -27,7 +29,22 @@ public:
 
     virtual int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) = 0;
 
-    virtual int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) = 0;
+    virtual int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data)
+    {}
+
+    virtual int32_t GetOutput(omniruntime::vec::VectorBatch **result)
+    {
+        std::vector<omniruntime::vec::VectorBatch *> outputs;
+        int32_t resultCode = GetOutput(outputs);
+        if (outputs.size() == 1) {
+            *result = outputs[0];
+            outputs.clear();
+        } else if (outputs.size() > 1) {
+            VectorHelper::FreeVecBatches(outputs);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", "output multiple batch at once");
+        }
+        return resultCode;
+    }
 
     static void DeleteOperator(Operator *op)
     {

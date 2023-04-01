@@ -15,18 +15,18 @@ import java.io.Closeable;
  * @since 2021-06-30
  */
 public class OmniResults implements Closeable {
-    private final VecBatch[] vecBatches;
+    private final VecBatch vecBatch;
 
     private final Status status;
 
     /**
      * Instantiates a new Omni results.
      *
-     * @param vecBatches the vec batches
+     * @param vecBatch the vec batch
      * @param status the status
      */
-    public OmniResults(VecBatch[] vecBatches, int status) {
-        this.vecBatches = vecBatches;
+    public OmniResults(VecBatch vecBatch, int status) {
+        this.vecBatch = vecBatch;
         this.status = new Status(status);
     }
 
@@ -35,8 +35,8 @@ public class OmniResults implements Closeable {
      *
      * @return the vec batch [ ]
      */
-    public VecBatch[] getVecBatches() {
-        return vecBatches;
+    public VecBatch getVecBatch() {
+        return vecBatch;
     }
 
     /**
@@ -50,7 +50,7 @@ public class OmniResults implements Closeable {
 
     @Override
     public void close() {
-        for (VecBatch vecBatch : vecBatches) {
+        if (vecBatch != null) {
             vecBatch.close();
         }
     }
