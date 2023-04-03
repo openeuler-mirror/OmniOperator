@@ -58,7 +58,7 @@ StreamedTableWithExprOperator::StreamedTableWithExprOperator(const type::DataTyp
       projectFuncs(projectFuncs)
 {}
 
-StreamedTableWithExprOperator::~StreamedTableWithExprOperator() {}
+StreamedTableWithExprOperator::~StreamedTableWithExprOperator() = default;
 
 int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
@@ -119,7 +119,7 @@ BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const
     streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilder(overflowConfig);
 }
 
-BufferedTableWithExprOperatorFactory::~BufferedTableWithExprOperatorFactory() {}
+BufferedTableWithExprOperatorFactory::~BufferedTableWithExprOperatorFactory() = default;
 
 Operator *BufferedTableWithExprOperatorFactory::CreateOperator()
 {
@@ -136,7 +136,7 @@ BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTyp
       projectFuncs(projectFuncs)
 {}
 
-BufferedTableWithExprOperator::~BufferedTableWithExprOperator() {}
+BufferedTableWithExprOperator::~BufferedTableWithExprOperator() = default;
 
 int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {

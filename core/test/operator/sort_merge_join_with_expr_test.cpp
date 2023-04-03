@@ -4124,7 +4124,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
         "\"operator\":\"GREATER_THAN\","
         "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
         "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1, \"isNull\":false, \"value\":2}}";
-    std::vector<DataTypePtr> streamTypeVector = { IntType(), LongType() };
+    std::vector<DataTypePtr> streamTypeVector = { IntType(), VarcharType(2000) };
     DataTypes streamedTblTypes(streamTypeVector);
     FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
@@ -4136,7 +4136,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, filterJsonStr, overflowConfig);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    std::vector<DataTypePtr> bufferTypesVector = { DoubleType(), IntType() };
+    std::vector<DataTypePtr> bufferTypesVector = { VarcharType(2000), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
     FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
@@ -4149,21 +4149,21 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
 
 
     // construct data
-    const int32_t streamedTblDataSize = 65545;
+    const int32_t streamedTblDataSize = 270;
     int32_t streamedTblCol1Data[streamedTblDataSize];
-    long streamedTblCol2Data[streamedTblDataSize];
+    std::string streamedTblCol2Data[streamedTblDataSize];
     for (int32_t i = 0; i < streamedTblDataSize; i++) {
         streamedTblCol1Data[i] = i;
-        streamedTblCol2Data[i] = i + 1;
+        streamedTblCol2Data[i] = std::to_string(i + 1);
     }
     VectorBatch *streamedTblVecBatch =
         CreateVectorBatch(streamedTblTypes, streamedTblDataSize, streamedTblCol1Data, streamedTblCol2Data);
 
-    const int32_t bufferedTblSize = 65545;
-    double bufferedTblCol1Data[bufferedTblSize];
+    const int32_t bufferedTblSize = 270;
+    std::string bufferedTblCol1Data[bufferedTblSize];
     int32_t bufferedTblCol2Data[bufferedTblSize];
     for (int32_t i = 0; i < streamedTblDataSize; i++) {
-        bufferedTblCol1Data[i] = i + 3;
+        bufferedTblCol1Data[i] = std::to_string(i + 3);
         bufferedTblCol2Data[i] = i;
     }
     VectorBatch *bufferedTblVecBatch =
@@ -4216,14 +4216,18 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
     int32_t index = 3;
     for (uint32_t i = 0; i < result.size(); i++) {
         ASSERT_EQ(result[i]->GetVectorCount(), 2);
-        ASSERT_EQ(result[i]->GetVector(0)->GetTypeId(), OMNI_LONG);
-        ASSERT_EQ(result[i]->GetVector(1)->GetTypeId(), OMNI_DOUBLE);
+        auto vector1 = static_cast<VarcharVector *>(result[i]->GetVector(0));
+        auto vector2 = static_cast<VarcharVector *>(result[i]->GetVector(1));
+        ASSERT_EQ(vector1->GetTypeId(), OMNI_VARCHAR);
+        ASSERT_EQ(vector2->GetTypeId(), OMNI_VARCHAR);
         for (auto j = 0; j < result[i]->GetRowCount(); j++) {
-            long longValue = (static_cast<LongVector *>(result[i]->GetVector(0)))->GetValue(j);
-            ASSERT_EQ(longValue, streamedTblCol2Data[index]);
+            uint8_t *value1 = nullptr;
+            int32_t valueLen1 = vector1->GetValue(j, &value1);
+            ASSERT_EQ(std::string(value1, value1 + valueLen1), streamedTblCol2Data[index]);
 
-            double doubleValue = (static_cast<DoubleVector *>(result[i]->GetVector(1)))->GetValue(j);
-            ASSERT_EQ(doubleValue, bufferedTblCol1Data[index]);
+            uint8_t *value2 = nullptr;
+            int32_t valueLen2 = vector2->GetValue(j, &value2);
+            ASSERT_EQ(std::string(value2, value2 + valueLen2), bufferedTblCol1Data[index]);
             index++;
         }
         VectorHelper::FreeVecBatch(result[i]);

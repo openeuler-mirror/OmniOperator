@@ -9,6 +9,7 @@
 #include "dynamic_pages_index.h"
 #include "operator/join/common_join.h"
 #include "vector/vector_common.h"
+#include "operator/pages_index.h"
 
 namespace omniruntime {
 namespace op {
@@ -31,19 +32,91 @@ static ALWAYS_INLINE bool HasNext(int32_t pos, DynamicPagesIndex *pagesIndex)
     return pos < pagesIndex->GetPositionCount() - 1;
 }
 
+constexpr uint32_t STREAM_SHIFT_24 = 24;
+constexpr uint32_t BUFFER_SHIFT_16 = 16;
+constexpr uint32_t BUFFER_SHIFT_8 = 8;
+
+inline int8_t DecodeStreamedTblResult(uint32_t findNextJoinRowResult)
+{
+    return static_cast<int8_t>(findNextJoinRowResult >> STREAM_SHIFT_24);
+}
+
+inline int8_t DecodeBufferedTblResult(uint32_t findNextJoinRowResult)
+{
+    return static_cast<int8_t>((findNextJoinRowResult << BUFFER_SHIFT_8) >> STREAM_SHIFT_24);
+}
+
+inline int16_t DecodeJoinResult(uint32_t findNextJoinRowResult)
+{
+    return static_cast<int16_t>((findNextJoinRowResult << BUFFER_SHIFT_16) >> BUFFER_SHIFT_16);
+}
+
 class JoinStatus {
 public:
-    JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, JoinResultCode resultCode);
-    JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, bool hasResult);
+    JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, JoinResultCode resultCode)
+        : streamedCode(streamedCode), bufferedCode(bufferedCode), resultCode(resultCode)
+    {}
+
+    JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, bool hasResult)
+        : streamedCode(streamedCode),
+          bufferedCode(bufferedCode),
+          resultCode(hasResult ? JoinResultCode::HAS_RESULT : JoinResultCode::NO_RESULT)
+    {}
+
     virtual ~JoinStatus() {}
 
-    uint32_t GenerateStatus();
-    void Set(JoinTableCode inputStreamedCode, JoinTableCode inputBufferedCode, bool hasResult);
-    void TransToNeedStreamedData(bool hasResult);
-    void TransToNeedBufferedData(bool hasResult);
-    bool NewStreamedDataAdded();
-    bool NewBufferedDataAdded();
-    void Reset();
+    ALWAYS_INLINE uint32_t GenerateStatus()
+    {
+        return (static_cast<uint32_t>(streamedCode) << STREAM_SHIFT_24) |
+            (static_cast<uint32_t>(bufferedCode) << BUFFER_SHIFT_16) | static_cast<uint32_t>(resultCode);
+    }
+
+    ALWAYS_INLINE void Set(JoinTableCode inputStreamedCode, JoinTableCode inputBufferedCode, bool hasResult)
+    {
+        this->streamedCode = inputStreamedCode;
+        this->bufferedCode = inputBufferedCode;
+        this->resultCode = hasResult ? JoinResultCode::HAS_RESULT : JoinResultCode::NO_RESULT;
+    }
+
+    ALWAYS_INLINE void TransToNeedStreamedData(bool hasResult)
+    {
+        if (streamedCode == JoinTableCode::SCAN_FINISHED) {
+            // Inner Join Unique logic, need refactor
+            Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, hasResult);
+        } else {
+            auto bufferedStatus = (bufferedCode == JoinTableCode::SCAN_FINISHED) ? JoinTableCode::SCAN_FINISHED :
+                                                                                   JoinTableCode::NEED_SCAN;
+            Set(JoinTableCode::NEED_DATA, bufferedStatus, hasResult);
+        }
+    }
+
+    ALWAYS_INLINE void TransToNeedBufferedData(bool hasResult)
+    {
+        if (bufferedCode == JoinTableCode::SCAN_FINISHED) {
+            // Inner Join Unique logic, need refactor
+            Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, hasResult);
+        } else {
+            auto streamStatus = (streamedCode == JoinTableCode::SCAN_FINISHED) ? JoinTableCode::SCAN_FINISHED :
+                                                                                 JoinTableCode::NEED_SCAN;
+            Set(streamStatus, JoinTableCode::NEED_DATA, hasResult);
+        }
+    }
+
+    ALWAYS_INLINE bool NewStreamedDataAdded()
+    {
+        return streamedCode == JoinTableCode::NEED_DATA;
+    }
+
+    ALWAYS_INLINE bool NewBufferedDataAdded()
+    {
+        return bufferedCode == JoinTableCode::NEED_DATA;
+    }
+
+    ALWAYS_INLINE void Reset()
+    {
+        streamedCode = JoinTableCode::INVALID;
+        bufferedCode = JoinTableCode::INVALID;
+    }
 
 private:
     JoinTableCode streamedCode;
@@ -54,7 +127,7 @@ private:
 class InitialJoinStatus : public JoinStatus {
 public:
     InitialJoinStatus() : JoinStatus(JoinTableCode::INVALID, JoinTableCode::INVALID, JoinResultCode::NO_RESULT) {};
-    ~InitialJoinStatus() override {}
+    ~InitialJoinStatus() override = default;
 };
 
 class SortMergeJoinScanner {
@@ -95,11 +168,17 @@ private:
 
     bool AdvancedBufferedJoinKey();
 
-    bool CurStreamedHasNull();
+    /* * Returns true if there are any NULL values in this row. */
+    ALWAYS_INLINE bool CurStreamedHasNull()
+    {
+        return streamedPagesIndex->HaveNull(streamedPagesIndexPosition);
+    }
 
-    bool StreamedRowHasNull(int64_t valueAddress);
-
-    bool CurBufferedHasNull();
+    /* * Returns true if there are any NULL values in this row. */
+    ALWAYS_INLINE bool CurBufferedHasNull()
+    {
+        return bufferedPagesIndex->HaveNull(bufferedPagesIndexPosition);
+    }
 
     void RunInnerJoin();
 
@@ -145,14 +224,46 @@ private:
 
     bool PreKeyMatchedWithNullValue();
 
-    bool HasResult();
+    // return true if streamedValueAddress bufferedValueAddress both not empty
+    ALWAYS_INLINE bool HasResult()
+    {
+        return !streamedValueAddress.empty() && !bufferedValueAddress.empty();
+    }
 
-    int32_t CompareCurRowKeys();
+    ALWAYS_INLINE int32_t CompareCurRowKeys()
+    {
+        auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
+        auto bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
+        return CompareRowKeys(streamedValueAddr, streamedPagesIndex, streamedTableKeysCols, bufferedValueAddr,
+            bufferedPagesIndex, bufferedTableKeysCols);
+    }
 
-    int32_t CompareRowKeys(int64_t leftRowIndex, DynamicPagesIndex *leftPagesIndex, const int32_t *leftKeyCols,
-        int64_t rightRowIndex, DynamicPagesIndex *rightPagesIndex, const int32_t *rightKeyCols);
+    ALWAYS_INLINE int32_t CompareRowKeys(int64_t leftRowIndex, DynamicPagesIndex *leftPagesIndex,
+        const int32_t *leftKeyCols, int64_t rightRowIndex, DynamicPagesIndex *rightPagesIndex,
+        const int32_t *rightKeyCols)
+    {
+        auto streamedBatchId = DecodeSliceIndex(leftRowIndex);
+        auto streamedRowId = DecodePosition(leftRowIndex);
+        auto bufferedBatchId = DecodeSliceIndex(rightRowIndex);
+        auto bufferedRowId = DecodePosition(rightRowIndex);
+        for (int i = 0; i < keyColsCount; ++i) {
+            auto streamedColumn = leftPagesIndex->GetColumn(streamedBatchId, leftKeyCols[i]);
+            auto bufferedColumn = rightPagesIndex->GetColumn(bufferedBatchId, rightKeyCols[i]);
+            auto com = OperatorUtil::CompareVectorAtPosition(streamedTableKeysTypes.GetIds()[leftKeyCols[i]],
+                streamedColumn, streamedRowId, bufferedColumn, bufferedRowId);
+            if (com != 0) {
+                return com;
+            }
+        }
 
-    int32_t CompareRowKeys(int64_t leftRowIndex, int64_t rightRowIndex);
+        return 0;
+    }
+
+    ALWAYS_INLINE int32_t CompareRowKeys(int64_t leftRowIndex, int64_t rightRowIndex)
+    {
+        return CompareRowKeys(leftRowIndex, streamedPagesIndex, streamedTableKeysCols, rightRowIndex,
+            bufferedPagesIndex, bufferedTableKeysCols);
+    }
 
     omniruntime::type::DataTypes streamedTableKeysTypes;
     JoinType joinType;
@@ -173,6 +284,7 @@ private:
     DynamicPagesIndex *streamedPagesIndex;
     DynamicPagesIndex *bufferedPagesIndex;
     int64_t preStreamedValueAddress;
+    int32_t preStreamedPagesIndexPosition;
     std::unique_ptr<JoinStatus> preStatus;
     std::vector<bool> isPreKeyMatched;
     std::vector<bool> isSameBufferedKeyMatched;
@@ -180,26 +292,9 @@ private:
     std::vector<int64_t> streamedValueAddress;
     std::vector<int64_t> bufferedValueAddress;
     std::vector<int64_t> preBufferedValueAddress;
+    size_t valueAddressCapacity;
+    size_t valueAddressSize;
 };
-
-constexpr uint32_t STREAM_SHIFT_24 = 24;
-constexpr uint32_t BUFFER_SHIFT_16 = 16;
-constexpr uint32_t BUFFER_SHIFT_8 = 8;
-
-inline int8_t DecodeStreamedTblResult(uint32_t findNextJoinRowResult)
-{
-    return static_cast<int8_t>(findNextJoinRowResult >> STREAM_SHIFT_24);
-}
-
-inline int8_t DecodeBufferedTblResult(uint32_t findNextJoinRowResult)
-{
-    return static_cast<int8_t>((findNextJoinRowResult << BUFFER_SHIFT_8) >> STREAM_SHIFT_24);
-}
-
-inline int16_t DecodeJoinResult(uint32_t findNextJoinRowResult)
-{
-    return static_cast<int16_t>((findNextJoinRowResult << BUFFER_SHIFT_16) >> BUFFER_SHIFT_16);
-}
 }
 }
 

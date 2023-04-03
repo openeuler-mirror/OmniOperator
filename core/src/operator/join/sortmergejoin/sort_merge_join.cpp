@@ -49,8 +49,8 @@ void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &buffere
 
 void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflowConfig)
 {
-    streamedTblPagesIndex = new DynamicPagesIndex(*streamedTypes);
-    bufferedTblPagesIndex = new DynamicPagesIndex(*bufferedTypes);
+    streamedTblPagesIndex = new DynamicPagesIndex(*streamedTypes, streamedKeysCols.data(), streamedKeysCols.size());
+    bufferedTblPagesIndex = new DynamicPagesIndex(*bufferedTypes, bufferedKeysCols.data(), bufferedKeysCols.size());
     bool onlyBufferedFirstMatch =
         (joinType == OMNI_JOIN_TYPE_LEFT_SEMI || joinType == OMNI_JOIN_TYPE_LEFT_ANTI) && filter.empty();
 
@@ -199,9 +199,7 @@ int32_t SortMergeJoinOperator::AddStreamedTableInput(omniruntime::vec::VectorBat
     if (streamedTblPagesIndex->IsDataFinish()) {
         VectorHelper::FreeVecBatch(vecBatch);
     } else {
-        std::vector<VectorBatch *> vecBatchVector;
-        vecBatchVector.push_back(vecBatch);
-        streamedTblPagesIndex->AddVecBatches(vecBatchVector);
+        streamedTblPagesIndex->AddVecBatch(vecBatch);
     }
     SetStatus(OMNI_STATUS_NORMAL);
     return GetJoinResult();
@@ -212,9 +210,7 @@ int32_t SortMergeJoinOperator::AddBufferedTableInput(omniruntime::vec::VectorBat
     if (bufferedTblPagesIndex->IsDataFinish()) {
         VectorHelper::FreeVecBatch(vecBatch);
     } else {
-        std::vector<VectorBatch *> vecBatchVector;
-        vecBatchVector.push_back(vecBatch);
-        bufferedTblPagesIndex->AddVecBatches(vecBatchVector);
+        bufferedTblPagesIndex->AddVecBatch(vecBatch);
     }
     SetStatus(OMNI_STATUS_NORMAL);
     return GetJoinResult();
