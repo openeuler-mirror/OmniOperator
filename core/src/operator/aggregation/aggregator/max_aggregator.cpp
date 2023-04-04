@@ -29,16 +29,14 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         LogDebug("HMPP-Agg-max");
         result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset), rowCount,
             reinterpret_cast<int16_t *>(maxVal));
-        if constexpr (OUT_ID == OMNI_LONG) {
-            *maxVal = *reinterpret_cast<int16_t *>(maxVal);
-        }
+        int16_t realVal = *reinterpret_cast<int16_t *>(maxVal);
+        *maxVal = static_cast<ResultType>(realVal);
     } else if constexpr (IN_ID == OMNI_INT || IN_ID == OMNI_DATE32) {
         LogDebug("HMPP-Agg-max");
         result = HMPPS_Max_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset), rowCount,
             reinterpret_cast<int32_t *>(maxVal));
-        if constexpr (OUT_ID == OMNI_LONG) {
-            *maxVal = *reinterpret_cast<int32_t *>(maxVal);
-        }
+        int32_t realVal = *reinterpret_cast<int32_t *>(maxVal);
+        *maxVal = static_cast<ResultType>(realVal);
     } else if constexpr (IN_ID == OMNI_LONG || IN_ID == OMNI_DECIMAL64) {
         LogDebug("HMPP-Agg-max");
         result = HMPPS_Max_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset), rowCount,
