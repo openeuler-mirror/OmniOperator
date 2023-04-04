@@ -141,7 +141,6 @@ private:
     int32_t leftTableOutputColsCount;
     int32_t originalLeftTableColsCount;
     DynamicPagesIndex *leftTablePagesIndex;
-    std::vector<DataTypePtr> rightTableOutputTypes;
     int32_t *rightTableOutputCols;
     int32_t rightTableOutputColsCount;
     int32_t originalRightTableColsCount;
@@ -185,6 +184,7 @@ private:
     std::vector<int64_t> bufferedTableValueAddresses;
     std::vector<int8_t> isSameBufferedKeyMatched;
     LeftAntiJoinHandler leftAntiJoinHandler;
+    std::vector<DataTypePtr> allTypes;
 };
 }
 }

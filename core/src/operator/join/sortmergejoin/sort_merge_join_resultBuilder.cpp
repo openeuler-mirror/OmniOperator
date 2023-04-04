@@ -19,12 +19,10 @@ JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOu
     const std::vector<DataTypePtr> &rightTableOutputTypes, int32_t *rightTableOutputCols,
     int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
     std::string &filter, VectorAllocator *vecAllocator, JoinType joinType, OverflowConfig *overflowConfig)
-    : leftTableOutputTypes(leftTableOutputTypes),
-      leftTableOutputCols(leftTableOutputCols),
+    : leftTableOutputCols(leftTableOutputCols),
       leftTableOutputColsCount(leftTableOutputColsCount),
       originalLeftTableColsCount(originalLeftTableColsCount),
       leftTablePagesIndex(leftTablePagesIndex),
-      rightTableOutputTypes(rightTableOutputTypes),
       rightTableOutputCols(rightTableOutputCols),
       rightTableOutputColsCount(rightTableOutputColsCount),
       originalRightTableColsCount(originalRightTableColsCount),
@@ -33,11 +31,13 @@ JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOu
       vecAllocator(vecAllocator),
       joinType(joinType)
 {
-    int32_t leftRowSize = OperatorUtil::GetRowSize(this->leftTableOutputTypes);
-    int32_t rightRowSize = OperatorUtil::GetRowSize(this->rightTableOutputTypes);
+    int32_t leftRowSize = OperatorUtil::GetRowSize(leftTableOutputTypes);
+    int32_t rightRowSize = OperatorUtil::GetRowSize(rightTableOutputTypes);
     int32_t outputRowSize = leftRowSize + rightRowSize;
     this->maxRowCount = OperatorUtil::GetMaxRowCount(outputRowSize != 0 ? outputRowSize : DEFAULT_ROW_SIZE);
     this->JoinFilterCodeGen(overflowConfig);
+    allTypes.insert(allTypes.cend(), leftTableOutputTypes.cbegin(), leftTableOutputTypes.cend());
+    allTypes.insert(allTypes.cend(), rightTableOutputTypes.cbegin(), rightTableOutputTypes.cend());
 }
 
 void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
@@ -73,18 +73,16 @@ void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
     values = new int64_t[originalAllColsCount];
     nulls = new bool[originalAllColsCount];
     lengths = new int32_t[originalAllColsCount];
-    memset_s(values, sizeof(int64_t) * originalAllColsCount, 0, sizeof(int64_t) * originalAllColsCount);
-    memset_s(nulls, sizeof(bool) * originalAllColsCount, 0, sizeof(bool) * originalAllColsCount);
-    memset_s(lengths, sizeof(int32_t) * originalAllColsCount, 0, sizeof(int32_t) * originalAllColsCount);
+    memset_sp(values, sizeof(int64_t) * originalAllColsCount, 0, sizeof(int64_t) * originalAllColsCount);
+    memset_sp(nulls, sizeof(bool) * originalAllColsCount, 0, sizeof(bool) * originalAllColsCount);
+    memset_sp(lengths, sizeof(int32_t) * originalAllColsCount, 0, sizeof(int32_t) * originalAllColsCount);
 }
 
 VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
 {
     int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
     VectorBatch *vectorBatch = new VectorBatch(outputColCount, maxRowCount);
-    std::vector<DataTypePtr> allTypes;
-    allTypes.insert(allTypes.cend(), leftTableOutputTypes.cbegin(), leftTableOutputTypes.cend());
-    allTypes.insert(allTypes.cend(), rightTableOutputTypes.cbegin(), rightTableOutputTypes.cend());
+
     vectorBatch->NewVectors(vecAllocator, allTypes);
     return vectorBatch;
 }
@@ -570,7 +568,7 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
         auto col = streamedColsInFilter[i];
         auto leftVector = leftTablePagesIndex->GetColumnFromCache(col);
         nulls[col] = leftVector->IsValueNull(leftRowId);
-        values[col] = VectorHelper::GetValuePtrAndLength(leftVector, leftRowId, lengths + col);
+        values[col] = VectorHelper::GetValuePtrAndLengthFromRawVector(leftVector, leftRowId, lengths + col);
     }
     rightTablePagesIndex->CacheBatch(rightBatchId);
     for (int32_t i = 0; i < bufferedColsCountInFilter; i++) {
@@ -578,7 +576,7 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
         auto rightVector = rightTablePagesIndex->GetColumnFromCache(col);
         auto colIdx = col + originalLeftTableColsCount;
         nulls[colIdx] = rightVector->IsValueNull(rightRowId);
-        values[colIdx] = VectorHelper::GetValuePtrAndLength(rightVector, rightRowId, lengths + colIdx);
+        values[colIdx] = VectorHelper::GetValuePtrAndLengthFromRawVector(rightVector, rightRowId, lengths + colIdx);
     }
 
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));

@@ -158,6 +158,8 @@ private:
 
     void FullOuterJoin();
 
+    void ErrorJoin();
+
     bool IsValidAddedStreamedData();
 
     bool IsValidAddedBufferedData();
@@ -273,10 +275,10 @@ private:
         uint32_t bufferedRowId)
     {
         for (int i = 0; i < keyColsCount; ++i) {
-            auto streamedColumn = streamedPagesIndex->GetColumn(streamedBatchId, streamedTableKeysCols[i]);
+            auto streamColId = streamedTableKeysCols[i];
+            auto streamedColumn = streamedPagesIndex->GetColumn(streamedBatchId, streamColId);
             auto bufferedColumn = bufferedPagesIndex->GetColumn(bufferedBatchId, bufferedTableKeysCols[i]);
-            auto com = OperatorUtil::CompareVectorAtPosition(streamedColumn->GetTypeId(), streamedColumn, streamedRowId,
-                bufferedColumn, bufferedRowId);
+            auto com = keyCompareFuncs[streamColId](streamedColumn, streamedRowId, bufferedColumn, bufferedRowId);
             if (com != 0) {
                 return com;
             }
@@ -286,6 +288,14 @@ private:
     }
 
     omniruntime::type::DataTypes streamedTableKeysTypes;
+
+    void (SortMergeJoinScanner::*scanFindNextRow)() = nullptr;
+
+    using CompareFunc = int32_t (*)(vec::Vector *leftColumn, int32_t leftColumnPosition, vec::Vector *rightColumn,
+        int32_t rightColumnPosition);
+
+    std::vector<CompareFunc> keyCompareFuncs;
+
     JoinType joinType;
     int32_t *streamedTableKeysCols;
     int32_t *bufferedTableKeysCols;

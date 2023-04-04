@@ -17,8 +17,6 @@ SortMergeJoinOperator::SortMergeJoinOperator(JoinType joinType, std::string &fil
 
 SortMergeJoinOperator::~SortMergeJoinOperator()
 {
-    delete streamedTypes;
-    delete bufferedTypes;
     streamedTblPagesIndex->FreeAllRemainingVecBatch();
     bufferedTblPagesIndex->FreeAllRemainingVecBatch();
     delete streamedTblPagesIndex;
@@ -31,7 +29,7 @@ void SortMergeJoinOperator::ConfigStreamedTblInfo(const type::DataTypes &streame
     const std::vector<int32_t> &streamedKeysCols, const std::vector<int32_t> &streamedOutputCols,
     int32_t originalInputStreamedColsCount)
 {
-    this->streamedTypes = new DataTypes(streamedDataTypes);
+    this->streamedTypes = &streamedDataTypes;
     this->streamedKeysCols = streamedKeysCols;
     this->streamedOutputCols = streamedOutputCols;
     this->originalStreamedColsCount = originalInputStreamedColsCount;
@@ -41,7 +39,7 @@ void SortMergeJoinOperator::ConfigBufferedTblInfo(const type::DataTypes &buffere
     std::vector<int32_t> &bufferedKeysCols, std::vector<int32_t> &bufferedOutputCols,
     int32_t originalInputBufferedColsCount)
 {
-    this->bufferedTypes = new DataTypes(bufferedDataTypes);
+    this->bufferedTypes = &bufferedDataTypes;
     this->bufferedKeysCols = bufferedKeysCols;
     this->bufferedOutputCols = bufferedOutputCols;
     this->originalBufferedColsCount = originalInputBufferedColsCount;

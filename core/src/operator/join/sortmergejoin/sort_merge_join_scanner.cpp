@@ -27,33 +27,68 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
       preStreamedValueAddress(-1),
       preStreamedPagesIndexPosition(-1),
       preStatus(std::make_unique<InitialJoinStatus>())
-{}
-
-SortMergeJoinScanner::~SortMergeJoinScanner() = default;
-
-int64_t SortMergeJoinScanner::FindNextJoinRows()
 {
     switch (joinType) {
         case JoinType::OMNI_JOIN_TYPE_INNER:
-            InnerJoin<OMNI_JOIN_TYPE_INNER>();
+            scanFindNextRow = &SortMergeJoinScanner::InnerJoin<OMNI_JOIN_TYPE_INNER>;
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
-            InnerJoin<OMNI_JOIN_TYPE_LEFT_SEMI>();
+            scanFindNextRow = &SortMergeJoinScanner::InnerJoin<OMNI_JOIN_TYPE_LEFT_SEMI>;
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT:
-            LeftOuterJoin<OMNI_JOIN_TYPE_LEFT>();
+            scanFindNextRow = &SortMergeJoinScanner::LeftOuterJoin<OMNI_JOIN_TYPE_LEFT>;
             break;
         case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI:
-            LeftOuterJoin<OMNI_JOIN_TYPE_LEFT_ANTI>();
+            scanFindNextRow = &SortMergeJoinScanner::LeftOuterJoin<OMNI_JOIN_TYPE_LEFT_ANTI>;
             break;
         case JoinType::OMNI_JOIN_TYPE_FULL:
-            FullOuterJoin();
+            scanFindNextRow = &SortMergeJoinScanner::FullOuterJoin;
             break;
         default:
-            LogError("Unsupported join type: %u.", joinType);
-            preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, false);
+            scanFindNextRow = &SortMergeJoinScanner::ErrorJoin;
             break;
     }
+
+    keyCompareFuncs.resize(streamedTableKeysTypes.GetSize());
+    for (int i = 0; i < streamedTableKeysTypes.GetSize(); ++i) {
+        auto colTypeId = streamedTableKeysTypes.GetIds()[i];
+        switch (colTypeId) {
+            case OMNI_BOOLEAN:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<BooleanVector>);
+                break;
+            case OMNI_INT:
+            case OMNI_DATE32:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<IntVector>);
+                break;
+            case OMNI_SHORT:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<ShortVector>);
+                break;
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<LongVector>);
+                break;
+            case OMNI_DOUBLE:
+                keyCompareFuncs[i] = (OperatorUtil::CompareDouble);
+                break;
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                keyCompareFuncs[i] = (OperatorUtil::CompareVarchar);
+                break;
+            case OMNI_DECIMAL128:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<Decimal128Vector>);
+                break;
+            default:
+                throw omniruntime::exception::OmniException("sort merge join scanner",
+                    "unsupport compare funct in smj");
+        }
+    }
+}
+
+SortMergeJoinScanner::~SortMergeJoinScanner() {}
+
+int64_t SortMergeJoinScanner::FindNextJoinRows()
+{
+    (this->*scanFindNextRow)();
     return preStatus->GenerateStatus();
 }
 
@@ -221,6 +256,12 @@ void SortMergeJoinScanner::FullOuterJoin()
         return;
     }
     return RunFullOuterJoin();
+}
+
+void SortMergeJoinScanner::ErrorJoin()
+{
+    LogError("Unsupported join type: %u.", joinType);
+    preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, false);
 }
 
 template <JoinType templateJoinType> void SortMergeJoinScanner::RunInnerJoin()
