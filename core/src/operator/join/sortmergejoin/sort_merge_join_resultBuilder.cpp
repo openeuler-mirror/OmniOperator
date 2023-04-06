@@ -160,7 +160,13 @@ void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBa
 {
     if (IsNullFlagBatchAndRow(leftBatchId, leftRowId)) {
         for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
-            buildVectorBatch->GetVector(columnIdx)->SetValueNull(buildRowCount);
+            auto vector = buildVectorBatch->GetVector(columnIdx);
+            auto typeId = vector->GetTypeId();
+            if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+            } else {
+                vector->SetValueNull(buildRowCount);
+            }
         }
     } else {
         for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
@@ -176,7 +182,13 @@ void JoinResultBuilder::ParsingAndOrganizationResultsForRightTable(int32_t right
     if (IsNullFlagBatchAndRow(rightBatchId, rightRowId)) {
         for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
             int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
-            buildVectorBatch->GetVector(buildColumnIdx)->SetValueNull(buildRowCount);
+            auto vector = buildVectorBatch->GetVector(buildColumnIdx);
+            auto typeId = vector->GetTypeId();
+            if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+            } else {
+                vector->SetValueNull(buildRowCount);
+            }
         }
     } else {
         for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {

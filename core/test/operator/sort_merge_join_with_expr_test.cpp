@@ -4258,7 +4258,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, TestBothJoinKeyAndFilterWithExpr)
     auto castExpr1 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
     auto substrExpr1 = new FuncExpr("substr",
         { castExpr1, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
-    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs{ substrExpr1 };
+    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs { substrExpr1 };
     int32_t streamedOutputCols[]= {0};
     auto overflowConfig = new OverflowConfig();
     auto streamedWithExprOperatorFactory =
@@ -4266,11 +4266,11 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, TestBothJoinKeyAndFilterWithExpr)
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_LEFT, filter, overflowConfig);
     auto streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    DataTypes bufferedTblTypes(std::vector<DataTypePtr>{ Decimal64Type(18, 2) });
+    DataTypes bufferedTblTypes(std::vector<DataTypePtr> { Decimal64Type(18, 2) });
     auto castExpr2 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
     auto substrExpr2 = new FuncExpr("substr",
         { castExpr2, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
-    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs{ substrExpr2 };
+    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs { substrExpr2 };
     int bufferedOutputCols[1] = {0};
     auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     auto bufferedWithExprOperatorFactory =
@@ -4335,7 +4335,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinSubStrAndCaseWhen)
     auto castExpr1 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
     auto substrExpr1 = new FuncExpr("substr",
         { castExpr1, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
-    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs{ substrExpr1 };
+    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs { substrExpr1 };
     int32_t streamedOutputCols[]= {0};
     auto overflowConfig = new OverflowConfig();
     auto streamedWithExprOperatorFactory =
@@ -4343,11 +4343,11 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinSubStrAndCaseWhen)
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_LEFT_ANTI, filter, overflowConfig);
     auto streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    DataTypes bufferedTblTypes(std::vector<DataTypePtr>{ Decimal64Type(18, 2) });
+    DataTypes bufferedTblTypes(std::vector<DataTypePtr> { Decimal64Type(18, 2) });
     auto castExpr2 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
     auto substrExpr2 = new FuncExpr("substr",
         { castExpr2, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
-    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs{ substrExpr2 };
+    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs { substrExpr2 };
     int bufferedOutputCols[0] = {};
     auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     auto bufferedWithExprOperatorFactory =
@@ -4379,6 +4379,60 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinSubStrAndCaseWhen)
     // check the join result
     EXPECT_EQ(result.size(), 0);
     VectorHelper::FreeVecBatches(result);
+
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
+    DeleteOperatorFactory(bufferedWithExprOperatorFactory);
+    DeleteOperatorFactory(streamedWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
+TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiForEmptyVecBatch)
+{
+    std::string filter = "";
+    DataTypes streamedTblTypes(std::vector<DataTypePtr>({ Date32Type(), VarcharType(200), VarcharType(200) }));
+
+    auto v1 = new FieldExpr(1, VarcharType(200));
+    auto str = new std::string("");
+    auto v2 = new LiteralExpr(str, VarcharType(200));
+    auto streamedKey = new CoalesceExpr(v1, v2);
+    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs { streamedKey };
+
+    int32_t streamedOutputCols[]= {0};
+    auto overflowConfig = new OverflowConfig();
+    auto streamedWithExprOperatorFactory =
+        StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
+        streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_LEFT_ANTI, filter, overflowConfig);
+    auto streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
+
+    DataTypes bufferedTblTypes(std::vector<DataTypePtr> { VarcharType(200), VarcharType(200), Date32Type() });
+    auto v3 = new FieldExpr(1, VarcharType(200));
+    auto str1 = new std::string("");
+    auto v4 = new LiteralExpr(str1, VarcharType(200));
+    auto bufferedKey = new CoalesceExpr(v3, v4);
+    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs { bufferedKey };
+    int bufferedOutputCols[0] = {};
+    auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
+    auto bufferedWithExprOperatorFactory =
+        BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
+        bufferedEqualKeyExprs, 1, bufferedOutputCols, 0, streamedWithExprOperatorFactoryAddr, overflowConfig);
+    omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
+
+    // add eof flag to buffered table , need add streamed table data
+    VectorBatch *bufferedVecBatchEof = CreateEmptyVectorBatch(bufferedTblTypes.Get());
+    bufferedTblWithExprOperator->AddInput(bufferedVecBatchEof);
+
+    // add eof flag to streamed table
+    VectorBatch *streamedVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes.Get());
+    streamedTblWithExprOperator->AddInput(streamedVecBatchEof);
+
+    VectorBatch *result = nullptr;
+    bufferedTblWithExprOperator->GetOutput(&result);
+
+    // check the join result
+    EXPECT_EQ(result, nullptr);
 
     Expr::DeleteExprs(streamedEqualKeyExprs);
     Expr::DeleteExprs(bufferedEqualKeyExprs);
