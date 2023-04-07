@@ -228,11 +228,17 @@ VectorBatch *OperatorUtil::ProjectVectors(VectorBatch *inputVecBatch, const Data
     int32_t vecCount = inputVecBatch->GetVectorCount();
     int32_t rowCount = inputVecBatch->GetRowCount();
     VectorBatch *newInputVecBatch = new VectorBatch(vecCount + projectFuncsCount, rowCount);
+    // short-circuit logic for column projections
+    // no need to go through codegen
+    if (rowCount == 0) {
+        newInputVecBatch->NewVectors(allocator, inputTypes.Get());
+        return newInputVecBatch;
+    }
+
     int64_t valueAddresses[vecCount];
     int64_t valueNulls[vecCount];
     int64_t valueOffsets[vecCount];
     int64_t dictVectorAddrs[vecCount];
-
     for (int32_t i = 0; i < vecCount; i++) {
         Vector *inputVector = inputVecBatch->GetVector(i);
         Vector *newInputVec = inputVector->Slice(0, rowCount);
@@ -260,6 +266,12 @@ VectorBatch *OperatorUtil::ProjectRequiredVectors(VectorBatch *inputVecBatch, co
     int32_t vecCount = projectCols.size();
     int32_t rowCount = inputVecBatch->GetRowCount();
     VectorBatch *newInputVecBatch = new VectorBatch(vecCount, rowCount);
+    // short-circuit logic for column projections
+    // no need to go through codegen
+    if (rowCount == 0) {
+        newInputVecBatch->NewVectors(allocator, inputTypes.Get());
+        return newInputVecBatch;
+    }
 
     for (int32_t i = 0; i < vecCount; i++) {
         int32_t sourceColId = projectCols[i];
