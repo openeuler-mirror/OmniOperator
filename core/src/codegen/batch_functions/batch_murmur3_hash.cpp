@@ -2,13 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  * Description: batch mmh3 functions implementation
  */
-#include <string>
-
 #include "codegen/functions/murmur3_hash.h"
 #include "type/decimal128_utils.h"
 #include "batch_murmur3_hash.h"
-
-using namespace std;
 
 namespace omniruntime::codegen::function {
 static const int COMBINE_HASH_VALUE = 31;
@@ -36,12 +32,11 @@ extern "C" DLLEXPORT void BatchMm3Int64(int64_t *val, bool *isValNull, int32_t *
 extern "C" DLLEXPORT void BatchMm3String(uint8_t **val, int32_t *valLen, bool *isValNull, int32_t *seed,
     bool *isSeedNull, bool *resIsNull, int32_t *output, int32_t rowCnt)
 {
-    string as;
     for (int i = 0; i < rowCnt; ++i) {
         seed[i] = isSeedNull[i] ? 0 : seed[i];
-        as = string(reinterpret_cast<const char *>(val[i]), valLen[i] * !isValNull[i]);
-        output[i] =
-            static_cast<int32_t>(HashUnsafeBytes(as, static_cast<uint32_t>(valLen[i]), static_cast<uint32_t>(seed[i])));
+        valLen[i] = valLen[i] * !isValNull[i];
+        output[i] = static_cast<int32_t>(HashUnsafeBytes(reinterpret_cast<char *>(val[i]),
+            static_cast<uint32_t>(valLen[i]), static_cast<uint32_t>(seed[i])));
     }
 }
 
@@ -69,16 +64,14 @@ extern "C" DLLEXPORT void BatchMm3Decimal64(int64_t *val, int32_t precision, int
     }
 }
 
-extern "C" DLLEXPORT void BatchMm3Decimal128(Decimal128 *x, int32_t precision, int32_t scale, bool *isValNull,
-    int32_t *seed, bool *isSeedNull, bool *resIsNull, int32_t *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchMm3Decimal128(omniruntime::type::Decimal128 *x, int32_t precision, int32_t scale,
+    bool *isValNull, int32_t *seed, bool *isSeedNull, bool *resIsNull, int32_t *output, int32_t rowCnt)
 {
     int32_t byteLen = 0;
     for (int i = 0; i < rowCnt; ++i) {
         auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(x[i].HighBits(), x[i].LowBits(), &byteLen);
-        string strVal(reinterpret_cast<char *>(bytes), byteLen);
-        output[i] = static_cast<int32_t>(HashUnsafeBytes(strVal, byteLen, seed[i]));
+        output[i] = static_cast<int32_t>(HashUnsafeBytes(reinterpret_cast<char *>(bytes), byteLen, seed[i]));
         delete[] bytes;
-        bytes = nullptr;
     }
 }
 

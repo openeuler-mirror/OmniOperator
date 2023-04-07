@@ -2,13 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * Description: Murmur3 Hash function
  */
-#include <iostream>
-#include <string>
 #include "util/compiler_util.h"
 #include "type/decimal128_utils.h"
 #include "murmur3_hash.h"
-
-using namespace std;
 
 namespace omniruntime::codegen::function {
 static const int COMBINE_HASH_VALUE = 31;
@@ -33,8 +29,6 @@ static const uint32_t HASH_LONG_RIGHT_SHIFT = 32;
 static const uint32_t MM3_SIZE_INT = 4;
 static const uint32_t MM3_SIZE_LONG = 8;
 
-static const uint32_t HASH_BYTES_MEMCPY_CNT = 1;
-
 static const uint32_t MM3_INT_ONE = 1;
 
 static const uint32_t REVERSE_SHIFT_M = 24;
@@ -43,8 +37,6 @@ static const uint32_t REVERSE_AND_A = 0xff;
 static const uint32_t REVERSE_AND_B = 0xff0000;
 static const uint32_t REVERSE_AND_C = 0xff00;
 static const uint32_t REVERSE_AND_D = 0xff000000;
-
-static const uint32_t MM3_HALFWORD_INIT = 0;
 
 uint32_t ALWAYS_INLINE RotateLeft(uint32_t i, uint32_t distance)
 {
@@ -98,15 +90,11 @@ uint32_t ALWAYS_INLINE ReverseBytes(uint32_t x)
         ((x >> REVERSE_SHIFT_N) & REVERSE_AND_C) | ((x << REVERSE_SHIFT_M) & REVERSE_AND_D);
 }
 
-uint32_t ALWAYS_INLINE HashBytesByInt(const string &base, uint32_t lengthInBytes, uint32_t seed)
+uint32_t ALWAYS_INLINE HashBytesByInt(char *base, uint32_t lengthInBytes, uint32_t seed)
 {
     uint32_t h1 = seed;
     for (uint i = 0; i < lengthInBytes; i += MM3_SIZE_INT) {
-        uint32_t halfWord;
-        errno_t ret = memcpy_s(&halfWord, sizeof(halfWord), base.c_str() + i, MM3_SIZE_INT);
-        if (ret != EOK) {
-            cerr << "Error memcpy in HashBytesByInt!" << endl;
-        }
+        uint32_t halfWord = *reinterpret_cast<uint32_t *>(base + i);
         if (IsBigEndian()) {
             halfWord = ReverseBytes(halfWord);
         }
@@ -138,16 +126,14 @@ uint32_t HashLong(uint64_t input, uint32_t seed)
     return Fmix(h1, MM3_SIZE_LONG);
 }
 
-uint32_t HashUnsafeBytes(const string &base, uint32_t lengthInBytes, uint32_t seed)
+uint32_t HashUnsafeBytes(char *base, uint32_t lengthInBytes, uint32_t seed)
 {
     uint32_t lengthAligned = lengthInBytes - lengthInBytes % MM3_SIZE_INT;
     uint32_t h1 = HashBytesByInt(base, lengthAligned, seed);
     for (uint i = lengthAligned; i < lengthInBytes; i++) {
-        uint32_t halfWord = MM3_HALFWORD_INIT;
-        errno_t ret = memcpy_s(&halfWord, sizeof(halfWord), base.c_str() + i, HASH_BYTES_MEMCPY_CNT);
-        if (ret != EOK) {
-            cout << "Error memcpy in HashUnsafeBytes!" << endl;
-        }
+        auto charVal = *(base + i);
+        auto halfWord = static_cast<int32_t>(charVal);
+        halfWord &= 0x000000FF; // get the lower eight bits
         uint32_t k1 = MixK1(halfWord);
         h1 = MixH1(h1, k1);
     }
@@ -170,13 +156,13 @@ extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, bool isValNull, int32_t seed,
     return static_cast<int32_t>(HashLong(static_cast<uint64_t>(val * !isValNull), static_cast<uint32_t>(seed)));
 }
 
-extern "C" DLLEXPORT int32_t Mm3String(const char *val, int32_t valLen, bool isValNull, int32_t seed, bool isSeedNull)
+extern "C" DLLEXPORT int32_t Mm3String(char *val, int32_t valLen, bool isValNull, int32_t seed, bool isSeedNull)
 {
     if (isSeedNull) {
         seed = 0;
     }
-    string as = string(val, valLen * !isValNull);
-    return static_cast<int32_t>(HashUnsafeBytes(as, static_cast<uint32_t>(valLen), static_cast<uint32_t>(seed)));
+    valLen = valLen * !isValNull;
+    return static_cast<int32_t>(HashUnsafeBytes(val, static_cast<uint32_t>(valLen), static_cast<uint32_t>(seed)));
 }
 
 extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isValNull, int32_t seed, bool isSeedNull)
@@ -210,10 +196,8 @@ extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, int32_t
 
     int32_t byteLen = 0;
     auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(xHigh, xLow, &byteLen);
-    string strVal(reinterpret_cast<char *>(bytes), byteLen);
-    auto result = static_cast<int32_t>(HashUnsafeBytes(strVal, byteLen, seed));
+    auto result = static_cast<int32_t>(HashUnsafeBytes(reinterpret_cast<char *>(bytes), byteLen, seed));
     delete[] bytes;
-    bytes = nullptr;
     return result;
 }
 
