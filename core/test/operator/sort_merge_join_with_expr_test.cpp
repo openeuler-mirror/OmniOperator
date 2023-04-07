@@ -4373,12 +4373,11 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinSubStrAndCaseWhen)
     VectorBatch *streamedVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes.Get());
     streamedTblWithExprOperator->AddInput(streamedVecBatchEof);
 
-    std::vector<VectorBatch *> result;
-    bufferedTblWithExprOperator->GetOutput(result);
+    VectorBatch *result = nullptr;
+    bufferedTblWithExprOperator->GetOutput(&result);
 
     // check the join result
-    EXPECT_EQ(result.size(), 0);
-    VectorHelper::FreeVecBatches(result);
+    EXPECT_TRUE(result == nullptr);
 
     Expr::DeleteExprs(streamedEqualKeyExprs);
     Expr::DeleteExprs(bufferedEqualKeyExprs);
