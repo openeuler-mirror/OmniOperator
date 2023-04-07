@@ -47,8 +47,8 @@ void VectorBatch::NewFlatVectors(VectorAllocator *vecAllocator, const std::vecto
         auto omniId = types[colIndex]->GetId();
         vectorTypeIds[colIndex] = omniId;
         auto curVecType = types[colIndex];
-        auto capacity = (omniId == type::OMNI_CHAR || omniId == type::OMNI_VARCHAR) ?
-                        (VarcharVector::initCapacityInBytes):0;
+        auto capacity =
+            (omniId == type::OMNI_CHAR || omniId == type::OMNI_VARCHAR) ? (VarcharVector::initCapacityInBytes) : 0;
         SetVector(colIndex, VectorHelper::CreateFlatVector(vecAllocator, omniId, capacity, rowCount));
     }
 }

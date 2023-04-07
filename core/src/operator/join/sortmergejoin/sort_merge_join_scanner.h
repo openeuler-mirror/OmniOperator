@@ -127,7 +127,7 @@ private:
 
 class InitialJoinStatus : public JoinStatus {
 public:
-    InitialJoinStatus() : JoinStatus(JoinTableCode::INVALID, JoinTableCode::INVALID, JoinResultCode::NO_RESULT) {};
+    InitialJoinStatus() : JoinStatus(JoinTableCode::INVALID, JoinTableCode::INVALID, JoinResultCode::NO_RESULT){};
     ~InitialJoinStatus() override = default;
 };
 
@@ -228,7 +228,7 @@ private:
 
     template <JoinType templateJoinType> void SavePrevMatchingRows(int8_t isMatched);
 
-    void SavePrevMatchingRowsForFullOuter(int8_t isMatched);
+    void SavePrevMatchingRowsForFullOuter(int64_t inValueAddress, int8_t isMatched);
 
     bool PreKeyMatched();
 

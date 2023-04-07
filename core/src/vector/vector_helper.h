@@ -133,7 +133,7 @@ public:
         } else {
             int32_t dataTypeId = dataType.GetId();
             int32_t capacityInBytes = (dataTypeId == type::OMNI_CHAR || dataTypeId == type::OMNI_VARCHAR) ?
-                VarcharVector::initCapacityInBytes:
+                VarcharVector::initCapacityInBytes :
                 0;
             return CreateVector(allocator, vectorEncodingId, dataTypeId, capacityInBytes, size);
         }
