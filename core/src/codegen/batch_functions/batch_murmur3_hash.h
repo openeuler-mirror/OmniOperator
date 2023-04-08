@@ -6,10 +6,7 @@
 #ifndef OMNI_RUNTIME_BATCH_MURMUR3_HASH_H
 #define OMNI_RUNTIME_BATCH_MURMUR3_HASH_H
 
-#include <iostream>
-#include <huawei_secure_c/include/securec.h>
 #include "type/decimal128.h"
-using namespace omniruntime::type;
 
 namespace omniruntime::codegen::function {
 #ifdef _WIN32
@@ -36,8 +33,8 @@ extern "C" DLLEXPORT void BatchMm3Double(double *val, bool *isValNull, int32_t *
 extern "C" DLLEXPORT void BatchMm3Decimal64(int64_t *val, int32_t precision, int32_t scale, bool *isValNull,
     int32_t *seed, bool *isSeedNull, bool *resIsNull, int32_t *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void BatchMm3Decimal128(Decimal128 *x, int32_t precision, int32_t scale, bool *isValNull,
-    int32_t *seed, bool *isSeedNull, bool *resIsNull, int32_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchMm3Decimal128(omniruntime::type::Decimal128 *x, int32_t precision, int32_t scale,
+    bool *isValNull, int32_t *seed, bool *isSeedNull, bool *resIsNull, int32_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchMm3Boolean(bool *val, bool *isValNull, int32_t *seed, bool *isSeedNull, bool *resIsNull,
     int32_t *output, int32_t rowCnt);

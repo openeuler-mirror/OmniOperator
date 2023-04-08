@@ -208,7 +208,8 @@ TEST(FunctionTest, Mm3Double)
 
 TEST(FunctionTest, Mm3String)
 {
-    EXPECT_EQ(Mm3String("hello world", 11, false, 42, false), -1528836094);
+    std::string value("hello world");
+    EXPECT_EQ(Mm3String(const_cast<char *>(value.c_str()), 11, false, 42, false), -1528836094);
 }
 
 /*
