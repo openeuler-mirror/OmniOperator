@@ -11,15 +11,15 @@ namespace op {
 using namespace std;
 using namespace omniruntime::codegen::function;
 
-BloomFilter::BloomFilter(int32_t *in, int32_t versionJava) : version(versionJava)
+BloomFilter::BloomFilter(int8_t *in, int32_t versionJava) : version(versionJava)
 {
-    int32_t versionIn = ((int32_t *)in)[0]; // version 4 Bytes
+    int32_t versionIn = (reinterpret_cast<int32_t *>(in))[0]; // version 4 Bytes
     if (version != versionIn) {
         throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "wrong version for bloom filter");
     }
 
-    numHashFunctions = ((int32_t *)in)[1];   // numHashFunctions 4 Bytes
-    bits = new BitArray((uint64_t *)in + 1); // offset is 8 Bytes
+    numHashFunctions = (reinterpret_cast<int32_t *>(in))[1]; // numHashFunctions 4 Bytes
+    bits = new BitArray(in + 8);                    // offset is 8 Bytes
 }
 
 BloomFilter::~BloomFilter()
@@ -32,7 +32,7 @@ BloomFilter::~BloomFilter()
  * @param item : long type data
  * @return : Returns true if the bit slot is reversed after insertion, Otherwise, false is returned.
  */
-bool BloomFilter::PutLong(uint64_t item)
+bool BloomFilter::PutLong(int64_t item)
 {
     int32_t h1 = Mm3Int64(item, false, 0, false);
     int32_t h2 = Mm3Int64(item, false, h1, false);
@@ -55,7 +55,7 @@ bool BloomFilter::PutLong(uint64_t item)
  * @param item : long type data
  * @return : Returns true if the item in the filter, Otherwise, false is returned.
  */
-bool BloomFilter::MightContainLong(uint64_t item)
+bool BloomFilter::MightContainLong(int64_t item)
 {
     int32_t h1 = Mm3Int64(item, false, 0, false);
     int32_t h2 = Mm3Int64(item, false, h1, false);
@@ -121,7 +121,7 @@ int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
     int64_t valuesAddress = VectorHelper::GetValuesAddr(colVec);
 
     // init BloomFilter
-    bloomFilterAddress = new BloomFilter((int32_t *)(uintptr_t)valuesAddress, version);
+    bloomFilterAddress = new BloomFilter(reinterpret_cast<int8_t *>((uintptr_t)valuesAddress), version);
     return 0;
 }
 
