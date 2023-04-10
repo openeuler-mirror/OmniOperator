@@ -59,7 +59,7 @@ public:
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition);
     void BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe, const JoinHashTables *hashTables,
-        std::vector<VectorBatch *> &outputVecBatches);
+        VectorBatch **outputVecBatch);
 
     ALWAYS_INLINE bool HasNext()
     {
@@ -131,7 +131,7 @@ public:
         JoinHashTables *hashTables, int32_t outputRowSize);
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages) override;
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
 private:
     void ProcessProbe();

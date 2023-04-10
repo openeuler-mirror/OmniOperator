@@ -133,7 +133,7 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t LookupJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
+int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (!outputBuilder->HasNext()) {
         if (joinProbe != nullptr) {
@@ -149,7 +149,7 @@ int32_t LookupJoinOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
         return 0;
     }
     // build output data
-    outputBuilder->BuildOutput(vecAllocator, joinProbe, hashTables, outputPages);
+    outputBuilder->BuildOutput(vecAllocator, joinProbe, hashTables, outputVecBatch);
     if (!outputBuilder->HasNext()) {
         outputBuilder->Clear();
         SetStatus(OMNI_STATUS_FINISHED);
@@ -923,20 +923,20 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
 }
 
 void LookupJoinOutputBuilder::BuildOutput(VectorAllocator *vecAllocator, const JoinProbe *joinProbe,
-    const JoinHashTables *hashTables, std::vector<VectorBatch *> &outputVecBatches)
+    const JoinHashTables *hashTables, VectorBatch **outputVecBatch)
 {
     Vector **probeAllColumns = joinProbe->GetProbeAllColumns();
     int32_t columnCount = probeOutputColsCount + buildOutputColsCount;
 
     int32_t currentRowToReturn = std::min(maxRowCount, static_cast<int32_t>(probeIndex.size()) - positionReturned);
-    auto *vectorBatch = new VectorBatch(columnCount, currentRowToReturn);
-    ConstructProbeColumns(vectorBatch, probeAllColumns, probeOutputCols, probeOutputColsCount, isSequentialProbeIndices,
-        probeIndex, positionReturned, currentRowToReturn);
-    ConstructBuildColumns(vectorBatch, hashTables, buildOutputTypes.Get(), buildOutputTypes.GetIds(), buildOutputCols,
-        buildOutputColsCount, probeOutputColsCount, buildIndex, positionReturned, currentRowToReturn, vecAllocator);
+    *outputVecBatch = new VectorBatch(columnCount, currentRowToReturn);
+    ConstructProbeColumns(*outputVecBatch, probeAllColumns, probeOutputCols, probeOutputColsCount,
+        isSequentialProbeIndices, probeIndex, positionReturned, currentRowToReturn);
+    ConstructBuildColumns(*outputVecBatch, hashTables, buildOutputTypes.Get(), buildOutputTypes.GetIds(),
+        buildOutputCols, buildOutputColsCount, probeOutputColsCount, buildIndex, positionReturned, currentRowToReturn,
+        vecAllocator);
 
     positionReturned += currentRowToReturn;
-    outputVecBatches.push_back(vectorBatch);
 }
 } // end of op
 } // end of omniruntime

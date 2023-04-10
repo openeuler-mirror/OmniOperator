@@ -44,7 +44,7 @@ template <typename... Ts> struct Arguments {
 
         bitmap = new bool *[colCount];
         for (int i = 0; i < colCount; i++) {
-            bitmap[i] = new bool[rowCount] { false };
+            bitmap[i] = new bool[rowCount]{ false };
         }
 
         offsets = new int32_t *[colCount];
@@ -171,11 +171,11 @@ TEST(ExpressionTest, q1LongType)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         auto copy = DuplicateVectorBatch(t);
-        vector<VectorBatch *> ret;
+        VectorBatch *outputVecBatch = nullptr;
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&outputVecBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
@@ -183,11 +183,11 @@ TEST(ExpressionTest, q1LongType)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            int64_t result = ((LongVector *)ret[0]->GetVector(0))->GetValue(i);
+            int64_t result = ((LongVector *)outputVecBatch->GetVector(0))->GetValue(i);
             int64_t actualLong = col1->GetValue(i) * (100L - col2->GetValue(i)) * (100L + col3->GetValue(i));
             EXPECT_EQ(result, actualLong);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(outputVecBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -271,11 +271,11 @@ TEST(ExpressionTest, q1DoubleType)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         auto copy = DuplicateVectorBatch(t);
-        vector<VectorBatch *> ret;
+        VectorBatch *outputVecBatch = nullptr;
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&outputVecBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
@@ -283,11 +283,11 @@ TEST(ExpressionTest, q1DoubleType)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            double result = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+            double result = ((DoubleVector *)outputVecBatch->GetVector(0))->GetValue(i);
             double actualDouble = col1->GetValue(i) * (1.0 - col2->GetValue(i)) * (1.0 + col3->GetValue(i));
             EXPECT_EQ(result, actualDouble);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(outputVecBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -343,7 +343,7 @@ TEST(ExpressionTest, q1DoubleFilter)
     BinaryExpr *ltExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, mulExpr2, minValue, BooleanType());
 
     const string defaultTestFunctionName = "double-comparison-function";
-    Arguments<double, double, double> args { numRows, numRows, col1, col2, col3 };
+    Arguments<double, double, double> args{ numRows, numRows, col1, col2, col3 };
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() }));
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
@@ -468,11 +468,11 @@ TEST(ExpressionTest, q1Decimal64Type)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         auto copy = DuplicateVectorBatch(t);
-        vector<VectorBatch *> ret;
+        VectorBatch *vectorBatch = nullptr;
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&vectorBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
@@ -480,12 +480,12 @@ TEST(ExpressionTest, q1Decimal64Type)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            double result = ((LongVector *)ret[0]->GetVector(0))->GetValue(i) / 1000000.0;
+            double result = ((LongVector *)vectorBatch->GetVector(0))->GetValue(i) / 1000000.0;
             double actualDecimal64 =
                 col1->GetValue(i) / 100.0 * (1.0 - col2->GetValue(i) / 100.0) * (1 + col3->GetValue(i) / 100.0);
             EXPECT_TRUE(abs(result - actualDecimal64) < 0.1);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(vectorBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -573,12 +573,12 @@ TEST(ExpressionTest, q1Decimal128Type)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        vector<VectorBatch *> ret;
+        VectorBatch *vectorBatch = nullptr;
         auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&vectorBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
@@ -586,14 +586,14 @@ TEST(ExpressionTest, q1Decimal128Type)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            Decimal128 result = ((Decimal128Vector *)ret[0]->GetVector(0))->GetValue(i);
+            Decimal128 result = ((Decimal128Vector *)vectorBatch->GetVector(0))->GetValue(i);
             EXPECT_EQ(result.HighBits(), 0);
 
             double actualDecimal128 = col1->GetValue(i).LowBits() / 100.0 *
                 (1.0 - col2->GetValue(i).LowBits() / 100.0) * (1.0 + col3->GetValue(i).LowBits() / 100.0);
             EXPECT_TRUE(abs(result.LowBits() / 1000000.0 - actualDecimal128) < 0.1);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(vectorBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -663,21 +663,21 @@ TEST(ExpressionTest, q1Decimal64Cast)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         auto copy = DuplicateVectorBatch(t);
-        vector<VectorBatch *> ret;
+        VectorBatch *vectorBatch = nullptr;
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&vectorBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
         std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
         for (int i = 0; i < numRows; i++) {
-            double result = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+            double result = ((DoubleVector *)vectorBatch->GetVector(0))->GetValue(i);
             double actual = col0->GetValue(i) / 100.00;
             EXPECT_EQ(result, actual);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(vectorBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -744,12 +744,12 @@ TEST(ExpressionTest, q1DateType)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        vector<VectorBatch *> ret;
+        VectorBatch *vectorBatch = nullptr;
         auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&vectorBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
@@ -757,11 +757,11 @@ TEST(ExpressionTest, q1DateType)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            bool result = ((BooleanVector *)ret[0]->GetVector(0))->GetValue(i);
+            bool result = ((BooleanVector *)vectorBatch->GetVector(0))->GetValue(i);
             bool actualBool = col1->GetValue(i) < 19266;
             EXPECT_EQ(result, actualBool);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(vectorBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -841,12 +841,12 @@ TEST(ExpressionTest, q1Case1)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        vector<VectorBatch *> ret;
+        VectorBatch *vectorBatch = nullptr;
         auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&vectorBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
@@ -854,12 +854,12 @@ TEST(ExpressionTest, q1Case1)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            double result = ((DoubleVector *)ret[0]->GetVector(0))->GetValue(i);
+            double result = ((DoubleVector *)vectorBatch->GetVector(0))->GetValue(i);
             double actualDouble =
                 (col1->GetValue(i) >= 18993 && col1->GetValue(i) < 19358) ? col2->GetValue(i) / 10000.0 : 0.0;
             EXPECT_EQ(result, actualDouble);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(vectorBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -1050,12 +1050,12 @@ TEST(ExpressionTest, q1SwitchCase)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        vector<VectorBatch *> ret;
+        VectorBatch *vectorBatch = nullptr;
         auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&vectorBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
@@ -1063,7 +1063,7 @@ TEST(ExpressionTest, q1SwitchCase)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            int32_t result = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+            int32_t result = ((IntVector *)vectorBatch->GetVector(0))->GetValue(i);
             int32_t actualInt;
             if (col1->GetValue(i) >= 90) {
                 actualInt = 12;
@@ -1094,7 +1094,7 @@ TEST(ExpressionTest, q1SwitchCase)
             }
             EXPECT_EQ(result, actualInt);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(vectorBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -1232,12 +1232,12 @@ TEST(ExpressionTest, q1If)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        vector<VectorBatch *> ret;
+        VectorBatch *vectorBatch = nullptr;
         auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
-        op->GetOutput(ret);
+        op->GetOutput(&vectorBatch);
         timer.CalculateElapse();
         wallTime[i] = timer.GetWallElapse();
         cpuTime[i] = timer.GetCpuElapse();
@@ -1245,7 +1245,7 @@ TEST(ExpressionTest, q1If)
 
         // verify result
         for (int i = 0; i < numRows; i++) {
-            int32_t result = ((IntVector *)ret[0]->GetVector(0))->GetValue(i);
+            int32_t result = ((IntVector *)vectorBatch->GetVector(0))->GetValue(i);
             int32_t actualInt;
             if (col1->GetValue(i) >= 90) {
                 actualInt = 12;
@@ -1276,7 +1276,7 @@ TEST(ExpressionTest, q1If)
             }
             EXPECT_EQ(result, actualInt);
         }
-        VectorHelper::FreeVecBatches(ret);
+        VectorHelper::FreeVecBatch(vectorBatch);
     }
 
     PrintValueLine(wallTime, rounds);
@@ -1319,7 +1319,7 @@ template <typename T, int Size> static void bm_codegen_between()
     }
 
     BetweenExpr *expr = new BetweenExpr(valueExpr, lowerExpr, upperExpr);
-    Arguments<T, T, T> args { Size, 5, col0, col1, col2 };
+    Arguments<T, T, T> args{ Size, 5, col0, col1, col2 };
     DataTypes inputTypes(dataTypePtr);
     VectorBatch *t = CreateVectorBatch(inputTypes, 5, col0, col1, col2);
 
@@ -1378,7 +1378,7 @@ TEST(ExpressionTest, bm_codegen_between2)
     int col1[] = {1001, 1245, 1245, 3, 4};
     int col2[] = {1001, -1256, 12365, 4, 6};
 
-    Arguments<int, int, int> args { 1000, 5, col0, col1, col2 };
+    Arguments<int, int, int> args{ 1000, 5, col0, col1, col2 };
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorBatch *t = CreateVectorBatch(inputTypes, 5, col0, col1, col2);
 

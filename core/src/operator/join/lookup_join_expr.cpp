@@ -83,9 +83,9 @@ int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t LookupJoinWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
+int32_t LookupJoinWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    int32_t status = lookupJoinOperator->GetOutput(outputPages);
+    int32_t status = lookupJoinOperator->GetOutput(outputVecBatch);
     SetStatus(lookupJoinOperator->GetStatus());
     return status;
 }

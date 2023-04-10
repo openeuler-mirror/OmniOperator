@@ -35,7 +35,7 @@ public:
     }
 
     int32_t AddInput(VectorBatch *vecBatch) override;
-    int32_t GetOutput(std::vector<VectorBatch *> &ret) override;
+    int32_t GetOutput(VectorBatch **outputVecBatch) override;
     OmniStatus Close() override;
 
 private:
