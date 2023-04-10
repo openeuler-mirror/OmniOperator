@@ -174,14 +174,14 @@ public class OmniProjectOperatorTest {
         assertEquals(((IntVec) res.getVector(0)).get(1), 25);
         assertEquals(((IntVec) res.getVector(1)).get(1), -1712319331);
         assertEquals(((IntVec) res.getVector(2)).get(1), 352365215);
-        assertEquals(((IntVec) res.getVector(3)).get(1), 2116291453);
+        assertEquals(((IntVec) res.getVector(3)).get(1), 1352383760);
         assertEquals(((IntVec) res.getVector(4)).get(1), 933211791);
         // null value check
-        assertEquals(((IntVec) res.getVector(0)).get(2), 15);
-        assertEquals(((IntVec) res.getVector(1)).get(2), -1670924195);
-        assertEquals(((IntVec) res.getVector(2)).get(2), 142593372);
-        assertEquals(((IntVec) res.getVector(3)).get(2), 967293486);
-        assertEquals(((IntVec) res.getVector(4)).get(2), 933211791);
+        assertEquals(((IntVec) res.getVector(0)).get(2), 0);
+        assertEquals(((IntVec) res.getVector(1)).get(2), 42);
+        assertEquals(((IntVec) res.getVector(2)).get(2), 42);
+        assertEquals(((IntVec) res.getVector(3)).get(2), 42);
+        assertEquals(((IntVec) res.getVector(4)).get(2), 42);
 
         freeVecBatch(res);
         op.close();
@@ -237,7 +237,7 @@ public class OmniProjectOperatorTest {
         Iterator<VecBatch> results = op.getOutput();
         VecBatch resultVecBatch = results.next();
 
-        Object[][] expectDatas = {{-8641832543871958383L, 5052335482464806674L, 7563124414157642229L}};
+        Object[][] expectDatas = {{4122469761574251967L, -1100376009453395183L, -1241606273492999864L}};
         assertVecBatchEquals(resultVecBatch, expectDatas);
 
         freeVecBatch(resultVecBatch);

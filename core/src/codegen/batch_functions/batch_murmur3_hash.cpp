@@ -69,7 +69,7 @@ extern "C" DLLEXPORT void BatchMm3Decimal128(omniruntime::type::Decimal128 *x, i
 {
     int32_t byteLen = 0;
     for (int i = 0; i < rowCnt; ++i) {
-        auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(x[i].HighBits(), x[i].LowBits(), &byteLen);
+        auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(x[i].HighBits(), x[i].LowBits(), byteLen);
         output[i] = static_cast<int32_t>(HashUnsafeBytes(reinterpret_cast<char *>(bytes), byteLen, seed[i]));
         delete[] bytes;
     }
