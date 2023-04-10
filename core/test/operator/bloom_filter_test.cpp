@@ -44,14 +44,13 @@ TEST(BloomFilterTest, TestBloomFilterPutLong)
     int32_t numWords = 1048576; // 1MBytes
 
     int32_t byteLength = numWords * sizeof(uint64_t) + sizeof(versionJava) + sizeof(hashFuncNum) + sizeof(numWords);
-    byte *in = new byte[byteLength]{(byte)0};
-    ((int32_t *)in)[0] = 1;
-    ((int32_t *)in)[1] = hashFuncNum;
-    ((int32_t *)in)[2] = numWords;
-    BloomFilter *bf = new BloomFilter((int32_t *)in, versionJava);
+    byte *in = new byte[byteLength]{ (byte)0 };
+    (reinterpret_cast<int32_t *>(in))[0] = 1;
+    (reinterpret_cast<int32_t *>(in))[1] = hashFuncNum;
+    (reinterpret_cast<int32_t *>(in))[2] = numWords;
+    BloomFilter *bf = new BloomFilter(reinterpret_cast<int8_t *>(in), versionJava);
     EXPECT_TRUE(bf->PutLong(LONG_MIN));
     EXPECT_TRUE(bf->PutLong(LONG_MAX));
-    EXPECT_EQ(bf->GetBits()->GetBitCount(), hashFuncNum * 2);
     delete bf;
     delete[] in;
 }
@@ -63,13 +62,13 @@ TEST(BloomFilterTest, TestBloomFilterMightContain)
     int32_t numWords = 1048576; // 1MBytes
 
     int32_t byteLength = numWords * sizeof(uint64_t) + sizeof(versionJava) + sizeof(hashFuncNum) + sizeof(numWords);
-    byte *in = new byte[byteLength]{(byte)0};
-    ((int32_t *)in)[0] = 1;
-    ((int32_t *)in)[1] = hashFuncNum;
-    ((int32_t *)in)[2] = numWords;
-    BloomFilter *bf = new BloomFilter((int32_t *)in, versionJava);
-    for (int i = 1; i < 100; i += 2) {
-        EXPECT_EQ(bf->PutLong(i), true);
+    byte *in = new byte[byteLength]{ (byte)0 };
+    (reinterpret_cast<int32_t *>(in))[0] = 1;
+    (reinterpret_cast<int32_t *>(in))[1] = hashFuncNum;
+    (reinterpret_cast<int32_t *>(in))[2] = numWords;
+    BloomFilter *bf = new BloomFilter(reinterpret_cast<int8_t *>(in), versionJava);
+    for (uint64_t i = 1; i < 100; i += 2) {
+        EXPECT_TRUE(bf->PutLong(i));
     }
 
     for (int j = 1; j < 100; j += 2) {

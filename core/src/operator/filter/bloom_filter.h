@@ -19,13 +19,13 @@ namespace omniruntime {
 namespace op {
 class BloomFilter {
 public:
-    explicit BloomFilter(int32_t *in, int32_t versionJava);
+    explicit BloomFilter(int8_t *in, int32_t versionJava);
 
     ~BloomFilter();
 
-    bool PutLong(uint64_t item);
+    bool PutLong(int64_t item);
 
-    bool MightContainLong(uint64_t item);
+    bool MightContainLong(int64_t item);
 
     int32_t GetNumHashFunctions();
 
