@@ -37,8 +37,10 @@ TEST(NativeOmniUnionOperator, TestUnionByThreeColumn)
     unionOperator->AddInput(vecBatch1);
     unionOperator->AddInput(vecBatch2);
     std::vector<VectorBatch *> outputVecBatches;
-    while (unionOperator->GetStatus() == OMNI_STATUS_NORMAL) {
-        unionOperator->GetOutput(outputVecBatches);
+    while (unionOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        VectorBatch *outputVecBatch = nullptr;
+        unionOperator->GetOutput(&outputVecBatch);
+        outputVecBatches.push_back(outputVecBatch);
     }
 
     int32_t expData1[dataSize] = {0, 1, 2, 0, 1, 2};

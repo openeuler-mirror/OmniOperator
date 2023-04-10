@@ -94,9 +94,9 @@ int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     return 0;
 }
 
-int32_t AggregationWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputVecBatches)
+int32_t AggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    aggOperator->GetOutput(outputVecBatches);
+    aggOperator->GetOutput(outputVecBatch);
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }

@@ -162,12 +162,12 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         aggPartial1->AddInput(input);
     }
 
-    std::vector<VectorBatch *> result1;
+    VectorBatch *outputVecBatch1 = nullptr;
     try {
-        int32_t vecBatchCount = aggPartial1->GetOutput(result1);
+        int32_t vecBatchCount = aggPartial1->GetOutput(&outputVecBatch1);
         EXPECT_EQ(vecBatchCount, 1);
-        EXPECT_EQ(result1[0]->GetVectorCount(), expectedResult1->GetVectorCount());
-        EXPECT_EQ(result1[0]->GetRowCount(), expectedResult1->GetRowCount());
+        EXPECT_EQ(outputVecBatch1->GetVectorCount(), expectedResult1->GetVectorCount());
+        EXPECT_EQ(outputVecBatch1->GetRowCount(), expectedResult1->GetRowCount());
     } catch (OmniException &e) {
         op::Operator::DeleteOperator(aggPartial1);
         op::Operator::DeleteOperator(aggPartial2);
@@ -181,7 +181,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     }
     if (overflow1) {
         EXPECT_EQ(expectedExceptionMessage.length(), 0);
-        EXPECT_TRUE(ValidateOverflow("Partial1", valueColIdx, expectedResult1, result1[0]));
+        EXPECT_TRUE(ValidateOverflow("Partial1", valueColIdx, expectedResult1, outputVecBatch1));
     }
     op::Operator::DeleteOperator(aggPartial1);
 
@@ -196,15 +196,15 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         aggPartial2->AddInput(input);
     }
 
-    std::vector<VectorBatch *> result2;
+    VectorBatch *outputVecBatch2 = nullptr;
     try {
-        int32_t vecBatchCount = aggPartial2->GetOutput(result2);
+        int32_t vecBatchCount = aggPartial2->GetOutput(&outputVecBatch2);
         EXPECT_EQ(vecBatchCount, 1);
-        EXPECT_EQ(result2[0]->GetVectorCount(), expectedResult2->GetVectorCount());
-        EXPECT_EQ(result2[0]->GetRowCount(), expectedResult2->GetRowCount());
+        EXPECT_EQ(outputVecBatch2->GetVectorCount(), expectedResult2->GetVectorCount());
+        EXPECT_EQ(outputVecBatch2->GetRowCount(), expectedResult2->GetRowCount());
     } catch (OmniException &e) {
         VectorHelper::FreeVecBatch(expectedResult1);
-        VectorHelper::FreeVecBatches(result1);
+        VectorHelper::FreeVecBatch(outputVecBatch1);
         op::Operator::DeleteOperator(aggPartial2);
         op::Operator::DeleteOperator(aggFinal);
         VectorHelper::FreeVecBatch(expectedResult2);
@@ -216,30 +216,26 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     }
     if (overflow2) {
         EXPECT_EQ(expectedExceptionMessage.length(), 0);
-        EXPECT_TRUE(ValidateOverflow("Partial2", valueColIdx, expectedResult2, result2[0]));
+        EXPECT_TRUE(ValidateOverflow("Partial2", valueColIdx, expectedResult2, outputVecBatch2));
     }
     op::Operator::DeleteOperator(aggPartial2);
 
     // Second stage (final)
-    std::vector<VectorBatch *> expectedResults { expectedResult1, expectedResult2 };
+    std::vector<VectorBatch *> expectedResults{ expectedResult1, expectedResult2 };
     VectorBatch *expectedResultFinal = nullptr;
     bool overflowFinal = tester->GenerateFinalExpectedResult(&expectedResultFinal, expectedResults);
 
     aggFinal->Init();
 
-    for (uint32_t i = 0; i < result1.size(); ++i) {
-        aggFinal->AddInput(result1[i]);
-    }
-    for (uint32_t i = 0; i < result2.size(); ++i) {
-        aggFinal->AddInput(result2[i]);
-    }
+    aggFinal->AddInput(outputVecBatch1);
+    aggFinal->AddInput(outputVecBatch2);
 
-    std::vector<VectorBatch *> finalResult;
+    VectorBatch *finalOutputVecBatch = nullptr;
     try {
-        int32_t vecBatchCount = aggFinal->GetOutput(finalResult);
+        int32_t vecBatchCount = aggFinal->GetOutput(&finalOutputVecBatch);
         EXPECT_EQ(vecBatchCount, 1);
-        EXPECT_EQ(finalResult[0]->GetVectorCount(), expectedResultFinal->GetVectorCount());
-        EXPECT_EQ(finalResult[0]->GetRowCount(), expectedResultFinal->GetRowCount());
+        EXPECT_EQ(finalOutputVecBatch->GetVectorCount(), expectedResultFinal->GetVectorCount());
+        EXPECT_EQ(finalOutputVecBatch->GetRowCount(), expectedResultFinal->GetRowCount());
     } catch (OmniException &e) {
         op::Operator::DeleteOperator(aggFinal);
         VectorHelper::FreeVecBatch(expectedResultFinal);
@@ -251,14 +247,14 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     }
     if (overflowFinal) {
         EXPECT_EQ(expectedExceptionMessage.length(), 0);
-        EXPECT_TRUE(ValidateOverflow("Final", valueColIdx, expectedResultFinal, finalResult[0]));
+        EXPECT_TRUE(ValidateOverflow("Final", valueColIdx, expectedResultFinal, finalOutputVecBatch));
     }
 
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(finalResult[0], expectedResultFinal, error));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(finalOutputVecBatch, expectedResultFinal, error));
 
     op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatch(expectedResultFinal);
-    VectorHelper::FreeVecBatches(finalResult);
+    VectorHelper::FreeVecBatch(finalOutputVecBatch);
 }
 
 TEST_P(MultiStageCompleteTest, verify_correctness)

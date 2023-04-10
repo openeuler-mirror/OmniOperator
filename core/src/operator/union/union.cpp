@@ -49,7 +49,7 @@ int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t UnionOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
+int32_t UnionOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (vecBatchCount == 0 || vecBatchIndex == vecBatchCount) {
         vecBatchCount = 0;
@@ -59,8 +59,7 @@ int32_t UnionOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
         return 0;
     }
 
-    auto outVecBatch = inputVecBatches[vecBatchIndex];
-    outputPages.push_back(outVecBatch);
+    *outputVecBatch = inputVecBatches[vecBatchIndex];
     vecBatchIndex++;
     if (vecBatchIndex == vecBatchCount) {
         vecBatchCount = 0;
@@ -68,7 +67,7 @@ int32_t UnionOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
         inputVecBatches.clear();
         SetStatus(OMNI_STATUS_FINISHED);
     }
-    
+
     return 0;
 }
 

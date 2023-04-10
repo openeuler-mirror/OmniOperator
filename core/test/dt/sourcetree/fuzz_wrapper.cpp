@@ -127,10 +127,10 @@ void TestFilter(void **testData, omniruntime::type::DataTypes &sourceTypes, int3
         CreateFilterFactory(sourceTypes, eqExpr, projections, overflowConfig));
     omniruntime::op::Operator *op = factory->CreateOperator();
     op->AddInput(sourceVecBatch);
-    std::vector<VectorBatch *> ret;
-    op->GetOutput(ret);
+    VectorBatch *resultVecBatch = nullptr;
+    op->GetOutput(&resultVecBatch);
 
-    VectorHelper::FreeVecBatches(ret);
+    VectorHelper::FreeVecBatch(resultVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete overflowConfig;
@@ -166,10 +166,10 @@ void TestAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes,
     nativeOperatorFactory->Init();
     auto groupBy = nativeOperatorFactory->CreateOperator();
     groupBy->AddInput(sourceVecBatch);
-    std::vector<VectorBatch *> result;
-    groupBy->GetOutput(result);
+    VectorBatch *resultVecBatch = nullptr;
+    groupBy->GetOutput(&resultVecBatch);
 
-    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(resultVecBatch);
     omniruntime::op::Operator::DeleteOperator(groupBy);
     DeleteOperatorFactory(nativeOperatorFactory);
     delete vecAllocator;
@@ -187,10 +187,10 @@ void TestHashAggregation(void **testData, omniruntime::type::DataTypes &sourceTy
     nativeOperatorFactory->Init();
     auto groupBy = nativeOperatorFactory->CreateOperator();
     groupBy->AddInput(sourceVecBatch);
-    std::vector<VectorBatch *> result;
-    groupBy->GetOutput(result);
+    VectorBatch *resultVecBatch = nullptr;
+    groupBy->GetOutput(&resultVecBatch);
 
-    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(resultVecBatch);
     omniruntime::op::Operator::DeleteOperator(groupBy);
     DeleteOperatorFactory(nativeOperatorFactory);
     delete vecAllocator;
@@ -280,10 +280,10 @@ void TestPartitionedOutput(void **testData, omniruntime::type::DataTypes &source
         dynamic_cast<PartitionedOutputOperatorFactory *>(CreatePartitionedOutputFactory(sourceTypes));
     auto partitionedOperator = operatorFactory->CreateOperator();
     partitionedOperator->AddInput(vecBatch);
-    std::vector<VectorBatch *> outputVecBatch;
-    partitionedOperator->GetOutput(outputVecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    partitionedOperator->GetOutput(&outputVecBatch);
 
-    VectorHelper::FreeVecBatches(outputVecBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(partitionedOperator);
     DeleteOperatorFactory(operatorFactory);
     delete vecAllocator;
@@ -332,7 +332,9 @@ void TestUnion(void **testData, omniruntime::type::DataTypes &sourceTypes, int32
     unionOperator->AddInput(vecBatch2);
     std::vector<VectorBatch *> outputVecBatches;
     while (unionOperator->GetStatus() == OMNI_STATUS_NORMAL) {
-        unionOperator->GetOutput(outputVecBatches);
+        VectorBatch *outputVecBatch = nullptr;
+        unionOperator->GetOutput(&outputVecBatch);
+        outputVecBatches.push_back(outputVecBatch);
     }
 
     VectorHelper::FreeVecBatches(outputVecBatches);
@@ -436,11 +438,11 @@ void TestWindow(void **testData, omniruntime::type::DataTypes &sourceTypes, int3
     WindowOperatorFactory *operatorFactory = dynamic_cast<WindowOperatorFactory *>(CreateWindowFactory(sourceTypes));
     auto windowOperator = operatorFactory->CreateOperator();
     windowOperator->AddInput(sourceVecBatch);
-    std::vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     DeleteOperatorFactory(operatorFactory);
     delete vecAllocator;
 }

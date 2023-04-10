@@ -64,8 +64,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
         dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
@@ -79,13 +79,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -131,8 +131,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType() }));
@@ -143,13 +143,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -195,8 +195,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     auto test = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
     WindowWithExprOperator *windowOperator = test;
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ DoubleType(), LongType(), LongType() }));
@@ -205,13 +205,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     int64_t expectData3[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -256,8 +256,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType() }));
@@ -268,13 +268,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -319,8 +319,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), DoubleType(), IntType(), LongType() }));
@@ -331,13 +331,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -386,8 +386,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType(), LongType() }));
@@ -399,13 +399,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -455,8 +455,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), LongType(), LongType() }));
@@ -470,13 +470,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     expectVecBatch->GetVector(0)->SetValueNull(4);
     expectVecBatch->GetVector(0)->SetValueNull(5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -544,8 +544,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
@@ -575,13 +575,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -650,8 +650,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI), LongType(),
@@ -680,13 +680,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -756,8 +756,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY),
@@ -789,13 +789,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -864,8 +864,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY),
@@ -895,13 +895,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -971,8 +971,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
@@ -1003,13 +1003,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -1078,8 +1078,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
@@ -1111,13 +1111,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -1185,8 +1185,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI), LongType(),
@@ -1215,13 +1215,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -1295,8 +1295,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
@@ -1326,13 +1326,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -1381,8 +1381,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), LongType() }));
@@ -1396,13 +1396,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -1454,8 +1454,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
@@ -1472,13 +1472,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 
@@ -1527,8 +1527,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
-    vector<VectorBatch *> outputVecBatches;
-    windowOperator->GetOutput(outputVecBatches);
+    VectorBatch *outputVecBatch = nullptr;
+    windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType(), LongType() }));
@@ -1542,13 +1542,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     DeleteOperatorFactory(operatorFactory);
     VectorHelper::FreeVecBatch(expectVecBatch);
-    VectorHelper::FreeVecBatches(outputVecBatches);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
 }
 }

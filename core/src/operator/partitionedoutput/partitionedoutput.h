@@ -60,7 +60,7 @@ public:
 
     int32_t AddInput(VectorBatch *vecBatch) override;
 
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputVecBatch) override;
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
 

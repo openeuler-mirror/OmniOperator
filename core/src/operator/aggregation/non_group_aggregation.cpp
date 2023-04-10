@@ -95,7 +95,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
+int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     // always output one row
     int32_t aggsCount = 0;
@@ -107,17 +107,15 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             aggsOutputDataTypePtrs.push_back(aggOutputTypes.GetType(i));
         }
     }
-    auto outputVecBatch = new VectorBatch(aggsCount, 1);
-    outputVecBatch->NewVectors(this->vecAllocator, aggsOutputDataTypePtrs);
-
-    // set result value
+    auto output = new VectorBatch(aggsCount, 1);
+    output->NewVectors(this->vecAllocator, aggsOutputDataTypePtrs);
     int32_t aggOutputColsStart = 0;
     for (size_t aggIdx = 0; aggIdx < aggregators.size(); ++aggIdx) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggsStates[aggIdx];
         std::vector<Vector *> extractVectors;
         for (int i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
-            extractVectors.push_back(outputVecBatch->GetVector(aggOutputColsStart + i));
+            extractVectors.push_back(output->GetVector(aggOutputColsStart + i));
         }
         aggOutputColsStart += aggsOutputTypes[aggIdx].GetSize();
 
@@ -127,12 +125,12 @@ int AggregationOperator::GetOutput(std::vector<VectorBatch *> &result)
             // release VectorBatch when aggregator.ExtractValues throw exception
             // when spark hash agg sum/avg decimal overflow, it will throw exception when
             // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
-            VectorHelper::FreeVecBatch(outputVecBatch);
+            VectorHelper::FreeVecBatch(output);
             throw oneException;
         }
     }
 
-    result.push_back(outputVecBatch);
+    *outputVecBatch = output;
     SetStatus(OMNI_STATUS_FINISHED);
     return OMNI_STATUS_FINISHED;
 }

@@ -28,7 +28,7 @@ public:
 
     ~AggregationOperator() override {}
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data) override;
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
 private:
     std::vector<omniruntime::type::DataTypes> aggsOutputTypes;

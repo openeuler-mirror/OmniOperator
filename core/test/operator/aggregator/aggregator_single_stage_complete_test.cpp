@@ -100,7 +100,7 @@ public:
             using T_IN = typename NativeAndVectorType<IN_ID>::type;
             using T_OUT = typename NativeAndVectorType<OUT_ID>::type;
             using V_OUT = typename NativeAndVectorType<OUT_ID>::vector;
-            T_OUT result {};
+            T_OUT result{};
             int64_t count = 0;
             bool overflow;
             const int32_t valueIndex = this->GetValueColumnIndex();
@@ -112,7 +112,7 @@ public:
                     overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, T_OUT, Decimal128>(vvb, valueIndex,
                         maskIndex, SumFunc<T_IN, Decimal128>, count, result);
                 } else {
-                    Decimal128 result128 {};
+                    Decimal128 result128{};
                     overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, Decimal128, Decimal128>(vvb,
                         valueIndex, maskIndex, SumFunc<T_IN, Decimal128>, count, result128);
                     if (!overflow && count > 0) {
@@ -126,7 +126,7 @@ public:
                 overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, T_OUT, T_MID>(vvb, valueIndex,
                     maskIndex, SumFunc<T_IN, T_MID>, count, result);
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                double resultDouble {};
+                double resultDouble{};
                 overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, double, double>(vvb, valueIndex,
                     maskIndex, SumFunc<T_IN, double>, count, resultDouble);
                 if (!overflow && count > 0) {
@@ -218,7 +218,7 @@ public:
                 IntVector *orgGroups = static_cast<IntVector *>(VectorHelper::ExpandVectorAndIndex(groups, i, orgIdx));
                 int32_t filterValue = orgGroups->GetValue(orgIdx);
                 int32_t *filterValuePtr = groups->IsValueNull(i) ? nullptr : &filterValue;
-                T_OUT result {};
+                T_OUT result{};
                 int64_t count = 0;
                 bool overflow;
 
@@ -228,7 +228,7 @@ public:
                         overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, T_OUT, Decimal128>(vvb,
                             valueIndex, maskIndex, SumFunc<T_IN, Decimal128>, count, result, filterValuePtr, 0);
                     } else {
-                        Decimal128 result128 {};
+                        Decimal128 result128{};
                         overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, Decimal128, Decimal128>(vvb,
                             valueIndex, maskIndex, SumFunc<T_IN, Decimal128>, count, result128, filterValuePtr, 0);
                         if (!overflow && count > 0) {
@@ -243,7 +243,7 @@ public:
                     overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, T_OUT, T_MID>(vvb, valueIndex,
                         maskIndex, SumFunc<T_IN, T_MID>, count, result, filterValuePtr, 0);
                 } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                    double resultDouble {};
+                    double resultDouble{};
                     overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, double, double>(vvb, valueIndex,
                         maskIndex, SumFunc<T_IN, double>, count, resultDouble, filterValuePtr, 0);
                     if (!overflow && count > 0) {
@@ -434,12 +434,12 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         agg->AddInput(inputs[i]);
     }
 
-    std::vector<VectorBatch *> result;
+    VectorBatch *outputVecBatch = nullptr;
     try {
-        int32_t vecBatchCount = agg->GetOutput(result);
+        int32_t vecBatchCount = agg->GetOutput(&outputVecBatch);
         EXPECT_EQ(vecBatchCount, 1);
-        EXPECT_EQ(result[0]->GetVectorCount(), expectedResult->GetVectorCount());
-        EXPECT_EQ(result[0]->GetRowCount(), expectedResult->GetRowCount());
+        EXPECT_EQ(outputVecBatch->GetVectorCount(), expectedResult->GetVectorCount());
+        EXPECT_EQ(outputVecBatch->GetRowCount(), expectedResult->GetRowCount());
     } catch (OmniException &e) {
         op::Operator::DeleteOperator(agg);
         VectorHelper::FreeVecBatch(expectedResult);
@@ -451,13 +451,13 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
     }
     if (overflow) {
         EXPECT_EQ(expectedExceptionMessage.length(), 0);
-        EXPECT_TRUE(ValidateOverflow("Final", tester->GetValueColumnIndex(), expectedResult, result[0]));
+        EXPECT_TRUE(ValidateOverflow("Final", tester->GetValueColumnIndex(), expectedResult, outputVecBatch));
     }
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(result[0], expectedResult, error));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedResult, error));
 
     op::Operator::DeleteOperator(agg);
     VectorHelper::FreeVecBatch(expectedResult);
-    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
 TEST_P(SingleStageCompleteTest, verify_correctness)
