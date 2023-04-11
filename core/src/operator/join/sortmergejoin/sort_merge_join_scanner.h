@@ -139,7 +139,7 @@ public:
 
     int64_t FindNextJoinRows();
 
-    int32_t GetMatchedValueAddresses(std::vector<bool> &isPreKeyMatched,
+    int32_t GetMatchedValueAddresses(size_t &capacity, size_t &size, std::vector<bool> &isPreKeyMatched,
         std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
         std::vector<bool> &isSameBufferedKeyMatched);
 
@@ -194,11 +194,13 @@ private:
 
     void BufferMatchingRows();
 
-    void BufferMatchingRowsForFullOuter();
+    void BufferMatchingRowsForFullJoin();
 
     bool HandleLeftOuterStreamedNullAndBufferedDataFinishedSituation();
 
     void BufferMissingRows();
+
+    void BufferMissingRowsForFullJoin();
 
     void StreamMissingRowsForCompareValue();
 
@@ -218,7 +220,7 @@ private:
 
     void SavePrevMatchingRows(bool isMatched);
 
-    void FullOuterJoinSavePrevMatchingRows(bool isMatched);
+    void SavePrevMatchingRowsForFullJoin(bool isMatched);
 
     bool PreKeyMatched();
 

@@ -152,7 +152,8 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     // 1)put matched rows to result builder, and cache the result
     auto matchResultRet = DecodeJoinResult(joinScannerRet);
     if (static_cast<JoinResultCode>(matchResultRet) == JoinResultCode::HAS_RESULT) {
-        smjScanner->GetMatchedValueAddresses(joinResultBuilder->GetPreKeyMatched(),
+        smjScanner->GetMatchedValueAddresses(joinResultBuilder->GetValueAddressCapacity(),
+            joinResultBuilder->GetValueAddressSize(), joinResultBuilder->GetPreKeyMatched(),
             joinResultBuilder->GetStreamedTableValueAddresses(), joinResultBuilder->GetBufferedTableValueAddresses(),
             joinResultBuilder->GetSameBufferedKeyMatched());
         auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses();

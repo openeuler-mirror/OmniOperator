@@ -25,17 +25,13 @@ public:
         int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
         std::string &filter, VectorAllocator *vecAllocator, JoinType joinType, OverflowConfig *overflowConfig);
 
-    void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId,
-        vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+    void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId);
 
-    void ParsingAndOrganizationResultsForRightTable(int32_t rightBatchId, int32_t rightRowId,
-        vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+    void ParsingAndOrganizationResultsForRightTable(int32_t rightBatchId, int32_t rightRowId);
 
-    void PaddingLeftTableNull(int32_t rightBatchId, int32_t rightRowId, vec::VectorBatch *buildVectorBatch,
-        int32_t &buildRowCount);
+    void PaddingLeftTableNull(int32_t rightBatchId, int32_t rightRowId);
 
-    void PaddingRightTableNull(int32_t leftBatchId, int32_t leftRowId, vec::VectorBatch *buildVectorBatch,
-        int32_t &buildRowCount);
+    void PaddingRightTableNull(int32_t leftBatchId, int32_t leftRowId);
 
     int32_t AddJoinValueAddresses();
 
@@ -73,6 +69,16 @@ public:
         return isSameBufferedKeyMatched;
     }
 
+    ALWAYS_INLINE size_t &GetValueAddressSize()
+    {
+        return valueAddressSize;
+    }
+
+    ALWAYS_INLINE size_t &GetValueAddressCapacity()
+    {
+        return valueAddressCapacity;
+    }
+
     ALWAYS_INLINE bool HasNext()
     {
         return buildVectorBatchRowCount != 0;
@@ -84,10 +90,7 @@ public:
         buildVectorBatchRowCount = 0;
         addressOffset = 0;
         isPreRowMatched = false;
-        isPreKeyMatched.clear();
-        bufferedTableValueAddresses.clear();
-        streamedTableValueAddresses.clear();
-        isSameBufferedKeyMatched.clear();
+        valueAddressSize = 0;
         buildVectorBatch = nullptr;
     }
 
@@ -105,6 +108,33 @@ private:
     VectorBatch *NewEmptyVectorBatch() const;
     void UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJoinHandler, int32_t addressPosition,
         std::vector<bool> &isSameBufferedKeyMatched, int32_t inputSize);
+
+    ALWAYS_INLINE void PaddingLeftTableNull()
+    {
+        for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+            auto vector = buildVectorBatch->GetVector(columnIdx);
+            auto typeId = vector->GetTypeId();
+            if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+            } else {
+                vector->SetValueNull(buildRowCount);
+            }
+        }
+    }
+
+    ALWAYS_INLINE void PaddingRightTableNull()
+    {
+        for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
+            int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+            auto vector = buildVectorBatch->GetVector(buildColumnIdx);
+            auto typeId = vector->GetTypeId();
+            if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+            } else {
+                vector->SetValueNull(buildRowCount);
+            }
+        }
+    }
 
     std::vector<DataTypePtr> leftTableOutputTypes;
     int32_t *leftTableOutputCols;
@@ -152,6 +182,8 @@ private:
     std::vector<int64_t> streamedTableValueAddresses;
     std::vector<int64_t> bufferedTableValueAddresses;
     std::vector<bool> isSameBufferedKeyMatched;
+    size_t valueAddressCapacity = 1024;
+    size_t valueAddressSize = 0;
     LeftAntiJoinHandler leftAntiJoinHandler;
 };
 }
