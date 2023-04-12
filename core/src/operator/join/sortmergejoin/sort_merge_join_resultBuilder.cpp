@@ -83,7 +83,7 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
     int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
     VectorBatch *vectorBatch = new VectorBatch(outputColCount, maxRowCount);
 
-    vectorBatch->NewVectors(vecAllocator, allTypes);
+    vectorBatch->NewFlatVectors(vecAllocator, allTypes);
     return vectorBatch;
 }
 
@@ -115,8 +115,8 @@ void AddVarcharValueToVector(Vector *inputVector, int32_t inputRowId, Vector *ou
 
 void AddValueToBuildVector(Vector *inputVector, int32_t inputRowId, Vector *outputVector, int32_t outputRowId)
 {
-    int32_t originalId;
-    Vector *originalVector = VectorHelper::ExpandVectorAndIndex(inputVector, inputRowId, originalId);
+    int32_t originalId = inputRowId;
+    Vector *originalVector = inputVector;
     switch (originalVector->GetTypeId()) {
         case OMNI_INT:
         case OMNI_DATE32:

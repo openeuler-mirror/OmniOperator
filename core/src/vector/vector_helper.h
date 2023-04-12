@@ -317,7 +317,7 @@ public:
             auto dictionaryVector = static_cast<DictionaryVector *>(vector);
             int32_t originalRowIndex;
             auto dictionary = dictionaryVector->ExtractDictionaryAndId(rowIndex, originalRowIndex);
-            return GetValuePtrAndLength(dictionary, originalRowIndex, length);
+            return GetValuePtrAndLengthFromRawVector(dictionary, originalRowIndex, length);
         }
         return GetValuePtrAndLengthFromRawVector(vector, rowIndex, length);
     }

@@ -43,6 +43,8 @@ public:
 
     void NewVectors(VectorAllocator *vecAllocator, const std::vector<DataTypePtr> &types);
 
+    void NewFlatVectors(VectorAllocator *vecAllocator, const std::vector<DataTypePtr> &types);
+
     void ReleaseAllVectors();
 
 private:
