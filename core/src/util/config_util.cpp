@@ -10,6 +10,8 @@
 #include <memory>
 #include "config_util.h"
 
+std::map<std::string, std::string> ConfigUtil::configMap;
+
 static void Trim(std::string &value)
 {
     value.erase(0, value.find_first_not_of(' '));
@@ -72,10 +74,12 @@ static std::map<std::string, std::string> LoadConf()
     return omniConfigMap;
 }
 
-std::map<std::string, std::string> ConfigUtil::configMap = LoadConf();
-
 Properties ConfigUtil::CreateProperties()
 {
+    // first, load omni.conf
+    configMap = LoadConf();
+
+    // second, set properties
     static Properties tmpProperties;
     SetProperties(tmpProperties);
 
@@ -126,8 +130,7 @@ static void Convert(const std::string &value, std::string &property)
     property = value;
 }
 
-template<typename T>
-bool ConfigUtil::GetProperty(const char *key, T &value)
+template <typename T> bool ConfigUtil::GetProperty(const char *key, T &value)
 {
     const auto &iter = configMap.find(key);
     if (iter == configMap.end()) {
@@ -240,14 +243,14 @@ Policy *ConfigUtil::GetPolicy()
 Policy *ConfigUtil::InitializePolicy()
 {
     static Policy policy;
-    std::map<const char *, std::function<void(Policy *, std::string)>> initFunctionMap = {{ "RoundingRule",
+    std::map<const char *, std::function<void(Policy *, std::string)>> initFunctionMap = { { "RoundingRule",
         InitRoundingRule },
         { "CheckReScaleRule", InitCheckReScaleRule },
         { "EmptySearchStrReplaceRule", InitEmptySearchStrReplaceRule },
         { "CastDecimalToDoubleRule", InitCastDecimalToDoubleRule },
         { "NegativeStartIndexOutOfBoundsRule", InitNegativeStartIndexOutOfBoundsRule },
         { "SupportContainerVecRule", InitSupportContainerVecRule },
-        { "StringToDateFormatRule", InitStringToDateFormatRule }};
+        { "StringToDateFormatRule", InitStringToDateFormatRule } };
     std::string ruleValueStr;
     for (const auto &item : initFunctionMap) {
         const char *ruleKeyStr = item.first;
