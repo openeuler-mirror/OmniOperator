@@ -20,6 +20,28 @@ DynamicPagesIndex::DynamicPagesIndex(const omniruntime::type::DataTypes &types, 
       finishAddData(false)
 {}
 
+std::vector<bool> DynamicPagesIndex::CalculateNullsFromRawVectorBatch(VectorBatch *vectorBatch) {
+    std::vector<bool> result;
+    result.resize(vectorBatch->GetRowCount(), false);
+    for(int32_t id = 0; id < computeColsCount; ++id) {
+        auto colIdx = computeCols[id];
+        auto vec = vectorBatch->GetVector(colIdx);
+        auto totalRowSize = vec->GetSize();
+        auto nullSize = vec->GetNullCount();
+        if (nullSize == 0) {
+            continue;
+        }
+        auto nullValues = reinterpret_cast<bool *>(vec->GetValueNulls()) + vec->GetPositionOffset();
+        for (int32_t rowId = 0; rowId < totalRowSize && nullSize > 0; ++rowId) {
+            if (nullValues[rowId]) {
+                --nullSize;
+                result[rowId] = true;
+            }
+        }
+    }
+    return result;
+}
+
 int32_t DynamicPagesIndex::AddVecBatch(omniruntime::vec::VectorBatch *vecBatch)
 {
     if (finishAddData) {
@@ -44,16 +66,10 @@ int32_t DynamicPagesIndex::AddVecBatch(omniruntime::vec::VectorBatch *vecBatch)
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         int64_t valueAddress = EncodeSyntheticAddress(vecBatchLastIndex, rowIdx);
         this->valueAddressesDeque.emplace_back(valueAddress);
-        bool isNull = false;
-        for (int32_t colIdx = 0; colIdx < computeColsCount; colIdx++) {
-            if (vecBatch->GetVector(computeCols[colIdx])->IsValueNull(rowIdx)) {
-                isNull = true;
-                break;
-            }
-        }
-        this->nullsDeque.emplace_back(isNull);
     }
 
+    std::vector<bool> nulls = CalculateNullsFromRawVectorBatch(vecBatch);
+    this->nullsDeque.insert(this->nullsDeque.end(), nulls.begin(), nulls.end());
     this->columnsDeque.emplace_back(vecBatch->GetVectors());
 
     return 0;

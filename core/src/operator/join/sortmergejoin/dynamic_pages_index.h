@@ -81,6 +81,8 @@ public:
     // free all vecBatch
     void FreeAllRemainingVecBatch();
 
+    std::vector<bool> CalculateNullsFromRawVectorBatch(vec::VectorBatch *vectorBatch);
+
 private:
     int32_t typesCount;
     int32_t *computeCols;
