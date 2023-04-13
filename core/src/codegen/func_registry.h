@@ -15,6 +15,7 @@
 #include "func_registry_dictionary.h"
 #include "func_registry_math.h"
 #include "func_registry_hash.h"
+#include "func_registry_might_contain.h"
 #include "func_registry_string.h"
 #include "func_registry_varchar_vector.h"
 #include "func_registry_hive_udf.h"
