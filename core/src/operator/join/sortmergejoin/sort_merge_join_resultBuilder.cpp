@@ -38,10 +38,6 @@ JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOu
     int32_t outputRowSize = leftRowSize + rightRowSize;
     this->maxRowCount = OperatorUtil::GetMaxRowCount(outputRowSize != 0 ? outputRowSize : DEFAULT_ROW_SIZE);
     this->JoinFilterCodeGen(overflowConfig);
-    isPreKeyMatched.resize(valueAddressCapacity);
-    streamedTableValueAddresses.resize(valueAddressCapacity);
-    bufferedTableValueAddresses.resize(valueAddressCapacity);
-    isSameBufferedKeyMatched.resize(valueAddressCapacity);
 }
 
 void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
@@ -217,7 +213,7 @@ void JoinResultBuilder::UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJ
 
 int32_t JoinResultBuilder::ConstructInnerJoinOutput()
 {
-    auto inputSize = static_cast<int32_t>(valueAddressSize);
+    auto inputSize = static_cast<int32_t>(streamedTableValueAddresses.size());
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
@@ -258,7 +254,7 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
 
 int32_t JoinResultBuilder::ConstructLeftJoinOutput()
 {
-    auto inputSize = static_cast<int32_t>(valueAddressSize);
+    auto inputSize = static_cast<int32_t>(streamedTableValueAddresses.size());
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
@@ -312,7 +308,7 @@ int32_t JoinResultBuilder::ConstructLeftJoinOutput()
 
 int32_t JoinResultBuilder::ConstructFullJoinOutput()
 {
-    auto inputSize = static_cast<int32_t>(valueAddressSize);
+    auto inputSize = static_cast<int32_t>(streamedTableValueAddresses.size());
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
@@ -368,7 +364,7 @@ int32_t JoinResultBuilder::ConstructFullJoinOutput()
 
 int32_t JoinResultBuilder::ConstructLeftSemiJoinOutput()
 {
-    auto inputSize = static_cast<int32_t>(valueAddressSize);
+    auto inputSize = static_cast<int32_t>(streamedTableValueAddresses.size());
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
@@ -425,7 +421,7 @@ int32_t JoinResultBuilder::ConstructLeftSemiJoinOutput()
 
 int32_t JoinResultBuilder::ConstructLeftAntiJoinOutput()
 {
-    auto inputSize = static_cast<int32_t>(valueAddressSize);
+    auto inputSize = static_cast<int32_t>(streamedTableValueAddresses.size());
     leftAntiJoinHandler.hasSameBufferedRow = false;
     leftAntiJoinHandler.printThisStreamRowOutFlag = true;
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {

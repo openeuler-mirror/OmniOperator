@@ -139,16 +139,16 @@ public:
 
     int64_t FindNextJoinRows();
 
-    int32_t GetMatchedValueAddresses(size_t &capacity, size_t &size, std::vector<bool> &isPreKeyMatched,
+    int32_t GetMatchedValueAddresses(std::vector<bool> &isPreKeyMatched,
         std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
         std::vector<bool> &isSameBufferedKeyMatched);
 
     ~SortMergeJoinScanner();
 
 private:
-    void InnerJoin();
+    template <JoinType templateJoinType> void InnerJoin();
 
-    void LeftOuterJoin();
+    template <JoinType templateJoinType> void LeftOuterJoin();
 
     void FullOuterJoin();
 
@@ -158,7 +158,7 @@ private:
 
     bool NeedBufferedData();
 
-    int32_t FindNextMatchPos();
+    template <JoinType templateJoinType> int32_t FindNextMatchPos();
 
     bool AdvancedStreamedWithNullFreeJoinKey();
 
@@ -168,39 +168,39 @@ private:
 
     bool AdvancedBufferedJoinKey();
 
-    /* * Returns true if there are any NULL values in this row. */
+    /** Returns true if there are any NULL values in this row. */
     ALWAYS_INLINE bool CurStreamedHasNull()
     {
         return streamedPagesIndex->HaveNull(streamedPagesIndexPosition);
     }
 
-    /* * Returns true if there are any NULL values in this row. */
+    /** Returns true if there are any NULL values in this row. */
     ALWAYS_INLINE bool CurBufferedHasNull()
     {
         return bufferedPagesIndex->HaveNull(bufferedPagesIndexPosition);
     }
 
-    void RunInnerJoin();
+    template <JoinType templateJoinType> void RunInnerJoin();
 
-    void RunLeftOuterJoin();
+    template <JoinType templateJoinType> void RunLeftOuterJoin();
 
     void RunFullOuterJoin();
 
-    bool FindMatchingRows();
+    template <JoinType templateJoinType> bool FindMatchingRows();
 
-    bool LeftOuterFindJoinRows();
+    template <JoinType templateJoinType> bool LeftOuterFindJoinRows();
 
     bool FullOuterFindJoinRows();
 
-    void BufferMatchingRows();
+    template <JoinType templateJoinType> void BufferMatchingRows();
 
-    void BufferMatchingRowsForFullJoin();
+    void BufferMatchingRowsForFullOuter();
 
-    bool HandleLeftOuterStreamedNullAndBufferedDataFinishedSituation();
+    template <JoinType templateJoinType> bool HandleLeftOuterStreamedNullAndBufferedDataFinishedSituation();
 
-    void BufferMissingRows();
+    template <JoinType templateJoinType> void BufferMissingRows();
 
-    void BufferMissingRowsForFullJoin();
+    void BufferMissingRowsForFullOuter();
 
     void StreamMissingRowsForCompareValue();
 
@@ -218,9 +218,9 @@ private:
 
     void StreamMissingRowsForNullBuffered();
 
-    void SavePrevMatchingRows(bool isMatched);
+    template <JoinType templateJoinType> void SavePrevMatchingRows(bool isMatched);
 
-    void SavePrevMatchingRowsForFullJoin(bool isMatched);
+    void SavePrevMatchingRowsForFullOuter(bool isMatched);
 
     bool PreKeyMatched();
 
@@ -294,8 +294,6 @@ private:
     std::vector<int64_t> streamedValueAddress;
     std::vector<int64_t> bufferedValueAddress;
     std::vector<int64_t> preBufferedValueAddress;
-    size_t valueAddressCapacity;
-    size_t valueAddressSize;
 };
 }
 }

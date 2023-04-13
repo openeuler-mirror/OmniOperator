@@ -69,16 +69,6 @@ public:
         return isSameBufferedKeyMatched;
     }
 
-    ALWAYS_INLINE size_t &GetValueAddressSize()
-    {
-        return valueAddressSize;
-    }
-
-    ALWAYS_INLINE size_t &GetValueAddressCapacity()
-    {
-        return valueAddressCapacity;
-    }
-
     ALWAYS_INLINE bool HasNext()
     {
         return buildVectorBatchRowCount != 0;
@@ -90,7 +80,10 @@ public:
         buildVectorBatchRowCount = 0;
         addressOffset = 0;
         isPreRowMatched = false;
-        valueAddressSize = 0;
+        isPreKeyMatched.clear();
+        bufferedTableValueAddresses.clear();
+        streamedTableValueAddresses.clear();
+        isSameBufferedKeyMatched.clear();
         buildVectorBatch = nullptr;
     }
 
@@ -182,8 +175,6 @@ private:
     std::vector<int64_t> streamedTableValueAddresses;
     std::vector<int64_t> bufferedTableValueAddresses;
     std::vector<bool> isSameBufferedKeyMatched;
-    size_t valueAddressCapacity = 1024;
-    size_t valueAddressSize = 0;
     LeftAntiJoinHandler leftAntiJoinHandler;
 };
 }
