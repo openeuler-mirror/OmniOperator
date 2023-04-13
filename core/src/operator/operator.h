@@ -29,22 +29,7 @@ public:
 
     virtual int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) = 0;
 
-    virtual int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &data)
-    {}
-
-    virtual int32_t GetOutput(omniruntime::vec::VectorBatch **result)
-    {
-        std::vector<omniruntime::vec::VectorBatch *> outputs;
-        int32_t resultCode = GetOutput(outputs);
-        if (outputs.size() == 1) {
-            *result = outputs[0];
-            outputs.clear();
-        } else if (outputs.size() > 1) {
-            VectorHelper::FreeVecBatches(outputs);
-            throw OmniException("OPERATOR_RUNTIME_ERROR", "output multiple batch at once");
-        }
-        return resultCode;
-    }
+    virtual int32_t GetOutput(omniruntime::vec::VectorBatch **result) = 0;
 
     static void DeleteOperator(Operator *op)
     {

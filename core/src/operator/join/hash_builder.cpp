@@ -59,7 +59,7 @@ int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t HashBuilderOperator::GetOutput(std::vector<omniruntime::vec::VectorBatch *> &outputPages)
+int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
     // add vecBatches into PagesIndex
     pagesIndex->Prepare();

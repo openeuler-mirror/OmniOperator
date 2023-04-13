@@ -71,9 +71,9 @@ int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-int32_t HashBuilderWithExprOperator::GetOutput(std::vector<VectorBatch *> &outputPages)
+int32_t HashBuilderWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    hashBuilderOperator->GetOutput(outputPages);
+    hashBuilderOperator->GetOutput(outputVecBatch);
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }

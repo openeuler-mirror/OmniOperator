@@ -6,14 +6,7 @@
 #define OMNI_RUNTIME_BLOOM_FILTER_H
 
 #include "util/bit_array.h"
-#include "util/error_code.h"
 #include "operator/operator_factory.h"
-#include "operator/config/operator_config.h"
-#include "operator/pages_index.h"
-#include "operator/spill/spiller.h"
-#include "operator/spill/vector_batch_merger.h"
-#include "type/data_types.h"
-#include "type/data_type.h"
 
 namespace omniruntime {
 namespace op {
@@ -66,14 +59,13 @@ public:
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 
-    int32_t GetOutput(std::vector<omniruntime::vec::VectorBatch *> &blOutPut) override;
+    int32_t GetOutput(omniruntime::vec::VectorBatch **blOutPut) override;
 
     OmniStatus Close() override;
 
 private:
     int32_t version;
     BloomFilter *bloomFilterAddress;
-    omniruntime::vec::VectorBatch *outPutVecs;
     VectorBatch *inputVecBatch;
 };
 } // end of op

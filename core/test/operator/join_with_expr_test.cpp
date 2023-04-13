@@ -82,8 +82,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
         hashKeysCount, filter, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
-    std::vector<VectorBatch *> hashBuilderOutput;
-    hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
 
     DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
@@ -152,8 +152,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
         hashKeysCount, filter, hashTableCount, overflowConfig);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
-    std::vector<VectorBatch *> hashBuilderOutput;
-    hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
 
     DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
@@ -220,8 +220,8 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
         hashKeysCount, filter, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
-    std::vector<VectorBatch *> hashBuilderOutput;
-    hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
 
     DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
@@ -318,8 +318,8 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
         hashKeysCount, filter, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
-    std::vector<VectorBatch *> hashBuilderOutput;
-    hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
 
     DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t probeData0[] = {1, 2, 3, 4};
@@ -414,8 +414,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
         hashKeysCount, filter, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
-    std::vector<VectorBatch *> hashBuilderOutput;
-    hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
 
     DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType(), VarcharType(500000) }));
     int64_t probeData00[] = {1, 2};
@@ -518,8 +518,8 @@ TEST(JoinWithExprTest, TestBothJoinKeyAndFilterWithExpr)
     int64_t buildData[] = {111, 112};
     auto buildVecBatch = TestUtil::CreateVectorBatch(buildTypes, dataSize, buildData);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
-    std::vector<VectorBatch *> hashBuilderOutput;
-    hashBuilderWithExprOperator->GetOutput(hashBuilderOutput);
+    VectorBatch *hashBuilderOutput = nullptr;
+    hashBuilderWithExprOperator->GetOutput(&hashBuilderOutput);
 
     DataTypes probeTypes(std::vector<DataTypePtr>({ Decimal64Type(18, 2) }));
     auto hashTables = hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()->GetHashTables();
