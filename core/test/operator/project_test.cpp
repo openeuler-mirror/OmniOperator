@@ -3642,17 +3642,17 @@ TEST(ProjectionTest, ProjectCastStrStrZh)
 
     string *expected1 = new string[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col0[i] = "cast乌s斯侧后解";
+        expected1[i] = "cast乌s斯侧后解";
     }
     string *expected2 = new string[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col0[i] = "cast乌s斯";
+        expected2[i] = "cast乌s斯";
     }
 
     DataTypes outputTypes({ VarcharType(1024), VarcharType(7) });
-    VectorBatch *expectedRet = CreateVectorBatch(inputTypes, numRows, expected1, expected2);
+    VectorBatch *expectedRet = CreateVectorBatch(outputTypes, numRows, expected1, expected2);
 
-    VecBatchMatch(outputVecBatch, expectedRet);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedRet));
 
     delete[] col0;
     delete[] expected1;
@@ -3699,17 +3699,17 @@ TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
 
     string *expected1 = new string[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col0[i] = "cast乌s斯侧后解";
+        expected1[i] = "cast乌s斯侧后解";
     }
     string *expected2 = new string[numRows];
     for (int32_t i = 0; i < numRows; i++) {
-        col0[i] = "cast乌s斯";
+        expected2[i] = "cast乌s斯";
     }
 
     DataTypes outputTypes({ VarcharType(1024), VarcharType(7) });
-    VectorBatch *expectedRet = CreateVectorBatch(inputTypes, numRows, expected1, expected2);
+    VectorBatch *expectedRet = CreateVectorBatch(outputTypes, numRows, expected1, expected2);
 
-    VecBatchMatch(outputVecBatch, expectedRet);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedRet));
 
     delete[] col0;
     delete[] expected1;

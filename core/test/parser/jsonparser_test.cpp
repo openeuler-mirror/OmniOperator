@@ -690,11 +690,11 @@ TEST(JSONParserTest, Literal_Decimal64)
     delete d64Expr;
 }
 
-TEST(JSONParserTest, DISABLED_Literal_Decimal128)
+TEST(JSONParserTest, Literal_Decimal128)
 {
     string unparsedD128Json = GetDec128TestJson("12", PRECISION128, NUM_SCALE);
     Expr *d128Expr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedD128Json));
-    TestLiteralExpr expectedExpr(new std::string(to_string(INT64_VAL)), Decimal128Type(17, 0));
+    TestLiteralExpr expectedExpr(new std::string(to_string(12)), Decimal128Type(17, 0));
     expectedExpr.isEqual(d128Expr);
     delete d128Expr;
 }
