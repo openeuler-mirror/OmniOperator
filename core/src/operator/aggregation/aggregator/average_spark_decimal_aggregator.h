@@ -46,7 +46,7 @@ public:
             if (avgCountVector->GetEncoding() == OMNI_DICTIONARY) {
                 avgCnt = reinterpret_cast<Vector<DictionaryContainer<long>> *>(avgCountVector)->GetValue(rowIndex);
             } else {
-                avgCnt = reinterpret_cast<Vector<long> *>(avgCountVector)->GetValue(rowIndex);
+                avgCnt = reinterpret_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
             }
 
             // 2. decode current state and intermediate state
@@ -93,7 +93,7 @@ public:
             if (avgCountVector->GetEncoding() == OMNI_DICTIONARY) {
                 avgCnt = static_cast<Vector<DictionaryContainer<long>> *>(avgCountVector)->GetValue(rowIndex);
             } else {
-                avgCnt = static_cast<Vector<long> *>(avgCountVector)->GetValue(rowIndex);
+                avgCnt = static_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
             }
 
             state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
@@ -134,7 +134,7 @@ public:
             MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
 
             if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                auto longVector = reinterpret_cast<Vector<long> *>(vector);
+                auto longVector = reinterpret_cast<Vector<int64_t> *>(vector);
                 int64_t shortResult = static_cast<int64_t>(resultDec);
                 longVector->SetValue(rowIndex, shortResult);
             } else {
@@ -144,7 +144,7 @@ public:
             }
 
             BaseVector *avgCountVector = vectors[1];
-            reinterpret_cast<Vector<long> *>(avgCountVector)
+            reinterpret_cast<Vector<int64_t> *>(avgCountVector)
                 ->SetValue(rowIndex, static_cast<DecimalAverageState *>(state.val)->count);
         } else {
             int128 finalResultDec;
@@ -160,7 +160,7 @@ public:
             }
             if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 int64_t shortResult = static_cast<int64_t>(finalResultDec);
-                static_cast<Vector<long> *>(vector)->SetValue(rowIndex, shortResult);
+                static_cast<Vector<int64_t> *>(vector)->SetValue(rowIndex, shortResult);
             } else {
                 Decimal128 decimal128Result(finalResultDec);
                 static_cast<Vector<Decimal128> *>(vector)->SetValue(rowIndex, decimal128Result);
@@ -243,8 +243,7 @@ private:
         }
         vector->SetNull(index);
     }
-
-    // avg = (sum/count).cast(targetDecimalType)
+    
     // GetDivideResultDecimalType get the sum/count result decimal type, and count's type is always Decimal(20,0)
     void GetDivideResultDecimalType(int32_t sumPrec, int32_t sumScale, int32_t &resultPrec, int32_t &resultScale)
     {

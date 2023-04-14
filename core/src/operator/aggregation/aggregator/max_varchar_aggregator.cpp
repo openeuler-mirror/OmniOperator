@@ -18,16 +18,14 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &s
 {
     auto vector = vectorBatch->Get(this->channels[0]);
 
-    auto offsets =
-        static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector, IN_ID)));
+    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, IN_ID)));
     auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
     int32_t maxLen = 0;
     uint8_t *maxVal = this->executionContext->GetArena()->Allocate(3 * width);
 
     LogDebug("HMPP-Agg-max");
-    auto result =
-        HMPPS_Max_varchar(static_cast<uint8_t *>(VectorHelper::GetValues(vector, IN_ID)), offsets, vector->GetSize(),
-            maxVal, &maxLen);
+    auto result = HMPPS_Max_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector, IN_ID)), offsets,
+        vector->GetSize(), maxVal, &maxLen);
     if (result != HMPP_STS_NO_ERR) {
         throw OmniException("HMPP ERROR", "max failed for hmpp error");
     }
@@ -97,13 +95,11 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *v,
-    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector,
+    Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
@@ -113,9 +109,9 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateS
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictCharFilter<MaxCharOp>(state, vector, rowCount, indexMap, boolPtr);
+            AddDictCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, boolPtr);
         } else {
-            AddDictConditionalCharFilter<MaxCharOp>(state, vector, rowCount, nullMap, indexMap, boolPtr);
+            AddDictConditionalCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, nullMap, boolPtr);
         }
     }
     SaveState(state);
@@ -147,24 +143,22 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *v, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    const size_t aggIdx, BaseVector *v, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
-            AddUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, rowOffset, boolPtr);
+            AddUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, v, rowOffset, boolPtr);
         } else {
-            AddConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap, boolPtr);
+            AddConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, v, rowOffset, nullMap, boolPtr);
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, indexMap, boolPtr);
+            AddDictUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, rowOffset, v, boolPtr);
         } else {
-            AddDictConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, nullMap, indexMap, boolPtr);
+            AddDictConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, rowOffset, v, nullMap, boolPtr);
         }
     }
 

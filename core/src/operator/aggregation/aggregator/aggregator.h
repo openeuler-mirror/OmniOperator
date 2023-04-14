@@ -24,8 +24,8 @@ using namespace omniruntime::vec;
 
 using ColumnIndex = struct ColumnIndex {
     int32_t idx;
-    DataTypePtr input;
-    DataTypePtr output;
+    type::DataTypePtr input;
+    type::DataTypePtr output;
 };
 
 using AggregateState = struct AggregateState {
@@ -48,12 +48,12 @@ using AggregateState = struct AggregateState {
 using DecimalAverageState = struct DecimalAverageState {
     int64_t count;
     int64_t overflow;
-    int128 val;
+    type::int128 val;
 };
 
 using DecimalSumState = struct DecimalSumState {
     int64_t overflow;
-    int128 val;
+    type::int128 val;
 };
 
 using FirstState = struct FirstState {
@@ -84,7 +84,7 @@ public:
      * true overflow as null value, false throw exception, default value as false.
      *
      */
-    Aggregator(const FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
+    Aggregator(const FunctionType aggregateType, const type::DataTypes &inputTypes, const type::DataTypes &outputTypes,
         const std::vector<int32_t> &channels, const bool inputRaw = true, const bool outputPartial = false,
         const bool isOverflowAsNull = false)
         : type(aggregateType),
@@ -147,7 +147,7 @@ public:
 #endif
 
         int32_t rowEnd = rowOffset + vectorBatch->GetRowCount();
-        auto booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterIndex));
+        auto booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
         bool needFilterJude = false;
         for (int32_t start = 0, end = rowEnd - 1; start <= end; ++start, --end) {
             if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
@@ -195,7 +195,7 @@ public:
         size_t rowCount = rowStates.size();
         bool needFilterJude = false;
 
-        auto booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterStart + aggIdx));
+        auto booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
         for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
             if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
                 needFilterJude = true;
@@ -253,12 +253,12 @@ public:
         return type;
     }
 
-    virtual const DataTypes &GetInputTypes() const
+    virtual const type::DataTypes &GetInputTypes() const
     {
         return inputTypes;
     }
 
-    virtual const DataTypes &GetOutputTypes() const
+    virtual const type::DataTypes &GetOutputTypes() const
     {
         return outputTypes;
     }
@@ -274,8 +274,8 @@ public:
 
 protected:
     const FunctionType type;
-    DataTypes inputTypes;
-    DataTypes outputTypes;
+    type::DataTypes inputTypes;
+    type::DataTypes outputTypes;
     const bool inputRaw;
     const bool outputPartial;
     const bool isOverflowAsNull;

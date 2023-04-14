@@ -23,7 +23,7 @@ class AggregatorUtil {
 public:
     static std::vector<int32_t> WrapWithVector(int32_t value);
 
-    static std::vector<DataTypes> WrapWithVector(const DataTypes &value);
+    static std::vector<type::DataTypes> WrapWithVector(const type::DataTypes &value);
 
     static std::vector<bool> WrapWithVector(bool value, int num);
 
@@ -31,9 +31,9 @@ public:
 
     static std::vector<std::vector<int32_t>> WrapWithVector(std::vector<int32_t> &value);
 
-    static std::unique_ptr<DataTypes> WrapWithDataTypes(const DataTypePtr &value);
+    static std::unique_ptr<type::DataTypes> WrapWithDataTypes(const type::DataTypePtr &value);
 
-    static bool IsHMPPMaxMinSupportDataTypeId(DataTypeId dataTypeId);
+    static bool IsHMPPMaxMinSupportDataTypeId(type::DataTypeId);
 };
 }
 }

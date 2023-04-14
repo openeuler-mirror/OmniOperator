@@ -74,9 +74,6 @@ FAST_MATH NO_INLINE void SumConditionalFloat(MID *res, int64_t &flag, const IN *
     }
 #endif
 
-//    ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-//    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-
     const auto *endPtr = ptr + rowCount;
 
     using equivalent_integer = std::conditional_t<sizeof(IN) == 4, uint32_t, uint64_t>;
@@ -113,10 +110,6 @@ FAST_MATH NO_INLINE void SumConditionalFloatFilter(MID *res, int64_t &flag, cons
         LogWarn("[sumConditionalFloat] ConditionMap pointer NOT aligned");
     }
 #endif
-
-    ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
     const auto *endPtr = ptr + rowCount;
 
@@ -211,14 +204,14 @@ protected:
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 
     void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
-        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap) override;
 
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,

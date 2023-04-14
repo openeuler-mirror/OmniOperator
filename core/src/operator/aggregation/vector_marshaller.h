@@ -5,11 +5,11 @@
 #ifndef OMNI_RUNTIME_VECTOR_MARSHALLER_H
 #define OMNI_RUNTIME_VECTOR_MARSHALLER_H
 
+#include <cstddef>
 #include "vector/vector_batch.h"
 #include "vector/dictionary_container.h"
 #include "memory/simple_arena_allocator.h"
 #include "type/string_ref.h"
-#include <cstddef>
 #include "type/data_type.h"
 
 namespace omniruntime {
@@ -28,14 +28,14 @@ type::StringRef FixedLenTypeSerializer(void *inValuePtr, mem::SimpleArenaAllocat
                                        const char *&begin);
 
 template <type::DataTypeId id>
-const char *FixedLenTypeDeserializer(std::shared_ptr<BaseVector> baseVector, size_t rowId, const char *pos);
+const char *FixedLenTypeDeserializer(BaseVector *baseVector, size_t rowId, const char *pos);
 
 template <type::DataTypeId id>
 type::StringRef VariableTypeSerializer(void *inValuePtr, mem::SimpleArenaAllocator &arenaAllocator,
                                        const char *&begin);
 
 template <type::DataTypeId id>
-const char *VariableTypeDeserializer(std::shared_ptr<BaseVector> baseVector, size_t rowId, const char *pos);
+const char *VariableTypeDeserializer(BaseVector *baseVector, size_t rowId, const char *pos);
 
 
 template <type::DataTypeId id>

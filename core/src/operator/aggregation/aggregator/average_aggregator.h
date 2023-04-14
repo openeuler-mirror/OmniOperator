@@ -26,10 +26,6 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AvgConditionalFloat(MID *res, int64_t &f
     }
 #endif
 
-//    ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-//    cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-//    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-
     const auto len = sizeof(IN);
 
     for (size_t i = 0; i < rowCount; i++) {

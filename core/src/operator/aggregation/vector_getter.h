@@ -1,18 +1,18 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  */
 #ifndef OMNI_RUNTIME_VECTOR_GETTER_H
 #define OMNI_RUNTIME_VECTOR_GETTER_H
+
+#include <cstddef>
 #include "vector/vector_batch.h"
 #include "vector/dictionary_container.h"
 #include "memory/simple_arena_allocator.h"
 #include "type/string_ref.h"
-#include <cstddef>
 #include "type/data_type.h"
 #include "vector/unsafe_vector.h"
 #include "operator/aggregation/container_vector.h"
 #include "vector/vector_helper.h"
-#include "operator/aggregation/aggregator/adapt_header.h"
 #include "definitions.h"
 #include "util/type_util.h"
 
@@ -25,7 +25,7 @@ using GetIdsWithOffFunction =
 
 using GetValuesFunction = std::function<void *(BaseVector *)>;
 
-template <type::DataTypeId OmniId> ALWAYS_INLINE static void *GetValuesFromVector(BaseVector *vector)
+template <type::DataTypeId OmniId> void *GetValuesFromVector(BaseVector *vector)
 {
     void *ptr = nullptr;
     using T = typename NativeType<OmniId>::type;
@@ -41,7 +41,7 @@ template <type::DataTypeId OmniId> ALWAYS_INLINE static void *GetValuesFromVecto
     return ptr;
 }
 
-template <type::DataTypeId OmniId> static void *GetValuesFromDict(BaseVector *vector)
+template <type::DataTypeId OmniId> void *GetValuesFromDict(BaseVector *vector)
 {
     using T = typename NativeType<OmniId>::type;
     if constexpr (std::is_same_v<std::string_view, T> || std::is_same_v<T, uint8_t>) {
@@ -66,8 +66,8 @@ template <type::DataTypeId OmniId> ALWAYS_INLINE static void NewUniqueVector(Vec
 template <>
 ALWAYS_INLINE void NewUniqueVector<type::DataTypeId::OMNI_CONTAINER>(VectorBatch *vectorBatch, int size)
 {
-    auto doubleVector = new DoubleVector(size);
-    auto longVector = new LongVector(size);
+    auto doubleVector = new Vector<double>(size);
+    auto longVector = new Vector<int64_t>(size);
     // container is used in average final stage , the inputs only include doubleVector and longVector
     std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
@@ -99,7 +99,7 @@ template <> int32_t *GetIdsWithOffset<std::string_view>(BaseVector *vector, int3
     return nullptr;
 }
 
-static std::vector<GetIdsWithOffFunction> getIdsWithOffsetFunctions = {
+const std::vector<GetIdsWithOffFunction> getIdsWithOffsetFunctions {
     GetIdsWithOffset<void>,             // OMNI_NONE
     GetIdsWithOffset<int32_t>,          // OMNI_INT
     GetIdsWithOffset<int64_t>,          // OMNI_LONG
@@ -120,7 +120,7 @@ static std::vector<GetIdsWithOffFunction> getIdsWithOffsetFunctions = {
     nullptr                             // OMNI_CONTAINER
 };
 
-static std::vector<GetValuesFunction> getValuesFromDictFunctions{
+const std::vector<GetValuesFunction> getValuesFromDictFunctions {
     nullptr,                            // OMNI_NONE
     GetValuesFromDict<OMNI_INT>,        // OMNI_INT
     GetValuesFromDict<OMNI_LONG>,       // OMNI_LONG
@@ -140,7 +140,7 @@ static std::vector<GetValuesFunction> getValuesFromDictFunctions{
     nullptr,                             // OMNI_CHAR
     nullptr                              // OMNI_CONTAINER
 };
-static std::vector<GetValuesFunction> getValuesFromVectorFunctions = {
+const std::vector<GetValuesFunction> getValuesFromVectorFunctions {
     nullptr,                              // OMNI_NONE
     GetValuesFromVector<OMNI_INT>,        // OMNI_INT
     GetValuesFromVector<OMNI_LONG>,       // OMNI_LONG
@@ -162,7 +162,7 @@ static std::vector<GetValuesFunction> getValuesFromVectorFunctions = {
 };
 
 
-static std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions{
+const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions {
     nullptr,                          // OMNI_NONE
     NewUniqueVector<OMNI_INT>,        // OMNI_INT
     NewUniqueVector<OMNI_LONG>,       // OMNI_LONG
@@ -195,7 +195,7 @@ static ALWAYS_INLINE void GetDecimalValue(BaseVector *vector, const int32_t &dat
         }
     } else {
         if (dataTypeId == OMNI_DECIMAL64) {
-            decimalValue = reinterpret_cast<Vector<long> *>(vector)->GetValue(rowIndex);
+            decimalValue = reinterpret_cast<Vector<int64_t> *>(vector)->GetValue(rowIndex);
         } else if (dataTypeId == OMNI_DECIMAL128) {
             decimalValue = reinterpret_cast<Vector<Decimal128> *>(vector)->GetValue(rowIndex).ToInt128();
         }

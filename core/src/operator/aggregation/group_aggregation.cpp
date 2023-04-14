@@ -19,52 +19,52 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::type;
 
-template void HashFuncImpl<BooleanVector, bool>(BaseVector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
+template void HashFuncImpl<Vector<bool>, bool>(BaseVector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
     uint64_t *combinedHash);
 
-template void HashFuncVectImpl<BooleanVector, bool>(BaseVector *vector, const uint32_t start, const uint32_t rowCount,
+template void HashFuncVectImpl<Vector<bool>, bool>(BaseVector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash);
 
-template void DuplicateKeyValueImpl<BooleanVector, bool>(AggregateState &state, BaseVector *vector, const uint32_t offset,
-    ExecutionContext *context);
+template void DuplicateKeyValueImpl<Vector<bool>, bool>(AggregateState &state, BaseVector *vector,
+    const uint32_t offset, ExecutionContext *context);
 
-template void IsSameNodeFuncImpl<BooleanVector, bool>(BaseVector *vector, const uint32_t offset, const AggregateState &slot,
-    bool &isSame);
+template void IsSameNodeFuncImpl<Vector<bool>, bool>(BaseVector *vector, const uint32_t offset,
+    const AggregateState &slot, bool &isSame);
 
 static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     {OMNI_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INT, HashFuncImpl<IntVector, int32_t>, HashFuncVectImplProxy<IntVector, int32_t>,
-     IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
-     SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
+    {OMNI_INT, HashFuncImpl<Vector<int32_t>, int32_t>, HashFuncVectImplProxy<Vector<int32_t>, int32_t>,
+     IsSameNodeFuncImpl<Vector<int32_t>, int32_t>, DuplicateKeyValueImpl<Vector<int32_t>, int32_t>,
+     SetVectorImpl<Vector<int32_t>>, FillValueImpl<Vector<int32_t>, int32_t>
     },
-    {OMNI_LONG, HashFuncImpl<LongVector, int64_t>, HashFuncVectImplProxy<LongVector, int64_t>,
-     IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
-     SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
-    },
-    {
-        OMNI_DOUBLE, HashFuncImpl<DoubleVector, double>, HashFuncVectImplProxy<DoubleVector, double>,
-        IsSameNodeFuncImpl<DoubleVector, double>, DuplicateKeyValueImpl<DoubleVector, double>,
-        SetVectorImpl<DoubleVector>, FillValueImpl<DoubleVector, double>
+    {OMNI_LONG, HashFuncImpl<Vector<int64_t>, int64_t>, HashFuncVectImplProxy<Vector<int64_t>, int64_t>,
+     IsSameNodeFuncImpl<Vector<int64_t>, int64_t>, DuplicateKeyValueImpl<Vector<int64_t>, int64_t>,
+     SetVectorImpl<Vector<int64_t>>, FillValueImpl<Vector<int64_t>, int64_t>
     },
     {
-        OMNI_BOOLEAN, HashFuncImpl<BooleanVector, bool>, HashFuncVectImplProxy<BooleanVector, bool>,
-        IsSameNodeFuncImpl<BooleanVector, bool>, DuplicateKeyValueImpl<BooleanVector, bool>,
-        SetVectorImpl<BooleanVector>, FillValueImpl<BooleanVector, bool>
+        OMNI_DOUBLE, HashFuncImpl<Vector<double>, double>, HashFuncVectImplProxy<Vector<double>, double>,
+        IsSameNodeFuncImpl<Vector<double>, double>, DuplicateKeyValueImpl<Vector<double>, double>,
+        SetVectorImpl<Vector<double>>, FillValueImpl<Vector<double>, double>
     },
-    {OMNI_SHORT, HashFuncImpl<ShortVector, int16_t>, HashFuncVectImplProxy<ShortVector, int16_t>,
-     IsSameNodeFuncImpl<ShortVector, int16_t>, DuplicateKeyValueImpl<ShortVector, int16_t>,
-     SetVectorImpl<ShortVector>, FillValueImpl<ShortVector, int16_t>},
-    {OMNI_DECIMAL64, HashFuncImpl<LongVector, int64_t>, HashFuncVectImplProxy<LongVector, int64_t>,
-     IsSameNodeFuncImpl<LongVector, int64_t>, DuplicateKeyValueImpl<LongVector, int64_t>,
-     SetVectorImpl<LongVector>, FillValueImpl<LongVector, int64_t>
+    {
+        OMNI_BOOLEAN, HashFuncImpl<Vector<bool>, bool>, HashFuncVectImplProxy<Vector<bool>, bool>,
+        IsSameNodeFuncImpl<Vector<bool>, bool>, DuplicateKeyValueImpl<Vector<bool>, bool>,
+        SetVectorImpl<Vector<bool>>, FillValueImpl<Vector<bool>, bool>
+    },
+    {OMNI_SHORT, HashFuncImpl<Vector<short>, int16_t>, HashFuncVectImplProxy<Vector<short>, int16_t>,
+     IsSameNodeFuncImpl<Vector<short>, int16_t>, DuplicateKeyValueImpl<Vector<short>, int16_t>,
+     SetVectorImpl<Vector<short>>, FillValueImpl<Vector<short>, int16_t>},
+    {OMNI_DECIMAL64, HashFuncImpl<Vector<int64_t>, int64_t>, HashFuncVectImplProxy<Vector<int64_t>, int64_t>,
+     IsSameNodeFuncImpl<Vector<int64_t>, int64_t>, DuplicateKeyValueImpl<Vector<int64_t>, int64_t>,
+     SetVectorImpl<Vector<int64_t>>, FillValueImpl<Vector<int64_t>, int64_t>
     },
     {OMNI_DECIMAL128, HashDecimalFunc, HashDecimalVectFuncProxy,
-     IsSameNodeFuncImpl<Decimal128Vector, Decimal128>, DuplicateKeyValueImpl<Decimal128Vector, Decimal128>,
-     SetVectorImpl<Decimal128Vector>, FillValueImpl<Decimal128Vector, Decimal128>
+     IsSameNodeFuncImpl<Vector<Decimal128>, Decimal128>, DuplicateKeyValueImpl<Vector<Decimal128>, Decimal128>,
+     SetVectorImpl<Vector<Decimal128>>, FillValueImpl<Vector<Decimal128>, Decimal128>
     },
-    {OMNI_DATE32, HashFuncImpl<IntVector, int32_t>, HashFuncVectImplProxy<IntVector, int32_t>,
-     IsSameNodeFuncImpl<IntVector, int32_t>, DuplicateKeyValueImpl<IntVector, int32_t>,
-     SetVectorImpl<IntVector>, FillValueImpl<IntVector, int32_t>
+    {OMNI_DATE32, HashFuncImpl<Vector<int32_t>, int32_t>, HashFuncVectImplProxy<Vector<int32_t>, int32_t>,
+     IsSameNodeFuncImpl<Vector<int32_t>, int32_t>, DuplicateKeyValueImpl<Vector<int32_t>, int32_t>,
+     SetVectorImpl<Vector<int32_t>>, FillValueImpl<Vector<int32_t>, int32_t>
     },
     {OMNI_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr},
@@ -263,7 +263,7 @@ void HashAggregationOperator::SetVectors(mem::Allocator *vecAllocator, VectorBat
     const std::vector<DataTypePtr> &types, int32_t rowCount)
 {
     for (int colIndex = 0; colIndex < types.size(); ++colIndex) {
-        const DataTypePtr& type = types[colIndex];
+        const DataTypePtr &type = types[colIndex];
         GROUP_AGG_FUNCTIONS[type->GetId()].setVector(vectorBatch, *type, colIndex, vecAllocator, rowCount);
     }
 }
@@ -293,30 +293,29 @@ OmniStatus HashAggregationOperator::Close()
 void SetVarcharVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, mem::Allocator *vecAllocator,
     int32_t rowCount)
 {
-    vecBatch->Append(new VarcharVector(rowCount));
+    vecBatch->Append(new Vector<LargeStringContainer<std::string_view>>(rowCount));
 }
 
 void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, mem::Allocator *vecAllocator,
     int32_t rowCount)
 {
-    auto doubleVector = new DoubleVector(rowCount);
-    auto longVector = new LongVector(rowCount);
+    auto doubleVector = new Vector<double>(rowCount);
+    auto longVector = new Vector<int64_t>(rowCount);
     std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
-    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
-    auto containerVector =
-        new ContainerVector(rowCount, vectorAddresses, dataTypes);
+    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
+    auto containerVector = new ContainerVector(rowCount, vectorAddresses, dataTypes);
     vecBatch->Append(containerVector);
 }
 
 void FillVarcharValue(BaseVector *v, int32_t rowIndex, const AggregateState &state)
 {
     if (state.val == nullptr) {
-        static_cast<VarcharVector *>(v)->SetNull(rowIndex);
+        static_cast<Vector<LargeStringContainer<std::string_view>> *>(v)->SetNull(rowIndex);
     } else {
         std::string_view str(reinterpret_cast<char *>(state.val), state.count);
-        static_cast<VarcharVector *>(v)->SetValue(rowIndex, str);
+        static_cast<Vector<LargeStringContainer<std::string_view>> *>(v)->SetValue(rowIndex, str);
     }
 }
 

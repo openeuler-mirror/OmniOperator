@@ -13,8 +13,8 @@ namespace omniruntime {
 namespace op {
 template <bool INPUT_RAW, bool OUT_PARTIAL, typename RawInputVectorType, typename ResultType = double>
 class AverageFlatIMAggregator : public Aggregator {
-using VECTOR = Vector<RawInputVectorType>;
-using DICTVECTOR = Vector<DictionaryContainer<RawInputVectorType>>;
+using FixedVector = Vector<RawInputVectorType>;
+using DicVector = Vector<DictionaryContainer<RawInputVectorType>>;
 public:
     AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
@@ -44,10 +44,10 @@ public:
             auto currentVal = static_cast<ResultType *>(state.val);
             if (vector->GetEncoding() == OMNI_DICTIONARY) {
                 *reinterpret_cast<ResultType *>(state.val) =
-                    (static_cast<DICTVECTOR *>(vector))->GetValue(rowIndex) + *currentVal;
+                    (static_cast<DicVector *>(vector))->GetValue(rowIndex) + *currentVal;
             } else {
                 *reinterpret_cast<ResultType *>(state.val) =
-                    (static_cast<VECTOR *>(vector))->GetValue(rowIndex) + *currentVal;
+                    (static_cast<FixedVector *>(vector))->GetValue(rowIndex) + *currentVal;
             }
             ++state.count;
         } else {
@@ -83,10 +83,10 @@ public:
         if constexpr (INPUT_RAW) {
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                auto rowVal = (static_cast<DICTVECTOR *>(vector))->GetValue(rowIndex);
+                auto rowVal = (static_cast<DicVector *>(vector))->GetValue(rowIndex);
                 *reinterpret_cast<ResultType *>(ptr) = rowVal;
             } else {
-                auto rowVal = (static_cast<VECTOR *>(vector))->GetValue(rowIndex);
+                auto rowVal = (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
                 *reinterpret_cast<ResultType *>(ptr) = rowVal;
             }
             state.val = ptr;

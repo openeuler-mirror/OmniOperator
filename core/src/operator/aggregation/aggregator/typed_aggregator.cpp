@@ -42,7 +42,7 @@ BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t r
     if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
         indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
         getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
-        //return original vector rather than internal vector
+        // return original vector rather than internal vector
         return vector;
     } else {
         indexMap.Release();

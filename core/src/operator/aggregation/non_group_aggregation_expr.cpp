@@ -42,7 +42,7 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
             continue;
         }
         SimpleFilter *simpleFilter = new SimpleFilter(*aggFilters[i]);
-        simpleFilter->Initialize((&overflowConfig));
+        simpleFilter->Initialize((overflowConfig));
         aggSimpleFilters.push_back(simpleFilter);
     }
 
@@ -114,12 +114,11 @@ AggregationWithExprOperator::~AggregationWithExprOperator()
 
 int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    auto aggFilterNum = aggSimpleFilters.size();
     VectorBatch *newInputVecBatch = AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes,
-        projectFuncs, projectCols, aggFilterNum);
+        projectFuncs, projectCols);
     // do filter and update newInputVecBatch
     // if is true not filter
-    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, aggSimpleFilters, context);
+    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, aggSimpleFilters, context, originTypes);
     aggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;

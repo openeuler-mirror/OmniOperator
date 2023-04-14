@@ -88,7 +88,7 @@ public:
         *expectedResult = new VectorBatch(1);
         std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
         (*expectedResult)->Append(v.release());
-        (*expectedResult)->Append(new LongVector(1));
+        (*expectedResult)->Append(new Vector<int64_t>(1));
 
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
             AggregatorTesterTemplate<IN_ID, OUT_ID>::GenerateVarcharResult(vvb, *expectedResult, true);
@@ -143,7 +143,7 @@ public:
                     "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
             }
 
-            static_cast<LongVector *>((*expectedResult)->Get(1))->SetValue(0, count);
+            static_cast<Vector<int64_t> *>((*expectedResult)->Get(1))->SetValue(0, count);
             if (overflow || count == 0) {
                 (*expectedResult)->Get(0)->SetNull(0);
             } else {
@@ -218,7 +218,7 @@ public:
                 if (groups->GetEncoding() == vec::OMNI_DICTIONARY) {
                     filterValue = static_cast<Vector<DictionaryContainer<int32_t>> *>(groups)->GetValue(i);
                 } else {
-                    filterValue = static_cast<IntVector *>(groups)->GetValue(i);
+                    filterValue = static_cast<Vector<int32_t> *>(groups)->GetValue(i);
                 }
                 int32_t *filterValuePtr = groups->IsNull(i) ? nullptr : &filterValue;
                 T_OUT result{};
@@ -263,7 +263,7 @@ public:
                         "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
                 }
 
-                static_cast<LongVector *>((*expectedResult)->Get(2))->SetValue(i, count);
+                static_cast<Vector<int64_t> *>((*expectedResult)->Get(2))->SetValue(i, count);
 
                 if (overflow || count == 0) {
                     (*expectedResult)->Get(1)->SetNull(i);
@@ -295,7 +295,7 @@ private:
                     if (v->GetEncoding() == vec::OMNI_DICTIONARY) {
                         val = static_cast<Vector<DictionaryContainer<int32_t>> *>(v)->GetValue(i);
                     } else {
-                        val = static_cast<IntVector *>(v)->GetValue(i);
+                        val = static_cast<Vector<int32_t> *>(v)->GetValue(i);
                     }
                     groups.insert(val);
                 }
@@ -304,7 +304,7 @@ private:
 
         int32_t nGroups = groups.size() + hasNull;
         VectorBatch *expectedResult = new VectorBatch(nGroups);
-        IntVector *groupCol = new IntVector(nGroups);
+        Vector<int32_t> *groupCol = new Vector<int32_t>(nGroups);
         int32_t rowIdx = 0;
         if (hasNull > 0) {
             groupCol->SetNull(rowIdx++);
@@ -316,7 +316,7 @@ private:
         expectedResult->Append(groupCol);
         std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, nGroups);
         expectedResult->Append(v.release());
-        expectedResult->Append(new LongVector(nGroups));
+        expectedResult->Append(new Vector<int64_t>(nGroups));
 
         return expectedResult;
     }

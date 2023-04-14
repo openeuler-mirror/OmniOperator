@@ -18,15 +18,14 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &s
     auto vector = vectorBatch->Get(this->channels[0]);
 
     auto offsets =
-        static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector, IN_ID)));
+        static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, IN_ID)));
     auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
     int32_t minLen = 3 * width;
     uint8_t *minVal = this->executionContext->GetArena()->Allocate(3 * width);
 
     LogDebug("HMPP-Agg-min");
-    auto result =
-        HMPPS_Min_varchar(static_cast<uint8_t *>(VectorHelper::GetValues(vector, IN_ID)), offsets, vector->GetSize(),
-            minVal, &minLen);
+    auto result = HMPPS_Min_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector, IN_ID)), offsets,
+        vector->GetSize(), minVal, &minLen);
     if (result != HMPP_STS_NO_ERR) {
         throw OmniException("HMPP ERROR", "min failed for hmpp error");
     }
@@ -97,25 +96,23 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *v,
-    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, BaseVector *v,
+    Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
-    if (indexMap == nullptr) {
+    if (v->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
-            AddCharFilter<MinCharOp>(state, vector, rowOffset, rowCount, boolPtr);
+            AddCharFilter<MinCharOp>(state, v, rowOffset, rowCount, boolPtr);
         } else {
-            AddConditionalCharFilter<MinCharOp>(state, vector, rowOffset, rowCount, nullMap, boolPtr);
+            AddConditionalCharFilter<MinCharOp>(state, v, rowOffset, rowCount, nullMap, boolPtr);
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictCharFilter<MinCharOp>(state, vector, rowCount, indexMap, boolPtr);
+            AddDictCharFilter<MinDictCharOp>(state, v, rowOffset, rowCount, boolPtr);
         } else {
-            AddDictConditionalCharFilter<MinCharOp>(state, vector, rowCount, nullMap, indexMap, boolPtr);
+            AddDictConditionalCharFilter<MinDictCharOp>(state, v, rowOffset, rowCount, nullMap, boolPtr);
         }
     }
 
@@ -147,24 +144,22 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *v, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    const size_t aggIdx, BaseVector *v, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
-    if (indexMap == nullptr) {
+    if (v->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
-            AddUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, vector, rowOffset, boolPtr);
+            AddUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, v, rowOffset, boolPtr);
         } else {
-            AddConditionalUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap, boolPtr);
+            AddConditionalUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, v, rowOffset, nullMap, boolPtr);
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, vector, indexMap, boolPtr);
+            AddDictUseRowIndexCharFilter<MinDictCharOp>(rowStates, aggIdx, rowOffset, v, boolPtr);
         } else {
-            AddDictConditionalUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, vector, nullMap, indexMap, boolPtr);
+            AddDictConditionalUseRowIndexCharFilter<MinDictCharOp>(rowStates, aggIdx, rowOffset, v, nullMap, boolPtr);
         }
     }
 

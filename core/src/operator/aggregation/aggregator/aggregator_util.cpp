@@ -6,6 +6,7 @@
 
 namespace omniruntime {
 namespace op {
+using namespace type;
 std::vector<int32_t> AggregatorUtil::WrapWithVector(int32_t value)
 {
     std::vector<int32_t> retVector;

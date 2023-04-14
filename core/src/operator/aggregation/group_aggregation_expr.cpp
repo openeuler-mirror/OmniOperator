@@ -145,12 +145,11 @@ HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 
 int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    auto aggFilterNum = aggSimpleFilters.size();
     VectorBatch *newInputVecBatch = AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes,
-        projectFuncs, projectCols, aggFilterNum);
+        projectFuncs, projectCols);
     // do filter and update newInputVecBatch
     // if is true not filter
-    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, aggSimpleFilters, context);
+    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, aggSimpleFilters, context, originTypes);
     hashAggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;
@@ -160,7 +159,7 @@ void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t 
 {
     auto inputVecBatch = oneRowAdaptor.Trans2VectorBatch(rowValues, lens);
     VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectRequiredVectors(inputVecBatch, originTypes, sourceTypes, projectFuncs, projectCols);
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projectFuncs, projectCols);
     hashAggOperator->AddInput(newInputVecBatch);
     // no need to delete inputVecBatch, it will be reused when this interface call again
 }

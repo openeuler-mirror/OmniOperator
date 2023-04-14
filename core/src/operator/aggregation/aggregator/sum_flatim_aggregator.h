@@ -11,8 +11,8 @@ namespace omniruntime {
 namespace op {
 template <bool INPUT_RAW, bool OUTPUT_PARTIAL, typename RawInputVectorType, typename ResultType>
 class SumFlatIMAggregator : public Aggregator {
-using VECTOR = Vector<RawInputVectorType>;
-using DICTVECTOR = Vector<DictionaryContainer<RawInputVectorType>>;
+using FixedVector = Vector<RawInputVectorType>;
+using DictVector = Vector<DictionaryContainer<RawInputVectorType>>;
 public:
     SumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
@@ -36,9 +36,9 @@ public:
         }
         if constexpr (INPUT_RAW) {
             if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                *(static_cast<ResultType *>(state.val)) += (static_cast<DICTVECTOR *>(vector))->GetValue(rowIndex);
+                *(static_cast<ResultType *>(state.val)) += (static_cast<DictVector *>(vector))->GetValue(rowIndex);
             } else {
-                *(static_cast<ResultType *>(state.val)) += (static_cast<VECTOR *>(vector))->GetValue(rowIndex);
+                *(static_cast<ResultType *>(state.val)) += (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
             }
         } else {
             if (vector->GetEncoding() == OMNI_DICTIONARY) {
@@ -60,11 +60,11 @@ public:
         if constexpr (INPUT_RAW) {
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                auto curVal = (static_cast<DICTVECTOR *>(vector))->GetValue(rowIndex);
+                auto curVal = (static_cast<DictVector *>(vector))->GetValue(rowIndex);
                 *reinterpret_cast<ResultType *>(ptr) = curVal;
                 state.val = ptr;
             } else {
-                auto curVal = (static_cast<VECTOR *>(vector))->GetValue(rowIndex);
+                auto curVal = (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
                 *reinterpret_cast<ResultType *>(ptr) = curVal;
                 state.val = ptr;
             }

@@ -171,7 +171,7 @@ private:
     {
         if (outputType == OMNI_DECIMAL64) {
             int64_t longVal = static_cast<int64_t>(deciVal);
-            static_cast<Vector<long> *>(vector)->SetValue(rowIndex, longVal);
+            static_cast<Vector<int64_t> *>(vector)->SetValue(rowIndex, longVal);
         } else {
             Decimal128 decimal128Val(deciVal);
             static_cast<Vector<Decimal128> *>(vector)->SetValue(rowIndex, decimal128Val);

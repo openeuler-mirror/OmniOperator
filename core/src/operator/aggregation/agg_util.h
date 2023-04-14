@@ -17,7 +17,7 @@ namespace op {
 class AggUtil {
 public:
     static bool IsAggPositionEligible(int32_t rowId, VectorBatch *inputVecBatch, SimpleFilter *aggSimpleFilters,
-        ExecutionContext *executionContext)
+        ExecutionContext *executionContext, DataTypes &originTypes)
     {
         if (!aggSimpleFilters) {
             return true;
@@ -29,78 +29,88 @@ public:
         std::set<int32_t> usedVectors = aggSimpleFilters->GetVectorIndexes();
         for (auto iter = usedVectors.begin(); iter != usedVectors.end(); ++iter) {
             auto vecIdx = *iter;
-            auto vector = inputVecBatch->GetVector(vecIdx);
-            nulls[vecIdx] = vector->IsValueNull(rowId);
-            values[vecIdx] = VectorHelper::GetValuePtrAndLength(vector, rowId, lengths + vecIdx);
+            auto vector = inputVecBatch->Get(vecIdx);
+            nulls[vecIdx] = vector->IsNull(rowId);
+            values[vecIdx] = OperatorUtil::GetValuePtrAndLength(vector, rowId, lengths + vecIdx,
+                originTypes.GetType(vecIdx)->GetId());
         }
 
         return aggSimpleFilters->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(&executionContext));
     }
 
-    static VectorBatch *AggFilterRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, int32_t aggFilterNum,
-        VectorAllocator *allocator)
+    static VectorBatch *AggFilterRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &originTypes,
+        const DataTypes &inputTypes, const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
     {
-        auto projectColsCount = static_cast<int32_t>(projectCols.size());
-        int32_t vecCount = projectColsCount + aggFilterNum;
+        int32_t vecCount = projectCols.size();
         int32_t rowCount = inputVecBatch->GetRowCount();
-        VectorBatch *newInputVecBatch = new VectorBatch(vecCount, rowCount);
-
-        for (int32_t i = 0; i < projectColsCount; i++) {
-            int32_t sourceColId = projectCols[i];
-            if (sourceColId >= 0) {
-                // source col
-                Vector *inputVector = inputVecBatch->GetVector(sourceColId);
-                Vector *newInputVec = inputVector->Slice(0, rowCount);
-                newInputVecBatch->SetVector(i, newInputVec);
-            }
+        auto newInputVecBatch = new VectorBatch(rowCount);
+        // short-circuit logic for column projections
+        // no need to go through codegen
+        if (rowCount == 0) {
+            VectorHelper::AppendVectors(newInputVecBatch, inputTypes, rowCount);
+            return newInputVecBatch;
         }
 
         auto projectFuncsCount = projectFuncs.size();
-        if (projectFuncsCount <= 0) {
-            return newInputVecBatch;
-        }
 
         int32_t originVecCount = inputVecBatch->GetVectorCount();
         int64_t valueAddresses[originVecCount];
         int64_t valueNulls[originVecCount];
         int64_t valueOffsets[originVecCount];
         int64_t dictVectorAddrs[originVecCount];
+
         for (int32_t i = 0; i < originVecCount; i++) {
-            Vector *inputVector = inputVecBatch->GetVector(i);
-            if (inputVector->GetEncoding() != OMNI_VEC_ENCODING_DICTIONARY) {
-                valueAddresses[i] = VectorHelper::GetValuesAddr(inputVector);
+            auto inputVector = inputVecBatch->Get(i);
+            if (inputVector->GetEncoding() != OMNI_DICTIONARY) {
+                valueAddresses[i] =
+                    DYNAMIC_TYPE_DISPATCH(OperatorUtil::GetRawAddr, originTypes.GetType(i)->GetId(), inputVector);
                 dictVectorAddrs[i] = 0;
             } else {
                 valueAddresses[i] = 0;
                 dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(inputVector));
             }
-            valueNulls[i] = VectorHelper::GetNullsAddr(inputVector);
-            valueOffsets[i] = VectorHelper::GetOffsetsAddr(inputVector);
+            valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(inputVector));
+            valueOffsets[i] = reinterpret_cast<int64_t>(
+                VectorHelper::UnsafeGetOffsetsAddr(inputVector, originTypes.GetType(i)->GetId()));
         }
 
-        op::OperatorUtil::ProjectRequiredVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls,
-            valueOffsets, dictVectorAddrs, rowCount, newInputVecBatch, allocator);
+        for (int32_t i = 0, projectFuncsIndex = 0; i < vecCount; i++) {
+            int32_t sourceColId = projectCols[i];
+            if (sourceColId >= 0) {
+                // source col append project colmun
+                auto inputVector = inputVecBatch->Get(sourceColId);
+                std::unique_ptr<BaseVector> newInputVec =
+                    VectorHelper::SliceVector(inputVector, inputTypes.GetIds()[i], 0, rowCount);
+                newInputVecBatch->Append(newInputVec.release());
+            } else if (sourceColId == -1 && projectFuncsCount > 0) {
+                // append withexpr colmun
+                newInputVecBatch->Append(DYNAMIC_TYPE_DISPATCH(OperatorUtil::ProjectVector,
+                    inputTypes.GetType(i)->GetId(), projectFuncs[projectFuncsIndex++], valueAddresses, valueNulls,
+                    valueOffsets, dictVectorAddrs, rowCount)
+                                             .release());
+            }
+        }
         return newInputVecBatch;
     }
 
+
     static void AddFilterColumn(VectorBatch *inputVecBatch, VectorBatch *newInputVecBatch,
-        std::vector<int32_t> &projectCols, vec::VectorAllocator *vecAllocator,
-        std::vector<SimpleFilter *> &aggSimpleFilters, ExecutionContext *context)
+        std::vector<int32_t> &projectCols, std::vector<SimpleFilter *> &aggSimpleFilters, ExecutionContext *context,
+        DataTypes &originTypes)
     {
         auto aggFilterNum = aggSimpleFilters.size();
         auto rowCount = inputVecBatch->GetRowCount();
-        auto projectColsCount = static_cast<int32_t>(projectCols.size());
+
         for (size_t i = 0; i < aggFilterNum; ++i) {
-            BooleanVector *booleanVector = new BooleanVector(vecAllocator, rowCount);
+            auto *booleanVector = new Vector<bool>(rowCount);
             for (int j = 0; j < rowCount; ++j) {
-                if (AggUtil::IsAggPositionEligible(j, inputVecBatch, aggSimpleFilters[i], context)) {
+                if (AggUtil::IsAggPositionEligible(j, inputVecBatch, aggSimpleFilters[i], context, originTypes)) {
                     booleanVector->SetValue(j, true);
                     continue;
                 }
                 booleanVector->SetValue(j, false);
             }
-            newInputVecBatch->SetVector(projectColsCount + i, booleanVector);
+            newInputVecBatch->Append(booleanVector);
         }
     }
 };

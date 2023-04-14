@@ -20,7 +20,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &stat
     } else {
         auto vector = vectorBatch->Get(this->channels[0]);
 
-        auto vectorValues = VectorHelper::GetValues(vector, IN_ID);
+        auto vectorValues = VectorHelper::UnsafeGetValues(vector, IN_ID);
         auto rowCount = vector->GetSize();
         auto nullAddr = reinterpret_cast<void *>(unsafe::UnsafeBaseVector::GetNulls(vector));
         bool overflow = false;
@@ -106,7 +106,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
             OutType result {};
             auto *vector = static_cast<ContainerVector *>(vectors[0]);
             auto *doubleVector = reinterpret_cast<OutVector *>(vector->GetValue(0));
-            auto *longVector = reinterpret_cast<Vector<long> *>(vector->GetValue(1));
+            auto *longVector = reinterpret_cast<Vector<int64_t> *>(vector->GetValue(1));
 
             bool overflow = state.count < 0;
             if (state.count > 0 && state.val != nullptr) {
@@ -170,7 +170,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &sta
         auto v = static_cast<ContainerVector *>(vector);
         auto *sumVector = reinterpret_cast<InVector *>(v->GetValue(0));
 
-        auto *cntVector = reinterpret_cast<Vector<long> *>(v->GetValue(1));
+        auto *cntVector = reinterpret_cast<Vector<int64_t> *>(v->GetValue(1));
 
         if (indexMap == nullptr) {
             auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(sumVector));
@@ -212,7 +212,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
         auto *v = static_cast<ContainerVector *>(vector);
         auto *sumVector = reinterpret_cast<InVector *>(v->GetValue(0));
 
-        auto *cntVector = reinterpret_cast<Vector<long> *>(v->GetValue(1));
+        auto *cntVector = reinterpret_cast<Vector<int64_t> *>(v->GetValue(1));
 
         if (indexMap == nullptr) {
             auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(sumVector));

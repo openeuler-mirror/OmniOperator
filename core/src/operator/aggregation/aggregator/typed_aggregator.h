@@ -225,14 +225,14 @@ protected:
     virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
-    virtual void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, BooleanVector *booleanVector,
+    virtual void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
     virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
     virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        BaseVector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap) = 0;
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, const int index, const char *errorMsg)
@@ -268,6 +268,25 @@ protected:
     }
 
     Allocator *allocator = Allocator::GetAllocator();
+
+    GetIdsWithOffFunction getIdsWithOffFunction;
+
+    static inline bool CheckType(const DataTypeId actual, const DataTypeId expected)
+    {
+        switch (actual) {
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+            case OMNI_INT:
+                return expected == OMNI_INT;
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return expected == OMNI_LONG;
+            default:
+                return expected == actual;
+        }
+    }
 
 private:
     template <typename OutType> OutType CastWithOverflowDecimalInput(const Decimal128 &val, bool &overflow)
@@ -519,25 +538,6 @@ private:
             }
         }
         return res;
-    }
-protected:
-    GetIdsWithOffFunction getIdsWithOffFunction;
-
-    static inline bool CheckType(const DataTypeId actual, const DataTypeId expected)
-    {
-        switch (actual) {
-            case OMNI_DATE32:
-            case OMNI_TIME32:
-            case OMNI_INT:
-                return expected == OMNI_INT;
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_TIME64:
-            case OMNI_TIMESTAMP:
-                return expected == OMNI_LONG;
-            default:
-                return expected == actual;
-        }
     }
 };
 } // end of namespace op

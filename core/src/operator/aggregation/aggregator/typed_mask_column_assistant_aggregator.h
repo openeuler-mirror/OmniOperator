@@ -187,7 +187,7 @@ public:
                 TypedAggregator::getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
             }
         }
-        auto booleanVector = static_cast<BooleanVector *>(vectorBatch->Get(filterStart + aggIdx));
+        auto booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
 
         bool needFilterJude = false;
         for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
@@ -273,7 +273,7 @@ protected:
         const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
-    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
@@ -281,7 +281,7 @@ protected:
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}
     void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
 private:

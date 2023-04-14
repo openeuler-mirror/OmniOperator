@@ -78,7 +78,7 @@ std::unique_ptr<Aggregator> SumSparkAggregatorFactory::CreateAggregator(const Da
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
         case OMNI_SHORT: {
-            return CreateAggregatorHelper<SumFlatIMAggregator, int16_t , int64_t>(inputTypes,
+            return CreateAggregatorHelper<SumFlatIMAggregator, int16_t, int64_t>(inputTypes,
                 outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
         }
         case OMNI_INT: {

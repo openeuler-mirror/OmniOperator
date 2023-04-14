@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 #ifndef OMNI_RUNTIME_CONTAINER_VECTOR_H
 #define OMNI_RUNTIME_CONTAINER_VECTOR_H

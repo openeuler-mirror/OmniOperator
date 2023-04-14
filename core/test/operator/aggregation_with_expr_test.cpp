@@ -435,7 +435,7 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_expr)
 
     auto *aggWithExprOperatorFactory =
         new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, sourceTypes, aggOutputTypesWrap,
-        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
+        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto *aggWithExprOperator =
         static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
 
@@ -495,7 +495,7 @@ TEST(AggregationWithExprOperatorTest, test_agg_first_expr)
 
     auto *aggWithExprOperatorFactory =
         new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, sourceTypes, aggOutputTypesWrap,
-        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
+        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto *aggWithExprOperator =
         static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
 
@@ -710,7 +710,7 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_exprFilter)
 
     auto *aggWithExprOperatorFactory =
         new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, sourceTypes, aggOutputTypesWrap,
-        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, *overflowConfig);
+        aggFuncTypes, aggFilters, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
     auto *aggWithExprOperator =
         static_cast<AggregationWithExprOperator *>(CreateTestOperator(aggWithExprOperatorFactory));
     aggWithExprOperator->AddInput(vecBatch);

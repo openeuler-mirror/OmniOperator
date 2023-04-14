@@ -11,7 +11,7 @@ namespace omniruntime {
 namespace op {
 inline const char *MaxCharOp(const char *res, int64_t &lenAndFlag, BaseVector *vector, const int32_t idx)
 {
-    auto *rawStringVector = reinterpret_cast<BaseVector<LargeStringContainer<std::string_view>>*>(vector);
+    auto *rawStringVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>>*>(vector);
     auto strView = rawStringVector->GetValue(idx);
     int32_t curLen = strView.size();
     auto *curVal = strView.data();
@@ -28,7 +28,7 @@ inline const char *MaxCharOp(const char *res, int64_t &lenAndFlag, BaseVector *v
 
 inline const char *MaxDictCharOp(const char *res, int64_t &lenAndFlag, BaseVector *vector, const int32_t idx)
 {
-    auto *rawStringVector = reinterpret_cast<BaseVector<DictionaryContainer<std::string_view>>*>(vector);
+    auto *rawStringVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>>*>(vector);
     auto strView = rawStringVector->GetValue(idx);
     int32_t curLen = strView.size();
     auto *curVal = strView.data();
@@ -91,13 +91,13 @@ protected:
     void ProcessSingleInternal(AggregateState &state, BaseVector *v, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *v, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *v, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
     void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
-        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap) override;
 
 private:

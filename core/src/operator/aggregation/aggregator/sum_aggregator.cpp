@@ -19,7 +19,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
     } else {
         auto vector = vectorBatch->Get(this->channels[0]);
 
-        auto vectorValues = VectorHelper::GetValues(vector, IN_ID);
+        auto vectorValues = VectorHelper::UnsafeGetValues(vector, IN_ID);
         auto rowCount = vector->GetSize();
         auto nullAddr = reinterpret_cast<void *>(unsafe::UnsafeBaseVector::GetNulls(vector));
         bool overflow = false;
@@ -29,8 +29,8 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         if constexpr (IN_ID == OMNI_LONG) {
             LogDebug("HMPP-Agg-sum");
             long sumVal = 0;
-            result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)),
-                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal);
+            result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)), rowCount,
+                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal);
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "sum failed for hmpp error");
             }
@@ -47,9 +47,8 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
             // IN_ID == OMNI_DECIMAL128
             LogDebug("HMPP-Agg-sum");
             HmppDecimal128 sumVal{};
-            result = HMPPS_Sum_decimal128(
-                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)), rowCount,
-                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal);
+            result = HMPPS_Sum_decimal128(static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)),
+                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal);
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "sum failed for hmpp error");
             }
@@ -134,8 +133,8 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         this->InitState(state);
@@ -167,21 +166,18 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *vector,
-    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector,
+    Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         this->InitState(state);
     }
-    ResultType *res = reinterpret_cast<ResultType *>(state.val);
-
-    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-    ptr += vector->GetPositionOffset();
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    auto *res = reinterpret_cast<ResultType *>(state.val);
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
     if (indexMap == nullptr) {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             AddFilter<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount, boolPtr);
@@ -194,6 +190,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &s
             }
         }
     } else {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         if (nullMap == nullptr) {
             AddDictFilter<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap,
                 boolPtr);
@@ -231,15 +228,13 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-    const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
-    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-    ptr += vector->GetPositionOffset();
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
     if (indexMap == nullptr) {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             AddUseRowIndexFilter<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, boolPtr);
@@ -249,6 +244,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<Aggreg
                 aggIdx, ptr, nullMap, boolPtr);
         }
     } else {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         if (nullMap == nullptr) {
             AddDictUseRowIndexFilter<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap,
                 boolPtr);

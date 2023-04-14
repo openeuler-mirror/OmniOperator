@@ -10,7 +10,6 @@
 #include "type/data_types.h"
 #include "operator/hash_util.h"
 #include "operator/execution_context.h"
-#include "operator/aggregation/aggregator/adapt_header.h"
 #include "operator/aggregation/aggregator/only_aggregator_factory.h"
 #include "operator/util/operator_util.h"
 #include "group_column_marshaller.h"
@@ -57,7 +56,7 @@ void HashFuncImpl(BaseVector *vector, const uint32_t rowCount, const int32_t *ro
     }
 }
 
-template <typename V = VarcharVector>
+template <typename V = Vector<LargeStringContainer<std::string_view>>>
 void HashVarcharFuncImpl(BaseVector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     for (uint32_t i = 0; i < rowCount; ++i) {
@@ -69,7 +68,7 @@ void HashVarcharFuncImpl(BaseVector *vector, const uint32_t rowCount, const int3
     }
 }
 
-template <typename V = Decimal128Vector>
+template <typename V = Vector<Decimal128>>
 void HashDecimalFunc(BaseVector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
     for (uint32_t i = 0; i < rowCount; ++i) {
@@ -124,14 +123,14 @@ void HashFuncVectImplProxy(BaseVector *vector, uint32_t start, uint32_t rowCount
     HashFuncVectImpl<V, D>(vector, start, rowCount, combinedHash);
 }
 
-template <typename V = VarcharVector>
+template <typename V = Vector<LargeStringContainer<std::string_view>>>
 void HashVarcharVectFuncImplProxy(BaseVector *vector, const uint32_t start, const uint32_t rowCount,
     uint64_t *combinedHash)
 {
     HashVarcharVectFuncImpl<V>(vector, start, rowCount, combinedHash);
 }
 
-template <typename V = Decimal128Vector>
+template <typename V = Vector<Decimal128>>
 void HashDecimalVectFuncProxy(BaseVector *vector, const uint32_t start, const uint32_t rowCount, uint64_t *combinedHash)
 {
     HashDecimalVectFunc<V>(vector, start, rowCount, combinedHash);
@@ -155,7 +154,7 @@ void IsSameNodeFuncImpl(BaseVector *vector, const uint32_t offset, const Aggrega
     return;
 }
 
-template <typename V = VarcharVector>
+template <typename V = Vector<LargeStringContainer<std::string_view>>>
 void IsSameNodeFuncVarcharImpl(BaseVector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame)
 {
     bool isIntermediateNull = slot.val == nullptr;
@@ -188,7 +187,7 @@ void DuplicateKeyValueImpl(AggregateState &state, BaseVector *vector, const uint
     state.val = ptr;
 }
 
-template <typename V = VarcharVector>
+template <typename V = Vector<LargeStringContainer<std::string_view>>>
 void DuplicateVarcharKeyValue(AggregateState &state, BaseVector *vector, const uint32_t offset,
     ExecutionContext *context)
 {
