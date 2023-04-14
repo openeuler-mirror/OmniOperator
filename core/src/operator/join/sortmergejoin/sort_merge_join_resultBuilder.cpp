@@ -190,16 +190,16 @@ void JoinResultBuilder::PaddingRightTableNull(int32_t leftBatchId, int32_t leftR
 }
 
 void JoinResultBuilder::UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJoinHandler, int32_t addressPosition,
-    std::vector<bool> &isSameBufferedKeyMatched, int32_t inputSize)
+    std::vector<int8_t> &isSameBufferedKeyMatched, int32_t inputSize)
 {
     if (!isSameBufferedKeyMatched.empty()) {
         if (addressPosition == inputSize - 1) {
             leftAntiJoinHandler->hasSameBufferedRow = false;
         } else {
-            if (!isSameBufferedKeyMatched[addressPosition]) {
+            if (isSameBufferedKeyMatched[addressPosition] == 0) {
                 leftAntiJoinHandler->printThisStreamRowOutFlag = true;
             }
-            if (!isSameBufferedKeyMatched[addressPosition + 1]) {
+            if (isSameBufferedKeyMatched[addressPosition + 1] == 0) {
                 leftAntiJoinHandler->hasSameBufferedRow = false;
             } else {
                 leftAntiJoinHandler->hasSameBufferedRow = true;
@@ -377,7 +377,7 @@ int32_t JoinResultBuilder::ConstructLeftSemiJoinOutput()
         }
 
         // left semi join only needs to output the data of the left table
-        if (isSameBufferedKeyMatched[addressPosition]) {
+        if (isSameBufferedKeyMatched[addressPosition] != 0) {
             // same buffered key match and failed to match the previous
             if (!isPreRowMatched && IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
                 for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {

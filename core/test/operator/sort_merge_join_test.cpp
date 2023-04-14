@@ -241,10 +241,10 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner1)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 0, 3 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 1 });
-    std::vector<bool> isMatchPre;
+    std::vector<int8_t> isMatchPre;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isMatchPre, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -286,10 +286,10 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner2)
     auto ret = scan->FindNextJoinRows();
     EXPECT_NE(ret, -1);
 
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
@@ -338,10 +338,10 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner3)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 2, 3 });
     std::vector<int64_t> expectedBufferedAddr({ 1, 2 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -383,10 +383,10 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner4)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 2, 3 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
     bufferedPageIndex->AddVecBatch(eofVecBatch);
@@ -432,10 +432,10 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner5)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 3 });
     std::vector<int64_t> expectedBufferedAddr({ 1 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -477,10 +477,10 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner6)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1 });
     std::vector<int64_t> expectedBufferedAddr({ 3 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
     bufferedPageIndex->AddVecBatch(eofVecBatch);
@@ -526,10 +526,10 @@ TEST(NativeSortMergeJoinTest, TestRepeatBufferedTableKeys1)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 2, 3 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
     bufferedPageIndex->AddVecBatch(eofVecBatch);
@@ -575,10 +575,10 @@ TEST(NativeSortMergeJoinTest, TestRepeatBufferedTableKeys2)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 2, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 1, 2 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -620,10 +620,10 @@ TEST(NativeSortMergeJoinTest, TestRepeatStreamedTableKeys1)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 0, 2, 3 });
     std::vector<int64_t> expectedBufferedAddr({ 1, 2, 2 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -665,10 +665,10 @@ TEST(NativeSortMergeJoinTest, TestRepeatStreamedTableKeys2)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 2, 2 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     ExpectVectorEqual(expectedStreamedAddr, streamedAddr);
     ExpectVectorEqual(expectedBufferedAddr, bufferedAddr);
@@ -718,10 +718,10 @@ TEST(NativeSortMergeJoinTest, TestMultipleTableKeys)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 3 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
     bufferedPageIndex->AddVecBatch(eofVecBatch);
@@ -776,10 +776,10 @@ TEST(NativeSortMergeJoinTest, TestNullKeys)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 1, 2 });
     std::vector<int64_t> expectedBufferedAddr({ 0, 3 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
     bufferedPageIndex->AddVecBatch(eofVecBatch);
@@ -832,10 +832,10 @@ TEST(NativeSortMergeJoinTest, TestDateTypes)
     scan->FindNextJoinRows();
     std::vector<int64_t> expectedStreamedAddr({ 3 });
     std::vector<int64_t> expectedBufferedAddr({ 3 });
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
     bufferedPageIndex->AddVecBatch(eofVecBatch);
@@ -876,10 +876,10 @@ TEST(NativeSortMergeJoinTest, TestMultipleVecBatch)
     auto scan = new SortMergeJoinScanner(streamedKeysTypes, streamedCols, streamedKeysTypes.GetSize(),
         streamedPageIndex, bufferedKeysTypes, bufferedCols, bufferedPageIndex, JoinType::OMNI_JOIN_TYPE_INNER, false);
     scan->FindNextJoinRows();
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     long bufferData1[] = {10, 13, 13, 17, 17, 18, 18, 19};
@@ -990,10 +990,10 @@ TEST(NativeSortMergeJoinTest, TestReturnCode)
     ASSERT_EQ(DecodeStreamedTblResult(ret), 0);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 1);
     ASSERT_EQ(DecodeJoinResult(ret), 1);
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(bufferedTypes.Get());
@@ -1069,10 +1069,10 @@ TEST(NativeSortMergeJoinTest, TestReturnCode2)
     ASSERT_EQ(DecodeStreamedTblResult(ret), 1);
     ASSERT_EQ(DecodeBufferedTblResult(ret), 0);
     ASSERT_EQ(DecodeJoinResult(ret), 1);
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     VectorBatch *eofVecBatch = CreateEmptyVectorBatch(streamedTypes.Get());
@@ -1148,10 +1148,10 @@ TEST(NativeSortMergeJoinTest, TestJoinScanner7)
     EXPECT_NE(ret, -1);
 
     // get output
-    std::vector<bool> isPreMatched;
+    std::vector<int8_t> isPreMatched;
     std::vector<int64_t> streamedAddr;
     std::vector<int64_t> bufferedAddr;
-    std::vector<bool> isSameBufferedKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
     scan->GetMatchedValueAddresses(isPreMatched, streamedAddr, bufferedAddr, isSameBufferedKeyMatched);
 
     // add buffer1
@@ -1297,8 +1297,8 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
         rightTableOutputColsCount, rightSourceTypes.GetSize(), rightPagesIndex, filter, vecAllocator,
         OMNI_JOIN_TYPE_INNER, nullptr);
 
-    std::vector<bool> isPreMatched;
-    isPreMatched.insert(isPreMatched.end(), 6, false);
+    std::vector<int8_t> isPreMatched;
+    isPreMatched.insert(isPreMatched.end(), 6, 0);
     std::vector<int64_t> leftAddress1 = {
         static_cast<int64_t>(EncodeSyntheticAddress(0, 1)), static_cast<int64_t>(EncodeSyntheticAddress(0, 3)),
         static_cast<int64_t>(EncodeSyntheticAddress(0, 5)), static_cast<int64_t>(EncodeSyntheticAddress(1, 1)),
@@ -1312,7 +1312,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
 
     std::vector<int64_t> &builderBufferedAddress = resultBuilder->GetBufferedTableValueAddresses();
     std::vector<int64_t> &builderStreamedAddress = resultBuilder->GetStreamedTableValueAddresses();
-    std::vector<bool> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
+    std::vector<int8_t> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
     builderIsPreMatched.insert(builderIsPreMatched.end(), isPreMatched.begin(), isPreMatched.end());
     builderBufferedAddress.insert(builderBufferedAddress.end(), rightAddress1.begin(), rightAddress1.end());
     builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
@@ -1380,17 +1380,16 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
         rightTableOutputColsCount, rightSourceTypes.GetSize(), rightPagesIndex, filter, vecAllocator,
         OMNI_JOIN_TYPE_INNER, nullptr);
 
-    std::vector<bool> isPreMatched;
-    isPreMatched.insert(isPreMatched.end(), 3, false);
+    std::vector<int8_t> isPreMatched;
+    isPreMatched.insert(isPreMatched.end(), 3, 0);
     std::vector<int64_t> leftAddress1 = { static_cast<int64_t>(EncodeSyntheticAddress(0, 1)),
         static_cast<int64_t>(EncodeSyntheticAddress(0, 3)), static_cast<int64_t>(EncodeSyntheticAddress(0, 5)) };
     std::vector<int64_t> rightAddress1 = { static_cast<int64_t>(EncodeSyntheticAddress(0, 0)),
         static_cast<int64_t>(EncodeSyntheticAddress(0, 2)), static_cast<int64_t>(EncodeSyntheticAddress(0, 4)) };
 
-    std::vector<bool> isSameKey;
     std::vector<int64_t> &builderBufferedAddress = resultBuilder->GetBufferedTableValueAddresses();
     std::vector<int64_t> &builderStreamedAddress = resultBuilder->GetStreamedTableValueAddresses();
-    std::vector<bool> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
+    std::vector<int8_t> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
     builderIsPreMatched.insert(builderIsPreMatched.end(), isPreMatched.begin(), isPreMatched.end());
     builderBufferedAddress.insert(builderBufferedAddress.end(), rightAddress1.begin(), rightAddress1.end());
     builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());

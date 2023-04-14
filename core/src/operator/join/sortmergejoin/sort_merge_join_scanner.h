@@ -139,9 +139,9 @@ public:
 
     int64_t FindNextJoinRows();
 
-    int32_t GetMatchedValueAddresses(std::vector<bool> &isPreKeyMatched,
+    int32_t GetMatchedValueAddresses(std::vector<int8_t> &isPreKeyMatched,
         std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
-        std::vector<bool> &isSameBufferedKeyMatched);
+        std::vector<int8_t> &isSameBufferedKeyMatched);
 
     ~SortMergeJoinScanner();
 
@@ -218,9 +218,9 @@ private:
 
     void StreamMissingRowsForNullBuffered();
 
-    template <JoinType templateJoinType> void SavePrevMatchingRows(bool isMatched);
+    template <JoinType templateJoinType> void SavePrevMatchingRows(int8_t isMatched);
 
-    void SavePrevMatchingRowsForFullOuter(bool isMatched);
+    void SavePrevMatchingRowsForFullOuter(int8_t isMatched);
 
     bool PreKeyMatched();
 
@@ -288,9 +288,9 @@ private:
     int64_t preStreamedValueAddress;
     int32_t preStreamedPagesIndexPosition;
     std::unique_ptr<JoinStatus> preStatus;
-    std::vector<bool> isPreKeyMatched;
-    std::vector<bool> isSameBufferedKeyMatched;
-    std::vector<bool> preBufferedKeyMatched;
+    std::vector<int8_t> isPreKeyMatched;
+    std::vector<int8_t> isSameBufferedKeyMatched;
+    std::vector<int8_t> preBufferedKeyMatched;
     std::vector<int64_t> streamedValueAddress;
     std::vector<int64_t> bufferedValueAddress;
     std::vector<int64_t> preBufferedValueAddress;
