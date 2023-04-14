@@ -66,8 +66,8 @@ bool PagesHashStrategy::PositionEqualsPositionIgnoreNulls(uint32_t leftTableInde
         // todo:: handle dictionary
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-        result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, buildHashColTypes[columnIdx], leftColumn, leftRowIndex,
-            rightColumn, rightRowIndex);
+        result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, buildHashColTypes[columnIdx], leftColumn,
+            leftRowIndex, rightColumn, rightRowIndex);
         if (!result) {
             return false;
         }
@@ -83,8 +83,8 @@ bool PagesHashStrategy::PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, u
         BaseVector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
         BaseVector *probeColumn = probeJoinColumns[columnIdx];
         // todo:: handle dictionary
-        result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, buildHashColTypes[columnIdx], buildColumn, buildRowIndex,
-            probeColumn, probePosition);
+        result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, buildHashColTypes[columnIdx], buildColumn,
+            buildRowIndex, probeColumn, probePosition);
         if (!result) {
             return false;
         }

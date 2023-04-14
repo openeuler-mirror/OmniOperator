@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 
 #ifndef OMNI_RUNTIME_MEMORY_MANAGER_H
@@ -15,6 +15,7 @@
 #include "util/error_code.h"
 #include "util/compiler_util.h"
 #include "memory_manager_allocator.h"
+#include "memory_trace.h"
 
 namespace omniruntime {
 namespace mem {
@@ -22,7 +23,7 @@ using namespace exception;
 
 /**
  * it is responsible for memory usage statistics of each thread and the global memory usage.
- *     */
+ *         */
 class MemoryManager {
 public:
     // unlimited memory usage
@@ -35,6 +36,7 @@ public:
 
     static void SetGlobalMemoryLimit(int64_t limit)
     {
+        LogInfo("set global memory manager limit:%ld Byte", limit);
         MemoryManager *globalMemoryManager = GetGlobalMemoryManager();
         globalMemoryManager->SetMemoryLimit(limit);
     }
@@ -49,7 +51,7 @@ public:
     MemoryManager();
 
     // constructor for threadMemoryManager
-    MemoryManager(MemoryManager *globalMemoryManager);
+    explicit MemoryManager(MemoryManager *globalMemoryManager);
 
     ~MemoryManager();
 
@@ -58,13 +60,12 @@ public:
      * Account() interface is called when the untrackedMemory exceeds the threshold range [-THRESHOLD, THRESHOLD].
      * Note that untrackedMemory could be less than -THRESHOLD. That is, the memory is continuously allocated,
      * and then be continuously freed.
-     *     */
+     *         */
     void Account(int64_t size)
     {
         int64_t newMemoryAmount = memoryAmount.fetch_add(size, std::memory_order_relaxed) + size;
         int64_t limit = memoryLimit.load(std::memory_order_relaxed);
         if (limit == UNLIMIT || newMemoryAmount < limit) {
-            //UpdatePeak(size);
             isBlocked.store(false, std::memory_order_relaxed);
         } else {
             /*
@@ -72,9 +73,17 @@ public:
              * The If statement is used to avoid the following case: When the thread exceeds the limit,
              * the destructor of the thread is called and the Account interface is executed again,
              * which may cause the OmniException to be thrown again.
-             *     */
+             *         */
             if (!isBlocked.load(std::memory_order_relaxed)) {
                 isBlocked.store(true, std::memory_order_relaxed);
+#ifdef TRACE
+                // print current vector and arena memory usage.
+                MemoryTrace *trace = MemoryTrace::GetMemoryTrace();
+                int64_t vectorMemory = trace->GetVectorAllocated();
+                std::cout << "vector memory is: " << vectorMemory << std::endl;
+                int64_t arenaMemory = trace->GetArenaAllocated();
+                std::cout << "arena memory is: " << arenaMemory << std::endl;
+#endif
                 auto message =
                     op::GetErrorMessage(op::ErrorCode::MEM_CAP_EXCEEDED) + std::to_string(limit / 1024 / 1024);
                 throw OmniException(GetErrorCode(op::ErrorCode::MEM_CAP_EXCEEDED), message);

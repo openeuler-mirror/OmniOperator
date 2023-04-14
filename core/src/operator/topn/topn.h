@@ -100,10 +100,10 @@ private:
 
     vec::VectorBatch *CreateSingleRowVecBatch(omniruntime::vec::VectorBatch *vectorBatch, int32_t position) const;
 
-    void SetValueForVectorBatch(int32_t typeId, int64_t index, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const;
-
-    void SetVarcharValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector,
+    void SetValueForVectorBatch(int32_t typeId, int64_t index, vec::BaseVector *pqVector,
         vec::BaseVector *tmpVector) const;
+
+    void SetVarcharValueForVectorBatch(int64_t rowNum, vec::BaseVector *pqVector, vec::BaseVector *tmpVector) const;
 
     void UpdateSingleRowVectorBatch(vec::VectorBatch *vectorBatch, vec::VectorBatch *singleRowVecBatch,
         int32_t position) const;

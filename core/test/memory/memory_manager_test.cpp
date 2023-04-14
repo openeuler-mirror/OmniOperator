@@ -54,10 +54,8 @@ TEST(MemoryManager, testUnlimitedAccountMultipleThreads)
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         int64_t globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-        int64_t globalMemoryPeak = globalMemoryManager->GetMemoryPeak();
 
         EXPECT_EQ(globalMemoryAmount, threadNum * count * positiveSize);
-        // EXPECT_EQ(globalMemoryPeak, positiveSize);
 
         int64_t negativeSize = -1 * 1024 * 1024;
         for (int j = 0; j < threadNum; ++j) {
@@ -71,10 +69,8 @@ TEST(MemoryManager, testUnlimitedAccountMultipleThreads)
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-        globalMemoryPeak = globalMemoryManager->GetMemoryPeak();
 
         EXPECT_EQ(globalMemoryAmount, 0);
-        // EXPECT_EQ(globalMemoryPeak, positiveSize);
     }
 }
 
@@ -121,10 +117,8 @@ TEST(MemoryManager, testLimitedAccountMultipleThreads)
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         int64_t globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-        int64_t globalMemoryPeak = globalMemoryManager->GetMemoryPeak();
 
         EXPECT_GE(globalMemoryAmount, globalThreshold);
-        // EXPECT_EQ(globalMemoryPeak, positiveSize);
     }
 }
 
@@ -387,7 +381,6 @@ TEST(MemoryManager, testStatisticsFunctionMemoryPeak)
     // due to aggregation,
     // expectedMemoryPeak equals null size of shared_ptr(32) + value size of boost_dec64(size * 64);
     int64_t expectedMemoryPeak = size * 64 + 32;
-    // EXPECT_EQ(globalMemoryPeak, expectedMemoryPeak);
 }
 
 // test: set global memory limit
@@ -510,29 +503,21 @@ TEST(MemoryManager, testUnlimitedAccount)
         currentMemoryManager->Account(positiveSize);
     }
     int64_t currentMemoryAmount = currentMemoryManager->GetMemoryAmount();
-    int64_t currentMemoryPeak = currentMemoryManager->GetMemoryPeak();
     EXPECT_EQ(currentMemoryAmount, count * positiveSize);
-    // EXPECT_EQ(currentMemoryPeak, positiveSize);
 
     auto *parentMemoryManager = currentMemoryManager->GetParent();
     EXPECT_TRUE(parentMemoryManager != nullptr);
     int64_t parentMemoryAmount = parentMemoryManager->GetMemoryAmount();
-    int64_t parentMemoryPeak = parentMemoryManager->GetMemoryPeak();
     EXPECT_EQ(parentMemoryAmount, count * positiveSize);
-    // EXPECT_EQ(parentMemoryPeak, positiveSize);
 
     for (int i = 0; i < count; ++i) {
         currentMemoryManager->Account(negativeSize);
     }
     currentMemoryAmount = currentMemoryManager->GetMemoryAmount();
-    currentMemoryPeak = currentMemoryManager->GetMemoryPeak();
     EXPECT_EQ(currentMemoryAmount, 0);
-    // EXPECT_EQ(currentMemoryPeak, positiveSize);
 
     parentMemoryAmount = parentMemoryManager->GetMemoryAmount();
-    parentMemoryPeak = parentMemoryManager->GetMemoryPeak();
     EXPECT_EQ(parentMemoryAmount, 0);
-    // EXPECT_EQ(parentMemoryPeak, positiveSize);
 }
 
 // test: limited account
@@ -558,15 +543,11 @@ TEST(MemoryManager, testLimitedAccount)
     }
 
     int64_t currentMemoryAmount = currentMemoryManager->GetMemoryAmount();
-    int64_t currentMemoryPeak = currentMemoryManager->GetMemoryPeak();
     EXPECT_EQ(currentMemoryAmount, globalThreshold);
-    // EXPECT_EQ(currentMemoryPeak, positiveSize);
 
     auto *parentMemoryManager = currentMemoryManager->GetParent();
     EXPECT_TRUE(globalMemoryManager != nullptr);
     int64_t parentMemoryAmount = parentMemoryManager->GetMemoryAmount();
-    int64_t parentMemoryPeak = parentMemoryManager->GetMemoryPeak();
     EXPECT_EQ(parentMemoryAmount, globalThreshold - positiveSize);
-    // EXPECT_EQ(parentMemoryPeak, positiveSize);
 }
 }

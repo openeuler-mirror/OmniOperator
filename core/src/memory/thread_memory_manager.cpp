@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 #include "thread_memory_manager.h"
 
@@ -43,7 +43,7 @@ void ThreadMemoryManager::RemoveScope(const std::string &scope)
  * The current logic is that when the scope ends,
  * the value of the thread's scopeMap in thread is set to 0, and the value of the global scopeMap decreases.
  * todo: In the future, reference count may be introduced to clear key-value pair.
- *   */
+ *         */
 void ThreadMemoryManager::DeleteScope(const std::string &scope)
 {
     std::unordered_map<std::string, int64_t, std::hash<std::string>, std::equal_to<std::string>,

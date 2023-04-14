@@ -4,7 +4,7 @@
  */
 #include "vector_batch_spiller.h"
 #include <sys/types.h>
-#include "../vector/vector_helper.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
@@ -62,21 +62,21 @@ bool VectorBatchSpiller::HasNext()
 }
 
 template <typename V>
-void SetValue(vec::BaseVector *inputVector, int32_t inputPosition, vec::BaseVector *outputVector,
+void SetValue(BaseVector *inputVector, int32_t inputPosition, BaseVector *outputVector,
               int32_t outputPosition)
 {
-    auto resultVector = static_cast<vec::Vector<V> *>(outputVector);
+    auto resultVector = static_cast<Vector<V> *>(outputVector);
     if (inputVector->IsNull(inputPosition)) {
         resultVector->SetNull(outputPosition);
     } else {
-        resultVector->SetValue(outputPosition, static_cast<vec::Vector<V> *>(inputVector)->GetValue(inputPosition));
+        resultVector->SetValue(outputPosition, static_cast<Vector<V> *>(inputVector)->GetValue(inputPosition));
     }
 }
 
-void SetVarcharValue(vec::BaseVector *inputVector, int32_t inputPosition, vec::BaseVector *outputVector,
+void SetVarcharValue(BaseVector *inputVector, int32_t inputPosition, BaseVector *outputVector,
                      int32_t outputPosition)
 {
-    using VarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
+    using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     auto resultVector = static_cast<VarcharVector *>(outputVector);
     if (inputVector->IsNull(inputPosition)) {
         resultVector->SetNull(outputPosition);
@@ -90,7 +90,7 @@ VectorBatchUnit *VectorBatchSpiller::Next()
 {
     auto rowCount = static_cast<int32_t>(std::min((int64_t)maxRowCountPerVecBatch, remainingRowCount));
     auto colCount = static_cast<int32_t>(outputCols.size());
-    auto output = new vec::VectorBatch(rowCount);
+    auto output = new VectorBatch(rowCount);
     VectorHelper::AppendVectors(output, DataTypes(outputTypes), rowCount);
     int32_t rowIndex = 0;
 

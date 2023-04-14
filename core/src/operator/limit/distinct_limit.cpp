@@ -330,7 +330,6 @@ bool IsExistSameRow(const type::DataTypes &inputTypes, VectorBatch *vectorBatch,
             columnId = distinctCols[column];
             typeId = inputTypes.GetType(columnId)->GetId();
             inputVector = vectorBatch->Get(columnId);
-
             if ((rowVector[column].val == nullptr) || (inputVector->IsNull(rowIndex))) {
                 isSame = ((rowVector[column].val == nullptr) && (inputVector->IsNull(rowIndex)));
                 continue;
@@ -364,7 +363,6 @@ void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int ro
         tuple[colIndex].val = nullptr;
         tuple[colIndex].count = 0;
         inputVector = vectorBatch->Get(colId);
-
         if (!(inputVector->IsNull(rowIndex))) {
             if (inputVector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFunc(tuple[colIndex], inputVector, rowIndex,

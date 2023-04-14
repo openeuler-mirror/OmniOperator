@@ -1749,7 +1749,7 @@ TEST(ProjectionTest, varcharExpand)
 
     auto *vcVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(outputVecBatch->Get(0));
 
-    EXPECT_GT(UnsafeStringVector::GetCapacityInBytes(vcVec), avgStrLen * numRows);
+    EXPECT_GT(omniruntime::vec::unsafe::UnsafeStringVector::GetCapacityInBytes(vcVec), avgStrLen * numRows);
     string expected1 = "hello" + baseStr;
     string expected2 = "Bonjo" + baseStr;
     for (int32_t i = 0; i < numRows; i++) {

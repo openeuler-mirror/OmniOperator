@@ -110,7 +110,7 @@ static int32_t ALWAYS_INLINE Compare(const int32_t sortNullFirsts, const uint64_
         // neither the left nor the right is NULL
         compare = compareFunc(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
 
-        if (sortAscendings == 0) {
+        if constexpr (sortAscendings == 0) {
             compare = -compare;
         }
     }

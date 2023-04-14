@@ -97,14 +97,14 @@ BaseVector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatc
 }
 
 VectorBatch **BuildWindowInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t windowFunctionNum,
-                                     const std::vector<DataTypePtr> &sourceTypes)
+    const std::vector<DataTypePtr> &sourceTypes)
 {
     VectorBatch **input = new VectorBatch *[vecBatchNum];
     for (int32_t i = 0; i < vecBatchNum; ++i) {
         VectorBatch *vecBatch = new VectorBatch(windowFunctionNum);
         for (int32_t index = 0; index < windowFunctionNum; index++) {
             auto vec = std::unique_ptr<BaseVector>(BuildVectorInput(sourceTypes[index], rowPerVecBatch));
-            vecBatch->Append(std::move(vec));
+            vecBatch->Append(vec.release());
         }
         input[i] = vecBatch;
     }
@@ -1017,16 +1017,16 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
     int16_t data10[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
 
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6,
-  data7, data8, data9, data10);
+        data7, data8, data9, data10);
 
     const int32_t colCount = 11;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     int32_t sortCols[1] = {0};
     int32_t ascendings[1] = {false};
     int32_t nullFirsts[1] = {false};
-    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,OMNI_AGGREGATION_TYPE_SUM,
+    int32_t windowFunctionTypes[8] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
-        OMNI_AGGREGATION_TYPE_SUM,OMNI_AGGREGATION_TYPE_SUM};
+        OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
     int32_t windowFrameTypes[8] = {OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
                                OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE,
                                OMNI_FRAME_TYPE_RANGE, OMNI_FRAME_TYPE_RANGE};
@@ -1517,7 +1517,7 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
     int16_t data10[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
 
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6,
-  data7, data8, data9, data10);
+        data7, data8, data9, data10);
 
     const int32_t colCount = 11;
     int32_t outputCols[colCount] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
@@ -1891,7 +1891,7 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     void *datas[10] = {data0, data1, data2, data3, data4, data5, data6, data7, data8, data9};
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
         DataTypePtr dataType = sourceTypes.GetType(i);
-        vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]));
+        vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]).release());
     }
 
     int32_t outputCols[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};

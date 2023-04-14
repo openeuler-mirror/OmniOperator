@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 
 #ifndef OMNI_RUNTIME_DICTIONARY_CONTAINER_H
@@ -19,16 +19,17 @@ class DictionaryContainer {
 public:
     DictionaryContainer(const int32_t *values, int32_t valueSize, std::shared_ptr<DictType> dictionary,
         int32_t dictSize, int32_t dictOffset = 0)
-        : valueSize(valueSize), dictionary(std::move(dictionary)), dictSize(dictSize), dictOffset(dictOffset),
-        isSliced(false)
+        : valueSize(valueSize),
+          dictionary(std::move(dictionary)),
+          dictSize(dictSize),
+          dictOffset(dictOffset),
+          isSliced(false)
     {
         this->values.reserve(valueSize);
         // init values
         for (int32_t i = 0; i < valueSize; i++) {
             this->values[i] = values[i];
         }
-        int64_t containerCapacity = sizeof(DictionaryContainer) + valueSize * sizeof(int32_t);
-        omniruntime::mem::ThreadMemoryManager::ReportMemory(containerCapacity);
     }
 
     DictionaryContainer(std::vector<int32_t> &values, int32_t valueSize, std::shared_ptr<DictType> dictionary,
@@ -39,22 +40,11 @@ public:
           dictSize(dictSize),
           dictOffset(dictOffset),
           isSliced(true)
-    {
-        int64_t containerCapacity = sizeof(DictionaryContainer);
-        omniruntime::mem::ThreadMemoryManager::ReportMemory(containerCapacity);
-    }
+    {}
 
-    ~DictionaryContainer()
-    {
-        int64_t containerCapacity = sizeof(DictionaryContainer);
-        if (!isSliced) {
-            // vector class, and values total capacity
-            containerCapacity += valueSize * sizeof(int32_t);
-        }
-        omniruntime::mem::ThreadMemoryManager::ReclaimMemory(containerCapacity);
-    }
+    ~DictionaryContainer() = default;
 
-    std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> CopyPosition(int32_t *positions, int32_t length)
+    std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> CopyPositions(int32_t *positions, int32_t length)
     {
         std::vector<int32_t> newValues(length);
         for (int32_t i = 0; i < length; i++) {
@@ -88,6 +78,16 @@ public:
             }
         }
         // fixme: we should probably throw exception if setting to a value doesn't exist in the dictionary
+    }
+
+    ALWAYS_INLINE int64_t GetContainerCapacity()
+    {
+        int64_t containerCapacity = sizeof(DictionaryContainer);
+        if (!isSliced) {
+            // vector class, and values total capacity
+            containerCapacity += valueSize * sizeof(int32_t);
+        }
+        return containerCapacity;
     }
 
 private:

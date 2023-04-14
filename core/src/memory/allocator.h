@@ -6,8 +6,9 @@
 #define OMNI_RUNTIME_ALLOCATOR_H
 
 #include <jemalloc/jemalloc.h>
-#include "memory/memory_pool.h"
+#include "memory_pool.h"
 #include "thread_memory_manager.h"
+#include "memory_trace.h"
 
 namespace omniruntime::mem {
 class Allocator {
@@ -25,6 +26,9 @@ public:
 
         // memory usage statistics
         ThreadMemoryManager::ReportMemory(size);
+#ifdef TRACE
+        MemoryTrace::AddArenaMemory(reinterpret_cast<uintptr_t>(data), size);
+#endif
         return data;
     }
 
@@ -32,6 +36,9 @@ public:
     {
         // memory usage statistics
         ThreadMemoryManager::ReclaimMemory(size);
+#ifdef TRACE
+        MemoryTrace::SubArenaMemory(reinterpret_cast<uintptr_t>(reinterpret_cast<uint8_t *>(data)), size);
+#endif
 
         pool->Release(reinterpret_cast<uint8_t *>(data));
     }

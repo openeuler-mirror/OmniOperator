@@ -3,7 +3,7 @@
  */
 
 #include "topn_expr.h"
-#include "../util/operator_util.h"
+#include "operator/util/operator_util.h"
 
 namespace omniruntime::op {
 TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,

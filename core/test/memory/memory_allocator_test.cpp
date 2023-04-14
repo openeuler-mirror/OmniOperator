@@ -8,7 +8,7 @@
 #include "../vector/test.h"
 
 namespace omniruntime::vec {
-template <typename T> void CreateVector(int vec_size)
+template <typename T> void createVector(int vec_size)
 {
     auto vector = std::make_unique<Vector<T>>(vec_size);
     for (int i = 0; i < vec_size; i++) {
@@ -16,7 +16,7 @@ template <typename T> void CreateVector(int vec_size)
         if constexpr (std::is_same_v<std::string, T>) {
             value = "string " + std::to_string(i);
         } else {
-            value = (T)i * 2 / 3;
+            value = static_cast<T>(i) * 2 / 3;
         }
         vector->SetValue(i, value);
     }
@@ -26,7 +26,7 @@ template <typename T> void CreateVector(int vec_size)
         if constexpr (std::is_same_v<std::string, T>) {
             value = "string " + std::to_string(i);
         } else {
-            value = (T)i * 2 / 3;
+            value = static_cast<T>(i) * 2 / 3;
         }
         EXPECT_EQ(value, vector->GetValue(i));
     }
@@ -36,23 +36,23 @@ template <typename T> void CreateVector(int vec_size)
 TEST(Allocator, testCreateAndFreeVector)
 {
     int vecSize = 100;
-    CreateVector<int32_t>(vecSize);
-    CreateVector<int64_t>(vecSize);
-    CreateVector<double>(vecSize);
-    CreateVector<test::boost_dec64>(vecSize);
-    CreateVector<test::boost_dec128>(vecSize);
-    CreateVector<std::string>(vecSize);
+    createVector<int32_t>(vecSize);
+    createVector<int64_t>(vecSize);
+    createVector<double>(vecSize);
+    createVector<test::boost_dec64>(vecSize);
+    createVector<test::boost_dec128>(vecSize);
+    createVector<std::string>(vecSize);
 }
 
 TEST(Allocator, testCreateZeroVector)
 {
     int vecSize = 0;
-    CreateVector<int32_t>(vecSize);
-    CreateVector<int64_t>(vecSize);
-    CreateVector<double>(vecSize);
-    CreateVector<test::boost_dec64>(vecSize);
-    CreateVector<test::boost_dec128>(vecSize);
-    CreateVector<std::string>(vecSize);
+    createVector<int32_t>(vecSize);
+    createVector<int64_t>(vecSize);
+    createVector<double>(vecSize);
+    createVector<test::boost_dec64>(vecSize);
+    createVector<test::boost_dec128>(vecSize);
+    createVector<std::string>(vecSize);
 }
 
 // test: the alloc method works properly.
@@ -100,5 +100,29 @@ TEST(Allocator, testAllocateAlignmentSize)
     allocator->Free(p, size);
     untrackedMemory = threadMemoryManager->GetUntrackedMemory();
     EXPECT_EQ(untrackedMemory, 0);
+}
+
+TEST(Allocator, testSlicedVectorSize)
+{
+    auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
+    threadMemoryManager->Clear();
+    int32_t vecSize = 100;
+    auto vector = std::make_unique<Vector<int32_t>>(vecSize).release();
+    for (int i = 0; i < vecSize; i++) {
+        int32_t value = static_cast<int32_t>(i);
+        vector->SetValue(i, value);
+    }
+    int64_t accountedMemory  = threadMemoryManager->GetUntrackedMemory();
+
+    auto sliceVector = vector->Slice(0, vecSize).release();
+    int64_t accountedMemory2  = threadMemoryManager->GetUntrackedMemory();
+    EXPECT_EQ(accountedMemory2, accountedMemory + 64);
+
+    delete vector;
+    int64_t accountedMemory3  = threadMemoryManager->GetUntrackedMemory();
+    EXPECT_EQ(accountedMemory3, 64);
+
+    delete sliceVector;
+    EXPECT_EQ(threadMemoryManager->GetUntrackedMemory(), 0);
 }
 }

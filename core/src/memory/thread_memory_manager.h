@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 
 #ifndef OMNI_RUNTIME_THREAD_MEMORY_MANAGER_H
@@ -14,7 +14,7 @@ namespace omniruntime {
 namespace mem {
 /**
  * TLS Object, it is responsible for memory aggregation per thread.
- *   */
+ *      */
 class ThreadMemoryManager {
 public:
     static ALWAYS_INLINE ThreadMemoryManager *GetThreadMemoryManager()
@@ -68,19 +68,19 @@ public:
      * There are three external engine mobilization interfaces for implementing sql-level memory statistics.
      * StartScope interface is used to start or cut in the memory statistics of a certain sql.
      * @param scope: scope is mapped to sql
-     *   */
+     *      */
     void StartScope(const std::string &scope);
 
     /* *
      * RemoveScope interface is used to cut out the memory statistics of a certain sql.
      * @param scope: scope is mapped to sql
-     *   */
+     *      */
     void RemoveScope(const std::string &scope);
 
     /* *
      * DeleteScope interface is used to end the memory statistics of a certain sql.
      * @param scope: scope is mapped to sql
-     *   */
+     *      */
     void DeleteScope(const std::string &scope);
 #endif
 
@@ -101,9 +101,13 @@ private:
      * within the range of [-Threshold, Threshold]. Moreover, a memory usage update request is initiated
      * when the memory usage of each thread exceeds the range.
      * The benefit is to avoid frequent updates of each thread and global memory usage.
-     *   */
+     *      */
     int64_t untrackedMemory = 0;
+#ifdef TRACE
+    int64_t untrackedMemoryThreshold = 0;
+#else
     int64_t untrackedMemoryThreshold = 1 * 1024 * 1024;
+#endif
 };
 } // mem
 } // omniruntime

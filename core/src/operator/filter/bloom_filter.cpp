@@ -4,6 +4,7 @@
  */
 
 #include "bloom_filter.h"
+#include "util/type_util.h"
 #include "codegen/functions/murmur3_hash.h"
 
 namespace omniruntime {
@@ -133,6 +134,7 @@ int32_t BloomFilterOperator::GetOutput(VectorBatch **blOutPut)
     col->SetValue(0, reinterpret_cast<int64_t>(bloomFilterAddress));
     outPut->Append(col);
     *blOutPut = outPut;
+    this->outputTypes = { LongType() };
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }

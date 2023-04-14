@@ -17,9 +17,7 @@ Chunk::~Chunk()
         return;
     }
 
-    if (allocator != nullptr) {
-        allocator->Free(address, sizeInBytes);
-    }
+    allocator->Free(address, sizeInBytes);
     address = nullptr;
 }
 

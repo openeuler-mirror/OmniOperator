@@ -2,13 +2,13 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  */
 
-#include "benchmark/benchmark.h"
-#include "memory/thread_memory_manager.h"
 #include <cstdlib>
 #include <ctime>
+#include "benchmark/benchmark.h"
+#include "memory/thread_memory_manager.h"
 
 namespace omniruntime::vec::test {
-static int threadNum = 10000;
+static int g_threadNum = 10000;
 static int64_t sizes[1'000'000];
 void Random()
 {
@@ -117,12 +117,12 @@ BENCHMARK(bm_v2_memory_reportmemoryusage_fixedsize)->Arg(8)->Arg(64)->Arg(1024);
 BENCHMARK(bm_v2_memory_reportmemoryusage_random);
 
 // reportmemoryusage vs tryallocate interface under multiple threads by benchmark
-BENCHMARK(bm_v2_memory_reportmemoryusage_multithread_fixedsize)->Arg(8)->Arg(64)->Arg(1024)->Threads(threadNum);
+BENCHMARK(bm_v2_memory_reportmemoryusage_multithread_fixedsize)->Arg(8)->Arg(64)->Arg(1024)->Threads(g_threadNum);
 
 // reclaimmemoryusage vs releasebytes interface under single thread
 BENCHMARK(bm_v2_memory_reclaimmemoryusage_fixedsize)->Arg(8)->Arg(64)->Arg(1024);
 BENCHMARK(bm_v2_memory_reclaimmemoryusage_random);
 
 // reclaimmemoryusage vs releasebytes interface under multiple threads by benchmark
-BENCHMARK(bm_v2_memory_reclaimmemoryusage_multithread_fixedsize)->Arg(8)->Arg(64)->Arg(1024)->Threads(threadNum);
+BENCHMARK(bm_v2_memory_reclaimmemoryusage_multithread_fixedsize)->Arg(8)->Arg(64)->Arg(1024)->Threads(g_threadNum);
 }

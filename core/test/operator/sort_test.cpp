@@ -61,7 +61,7 @@ void BuildSortTestData(VectorBatch **vecBatches, int32_t columnCount)
         for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
             Vector<int64_t> *vector = new Vector<int64_t>(positionCount);
             BuildVectorValues(vector);
-            vecBatch->Append(std::unique_ptr<BaseVector>(vector));
+            vecBatch->Append(vector);
         }
         vecBatches[i] = vecBatch;
     }
@@ -746,7 +746,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
     VectorBatch *vecBatch = new VectorBatch(dataSize);
     for (int32_t i = 0; i < 3; i++) {
         auto &dataType = sourceTypes.GetType(i);
-        vecBatch->Append(CreateDictionaryVector(*dataType, dataSize, ids, dataSize, datas[i]));
+        vecBatch->Append(CreateDictionaryVector(*dataType, dataSize, ids, dataSize, datas[i]).release());
     }
 
     int32_t outputCols[2] = {1, 2};
@@ -776,7 +776,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
 }
 
 VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize,
-                                             int32_t loopCount, bool isDictionary, bool hasNull)
+    int32_t loopCount, bool isDictionary, bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
@@ -814,13 +814,13 @@ VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas
 
     auto sortVecBatch = new VectorBatch(totalDataSize);
     for (int32_t i = 0; i < sourceTypesSize; i++) {
-        sortVecBatch->Append(move(sourceVectors[i]));
+        sortVecBatch->Append(sourceVectors[i].release());
     }
     return sortVecBatch;
 }
 
 VectorBatch *CreateSortExpectForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize,
-                                              int32_t loopCount, bool hasNull)
+    int32_t loopCount, bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
@@ -844,7 +844,7 @@ VectorBatch *CreateSortExpectForAllTypes(DataTypes &sourceTypes, void **sortData
 
     auto expectVecBatch = new VectorBatch(totalDataSize);
     for (int32_t i = 0; i < sourceTypesSize; i++) {
-        expectVecBatch->Append(move(expectVectors[i]));
+        expectVecBatch->Append(expectVectors[i].release());
     }
     return expectVecBatch;
 }
@@ -1016,7 +1016,7 @@ TEST(NativeOmniSortTestV2, TestSortZeroRowCountInMemory)
     std::unique_ptr<BaseVector> sourceVectors[sourceTypesSize];
     for (int32_t i = 0; i < sourceTypesSize; i++) {
         sourceVectors[i] = VectorHelper::CreateVector(OMNI_FLAT, sourceTypeIds[i], 0);
-        sourceVecBatch->Append(move(sourceVectors[i]));
+        sourceVecBatch->Append(sourceVectors[i].release());
     }
 
     sortOperator->AddInput(sourceVecBatch);
@@ -1146,7 +1146,7 @@ TEST(NativeOmniSortTestV2, TestSortZeroRowCountInMemoryWithSpill)
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
     for (int32_t i = 0; i < sourceTypesSize; i++) {
         sourceVectors[i] = VectorHelper::CreateVector(OMNI_FLAT, sourceTypeIds[i], 0);
-        sourceVecBatch3->Append(move(sourceVectors[i]));
+        sourceVecBatch3->Append(sourceVectors[i].release());
     }
 
     SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 5);

@@ -52,7 +52,7 @@ using FillOutputFunc = void (*)(VectorBatch *resultBatch, std::vector<AggregateS
     int32_t colIndex);
 
 using DistinctLimitFuncSet = struct {
-    DataTypeId dataTypeId;
+    type::DataTypeId dataTypeId;
     DuplicateValueFunc duplicateValueFunc;
     GenerateHashFunc generateHashFunc;
     GenerateHashFuncVect generateHashFuncVect;

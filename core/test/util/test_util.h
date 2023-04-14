@@ -70,7 +70,7 @@ std::unique_ptr<vec::BaseVector> CreateFlatVector(int32_t length, va_list &args)
 void SetValue(vec::BaseVector *vector, int32_t index, void *value, int32_t typeId);
 
 template <type::DataTypeId typeId>
-static std::unique_ptr<vec::BaseVector> DictionaryVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
+std::unique_ptr<vec::BaseVector> DictionaryVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
 {
     using T = typename type::NativeType<typeId>::type;
     if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
@@ -82,7 +82,7 @@ static std::unique_ptr<vec::BaseVector> DictionaryVectorSlice(vec::BaseVector *v
 }
 
 template <type::DataTypeId typeId>
-static std::unique_ptr<vec::BaseVector> FlatVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
+std::unique_ptr<vec::BaseVector> FlatVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
 {
     using T = typename type::NativeType<typeId>::type;
     if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
@@ -93,16 +93,7 @@ static std::unique_ptr<vec::BaseVector> FlatVectorSlice(vec::BaseVector *vector,
     }
 }
 
-static std::unique_ptr<vec::BaseVector> SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length,
-    int32_t typeId)
-{
-    using namespace omniruntime::type;
-    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
-        return DYNAMIC_TYPE_DISPATCH(FlatVectorSlice, typeId, vector, offset, length);
-    } else {
-        return DYNAMIC_TYPE_DISPATCH(DictionaryVectorSlice, typeId, vector, offset, length);
-    }
-}
+std::unique_ptr<vec::BaseVector> SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length, int32_t typeId);
 
 omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory);
 

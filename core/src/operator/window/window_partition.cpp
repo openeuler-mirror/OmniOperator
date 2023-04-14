@@ -51,8 +51,8 @@ void WindowPartition::ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBat
 
     for (auto &windowFunction : windowFunctions) {
         unique_ptr<Range> range = GetFrameRange(windowFunction->GetWindowFrameInfo());
-        windowFunction->ProcessRow(inputVecBatchForAgg, outputVecBatch->Get(channel), index, peerGroupStart - partitionStart, 
-            peerGroupEnd - partitionStart - 1, range->GetStart(), range->GetEnd());
+        windowFunction->ProcessRow(inputVecBatchForAgg, outputVecBatch->Get(channel), index,
+            peerGroupStart - partitionStart, peerGroupEnd - partitionStart - 1, range->GetStart(), range->GetEnd());
         channel++;
     }
 

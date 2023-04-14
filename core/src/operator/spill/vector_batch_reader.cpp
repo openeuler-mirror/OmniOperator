@@ -4,10 +4,10 @@
  */
 
 #include <unistd.h>
-#include "util/error_code.h"
-#include "vector_batch_reader.h"
 #include "vector/unsafe_vector.h"
 #include "vector/vector_helper.h"
+#include "util/error_code.h"
+#include "vector_batch_reader.h"
 
 namespace omniruntime {
 namespace op {
@@ -65,7 +65,7 @@ VectorBatchUnit *VectorBatchReader::Next()
  * 0        0      "aab"
  * 1        3        -
  * 0        3      "bbcd"
- *          7
+ * 7
  */
 std::unique_ptr<BaseVector> VectorBatchReader::ReadVarcharVector(int32_t rowCount)
 {
@@ -80,7 +80,7 @@ std::unique_ptr<BaseVector> VectorBatchReader::ReadVarcharVector(int32_t rowCoun
 
     // read offsets
     auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
-    auto offsets = reinterpret_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector.get(), OMNI_VARCHAR));
+    auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector.get(), OMNI_VARCHAR));
     if (read(fd, offsets, offsetSize) < offsetSize) {
         LogError("Read value offsets failed.");
         return nullptr;
@@ -89,11 +89,11 @@ std::unique_ptr<BaseVector> VectorBatchReader::ReadVarcharVector(int32_t rowCoun
     // read values
     auto length = offsets[rowCount] - offsets[0];
     char *valuesBuffer;
-    if  (length <= INITIAL_STRING_SIZE) {
+    if (length <= INITIAL_STRING_SIZE) {
         valuesBuffer = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector.get()));
     } else {
         valuesBuffer =
-                unsafe::UnsafeStringVector::ExpandStringBuffer(reinterpret_cast<VarcharVector *>(vector.get()), length);
+            unsafe::UnsafeStringVector::ExpandStringBuffer(reinterpret_cast<VarcharVector *>(vector.get()), length);
     }
     if (read(fd, valuesBuffer, length) < static_cast<ssize_t>(length)) {
         LogError("Read values failed.");
@@ -169,7 +169,7 @@ VectorBatch *VectorBatchReader::ReadVecBatch()
             VectorHelper::FreeVecBatch(vecBatch);
             return nullptr;
         }
-        vecBatch->Append(std::move(vector));
+        vecBatch->Append(vector.release());
     }
 
     rowOffset += rowCount;

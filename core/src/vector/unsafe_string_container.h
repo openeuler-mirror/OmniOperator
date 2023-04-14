@@ -7,7 +7,6 @@
 
 #include "dictionary_container.h"
 #include "large_string_container.h"
-#include "small_string_container.h"
 
 namespace omniruntime::vec::unsafe {
 /**
@@ -16,11 +15,6 @@ namespace omniruntime::vec::unsafe {
  */
 class UnsafeStringContainer {
 public:
-    static ALWAYS_INLINE char *GetValues(SmallStringContainer<std::string_view> *container)
-    {
-        return (char *)container->bufferSupplier.data();
-    }
-
     static ALWAYS_INLINE char *GetValues(LargeStringContainer<std::string_view> *container)
     {
         return container->bufferSupplier->Data();

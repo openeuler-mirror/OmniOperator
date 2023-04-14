@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 
 #ifndef OMNI_RUNTIME_MEMORY_MANAGER_ALLOCATOR_H
@@ -34,18 +34,20 @@ public:
 
     MemoryManagerAllocator(const MemoryManagerAllocator &) noexcept {}
 
-    template <class U> MemoryManagerAllocator(const MemoryManagerAllocator<U> &) noexcept {}
+    MemoryManagerAllocator& operator=(const MemoryManagerAllocator& allocator) noexcept {}
+
+    template <class U> explicit MemoryManagerAllocator(const MemoryManagerAllocator<U> &) noexcept {}
 
     ~MemoryManagerAllocator() noexcept {}
 
     pointer address(reference x) noexcept
     {
-        return (pointer)&x;
+        return static_cast<pointer>(&x);
     }
 
     const_pointer address(const_reference x) noexcept
     {
-        return (const_pointer)&x;
+        return static_cast<const_pointer>(&x);
     }
 
     // modified allocation method from "::operator new(n * sizeof(T))" in stl::allocator to "malloc(n * sizeof(T)))"

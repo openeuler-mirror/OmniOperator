@@ -23,15 +23,9 @@ public:
         }
         bufferSupplier = std::make_unique<LargeStringBuffer>(capacityInBytes);
         offsets.resize(value_size + 1);
-        int64_t containerCapacity = sizeof(LargeStringContainer) + (size + 1) * sizeof(int32_t);
-        omniruntime::mem::ThreadMemoryManager::ReportMemory(containerCapacity);
     }
 
-    ~LargeStringContainer()
-    {
-        int64_t containerCapacity = sizeof(LargeStringContainer) + (size + 1) * sizeof(int32_t);
-        omniruntime::mem::ThreadMemoryManager::ReclaimMemory(containerCapacity);
-    }
+    ~LargeStringContainer() = default;
 
     ALWAYS_INLINE std::string_view GetValue(int index)
     {
@@ -42,7 +36,7 @@ public:
 
     ALWAYS_INLINE void SetValue(int index, std::string_view &value)
     {
-        FillSlots(index); //rescue offset for null values
+        FillSlots(index); // rescue offset for null values
 
         size_t valueSize = value.size();
         int32_t needCapacityInBytes = offsets[index] + valueSize; // start offset, and then value size
@@ -59,10 +53,10 @@ public:
     /* *
      * set the element at the index position to null
      * @param index
-     *     */
+     *         */
     ALWAYS_INLINE void SetNull(int32_t index)
     {
-        FillSlots(index);  //rescue offset for null values
+        FillSlots(index); // rescue offset for null values
         offsets[index + 1] = offsets[index];
         lastOffsetPosition = index;
     }
@@ -80,11 +74,17 @@ public:
         return bufferSupplier->Capacity();
     }
 
+    ALWAYS_INLINE int64_t GetContainerCapacity()
+    {
+        int64_t containerCapacity = sizeof(LargeStringContainer) + (size + 1) * sizeof(int32_t);
+        return containerCapacity;
+    }
+
 private:
     ALWAYS_INLINE char *GetBufferWithSpace(uint32_t needCapacityInBytes)
     {
         // Check if the last buffer has enough space.
-        if (needCapacityInBytes <= bufferSupplier->Capacity()) {
+        if (bufferSupplier->Capacity() > 0 && needCapacityInBytes <= bufferSupplier->Capacity()) {
             return bufferSupplier->Data();
         }
 
@@ -105,9 +105,11 @@ private:
 
         // Allocate a new buffer.
         std::unique_ptr<LargeStringBuffer> newBuffer = std::make_unique<LargeStringBuffer>(toCapacityInBytes);
-        errno_t result = memcpy_s(newBuffer->Data(), newBuffer->Capacity(), oldBuffer->Data(), oldBuffer->Capacity());
-        ASSERT(result == EOK);
-
+        if (oldBuffer->Capacity() > 0) {
+            errno_t result =
+                memcpy_s(newBuffer->Data(), newBuffer->Capacity(), oldBuffer->Data(), oldBuffer->Capacity());
+            ASSERT(result == EOK);
+        }
         bufferSupplier = std::move(newBuffer);
         return bufferSupplier->Data();
     }

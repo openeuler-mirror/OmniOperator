@@ -7,6 +7,7 @@
 #include "vector/vector_common.h"
 
 using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 namespace DictionaryVectorTest {
 TEST(DictionaryVector, appendVector)
@@ -364,11 +365,7 @@ template <typename T, template <typename> typename CONTAINER> void getValue_with
     auto originVec = std::make_unique<Vector<CONTAINER<T>>>(dicSize);
 
     std::string valuePrefix;
-    if constexpr (std::is_same_v<SmallStringContainer<std::string_view>, CONTAINER<T>>) {
-        valuePrefix = "hello__";
-    } else {
-        valuePrefix = "hello_world__";
-    }
+    valuePrefix = "hello_world__";
 
     for (int32_t i = 0; i < dicSize; ++i) {
         if (i % 2 == 0) {
@@ -399,9 +396,34 @@ TEST(DictionaryVector, getValue_with_null_LargeString)
     getValue_with_null_container<std::string_view, LargeStringContainer>();
 }
 
-TEST(DictionaryVector, getValue_with_null_SmallString)
+TEST(DictionaryVector, appendDictionaryStringVector)
 {
-    // TODO: create and test small string container
-    //getValue_with_null_container<std::string_view, SmallStringContainer>();
+    int32_t vecSize = 10;
+    int32_t valueSize = 6;
+    auto originVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(vecSize);
+
+    for (int32_t i = 0; i < valueSize; ++i) {
+        auto str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.length());
+        originVec->SetValue(i, value);
+    }
+
+    int32_t otherValueSize = 4;
+    int32_t otherValues[] = {0, 1, 2, 3};
+    auto otherOriginVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(otherValueSize);
+    for (int32_t i = 0; i < otherValueSize; ++i) {
+        auto str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.length());
+        otherOriginVec->SetValue(i, value);
+    }
+    auto otherDicVecPtr = VectorHelper::CreateStringDictionary(otherValues, otherValueSize,
+        reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(otherOriginVec.get()));
+    auto *otherDicVec =
+        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(otherDicVecPtr.get());
+
+    originVec->Append(otherDicVec, 6, 4);
+    for (int i = valueSize; i < valueSize + otherValueSize; i++) {
+        EXPECT_EQ(originVec->GetValue(i), otherOriginVec->GetValue(i - valueSize));
+    }
 }
 }

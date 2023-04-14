@@ -1,35 +1,38 @@
+/*
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * @Description: container vec test implementations
+ */
+
 #include "gtest/gtest.h"
 #include "vector/vector.h"
 #include "vector/dictionary_container.h"
 #include "test.h"
-//
-// Created by ken on 2022-09-19.
-//
 
 namespace omniruntime::vec::test {
 template <typename T> void container_vector_get_set_value()
 {
-    int dictionary_size = 10, value_size = 100;
-    int *values = new int[value_size];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[value_size]);
-    for (int i = 0; i < value_size; i++) {
-        values[i] = i % dictionary_size;
+    int dictionarySize = 10;
+    int valueSize = 100;
+    int *values = new int[valueSize];
+    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[valueSize]);
+    for (int i = 0; i < valueSize; i++) {
+        values[i] = i % dictionarySize;
         nulls[i] = false;
     }
 
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<T>::DICTIONARY_TYPE;
 
-    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionary_size);
-    auto container = std::make_shared<DictionaryContainer<T>>(values, value_size, dictionary, dictionary_size, 0);
-    Vector<DictionaryContainer<T>> vector(value_size, container, nulls);
+    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionarySize);
+    auto container = std::make_shared<DictionaryContainer<T>>(values, valueSize, dictionary, dictionarySize, 0);
+    Vector<DictionaryContainer<T>> vector(valueSize, container, nulls);
     T value;
-    for (int i = 0; i < value_size; i++) {
+    for (int i = 0; i < valueSize; i++) {
         value = vector.GetValue(i);
-        EXPECT_EQ(dictionary[i % dictionary_size], value);
+        EXPECT_EQ(dictionary[i % dictionarySize], value);
     }
 
-    for (int i = 0; i < value_size; i++) {
-        value = dictionary[(i + 1) % dictionary_size];
+    for (int i = 0; i < valueSize; i++) {
+        value = dictionary[(i + 1) % dictionarySize];
         vector.SetValue(i, value);
         EXPECT_EQ(value, vector.GetValue(i));
     }

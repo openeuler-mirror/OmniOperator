@@ -119,7 +119,7 @@ JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getData
  * Signature: (J)J;
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative(JNIEnv *, jclass,
-    jlong, jint);
+    jlong);
 
 /*
  * Class:     Java_nova_hetu_omniruntime_memory_MemoryManager

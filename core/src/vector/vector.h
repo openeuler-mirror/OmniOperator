@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Description: vector  implementation
+ */
 #ifndef OMNI_RUNTIME_VECTOR_H
 #define OMNI_RUNTIME_VECTOR_H
 #pragma once
@@ -11,8 +15,8 @@
 #include "dictionary_container.h"
 #include "util/debug.h"
 #include "util/compiler_util.h"
-#include "small_string_container.h"
 #include "large_string_container.h"
+#include "memory/memory_trace.h"
 
 namespace omniruntime::vec::unsafe {
 class UnsafeBaseVector;
@@ -44,23 +48,17 @@ public:
             // fixme: Initialization of nulls should replace new with make_shared, when the C++ version is upgraded
             // to 20.
             this->nulls = std::shared_ptr<bool[]>(new bool[size]);
-            memset(this->nulls.get(), 0, sizeB * size);
-            omniruntime::mem::ThreadMemoryManager::ReportMemory(GetNullsCapacity(this->nulls));
+            memset_sp(this->nulls.get(), sizeB * size, 0, sizeB * size);
         }
     }
 
-    virtual ~BaseVector()
-    {
-        if (!isSliced) {
-            omniruntime::mem::ThreadMemoryManager::ReclaimMemory(GetNullsCapacity(this->nulls));
-        }
-    }
+    virtual ~BaseVector() = default;
 
     /* *
      * set the element at the index position to null
      * Attention: String vector has its own SetNull, need call corresponding SetNull when string vector
      * @param index
-     *        */
+     *                */
     void ALWAYS_INLINE SetNull(int32_t index)
     {
         nulls[index] = true;
@@ -70,6 +68,21 @@ public:
     void ALWAYS_INLINE SetNotNull(int32_t index)
     {
         nulls[index] = false;
+    }
+
+    void SetNulls(int startIndex, bool *nullsPtr, int length)
+    {
+        if (startIndex + length > this->size) {
+            LogError("vector is out of range(needed size:%d, real size:%d).", startIndex + length, this->size);
+            return;
+        }
+
+        bool *startAddr = reinterpret_cast<bool *>(this->nulls.get());
+        errno_t ret =
+            memcpy_s(startAddr + startIndex, GetNullsCapacity(this->nulls.get()), nullsPtr, length * sizeof(bool));
+        if (ret != EOK) {
+            LogError("memory copy failed.");
+        }
     }
 
     /* *
@@ -137,12 +150,12 @@ public:
     }
 
 protected:
-    int64_t ALWAYS_INLINE GetNullsCapacity(std::shared_ptr<bool[]> ptr)
+    int64_t ALWAYS_INLINE GetNullsCapacity(bool *nulls)
     {
 #ifdef COVERAGE
         return size * sizeof(bool);
 #else
-        return  malloc_usable_size(ptr.get());
+        return malloc_usable_size(nulls);
 #endif
     }
 
@@ -169,20 +182,27 @@ public:
      */
     explicit Vector(int vSize) : BaseVector(vSize), values(std::shared_ptr<RAW_DATA_TYPE[]>(new RAW_DATA_TYPE[vSize]))
     {
-        // vector class, and values total capacity
-        int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>) + GetValuesCapacity(values);
+        // vector class, values total capacity and nulls total capacity
+        int64_t vectorCapacity =
+            sizeof(Vector<RAW_DATA_TYPE>) + GetValuesCapacity(values.get()) + BaseVector::GetNullsCapacity(nulls.get());
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
-    virtual ~Vector()
+    virtual ~Vector() override
     {
         if ((encoding == OMNI_FLAT) && (values != nullptr)) {
             int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>);
             if (!isSliced) {
-                // vector class, and values total capacity
-                vectorCapacity += GetValuesCapacity(values);
+                // vector class, nulls total capacity and values total capacity
+                vectorCapacity += BaseVector::GetNullsCapacity(nulls.get()) + GetValuesCapacity(values.get());
             }
             omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
+#ifdef TRACE
+            omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
         }
     }
 
@@ -194,10 +214,13 @@ public:
     Vector(int vSize, Encoding encoding, std::shared_ptr<bool[]> nulls, std::shared_ptr<RAW_DATA_TYPE[]> values)
         : BaseVector(vSize, encoding, nulls)
     {
-        this->values = values;  // copy the data field shared_ptr
+        this->values = values; // copy the data field shared_ptr
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
     /* *
@@ -208,6 +231,27 @@ public:
     void ALWAYS_INLINE SetValue(int index, typename PARAM_TYPE<RAW_DATA_TYPE>::type value)
     {
         values[index] = value;
+    }
+
+    /* *
+     * Set the values from start index
+     * @param startIndex
+     * @param values
+     * @param length
+     */
+    void ALWAYS_INLINE SetValues(int startIndex, const void *values, int length)
+    {
+        if (startIndex + length > this->size) {
+            LogError("vector is out of range(needed size:%d, real size:%d).", startIndex + length, this->size);
+            return;
+        }
+
+        RAW_DATA_TYPE *startAddr = reinterpret_cast<RAW_DATA_TYPE *>(this->values.get());
+        errno_t ret = memcpy_s(startAddr + startIndex, GetValuesCapacity(this->values.get()), values,
+            length * sizeof(RAW_DATA_TYPE));
+        if (ret != EOK) {
+            LogError("memory copy failed.");
+        }
     }
 
     /* *
@@ -233,17 +277,17 @@ public:
             LogError("append vector out of range(needed size:%d, real size:%d).", positionOffset + length, size);
             return;
         }
+
         if (other->GetEncoding() == OMNI_FLAT) {
             auto src = reinterpret_cast<Vector<RAW_DATA_TYPE> *>(other);
-            for (int32_t i = 0; i < length; i++) {
-                nulls[i + positionOffset] = src->IsNull(i);
-                SetValue(i + positionOffset, src->GetValue(i));
-            }
+            SetNulls(positionOffset, src->nulls.get() + src->offset, length);
+            SetValues(positionOffset, src->values.get() + src->offset, length);
         } else { // for dictionay
             auto src = reinterpret_cast<Vector<DictionaryContainer<RAW_DATA_TYPE>> *>(other);
             for (int32_t i = 0; i < length; i++) {
-                nulls[i + positionOffset] = src->IsNull(i);
-                SetValue(i + positionOffset, src->GetValue(i));
+                auto index = i + positionOffset;
+                nulls[index] = src->IsNull(i);
+                SetValue(index, src->GetValue(i));
             }
         }
     }
@@ -261,8 +305,9 @@ public:
             return nullptr;
         }
         auto vector = std::make_unique<Vector<RAW_DATA_TYPE>>(length);
+        auto startPositions = positions + positionOffset;
         for (int32_t i = 0; i < length; i++) {
-            int position = positions[positionOffset + i];
+            int position = startPositions[i];
             vector->nulls[i] = IsNull(position);
             vector->SetValue(i, GetValue(position));
         }
@@ -291,12 +336,12 @@ public:
     }
 
 protected:
-    int64_t ALWAYS_INLINE GetValuesCapacity(std::shared_ptr<RAW_DATA_TYPE[]> ptr)
+    int64_t ALWAYS_INLINE GetValuesCapacity(RAW_DATA_TYPE *values)
     {
 #ifdef COVERAGE
         return size * sizeof(RAW_DATA_TYPE);
 #else
-        return  malloc_usable_size(ptr.get());
+        return malloc_usable_size(values);
 #endif
     }
 
@@ -315,28 +360,39 @@ public:
         std::shared_ptr<bool[]> nulls)
         : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
     {
-        // vector class capacity, size* sizeof(bool) is reclaimed in BaseVector destructor.
-        int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>) + BaseVector::GetNullsCapacity(nulls);
+        // vector class capacity, nulls total capacity and container total capacity.
+        int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>) +
+            BaseVector::GetNullsCapacity(nulls.get()) + container->GetContainerCapacity();
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
     // used for vector slice, sliced vector use same container as parent vector
     Vector(int size, std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> container,
-           std::shared_ptr<bool[]> nulls, bool isSliced)
-            : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
+        std::shared_ptr<bool[]> nulls, bool isSliced)
+        : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
     {
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
-    ~Vector()
+    ~Vector() override
     {
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>);
+        if (!this->isSliced) {
+            vectorCapacity += BaseVector::GetNullsCapacity(this->nulls.get()) + container->GetContainerCapacity();
+        }
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
-
-        // nulls reclaimed by baseVector
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
     /* *
@@ -379,13 +435,15 @@ public:
         std::shared_ptr<bool[]> newNulls = std::shared_ptr<bool[]>(new bool[length]);
         // new positions
         std::vector<int32_t> newPositions(length);
+        auto startPositions = positions + positionOffset;
         for (int32_t i = 0; i < length; i++) {
-            newNulls[i] = this->IsNull(positions[i + positionOffset]);
-            newPositions[i] = positions[i + positionOffset] + this->offset;
+            auto position = startPositions[i];
+            newNulls[i] = this->IsNull(position);
+            newPositions[i] = position + this->offset;
         }
         // new container
         std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> newContainer =
-            container->CopyPosition(newPositions.data(), length);
+            container->CopyPositions(newPositions.data(), length);
         return std::make_unique<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>>(length, newContainer, newNulls);
     }
 
@@ -431,9 +489,13 @@ public:
         this->stringEncoding = OMNI_LARGE_STRING;
         // default string_view vector use large string encoding
         this->container = std::make_shared<LargeStringContainer<std::string_view>>(size, capacityInBytes);
-        // vector class capacity
-        int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>);
+        // vector class capacity, nulls total capacity and values total capacity
+        int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>) +
+            BaseVector::GetNullsCapacity(this->nulls.get()) + container->GetContainerCapacity();
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
     // used for vector slice, sliced vector use same container as parent vector
@@ -445,19 +507,28 @@ public:
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
-    ~Vector()
+    ~Vector() override
     {
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>);
+        if (!this->isSliced) {
+            vectorCapacity += BaseVector::GetNullsCapacity(this->nulls.get()) + container->GetContainerCapacity();
+        }
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
     /* *
      * set the element at the index position to null
      * @param index
-     *      */
+     *             */
     void ALWAYS_INLINE SetNull(int32_t index)
     {
         BaseVector::SetNull(index);
@@ -469,7 +540,7 @@ public:
      * @param index
      * @param value
      */
-    void ALWAYS_INLINE SetValue(int index, std::string_view value)
+    void ALWAYS_INLINE SetValue(int index, std::string_view &value)
     {
         container->SetValue(index, value);
     }
@@ -502,20 +573,24 @@ public:
             auto src = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(other);
             for (int32_t i = 0; i < length; i++) {
                 bool isNull = src->IsNull(i);
+                auto index = i + positionOffset;
                 if (!isNull) {
-                    SetValue(i + positionOffset, src->GetValue(i));
+                    auto value = src->GetValue(i);
+                    SetValue(index, value);
                 } else {
-                    SetNull(i + positionOffset);
+                    SetNull(index);
                 }
             }
         } else { // for dictionay
             auto src = reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(other);
             for (int32_t i = 0; i < length; i++) {
                 bool isNull = src->IsNull(i);
+                auto index = i + positionOffset;
                 if (!isNull) {
-                    SetValue(i + positionOffset, src->GetValue(i));
+                    auto value = src->GetValue(i);
+                    SetValue(index, value);
                 } else {
-                    SetNull(i + positionOffset);
+                    SetNull(index);
                 }
             }
         }
@@ -536,12 +611,14 @@ public:
         }
 
         auto vector = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(length);
+        auto startPositions = positions + offset;
         for (int32_t i = 0; i < length; i++) {
-            int position = positions[offset + i];
+            auto position = startPositions[i];
             if (this->IsNull(position)) {
                 vector->SetNull(i);
             } else {
-                vector->SetValue(i, GetValue(position));
+                auto value = GetValue(position);
+                vector->SetValue(i, value);
             }
         }
         return vector;
@@ -572,147 +649,6 @@ public:
 private:
     friend class unsafe::UnsafeStringVector;
     std::shared_ptr<LargeStringContainer<std::string_view>> container;
-};
-
-/**
- * The master template for the vector class supporting string encoding
- * @tparam string_view : meta of string
- */
-template <typename RAW_DATA_TYPE>
-class Vector<SmallStringContainer<RAW_DATA_TYPE>> final : public Vector<RAW_DATA_TYPE> {
-public:
-    explicit Vector(int size) : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */)
-    {
-        this->stringEncoding = OMNI_SMALL_STRING;
-        this->container = std::make_shared<SmallStringContainer<std::string_view>>(size);
-        // vector class capacity
-        int64_t vectorCapacity = sizeof(Vector<SmallStringContainer<RAW_DATA_TYPE>>);
-        omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-    }
-
-    // used for vector slice, sliced vector use same container as parent vector
-    explicit Vector(int size, std::shared_ptr<SmallStringContainer<std::string_view>> container,
-        std::shared_ptr<bool[]> nulls)
-        : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */, nulls), container(container)
-    {
-        this->stringEncoding = OMNI_SMALL_STRING;
-        // vector class capacity
-        int64_t vectorCapacity = sizeof(Vector<SmallStringContainer<RAW_DATA_TYPE>>);
-        omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-    }
-
-    ~Vector()
-    {
-        int64_t vectorCapacity = sizeof(Vector<SmallStringContainer<RAW_DATA_TYPE>>);
-        omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
-    }
-
-    /* *
-     * Set the value at the indicated index
-     * @param index
-     * @param value
-     */
-    void ALWAYS_INLINE SetValue(int index, std::string_view value)
-    {
-        container->SetValue(index, value);
-    }
-
-    /* *
-     * Gets the value of the vector at the indicated index
-     * @param index
-     * @return
-     */
-    ALWAYS_INLINE std::string_view GetValue(int index)
-    {
-        return container->GetValue(index + this->offset);
-    }
-
-    /* *
-     * append data to the current vector
-     *
-     * @param other the dst data from
-     * @param positionOffset element position
-     * @param length number of elements
-     */
-    void Append(BaseVector *other, int positionOffset, int length)
-    {
-        if (positionOffset + length > this->size) {
-            LogError("append vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return;
-        }
-
-        if (other->GetEncoding() == OMNI_FLAT) {
-            auto src = reinterpret_cast<Vector<SmallStringContainer<std::string_view>> *>(other);
-            for (int32_t i = 0; i < length; i++) {
-                bool isNull = src->IsNull(i);
-                this->nulls[i + positionOffset] = isNull;
-                if (!isNull) {
-                    SetValue(i + positionOffset, src->GetValue(i));
-                }
-            }
-        } else { // for dictionay
-            auto src = reinterpret_cast<Vector<DictionaryContainer<std::string_view, SmallStringContainer>> *>(other);
-            for (int32_t i = 0; i < length; i++) {
-                bool isNull = src->IsNull(i);
-                this->nulls[i + positionOffset] = isNull;
-                if (!isNull) {
-                    SetValue(i + positionOffset, src->GetValue(i));
-                }
-            }
-        }
-    }
-
-    /* *
-     * Copies the values of the vector at the indicated positions
-     * @param positions
-     * @param offset
-     * @param length
-     */
-    std::unique_ptr<Vector<SmallStringContainer<std::string_view>>> CopyPositions(const int *positions, int offset,
-        int length)
-    {
-        if ((positions == nullptr) || (length < 0)) {
-            LogError("positions is null or the input length is incorrect: %d.", length);
-            return nullptr;
-        }
-
-        auto vector = std::make_unique<Vector<SmallStringContainer<std::string_view>>>(length);
-        for (int32_t i = 0; i < length; i++) {
-            int position = positions[offset + i];
-            if (this->IsNull(position)) {
-                vector->SetNull(i);
-            } else {
-                vector->SetValue(i, GetValue(position));
-            }
-        }
-        return vector;
-    }
-
-    /* *
-     * Create a new vector based on a slice of the vector. The returned Vector is
-     * a read-only vector which shares data memory with the original vector,
-     * if the vector data is modified, the original vector data is also modified.
-     *
-     * @param positionOffset
-     * @param length
-     */
-    std::unique_ptr<Vector<SmallStringContainer<std::string_view>>> Slice(int positionOffset, int length,
-        bool isCopy = false)
-    {
-        if (positionOffset + length > this->size) {
-            LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return nullptr;
-        }
-        // copy the data field shared_ptr
-        auto sliced = std::make_unique<Vector<SmallStringContainer<std::string_view>>>(length, container, this->nulls);
-        sliced->offset = this->offset + positionOffset; // update offset
-        sliced->isSliced = true;
-        return std::move(sliced);
-    }
-
-private:
-    friend class unsafe::UnsafeStringVector;
-    std::shared_ptr<SmallStringContainer<std::string_view>> container;
 };
 }
 

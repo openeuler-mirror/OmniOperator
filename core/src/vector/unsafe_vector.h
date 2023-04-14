@@ -75,11 +75,11 @@ public:
 
     template <typename DATA_TYPE>
     static ALWAYS_INLINE int32_t *GetIdsWithOffset(Vector<DictionaryContainer<DATA_TYPE>> *vector,
-        int32_t *IdsWithOffset, int offset, int rowCount)
+        int32_t *idsWithOffset, int offset, int rowCount)
     {
         int *ids = GetIds(vector) + offset;
 
-        auto *ptr = IdsWithOffset;
+        auto *ptr = idsWithOffset;
         for (int32_t i = 0; i < rowCount; i++) {
             ptr[i] = ids[i];
         }
@@ -93,11 +93,6 @@ public:
  */
 class UnsafeStringVector {
 public:
-    static ALWAYS_INLINE char *GetValues(Vector<SmallStringContainer<std::string_view>> *vector)
-    {
-        return UnsafeStringContainer::GetValues(vector->container.get());
-    }
-
     static ALWAYS_INLINE int32_t *GetOffsets(Vector<LargeStringContainer<std::string_view>> *vector)
     {
         return UnsafeStringContainer::GetOffsets(vector->container.get()) + vector->offset;
@@ -106,12 +101,6 @@ public:
     static ALWAYS_INLINE char *GetValues(Vector<LargeStringContainer<std::string_view>> *vector)
     {
         return UnsafeStringContainer::GetValues(vector->container.get());
-    }
-
-    static ALWAYS_INLINE std::shared_ptr<SmallStringContainer<std::string_view>> GetContainer(
-        Vector<SmallStringContainer<std::string_view>> *vector)
-    {
-        return vector->container;
     }
 
     static ALWAYS_INLINE std::shared_ptr<LargeStringContainer<std::string_view>> GetContainer(

@@ -43,7 +43,7 @@ void RecordOutputVectorsStack(VectorBatch &outputVecBatch, JNIEnv *env)
 #endif
 }
 
-jobject transform(JNIEnv *env, VectorBatch &result, std::vector<DataTypePtr> &outputTypes)
+jobject transform(JNIEnv *env, VectorBatch &result, std::vector<omniruntime::type::DataTypePtr> &outputTypes)
 {
     int32_t vecCount = result.GetVectorCount();
     long vecAddresses[vecCount];
@@ -59,9 +59,9 @@ jobject transform(JNIEnv *env, VectorBatch &result, std::vector<DataTypePtr> &ou
         encodings[i] = vector->GetEncoding();
         // By default, all 3 buf arrays will have a value,
         // if not, it will be 0, which means a null pointer.
-        valueBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::GetValues(vector, dataTypeIds[i]));
-        nullBufAddrs[i] = reinterpret_cast<uintptr_t>(UnsafeBaseVector::GetNulls(vector));
-        offsetsBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::GetOffsetsAddr(vector, dataTypeIds[i]));
+        valueBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(vector, dataTypeIds[i]));
+        nullBufAddrs[i] = reinterpret_cast<uintptr_t>(omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(vector));
+        offsetsBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetOffsetsAddr(vector, dataTypeIds[i]));
     }
 
     // set vector addresses parameter to vector batch construct.

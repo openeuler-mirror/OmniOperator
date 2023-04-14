@@ -87,13 +87,12 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getCapacityInBytesN
     jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    if (nativeVector ->GetStringEncoding() != OMNI_LARGE_STRING) {
+    if (nativeVector->GetStringEncoding() != OMNI_LARGE_STRING) {
         // TODO: return the real capacity for fixed width vector
         return 0;
     }
-    auto *varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
-            jNativeVector);
-    return UnsafeStringVector::GetContainer(varCharVector)->GetCapacityInBytes();
+    auto *varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(jNativeVector);
+    return omniruntime::vec::unsafe::UnsafeStringVector::GetContainer(varCharVector)->GetCapacityInBytes();
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getSizeNative(JNIEnv *env, jclass jcls,
@@ -111,7 +110,7 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_setSizeNative(JNIEn
         std::cerr << "size is error, the range is[0," << nativeVector->GetSize() << "]" << std::endl;
         return jSize;
     }
-    UnsafeBaseVector::SetSize(nativeVector, jSize);
+    omniruntime::vec::unsafe::UnsafeBaseVector::SetSize(nativeVector, jSize);
     return jSize;
 }
 
@@ -119,14 +118,15 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative(JN
     jlong jNativeVector, jint dataTypeId)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(VectorHelper::GetValues(nativeVector, dataTypeId));
+    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector, dataTypeId));
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNative(JNIEnv *env, jclass jcls,
     jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(UnsafeBaseVector::GetNulls(nativeVector)));
+    return reinterpret_cast<uintptr_t>(
+        reinterpret_cast<void *>(omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(nativeVector)));
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositionNative(JNIEnv *env, jclass jcls,
@@ -141,7 +141,7 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_setDataTyp
 {
     ContainerVector *containerVec = reinterpret_cast<ContainerVector *>(jNativeVector);
     auto dataTypeString = env->GetStringUTFChars(dataTypes, JNI_FALSE);
-    containerVec->SetDataTypes(Deserialize(dataTypeString).Get());
+    containerVec->SetDataTypes(omniruntime::type::Deserialize(dataTypeString).Get());
     env->ReleaseStringUTFChars(dataTypes, dataTypeString);
 }
 
@@ -164,10 +164,11 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative(
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getValueOffsetsNative(JNIEnv *env,
-    jclass jcls, jlong jNativeVector, jint jVectorTypeId)
+    jclass jcls, jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(VectorHelper::GetOffsetsAddr(nativeVector, jVectorTypeId));
+    return reinterpret_cast<uintptr_t>(
+        VectorHelper::UnsafeGetOffsetsAddr(nativeVector, omniruntime::type::DataTypeId::OMNI_VARCHAR));
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_setGlobalMemoryLimitNative(JNIEnv *env,
@@ -214,7 +215,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDicti
     jlong jNativeVector, jint dataTypeId)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(VectorHelper::GetDictionary(nativeVector, dataTypeId));
+    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetDictionary(nativeVector, dataTypeId));
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getVecEncodingNative(JNIEnv *env, jclass jcls,
@@ -227,9 +228,9 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getVecEncodingNativ
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataCapacity(JNIEnv *env, jclass jcls,
     jlong jNativeVector, jint jToCapacityInBytes)
 {
-    auto nativeVector =
-            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(jNativeVector);
-    char *newBuffAddress = UnsafeStringVector::ExpandStringBuffer(nativeVector, jToCapacityInBytes);
+    auto nativeVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(jNativeVector);
+    char *newBuffAddress =
+        omniruntime::vec::unsafe::UnsafeStringVector::ExpandStringBuffer(nativeVector, jToCapacityInBytes);
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(newBuffAddress));
 }
 

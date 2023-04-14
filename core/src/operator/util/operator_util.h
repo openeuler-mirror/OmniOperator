@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 #ifndef OMNI_RUNTIME_OPERATOR_UTIL_H
 #define OMNI_RUNTIME_OPERATOR_UTIL_H
@@ -16,7 +16,6 @@
 
 namespace omniruntime {
 namespace op {
-using namespace omniruntime::type;
 class OperatorUtil {
     template <typename T> using LargeStringContainer = vec::LargeStringContainer<T>;
     using VarcharVector = vec::Vector<LargeStringContainer<std::string_view>>;
@@ -356,18 +355,18 @@ public:
 
         auto result = std::make_unique<Vector>(rowCount);
         ExecutionContext context;
-        int64_t outData = reinterpret_cast<int64_t>(vec::VectorHelper::GetValues(result.get(), typeId));
+        int64_t outData = reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(result.get(), typeId));
         bool *outNull = unsafe::UnsafeBaseVector::GetNulls(result.get());
-        int32_t *outOffset = reinterpret_cast<int32_t *>(vec::VectorHelper::GetOffsetsAddr(result.get(), typeId));
+        int32_t *outOffset = reinterpret_cast<int32_t *>(vec::VectorHelper::UnsafeGetOffsetsAddr(result.get(), typeId));
 
         if constexpr (std::is_same_v<Type, std::string_view>) {
             func(valuesAddresses, rowCount, reinterpret_cast<int64_t>(result.get()), nullptr, rowCount, valueNulls,
-                 valueOffsets, outNull, outOffset, reinterpret_cast<int64_t>(&context), dictVectorAddrs);
+                valueOffsets, outNull, outOffset, reinterpret_cast<int64_t>(&context), dictVectorAddrs);
         } else {
-            func(valuesAddresses, rowCount, outData, nullptr, rowCount, valueNulls,
-                 valueOffsets, outNull, outOffset, reinterpret_cast<int64_t>(&context), dictVectorAddrs);
+            func(valuesAddresses, rowCount, outData, nullptr, rowCount, valueNulls, valueOffsets, outNull, outOffset,
+                reinterpret_cast<int64_t>(&context), dictVectorAddrs);
         }
-        result->SetNullFlag(true);
+
         return std::move(result);
     }
 
@@ -384,7 +383,8 @@ public:
                 continue;
             }
             newVecBatch->Append(DYNAMIC_TYPE_DISPATCH(ProjectVector, newInputTypes.GetType(projectCol)->GetId(),
-                projectFuncs[projectFuncsIndex++], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
+                projectFuncs[projectFuncsIndex++], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount)
+                                    .release());
         }
     }
 
@@ -417,74 +417,21 @@ public:
                 vec::VectorHelper::SliceVector(inputVector, inputTypes.GetIds()[i], 0, rowCount);
 
             if (newInputVec->GetEncoding() != vec::OMNI_DICTIONARY) {
-                valueAddresses[i] =
-                    reinterpret_cast<int64_t>(vec::VectorHelper::GetValues(newInputVec.get(), inputTypes.GetIds()[i]));
+                valueAddresses[i] = reinterpret_cast<int64_t>(
+                    vec::VectorHelper::UnsafeGetValues(newInputVec.get(), inputTypes.GetIds()[i]));
                 dictVectorAddrs[i] = 0;
             } else {
                 valueAddresses[i] = 0;
                 dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(newInputVec.get()));
             }
             valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(newInputVec.get()));
-            valueOffsets[i] =
-                reinterpret_cast<int64_t>(vec::VectorHelper::GetOffsetsAddr(newInputVec.get(), inputTypes.GetIds()[i]));
-            newInputVecBatch->Append(std::move(newInputVec));
+            valueOffsets[i] = reinterpret_cast<int64_t>(
+                vec::VectorHelper::UnsafeGetOffsetsAddr(newInputVec.get(), inputTypes.GetIds()[i]));
+            newInputVecBatch->Append(newInputVec.release());
         }
 
         ProjectVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets, dictVectorAddrs,
             rowCount, newInputVecBatch);
-        return newInputVecBatch;
-    }
-
-    static vec::VectorBatch *ProjectRequiredVectors(vec::VectorBatch *inputVecBatch, const DataTypes &originTypes,
-        const DataTypes &inputTypes, const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
-    {
-        int32_t vecCount = projectCols.size();
-        int32_t rowCount = inputVecBatch->GetRowCount();
-        auto newInputVecBatch = new vec::VectorBatch(rowCount);
-        // short-circuit logic for column projections
-        // no need to go through codegen
-        if (rowCount == 0) {
-            vec::VectorHelper::AppendVectors(newInputVecBatch, inputTypes, rowCount);
-            return newInputVecBatch;
-        }
-
-        int32_t projectFuncsCount = projectFuncs.size();
-
-        int32_t originVecCount = inputVecBatch->GetVectorCount();
-        int64_t valueAddresses[originVecCount];
-        int64_t valueNulls[originVecCount];
-        int64_t valueOffsets[originVecCount];
-        int64_t dictVectorAddrs[originVecCount];
-
-        for (int32_t i = 0; i < originVecCount; i++) {
-            auto inputVector = inputVecBatch->Get(i);
-            if (inputVector->GetEncoding() != vec::OMNI_DICTIONARY) {
-                valueAddresses[i] = DYNAMIC_TYPE_DISPATCH(GetRawAddr, originTypes.GetType(i)->GetId(), inputVector);
-                dictVectorAddrs[i] = 0;
-            } else {
-                valueAddresses[i] = 0;
-                dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(inputVector));
-            }
-            valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(inputVector));
-            valueOffsets[i] = reinterpret_cast<int64_t>(
-                vec::VectorHelper::GetOffsetsAddr(inputVector, originTypes.GetType(i)->GetId()));
-        }
-
-        for (int32_t i = 0, projectFuncsIndex = 0; i < vecCount; i++) {
-            int32_t sourceColId = projectCols[i];
-            if (sourceColId >= 0) {
-                // source col append project colmun
-                auto inputVector = inputVecBatch->Get(sourceColId);
-                std::unique_ptr<BaseVector> newInputVec =
-                    vec::VectorHelper::SliceVector(inputVector, inputTypes.GetIds()[i], 0, rowCount);
-                newInputVecBatch->Append(std::move(newInputVec));
-            } else if (sourceColId == -1 && projectFuncsCount > 0) {
-                // append withexpr colmun
-                newInputVecBatch->Append(DYNAMIC_TYPE_DISPATCH(ProjectVector, inputTypes.GetType(i)->GetId(),
-                    projectFuncs[projectFuncsIndex++], valueAddresses, valueNulls, valueOffsets, dictVectorAddrs,
-                    rowCount));
-            }
-        }
         return newInputVecBatch;
     }
 

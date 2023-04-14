@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 #ifndef OMNI_RUNTIME_VECTOR_HELPER_H
 #define OMNI_RUNTIME_VECTOR_HELPER_H
@@ -12,8 +12,6 @@
 #include "operator/aggregation/container_vector.h"
 
 namespace omniruntime::vec {
-using namespace omniruntime::type;
-using namespace omniruntime::vec::unsafe;
 class VectorHelper {
 public:
     static std::unique_ptr<BaseVector> CreateStringDictionary(int32_t *values, int32_t valueSize,
@@ -53,11 +51,7 @@ public:
     static ALWAYS_INLINE std::unique_ptr<BaseVector> CreateStringVector(uint32_t vectorSize,
         uint32_t stringWidth = OMNI_LARGE_WIDTH)
     {
-        if (stringWidth > STRING_SIZE_THRESHOLD) {
-            return std::make_unique<Vector<LargeStringContainer<std::string_view>>>(vectorSize);
-        } else {
-            return std::make_unique<Vector<SmallStringContainer<std::string_view>>>(vectorSize);
-        }
+        return std::make_unique<Vector<LargeStringContainer<std::string_view>>>(vectorSize);
     }
 
     static std::unique_ptr<BaseVector> CreateVector(int32_t vectorEncodingId, int32_t dataTypeId, int32_t size,
@@ -74,8 +68,8 @@ public:
         }
     }
 
-    template <type::DataTypeId typeId> static std::unique_ptr<BaseVector> CreateFlatVector(int32_t size,
-        int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    template <type::DataTypeId typeId>
+    static std::unique_ptr<BaseVector> CreateFlatVector(int32_t size, int32_t capacityInBytes = INITIAL_STRING_SIZE)
     {
         using T = typename type::NativeType<typeId>::type;
         if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
@@ -84,8 +78,7 @@ public:
         return std::make_unique<Vector<T>>(size);
     }
 
-    template <type::DataTypeId typeId>
-    static void VectorSetValue(vec::BaseVector *vector, int32_t index, void *value)
+    template <type::DataTypeId typeId> static void VectorSetValue(vec::BaseVector *vector, int32_t index, void *value)
     {
         using T = typename type::NativeType<typeId>::type;
         if (value == nullptr) {
@@ -169,29 +162,28 @@ public:
         int dataTypeId)
     {
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int32_t> *>(vector));
             }
-            case OMNI_SHORT:
+            case type::OMNI_SHORT:
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int16_t> *>(vector));
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int64_t> *>(vector));
             }
-            case OMNI_DECIMAL128: {
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<Decimal128> *>(vector));
+            case type::OMNI_DECIMAL128: {
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<type::Decimal128> *>(vector));
             }
-            case OMNI_DOUBLE: {
+            case type::OMNI_DOUBLE: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<double> *>(vector));
             }
-            case OMNI_BOOLEAN: {
+            case type::OMNI_BOOLEAN: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<bool> *>(vector));
             }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                // TODO: need to support Vector<SmallStringContainer>
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
                 return CreateStringDictionary(values, valueSize,
                     reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector));
             }
@@ -202,44 +194,44 @@ public:
         }
     }
 
-    static void *GetValuesDictionary(BaseVector *vector, int32_t dataTypeId)
+    static void *UnsafeGetValuesDictionary(BaseVector *vector, int32_t dataTypeId)
     {
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetIds(reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vector)));
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
+                    reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vector)));
             }
-            case OMNI_SHORT: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetIds(reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)));
+            case type::OMNI_SHORT: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
+                    reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)));
             }
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetIds(reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)));
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
+                    reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)));
             }
-            case OMNI_DECIMAL128: {
-                return reinterpret_cast<void *>(UnsafeDictionaryVector::GetIds(
-                    reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(vector)));
+            case type::OMNI_DECIMAL128: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
+                    reinterpret_cast<Vector<DictionaryContainer<type::Decimal128>> *>(vector)));
             }
-            case OMNI_DOUBLE: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetIds(reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)));
+            case type::OMNI_DOUBLE: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
+                    reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)));
             }
-            case OMNI_BOOLEAN: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetIds(reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)));
+            case type::OMNI_BOOLEAN: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
+                    reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)));
             }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
                 if (vector->GetStringEncoding() == OMNI_LARGE_STRING) {
-                    return reinterpret_cast<void *>(UnsafeDictionaryVector::GetIds(
+                    return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
                         reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(
                         vector)));
                 }
-                return reinterpret_cast<void *>(UnsafeDictionaryVector::GetIds(
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
                     reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector)));
             }
             default: {
@@ -249,49 +241,47 @@ public:
         }
     }
 
-    static void *GetValues(BaseVector *vector, int32_t dataTypeId)
+    static void *UnsafeGetValues(BaseVector *vector, int32_t dataTypeId)
     {
         if (vector->GetEncoding() == OMNI_DICTIONARY) {
-            return GetValuesDictionary(vector, dataTypeId);
+            return UnsafeGetValuesDictionary(vector, dataTypeId);
         }
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
                 return reinterpret_cast<void *>(
-                    UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(vector)));
+                    unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(vector)));
             }
-            case OMNI_SHORT: {
+            case type::OMNI_SHORT: {
                 return reinterpret_cast<void *>(
-                    UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(vector)));
+                    unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(vector)));
             }
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<void *>(
-                    UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(vector)));
+                    unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(vector)));
             }
-            case OMNI_DECIMAL128: {
+            case type::OMNI_DECIMAL128: {
                 return reinterpret_cast<void *>(
-                    UnsafeVector::GetRawValues(reinterpret_cast<Vector<Decimal128> *>(vector)));
+                    unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<type::Decimal128> *>(vector)));
             }
-            case OMNI_DOUBLE: {
-                return reinterpret_cast<void *>(UnsafeVector::GetRawValues(reinterpret_cast<Vector<double> *>(vector)));
-            }
-            case OMNI_BOOLEAN: {
-                return reinterpret_cast<void *>(UnsafeVector::GetRawValues(reinterpret_cast<Vector<bool> *>(vector)));
-            }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                if (vector->GetStringEncoding() == OMNI_LARGE_STRING) {
-                    return reinterpret_cast<void *>(UnsafeStringVector::GetValues(
-                        reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)));
-                }
-                return reinterpret_cast<void *>(UnsafeStringVector::GetValues(
-                    reinterpret_cast<Vector<SmallStringContainer<std::string_view>> *>(vector)));
-            }
-            case OMNI_CONTAINER:
+            case type::OMNI_DOUBLE: {
                 return reinterpret_cast<void *>(
-                    UnsafeVector::GetRawValues(reinterpret_cast<ContainerVector *>(vector)));
+                    unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<double> *>(vector)));
+            }
+            case type::OMNI_BOOLEAN: {
+                return reinterpret_cast<void *>(
+                    unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<bool> *>(vector)));
+            }
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
+                return reinterpret_cast<void *>(unsafe::UnsafeStringVector::GetValues(
+                    reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)));
+            }
+            case type::OMNI_CONTAINER:
+                return reinterpret_cast<void *>(
+                    unsafe::UnsafeVector::GetRawValues(reinterpret_cast<ContainerVector *>(vector)));
             default: {
                 LogError("No such data type %d", dataTypeId);
                 break;
@@ -299,15 +289,15 @@ public:
         }
     }
 
-    static void *GetOffsetsAddr(BaseVector *vector, int32_t dataTypeId)
+    static void *UnsafeGetOffsetsAddr(BaseVector *vector, int32_t dataTypeId)
     {
-        if (dataTypeId == OMNI_VARCHAR || dataTypeId == OMNI_CHAR) {
+        if (dataTypeId == type::OMNI_VARCHAR || dataTypeId == type::OMNI_CHAR) {
             if (vector->GetEncoding() == OMNI_DICTIONARY) {
                 auto dictVarCharVec = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
-                return UnsafeDictionaryVector::GetDictionaryOffsets(dictVarCharVec);
+                return unsafe::UnsafeDictionaryVector::GetDictionaryOffsets(dictVarCharVec);
             } else {
                 auto varCharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
-                return reinterpret_cast<void *>(UnsafeStringVector::GetOffsets(varCharVec));
+                return reinterpret_cast<void *>(unsafe::UnsafeStringVector::GetOffsets(varCharVec));
             }
         }
         return nullptr;
@@ -317,29 +307,29 @@ public:
         int length)
     {
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
                 return reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_SHORT: {
+            case type::OMNI_SHORT: {
                 return reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_DECIMAL128: {
+            case type::OMNI_DECIMAL128: {
                 return reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_DOUBLE: {
+            case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_BOOLEAN: {
+            case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
                 if (vector->GetStringEncoding() == OMNI_LARGE_STRING) {
                     return reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector)->Slice(
                         positionOffset, length);
@@ -360,37 +350,33 @@ public:
             return SliceDictionaryVector(vector, dataTypeId, positionOffset, length);
         }
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
                 return reinterpret_cast<Vector<int32_t> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_SHORT: {
+            case type::OMNI_SHORT: {
                 return reinterpret_cast<Vector<int16_t> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<int64_t> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_DECIMAL128: {
-                return reinterpret_cast<Vector<Decimal128> *>(vector)->Slice(positionOffset, length);
+            case type::OMNI_DECIMAL128: {
+                return reinterpret_cast<Vector<type::Decimal128> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_DOUBLE: {
+            case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<double> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_BOOLEAN: {
+            case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<bool> *>(vector)->Slice(positionOffset, length);
             }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                if (vector->GetStringEncoding() == OMNI_LARGE_STRING) {
-                    return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(
-                        positionOffset, length);
-                }
-                return reinterpret_cast<Vector<SmallStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
+                return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
                     length);
             }
-            case OMNI_CONTAINER:
+            case type::OMNI_CONTAINER:
                 return reinterpret_cast<ContainerVector *>(vector)->Slice(positionOffset, length);
             default: {
                 LogError("No such data type %d", dataTypeId);
@@ -403,41 +389,36 @@ public:
         int length, int dataTypeId)
     {
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
                 return reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vector)->CopyPositions(positions,
                     offset, length);
             }
-            case OMNI_SHORT: {
+            case type::OMNI_SHORT: {
                 return reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)->CopyPositions(positions,
                     offset, length);
             }
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)->CopyPositions(positions,
                     offset, length);
             }
-            case OMNI_DECIMAL128: {
-                return reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(vector)->CopyPositions(positions,
-                    offset, length);
+            case type::OMNI_DECIMAL128: {
+                return reinterpret_cast<Vector<DictionaryContainer<type::Decimal128>> *>(vector)->CopyPositions(
+                    positions, offset, length);
             }
-            case OMNI_DOUBLE: {
+            case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)->CopyPositions(positions, offset,
                     length);
             }
-            case OMNI_BOOLEAN: {
+            case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)->CopyPositions(positions, offset,
                     length);
             }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                if (vector->GetStringEncoding() == OMNI_LARGE_STRING) {
-                    return reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(
-                        vector)
-                        ->CopyPositions(positions, offset, length);
-                }
-                return reinterpret_cast<Vector<DictionaryContainer<std::string_view, SmallStringContainer>> *>(vector)
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
+                return reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector)
                     ->CopyPositions(positions, offset, length);
             }
             default: {
@@ -454,37 +435,33 @@ public:
             return CopyPositionsDictionaryVector(vector, positions, offset, length, dataTypeId);
         }
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
                 return reinterpret_cast<Vector<int32_t> *>(vector)->CopyPositions(positions, offset, length);
             }
-            case OMNI_SHORT: {
+            case type::OMNI_SHORT: {
                 return reinterpret_cast<Vector<int16_t> *>(vector)->CopyPositions(positions, offset, length);
             }
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<int64_t> *>(vector)->CopyPositions(positions, offset, length);
             }
-            case OMNI_DOUBLE: {
+            case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<double> *>(vector)->CopyPositions(positions, offset, length);
             }
-            case OMNI_BOOLEAN: {
+            case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<bool> *>(vector)->CopyPositions(positions, offset, length);
             }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                if (vector->GetStringEncoding() == OMNI_LARGE_STRING) {
-                    return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->CopyPositions(
-                        positions, offset, length);
-                }
-                return reinterpret_cast<Vector<SmallStringContainer<std::string_view>> *>(vector)->CopyPositions(
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
+                return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->CopyPositions(
                     positions, offset, length);
             }
-            case OMNI_DECIMAL128: {
-                return reinterpret_cast<Vector<Decimal128> *>(vector)->CopyPositions(positions, offset, length);
+            case type::OMNI_DECIMAL128: {
+                return reinterpret_cast<Vector<type::Decimal128> *>(vector)->CopyPositions(positions, offset, length);
             }
-            case OMNI_CONTAINER:
+            case type::OMNI_CONTAINER:
                 return reinterpret_cast<ContainerVector *>(vector)->CopyPositions(positions, offset, length);
             default: {
                 LogError("No such data type %d", dataTypeId);
@@ -493,40 +470,39 @@ public:
         }
     }
 
-    static void *GetDictionary(BaseVector *vector, int32_t dataTypeId)
+    static void *UnsafeGetDictionary(BaseVector *vector, int32_t dataTypeId)
     {
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetDictionary(static_cast<Vector<DictionaryContainer<int32_t>> *>(vector)));
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
+                    static_cast<Vector<DictionaryContainer<int32_t>> *>(vector)));
             }
-            case OMNI_SHORT: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetDictionary(static_cast<Vector<DictionaryContainer<int16_t>> *>(vector)));
+            case type::OMNI_SHORT: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
+                    static_cast<Vector<DictionaryContainer<int16_t>> *>(vector)));
             }
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetDictionary(static_cast<Vector<DictionaryContainer<int64_t>> *>(vector)));
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
+                    static_cast<Vector<DictionaryContainer<int64_t>> *>(vector)));
             }
-            case OMNI_DECIMAL128: {
-                return reinterpret_cast<void *>(UnsafeDictionaryVector::GetDictionary(
-                    static_cast<Vector<DictionaryContainer<Decimal128>> *>(vector)));
+            case type::OMNI_DECIMAL128: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
+                    static_cast<Vector<DictionaryContainer<type::Decimal128>> *>(vector)));
             }
-            case OMNI_DOUBLE: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetDictionary(static_cast<Vector<DictionaryContainer<double>> *>(vector)));
+            case type::OMNI_DOUBLE: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
+                    static_cast<Vector<DictionaryContainer<double>> *>(vector)));
             }
-            case OMNI_BOOLEAN: {
-                return reinterpret_cast<void *>(
-                    UnsafeDictionaryVector::GetDictionary(static_cast<Vector<DictionaryContainer<bool>> *>(vector)));
+            case type::OMNI_BOOLEAN: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
+                    static_cast<Vector<DictionaryContainer<bool>> *>(vector)));
             }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                // TODO: support SmallStringContainer
-                return reinterpret_cast<void *>(UnsafeDictionaryVector::GetVarCharDictionary(
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetVarCharDictionary(
                     static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector)));
             }
 
@@ -541,41 +517,40 @@ public:
         int32_t dataTypeId)
     {
         switch (dataTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32: {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
                 reinterpret_cast<Vector<int32_t> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
-            case OMNI_SHORT: {
+            case type::OMNI_SHORT: {
                 reinterpret_cast<Vector<int16_t> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_DECIMAL64: {
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
                 reinterpret_cast<Vector<int64_t> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
-            case OMNI_DECIMAL128: {
-                reinterpret_cast<Vector<Decimal128> *>(destVector)->Append(srcVector, offset, length);
+            case type::OMNI_DECIMAL128: {
+                reinterpret_cast<Vector<type::Decimal128> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
-            case OMNI_DOUBLE: {
+            case type::OMNI_DOUBLE: {
                 reinterpret_cast<Vector<double> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
-            case OMNI_BOOLEAN: {
+            case type::OMNI_BOOLEAN: {
                 reinterpret_cast<Vector<bool> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                // TODO: support SmallStringContainer
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
                 reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(destVector)
                     ->Append(srcVector, offset, length);
                 break;
             }
-            case OMNI_CONTAINER:
+            case type::OMNI_CONTAINER:
                 reinterpret_cast<ContainerVector *>(destVector)->Append(srcVector, offset, length);
                 break;
             default: {
@@ -585,17 +560,18 @@ public:
         }
     }
 
-    static ALWAYS_INLINE void AppendVectors(VectorBatch *vectorBatch, const type::DataTypes &sourceTypes, int64_t positionCount)
+    static ALWAYS_INLINE void AppendVectors(VectorBatch *vectorBatch, const type::DataTypes &sourceTypes,
+        int64_t positionCount)
     {
         const std::vector<omniruntime::type::DataTypePtr> &types = sourceTypes.Get();
         for (int i = 0; i < sourceTypes.GetSize(); i++) {
-            vectorBatch->Append(CreateVector(OMNI_FLAT, types[i]->GetId(), positionCount));
+            vectorBatch->Append(CreateVector(OMNI_FLAT, types[i]->GetId(), positionCount).release());
         }
     }
 
     static ALWAYS_INLINE void FreeVecBatches(std::vector<VectorBatch *> &vecBatches)
     {
-        // vectorBatch manages vector with smart pointers,so just release vectorBatch explicitly.
+        // free vectorBatch and vectors inside it.
         for (auto &vecBatch : vecBatches) {
             FreeVecBatch(vecBatch);
         }

@@ -41,12 +41,15 @@ public:
         }
 
         // report memory usage
-        int64_t valuesCapacity = sizeof(ContainerVector) + Vector<int64_t>::GetValuesCapacity(values);
-        omniruntime::mem::ThreadMemoryManager::ReportMemory(valuesCapacity);
+        int64_t vectorCapacity = sizeof(ContainerVector) + BaseVector::GetNullsCapacity(nulls.get()) +
+            Vector<int64_t>::GetValuesCapacity(values.get());
+        omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
-    ContainerVector(int32_t vectorCount)
-        : Vector<int64_t>(vectorCount, OMNI_ENCODING_CONTAINER)
+    ContainerVector(int32_t vectorCount) : Vector<int64_t>(vectorCount, OMNI_ENCODING_CONTAINER)
     {
         values = std::shared_ptr<int64_t[]>(new int64_t[vectorCount]);
 
@@ -56,8 +59,12 @@ public:
         }
 
         // report memory usage
-        int64_t valuesCapacity = sizeof(ContainerVector) + Vector<int64_t>::GetValuesCapacity(values);
-        omniruntime::mem::ThreadMemoryManager::ReportMemory(valuesCapacity);
+        int64_t vectorCapacity = sizeof(ContainerVector) + BaseVector::GetNullsCapacity(nulls.get()) +
+            Vector<int64_t>::GetValuesCapacity(values.get());
+        omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
     // inline for high performance.
@@ -135,8 +142,12 @@ public:
             }
         }
 
-        int64_t valuesCapacity = sizeof(ContainerVector) + Vector<int64_t>::GetValuesCapacity(values);
-        omniruntime::mem::ThreadMemoryManager::ReclaimMemory(valuesCapacity);
+        int64_t vectorCapacity = sizeof(ContainerVector) + BaseVector::GetNullsCapacity(nulls.get()) +
+            Vector<int64_t>::GetValuesCapacity(values.get());
+        omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
+#endif
     }
 
     void SetDataTypes(const std::vector<type::DataTypePtr> &dataTypes)

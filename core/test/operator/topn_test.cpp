@@ -53,7 +53,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
         column0->SetValue(i, data0[i]);
     }
     std::vector<DataTypePtr> types = { IntType() };
-    inputVecBatch1->Append(std::unique_ptr<BaseVector>(column0));
+    inputVecBatch1->Append(column0);
     VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1, types);
 
 
@@ -93,7 +93,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
+    expectVectorBatch->Append(expectCol1);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -151,13 +151,13 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
         column0->SetValue(i, data0[i]);
     }
 
-    inputVecBatch1->Append(std::unique_ptr<BaseVector>(column0));
+    inputVecBatch1->Append(column0);
     VectorBatch *inputVecBatch2 = new VectorBatch(dataSize);
     auto column2 = new Vector<int32_t>(dataSize);
     for (int i = 0; i < dataSize; i++) {
         column2->SetValue(i, data0[i]);
     }
-    inputVecBatch2->Append(std::unique_ptr<BaseVector>(column2));
+    inputVecBatch2->Append(column2);
 
     std::vector<DataTypePtr> types = { IntType() };
     DataTypes sourceTypes(types);
@@ -211,7 +211,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
+    expectVectorBatch->Append(expectCol1);
 
     delete[] data0;
     omniruntime::op::Operator::DeleteOperator(topNOperator);
@@ -237,7 +237,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
         std::string_view strView(str.data(), str.size());
         column0->SetValue(i, strView);
     }
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
+    inputVecBatch->Append(column0);
 
     std::vector<DataTypePtr> types = { VarcharType(3) };
     DataTypes sourceTypes(types);
@@ -266,7 +266,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
         expectCol1->SetValue(i, str);
     }
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
+    expectVectorBatch->Append(expectCol1);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -291,7 +291,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
         column0->SetValue(i, data0[i]);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
+    inputVecBatch->Append(column0);
     std::vector<DataTypePtr> types = { IntType() };
     omniruntime::type::DataTypes sourceTypes(types);
     int32_t sortCols[1] = {0};
@@ -313,7 +313,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
         expectCol1->SetValue(i, expectData1[i]);
     }
     VectorBatch *expectVectorBatch = new VectorBatch(5);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
+    expectVectorBatch->Append(expectCol1);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -339,7 +339,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
         string_view str(data0[i]);
         column0->SetValue(i, str);
     }
-    inputVecBatch->Append(move(column0Base));
+    inputVecBatch->Append(column0Base.release());
 
     std::vector<DataTypePtr> types = { VarcharType(3) };
     DataTypes sourceTypes(types);
@@ -364,7 +364,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
         expectCol1->SetValue(i, str);
     }
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(move(expectCol1Base));
+    expectVectorBatch->Append(expectCol1Base.release());
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -391,7 +391,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
         string_view str(data0[i]);
         column0->SetValue(i, str);
     }
-    inputVecBatch->Append(move(column0Base));
+    inputVecBatch->Append(column0Base.release());
 
     std::vector<DataTypePtr> types = { CharType(3) };
     DataTypes sourceTypes(types);
@@ -416,7 +416,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
         expectCol1->SetValue(i, str);
     }
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(move(expectCol1Base));
+    expectVectorBatch->Append(expectCol1Base.release());
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -442,7 +442,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
         column0->SetValue(i, data0[i]);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
+    inputVecBatch->Append(column0);
     std::vector<DataTypePtr> types = { IntType() };
     DataTypes sourceTypes(types);
     int32_t sortCols[1] = {0};
@@ -464,7 +464,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
+    expectVectorBatch->Append(expectCol1);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -490,7 +490,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
         string_view str(data0[i]);
         column0->SetValue(i, str);
     }
-    inputVecBatch->Append(move(column0Base));
+    inputVecBatch->Append(column0Base.release());
 
     std::vector<DataTypePtr> types = { VarcharType(3) };
     DataTypes sourceTypes(types);
@@ -515,7 +515,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
         expectCol1->SetValue(i, str);
     }
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(move(expectCol1Base));
+    expectVectorBatch->Append(expectCol1Base.release());
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -540,7 +540,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
         string_view str(data0[i]);
         column0->SetValue(i, str);
     }
-    inputVecBatch->Append(move(column0Base));
+    inputVecBatch->Append(column0Base.release());
 
     std::vector<DataTypePtr> types = { CharType(3) };
     DataTypes sourceTypes(types);
@@ -564,7 +564,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
         expectCol1->SetValue(i, str);
     }
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(move(expectCol1Base));
+    expectVectorBatch->Append(expectCol1Base.release());
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -597,10 +597,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
         column2->SetValue(i, data2[i]);
         column3->SetValue(i, data3[i]);
     }
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column1));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column3));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1);
+    inputVecBatch->Append(column2);
+    inputVecBatch->Append(column3);
 
     std::vector<DataTypePtr> types = { IntType(), LongType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
@@ -633,10 +633,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol2));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol4));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2);
+    expectVectorBatch->Append(expectCol3);
+    expectVectorBatch->Append(expectCol4);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -669,9 +669,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
         column2->SetValue(i, data2[i]);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(move(column1Base));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1Base.release());
+    inputVecBatch->Append(column2);
 
     std::vector<DataTypePtr> types = { IntType(), VarcharType(3), DoubleType() };
     DataTypes sourceTypes(types);
@@ -706,9 +706,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(move(expectCol2Base));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2Base.release());
+    expectVectorBatch->Append(expectCol3);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -742,9 +742,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
         column2->SetValue(i, data2[i]);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(move(column1Base));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1Base.release());
+    inputVecBatch->Append(column2);
 
     std::vector<DataTypePtr> types = { IntType(), CharType(3), DoubleType() };
     DataTypes sourceTypes(types);
@@ -779,9 +779,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(move(expectCol2Base));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2Base.release());
+    expectVectorBatch->Append(expectCol3);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -814,10 +814,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
         column2->SetValue(i, data2[i]);
         column3->SetValue(i, data3[i]);
     }
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column1));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column3));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1);
+    inputVecBatch->Append(column2);
+    inputVecBatch->Append(column3);
 
     std::vector<DataTypePtr> types = { IntType(), LongType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
@@ -851,10 +851,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol2));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol4));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2);
+    expectVectorBatch->Append(expectCol3);
+    expectVectorBatch->Append(expectCol4);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -887,9 +887,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
         column2->SetValue(i, data2[i]);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(move(column1Base));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1Base.release());
+    inputVecBatch->Append(column2);
 
     std::vector<DataTypePtr> types = { IntType(), VarcharType(3), DoubleType() };
     DataTypes sourceTypes(types);
@@ -922,9 +922,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(move(expectCol2Base));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2Base.release());
+    expectVectorBatch->Append(expectCol3);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -957,9 +957,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
         column2->SetValue(i, data2[i]);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(move(column1Base));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1Base.release());
+    inputVecBatch->Append(column2);
 
     std::vector<DataTypePtr> types = { IntType(), CharType(3), DoubleType() };
     DataTypes sourceTypes(types);
@@ -994,9 +994,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(move(expectCol2Base));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2Base.release());
+    expectVectorBatch->Append(expectCol3);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -1027,8 +1027,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
         column1->SetValue(i, str);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(move(column1Base));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1Base.release());
 
     std::vector<DataTypePtr> types = { IntType(), VarcharType(3), DoubleType() };
     DataTypes sourceTypes(types);
@@ -1043,7 +1043,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     DataTypePtr dataType = sourceTypes.Get()[2];
     auto column2 = CreateDictionaryVector(*dataType, dataSize, ids, dataSize, data2);
-    inputVecBatch->Append(move(column2));
+    inputVecBatch->Append(column2.release());
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
@@ -1073,9 +1073,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(move(expectCol2Base));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2Base.release());
+    expectVectorBatch->Append(expectCol3);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(0));
@@ -1108,8 +1108,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
         column1->SetValue(i, str);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(move(column1Base));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1Base.release());
 
     std::vector<DataTypePtr> types = { IntType(), VarcharType(3), DoubleType() };
     DataTypes sourceTypes(types);
@@ -1124,7 +1124,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     DataTypePtr dataType = sourceTypes.Get()[2];
     auto column2 = CreateDictionaryVector(*dataType, dataSize, ids, dataSize, data2);
-    inputVecBatch->Append(move(column2));
+    inputVecBatch->Append(column2.release());
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
@@ -1154,9 +1154,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(move(expectCol2Base));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2Base.release());
+    expectVectorBatch->Append(expectCol3);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(0));
@@ -1189,9 +1189,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
         column2->SetValue(i, data2[i]);
     }
 
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column1));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1);
+    inputVecBatch->Append(column2);
 
     std::vector<DataTypePtr> types = { IntType(), LongDataType::Instance(), DoubleType() };
     DataTypes sourceTypes(types);
@@ -1223,9 +1223,9 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol2));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2);
+    expectVectorBatch->Append(expectCol3);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
 
@@ -1259,8 +1259,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
 
     column0->SetNull(dataSize - 1);
     column1->SetNull(dataSize - 1);
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column1));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1);
 
     std::vector<DataTypePtr> types = { IntType(), LongType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
@@ -1272,8 +1272,8 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     DataTypePtr dataType = sourceTypes.Get()[2];
     auto column2 = CreateDictionaryVector(*dataType, dataSize, ids, dataSize, data2);
-    inputVecBatch->Append(move(column2));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column3));
+    inputVecBatch->Append(column2.release());
+    inputVecBatch->Append(column3);
 
     TopNOperatorFactory *topNOperatorFactory =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
@@ -1302,10 +1302,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     expectCol2->SetNull(0);
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol2));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol4));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2);
+    expectVectorBatch->Append(expectCol3);
+    expectVectorBatch->Append(expectCol4);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(0));
@@ -1342,10 +1342,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     }
     column0->SetNull(dataSize - 1);
     column1->SetNull(dataSize - 1);
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column1));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column3));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1);
+    inputVecBatch->Append(column2);
+    inputVecBatch->Append(column3);
 
     std::vector<DataTypePtr> types = { IntType(), LongType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
@@ -1381,10 +1381,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     expectCol1->SetNull(0);
     expectCol2->SetNull(0);
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol2));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol4));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2);
+    expectVectorBatch->Append(expectCol3);
+    expectVectorBatch->Append(expectCol4);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(0));
@@ -1424,10 +1424,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     column0->SetNull(2);
     column0->SetNull(0);
     column1->SetNull(5);
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column0));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column1));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column2));
-    inputVecBatch->Append(std::unique_ptr<BaseVector>(column3));
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1);
+    inputVecBatch->Append(column2);
+    inputVecBatch->Append(column3);
 
     std::vector<DataTypePtr> types = { IntType(), LongType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
@@ -1464,10 +1464,10 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     expectCol2->SetNull(3);
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol1));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol2));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol3));
-    expectVectorBatch->Append(std::unique_ptr<BaseVector>(expectCol4));
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2);
+    expectVectorBatch->Append(expectCol3);
+    expectVectorBatch->Append(expectCol4);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(3));

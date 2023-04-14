@@ -35,8 +35,8 @@ RankFunction::RankFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr i
 
 RankFunction::~RankFunction() = default;
 
-void RankingWindowFunction::ProcessRow(VectorBatch *vectorBatch, BaseVector *column, int32_t index, int32_t peerGroupStart,
-    int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd)
+void RankingWindowFunction::ProcessRow(VectorBatch *vectorBatch, BaseVector *column, int32_t index,
+    int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd)
 {
     bool newPeerGroup = false;
     if (peerGroupStart != currentPeerGroupStart) {
@@ -84,8 +84,7 @@ void RowNumberFunction::RankingProcessRow(BaseVector *column, int32_t index, boo
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType,
-    DataTypePtr inputType, DataTypePtr outputType, std::unique_ptr<WindowFrameInfo> frame,
-    bool isOverflowAsNull)
+    DataTypePtr inputType, DataTypePtr outputType, std::unique_ptr<WindowFrameInfo> frame, bool isOverflowAsNull)
     : WindowFunction(std::move(frame), std::move(inputType), std::move(outputType)),
       windowIndex(nullptr),
       currentStart(0),

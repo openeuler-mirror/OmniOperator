@@ -34,9 +34,9 @@ TEST(vector2, vec_batch)
     auto intDictVec = std::make_unique<Vector<DictionaryContainer<int32_t>>>(rowCnt, container, nulls);
 
     VectorBatch vectorBatch(rowCnt);
-    vectorBatch.Append(std::move(intVec));
-    vectorBatch.Append(std::move(stringVec));
-    vectorBatch.Append(std::move(intDictVec));
+    vectorBatch.Append(intVec.release());
+    vectorBatch.Append(stringVec.release());
+    vectorBatch.Append(intDictVec.release());
 
     auto intCol0 = reinterpret_cast<Vector<int32_t> *>(vectorBatch.Get(0));
     auto stringCol1 = reinterpret_cast<Vector<std::string> *>(vectorBatch.Get(1));

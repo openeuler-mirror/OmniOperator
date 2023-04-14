@@ -32,15 +32,22 @@ public:
     LargeStringBuffer(size_t size)
     {
         capacity = size;
-        data.reserve(size);
+        data = new char[size];
         int64_t bufferCapacity = sizeof(LargeStringBuffer) + capacity;
         omniruntime::mem::ThreadMemoryManager::ReportMemory(bufferCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::AddArenaMemory(reinterpret_cast<uintptr_t>(this), bufferCapacity);
+#endif
     }
 
     ~LargeStringBuffer()
     {
+        delete data;
         int64_t bufferCapacity = sizeof(LargeStringBuffer) + capacity;
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(bufferCapacity);
+#ifdef TRACE
+        omniruntime::mem::MemoryTrace::SubArenaMemory(reinterpret_cast<uintptr_t>(this), bufferCapacity);
+#endif
     }
 
     ALWAYS_INLINE uint64_t Capacity()
@@ -60,11 +67,11 @@ public:
 
     ALWAYS_INLINE char *Data()
     {
-        return data.data();
+        return data;
     };
 
 private:
-    std::vector<char> data;
+    char* data;
     uint64_t usedSize = 0;
     uint64_t capacity = 0;
     std::atomic<int32_t> referenceCount;

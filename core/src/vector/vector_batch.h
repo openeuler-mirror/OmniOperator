@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 
 #ifndef OMNI_RUNTIME_VECTOR_BATCH_H
@@ -27,70 +27,36 @@ public:
      * delete vb;
      * @param rowCnt
      */
-    explicit VectorBatch(size_t rowCnt) : rowCnt(rowCnt) {}
+    explicit VectorBatch(size_t rowCnt);
 
-    ~VectorBatch() = default;
+    ~VectorBatch();
 
-     /**
+    /* *
+     * Set the vector at the indicated index, need ResizeVectorCount before SetVector
      * @param vector
      */
-     ALWAYS_INLINE void SetVector(int32_t index, BaseVector* vector)
-    {
-        vectors[index] = vector;
-    }
+    void SetVector(int32_t index, BaseVector *vector);
 
     /* *
      * @param vector
-     *
-     * This interface has deprecated, and is no longer supported.
-     * The standard interface is "void Append(BaseVector* vector)".
-     */
-    [[deprecated("The standard interface is 'void Append(BaseVector* vector)'.")]] ALWAYS_INLINE void Append(
-        std::unique_ptr<BaseVector> vector)
-    {
-        vectors.emplace_back(vector.release());
-    }
-
-    /* *
-     * @param vector
-     *  */
-    ALWAYS_INLINE void Append(BaseVector *vector)
-    {
-        vectors.emplace_back(vector);
-    }
+     *     */
+    void Append(BaseVector *vector);
 
     /* *
      * @param index
      */
-    ALWAYS_INLINE BaseVector *Get(int32_t index)
-    {
-        return vectors[index];
-    }
+    BaseVector *Get(int32_t index);
 
-    ALWAYS_INLINE size_t GetRowCount()
-    {
-        return rowCnt;
-    }
+    int GetRowCount() const;
 
-    ALWAYS_INLINE size_t GetVectorCount()
-    {
-        return vectors.size();
-    }
+    int GetVectorCount();
 
-    /**
-    * @param vectorCnt
-    */
-    ALWAYS_INLINE void ResizeVectorCount(size_t vectorCnt){
-        vectors.resize(vectorCnt);
-    }
+    /* *
+     * @param vectorCnt
+     */
+    void ResizeVectorCount(size_t vectorCnt);
 
-    ALWAYS_INLINE void FreeAllVectors()
-    {
-        for (int vecIndex = 0; vecIndex < vectors.size(); ++vecIndex) {
-            delete vectors[vecIndex];
-            vectors[vecIndex] = nullptr;
-        }
-    }
+    void FreeAllVectors();
 
 private:
     size_t rowCnt;

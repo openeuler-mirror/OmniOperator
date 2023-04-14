@@ -143,7 +143,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     auto *vecBatch = new VectorBatch(dataSize);
     for (int32_t i = 0; i < 3; i++) {
-        vecBatch->Append(CreateDictionaryVector(*sourceTypes.GetType(i), dataSize, ids, dataSize, datas[i]));
+        vecBatch->Append(CreateDictionaryVector(*sourceTypes.GetType(i), dataSize, ids, dataSize, datas[i]).release());
     }
 
     int32_t outputCols[2] = {1, 2};
@@ -185,7 +185,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     std::string values[dataSize] = {"hello", "world", "omni", "runtime"};
     auto vector = CreateVarcharVector(*type, values, dataSize);
     auto *vecBatch = new VectorBatch(dataSize);
-    vecBatch->Append(std::move(vector));
+    vecBatch->Append(vector.release());
 
     DataTypes sourceTypes(std::vector<DataTypePtr>({ type }));
     int32_t outputCols[vecCount] = {0};
@@ -210,7 +210,7 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     std::string expectValues[dataSize] = {"hello", "omni", "runtime", "world"};
     auto expectVector = CreateVarcharVector(*type, expectValues, dataSize);
     auto expectVecBatch = new VectorBatch(dataSize);
-    expectVecBatch->Append(std::move(expectVector));
+    expectVecBatch->Append(expectVector.release());
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
 
     Expr::DeleteExprs(sortExprs);
@@ -248,9 +248,9 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     auto slicedVec2 = static_cast<Vector<DictionaryContainer<int64_t>> *>(dictVec2.get())->Slice(1, 5);
 
     auto vecBatch = new VectorBatch(5);
-    vecBatch->Append(std::move(slicedVec0));
-    vecBatch->Append(std::move(slicedVec1));
-    vecBatch->Append(std::move(slicedVec2));
+    vecBatch->Append(slicedVec0.release());
+    vecBatch->Append(slicedVec1.release());
+    vecBatch->Append(slicedVec2.release());
 
     int32_t outputCols[2] = {1, 2};
     auto add1Col = new FieldExpr(0, IntType());

@@ -9,9 +9,9 @@
 
 namespace omniruntime::vec::test {
 using namespace omniruntime::vec::unsafe;
+using namespace omniruntime::type;
 
-template <typename T>
-std::shared_ptr<Vector<T>> CreateVectorAndSetValue(int32_t size)
+template <typename T> std::shared_ptr<Vector<T>> CreateVectorAndSetValue(int32_t size)
 {
     auto vector = std::make_shared<Vector<T>>(size);
     for (int32_t i = 0; i < size; i++) {
@@ -19,51 +19,45 @@ std::shared_ptr<Vector<T>> CreateVectorAndSetValue(int32_t size)
         if constexpr (std::is_same_v<std::string, T>) {
             value = "string " + std::to_string(i);
         } else {
-            value = (T)i * 2 / 3;
+            value = static_cast<T>(i) * 2 / 3;
         }
         vector->SetValue(i, value);
     }
     return vector;
 }
 
-template <typename T>
-std::shared_ptr<Vector<DictionaryContainer<T>>> CreateDictionaryVector()
+template <typename T> std::shared_ptr<Vector<DictionaryContainer<T>>> CreateDictionaryVector()
 {
-    int dictionary_size = 10, value_size = 100;
-    int *values = new int[value_size];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[value_size]);
-    for (int i = 0; i < value_size; i++) {
+    int dictionarySize = 10;
+    int valueSize = 100;
+    int *values = new int[valueSize];
+    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[valueSize]);
+    for (int i = 0; i < valueSize; i++) {
         nulls[i] = false;
-        values[i] = i % dictionary_size;
+        values[i] = i % dictionarySize;
     }
 
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<T>::DICTIONARY_TYPE;
-    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionary_size);
+    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionarySize);
 
-    auto container = std::make_shared<DictionaryContainer<T>>(values, value_size, dictionary, dictionary_size, 0);
-    auto vector = std::make_shared<Vector<DictionaryContainer<T>>>(value_size, container, nulls);
+    auto container = std::make_shared<DictionaryContainer<T>>(values, valueSize, dictionary, dictionarySize, 0);
+    auto vector = std::make_shared<Vector<DictionaryContainer<T>>>(valueSize, container, nulls);
     delete[] values;
     return vector;
 }
 
-template<typename CONTAINER>
-std::shared_ptr<BaseVector> CreateStringTestVector()
+template <typename CONTAINER> std::shared_ptr<BaseVector> CreateStringTestVector()
 {
-    int value_size = 1000;
+    int valueSize = 1000;
     uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     std::string valuePrefix;
-    if constexpr (std::is_same_v<SmallStringContainer<std::string_view>, CONTAINER>) {
-        stringWidth = OMNI_SMALL_WIDTH;
-        valuePrefix = "hello__";
-    } else {
-        valuePrefix = "hello_world__";
-    }
+    valuePrefix = "hello_world__";
 
-    auto baseVector = VectorHelper::CreateStringVector(value_size, stringWidth);
+    auto baseVector = VectorHelper::CreateStringVector(valueSize, stringWidth);
     auto *vector = (Vector<CONTAINER> *)baseVector.get();
 
-    for (int i = 0; i < value_size; i++) {
+    for (int i = 0; i < valueSize; i++) {
         std::string value = valuePrefix + std::to_string(i);
         std::string_view input(value.data(), value.size());
         vector->SetValue(i, input);
@@ -81,8 +75,7 @@ void VectorSetNull(BaseVector *vector)
     }
 }
 
-template <typename DATA_TYPE>
-void vector_get_values_and_nulls()
+template <typename DATA_TYPE> void vector_get_values_and_nulls()
 {
     int size = 100;
     auto vector = CreateVectorAndSetValue<DATA_TYPE>(size);
@@ -101,8 +94,7 @@ void vector_get_values_and_nulls()
     }
 }
 
-template <typename DATA_TYPE>
-void vector_slice_get_values_and_nulls()
+template <typename DATA_TYPE> void vector_slice_get_values_and_nulls()
 {
     int size = 100;
     int offSet = 50;
@@ -125,8 +117,7 @@ void vector_slice_get_values_and_nulls()
     }
 }
 
-template <typename DATA_TYPE>
-void dictionary_vector_get_values_and_nulls()
+template <typename DATA_TYPE> void dictionary_vector_get_values_and_nulls()
 {
     int size = 100;
 
@@ -148,11 +139,11 @@ void dictionary_vector_get_values_and_nulls()
 
 void dictionary_string_vector_get_values_and_nulls()
 {
-    int dictionary_size = 10;
-    auto vector = VectorHelper::CreateStringVector(dictionary_size);
+    int dictionarySize = 10;
+    auto vector = VectorHelper::CreateStringVector(dictionarySize);
     auto stringVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector.get());
 
-    for (int i = 0; i < dictionary_size; i++) {
+    for (int i = 0; i < dictionarySize; i++) {
         if (i % 2 == 0) {
             stringVector->SetNull(i);
             continue;
@@ -165,7 +156,7 @@ void dictionary_string_vector_get_values_and_nulls()
     int size = 100;
     int *values = new int[size];
     for (int i = 0; i < size; i++) {
-        values[i] = i % dictionary_size;
+        values[i] = i % dictionarySize;
     }
 
     std::unique_ptr<BaseVector> vectorPtr = VectorHelper::CreateStringDictionary(values, size, stringVector);
@@ -186,8 +177,7 @@ void dictionary_string_vector_get_values_and_nulls()
     delete[] values;
 }
 
-template <typename DATA_TYPE>
-void dictionary_vector_slice_get_values_and_nulls()
+template <typename DATA_TYPE> void dictionary_vector_slice_get_values_and_nulls()
 {
     int offSet = 50;
     int sliceLength = 50;
@@ -210,8 +200,7 @@ void dictionary_vector_slice_get_values_and_nulls()
     }
 }
 
-template<typename CONTAINER>
-void string_vector_get_values_and_nulls()
+template <typename CONTAINER> void string_vector_get_values_and_nulls()
 {
     int size = 100;
 
@@ -221,7 +210,7 @@ void string_vector_get_values_and_nulls()
     bool *vectorNulls = UnsafeBaseVector::GetNulls(baseVector.get());
     auto *vector = (Vector<CONTAINER> *)baseVector.get();
     char *vectorValues = UnsafeStringVector::GetValues(vector);
-    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector, OMNI_VARCHAR));
+    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, OMNI_VARCHAR));
     for (int i = 0; i < size; i++) {
         if (i % 2) {
             EXPECT_TRUE(vectorNulls[i]);
@@ -231,8 +220,7 @@ void string_vector_get_values_and_nulls()
     }
 }
 
-template<typename CONTAINER>
-void string_vector_slice_get_values_and_nulls()
+template <typename CONTAINER> void string_vector_slice_get_values_and_nulls()
 {
     int offSet = 50;
     int sliceLength = 50;
@@ -245,7 +233,7 @@ void string_vector_slice_get_values_and_nulls()
 
     bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2.get());
     char *vectorValues = UnsafeStringVector::GetValues(vector2.get());
-    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector2.get(), OMNI_VARCHAR));
+    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector2.get(), OMNI_VARCHAR));
     for (int i = 0; i < sliceLength; i++) {
         if (i % 2) {
             EXPECT_TRUE(vectorNulls[i]);
@@ -255,66 +243,60 @@ void string_vector_slice_get_values_and_nulls()
     }
 }
 
-template<typename CONTAINER>
-void string_vector_get_string_buffer()
+template <typename CONTAINER> void string_vector_get_string_buffer()
 {
     auto baseVector = CreateStringTestVector<CONTAINER>();
     auto *vector = (Vector<CONTAINER> *)baseVector.get();
-    auto vectorCapacityInBytes = UnsafeStringContainer::GetCapacityInBytes(
-            unsafe::UnsafeStringVector::GetContainer(vector).get());
+    auto vectorCapacityInBytes =
+        UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
 
-    auto real = UnsafeStringContainer::GetStringBufferAddr(
-            unsafe::UnsafeStringVector::GetContainer(vector).get());
+    auto real = UnsafeStringContainer::GetStringBufferAddr(unsafe::UnsafeStringVector::GetContainer(vector).get());
 
-    auto expect = UnsafeStringContainer::GetBufferWithSpace(
-            unsafe::UnsafeStringVector::GetContainer(vector).get(), vectorCapacityInBytes);
+    auto expect = UnsafeStringContainer::GetBufferWithSpace(unsafe::UnsafeStringVector::GetContainer(vector).get(),
+        vectorCapacityInBytes);
 
     EXPECT_EQ(expect, real);
 
-    auto newCapacityInBytes = UnsafeStringContainer::GetCapacityInBytes(
-            unsafe::UnsafeStringVector::GetContainer(vector).get());
+    auto newCapacityInBytes =
+        UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_EQ(vectorCapacityInBytes, newCapacityInBytes);
 }
 
-template<typename CONTAINER>
-void string_vector_get_string_expand_buffer()
+template <typename CONTAINER> void string_vector_get_string_expand_buffer()
 {
     int requestSize = INITIAL_STRING_SIZE + 10;
     auto baseVector = CreateStringTestVector<CONTAINER>();
     auto *vector = (Vector<CONTAINER> *)baseVector.get();
-    auto vectorCapacityInBytes = UnsafeStringContainer::GetCapacityInBytes(
-            unsafe::UnsafeStringVector::GetContainer(vector).get());
+    auto vectorCapacityInBytes =
+        UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
 
-    auto expect = UnsafeStringContainer::GetBufferWithSpace(
-            unsafe::UnsafeStringVector::GetContainer(vector).get(), vectorCapacityInBytes + requestSize);
+    auto expect = UnsafeStringContainer::GetBufferWithSpace(unsafe::UnsafeStringVector::GetContainer(vector).get(),
+        vectorCapacityInBytes + requestSize);
 
-    auto real = UnsafeStringContainer::GetStringBufferAddr(
-            unsafe::UnsafeStringVector::GetContainer(vector).get());
+    auto real = UnsafeStringContainer::GetStringBufferAddr(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_EQ(expect, real);
 
-    auto newCapacityInBytes = UnsafeStringContainer::GetCapacityInBytes(
-            unsafe::UnsafeStringVector::GetContainer(vector).get());
+    auto newCapacityInBytes =
+        UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_GE(newCapacityInBytes, vectorCapacityInBytes + requestSize);
 }
 
-template<typename CONTAINER>
-void string_vector_get_string_first_buffer()
+template <typename CONTAINER> void string_vector_get_string_first_buffer()
 {
-    int value_size = 1000;
+    int valueSize = 1000;
 
-    auto baseVector = VectorHelper::CreateStringVector(value_size);
+    auto baseVector = VectorHelper::CreateStringVector(valueSize);
     auto *vector = (Vector<CONTAINER> *)baseVector.get();
 
     int requestSize = 10;
-    auto expect = UnsafeStringContainer::GetBufferWithSpace(
-            unsafe::UnsafeStringVector::GetContainer(vector).get(), requestSize);
+    auto expect =
+        UnsafeStringContainer::GetBufferWithSpace(unsafe::UnsafeStringVector::GetContainer(vector).get(), requestSize);
 
-    auto real = UnsafeStringContainer::GetStringBufferAddr(
-            unsafe::UnsafeStringVector::GetContainer(vector).get());
+    auto real = UnsafeStringContainer::GetStringBufferAddr(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_EQ(expect, real);
 
-    auto newCapacityInBytes = UnsafeStringContainer::GetCapacityInBytes(
-            unsafe::UnsafeStringVector::GetContainer(vector).get());
+    auto newCapacityInBytes =
+        UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_EQ(newCapacityInBytes, INITIAL_STRING_SIZE);
 }
 
@@ -351,18 +333,6 @@ TEST(unsafe_vector, string_dictionary_get_values_and_nulls)
 TEST(unsafe_vector, int_dictionary_slice_get_values_and_nulls)
 {
     dictionary_vector_slice_get_values_and_nulls<int32_t>();
-}
-
-TEST(unsafe_vector, small_string_get_values_and_nulls)
-{
-    // TODO: small string with offsets
-    //  string_vector_get_values_and_nulls<SmallStringContainer<std::string_view>>();
-}
-
-TEST(unsafe_vector, small_string_slice_get_values_and_nulls)
-{
-    // TODO: small string with offsets
-    //  string_vector_slice_get_values_and_nulls<SmallStringContainer<std::string_view>>();
 }
 
 TEST(unsafe_vector, large_string_get_values_and_nulls)
