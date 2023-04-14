@@ -496,14 +496,14 @@ void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId
     }
 }
 
-VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, std::vector<DataTypePtr> dataTypes, int32_t rowCount)
+VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, std::vector<DataTypePtr> &dataTypes, int32_t rowCount)
 {
     auto outputColCount = vectorBatch->GetVectorCount();
     auto *sliceBatch = new VectorBatch(rowCount);
     for (int32_t columnIdx = 0; columnIdx < outputColCount; columnIdx++) {
         auto *vector = vectorBatch->Get(columnIdx);
         auto dataType = dataTypes[columnIdx]->GetId();
-        sliceBatch->Append(vec::VectorHelper::SliceVector(vector, dataType, 0, rowCount));
+        sliceBatch->Append(vec::VectorHelper::SliceVector(vector, dataType, 0, rowCount).release());
     }
     return sliceBatch;
 }

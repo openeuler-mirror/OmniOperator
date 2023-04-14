@@ -273,10 +273,10 @@ uint64_t LookupJoinOperator::GetNextJoinPosition(uint64_t currentJoinPosition) c
 }
 
 #ifdef ENABLE_HMPP
-template <type::DataTypeId OmniId>
+template <type::DataTypeId dataTypeId>
 void CalculateColHashesHMPP(BaseVector *vector, uint32_t rowCount, int64_t *combinedHash, bool *nulls)
 {
-    using RAW_DATA_TYPE = typename NativeAndVectorType<OmniId>::type;
+    using T = typename NativeType<dataTypeId>::type;
     if (vector->GetEncoding() != OMNI_DICTIONARY) {
         LogDebug("HMPP-Join-hash");
         if (vector->HasNull()) {
@@ -287,7 +287,7 @@ void CalculateColHashesHMPP(BaseVector *vector, uint32_t rowCount, int64_t *comb
                 }
             }
         }
-        HmppResult result = HmppHashUtil::ComputeHash<OmniId>(vector, combinedHash, 0, rowCount);
+        HmppResult result = HmppHashUtil::ComputeHash<dataTypeId>(vector, combinedHash, 0, rowCount);
         if (result != HMPP_STS_NO_ERR) {
             throw OmniException("HMPP ERROR", "Join HMPPS_ComputeHash failed for hmpp error");
         }
@@ -300,7 +300,7 @@ void CalculateColHashesHMPP(BaseVector *vector, uint32_t rowCount, int64_t *comb
                 continue;
             }
             hash = HashUtil::HashValue(
-                static_cast<Vector<DictionaryContainer<RAW_DATA_TYPE>> *>(vector)->GetValue(static_cast<int32_t>(i)));
+                static_cast<Vector<DictionaryContainer<T>> *>(vector)->GetValue(static_cast<int32_t>(i)));
             combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
         }
     }
@@ -310,7 +310,8 @@ void CalculateColDec64HashesHMPP(BaseVector *vector, uint32_t rowCount, int64_t 
 {
     if (vector->GetEncoding() != OMNI_DICTIONARY) {
         LogDebug("HMPP-Join-hashDec64");
-        const auto *decimalAddr = reinterpret_cast<const int64_t *>(VectorHelper::GetValues(vector, OMNI_DECIMAL64));
+        const auto *decimalAddr =
+            reinterpret_cast<const int64_t *>(VectorHelper::UnsafeGetValues(vector, OMNI_DECIMAL64));
         auto *resultHash = new int64_t[rowCount]();
         int8_t *nullAddr = nullptr;
         if (vector->HasNull()) {
@@ -354,7 +355,7 @@ void CalculateColDec128HashesHMPP(BaseVector *vector, uint32_t rowCount, int64_t
         LogDebug("HMPP-Join-hashDec128");
         auto *resultHash = new int64_t[rowCount]();
         int8_t *nullAddr = nullptr;
-        auto *decimalAddr = reinterpret_cast<HmppDecimal128 *>(VectorHelper::GetValues(vector, OMNI_DECIMAL128));
+        auto *decimalAddr = reinterpret_cast<HmppDecimal128 *>(VectorHelper::UnsafeGetValues(vector, OMNI_DECIMAL128));
         if (vector->HasNull()) {
             nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
             for (uint32_t i = 0; i < rowCount; ++i) {
@@ -398,8 +399,8 @@ void CalculateColVarcharHashesHMPP(BaseVector *vector, uint32_t rowCount, int64_
         LogDebug("HMPP-Join-hashVarchar");
         int8_t *nullAddr = nullptr;
         auto *resultHash = new int64_t[rowCount]();
-        auto *varcharVectorAddr = reinterpret_cast<uint8_t *>(VectorHelper::GetValues(vector, OMNI_VARCHAR));
-        auto *offset = static_cast<int32_t *>(VectorHelper::GetOffsetsAddr(vector, OMNI_VARCHAR));
+        auto *varcharVectorAddr = reinterpret_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector, OMNI_VARCHAR));
+        auto *offset = static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, OMNI_VARCHAR));
         if (vector->HasNull()) {
             nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
             for (uint32_t i = 0; i < rowCount; ++i) {
@@ -541,7 +542,7 @@ void CalculateColVarcharHashes(BaseVector *vec, uint32_t rowCount, int64_t *hash
             }
             std::string_view varcharValue =
                 static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vec)->GetValue(
-                static_cast<int32_t>(i));
+                    static_cast<int32_t>(i));
             hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(varcharValue.data())),
                 varcharValue.length());
             hashes[i] = HashUtil::CombineHash(hashes[i], hash);
@@ -549,18 +550,18 @@ void CalculateColVarcharHashes(BaseVector *vec, uint32_t rowCount, int64_t *hash
     }
 }
 
-template <type::DataTypeId OmniId>
+template <type::DataTypeId dataTypeId>
 void CalculateColHashesProxy(BaseVector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
 {
-    using RAW_DATA_TYPE = typename NativeAndVectorType<OmniId>::type;
+    using T = typename NativeType<dataTypeId>::type;
 #ifdef ENABLE_HMPP
     if (ConfigUtil::IsEnableHMPP()) {
-        CalculateColHashesHMPP<OmniId>(vec, rowCount, hashes, nulls);
+        CalculateColHashesHMPP<dataTypeId>(vec, rowCount, hashes, nulls);
     } else {
-        CalculateColHashes<RAW_DATA_TYPE>(vec, rowCount, hashes, nulls);
+        CalculateColHashes<T>(vec, rowCount, hashes, nulls);
     }
 #else
-    CalculateColHashes<RAW_DATA_TYPE>(vec, rowCount, hashes, nulls);
+    CalculateColHashes<T>(vec, rowCount, hashes, nulls);
 #endif
 }
 
@@ -603,18 +604,18 @@ void CalculateColVarcharHashesProxy(BaseVector *vec, uint32_t rowCount, int64_t 
 #endif
 }
 
-template <type::DataTypeId OmniId>
+template <type::DataTypeId dataTypeId>
 void CalculateOneColumnHash(BaseVector *vec, uint32_t rowCount, int64_t *hashes, bool *nulls)
 {
-    using T = typename NativeType<OmniId>::type;
+    using T = typename NativeType<dataTypeId>::type;
     if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
         CalculateColVarcharHashesProxy(vec, rowCount, hashes, nulls);
     } else if constexpr (std::is_same_v<T, Decimal128>) {
         CalculateColDec128HashesProxy(vec, rowCount, hashes, nulls);
-    } else if constexpr (OmniId == OMNI_DECIMAL64) {
+    } else if constexpr (dataTypeId == OMNI_DECIMAL64) {
         CalculateColDec64HashesProxy(vec, rowCount, hashes, nulls);
     } else {
-        CalculateColHashesProxy<OmniId>(vec, rowCount, hashes, nulls);
+        CalculateColHashesProxy<dataTypeId>(vec, rowCount, hashes, nulls);
     }
 }
 
@@ -733,13 +734,13 @@ std::unique_ptr<BaseVector> ConstructBuildColumn(const JoinHashTables *hashTable
                 GetBuildColumnAndRowIndex(hashTables, partitionedJoinPosition, outputCol, originalRowIndex);
             if (buildVector->IsNull(originalRowIndex)) {
                 output->SetNull(index++);
+                continue;
+            }
+            // todo::can the processing of dictionary be placed earlier?
+            if (buildVector->GetEncoding() != OMNI_DICTIONARY) {
+                output->SetValue(index++, static_cast<FlatVector *>(buildVector)->GetValue(originalRowIndex));
             } else {
-                // todo::can the processing of dictionary be placed earlier?
-                if (buildVector->GetEncoding() != OMNI_DICTIONARY) {
-                    output->SetValue(index++, static_cast<FlatVector *>(buildVector)->GetValue(originalRowIndex));
-                } else {
-                    output->SetValue(index++, static_cast<DictionaryVector *>(buildVector)->GetValue(originalRowIndex));
-                }
+                output->SetValue(index++, static_cast<DictionaryVector *>(buildVector)->GetValue(originalRowIndex));
             }
         } else {
             output->SetNull(index++);
@@ -749,7 +750,7 @@ std::unique_ptr<BaseVector> ConstructBuildColumn(const JoinHashTables *hashTable
 }
 
 std::unique_ptr<BaseVector> ConstructBuildVarcharColumn(const JoinHashTables *hashTables, int32_t outputCol,
-    uint64_t *buildIndex, int32_t offset, int32_t length, uint32_t width)
+    uint64_t *buildIndex, int32_t offset, int32_t length)
 {
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     using DictionaryVector = Vector<DictionaryContainer<std::string_view, LargeStringContainer>>;
@@ -765,13 +766,15 @@ std::unique_ptr<BaseVector> ConstructBuildVarcharColumn(const JoinHashTables *ha
                 GetBuildColumnAndRowIndex(hashTables, partitionedJoinPosition, outputCol, originalRowIndex);
             if (buildVector->IsNull(originalRowIndex)) {
                 output->SetNull(index++);
+                continue;
+            }
+
+            if (buildVector->GetEncoding() != OMNI_DICTIONARY) {
+                auto value = static_cast<VarcharVector *>(buildVector)->GetValue(originalRowIndex);
+                output->SetValue(index++, value);
             } else {
-                // todo::can the processing of dictionary be placed earlier?
-                if (buildVector->GetEncoding() != OMNI_DICTIONARY) {
-                    output->SetValue(index++, static_cast<VarcharVector *>(buildVector)->GetValue(originalRowIndex));
-                } else {
-                    output->SetValue(index++, static_cast<DictionaryVector *>(buildVector)->GetValue(originalRowIndex));
-                }
+                auto value = static_cast<DictionaryVector *>(buildVector)->GetValue(originalRowIndex);
+                output->SetValue(index++, value);
             }
         } else {
             output->SetNull(index++);
@@ -820,7 +823,7 @@ void ConstructProbeColumnsFromSlice(VectorBatch *vectorBatch, BaseVector **probe
             probeColumn = DYNAMIC_TYPE_DISPATCH(ConstructColumnsFromSliceForDictionary,
                 probeTypes[probeOutputCol]->GetId(), column, probeIndex[position], rowCount);
         }
-        vectorBatch->Append(std::move(probeColumn));
+        vectorBatch->Append(probeColumn.release());
     }
 }
 
@@ -841,7 +844,7 @@ void ConstructProbeColumnsFromReuse(VectorBatch *vectorBatch, BaseVector **probe
             probeColumn = DYNAMIC_TYPE_DISPATCH(ConstructColumnsFromSliceForDictionary,
                 probeTypes[probeOutputCol]->GetId(), column, 0, rowCnt);
         }
-        vectorBatch->Append(std::move(probeColumn));
+        vectorBatch->Append(probeColumn.release());
     }
 }
 
@@ -890,7 +893,7 @@ void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, BaseVector **p
             probeColumn = DYNAMIC_TYPE_DISPATCH(ConstructColumnFromPositions, probeTypes[probeOutputCol]->GetId(),
                 column, &probeIndex[position], rowCount);
         }
-        vectorBatch->Append(std::move(probeColumn));
+        vectorBatch->Append(probeColumn.release());
     }
 }
 
@@ -926,14 +929,13 @@ void ConstructBuildColumns(VectorBatch *vectorBatch, const JoinHashTables *hashT
         buildOutputCol = buildOutputCols[columnIdx];
         const DataTypePtr &dataType = buildOutputTypes[columnIdx];
         if (dataType->GetId() == OMNI_VARCHAR || dataType->GetId() == OMNI_CHAR) {
-            uint32_t width = static_cast<VarcharDataType *>(dataType.get())->GetWidth();
             buildColumn =
-                ConstructBuildVarcharColumn(hashTables, buildOutputCol, buildIndex.data(), position, rowCount, width);
+                ConstructBuildVarcharColumn(hashTables, buildOutputCol, buildIndex.data(), position, rowCount);
         } else {
             buildColumn = DYNAMIC_TYPE_DISPATCH(ConstructBuildColumn, dataType->GetId(), hashTables, buildOutputCol,
                 buildIndex.data(), position, rowCount);
         }
-        vectorBatch->Append(std::move(buildColumn));
+        vectorBatch->Append(buildColumn.release());
     }
 }
 
@@ -941,7 +943,6 @@ void LookupJoinOutputBuilder::BuildOutput(const JoinProbe *joinProbe,
     const JoinHashTables *hashTables, VectorBatch **outputVecBatch)
 {
     BaseVector **probeAllColumns = joinProbe->GetProbeAllColumns();
-    int32_t columnCount = probeOutputColsCount + buildOutputColsCount;
 
     int32_t currentRowToReturn = std::min(maxRowCount, static_cast<int32_t>(probeIndex.size()) - positionReturned);
     auto output = new VectorBatch(currentRowToReturn);

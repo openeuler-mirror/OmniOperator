@@ -189,7 +189,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprEqualCondition)
     double resultCol2[] = {2.2};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-        
+
     for (auto j = 0; j < result->GetRowCount(); j++) {
         long longValue = (static_cast<Vector<int64_t> *>(result->Get(0)))->GetValue(j);
         ASSERT_EQ(longValue, resultCol1[index]);
@@ -283,8 +283,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinstreamedGreaterThenBuf
     int32_t index = 0;
 
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -379,8 +378,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinstreamedLessThenBuffer
     double resultCol2[] =  {1.1, 2.2, 3.3, 4.4, 0};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -475,8 +473,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinMixGreaterLessThenBuff
     double resultCol2[] =  {1.1, 0, 0, 4.4, 4.4, 0};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -576,8 +573,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinStreamedWithNullJoinKe
     double resultCol2[] =  {0, 0, 3.3, 4.4, 0, 6.6, 0};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -758,8 +754,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinMutilColumBatch)
     double resultCol2[] =  {1.1, 2.2, 3.3, 4.4, 5.5, 0};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -950,8 +945,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinNullFirstWithRepeatRow
     double resultCol2[] =  {0, 0, 4.4, 5.5, 5.5, 5.5, 5.5, 6.6};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -1158,8 +1152,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinRepeatRowsAndMutilColu
                             5.5, 5.5, 5.5, 6.6};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -1251,8 +1244,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinStreamedWithEmptyBuffe
     double resultCol2[] =  {0, 0, 0, 0, 0, 0};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -1456,8 +1448,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinMissMatchBothSide
     double resultCol2[] =  {1.1, 2.2, 3.3, 4.4, 0, 6.6, 0, 8.8, 9.9};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -1638,8 +1629,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullJoinWithMutilColumBatch)
     double resultCol2[] =  {1.1, 2.2, 3.3, 4.4, 0, 6.6, 0, 8.8};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -1656,6 +1646,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullJoinWithMutilColumBatch)
         }
         index++;
     }
+    VectorHelper::FreeVecBatch(result);
 
     Expr::DeleteExprs(streamedEqualKeyExprs);
     Expr::DeleteExprs(bufferedEqualKeyExprs);
@@ -1740,8 +1731,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinMatchBothSide)
     int32_t index = 0;
 
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -1845,8 +1835,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinMissMatchWithNull
     double resultCol2[] =  {0, 1.1, 2.2, 3.3, 4.4, 6.6, 0, 8.8, 0};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -1953,8 +1942,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinMissMatchWith2Nul
     int32_t index = 0;
 
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -2057,8 +2045,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinkKeyLast)
     double resultCol2[] =  {1.1, 2.2, 3.3, 4.4, 0, 8.8};
     int32_t index = 0;
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -2246,8 +2233,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullJoinNullValuesWithMutilCol
     int32_t index = 0;
 
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -2340,8 +2326,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinStreamedWithEmpty
     int32_t index = 0;
 
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -2435,8 +2420,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinEmptyStreamedWith
     int32_t index = 0;
 
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -2644,8 +2628,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinRepeatRowsAndMuti
     int32_t index = 0;
 
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -2751,8 +2734,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinMissMatchBothSide
     int32_t index = 0;
 
     ASSERT_EQ(result->GetVectorCount(), 2);
-    
-    
+
     ASSERT_EQ(result->GetRowCount(), sizeof(resultCol1) / sizeof(resultCol1[0]));
     for (auto j = 0; j < result->GetRowCount(); j++) {
         if (resultCol1[index] != 0) {
@@ -2871,7 +2853,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinStreamedWithNullJoinKe
     omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     delete bufferedWithExprOperatorFactory;
-    delete streamedWithExprOperatorFactory;;
+    delete streamedWithExprOperatorFactory;
     delete overflowConfig;
 }
 
@@ -4236,24 +4218,24 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
 TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, TestBothJoinKeyAndFilterWithExpr)
 {
     std::string filter =
-            "{\"exprType\":\"IF\",\"returnType\":4,\"condition\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
-            "\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
-            "\"scale\":2},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
-            "\"scale\":2}},\"if_true\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\",\"left\":{"
-            "\"exprType\":\"FUNCTION\",\"returnType\":6,\"precision\":18,\"scale\":2,\"function_name\":\"abs\", "
-            "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
-            "\"scale\":2}]},\"right\":{\"exprType\":\"FUNCTION\",\"returnType\":6,\"precision\":18,\"scale\":2,\"function_"
-            "name\":\"abs\", "
-            "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
-            "\"scale\":2}]}},\"if_false\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\",\"left\":{"
-            "\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
-            "\"scale\":2},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
-            "\"scale\":2}}}";
+        "{\"exprType\":\"IF\",\"returnType\":4,\"condition\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
+        "\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}},\"if_true\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\",\"left\":{"
+        "\"exprType\":\"FUNCTION\",\"returnType\":6,\"precision\":18,\"scale\":2,\"function_name\":\"abs\", "
+        "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2}]},\"right\":{\"exprType\":\"FUNCTION\",\"returnType\":6,\"precision\":18,\"scale\":2,\"function_"
+        "name\":\"abs\", "
+        "\"arguments\":[{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}]}},\"if_false\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"LESS_THAN\",\"left\":{"
+        "\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
+        "\"scale\":2},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":1,\"precision\":18, "
+        "\"scale\":2}}}";
     DataTypes streamedTblTypes(std::vector<DataTypePtr>({ Decimal64Type(18, 2) }));
     auto castExpr1 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
     auto substrExpr1 = new FuncExpr("substr",
-       { castExpr1, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
-    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs { substrExpr1 };
+        { castExpr1, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
+    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs{ substrExpr1 };
     int32_t streamedOutputCols[]= {0};
     auto overflowConfig = new OverflowConfig();
     auto streamedWithExprOperatorFactory =
@@ -4261,11 +4243,11 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, TestBothJoinKeyAndFilterWithExpr)
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_LEFT, filter, overflowConfig);
     auto streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    DataTypes bufferedTblTypes(std::vector<DataTypePtr> { Decimal64Type(18, 2) });
+    DataTypes bufferedTblTypes(std::vector<DataTypePtr>{ Decimal64Type(18, 2) });
     auto castExpr2 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
     auto substrExpr2 = new FuncExpr("substr",
         { castExpr2, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
-    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs { substrExpr2 };
+    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs{ substrExpr2 };
     int bufferedOutputCols[1] = {0};
     auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     auto bufferedWithExprOperatorFactory =
@@ -4307,7 +4289,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, TestBothJoinKeyAndFilterWithExpr)
     omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     delete bufferedWithExprOperatorFactory;
-    delete streamedWithExprOperatorFactory;;
+    delete streamedWithExprOperatorFactory;
     delete overflowConfig;
 }
 
@@ -4331,7 +4313,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinSubStrAndCaseWhen)
     auto castExpr1 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
     auto substrExpr1 = new FuncExpr("substr",
         { castExpr1, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
-    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs { substrExpr1 };
+    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs{ substrExpr1 };
     int32_t streamedOutputCols[]= {0};
     auto overflowConfig = new OverflowConfig();
     auto streamedWithExprOperatorFactory =
@@ -4339,11 +4321,11 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinSubStrAndCaseWhen)
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_LEFT_ANTI, filter, overflowConfig);
     auto streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    DataTypes bufferedTblTypes(std::vector<DataTypePtr> { Decimal64Type(18, 2) });
+    DataTypes bufferedTblTypes(std::vector<DataTypePtr>{ Decimal64Type(18, 2) });
     auto castExpr2 = new FuncExpr("CAST", { new FieldExpr(0, Decimal64Type(18, 2)) }, VarcharType(50));
     auto substrExpr2 = new FuncExpr("substr",
         { castExpr2, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
-    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs { substrExpr2 };
+    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs{ substrExpr2 };
     int bufferedOutputCols[0] = {};
     auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     auto bufferedWithExprOperatorFactory =
@@ -4380,7 +4362,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinSubStrAndCaseWhen)
     omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     delete bufferedWithExprOperatorFactory;
-    delete streamedWithExprOperatorFactory;;
+    delete streamedWithExprOperatorFactory;
     delete overflowConfig;
 }
 
@@ -4393,7 +4375,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiForEmptyVecBatch)
     auto str = new std::string("");
     auto v2 = new LiteralExpr(str, VarcharType(200));
     auto streamedKey = new CoalesceExpr(v1, v2);
-    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs { streamedKey };
+    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs{ streamedKey };
 
     int32_t streamedOutputCols[]= {0};
     auto overflowConfig = new OverflowConfig();
@@ -4402,12 +4384,12 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiForEmptyVecBatch)
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_LEFT_ANTI, filter, overflowConfig);
     auto streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    DataTypes bufferedTblTypes(std::vector<DataTypePtr> { VarcharType(200), VarcharType(200), Date32Type() });
+    DataTypes bufferedTblTypes(std::vector<DataTypePtr>{ VarcharType(200), VarcharType(200), Date32Type() });
     auto v3 = new FieldExpr(1, VarcharType(200));
     auto str1 = new std::string("");
     auto v4 = new LiteralExpr(str1, VarcharType(200));
     auto bufferedKey = new CoalesceExpr(v3, v4);
-    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs { bufferedKey };
+    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs{ bufferedKey };
     int bufferedOutputCols[0] = {};
     auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     auto bufferedWithExprOperatorFactory =
@@ -4595,7 +4577,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInner2)
     omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
     omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
     delete bufferedWithExprOperatorFactory;
-    delete streamedWithExprOperatorFactory;;
+    delete streamedWithExprOperatorFactory;
     delete overflowConfig;
 }
 }

@@ -61,9 +61,10 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     auto *buildVecBatch = new VectorBatch(dataSize);
-    buildVecBatch->Append(CreateVector(dataSize, buildData0));
+    buildVecBatch->Append(CreateVector(dataSize, buildData0).release());
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
+    buildVecBatch->Append(
+        CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1).release());
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
     int32_t hashKeysCount = 1;
@@ -82,8 +83,9 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     int64_t probeData1[] = {11, 22, 33, 44};
 
     auto *probeVecBatch = new VectorBatch(dataSize);
-    probeVecBatch->Append(CreateVector(dataSize, probeData0));
-    probeVecBatch->Append(CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1));
+    probeVecBatch->Append(CreateVector(dataSize, probeData0).release());
+    probeVecBatch->Append(
+        CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1).release());
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -109,8 +111,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
             {2, 4},
             {11, 33}};
     std::vector<DataTypePtr> expectedTypes{ LongType(), LongType(), LongType(), LongType() };
-    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedTypes,
-        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
+    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedTypes, expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
@@ -129,9 +131,10 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     auto *buildVecBatch = new VectorBatch(dataSize);
-    buildVecBatch->Append(CreateVector(dataSize, buildData0));
+    buildVecBatch->Append(CreateVector(dataSize, buildData0).release());
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
+    buildVecBatch->Append(
+        CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1).release());
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
         LongType()) };
@@ -151,8 +154,9 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     auto *probeVecBatch = new VectorBatch(dataSize);
-    probeVecBatch->Append(CreateVector(dataSize, probeData0));
-    probeVecBatch->Append(CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1));
+    probeVecBatch->Append(CreateVector(dataSize, probeData0).release());
+    probeVecBatch->Append(
+        CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1).release());
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -178,8 +182,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
             {2, 4},
             {11, 33}};
     std::vector<DataTypePtr> expectedTypes{ LongType(), LongType(), LongType(), LongType() };
-    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedTypes,
-        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
+    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedTypes, expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
@@ -198,9 +202,10 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     auto *buildVecBatch = new VectorBatch(dataSize);
-    buildVecBatch->Append(CreateVector(dataSize, buildData0));
+    buildVecBatch->Append(CreateVector(dataSize, buildData0).release());
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
+    buildVecBatch->Append(
+        CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1).release());
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
     int32_t hashKeysCount = 1;
@@ -218,8 +223,9 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     auto *probeVecBatch = new VectorBatch(dataSize);
-    probeVecBatch->Append(CreateVector(dataSize, probeData0));
-    probeVecBatch->Append(CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1));
+    probeVecBatch->Append(CreateVector(dataSize, probeData0).release());
+    probeVecBatch->Append(
+        CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1).release());
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -248,8 +254,8 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
         {2, 0, 4, 0},
         {11, 0, 33, 0}};
     std::vector<DataTypePtr> expectedTypes{ LongType(), LongType(), LongType(), LongType() };
-    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedTypes,
-        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
+    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedTypes, expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorBatch *appendOutput;
     lookupOuterJoinWithExprOperator->GetOutput(&appendOutput);
@@ -264,10 +270,10 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedData2);
     auto expectedVec3 = CreateVector(expectedDatasSize, expectedData3);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(std::move(expectedVec0));
-    vectorBatch->Append(std::move(expectedVec1));
-    vectorBatch->Append(std::move(expectedVec2));
-    vectorBatch->Append(std::move(expectedVec3));
+    vectorBatch->Append(expectedVec0.release());
+    vectorBatch->Append(expectedVec1.release());
+    vectorBatch->Append(expectedVec2.release());
+    vectorBatch->Append(expectedVec3.release());
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -294,9 +300,10 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     auto *buildVecBatch = new VectorBatch(dataSize);
-    buildVecBatch->Append(CreateVector(dataSize, buildData0));
+    buildVecBatch->Append(CreateVector(dataSize, buildData0).release());
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
+    buildVecBatch->Append(
+        CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1).release());
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
         LongType()) };
@@ -315,8 +322,9 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     auto *probeVecBatch = new VectorBatch(dataSize);
-    probeVecBatch->Append(CreateVector(dataSize, probeData0));
-    probeVecBatch->Append(CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1));
+    probeVecBatch->Append(CreateVector(dataSize, probeData0).release());
+    probeVecBatch->Append(
+        CreateDictionaryVector(*probeTypes.GetType(1), dataSize, ids, dataSize, probeData1).release());
 
     int32_t probeOutputCols[2]= {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -363,10 +371,10 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedData2);
     auto expectedVec3 = CreateVector(expectedDatasSize, expectedData3);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(std::move(expectedVec0));
-    vectorBatch->Append(std::move(expectedVec1));
-    vectorBatch->Append(std::move(expectedVec2));
-    vectorBatch->Append(std::move(expectedVec3));
+    vectorBatch->Append(expectedVec0.release());
+    vectorBatch->Append(expectedVec1.release());
+    vectorBatch->Append(expectedVec2.release());
+    vectorBatch->Append(expectedVec3.release());
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -456,8 +464,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
     std::string expectedData05[] = {"world", "hello"};
     std::vector<DataTypePtr> expectedTypes{ LongType(), LongType(), VarcharType(500000),
         LongType(), LongType(), VarcharType(500000) };
-    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedTypes,
-        expectedData00, expectedData01, expectedData02, expectedData03, expectedData04, expectedData05);
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedTypes, expectedData00, expectedData01, expectedData02, expectedData03, expectedData04, expectedData05);
 
     int64_t expectedData10[] = {3, 4};
     int64_t expectedData11[] = {33, 44};
@@ -465,8 +473,8 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
     int64_t expectedData13[] = {4, 3};
     int64_t expectedData14[] = {33, 44};
     std::string expectedData15[] = {"bye", "bye"};
-    AssertVecBatchEquals(lookupJoinOutput[1], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedTypes,
-        expectedData10, expectedData11, expectedData12, expectedData13, expectedData14, expectedData15);
+    AssertVecBatchEquals(lookupJoinOutput[1], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedTypes, expectedData10, expectedData11, expectedData12, expectedData13, expectedData14, expectedData15);
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
@@ -550,7 +558,7 @@ TEST(JoinWithExprTest, TestBothJoinKeyAndFilterWithExpr)
     int64_t expectedData1[] = {112, 111, 112};
     std::vector<DataTypePtr> expectedTypes{ LongType(), LongType() };
     AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
-                         expectedTypes, expectedData0, expectedData1);
+        expectedTypes, expectedData0, expectedData1);
 
     delete filterExpr;
     Expr::DeleteExprs(buildHashKeys);

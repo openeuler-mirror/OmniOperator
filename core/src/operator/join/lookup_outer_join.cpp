@@ -108,11 +108,11 @@ void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
         for (int32_t row = 0; row < rowCount; row++) {
             vector->SetNull(row);
         }
-        vectorBatch->Append(std::move(vector));
+        vectorBatch->Append(vector.release());
     }
     for (int32_t buildCol = 0; buildCol < buildOutputTypes.GetSize(); buildCol++) {
         auto vector = VectorHelper::CreateVector(OMNI_FLAT, buildOutputTypes.GetType(buildCol)->GetId(), rowCount);
-        vectorBatch->Append(std::move(vector));
+        vectorBatch->Append(vector.release());
     }
     int32_t rows = 0;
     auto outputIds = buildOutputTypes.GetIds();

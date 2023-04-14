@@ -77,8 +77,9 @@ TEST(HmppHash, VarcharPerf)
 
     int8_t *nullAddr = nullptr;
     auto *resultVarchar = new int64_t[varcharVector->GetSize()];
-    auto *varcharVectorAddr = reinterpret_cast<const varchar *>(VectorHelper::GetValues(varcharVector, OMNI_VARCHAR));
-    auto *offset = static_cast<int32_t *>(VectorHelper::GetOffsetsAddr(varcharVector, OMNI_VARCHAR));
+    auto *varcharVectorAddr =
+        reinterpret_cast<const varchar *>(VectorHelper::UnsafeGetValues(varcharVector, OMNI_VARCHAR));
+    auto *offset = static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(varcharVector, OMNI_VARCHAR));
     auto *combinedHashVarchar = new int64_t[varcharVector->GetSize()];
     for (int i = 0; i < varcharVector->GetSize(); i++) {
         combinedHashVarchar[i] = 0;
@@ -140,7 +141,7 @@ TEST(HmppHash, LongPerf)
 
     timer.Reset();
 
-    HMPPS_Hash_64s(reinterpret_cast<const int64_t *>(VectorHelper::GetValues(longVector, OMNI_LONG)),
+    HMPPS_Hash_64s(reinterpret_cast<const int64_t *>(VectorHelper::UnsafeGetValues(longVector, OMNI_LONG)),
         longVector->GetSize(), nullAddr, resultLong);
     HMPPS_CombineHash(combinedHashLong, resultLong, longVector->GetSize(), combinedHashLong);
 
@@ -198,7 +199,7 @@ TEST(HmppHash, DoublePerf)
 
     timer.Reset();
 
-    HMPPS_Hash_64f(reinterpret_cast<const double *>(VectorHelper::GetValues(doubleVector, OMNI_DOUBLE)),
+    HMPPS_Hash_64f(reinterpret_cast<const double *>(VectorHelper::UnsafeGetValues(doubleVector, OMNI_DOUBLE)),
         doubleVector->GetSize(), nullAddr, resultDouble);
     HMPPS_CombineHash(combinedHashDouble, resultDouble, doubleVector->GetSize(), combinedHashDouble);
 
@@ -255,7 +256,7 @@ TEST(HmppHash, Decimal128hashtest)
     }
     auto *nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(decimal128Vector));
     auto *decimalAddr =
-        reinterpret_cast<const HmppDecimal128 *>(VectorHelper::GetValues(decimal128Vector, OMNI_DECIMAL128));
+        reinterpret_cast<const HmppDecimal128 *>(VectorHelper::UnsafeGetValues(decimal128Vector, OMNI_DECIMAL128));
     HMPPS_Hash_decimal128(decimalAddr, decimal128Vector->GetSize(), nullAddr, resultDecimal128);
     HMPPS_CombineHash(combinedHashDecimal128, resultDecimal128, decimal128Vector->GetSize(), combinedHashDecimal128);
 
@@ -307,7 +308,7 @@ TEST(HmppHash, IntPerf)
     auto *resultInt = new int64_t[intVector->GetSize()];
 
     timer.Reset();
-    HMPPS_Hash_32s(reinterpret_cast<const int32_t *>(VectorHelper::GetValues(intVector, OMNI_INT)),
+    HMPPS_Hash_32s(reinterpret_cast<const int32_t *>(VectorHelper::UnsafeGetValues(intVector, OMNI_INT)),
         intVector->GetSize(), nullAddr, resultInt);
     HMPPS_CombineHash(combinedHashInt, resultInt, intVector->GetSize(), combinedHashInt);
     timer.CalculateElapse();
@@ -354,7 +355,7 @@ TEST(HmppHash, Boolhashtest)
     auto *resultBool = new int64_t[booleanVector->GetSize()]();
 
     auto *nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(booleanVector));
-    bool *boolAddr = static_cast<bool *>(VectorHelper::GetValues(booleanVector, OMNI_BOOLEAN));
+    bool *boolAddr = static_cast<bool *>(VectorHelper::UnsafeGetValues(booleanVector, OMNI_BOOLEAN));
     HMPPS_Hash_bool(boolAddr, booleanVector->GetSize(), nullAddr, resultBool);
     HMPPS_CombineHash(combinedHashBool, resultBool, booleanVector->GetSize(), combinedHashBool);
 
@@ -396,8 +397,8 @@ TEST(HmppHash, VarcharSlicetest)
     int8_t *nullAddr = nullptr;
     auto *resultVarchar = new int64_t[varcharSliceVector->GetSize()];
     auto *varcharSliceVectorAddr =
-        reinterpret_cast<const varchar *>(VectorHelper::GetValues(varcharSliceVector, OMNI_VARCHAR));
-    auto *offset = static_cast<int32_t *>(VectorHelper::GetOffsetsAddr(varcharSliceVector, OMNI_VARCHAR));
+        reinterpret_cast<const varchar *>(VectorHelper::UnsafeGetValues(varcharSliceVector, OMNI_VARCHAR));
+    auto *offset = static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(varcharSliceVector, OMNI_VARCHAR));
     auto *combinedHashVarchar = new int64_t[varcharSliceVector->GetSize()];
     for (int i = 0; i < varcharSliceVector->GetSize(); i++) {
         combinedHashVarchar[i] = 0;

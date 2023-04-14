@@ -356,7 +356,7 @@ static void ReadColumnCharHashes(uint32_t offset, uint32_t addressesCount, uint6
         } else {
             varcharValue =
                 static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(column)->GetValue(
-                rowIndex);
+                    rowIndex);
         }
         hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(varcharValue.data())),
             varcharValue.length());
