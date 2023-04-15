@@ -189,25 +189,25 @@ void JoinResultBuilder::PaddingRightTableNull(int32_t leftBatchId, int32_t leftR
     buildRowCount++;
 }
 
-void JoinResultBuilder::UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJoinHandler, int32_t addressPosition,
+void JoinResultBuilder::UpdateLeftAntiJoinHandler(int32_t addressPosition,
     std::vector<int8_t> &isSameBufferedKeyMatched, int32_t inputSize)
 {
     if (!isSameBufferedKeyMatched.empty()) {
         if (addressPosition == inputSize - 1) {
-            leftAntiJoinHandler->hasSameBufferedRow = false;
+            leftAntiJoinHandler.hasSameBufferedRow = false;
         } else {
             if (isSameBufferedKeyMatched[addressPosition] == 0) {
-                leftAntiJoinHandler->printThisStreamRowOutFlag = true;
+                leftAntiJoinHandler.printThisStreamRowOutFlag = true;
             }
             if (isSameBufferedKeyMatched[addressPosition + 1] == 0) {
-                leftAntiJoinHandler->hasSameBufferedRow = false;
+                leftAntiJoinHandler.hasSameBufferedRow = false;
             } else {
-                leftAntiJoinHandler->hasSameBufferedRow = true;
+                leftAntiJoinHandler.hasSameBufferedRow = true;
             }
         }
     } else {
-        leftAntiJoinHandler->hasSameBufferedRow = false;
-        leftAntiJoinHandler->printThisStreamRowOutFlag = true;
+        leftAntiJoinHandler.hasSameBufferedRow = false;
+        leftAntiJoinHandler.printThisStreamRowOutFlag = true;
     }
 }
 
@@ -221,22 +221,19 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
         int32_t leftRowId = DecodePosition(streamedRowAddress);
         int32_t rightBatchId = DecodeSliceIndex(bufferedRowAddress);
         int32_t rightRowId = DecodePosition(bufferedRowAddress);
-        FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
+        FreeVectorBatchesForInner(startBufferedBatchIds[addressPosition], leftBatchId);
 
-        if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
-            for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
-                AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
-                    leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
-            }
-            for (int32_t columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
-                int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
-                AddValueToBuildVector(rightTablePagesIndex->GetColumn(rightBatchId, rightTableOutputCols[columnIdx]),
-                    rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
-            }
-            buildRowCount++;
+        for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+            AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
+                leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
         }
+        for (int32_t columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
+            int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+            AddValueToBuildVector(rightTablePagesIndex->GetColumn(rightBatchId, rightTableOutputCols[columnIdx]),
+                rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
+        }
+        buildRowCount++;
 
-        preStreamedRowAddress = streamedRowAddress;
         addressOffset++;
         if (buildRowCount >= maxRowCount) {
             buildVectorBatchRowCount = buildRowCount;
@@ -245,7 +242,6 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
     }
 
     buildVectorBatchRowCount = buildRowCount;
-    preStreamedRowAddress = INT64_MAX;
     if (buildRowCount >= maxRowCount) {
         return 1;
     }
@@ -425,8 +421,7 @@ int32_t JoinResultBuilder::ConstructLeftAntiJoinOutput()
     leftAntiJoinHandler.hasSameBufferedRow = false;
     leftAntiJoinHandler.printThisStreamRowOutFlag = true;
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
-        UpdateLeftAntiJoinHandler(&leftAntiJoinHandler, addressPosition, isSameBufferedKeyMatched,
-            inputSize); // only for left anti
+        UpdateLeftAntiJoinHandler(addressPosition, isSameBufferedKeyMatched, inputSize); // only for left anti
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
         if (preStreamedRowAddress != INT64_MAX && preStreamedRowAddress != streamedRowAddress &&
@@ -518,6 +513,16 @@ void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId
         leftTablePagesIndex->FreeBeforeVecBatch(leftBatchId);
         rightTablePagesIndex->FreeBeforeVecBatch(rightBatchId);
         lastUnMatchedStreamedBatchId = leftBatchId;
+    }
+}
+
+void JoinResultBuilder::FreeVectorBatchesForInner(int32_t startRightBatchId, int32_t leftBatchId)
+{
+    if (startRightBatchId > lastUnMatchedBufferedBatchId && leftBatchId > lastUnMatchedStreamedBatchId) {
+        leftTablePagesIndex->FreeBeforeVecBatch(leftBatchId);
+        rightTablePagesIndex->FreeBeforeVecBatch(startRightBatchId);
+        lastUnMatchedStreamedBatchId = leftBatchId;
+        lastUnMatchedBufferedBatchId = startRightBatchId;
     }
 }
 

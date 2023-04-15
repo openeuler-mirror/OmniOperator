@@ -10,6 +10,7 @@
 #include "operator/join/common_join.h"
 #include "vector/vector_common.h"
 #include "operator/pages_index.h"
+#include "sort_merge_join_resultBuilder.h"
 
 namespace omniruntime {
 namespace op {
@@ -139,11 +140,16 @@ public:
 
     int64_t FindNextJoinRows();
 
-    int32_t GetMatchedValueAddresses(std::vector<int8_t> &isPreKeyMatched,
+    int32_t GetMatchedValueAddresses(std::vector<int8_t> &isPreKeyMatched, std::vector<int32_t> &bufferedBatchIds,
         std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
         std::vector<int8_t> &isSameBufferedKeyMatched);
 
     ~SortMergeJoinScanner();
+
+    void SetJoinResultBuilder(JoinResultBuilder *joinResultBuilder)
+    {
+        this->resultBuilder = joinResultBuilder;
+    }
 
 private:
     template <JoinType templateJoinType> void InnerJoin();
@@ -168,13 +174,13 @@ private:
 
     bool AdvancedBufferedJoinKey();
 
-    /** Returns true if there are any NULL values in this row. */
+    /* * Returns true if there are any NULL values in this row. */
     ALWAYS_INLINE bool CurStreamedHasNull()
     {
         return streamedPagesIndex->HaveNull(streamedPagesIndexPosition);
     }
 
-    /** Returns true if there are any NULL values in this row. */
+    /* * Returns true if there are any NULL values in this row. */
     ALWAYS_INLINE bool CurBufferedHasNull()
     {
         return bufferedPagesIndex->HaveNull(bufferedPagesIndexPosition);
@@ -236,23 +242,25 @@ private:
     {
         auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
         auto bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-        return CompareRowKeys(streamedValueAddr, streamedPagesIndex, streamedTableKeysCols, bufferedValueAddr,
-            bufferedPagesIndex, bufferedTableKeysCols);
+        auto streamedBatchId = DecodeSliceIndex(streamedValueAddr);
+        auto streamedRowId = DecodePosition(streamedValueAddr);
+        auto bufferedBatchId = DecodeSliceIndex(bufferedValueAddr);
+        auto bufferedRowId = DecodePosition(bufferedValueAddr);
+        return CompareRowKeys(streamedBatchId, streamedRowId, bufferedBatchId, bufferedRowId);
     }
 
-    ALWAYS_INLINE int32_t CompareRowKeys(int64_t leftRowIndex, DynamicPagesIndex *leftPagesIndex,
-        const int32_t *leftKeyCols, int64_t rightRowIndex, DynamicPagesIndex *rightPagesIndex,
-        const int32_t *rightKeyCols)
+    ALWAYS_INLINE int32_t CompareStreamedRowKeys(int64_t leftRowIndex, int64_t rightRowIndex)
     {
-        auto streamedBatchId = DecodeSliceIndex(leftRowIndex);
-        auto streamedRowId = DecodePosition(leftRowIndex);
-        auto bufferedBatchId = DecodeSliceIndex(rightRowIndex);
-        auto bufferedRowId = DecodePosition(rightRowIndex);
+        auto leftBatchId = DecodeSliceIndex(leftRowIndex);
+        auto leftRowId = DecodePosition(leftRowIndex);
+        auto rightBatchId = DecodeSliceIndex(rightRowIndex);
+        auto rightRowId = DecodePosition(rightRowIndex);
         for (int i = 0; i < keyColsCount; ++i) {
-            auto streamedColumn = leftPagesIndex->GetColumn(streamedBatchId, leftKeyCols[i]);
-            auto bufferedColumn = rightPagesIndex->GetColumn(bufferedBatchId, rightKeyCols[i]);
-            auto com = OperatorUtil::CompareVectorAtPosition(streamedTableKeysTypes.GetIds()[leftKeyCols[i]],
-                streamedColumn, streamedRowId, bufferedColumn, bufferedRowId);
+            auto colIdx = streamedTableKeysCols[i];
+            auto leftColumn = streamedPagesIndex->GetColumn(leftBatchId, colIdx);
+            auto rightColumn = streamedPagesIndex->GetColumn(rightBatchId, colIdx);
+            auto com = OperatorUtil::CompareVectorAtPosition(leftColumn->GetTypeId(), leftColumn, leftRowId,
+                rightColumn, rightRowId);
             if (com != 0) {
                 return com;
             }
@@ -261,10 +269,20 @@ private:
         return 0;
     }
 
-    ALWAYS_INLINE int32_t CompareRowKeys(int64_t leftRowIndex, int64_t rightRowIndex)
+    ALWAYS_INLINE int32_t CompareRowKeys(uint32_t streamedBatchId, uint32_t streamedRowId, uint32_t bufferedBatchId,
+        uint32_t bufferedRowId)
     {
-        return CompareRowKeys(leftRowIndex, streamedPagesIndex, streamedTableKeysCols, rightRowIndex,
-            bufferedPagesIndex, bufferedTableKeysCols);
+        for (int i = 0; i < keyColsCount; ++i) {
+            auto streamedColumn = streamedPagesIndex->GetColumn(streamedBatchId, streamedTableKeysCols[i]);
+            auto bufferedColumn = bufferedPagesIndex->GetColumn(bufferedBatchId, bufferedTableKeysCols[i]);
+            auto com = OperatorUtil::CompareVectorAtPosition(streamedColumn->GetTypeId(), streamedColumn, streamedRowId,
+                bufferedColumn, bufferedRowId);
+            if (com != 0) {
+                return com;
+            }
+        }
+
+        return 0;
     }
 
     omniruntime::type::DataTypes streamedTableKeysTypes;
@@ -289,11 +307,14 @@ private:
     int32_t preStreamedPagesIndexPosition;
     std::unique_ptr<JoinStatus> preStatus;
     std::vector<int8_t> isPreKeyMatched;
+    std::vector<uint32_t> startBufferedBatchIds;
     std::vector<int8_t> isSameBufferedKeyMatched;
     std::vector<int8_t> preBufferedKeyMatched;
     std::vector<int64_t> streamedValueAddress;
     std::vector<int64_t> bufferedValueAddress;
     std::vector<int64_t> preBufferedValueAddress;
+    int32_t startBufferedBatchId;
+    JoinResultBuilder *resultBuilder = nullptr;
 };
 }
 }

@@ -26,7 +26,6 @@ int32_t DynamicPagesIndex::AddVecBatch(omniruntime::vec::VectorBatch *vecBatch)
         return 0;
     }
 
-    int32_t vecBatchLastIndex = this->vecBatchFreeFlagDeque.size();
     int32_t rowCount = vecBatch->GetRowCount();
     if (rowCount == 0) {
         // no more vector batch will add
@@ -41,6 +40,7 @@ int32_t DynamicPagesIndex::AddVecBatch(omniruntime::vec::VectorBatch *vecBatch)
     this->vectorBatchDeque.emplace_back(vecBatch);
 
     // generate value address.
+    int32_t vecBatchLastIndex = this->columnsDeque.size();
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         int64_t valueAddress = EncodeSyntheticAddress(vecBatchLastIndex, rowIdx);
         this->valueAddressesDeque.emplace_back(valueAddress);

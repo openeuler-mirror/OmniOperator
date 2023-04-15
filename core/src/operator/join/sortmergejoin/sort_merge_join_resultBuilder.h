@@ -54,6 +54,11 @@ public:
         return isPreKeyMatched;
     }
 
+    ALWAYS_INLINE std::vector<int32_t> &GetStartBufferedBatchIds()
+    {
+        return startBufferedBatchIds;
+    }
+
     ALWAYS_INLINE std::vector<int64_t> &GetBufferedTableValueAddresses()
     {
         return bufferedTableValueAddresses;
@@ -89,6 +94,8 @@ public:
 
     ~JoinResultBuilder();
 
+    bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
+
 private:
     struct LeftAntiJoinHandler {
         bool hasSameBufferedRow = false;
@@ -97,10 +104,10 @@ private:
 
     void JoinFilterCodeGen(OverflowConfig *overflowConfig);
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
-    bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
+    void FreeVectorBatchesForInner(int32_t startRightBatchId, int32_t leftBatchId);
     VectorBatch *NewEmptyVectorBatch() const;
-    void UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJoinHandler, int32_t addressPosition,
-        std::vector<int8_t> &isSameBufferedKeyMatched, int32_t inputSize);
+    void UpdateLeftAntiJoinHandler(int32_t addressPosition, std::vector<int8_t> &isSameBufferedKeyMatched,
+        int32_t inputSize);
 
     ALWAYS_INLINE void PaddingLeftTableNull()
     {
@@ -142,6 +149,7 @@ private:
     std::string filterExpStr;
 
     int32_t lastUnMatchedStreamedBatchId = -1;
+    int32_t lastUnMatchedBufferedBatchId = -1;
 
     bool isFinished = false;
     int32_t maxRowCount;
@@ -171,6 +179,7 @@ private:
     int32_t addressOffset = 0;
     int32_t buildRowCount = 0;
     std::vector<int8_t> isPreKeyMatched;
+    std::vector<int32_t> startBufferedBatchIds;
     // store the matched valueAddress
     std::vector<int64_t> streamedTableValueAddresses;
     std::vector<int64_t> bufferedTableValueAddresses;
