@@ -99,7 +99,7 @@ extern "C" DLLEXPORT int64_t XxH64Decimal128(int64_t xHigh, uint64_t xLow, int32
     }
 
     int32_t byteLen = 0;
-    auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(xHigh, xLow, &byteLen);
+    auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(xHigh, xLow, byteLen);
     auto result = op::HashUtil::XxHash64Hash(seed, bytes, 0, byteLen);
     delete[] bytes;
     bytes = nullptr;

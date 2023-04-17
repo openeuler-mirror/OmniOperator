@@ -145,6 +145,10 @@ extern "C" DLLEXPORT int32_t Mm3Int32(int32_t val, bool isValNull, int32_t seed,
     if (isSeedNull) {
         seed = 0;
     }
+    if (isValNull) {
+        return seed;
+    }
+
     return static_cast<int32_t>(HashInt(static_cast<uint32_t>(val * !isValNull), static_cast<uint32_t>(seed)));
 }
 
@@ -153,6 +157,10 @@ extern "C" DLLEXPORT int32_t Mm3Int64(int64_t val, bool isValNull, int32_t seed,
     if (isSeedNull) {
         seed = 0;
     }
+    if (isValNull) {
+        return seed;
+    }
+
     return static_cast<int32_t>(HashLong(static_cast<uint64_t>(val * !isValNull), static_cast<uint32_t>(seed)));
 }
 
@@ -161,6 +169,10 @@ extern "C" DLLEXPORT int32_t Mm3String(char *val, int32_t valLen, bool isValNull
     if (isSeedNull) {
         seed = 0;
     }
+    if (isValNull) {
+        return seed;
+    }
+
     valLen = valLen * !isValNull;
     return static_cast<int32_t>(HashUnsafeBytes(val, static_cast<uint32_t>(valLen), static_cast<uint32_t>(seed)));
 }
@@ -175,6 +187,10 @@ extern "C" DLLEXPORT int32_t Mm3Double(double val, bool isValNull, int32_t seed,
     if (isSeedNull) {
         seed = 0;
     }
+    if (isValNull) {
+        return seed;
+    }
+
     return static_cast<int32_t>(HashLong(uVal.lVal, static_cast<uint32_t>(seed)));
 }
 
@@ -184,6 +200,10 @@ extern "C" DLLEXPORT int32_t Mm3Decimal64(int64_t val, int32_t precision, int32_
     if (isSeedNull) {
         seed = 0;
     }
+    if (isValNull) {
+        return seed;
+    }
+
     return static_cast<int32_t>(HashLong(val * !isValNull, seed));
 }
 
@@ -193,9 +213,12 @@ extern "C" DLLEXPORT int32_t Mm3Decimal128(int64_t xHigh, uint64_t xLow, int32_t
     if (isSeedNull) {
         seed = 0;
     }
+    if (isValNull) {
+        return seed;
+    }
 
     int32_t byteLen = 0;
-    auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(xHigh, xLow, &byteLen);
+    auto bytes = omniruntime::type::Decimal128Utils::Decimal128ToBytes(xHigh, xLow, byteLen);
     auto result = static_cast<int32_t>(HashUnsafeBytes(reinterpret_cast<char *>(bytes), byteLen, seed));
     delete[] bytes;
     return result;
@@ -206,6 +229,10 @@ extern "C" DLLEXPORT int32_t Mm3Boolean(bool val, bool isValNull, int32_t seed, 
     if (isSeedNull) {
         seed = 0;
     }
+    if (isValNull) {
+        return seed;
+    }
+
     uint32_t intVal = val ? 1 : 0;
     return static_cast<int32_t>(HashInt(static_cast<uint32_t>(intVal * !isValNull), static_cast<uint32_t>(seed)));
 }
