@@ -5,4 +5,4 @@ add_library(${MEMORY_TEST_TARGET} ${MEMORY_TESTS_LIST})
 
 # dependent library
 target_link_libraries(${MEMORY_TEST_TARGET} memory)
-target_include_directories(${MEMORY_TEST_TARGET} PRIVATE ${PROJECT_SOURCE_DIR}/src/memory)
+target_include_directories(${MEMORY_TEST_TARGET} PRIVATE ${SOURCE_ROOT}/src/memory)

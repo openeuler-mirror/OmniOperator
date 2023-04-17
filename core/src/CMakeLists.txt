@@ -5,7 +5,6 @@ if (DEFINED ENABLE_DT)
     endif ()
 endif ()
 
-add_subdirectory(jni)
 add_subdirectory(memory)
 add_subdirectory(operator)
 add_subdirectory(util)
@@ -20,7 +19,6 @@ set(OM_TARGET ${OMNI_RUNTIME_SO})
 
 # link libraries
 set(MY_LINK
-        jni
         ${OMNI_CODEGEN_SO}
         ${OMNI_OPERATOR_SO}
         ${OMNI_VECTOR_SO}

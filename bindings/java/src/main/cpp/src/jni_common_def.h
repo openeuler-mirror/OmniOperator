@@ -45,7 +45,7 @@
     }                                                              \
     catch (const std::exception &e)                                \
     {                                                              \
-        delete overflowConfig;                                     \
+        delete (overflowConfig);                                   \
         env->ThrowNew(omniRuntimeExceptionClass, e.what());        \
         return fallBackExpr;                                       \
     }
@@ -55,7 +55,7 @@
     catch (const std::exception &e)                                                     \
     {                                                                                   \
         Expr::DeleteExprs(toDeleteExprs);                                               \
-        delete overflowConfig;                                                          \
+        delete (overflowConfig);                                                        \
         env->ThrowNew(omniRuntimeExceptionClass, e.what());                             \
         return fallBackExpr;                                                            \
     }
@@ -67,7 +67,7 @@
     {                                                                                                          \
         Expr::DeleteExprs(toDeleteExprs1);                                                                     \
         Expr::DeleteExprs(toDeleteExprs2);                                                                     \
-        delete overflowConfig;                                                                                 \
+        delete (overflowConfig);                                                                               \
         env->ThrowNew(omniRuntimeExceptionClass, e.what());                                                    \
         return fallBackExpr;                                                                                   \
     }
