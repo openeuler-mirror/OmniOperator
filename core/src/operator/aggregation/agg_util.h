@@ -41,11 +41,12 @@ public:
         const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols, int32_t aggFilterNum,
         VectorAllocator *allocator)
     {
-        int32_t vecCount = projectCols.size() + aggFilterNum;
+        auto projectColsCount = static_cast<int32_t>(projectCols.size());
+        int32_t vecCount = projectColsCount + aggFilterNum;
         int32_t rowCount = inputVecBatch->GetRowCount();
         VectorBatch *newInputVecBatch = new VectorBatch(vecCount, rowCount);
 
-        for (int32_t i = 0; i < projectCols.size(); i++) {
+        for (int32_t i = 0; i < projectColsCount; i++) {
             int32_t sourceColId = projectCols[i];
             if (sourceColId >= 0) {
                 // source col
@@ -55,7 +56,7 @@ public:
             }
         }
 
-        int32_t projectFuncsCount = projectFuncs.size();
+        auto projectFuncsCount = projectFuncs.size();
         if (projectFuncsCount <= 0) {
             return newInputVecBatch;
         }
@@ -89,8 +90,8 @@ public:
     {
         auto aggFilterNum = aggSimpleFilters.size();
         auto rowCount = inputVecBatch->GetRowCount();
-        auto projectColsCount = projectCols.size();
-        for (int i = 0; i < aggFilterNum; ++i) {
+        auto projectColsCount = static_cast<int32_t>(projectCols.size());
+        for (size_t i = 0; i < aggFilterNum; ++i) {
             BooleanVector *booleanVector = new BooleanVector(vecAllocator, rowCount);
             for (int j = 0; j < rowCount; ++j) {
                 if (AggUtil::IsAggPositionEligible(j, inputVecBatch, aggSimpleFilters[i], context)) {

@@ -1,6 +1,6 @@
 #!/bin/bash
 # build file for OmniOperatorJit
-# Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+# Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
 
 set -e
 

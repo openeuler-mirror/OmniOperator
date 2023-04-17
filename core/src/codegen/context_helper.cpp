@@ -5,6 +5,7 @@
 #include "context_helper.h"
 
 using namespace omniruntime::op;
+using namespace omniruntime::type;
 
 namespace omniruntime::codegen {
 #ifdef _WIN32

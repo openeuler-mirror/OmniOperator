@@ -72,7 +72,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
         int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
         ptr += vector->GetPositionOffset();
 
-        int64_t noUsed{};
+        int64_t noUsed {};
 
         if (indexMap == nullptr) {
             ptr += rowOffset;
@@ -103,7 +103,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilterFunction(A
     boolPtr += booleanVector->GetPositionOffset();
     if constexpr (RAW_IN) {
         if (nullMap == nullptr) {
-            for (size_t i = 0; i < rowCount; ++i) {
+            for (int32_t i = 0; i < rowCount; ++i) {
                 if (boolPtr[i]) {
                     state.count++;
                 }
@@ -115,7 +115,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilterFunction(A
         int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
         ptr += vector->GetPositionOffset();
 
-        int64_t noUsed{};
+        int64_t noUsed {};
 
         if (indexMap == nullptr) {
             ptr += rowOffset;

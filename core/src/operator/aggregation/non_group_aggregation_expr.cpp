@@ -100,8 +100,8 @@ AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &source
     : sourceTypes(sourceTypes),
       projectCols(projectCols),
       projectFuncs(projectFuncs),
-      aggOperator(aggOperator),
-      aggSimpleFilters(aggSimpleFilters)
+      aggSimpleFilters(aggSimpleFilters),
+      aggOperator(aggOperator)
 {}
 
 AggregationWithExprOperator::~AggregationWithExprOperator()

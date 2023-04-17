@@ -202,7 +202,7 @@ public:
         }
         if (needFilterJude) {
             realAggregator->ProcessGroupInternalFilter(rowStates, aggIdx, vector, booleanVector, rowOffset,
-                                                       nullMap.data, indexMap.data);
+                nullMap.data, indexMap.data);
         } else {
             realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
         }
