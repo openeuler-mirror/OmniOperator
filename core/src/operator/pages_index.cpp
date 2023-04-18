@@ -342,11 +342,12 @@ static ALWAYS_INLINE typename NativeType<D>::type NewGetValue(void* valuePtr)
 }
 
 template <DataTypeId D>
-static int32_t ALWAYS_INLINE NewOnlyCompareAscending(typename NativeType<D>::type &left, typename NativeType<D>::type &right)
+static int8_t ALWAYS_INLINE NewOnlyCompareAscending(typename NativeType<D>::type &left, typename NativeType<D>::type &right)
 {
     if constexpr (D == OMNI_INT || D == OMNI_DATE32 || D == OMNI_SHORT ||
                   D == OMNI_LONG || D == OMNI_DECIMAL64 || D == OMNI_BOOLEAN) {
-        return (left - right);
+        return left > right ? OperatorUtil::COMPARE_STATUS_GREATER_THAN :
+                              left < right ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     } else if constexpr (D == OMNI_DECIMAL128) {
         return (left == right) ? omniruntime::op::OperatorUtil::COMPARE_STATUS_EQUAL : left.Compare(right);
     } else if constexpr (D == OMNI_DOUBLE) {
@@ -367,7 +368,7 @@ static int32_t ALWAYS_INLINE NewOnlyCompareAscending(typename NativeType<D>::typ
 }
 
 template <DataTypeId D, int32_t sortAscendings>
-static int32_t ALWAYS_INLINE NewOnlyCompare(typename NativeType<D>::type &left, typename NativeType<D>::type &right)
+static int8_t ALWAYS_INLINE NewOnlyCompare(typename NativeType<D>::type &left, typename NativeType<D>::type &right)
 {
     if constexpr (sortAscendings == 1) {
         return NewOnlyCompareAscending<D>(left, right);
@@ -402,9 +403,9 @@ int32_t NewMedian3(std::vector<std::pair<void*, uint64_t>> &valuePtrs, int32_t a
     auto va = NewGetValue<D>(valuePtrs[a].first);
     auto vb = NewGetValue<D>(valuePtrs[b].first);
     auto vc = NewGetValue<D>(valuePtrs[c].first);
-    int32_t ab = NewOnlyCompare<D, sortAscendings>(va, vb);
-    int32_t ac = NewOnlyCompare<D, sortAscendings>(va, vc);
-    int32_t bc = NewOnlyCompare<D, sortAscendings>(vb, vc);
+    int8_t ab = NewOnlyCompare<D, sortAscendings>(va, vb);
+    int8_t ac = NewOnlyCompare<D, sortAscendings>(va, vc);
+    int8_t bc = NewOnlyCompare<D, sortAscendings>(vb, vc);
     return ((ab < 0) ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
@@ -425,7 +426,7 @@ int32_t NO_INLINE NewGetMedianPosition(std::vector<std::pair<void*, uint64_t>> &
 }
 
 template <DataTypeId D, int32_t sortAscendings>
-int32_t ALWAYS_INLINE NewGetNextCompareLeft(int32_t *comparetmp, int &k, int &limit, int32_t b, int32_t c,
+int8_t ALWAYS_INLINE NewGetNextCompareLeft(int8_t *comparetmp, int &k, int &limit, int32_t b, int32_t c,
     std::vector<std::pair<void*, uint64_t>> &valuePtrs, typename NativeType<D>::type &pivotValue)
 {
     if (k < limit) {
@@ -470,7 +471,7 @@ int32_t ALWAYS_INLINE NewGetNextCompareLeft(int32_t *comparetmp, int &k, int &li
 }
 
 template <DataTypeId D, int32_t sortAscendings>
-inline int32_t NewGetNextCompareRight(int32_t *comparetmp, int &k, int &limit, int32_t b, int32_t c,
+inline int8_t NewGetNextCompareRight(int8_t *comparetmp, int &k, int &limit, int32_t b, int32_t c,
     std::vector<std::pair<void*, uint64_t>> &valuePtrs, typename NativeType<D>::type &pivotValue)
 {
     if (k < limit) {
@@ -515,7 +516,7 @@ inline int32_t NewGetNextCompareRight(int32_t *comparetmp, int &k, int &limit, i
 }
 
 template <DataTypeId D, int32_t sortAscendings>
-void QuickSortColumnInternal(std::vector<std::pair<void*, uint64_t>> &valuePtrs, int32_t from, int32_t to, int32_t *comparetmp)
+void QuickSortColumnInternal(std::vector<std::pair<void*, uint64_t>> &valuePtrs, int32_t from, int32_t to, int8_t *comparetmp)
 {
     int32_t len = to - from;
     if (len <= QUICK_SORT_SMALL_LEN) {
@@ -535,9 +536,9 @@ void QuickSortColumnInternal(std::vector<std::pair<void*, uint64_t>> &valuePtrs,
     int bk = 0, blim = 0;
     int ck = 0, clim = 0;
 
-    int32_t *leftComparetmp = comparetmp, *rightComparetmp = comparetmp + NMAX_SIZE;
+    int8_t *leftComparetmp = comparetmp, *rightComparetmp = comparetmp + NMAX_SIZE;
     while (true) {
-        int32_t comparison;
+        int8_t comparison;
         while (b <= c && (comparison = NewGetNextCompareLeft<D, sortAscendings>(leftComparetmp, bk, blim, b, c, valuePtrs, pivotValue)) <= 0) {
             if (UNLIKELY(comparison == 0)) {
                 Swap(valuePtrs, a++, b);
@@ -577,7 +578,7 @@ template <DataTypeId D, int32_t sortAscendings>
 void QuickSortColumn(std::vector<std::pair<void*, uint64_t>> &valuePtrs,
     int32_t from, int32_t to)
 {
-    int32_t comparetmp[NMAX_SIZE+NMAX_SIZE];
+    int8_t comparetmp[NMAX_SIZE+NMAX_SIZE];
     QuickSortColumnInternal<D, sortAscendings>(valuePtrs, from, to, comparetmp);
 }
 
