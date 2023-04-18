@@ -25,6 +25,7 @@ print_help() {
     --disable-cpuchecker               = Disable CPU checker
     --enable-dt                        = Enable DT checker
     --enable-hmpp                      = Enable using hmpp library
+    --exclude-test                     = Exclude Test Source
   "
 }
 
@@ -80,5 +81,12 @@ exit_with_message_and_print_help()
    echo ""
    echo "$1"
    print_help
+   exit 1
+}
+
+exit_with_message()
+{
+   echo ""
+   echo "$1"
    exit 1
 }
