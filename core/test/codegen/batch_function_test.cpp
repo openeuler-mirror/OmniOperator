@@ -1167,10 +1167,38 @@ TEST(BatchFunctionTest, SubstrZh)
         strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
     }
     bool isAnyNull[] = { false, false, false, false, false, false, false, false };
-    BatchSubstrEmptyString(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(), isAnyNull,
-        outResult.data(), outLen.data(), rowCnt);
+    BatchSubstrVarchar<int32_t, false, false>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        length.data(), isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, "时欧基乌斯", "hello! 回复哦", "色的圣诞袜", "", "袜", "", str };
+    AssertStringEquals(expected, outResult, outLen);
+
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrZhWhenStartIndexEqualsZero)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    auto strLen = static_cast<int32_t>(str.length());
+
+    std::vector<std::string> inputStr(8, str);
+    std::vector<int32_t> inputLen(8, strLen);
+    std::vector<int32_t> startIndexs { 0, 0, 0, 0, 0, 0, 0, 0 };
+    std::vector<int32_t> length { 37, 5, 10, 7, 0, strLen + 5, 10, 37 };
+    int32_t rowCnt = inputStr.size();
+    std::vector<int32_t> outLen(rowCnt);
+    std::vector<uint8_t *> outResult(rowCnt);
+    std::vector<uint8_t *> strAddr(rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+    bool isAnyNull[] = { false, false, false, false, false, false, false, false };
+    BatchSubstrVarchar<int32_t, false, false>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        length.data(), isAnyNull, outResult.data(), outLen.data(), rowCnt);
+
+    std::vector<std::string> expected { "", "", "", "", "", "", "", "" };
     AssertStringEquals(expected, outResult, outLen);
 
     delete context;
@@ -1197,10 +1225,40 @@ TEST(BatchFunctionTest, SubstrCharZh)
     }
 
     bool isAnyNull[] = { false, false, false, false, false, false, false, false };
-    BatchSubstrCharEmptyString(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(), length.data(),
-        isAnyNull, outResult.data(), outLen.data(), rowCnt);
+    BatchSubstrChar<int32_t, false, false>(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(),
+        length.data(), isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, "时欧基乌斯", "hello! 回复哦", "色的圣诞袜", "", "袜", "", str };
+    AssertStringEquals(expected, outResult, outLen);
+
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrCharZhWhenStartIndexEqualsZero)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    int32_t width = 37;
+    int32_t strLen = str.length();
+
+    std::vector<std::string> inputStr(8, str);
+    std::vector<int32_t> inputLen(8, strLen);
+    std::vector<int32_t> startIndexs { 0, 0, 0, 0, 0, 0, 0, 0 };
+    std::vector<int32_t> length { 37, 5, 10, 7, 0, strLen + 5, 10, 37 };
+    int32_t rowCnt = inputStr.size();
+    std::vector<int32_t> outLen(rowCnt);
+    std::vector<uint8_t *> outResult(rowCnt);
+    std::vector<uint8_t *> strAddr(rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull[] = { false, false, false, false, false, false, false, false };
+    BatchSubstrChar<int32_t, false, false>(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(),
+        length.data(), isAnyNull, outResult.data(), outLen.data(), rowCnt);
+
+    std::vector<std::string> expected { "", "", "", "", "", "", "", "" };
     AssertStringEquals(expected, outResult, outLen);
 
     delete context;
@@ -1225,10 +1283,38 @@ TEST(BatchFunctionTest, SubstrWithStartZh)
     }
 
     bool isAnyNull[] = { false, false, false, false, false, false, false };
-    BatchSubstrWithStartEmptyString(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
-        outResult.data(), outLen.data(), rowCnt);
+    BatchSubstrVarcharWithStart<int32_t, false, false>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, " hello! 回复哦黑色的and magic粉色的圣诞袜", "圣诞袜", "", "袜", "", str };
+    AssertStringEquals(expected, outResult, outLen);
+
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrWithStartZhWhenStartIndexEqualsZero)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    auto strLen = static_cast<int32_t>(str.length());
+
+    std::vector<std::string> inputStr(7, str);
+    std::vector<int32_t> inputLen(7, strLen);
+    std::vector<int32_t> startIndexs { 0, 0, 0, 0, 0, 0, 0 };
+    int32_t rowCnt = inputStr.size();
+    std::vector<int32_t> outLen(rowCnt);
+    std::vector<uint8_t *> outResult(rowCnt);
+    std::vector<uint8_t *> strAddr(rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull[] = { false, false, false, false, false, false, false };
+    BatchSubstrVarcharWithStart<int32_t, false, false>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
+
+    std::vector<std::string> expected { "", "", "", "", "", "", "" };
     AssertStringEquals(expected, outResult, outLen);
 
     delete context;
@@ -1254,13 +1340,43 @@ TEST(BatchFunctionTest, SubstrWithStartZhForSpark)
     }
 
     bool isAnyNull[] = { false };
-    BatchSubstrWithStartInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
-        outResult.data(), outLen.data(), rowCnt);
+    BatchSubstrVarcharWithStart<int32_t, true, false>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected(1, str);
     AssertStringEquals(expected, outResult, outLen);
 
     ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrWithStartZhForSparkWhenStartIndexEqualsZero)
+{
+    ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_SUPPORT);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "时欧基乌斯侧后解 h";
+    auto strLen = static_cast<int32_t>(str.length());
+
+    std::vector<std::string> inputStr(1, str);
+    std::vector<int32_t> inputLen(1, strLen);
+    std::vector<int32_t> outLen(inputStr.size());
+    std::vector<uint8_t *> outResult(inputStr.size());
+    std::vector<int32_t> startIndexs { 0 };
+    int32_t rowCnt = inputStr.size();
+    std::vector<uint8_t *> strAddr(rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull[] = { false };
+    BatchSubstrVarcharWithStart<int32_t, true, true>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
+
+    std::vector<std::string> expected(1, str);
+    AssertStringEquals(expected, outResult, outLen);
+
+    ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_NOT_SUPPORT);
     delete context;
 }
 
@@ -1284,13 +1400,43 @@ TEST(BatchFunctionTest, SubstrWithStartEnForSpark)
     }
 
     bool isAnyNull[] = { false };
-    BatchSubstrWithStartInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), isAnyNull,
-        outResult.data(), outLen.data(), rowCnt);
+    BatchSubstrVarcharWithStart<int32_t, true, false>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected(1, str);
     AssertStringEquals(expected, outResult, outLen);
 
     ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrWithStartEnForSparkWhenStartIndexEqualsZero)
+{
+    ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_SUPPORT);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "apple";
+    auto strLen = static_cast<int32_t>(str.length());
+
+    std::vector<std::string> inputStr(1, str);
+    std::vector<int32_t> inputLen(1, strLen);
+    std::vector<int32_t> outLen(inputStr.size());
+    std::vector<uint8_t *> outResult(inputStr.size());
+    std::vector<int32_t> startIndexs { 0 };
+    int32_t rowCnt = inputStr.size();
+    std::vector<uint8_t *> strAddr(rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull[] = { false };
+    BatchSubstrVarcharWithStart<int32_t, true, true>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        isAnyNull, outResult.data(), outLen.data(), rowCnt);
+
+    std::vector<std::string> expected(1, str);
+    AssertStringEquals(expected, outResult, outLen);
+
+    ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_NOT_SUPPORT);
     delete context;
 }
 
@@ -1316,12 +1462,43 @@ TEST(BatchFunctionTest, SubstrWithZhForSpark)
     }
 
     bool isAnyNull1[] = { false, false, false, false };
-    BatchSubstrInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(),
-        isAnyNull1, outResult.data(), outLen.data(), rowCnt);
+    BatchSubstrVarchar<int32_t, true, false>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        length.data(), isAnyNull1, outResult.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "", "时", "时欧基乌斯侧后解 ", "时欧基乌斯侧后解 h" };
     AssertStringEquals(expected, outResult, outLen);
 
     ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrWithZhForSparkWhenStartIndexEqualsZero)
+{
+    ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_SUPPORT);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "时欧基乌斯侧后解 h";
+    auto strLen = static_cast<int32_t>(str.length());
+
+    std::vector<std::string> inputStr(4, str);
+    int32_t rowCnt = inputStr.size();
+    std::vector<int32_t> inputLen(4, strLen);
+    std::vector<int32_t> outLen(inputStr.size());
+    std::vector<uint8_t *> outResult(inputStr.size());
+    std::vector<int32_t> startIndexs { 0, 0, 0, 0 };
+    std::vector<int32_t> length { 0, 1, 2, 5 };
+    std::vector<uint8_t *> strAddr(rowCnt);
+
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull1[] = { false, false, false, false };
+    BatchSubstrVarchar<int32_t, true, true>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        length.data(), isAnyNull1, outResult.data(), outLen.data(), rowCnt);
+    std::vector<std::string> expected { "", "时", "时欧", "时欧基乌斯" };
+    AssertStringEquals(expected, outResult, outLen);
+
+    ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_NOT_SUPPORT);
     delete context;
 }
 
@@ -1347,12 +1524,43 @@ TEST(BatchFunctionTest, SubstrWithEnForSpark)
     }
 
     bool isAnyNull1[] = { false };
-    BatchSubstrInterceptFromBeyond(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(), length.data(),
-        isAnyNull1, outResult.data(), outLen.data(), rowCnt);
+    BatchSubstrVarchar<int32_t, true, false>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        length.data(), isAnyNull1, outResult.data(), outLen.data(), rowCnt);
     std::vector<std::string> expected { "a" };
     AssertStringEquals(expected, outResult, outLen);
 
     ConfigUtil::SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrWithEnForSparkWhenStartIndexEqualsZero)
+{
+    ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_SUPPORT);
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "apple";
+    auto strLen = static_cast<int32_t>(str.length());
+
+    std::vector<std::string> inputStr(1, str);
+    int32_t rowCnt = inputStr.size();
+    std::vector<int32_t> inputLen(1, strLen);
+    std::vector<int32_t> outLen(inputStr.size());
+    std::vector<uint8_t *> outResult(inputStr.size());
+    std::vector<int32_t> startIndexs { 0 };
+    std::vector<int32_t> length { 3 };
+    std::vector<uint8_t *> strAddr(rowCnt);
+
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull1[] = { false };
+    BatchSubstrVarchar<int32_t, true, true>(contextPtr, strAddr.data(), inputLen.data(), startIndexs.data(),
+        length.data(), isAnyNull1, outResult.data(), outLen.data(), rowCnt);
+    std::vector<std::string> expected { "app" };
+    AssertStringEquals(expected, outResult, outLen);
+
+    ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_NOT_SUPPORT);
     delete context;
 }
 
@@ -1376,10 +1584,39 @@ TEST(BatchFunctionTest, SubstrCharWithStartZh)
     }
 
     bool isAnyNull[] = { false, false, false, false, false, false, false };
-    BatchSubstrCharWithStartEmptyString(contextPtr, strAddr.data(), width, inputLen.data(), startIndexs.data(),
-        isAnyNull, outResult.data(), outLen.data(), rowCnt);
+    BatchSubstrCharWithStart<int32_t, false, false>(contextPtr, strAddr.data(), width, inputLen.data(),
+        startIndexs.data(), isAnyNull, outResult.data(), outLen.data(), rowCnt);
 
     std::vector<std::string> expected { str, " hello! 回复哦黑色的and magic粉色的圣诞袜", "圣诞袜", "", "袜", "", str };
+    AssertStringEquals(expected, outResult, outLen);
+
+    delete context;
+}
+
+TEST(BatchFunctionTest, SubstrCharWithStartZhWhenStartIndexEqualsZero)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::string str = "时欧基乌斯侧后解 hello! 回复哦黑色的and magic粉色的圣诞袜";
+    auto width = static_cast<int32_t>(str.length());
+    int32_t strLen = str.length();
+
+    std::vector<std::string> inputStr(7, str);
+    std::vector<int32_t> inputLen(7, strLen);
+    std::vector<int32_t> outLen(inputStr.size());
+    std::vector<uint8_t *> outResult(inputStr.size());
+    std::vector<int32_t> startIndexs { 0, 0, 0, 0, 0, 0, 0 };
+    int32_t rowCnt = inputStr.size();
+    std::vector<uint8_t *> strAddr(rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        strAddr[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(inputStr[i].c_str()));
+    }
+
+    bool isAnyNull[] = { false, false, false, false, false, false, false };
+    BatchSubstrCharWithStart<int32_t, false, false>(contextPtr, strAddr.data(), width, inputLen.data(),
+        startIndexs.data(), isAnyNull, outResult.data(), outLen.data(), rowCnt);
+
+    std::vector<std::string> expected { "", "", "", "", "", "", "" };
     AssertStringEquals(expected, outResult, outLen);
 
     delete context;

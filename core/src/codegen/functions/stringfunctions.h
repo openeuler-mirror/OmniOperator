@@ -84,15 +84,65 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
 /**
- * Intercept substring from beyond.
+ * If isSupportNegativeIndex is false,the result of substr is "" when start index is negative
+ * If isSupportNegativeIndex is true,the substr rule is as follows:
  * e.g., str="apple", strLength=5, startIndex=-7, subStringLength=3, Result="a".
+ * If isSupportZeroIndex is false,the result of substr is "" when start index is 0
+ * If isSupportZeroIndex is true,it refers to the first element when the start index is 0
  */
-template <typename T>
-extern DLLEXPORT const char *SubstrInterceptFromBeyond(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
-    T length, bool isNull, int32_t *outLen)
+template <typename T, bool isSupportNegativeIndex, bool isSupportZeroIndex>
+extern DLLEXPORT const char *SubstrVarcharWithStart(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
+    bool isNull, int32_t *outLen)
 {
     if (isNull) {
         return nullptr;
+    }
+    if constexpr (isSupportZeroIndex) {
+        startIdx = (startIdx == 0) ? 1 : startIdx;
+    }
+    if (startIdx == 0 || strLen == 0 || startIdx > strLen) {
+        *outLen = 0;
+        return reinterpret_cast<const char *>(EMPTY);
+    }
+
+    int64_t startCodePoint = startIdx;
+    int64_t startIndex;
+    if (startCodePoint > 0) {
+        startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint - 1);
+        if (startIndex < 0) {
+            *outLen = 0;
+            return reinterpret_cast<const char *>(EMPTY);
+        }
+    } else {
+        // negative start is relative to end of string
+        int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
+        startCodePoint += codePoints;
+        if (startCodePoint < 0) {
+            if constexpr (isSupportNegativeIndex) {
+                startCodePoint = 0;
+            } else {
+                *outLen = 0;
+                return reinterpret_cast<const char *>(EMPTY);
+            }
+        }
+
+        startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint);
+    }
+
+    *outLen = strLen - startIndex;
+    return str + startIndex;
+}
+
+template <typename T, bool isSupportNegativeIndex, bool isSupportZeroIndex>
+extern DLLEXPORT const char *SubstrVarchar(int64_t contextPtr, const char *str, int32_t strLen, T startIdx, T length,
+    bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+
+    if constexpr (isSupportZeroIndex) {
+        startIdx = (startIdx == 0) ? 1 : startIdx;
     }
     if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx > strLen) {
         *outLen = 0;
@@ -121,9 +171,11 @@ extern DLLEXPORT const char *SubstrInterceptFromBeyond(int64_t contextPtr, const
         startCodePoint += codePoints;
         // before beginning of string
         if (startCodePoint < 0) {
-            if (ConfigUtil::GetPolicy()->GetNegativeStartIndexOutOfBoundsRule() !=
-                NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND ||
-                startCodePoint + lengthCodePoint <= 0) {
+            if constexpr (!isSupportNegativeIndex) {
+                *outLen = 0;
+                return reinterpret_cast<const char *>(EMPTY);
+            }
+            if (startCodePoint + lengthCodePoint <= 0) {
                 *outLen = 0;
                 return reinterpret_cast<const char *>(EMPTY);
             }
@@ -142,152 +194,20 @@ extern DLLEXPORT const char *SubstrInterceptFromBeyond(int64_t contextPtr, const
     return str + startIndex;
 }
 
-template <typename T>
-extern DLLEXPORT const char *SubstrCharInterceptFromBeyond(int64_t contextPtr, const char *str, int32_t width,
-    int32_t strLen, T startIdx, T length, bool isNull, int32_t *outLen)
-{
-    return SubstrInterceptFromBeyond<T>(contextPtr, str, strLen, startIdx, length, isNull, outLen);
-}
-
-template <typename T>
-extern DLLEXPORT const char *SubstrWithStartInterceptFromBeyond(int64_t contextPtr, const char *str, int32_t strLen,
-    T startIdx, bool isNull, int32_t *outLen)
-{
-    if (isNull) {
-        return nullptr;
-    }
-    if (startIdx == 0 || strLen == 0 || startIdx > strLen) {
-        *outLen = 0;
-        return reinterpret_cast<const char *>(EMPTY);
-    }
-
-    int64_t startCodePoint = startIdx;
-    int64_t startIndex;
-    if (startCodePoint > 0) {
-        startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint - 1);
-        if (startIndex < 0) {
-            *outLen = 0;
-            return reinterpret_cast<const char *>(EMPTY);
-        }
-    } else {
-        // negative start is relative to end of string
-        int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
-        startCodePoint += codePoints;
-        if (startCodePoint < 0) {
-            startCodePoint = 0;
-        }
-
-        startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint);
-    }
-
-    *outLen = strLen - startIndex;
-    return str + startIndex;
-}
-
-template <typename T>
-extern DLLEXPORT const char *SubstrCharWithStartInterceptFromBeyond(int64_t contextPtr, const char *str, int32_t width,
-    int32_t strLen, T startIdx, bool isNull, int32_t *outLen)
-{
-    return SubstrWithStartInterceptFromBeyond(contextPtr, str, strLen, startIdx, isNull, outLen);
-}
-
-template <typename T>
-extern DLLEXPORT const char *SubstrEmptyString(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
+template <typename T, bool isSupportNegativeIndex, bool isSupportZeroIndex>
+extern DLLEXPORT const char *SubstrChar(int64_t contextPtr, const char *str, int32_t width, int32_t strLen, T startIdx,
     T length, bool isNull, int32_t *outLen)
 {
-    if (isNull) {
-        return nullptr;
-    }
-    if (startIdx == 0 || (length <= 0) || (strLen == 0) || startIdx > strLen) {
-        *outLen = 0;
-        return reinterpret_cast<const char *>(EMPTY);
-    }
-
-    int64_t endIdx;
-    int64_t startIndex;
-    int64_t startCodePoint = startIdx;
-    int64_t lengthCodePoint = length;
-    if (startCodePoint > 0) {
-        startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint - 1);
-        if (startIndex < 0) {
-            // before beginning of string
-            *outLen = 0;
-            return reinterpret_cast<const char *>(EMPTY);
-        }
-        endIdx = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startIndex, lengthCodePoint);
-        if (endIdx < 0) {
-            // after end of string
-            endIdx = strLen;
-        }
-    } else {
-        // negative start is relative to end of string
-        int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
-        startCodePoint += codePoints;
-        // before beginning of string
-        if (startCodePoint < 0) {
-            *outLen = 0;
-            return reinterpret_cast<const char *>(EMPTY);
-        }
-        startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint);
-        if (startCodePoint + lengthCodePoint < codePoints) {
-            endIdx = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startIndex, lengthCodePoint);
-        } else {
-            endIdx = strLen;
-        }
-    }
-
-    *outLen = endIdx - startIndex;
-    return str + startIndex;
+    return SubstrVarchar<T, isSupportNegativeIndex, isSupportZeroIndex>(contextPtr, str, strLen, startIdx, length,
+        isNull, outLen);
 }
 
-template <typename T>
-extern DLLEXPORT const char *SubstrCharEmptyString(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
-    T startIdx, T length, bool isNull, int32_t *outLen)
+template <typename T, bool isSupportNegativeIndex, bool isSupportZeroIndex>
+extern DLLEXPORT const char *SubstrCharWithStart(int64_t contextPtr, const char *str, int32_t width, int32_t strLen,
+    T startIdx, bool isNull, int32_t *outLen)
 {
-    return SubstrEmptyString<T>(contextPtr, str, strLen, startIdx, length, isNull, outLen);
-}
-
-template <typename T>
-extern DLLEXPORT const char *SubstrWithStartEmptyString(int64_t contextPtr, const char *str, int32_t strLen, T startIdx,
-    bool isNull, int32_t *outLen)
-{
-    if (isNull) {
-        return nullptr;
-    }
-    if (startIdx == 0 || strLen == 0 || startIdx > strLen) {
-        *outLen = 0;
-        return reinterpret_cast<const char *>(EMPTY);
-    }
-
-    int64_t startCodePoint = startIdx;
-    int64_t startIndex;
-    if (startCodePoint > 0) {
-        startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint - 1);
-        if (startIndex < 0) {
-            *outLen = 0;
-            return reinterpret_cast<const char *>(EMPTY);
-        }
-    } else {
-        // negative start is relative to end of string
-        int32_t codePoints = omniruntime::Utf8Util::CountCodePoints(str, strLen);
-        startCodePoint += codePoints;
-        if (startCodePoint < 0) {
-            *outLen = 0;
-            return reinterpret_cast<const char *>(EMPTY);
-        }
-
-        startIndex = omniruntime::Utf8Util::OffsetOfCodePoint(str, strLen, startCodePoint);
-    }
-
-    *outLen = strLen - startIndex;
-    return str + startIndex;
-}
-
-template <typename T>
-extern DLLEXPORT const char *SubstrCharWithStartEmptyString(int64_t contextPtr, const char *str, int32_t width,
-    int32_t strLen, T startIdx, bool isNull, int32_t *outLen)
-{
-    return SubstrWithStartEmptyString(contextPtr, str, strLen, startIdx, isNull, outLen);
+    return SubstrVarcharWithStart<T, isSupportNegativeIndex, isSupportZeroIndex>(contextPtr, str, strLen, startIdx,
+        isNull, outLen);
 }
 
 extern "C" DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
