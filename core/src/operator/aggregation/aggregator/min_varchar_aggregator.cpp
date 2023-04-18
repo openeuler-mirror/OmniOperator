@@ -98,6 +98,32 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *v,
+    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+    const int32_t *indexMap)
+{
+    VarcharVector *vector = static_cast<VarcharVector *>(v);
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
+    boolPtr += booleanVector->GetPositionOffset();
+
+    if (indexMap == nullptr) {
+        if (nullMap == nullptr) {
+            AddCharFilter<MinCharOp>(state, vector, rowOffset, rowCount, boolPtr);
+        } else {
+            AddConditionalCharFilter<MinCharOp>(state, vector, rowOffset, rowCount, nullMap, boolPtr);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddDictCharFilter<MinCharOp>(state, vector, rowCount, indexMap, boolPtr);
+        } else {
+            AddDictConditionalCharFilter<MinCharOp>(state, vector, rowCount, nullMap, indexMap, boolPtr);
+        }
+    }
+
+    SaveState(state);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, Vector *v, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -114,6 +140,34 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
             AddDictUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, indexMap);
         } else {
             AddDictConditionalUseRowIndexChar<MinCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
+        }
+    }
+
+    for (AggregateState *states : rowStates) {
+        SaveState(states[aggIdx]);
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
+    const size_t aggIdx, Vector *v, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    const int32_t *indexMap)
+{
+    VarcharVector *vector = static_cast<VarcharVector *>(v);
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
+    boolPtr += booleanVector->GetPositionOffset();
+
+    if (indexMap == nullptr) {
+        if (nullMap == nullptr) {
+            AddUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, vector, rowOffset, boolPtr);
+        } else {
+            AddConditionalUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap, boolPtr);
+        }
+    } else {
+        if (nullMap == nullptr) {
+            AddDictUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, vector, indexMap, boolPtr);
+        } else {
+            AddDictConditionalUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, vector, nullMap, indexMap, boolPtr);
         }
     }
 

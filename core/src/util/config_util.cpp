@@ -235,6 +235,16 @@ StringToDateFormatRule ConfigUtil::GetStringToDateFormatRule()
     return g_properties.GetPolicy()->GetStringToDateFormatRule();
 }
 
+void ConfigUtil::SetSupportExprFilterRule(SupportExprFilterRule rule)
+{
+    g_properties.GetPolicy()->SetSupportExprFilterRule(rule);
+}
+
+SupportExprFilterRule ConfigUtil::GetSupportExprFilterRule()
+{
+    return g_properties.GetPolicy()->GetSupportExprFilterRule();
+}
+
 Policy *ConfigUtil::GetPolicy()
 {
     return g_properties.GetPolicy();
@@ -250,7 +260,8 @@ Policy *ConfigUtil::InitializePolicy()
         { "CastDecimalToDoubleRule", InitCastDecimalToDoubleRule },
         { "NegativeStartIndexOutOfBoundsRule", InitNegativeStartIndexOutOfBoundsRule },
         { "SupportContainerVecRule", InitSupportContainerVecRule },
-        { "StringToDateFormatRule", InitStringToDateFormatRule } };
+        { "StringToDateFormatRule", InitStringToDateFormatRule },
+        { "SupportExprFilterRule", InitSupportExprFilterRule } };
     std::string ruleValueStr;
     for (const auto &item : initFunctionMap) {
         const char *ruleKeyStr = item.first;
@@ -308,5 +319,12 @@ void ConfigUtil::InitStringToDateFormatRule(Policy *policy, const std::string &r
 {
     if (ruleValueStr == "ALLOW_REDUCED_PRECISION") {
         policy->SetStringToDateFormatRule(StringToDateFormatRule::ALLOW_REDUCED_PRECISION);
+    }
+}
+
+void ConfigUtil::InitSupportExprFilterRule(Policy *policy, const std::string &ruleValueStr)
+{
+    if (ruleValueStr == "EXPR_FILTER") {
+        policy->SetSupportExprFilterRule(SupportExprFilterRule::EXPR_FILTER);
     }
 }

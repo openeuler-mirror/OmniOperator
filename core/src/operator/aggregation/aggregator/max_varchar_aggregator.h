@@ -72,8 +72,14 @@ protected:
     void ProcessSingleInternal(AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
+    void ProcessSingleInternalFilter(AggregateState &state, Vector *v, BooleanVector *booleanVector,
+        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
+
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
+    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
+        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        const int32_t *indexMap) override;
 
 private:
     void SaveState(AggregateState &state);

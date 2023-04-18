@@ -122,6 +122,29 @@ public:
         realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
     }
 
+    void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+        const int32_t rowCount) override
+    {
+        AggregatorBuffer<uint8_t> nullMap;
+        GenerateNullMap(nullMap, vectorBatch, rowOffset, rowCount);
+        if (nullMap.data == nullptr) {
+            return;
+        }
+
+        AggregatorBuffer<int32_t> indexMap;
+        Vector *vector = nullptr;
+        auto aggChannels = realAggregator->GetInputChannels();
+        if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
+            vector = vectorBatch->GetVector(aggChannels[0]);
+            if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+                indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
+                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount,
+                    indexMap.data);
+            }
+        }
+
+        realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
+    }
     void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t rowOffset) override
     {
@@ -145,6 +168,44 @@ public:
         }
 
         realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
+    }
+
+    void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
+        const int32_t filterStart, const int32_t rowOffset) override
+    {
+        const size_t rowCount = rowStates.size();
+        AggregatorBuffer<uint8_t> nullMap;
+        GenerateNullMap(nullMap, vectorBatch, rowOffset, rowCount);
+        if (nullMap.data == nullptr) {
+            return;
+        }
+
+        AggregatorBuffer<int32_t> indexMap;
+        Vector *vector = nullptr;
+        auto aggChannels = realAggregator->GetInputChannels();
+        if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
+            vector = vectorBatch->GetVector(aggChannels[0]);
+            if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+                indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
+                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount,
+                    indexMap.data);
+            }
+        }
+        auto booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterStart + aggIdx));
+
+        bool needFilterJude = false;
+        for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
+            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
+                needFilterJude = true;
+                break;
+            }
+        }
+        if (needFilterJude) {
+            realAggregator->ProcessGroupInternalFilter(rowStates, aggIdx, vector, booleanVector, rowOffset,
+                                                       nullMap.data, indexMap.data);
+        } else {
+            realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
+        }
     }
 
     void InitState(AggregateState &state) override
@@ -213,8 +274,15 @@ protected:
         const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
+    void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+    {}
+
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    {}
+    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
 private:

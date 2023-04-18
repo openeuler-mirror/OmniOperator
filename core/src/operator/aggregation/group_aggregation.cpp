@@ -10,6 +10,8 @@
 #include "operator/util/operator_util.h"
 #include "util/type_util.h"
 #include "util/debug.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "agg_util.h"
 #ifdef ENABLE_HMPP
 #include <HMPP/hmpp.h>
 #include "operator/hmpp_hash_util.h"
@@ -117,7 +119,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
         groupByIndex[i] = c;
     }
 
-    // refresh inputDateTypes and intputColumnar index for OMNI_AGGREGATION_TYPE_COUNT_ALL type aggregator
+    // refresh inputDateTypes and inputColumnar index for OMNI_AGGREGATION_TYPE_COUNT_ALL type aggregator
     uint32_t aggInputColsSize = 0;
     uint32_t aggCountAllSkipCnt = 0;
     uint32_t aggregateType = OMNI_AGGREGATION_TYPE_INVALIDE;
@@ -581,6 +583,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
     // aggNum > 0
     std::vector<AggregateState *> rowStates(rowCount);
     AggregateState *currentGroupStates = nullptr;
+
     for (int32_t i = 0; i < rowCount; ++i) {
         auto ret = emplaceKey->InsertValueToHashmap(i, &groupVectors, *executionContext);
         if (ret.IsInsert()) {
@@ -598,8 +601,15 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
         rowStates[i] = currentGroupStates;
     }
 
-    for (size_t i = 0; i < aggNum; ++i) {
-        aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
+    if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
+        int32_t filterStart = vecBatch->GetVectorCount() - uint32_t(aggNum);
+        for (size_t i = 0; i < aggNum; ++i) {
+            aggregators[i]->ProcessGroupFilter(rowStates, i, vecBatch, filterStart, 0);
+        }
+    } else {
+        for (size_t i = 0; i < aggNum; ++i) {
+            aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
+        }
     }
 }
 

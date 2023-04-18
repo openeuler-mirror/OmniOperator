@@ -100,6 +100,50 @@ FAST_MATH NO_INLINE void SumConditionalFloat(MID *res, int64_t &flag, const IN *
     }
 }
 
+template <typename IN, typename MID, bool addIf>
+FAST_MATH NO_INLINE void SumConditionalFloatFilter(MID *res, int64_t &flag, const IN *__restrict ptr,
+    const int32_t rowCount, const uint8_t *__restrict condition, const int8_t *__restrict boolPtr)
+{
+    static_assert(std::is_floating_point_v<IN>, "Not floating point input passed to SumConditionalFloat");
+#ifdef DEBUG
+    if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
+        LogWarn("[sumConditionalFloat] Data pointer NOT aligned");
+    }
+    if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
+        LogWarn("[sumConditionalFloat] ConditionMap pointer NOT aligned");
+    }
+#endif
+
+    ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
+
+    const auto *endPtr = ptr + rowCount;
+
+    using equivalent_integer = std::conditional_t<sizeof(IN) == 4, uint32_t, uint64_t>;
+    const auto len = sizeof(IN);
+
+    while (ptr < endPtr) {
+        if (boolPtr) {
+            equivalent_integer iValue;
+            // Note: using memcpy_s hugely degrades performance
+            std::copy(reinterpret_cast<const uint8_t *>(ptr), reinterpret_cast<const uint8_t *>(ptr) + len,
+                reinterpret_cast<uint8_t *>(&iValue));
+            iValue &= (!*condition == addIf) - 1;
+            IN fValue;
+            std::copy(reinterpret_cast<const uint8_t *>(&iValue), reinterpret_cast<const uint8_t *>(&iValue) + len,
+                reinterpret_cast<uint8_t *>(&fValue));
+            *res += fValue;
+
+            flag += *condition == addIf;
+        }
+
+        ++boolPtr;
+        ++ptr;
+        ++condition;
+    }
+}
+
 template <DataTypeId IN_ID, DataTypeId OUT_ID> class SumAggregator : public TypedAggregator {
     using InVector = typename NativeAndVectorType<IN_ID>::vector;
     using InType = typename NativeAndVectorType<IN_ID>::type;
@@ -167,8 +211,15 @@ protected:
     void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
+    void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
+
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
+
+    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
+        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        const int32_t *indexMap) override;
 
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,
         const DataTypeId inId, const DataTypeId outId)

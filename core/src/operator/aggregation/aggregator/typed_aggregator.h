@@ -145,15 +145,69 @@ public:
         ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
     }
 
+    // for no groupby aggregation with filter
+    void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+        const int32_t filterIndex) override
+    {
+        AggregatorBuffer<int32_t> indexMap;
+        uint8_t *nullMap = nullptr;
+
+        int32_t rowCount = vectorBatch->GetRowCount();
+        Vector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
+
+        BooleanVector *booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterIndex));
+
+        bool needFilterJude = false;
+        for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
+            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
+                needFilterJude = true;
+                break;
+            }
+        }
+
+        if (needFilterJude) {
+            ProcessSingleInternalFilter(state, vector, booleanVector, rowOffset, rowCount, nullMap, indexMap.data);
+        } else {
+            ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
+        }
+    }
+
     // for groupby hash aggregation
     void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t rowOffset) override
     {
         AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
-        Vector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
 
+        Vector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
         ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
+    }
+
+    // for groupby hash aggregation with Filter
+    void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
+        const int32_t filterStart, const int32_t rowOffset) override
+    {
+        AggregatorBuffer<int32_t> indexMap;
+        uint8_t *nullMap = nullptr;
+
+        Vector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
+        int32_t rowCount = rowStates.size();
+
+        BooleanVector *booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterStart + aggIdx));
+        bool needFilterJude = false;
+
+        for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
+            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
+                needFilterJude = true;
+                break;
+            }
+        }
+
+        if (needFilterJude) {
+            ProcessGroupInternalFilter(rowStates, aggIdx, vector, booleanVector, rowOffset, nullMap, indexMap.data);
+        } else {
+            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
+        }
     }
 
     bool IsTypedAggregator() override
@@ -169,9 +223,15 @@ protected:
     virtual void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
+    virtual void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
+
     virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
+    virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+        Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        const int32_t *indexMap) = 0;
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(Vector *vector, const int index, const char *errorMsg)
     {
@@ -193,7 +253,7 @@ protected:
     template <typename InType, typename OutType> OutType CastWithOverflow(const InType &val, bool &overflow)
     {
         if (overflow) {
-            return OutType {};
+            return OutType{};
         }
 
         if constexpr (std::is_same_v<InType, Decimal128>) {
@@ -216,7 +276,7 @@ private:
             return this->CastWithOverflowDecimalToFloatingPoint<OutType>(val, overflow);
         } else {
             auto &inputType = inputTypes.GetType(0);
-            OutType result {};
+            OutType result{};
             Decimal128Wrapper val128(val);
 
             // so we shoud add decimal part separately if input is acutally decimal not varchar
@@ -288,7 +348,7 @@ private:
     {
         auto &inputType = inputTypes.GetType(0);
         auto &outputType = outputTypes.GetType(0);
-        int64_t result {};
+        int64_t result{};
         Decimal128Wrapper resultDec(val);
         int32_t scale = 0;
         if (outputType->GetId() == OMNI_DECIMAL64) {

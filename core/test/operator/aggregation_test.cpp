@@ -13,6 +13,7 @@
 #include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/non_group_aggregation.h"
+#include "operator/operator.h"
 #include "vector/vector_helper.h"
 #include "util/perf_util.h"
 #include "util/config_util.h"
@@ -21,6 +22,7 @@
 
 namespace omniruntime {
 using namespace omniruntime::vec;
+using namespace omniruntime::op;
 const int32_t VEC_BATCH_NUM = 10;
 const int32_t ROW_PER_VEC_BATCH = 200000;
 const int32_t CARDINALITY = 4;
@@ -244,7 +246,7 @@ Vector *BuildAggregateInput(VectorAllocator *vecAllocator, const DataTypePtr agg
     }
 }
 
-VectorBatch **buildAggInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t cardinality, int32_t groupColNum,
+VectorBatch **BuildAggInput(int32_t vecBatchNum, int32_t rowPerVecBatch, int32_t cardinality, int32_t groupColNum,
     int32_t aggColNum, const std::vector<DataTypePtr> &groupTypes, const std::vector<DataTypePtr> &aggTypes)
 {
     VectorBatch **input = new VectorBatch *[vecBatchNum];
@@ -408,7 +410,7 @@ void PerfTestOriginal(int64_t moduleAddr, VectorBatch **input)
     EXPECT_EQ(outputVecBatch->GetVectorCount(), 4);
     EXPECT_EQ(outputVecBatch->GetRowCount(), 4);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    op::Operator::DeleteOperator(groupBy);
+    omniruntime::op::Operator::DeleteOperator(groupBy);
 }
 
 void PerfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int32_t *rowCount)
@@ -430,14 +432,14 @@ void PerfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int3
     EXPECT_EQ(outputVecBatch->GetVectorCount(), 4);
     EXPECT_EQ(outputVecBatch->GetRowCount(), 4);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    op::Operator::DeleteOperator(groupBy);
+    omniruntime::op::Operator::DeleteOperator(groupBy);
 }
 
 void PerfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input, int32_t vecBatchNum, int32_t *rowCount)
 {
     // create operatory
     auto nativeOperatorFactory = reinterpret_cast<AggregationOperatorFactory *>(moduleAddr);
-    op::Operator *aggregation = nullptr;
+    omniruntime::op::Operator *aggregation = nullptr;
     if (codegenMode) {
         aggregation = CreateTestOperator(nativeOperatorFactory);
     } else {
@@ -544,7 +546,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
     std::vector<DataTypePtr> groupTypes = { LongType(), LongType() };
     std::vector<DataTypePtr> aggTypes = { LongType(), LongType(), LongType(), LongType(), LongType() };
-    VectorBatch **input1 = buildAggInput(vecBatchNum, rowSize, cardinality, 2, 5, groupTypes, aggTypes);
+    VectorBatch **input1 = BuildAggInput(vecBatchNum, rowSize, cardinality, 2, 5, groupTypes, aggTypes);
     if (input1 == nullptr) {
         std::cerr << "Building input data failed!" << std::endl;
     }
@@ -569,9 +571,9 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     EXPECT_EQ(vecBatchCount, 1);
     op::Operator::DeleteOperator(aggPartial1);
 
-    VectorBatch **input2 = buildAggInput(vecBatchNum, rowSize, cardinality, 2, 5, groupTypes, aggTypes);
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, rowSize, cardinality, 2, 5, groupTypes, aggTypes);
     if (input2 == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
+        return;
     }
 
     // operator 2 (partial)
@@ -737,11 +739,7 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
     std::vector<DataTypePtr> groupTypes = { LongType() };
     std::vector<DataTypePtr> aggTypes = { LongType(), LongType(), LongType(), LongType(), LongType() };
-    VectorBatch **input = buildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
-    if (input == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-        return;
-    }
+    VectorBatch **input = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
 
     input[0]->GetVector(2)->SetValueNull(0);
     input[0]->GetVector(2)->SetValueNull(1);
@@ -769,7 +767,7 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     int32_t vecBatchCount = groupByNULL->GetOutput(&outputVecBatch);
     EXPECT_EQ(vecBatchCount, 1);
 
-    op::Operator::DeleteOperator(groupByNULL);
+    omniruntime::op::Operator::DeleteOperator(groupByNULL);
 
     int64_t expectData1[1] = {0};
     int64_t expectData2[1] = {6};
@@ -916,9 +914,6 @@ TEST(HashAggregationOperatorTest, DISABLED_original_multiple_threads)
     std::vector<DataTypePtr> groupTypes{ LongType(), LongType() };
     std::vector<DataTypePtr> inputTypes{ LongType(), LongType() };
     VectorBatch **input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, inputTypes);
-    if (input == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
 
     auto nativeOperatorFactory = CreateHashAggregationOperatorFactory(std::vector<uint32_t>({ 0, 1 }),
         std::vector<DataTypePtr>({ LongType(), LongType() }),
@@ -965,10 +960,7 @@ TEST(HashAggregationOperatorTest, DISABLED_perf_via_API_multiple_threads)
 
     vector<DataTypePtr> groupTypes = { LongType(), LongType() };
     vector<DataTypePtr> aggTypes = { LongType(), LongType() };
-    VectorBatch **input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
-    if (input == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
+    VectorBatch **input = BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
 
     int32_t *rowCount = new int32_t[VEC_BATCH_NUM];
     for (int32_t i = 0; i < VEC_BATCH_NUM; i++) {
@@ -1340,7 +1332,7 @@ TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
     std::string aggNames[] = {"group", "count", "min", "max" };
     std::vector<DataTypePtr> groupTypes = { VarcharType(10) };
     std::vector<DataTypePtr> aggTypes = { VarcharType(10), VarcharType(10), VarcharType(10) };
-    VectorBatch **input = buildAggInput(vecBatchNum, rowSize, cardinality, 1, 3, groupTypes, aggTypes);
+    VectorBatch **input = BuildAggInput(vecBatchNum, rowSize, cardinality, 1, 3, groupTypes, aggTypes);
 
     std::vector<DataTypePtr> outputTypes{ LongType(), VarcharType(10), VarcharType(10) };
     auto aggFactory = CreateHashAggregationOperatorFactory(std::vector<uint32_t>({ 0 }), groupTypes,
@@ -1389,10 +1381,7 @@ TEST(AggregationOperatorTest, verify_correctness)
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
     std::vector<DataTypePtr> groupTypes;
     std::vector<DataTypePtr> aggTypes = { LongType(), LongType(), LongType(), LongType(), LongType() };
-    VectorBatch **input1 = buildAggInput(vecBatchNum, ROW_PER_VEC_BATCH, cardinality, 0, 5, groupTypes, aggTypes);
-    if (input1 == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
+    VectorBatch **input1 = BuildAggInput(vecBatchNum, ROW_PER_VEC_BATCH, cardinality, 0, 5, groupTypes, aggTypes);
 
     // STAGE1: (partial)
     std::vector<DataTypePtr> partialOutputTypes{ LongType(),
@@ -1411,7 +1400,7 @@ TEST(AggregationOperatorTest, verify_correctness)
     EXPECT_EQ(tableCount1, 1);
     omniruntime::op::op::Operator::DeleteOperator(aggPartial1);
 
-    VectorBatch **input2 = buildAggInput(vecBatchNum, ROW_PER_VEC_BATCH, cardinality, 0, 5, groupTypes, aggTypes);
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, ROW_PER_VEC_BATCH, cardinality, 0, 5, groupTypes, aggTypes);
     ASSERT(!(input2 == nullptr));
 
     // partial second operator
@@ -1521,10 +1510,7 @@ TEST(AggregationOperatorTest, avg_correctness_test)
     const int cardinality = 100;
     std::vector<DataTypePtr> groupTypes;
     std::vector<DataTypePtr> aggTypes = { LongType() };
-    VectorBatch **input = buildAggInput(vecBatchNum, ROW_PER_VEC_BATCH, cardinality, 0, 1, groupTypes, aggTypes);
-    if (input == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
+    VectorBatch **input = BuildAggInput(vecBatchNum, ROW_PER_VEC_BATCH, cardinality, 0, 1, groupTypes, aggTypes);
 
     // single stage
     auto aggFactory = CreateAggregationOperatorFactory(std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_AVG }),
@@ -1613,11 +1599,8 @@ TEST(AggregationOperatorTest, DISABLED_perf_original)
     const auto processorCount = std::thread::hardware_concurrency();
     std::cout << "core number: " << processorCount << std::endl;
 
-    VectorBatch **input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, COLUMN_NUM,
+    VectorBatch **input = BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, COLUMN_NUM,
         std::vector<DataTypePtr>(), sourceTypes.Get());
-    if (input == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
 
     int32_t *rowCount = new int32_t[VEC_BATCH_NUM];
     for (int32_t i = 0; i < VEC_BATCH_NUM; i++) {
@@ -1665,10 +1648,7 @@ TEST(AggregationOperatorTest, DISABLED_perf_codegen)
 
     std::vector<DataTypePtr> groupTypes;
     std::vector<DataTypePtr> aggTypes = { LongType(), LongType(), LongType(), LongType() };
-    VectorBatch **input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, 4, groupTypes, aggTypes);
-    if (input == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
+    VectorBatch **input = BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 0, 4, groupTypes, aggTypes);
 
     int32_t *rowCount = new int32_t[VEC_BATCH_NUM];
     for (int32_t i = 0; i < VEC_BATCH_NUM; i++) {
@@ -1745,10 +1725,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
 
     // ------------------------------------------Process Input--------------------------------------------
     VectorBatch **input1 =
-        buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupInputTypes.Get(), aggInputTypes.Get());
-    if (input1 == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
+        BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupInputTypes.Get(), aggInputTypes.Get());
 
     Timer timer;
     timer.SetStart();
@@ -1789,9 +1766,9 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto groupBy = nativeOperatorFactory2->CreateOperator();
 
     VectorBatch **input2 =
-        buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupInputTypes.Get(), aggInputTypes.Get());
+        BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupInputTypes.Get(), aggInputTypes.Get());
     if (input2 == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
+        return;
     }
     timer.Reset();
 
@@ -1819,8 +1796,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
     delete perfUtil;
     delete[] input1;
     delete[] input2;
-    op::Operator::DeleteOperator(jitGroupBy);
-    op::Operator::DeleteOperator(groupBy);
+    omniruntime::op::Operator::DeleteOperator(jitGroupBy);
+    omniruntime::op::Operator::DeleteOperator(groupBy);
     DeleteOperatorFactory(nativeOperatorFactory);
     DeleteOperatorFactory(nativeOperatorFactory2);
 
@@ -1834,10 +1811,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
     ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     std::vector<DataTypePtr> groupTypes = { LongType(), LongType() };
     std::vector<DataTypePtr> aggTypes = { LongType(), LongType(), Decimal64Type(7, 2), Decimal64Type(7, 2) };
-    VectorBatch **input1 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 4, groupTypes, aggTypes);
-    if (input1 == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
+    VectorBatch **input1 = BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 4, groupTypes, aggTypes);
     HAFactoryParameters parameters1 = {
         true,
         true,
@@ -1860,9 +1834,9 @@ TEST(HashAggregationOperatorTest, multi_stage)
     VectorBatch *resultFromPartial1 = nullptr;
     partialOperator1->GetOutput(&resultFromPartial1);
 
-    VectorBatch **input2 = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 4, groupTypes, aggTypes);
+    VectorBatch **input2 = BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 4, groupTypes, aggTypes);
     if (input2 == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
+        return;
     }
 
     HAFactoryParameters parameters2 = { true,
@@ -1939,10 +1913,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
 {
     std::vector<DataTypePtr> groupTypes = { LongType(), LongType() };
     std::vector<DataTypePtr> aggTypes = { LongType(), LongType() };
-    VectorBatch **input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
-    if (input == nullptr) {
-        std::cerr << "Building input data failed!" << std::endl;
-    }
+    VectorBatch **input = BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
 
     auto aggFactory = CreateHashAggregationOperatorFactory(std::vector<uint32_t>({ 0, 1 }),
         std::vector<DataTypePtr>({ LongType(), LongType() }),
@@ -1967,7 +1938,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     groupTypes[1] = Date32Type();
     aggTypes[0] = Date32Type();
     aggTypes[1] = Date32Type();
-    input = buildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
+    input = BuildAggInput(VEC_BATCH_NUM, ROW_PER_VEC_BATCH, CARDINALITY, 2, 2, groupTypes, aggTypes);
     aggFactory = CreateHashAggregationOperatorFactory(std::vector<uint32_t>({ 0, 1 }),
         std::vector<DataTypePtr>({ Date32DataType::Instance(), Date32DataType::Instance() }),
         std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM }),
@@ -3728,8 +3699,20 @@ TEST(AggregatorTest, typed_aggregator_test)
             return;
         }
 
+        virtual void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+            const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+        {
+            return;
+        }
+
         virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
             const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        {
+            return;
+        }
+        virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
+            Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+            const int32_t *indexMap)
         {
             return;
         }

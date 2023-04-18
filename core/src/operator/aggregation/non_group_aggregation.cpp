@@ -6,6 +6,7 @@
 #include "vector/vector_common.h"
 #include "operator/status.h"
 #include "util/type_util.h"
+#include "agg_util.h"
 #ifdef ENABLE_HMPP
 #include "util/config_util.h"
 #endif
@@ -76,7 +77,8 @@ Operator *AggregationOperatorFactory::CreateOperator()
 
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-    auto aggCount = aggregators.size();
+    uint32_t aggCount = aggregators.size();
+    int32_t filterIndex = vecBatch->GetVectorCount() - aggCount; // rowCount-aggNum
     for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggsStates[aggIdx];
@@ -88,7 +90,13 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
             aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
         }
 #else
-        aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
+        if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
+            aggregator->ProcessGroupFilter(state, vecBatch, 0, filterIndex);
+            filterIndex++;
+        } else {
+            aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
+        }
+
 #endif
     }
     VectorHelper::FreeVecBatch(vecBatch);

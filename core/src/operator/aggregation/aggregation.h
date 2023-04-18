@@ -44,7 +44,7 @@ public:
         }
     }
 
-    ~AggregationCommonOperatorFactory() override {};
+    ~AggregationCommonOperatorFactory() override{};
 
     std::vector<int32_t> &GetMaskColumns()
     {

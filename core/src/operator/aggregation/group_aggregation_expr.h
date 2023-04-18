@@ -18,9 +18,9 @@ class HashAggregationWithExprOperatorFactory : public OperatorFactory {
 public:
     HashAggregationWithExprOperatorFactory(std::vector<omniruntime::expressions::Expr *> &groupByKeys,
         uint32_t groupByNum, std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys,
-        DataTypes &sourceDataTypes, std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
-        std::vector<uint32_t> &maskColumns, std::vector<bool> &inputRaws, std::vector<bool> &outputPartial,
-        OverflowConfig *overflowConfig);
+        std::vector<omniruntime::expressions::Expr *> &aggFilters, DataTypes &sourceDataTypes,
+        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
+        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig);
 
     ~HashAggregationWithExprOperatorFactory() override;
 
@@ -36,13 +36,16 @@ private:
     std::vector<int32_t> projectCols;
     std::vector<std::unique_ptr<Projection>> projections;
     std::vector<ProjFunc> projectFuncs;
+    int32_t aggFilterNum;
+    std::vector<SimpleFilter *> aggSimpleFilters;
     HashAggregationOperatorFactory *hashAggOperatorFactory;
 };
 
 class HashAggregationWithExprOperator : public Operator {
 public:
     HashAggregationWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &projectCols,
-        std::vector<ProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator);
+        std::vector<ProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator,
+        std::vector<SimpleFilter *> &aggSimpleFilters);
 
     ~HashAggregationWithExprOperator() override;
 
@@ -61,6 +64,8 @@ private:
     DataTypes sourceTypes;
     std::vector<int32_t> projectCols;
     std::vector<ProjFunc> projectFuncs;
+    int32_t aggFilterNum;
+    std::vector<SimpleFilter *> aggSimpleFilters;
     HashAggregationOperator *hashAggOperator;
 };
 }

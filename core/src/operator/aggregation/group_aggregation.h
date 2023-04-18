@@ -13,6 +13,9 @@
 #include "operator/aggregation/aggregator/only_aggregator_factory.h"
 #include "operator/util/operator_util.h"
 #include "group_column_marshaller.h"
+#include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "operator/config/operator_config.h"
+#include "operator/filter/filter_and_project.h"
 
 namespace omniruntime {
 namespace op {
