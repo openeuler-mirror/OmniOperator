@@ -13,6 +13,7 @@ target_link_libraries(${BINDING_TARGET} PUBLIC  ${OMNI_OPERATOR_SO} ${OMNI_CODEG
 if (EXISTS $ENV{OMNI_HOME})
     file(REMOVE_RECURSE $ENV{OMNI_HOME}/java-binding)
     set_target_properties(${BINDING_TARGET} PROPERTIES LIBRARY_OUTPUT_DIRECTORY $ENV{OMNI_HOME}/java-binding)
+    set_target_properties(${BINDING_TARGET} PROPERTIES SKIP_BUILD_RPATH YES)
 endif()
 
 
