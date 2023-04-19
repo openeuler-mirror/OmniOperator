@@ -1455,10 +1455,17 @@ void ExpressionCodeGen::BinaryExprDecimal64Helper(const BinaryExpr *binaryExpr, 
             break;
         }
     }
-    CodeGenValuePtr valuePtr =
-        BuildDecimalValue(output, *(binaryExpr->GetReturnType()), builder->CreateOr(leftIsNull, rightIsNull));
-    valuePtr->isNull =
-        builder->CreateOr(builder->CreateNot(isNeitherNull), builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
+    CodeGenValuePtr valuePtr = nullptr;
+    if (TypeUtil::IsDecimalType(binaryExpr->GetReturnTypeId())) {
+        valuePtr =
+            BuildDecimalValue(output, *(binaryExpr->GetReturnType()), builder->CreateOr(leftIsNull, rightIsNull));
+    } else {
+        valuePtr = std::make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
+    }
+
+    if (overflowConfig != nullptr && overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+        valuePtr->isNull = builder->CreateOr(valuePtr->isNull, builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
+    }
     this->value = valuePtr;
 }
 
@@ -1637,7 +1644,7 @@ void ExpressionCodeGen::BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr,
         }
     }
     CodeGenValuePtr valuePtr = nullptr;
-    if (binaryExpr->GetReturnTypeId() == OMNI_DECIMAL128) {
+    if (TypeUtil::IsDecimalType(binaryExpr->GetReturnTypeId())) {
         valuePtr =
             BuildDecimalValue(output, *(binaryExpr->GetReturnType()), builder->CreateOr(leftIsNull, rightIsNull));
     } else {
@@ -1645,12 +1652,9 @@ void ExpressionCodeGen::BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr,
     }
 
     if (overflowConfig != nullptr && overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
-        valuePtr->isNull = builder->CreateOr(builder->CreateNot(isNeitherNull),
-            builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
-        this->value = valuePtr;
-    } else {
-        this->value = valuePtr;
+        valuePtr->isNull = builder->CreateOr(valuePtr->isNull, builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
     }
+    this->value = valuePtr;
 }
 
 CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lExpr)
