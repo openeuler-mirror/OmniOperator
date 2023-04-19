@@ -274,8 +274,8 @@ std::shared_ptr<DecimalValue> LLVMEngine::BuildDecimalValue(llvm::Value *data, o
         precision = llvmTypes.CreateConstantInt(static_cast<DecimalDataType &>(retType).GetPrecision());
         scale = llvmTypes.CreateConstantInt(static_cast<DecimalDataType &>(retType).GetScale());
     } else {
-        LogWarn("Unable to build DecimalValue because it is not a decimal type!");
-        return std::make_shared<DecimalValue>(nullptr, nullptr, nullptr, nullptr);
+        precision = llvmTypes.CreateConstantInt(0);
+        scale = llvmTypes.CreateConstantInt(0);
     }
     return std::make_shared<DecimalValue>(data, isNull, precision, scale);
 }
