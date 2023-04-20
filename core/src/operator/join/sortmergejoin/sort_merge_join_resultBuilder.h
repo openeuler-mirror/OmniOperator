@@ -96,6 +96,11 @@ public:
 
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
 
+    ALWAYS_INLINE bool NeedDoFilter() const
+    {
+        return simpleFilter != nullptr;
+    }
+
 private:
     struct LeftAntiJoinHandler {
         bool hasSameBufferedRow = false;

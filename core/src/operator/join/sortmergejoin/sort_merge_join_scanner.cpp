@@ -801,32 +801,38 @@ bool SortMergeJoinScanner::PreKeyMatchedWithNullValue()
 template <JoinType templateJoinType> void SortMergeJoinScanner::SavePrevMatchingRows(int8_t isMatched)
 {
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
+    auto matchedRowCount = preBufferedValueAddress.size();
     if constexpr (templateJoinType == OMNI_JOIN_TYPE_INNER) {
-        auto streamBatchId = DecodeSliceIndex(streamedValueAddr);
-        auto streamRowId = DecodePosition(streamedValueAddr);
-        auto matchedRowCount = preBufferedValueAddress.size();
-        size_t filterCount = 0;
-        for (size_t i = 0; i < matchedRowCount; i++) {
-            auto bufferedValueAddr = preBufferedValueAddress[i];
-            auto bufferBatchId = DecodeSliceIndex(bufferedValueAddr);
-            auto bufferRowId = DecodePosition(bufferedValueAddr);
-            if (resultBuilder == nullptr ||
-                resultBuilder->IsJoinPositionEligible(streamBatchId, streamRowId, bufferBatchId, bufferRowId)) {
-                bufferedValueAddress.emplace_back(bufferedValueAddr);
-                filterCount++;
+        if (resultBuilder == nullptr || !resultBuilder->NeedDoFilter()) {
+            bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
+                preBufferedValueAddress.end());
+            streamedValueAddress.insert(streamedValueAddress.end(), matchedRowCount, streamedValueAddr);
+            startBufferedBatchIds.insert(startBufferedBatchIds.end(), matchedRowCount, startBufferedBatchId);
+        } else {
+            auto streamBatchId = DecodeSliceIndex(streamedValueAddr);
+            auto streamRowId = DecodePosition(streamedValueAddr);
+            size_t filterCount = 0;
+            for (size_t i = 0; i < matchedRowCount; i++) {
+                auto bufferedValueAddr = preBufferedValueAddress[i];
+                auto bufferBatchId = DecodeSliceIndex(bufferedValueAddr);
+                auto bufferRowId = DecodePosition(bufferedValueAddr);
+                if (resultBuilder->IsJoinPositionEligible(streamBatchId, streamRowId, bufferBatchId, bufferRowId)) {
+                    bufferedValueAddress.emplace_back(bufferedValueAddr);
+                    filterCount++;
+                }
             }
-        }
-        if (filterCount > 0) {
-            streamedValueAddress.insert(streamedValueAddress.end(), filterCount, streamedValueAddr);
-            startBufferedBatchIds.insert(startBufferedBatchIds.end(), filterCount, startBufferedBatchId);
+            if (filterCount > 0) {
+                streamedValueAddress.insert(streamedValueAddress.end(), filterCount, streamedValueAddr);
+                startBufferedBatchIds.insert(startBufferedBatchIds.end(), filterCount, startBufferedBatchId);
+            }
         }
         return;
     }
 
     bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
         preBufferedValueAddress.end());
-    streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), streamedValueAddr);
-    isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);
+    streamedValueAddress.insert(streamedValueAddress.end(), matchedRowCount, streamedValueAddr);
+    isPreKeyMatched.insert(isPreKeyMatched.end(), matchedRowCount, isMatched);
     if constexpr (templateJoinType == OMNI_JOIN_TYPE_LEFT_SEMI || templateJoinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
         isSameBufferedKeyMatched.insert(isSameBufferedKeyMatched.end(), preBufferedKeyMatched.begin(),
             preBufferedKeyMatched.end());
