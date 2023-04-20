@@ -4446,7 +4446,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiForEmptyVecBatch)
     delete overflowConfig;
 }
 
-TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInner)
+TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInner1)
 {
     std::string filter =
         "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\","
@@ -4515,6 +4515,86 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInner)
     int32_t expectedData1[] = {8001, 8001, 1003, 1003, 8001, 8001, 1003, 1003};
     AssertVecBatchEquals(result, 2, expectedDataSize, expectedData0, expectedData1);
     VectorHelper::FreeVecBatch(result);
+
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
+    omniruntime::op::Operator::DeleteOperator(bufferedTblWithExprOperator);
+    omniruntime::op::Operator::DeleteOperator(streamedTblWithExprOperator);
+    DeleteOperatorFactory(bufferedWithExprOperatorFactory);
+    DeleteOperatorFactory(streamedWithExprOperatorFactory);
+    delete overflowConfig;
+}
+
+TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInner2)
+{
+    std::string filter =
+        "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\","
+        "\"dataType\":1,\"colVal\":0},\"right\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1, \"colVal\":2}}";
+    DataTypes streamedTblTypes(std::vector<DataTypePtr>({ IntType(), IntType() }));
+
+    auto streamedKey = new FieldExpr(1, IntType());
+    std::vector<omniruntime::expressions::Expr *> streamedEqualKeyExprs { streamedKey };
+
+    int32_t streamedOutputCols[]= {0};
+    auto overflowConfig = new OverflowConfig();
+    auto streamedWithExprOperatorFactory =
+        StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
+        streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, filter, overflowConfig);
+    auto streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
+
+    DataTypes bufferedTblTypes(std::vector<DataTypePtr> { IntType(), IntType() });
+    auto bufferedKey = new FieldExpr(1, IntType());
+    std::vector<omniruntime::expressions::Expr *> bufferedEqualKeyExprs { bufferedKey };
+    int bufferedOutputCols[] = {0};
+    auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
+    auto bufferedWithExprOperatorFactory =
+        BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
+        bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr, overflowConfig);
+    omniruntime::op::Operator *bufferedTblWithExprOperator = CreateTestOperator(bufferedWithExprOperatorFactory);
+
+    int32_t buffer00[] = {6001, 6002};
+    int32_t buffer01[] = {1, 3};
+    VectorBatch *bufferedVecBatch0 = CreateVectorBatch(bufferedTblTypes, 2, buffer00, buffer01);
+    int32_t buffer10[] = {8001, 1003};
+    int32_t buffer11[] = {3, 4};
+    VectorBatch *bufferedVecBatch1 = CreateVectorBatch(bufferedTblTypes, 2, buffer10, buffer11);
+    bufferedTblWithExprOperator->AddInput(bufferedVecBatch0);
+    bufferedTblWithExprOperator->AddInput(bufferedVecBatch1);
+
+    int32_t stream00[] = {8001, 8002};
+    int32_t stream01[] = {2, 3};
+    VectorBatch *streamedVecBatch0 = CreateVectorBatch(streamedTblTypes, 2, stream00, stream01);
+    int32_t stream10[] = {8001};
+    int32_t stream11[] = {3};
+    VectorBatch *streamedVecBatch1 = CreateVectorBatch(streamedTblTypes, 1, stream10, stream11);
+    streamedTblWithExprOperator->AddInput(streamedVecBatch0);
+    streamedTblWithExprOperator->AddInput(streamedVecBatch1);
+
+    VectorBatch *result = nullptr;
+    bufferedTblWithExprOperator->GetOutput(&result);
+
+    int32_t stream20[] = {8001};
+    int32_t stream21[] = {3};
+    VectorBatch *streamedVecBatch2 = CreateVectorBatch(streamedTblTypes, 1, stream20, stream21);
+    streamedTblWithExprOperator->AddInput(streamedVecBatch2);
+    bufferedTblWithExprOperator->GetOutput(&result);
+    int32_t expectData0[] = {8001};
+    int32_t expectData1[] = {8001};
+    AssertVecBatchEquals(result, 2, 1, expectData0, expectData1);
+    VectorHelper::FreeVecBatch(result);
+    result = nullptr;
+
+    // add eof flag to buffered table , need add streamed table data
+    VectorBatch *bufferedVecBatchEof = CreateEmptyVectorBatch(bufferedTblTypes.Get());
+    bufferedTblWithExprOperator->AddInput(bufferedVecBatchEof);
+
+    // add eof flag to streamed table
+    VectorBatch *streamedVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes.Get());
+    streamedTblWithExprOperator->AddInput(streamedVecBatchEof);
+    bufferedTblWithExprOperator->GetOutput(&result);
+    AssertVecBatchEquals(result, 2, 1, expectData0, expectData1);
+    VectorHelper::FreeVecBatch(result);
+    result = nullptr;
 
     Expr::DeleteExprs(streamedEqualKeyExprs);
     Expr::DeleteExprs(bufferedEqualKeyExprs);

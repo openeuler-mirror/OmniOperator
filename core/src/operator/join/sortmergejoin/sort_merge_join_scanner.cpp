@@ -809,6 +809,7 @@ template <JoinType templateJoinType> void SortMergeJoinScanner::SavePrevMatching
             streamedValueAddress.insert(streamedValueAddress.end(), matchedRowCount, streamedValueAddr);
             startBufferedBatchIds.insert(startBufferedBatchIds.end(), matchedRowCount, startBufferedBatchId);
         } else {
+            preStreamedValueAddress = streamedValueAddr;
             auto streamBatchId = DecodeSliceIndex(streamedValueAddr);
             auto streamRowId = DecodePosition(streamedValueAddr);
             size_t filterCount = 0;
