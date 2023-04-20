@@ -15,6 +15,8 @@ std::vector<Function> BatchDictionaryFunctionRegistry::GetFunctions()
     std::vector<DataTypeId> paramTypes = { OMNI_LONG };
     std::vector<Function> batchDictionaryFnRegistry = {
         Function(reinterpret_cast<void *>(BatchGetIntFromDictionaryVector), "batch_GetDic", {}, paramTypes, OMNI_INT),
+        Function(reinterpret_cast<void *>(BatchGetIntFromDictionaryVector), "batch_GetDic", {}, paramTypes,
+            OMNI_DATE32),
         Function(reinterpret_cast<void *>(BatchGetLongFromDictionaryVector), "batch_GetDic", {}, paramTypes, OMNI_LONG),
         Function(reinterpret_cast<void *>(BatchGetLongFromDictionaryVector), "batch_GetDic", {}, paramTypes,
             OMNI_DECIMAL64),
@@ -29,6 +31,7 @@ std::vector<Function> BatchDictionaryFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchGetDecimalFromDictionaryVector), "batch_GetDic", {}, paramTypes,
             OMNI_DECIMAL128),
         Function(reinterpret_cast<void *>(BatchGetIntFromVector), "batch_GetData", {}, paramTypes, OMNI_INT),
+        Function(reinterpret_cast<void *>(BatchGetIntFromVector), "batch_GetData", {}, paramTypes, OMNI_DATE32),
         Function(reinterpret_cast<void *>(BatchGetLongFromVector), "batch_GetData", {}, paramTypes, OMNI_LONG),
         Function(reinterpret_cast<void *>(BatchGetLongFromVector), "batch_GetData", {}, paramTypes, OMNI_DECIMAL64),
         Function(reinterpret_cast<void *>(BatchGetDoubleFromVector), "batch_GetData", {}, paramTypes, OMNI_DOUBLE),

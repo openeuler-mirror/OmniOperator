@@ -331,11 +331,7 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
     vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),
         [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
-    for (size_t i = 0; i < argTypes.size(); i++) {
-        if (argTypes[i] == omniruntime::type::OMNI_DATE32) {
-            argTypes[i] = omniruntime::type::OMNI_INT;
-        }
-    }
+
     if (TypeUtil::IsStringType(retTypeId)) {
         width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
         if (retTypeId == OMNI_CHAR) {

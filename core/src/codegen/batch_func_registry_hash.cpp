@@ -17,6 +17,8 @@ std::vector<Function> BatchHashFunctionRegistry::GetFunctions()
         "batch_combine_hash", {}, { OMNI_LONG, OMNI_LONG }, OMNI_LONG, INPUT_DATA_AND_NULL),
         Function(reinterpret_cast<void *>(BatchMm3Int32), batchMm3fnStr, {}, { OMNI_INT, OMNI_INT }, retType,
             INPUT_DATA_AND_NULL),
+        Function(reinterpret_cast<void *>(BatchMm3Int32), batchMm3fnStr, {}, { OMNI_DATE32, OMNI_INT }, retType,
+            INPUT_DATA_AND_NULL),
         Function(reinterpret_cast<void *>(BatchMm3Int64), batchMm3fnStr, {}, { OMNI_LONG, OMNI_INT }, retType,
             INPUT_DATA_AND_NULL),
         Function(reinterpret_cast<void *>(BatchMm3Double), batchMm3fnStr, {}, { OMNI_DOUBLE, OMNI_INT }, retType,

@@ -106,6 +106,7 @@ std::vector<Function> BatchUtilFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(InExpr<bool>), "batch_in", {}, { OMNI_BOOLEAN }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(InExpr<int32_t>), "batch_in", {}, { OMNI_INT }, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(InExpr<int32_t>), "batch_in", {}, { OMNI_DATE32 }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(InExpr<int64_t>), "batch_in", {}, { OMNI_LONG }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(InExpr<double>), "batch_in", {}, { OMNI_DOUBLE }, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(InExprString), "batch_in", {}, { OMNI_CHAR }, OMNI_BOOLEAN, INPUT_DATA),
