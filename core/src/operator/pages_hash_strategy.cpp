@@ -41,56 +41,65 @@ PagesHashStrategy::~PagesHashStrategy()
     }
 }
 
-template <DataTypeId typeId>
-static bool ValueEqualsValueIgnoreNulls(BaseVector *leftVector, uint32_t leftRowIndex, BaseVector *rightVector,
+template <typename T>
+static ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector, uint32_t leftIndex,
+    omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
+{
+    return static_cast<Vector<T> *>(leftVector)->GetValue(leftIndex) == static_cast<Vector<T> *>(rightVector)->GetValue(rightIndex);
+}
+
+static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector, uint32_t leftIndex,
+    omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
+{
+    double leftValue = static_cast<Vector<double> *>(leftVector)->GetValue(leftIndex);
+    double rightValue = static_cast<Vector<double> *>(rightVector)->GetValue(rightIndex);
+    if (std::abs(leftValue - rightValue) < __DBL_EPSILON__) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector, uint32_t leftIndex,
+    omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
+{
+    auto leftValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftVector)->GetValue(leftIndex);
+    auto rightValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightVector)->GetValue(rightIndex);
+    auto leftLength = leftValue.length();
+    if (leftLength != rightValue.length()) {
+        return false;
+    }
+    if (memcmp(leftValue.data(), rightValue.data(), leftLength) == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint32_t leftRowIndex, BaseVector *rightVector,
     uint32_t rightRowIndex)
 {
-    using T = typename NativeType<typeId>::type;
-    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
-        return VarcharValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
-    } else if constexpr (std::is_same_v<T, double>) {
-        return DoubleValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
-    } else {
-        return PrimitiveValueEqualsValueIgnoreNulls<T>(leftVector, leftRowIndex, rightVector, rightRowIndex);
-    }
-}
-
-bool PagesHashStrategy::PositionEqualsPositionIgnoreNulls(uint32_t leftTableIndex, uint32_t leftRowIndex,
-    uint32_t rightTableIndex, uint32_t rightRowIndex)
-{
-    BaseVector *leftColumn = nullptr;
-    BaseVector *rightColumn = nullptr;
-    bool result = true;
-
-    for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
-        // todo:: handle dictionary
-        leftColumn = buildHashColumns[columnIdx][leftTableIndex];
-        rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-        result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, buildHashColTypes[columnIdx], leftColumn,
-            leftRowIndex, rightColumn, rightRowIndex);
-        if (!result) {
+    switch (dataType) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            return ValueEqualsValueIgnoreNulls<int32_t>(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_SHORT:
+            return ValueEqualsValueIgnoreNulls<int16_t>(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+            return ValueEqualsValueIgnoreNulls<int64_t>(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_DOUBLE:
+            return DoubleValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_BOOLEAN:
+            return ValueEqualsValueIgnoreNulls<bool>(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+            return VarcharValueEqualsValueIgnoreNulls(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        case OMNI_DECIMAL128:
+            return ValueEqualsValueIgnoreNulls<Decimal128>(leftVector, leftRowIndex, rightVector, rightRowIndex);
+        default:
             return false;
-        }
     }
-    return true;
-}
-
-bool PagesHashStrategy::PositionEqualsRowIgnoreNulls(uint32_t buildTableIndex, uint32_t buildRowIndex,
-    uint32_t probePosition, BaseVector **probeJoinColumns)
-{
-    bool result = true;
-    for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
-        BaseVector *buildColumn = buildHashColumns[columnIdx][buildTableIndex];
-        BaseVector *probeColumn = probeJoinColumns[columnIdx];
-        // todo:: handle dictionary
-        result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, buildHashColTypes[columnIdx], buildColumn,
-            buildRowIndex, probeColumn, probePosition);
-        if (!result) {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
@@ -102,6 +111,7 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
     bool rightIsNull = false;
     bool result = true;
 
+    int32_t originalLeftRowIndex, originalRightRowIndex;
     for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
         leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         rightColumn = buildHashColumns[columnIdx][rightTableIndex];
@@ -114,9 +124,8 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
             return false;
         }
 
-        // todo:: handle dictionary
-        result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, buildHashColTypes[columnIdx], leftColumn,
-            leftRowIndex, rightColumn, rightRowIndex);
+        result = ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], leftColumn, originalLeftRowIndex,
+            rightColumn, originalRightRowIndex);
         if (!result) {
             return false;
         }

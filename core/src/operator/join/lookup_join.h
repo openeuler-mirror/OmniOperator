@@ -16,78 +16,70 @@
 
 namespace omniruntime {
 namespace op {
-class JoinProbe {
-public:
-    JoinProbe(omniruntime::vec::VectorBatch *input, uint32_t allColsCount, int32_t *hashCols, int32_t *hashColTypes,
-        uint32_t hashColsCount);
-    ~JoinProbe();
-
-    ALWAYS_INLINE int32_t GetPosition() const
-    {
-        return position;
-    }
-
-    ALWAYS_INLINE omniruntime::vec::BaseVector **GetProbeAllColumns() const
-    {
-        return probeAllColumns;
-    }
-
-    ALWAYS_INLINE int32_t GetProbeAllColsCount() const
-    {
-        return probeAllColsCount;
-    }
-
-    bool AdvanceNextPosition();
-    uint64_t GetCurrentJoinPosition(const JoinHashTables *hashTables) const;
-
-private:
-    omniruntime::vec::BaseVector **probeAllColumns;
-    uint32_t probeAllColsCount;
-    uint32_t positionCount;
-    omniruntime::vec::BaseVector **probeHashColumns; // Vector *[join column count]
-    int32_t *probeHashColTypes;
-    uint32_t probeHashColsCount;
-    int32_t position;
-    int64_t *hashes;
-    bool *nulls;
-};
-
 class LookupJoinOutputBuilder {
 public:
     LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
-        int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, int32_t outputRowSize,
-        const type::DataTypes &probeTypes);
+        int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
-    void AppendRow(int32_t probePosition, uint64_t partitionedJoinPosition);
-    void BuildOutput(const JoinProbe *joinProbe, const JoinHashTables *hashTables,
-        VectorBatch **outputVecBatch);
+    void AppendRow(int32_t probePosition, const JoinHashTable *hashtable, uint32_t joinPosition);
+    void BuildOutput(VectorAllocator *vecAllocator, BaseVector **probeOutputColumns, VectorBatch **outputVecBatch);
+    void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns);
+    void ConstructBuildColumns(VectorBatch *vectorBatch, VectorAllocator *vecAllocator);
 
-    ALWAYS_INLINE bool HasNext()
+    ALWAYS_INLINE bool IsFull()
     {
-        return positionReturned < static_cast<int32_t>(probeIndex.size());
+        return probeRowCount >= maxRowCount;
     }
 
-    ALWAYS_INLINE void Clear()
+    ALWAYS_INLINE bool IsEmpty()
     {
-        isSequentialProbeIndices = true;
-        probeIndex.clear();
-        buildIndex.clear();
-        positionReturned = 0;
+        return probeRowCount == 0;
     }
 
 private:
-    int32_t positionReturned = 0;
+    ALWAYS_INLINE void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, Vector **probeOutputColumns)
+    {
+        BaseVector *probeColumn = nullptr;
+        for (int32_t j = 0; j < probeOutputColsCount; ++j) {
+            auto column = probeOutputColumns[j];
+            // we want to keep only one level dictionary vector here
+            // if the data is non-dictionary, we build dictionary to avoid data copy
+            if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
+                probeColumn = column->CopyPositions(&probeIndex[0], 0, probeRowCount);
+            } else {
+                probeColumn = new DictionaryVector(column, &probeIndex[0], probeRowCount);
+            }
+            vectorBatch->SetVector(j, probeColumn);
+        }
+    }
+
+    ALWAYS_INLINE void ConstructProbeColumnsFromReuse(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
+    {
+        for (int32_t j = 0; j < probeOutputColsCount; ++j) {
+            auto column = probeOutputColumns[j];
+            column = column->Slice(0, column->GetSize());
+            vectorBatch->SetVector(j, column);
+        }
+    }
+
+    ALWAYS_INLINE void ConstructProbeColumnsFromSlice(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
+    {
+        for (int32_t j = 0; j < probeOutputColsCount; ++j) {
+            auto column = probeOutputColumns[j];
+            auto probeColumn = column->Slice(probeIndex[0], probeRowCount);
+            vectorBatch->SetVector(j, probeColumn);
+        }
+    }
+
     int32_t maxRowCount = 0;
     int32_t *probeOutputCols;
     int32_t probeOutputColsCount;
     int32_t *buildOutputCols;
     int32_t buildOutputColsCount;
     DataTypes buildOutputTypes;
-    int32_t outputRowSize;
+    int32_t probeRowCount = 0;
     std::vector<int32_t> probeIndex;
-    std::vector<uint64_t> buildIndex;
-    bool isSequentialProbeIndices;
-    type::DataTypes probeTypes;
+    std::vector<std::pair<BaseVector ***, uint64_t>> buildIndex;
 };
 
 class LookupJoinOperatorFactory : public OperatorFactory {
@@ -114,6 +106,10 @@ public:
     Operator *CreateOperator() override;
 
 private:
+    void CommonInitActions(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
+        int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
+        const type::DataTypes &buildOutputTypes);
+
     DataTypes probeTypes;                 // all types for probe
     std::vector<int32_t> probeOutputCols; // output columns for probe
     std::vector<int32_t> probeHashCols;   // join columns for probe
@@ -136,31 +132,46 @@ public:
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
 private:
-    void ProcessProbe();
-    void JoinCurrentPositionWithFilter();
-    void JoinCurrentPosition();
-    bool AdvanceProbePosition();
-    uint64_t GetNextJoinPosition(uint64_t currentJoinPosition) const;
+    template <bool hasJoinFilter> void ProbeBatchForInnerJoin();
+    template <bool hasJoinFilter> void ProbeBatchForLeftJoin();
+    template <bool hasJoinFilter> void ProbeBatchForRightJoin();
+    template <bool hasJoinFilter> void ProbeBatchForFullJoin();
+    template <bool hasJoinFilter> void ProbeBatchForLeftSemiJoin();
+    template <bool hasJoinFilter> void ProbeBatchForLeftAntiJoin();
+    bool IsJoinPositionEligible(uint32_t partition, uint32_t joinPosition, uint32_t probeRow);
+    void PrepareCurrentProbe();
+    void PopulateProbeHashes();
+    void ProcessProbe(bool hasFilter);
 
+    JoinType joinType;
     DataTypes probeTypes;
     std::vector<int32_t> probeOutputCols;
     std::vector<int32_t> probeHashCols;
     std::vector<int32_t> probeHashColTypes;
     std::vector<int32_t> buildOutputCols;
     DataTypes buildOutputTypes;
-    bool probeOnOuterSide;
-    bool needTrackPosition;
-    bool onlyBuildSideFirstMatch;
-    bool currentProbePositionProducedRow;
     JoinHashTables *hashTables;
-    JoinProbe *joinProbe;
-    uint64_t partitionedJoinPosition; // the addressIndex combined partition for build, it is encoded by ((addressIndex
-    // << shiftSize) | partition)
+
+    omniruntime::vec::BaseVector **probeHashColumns = nullptr; // Vector *[join column count]
+    omniruntime::vec::BaseVector **probeOutputColumns = nullptr;
+    std::vector<int64_t> curProbeHashes;
+    std::vector<int8_t> curProbeNulls;
+
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
     ExecutionContext *executionContext = nullptr;
-    omniruntime::vec::VectorBatch *input = nullptr;
-    // for left anti
-    bool onlyProbeOnBuildSideInvalid = false;
+    omniruntime::vec::VectorBatch *curInputBatch = nullptr;
+    int32_t curProbePosition = 0;
+    omniruntime::vec::VectorBatch *curOutputBatch = nullptr;
+
+    // this is for join filter
+    SimpleFilter *simpleFilter = nullptr;
+    omniruntime::vec::BaseVector **probeFilterColumns = nullptr;
+    int64_t *values = nullptr;
+    bool *nulls = nullptr;
+    int32_t *lengths = nullptr;
+    std::vector<int32_t> probeFilterCols;
+    std::vector<int32_t> buildFilterCols;
+    bool firstVecBatch = false;
 };
 } // end of op
 } // end of omniruntime

@@ -59,7 +59,7 @@ inline void VectorSwap(uint64_t *valueAddresses, int32_t from, int32_t l, int32_
 
 void PagesIndex::AddVecBatch(omniruntime::vec::VectorBatch *vecBatch)
 {
-    inputVecBatches.push_back(vecBatch);
+    inputVecBatches.emplace_back(vecBatch);
     positionCount += vecBatch->GetRowCount();
 }
 

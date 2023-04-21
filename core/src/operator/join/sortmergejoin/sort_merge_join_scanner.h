@@ -122,7 +122,7 @@ private:
 
 class InitialJoinStatus : public JoinStatus {
 public:
-    InitialJoinStatus() : JoinStatus(JoinTableCode::INVALID, JoinTableCode::INVALID, JoinResultCode::NO_RESULT){};
+    InitialJoinStatus() : JoinStatus(JoinTableCode::INVALID, JoinTableCode::INVALID, JoinResultCode::NO_RESULT) {};
     ~InitialJoinStatus() override = default;
 };
 

@@ -514,10 +514,10 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     // construct the output data
     DataTypes expectTypes(
         std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), LongType(), LongType() }));
-    int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 1, 2};
-    int64_t expectData2[DATA_SIZE] = {8, 8, 4, 2, 5, 1};
-    double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 1.1, 5.5};
-    int16_t expectData4[DATA_SIZE] = {5, 2, 1, 3, 0, 4};
+    int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 2, 1};
+    int64_t expectData2[DATA_SIZE] = {8, 8, 4, 2, 1, 5};
+    double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 5.5, 1.1};
+    int16_t expectData4[DATA_SIZE] = {5, 2, 1, 3, 4, 0};
     int64_t expectData5[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     int64_t expectData6[DATA_SIZE] = {1, 2, 1, 1, 1, 2};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
@@ -669,9 +669,9 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), LongType(),
         LongType(), DoubleType(), DoubleType(), LongType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 2, 1, 1};
-    int64_t expectData2[DATA_SIZE] = {8, 4, 4, 2, 5, 1};
-    double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 1.1, 5.5};
-    int16_t expectData4[DATA_SIZE] = {5, 2, 1, 3, 0, 4};
+    int64_t expectData2[DATA_SIZE] = {8, 4, 4, 2, 1, 5};
+    double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 4.4, 5.5, 1.1};
+    int16_t expectData4[DATA_SIZE] = {5, 2, 1, 3, 4, 0};
     int64_t expectData5[DATA_SIZE] = {8, 8, 4, 2, 6, 6};
     int64_t expectData6[DATA_SIZE] = {1, 1, 1, 1, 2, 2};
     double expectData7[DATA_SIZE] = {8, 8, 4, 2, 3, 3};
