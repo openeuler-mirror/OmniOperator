@@ -86,8 +86,11 @@ TEST(NativeOmniSortTest, TestSortPerformance)
     clock_t start = clock();
     auto sortOperator = CreateTestOperator(operatorFactory);
     sortOperator->AddInput(vecBatch);
-    VectorBatch *outputVecBatch = nullptr;
-    sortOperator->GetOutput(&outputVecBatch);
+    while (sortOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        VectorBatch *outputVecBatch = nullptr;
+        sortOperator->GetOutput(&outputVecBatch);
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
     std::cout << "sort and get output elapsed end time: " << static_cast<double>(std::clock() - start) / 1000 <<
         " ms" << std::endl;
 
@@ -97,7 +100,6 @@ TEST(NativeOmniSortTest, TestSortPerformance)
     delete[] data3;
     delete[] data2;
     delete[] data1;
-    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
 }
