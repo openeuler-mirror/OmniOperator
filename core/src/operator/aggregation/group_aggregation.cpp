@@ -543,7 +543,7 @@ void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnInd
     std::vector<uintptr_t> vectorAddresses(op::AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<uintptr_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<uintptr_t>(longVector);
-    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
+    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
     auto containerVector =
         new ContainerVector(vecAllocator, rowCount, vectorAddresses, op::AVG_VECTOR_COUNT, dataTypes);
     vecBatch->SetVector(columnIndex, containerVector);

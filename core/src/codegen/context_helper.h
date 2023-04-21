@@ -18,8 +18,6 @@
 #define DLLEXPORT
 #endif
 
-using namespace omniruntime::type;
-
 namespace omniruntime::codegen {
 #define CHECK_OVERFLOW_RETURN(DECIMAL, PRECISION)                     \
     do {                                                              \
@@ -85,12 +83,12 @@ namespace omniruntime::codegen {
         }                                                                                      \
     } while (false)
 
-#define CHECK_DIVIDE_BY_ZERO_CONTINUE(dividend)                 \
-    do {                                                        \
-        if ((dividend) == 0) {                                  \
-            SetError(contextPtr, DIVIDE_ZERO);                  \
-            continue;                                           \
-        }                                                       \
+#define CHECK_DIVIDE_BY_ZERO_CONTINUE(dividend) \
+    do {                                        \
+        if ((dividend) == 0) {                  \
+            SetError(contextPtr, DIVIDE_ZERO);  \
+            continue;                           \
+        }                                       \
     } while (false)
 
 extern "C" DLLEXPORT
@@ -99,24 +97,29 @@ extern "C" DLLEXPORT
     bool ArenaAllocatorReset(int64_t contextPtr);
     bool SetError(int64_t contextPtr, std::string errorMessage);
     bool HasError(int64_t contextPtr);
-    std::string GetDataString(DataTypeId type, int count, ...);
+    std::string GetDataString(type::DataTypeId type, int count, ...);
 }
 
-template <typename T> std::string CastErrorMessage(DataTypeId from, DataTypeId to, T value, OpStatus reason, ...)
+template <typename T>
+std::string CastErrorMessage(type::DataTypeId from, type::DataTypeId to, T value, type::OpStatus reason, ...)
 {
     va_list v;
     va_start(v, reason);
     std::ostringstream errorMessage;
-    if (from == OMNI_DECIMAL128 || from == OMNI_DECIMAL64) {
+    if (from == type::OMNI_DECIMAL128 || from == type::OMNI_DECIMAL64) {
         int32_t precision = va_arg(v, int32_t);
         int32_t scale = va_arg(v, int32_t);
         errorMessage << "Cannot cast " << GetDataString(from, 2, precision, scale) << " '";
-        errorMessage << Decimal128Wrapper(value).SetScale(scale).ToString();
+        errorMessage << type::Decimal128Wrapper(value).SetScale(scale).ToString();
     } else {
         errorMessage << "Cannot cast " << GetDataString(from, 1) << " '";
-        errorMessage << value;
+        if constexpr (std::is_same_v<T, __int128_t>) {
+            errorMessage << boost::multiprecision::int128_t(value);
+        } else {
+            errorMessage << value;
+        }
     }
-    if (to == OMNI_DECIMAL128 || to == OMNI_DECIMAL64) {
+    if (to == type::OMNI_DECIMAL128 || to == type::OMNI_DECIMAL64) {
         int32_t precision = va_arg(v, int32_t);
         int32_t scale = va_arg(v, int32_t);
         errorMessage << "' to " << GetDataString(to, 2, precision, scale);

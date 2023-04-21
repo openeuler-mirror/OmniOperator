@@ -1,3 +1,9 @@
+#!/bin/bash
+# check env for OmniOperatorJit
+# Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+
+set -e
+
 print_gcc_lib() {
   gcc -print-search-dirs | sed '/^lib/b 1;d;:1;s,/[^/.][^/]*/\.\./,/,;t 1;s,:[^=]*=,:;,;s,;,;  ,g' | tr \; \\012
 }

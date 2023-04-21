@@ -2,6 +2,8 @@
 # build file for OmniOperatorJit
 # Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
 
+set -e
+
 # print_usage
 print_usage() {
   echo "

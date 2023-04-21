@@ -117,7 +117,7 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
     auto *op =
-        new HashAggregationWithExprOperator(*sourceTypes, projectCols, projectFuncs, hashAggOperator, aggSimpleFilters);
+        new HashAggregationWithExprOperator(*sourceTypes, projectCols, projectFuncs, aggSimpleFilters, hashAggOperator);
     std::vector<type::DataTypeId> dataTypeIds;
     for (int32_t i = 0; i < originalSourceTypes->GetSize(); ++i) {
         dataTypeIds.push_back(originalSourceTypes->GetType(i)->GetId());
@@ -127,13 +127,13 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &sourceTypes,
-    std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs, HashAggregationOperator *hashAggOperator,
-    std::vector<SimpleFilter *> &aggSimpleFilters)
+    std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs,
+    std::vector<SimpleFilter *> &aggSimpleFilters, HashAggregationOperator *hashAggOperator)
     : sourceTypes(sourceTypes),
       projectCols(projectCols),
       projectFuncs(projectFuncs),
-      hashAggOperator(hashAggOperator),
-      aggSimpleFilters(aggSimpleFilters)
+      aggSimpleFilters(aggSimpleFilters),
+      hashAggOperator(hashAggOperator)
 {}
 
 HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
