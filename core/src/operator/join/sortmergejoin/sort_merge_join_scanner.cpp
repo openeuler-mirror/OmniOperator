@@ -93,11 +93,10 @@ int64_t SortMergeJoinScanner::FindNextJoinRows()
 }
 
 int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<int8_t> &isMatched,
-    std::vector<int32_t> &bufferedBatchIds, std::vector<int64_t> &streamedTblValueAddresses,
-    std::vector<int64_t> &bufferedTblValueAddresses, std::vector<int8_t> &isBufferedKeyMatched)
+    std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
+    std::vector<int8_t> &isBufferedKeyMatched)
 {
     isMatched.insert(isMatched.end(), isPreKeyMatched.begin(), isPreKeyMatched.end());
-    bufferedBatchIds.insert(bufferedBatchIds.end(), startBufferedBatchIds.begin(), startBufferedBatchIds.end());
     streamedTblValueAddresses.insert(streamedTblValueAddresses.end(), streamedValueAddress.begin(),
         streamedValueAddress.end());
     bufferedTblValueAddresses.insert(bufferedTblValueAddresses.end(), bufferedValueAddress.begin(),
@@ -105,7 +104,6 @@ int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<int8_t> &isMa
     isBufferedKeyMatched.insert(isBufferedKeyMatched.end(), isSameBufferedKeyMatched.begin(),
         isSameBufferedKeyMatched.end());
     isPreKeyMatched.clear();
-    startBufferedBatchIds.clear();
     streamedValueAddress.clear();
     bufferedValueAddress.clear();
     isSameBufferedKeyMatched.clear();
@@ -551,7 +549,6 @@ template <JoinType templateJoinType> void SortMergeJoinScanner::BufferMatchingRo
     int64_t bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
     if constexpr (templateJoinType == OMNI_JOIN_TYPE_INNER || templateJoinType == OMNI_JOIN_TYPE_LEFT) {
         preBufferedValueAddress.emplace_back(bufferedValueAddr);
-        startBufferedBatchId = DecodeSliceIndex(bufferedValueAddr);
     } else {
         if (!onlyBufferedFirstMatch || preBufferedValueAddress.empty()) {
             preBufferedKeyMatched.emplace_back(!preBufferedValueAddress.empty());
@@ -802,34 +799,6 @@ template <JoinType templateJoinType> void SortMergeJoinScanner::SavePrevMatching
 {
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     auto matchedRowCount = preBufferedValueAddress.size();
-    if constexpr (templateJoinType == OMNI_JOIN_TYPE_INNER) {
-        if (resultBuilder == nullptr || !resultBuilder->NeedDoFilter()) {
-            bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
-                preBufferedValueAddress.end());
-            streamedValueAddress.insert(streamedValueAddress.end(), matchedRowCount, streamedValueAddr);
-            startBufferedBatchIds.insert(startBufferedBatchIds.end(), matchedRowCount, startBufferedBatchId);
-        } else {
-            preStreamedValueAddress = streamedValueAddr;
-            auto streamBatchId = DecodeSliceIndex(streamedValueAddr);
-            auto streamRowId = DecodePosition(streamedValueAddr);
-            size_t filterCount = 0;
-            for (size_t i = 0; i < matchedRowCount; i++) {
-                auto bufferedValueAddr = preBufferedValueAddress[i];
-                auto bufferBatchId = DecodeSliceIndex(bufferedValueAddr);
-                auto bufferRowId = DecodePosition(bufferedValueAddr);
-                if (resultBuilder->IsJoinPositionEligible(streamBatchId, streamRowId, bufferBatchId, bufferRowId)) {
-                    bufferedValueAddress.emplace_back(bufferedValueAddr);
-                    filterCount++;
-                }
-            }
-            if (filterCount > 0) {
-                streamedValueAddress.insert(streamedValueAddress.end(), filterCount, streamedValueAddr);
-                startBufferedBatchIds.insert(startBufferedBatchIds.end(), filterCount, startBufferedBatchId);
-            }
-        }
-        return;
-    }
-
     bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
         preBufferedValueAddress.end());
     streamedValueAddress.insert(streamedValueAddress.end(), matchedRowCount, streamedValueAddr);

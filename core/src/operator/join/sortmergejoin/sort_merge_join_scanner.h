@@ -140,16 +140,11 @@ public:
 
     int64_t FindNextJoinRows();
 
-    int32_t GetMatchedValueAddresses(std::vector<int8_t> &isPreKeyMatched, std::vector<int32_t> &bufferedBatchIds,
+    int32_t GetMatchedValueAddresses(std::vector<int8_t> &isPreKeyMatched,
         std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
         std::vector<int8_t> &isSameBufferedKeyMatched);
 
     ~SortMergeJoinScanner();
-
-    void SetJoinResultBuilder(JoinResultBuilder *joinResultBuilder)
-    {
-        this->resultBuilder = joinResultBuilder;
-    }
 
 private:
     template <JoinType templateJoinType> void InnerJoin();
@@ -317,14 +312,11 @@ private:
     int32_t preStreamedPagesIndexPosition;
     std::unique_ptr<JoinStatus> preStatus;
     std::vector<int8_t> isPreKeyMatched;
-    std::vector<uint32_t> startBufferedBatchIds;
     std::vector<int8_t> isSameBufferedKeyMatched;
     std::vector<int8_t> preBufferedKeyMatched;
     std::vector<int64_t> streamedValueAddress;
     std::vector<int64_t> bufferedValueAddress;
     std::vector<int64_t> preBufferedValueAddress;
-    int32_t startBufferedBatchId;
-    JoinResultBuilder *resultBuilder = nullptr;
 };
 }
 }

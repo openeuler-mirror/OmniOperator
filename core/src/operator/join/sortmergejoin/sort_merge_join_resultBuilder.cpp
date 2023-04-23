@@ -219,18 +219,20 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
         int32_t leftRowId = DecodePosition(streamedRowAddress);
         int32_t rightBatchId = DecodeSliceIndex(bufferedRowAddress);
         int32_t rightRowId = DecodePosition(bufferedRowAddress);
-        FreeVectorBatchesForInner(startBufferedBatchIds[addressPosition], leftBatchId);
+        FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
 
-        for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
-            AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
-                leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
+        if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+            for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+                AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
+                    leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
+            }
+            for (int32_t columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
+                int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+                AddValueToBuildVector(rightTablePagesIndex->GetColumn(rightBatchId, rightTableOutputCols[columnIdx]),
+                    rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
+            }
+            buildRowCount++;
         }
-        for (int32_t columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
-            int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
-            AddValueToBuildVector(rightTablePagesIndex->GetColumn(rightBatchId, rightTableOutputCols[columnIdx]),
-                rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
-        }
-        buildRowCount++;
 
         addressOffset++;
         if (buildRowCount >= maxRowCount) {
@@ -511,16 +513,6 @@ void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId
         leftTablePagesIndex->FreeBeforeVecBatch(leftBatchId);
         rightTablePagesIndex->FreeBeforeVecBatch(rightBatchId);
         lastUnMatchedStreamedBatchId = leftBatchId;
-    }
-}
-
-void JoinResultBuilder::FreeVectorBatchesForInner(int32_t startRightBatchId, int32_t leftBatchId)
-{
-    if (startRightBatchId > lastUnMatchedBufferedBatchId && leftBatchId > lastUnMatchedStreamedBatchId) {
-        leftTablePagesIndex->FreeBeforeVecBatch(leftBatchId);
-        rightTablePagesIndex->FreeBeforeVecBatch(startRightBatchId);
-        lastUnMatchedStreamedBatchId = leftBatchId;
-        lastUnMatchedBufferedBatchId = startRightBatchId;
     }
 }
 

@@ -69,7 +69,6 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
         originalStreamedColsCount, streamedTblPagesIndex, bufferedOutputTypes, bufferedOutputCols.data(),
         bufferedOutputCols.size(), originalBufferedColsCount, bufferedTblPagesIndex, filter, vecAllocator, joinType,
         overflowConfig);
-    smjScanner->SetJoinResultBuilder(joinResultBuilder);
 }
 
 int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPagesIndex,
@@ -152,8 +151,8 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     auto matchResultRet = DecodeJoinResult(joinScannerRet);
     if (static_cast<JoinResultCode>(matchResultRet) == JoinResultCode::HAS_RESULT) {
         smjScanner->GetMatchedValueAddresses(joinResultBuilder->GetPreKeyMatched(),
-            joinResultBuilder->GetStartBufferedBatchIds(), joinResultBuilder->GetStreamedTableValueAddresses(),
-            joinResultBuilder->GetBufferedTableValueAddresses(), joinResultBuilder->GetSameBufferedKeyMatched());
+            joinResultBuilder->GetStreamedTableValueAddresses(), joinResultBuilder->GetBufferedTableValueAddresses(),
+            joinResultBuilder->GetSameBufferedKeyMatched());
         auto joinResultBuilderRet = joinResultBuilder->AddJoinValueAddresses();
         if (joinResultBuilderRet == 1) {
             joinResultBuilder->GetOutput(&returnVectorBatch);
