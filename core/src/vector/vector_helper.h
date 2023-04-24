@@ -133,7 +133,7 @@ public:
         } else {
             int32_t dataTypeId = dataType.GetId();
             int32_t capacityInBytes = (dataTypeId == type::OMNI_CHAR || dataTypeId == type::OMNI_VARCHAR) ?
-                VarcharVector::initCapacityInBytes:
+                VarcharVector::initCapacityInBytes :
                 0;
             return CreateVector(allocator, vectorEncodingId, dataTypeId, capacityInBytes, size);
         }
@@ -279,14 +279,8 @@ public:
         }
     }
 
-    static int64_t GetValuePtrAndLength(Vector *vector, int32_t rowIndex, int32_t *length)
+    static int64_t GetValuePtrAndLengthFromRawVector(Vector *vector, int32_t rowIndex, int32_t *length)
     {
-        if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-            auto dictionaryVector = static_cast<DictionaryVector *>(vector);
-            int32_t originalRowIndex;
-            auto dictionary = dictionaryVector->ExtractDictionaryAndId(rowIndex, originalRowIndex);
-            return GetValuePtrAndLength(dictionary, originalRowIndex, length);
-        }
         int32_t positionOffset = vector->GetPositionOffset();
         int32_t finalIndex = positionOffset + rowIndex;
         void *values = vector->GetValues();
@@ -315,6 +309,17 @@ public:
                 LogError("Do not support such vector type %d", vector->GetTypeId());
                 return 0;
         }
+    }
+
+    static int64_t GetValuePtrAndLength(Vector *vector, int32_t rowIndex, int32_t *length)
+    {
+        if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+            auto dictionaryVector = static_cast<DictionaryVector *>(vector);
+            int32_t originalRowIndex;
+            auto dictionary = dictionaryVector->ExtractDictionaryAndId(rowIndex, originalRowIndex);
+            return GetValuePtrAndLengthFromRawVector(dictionary, originalRowIndex, length);
+        }
+        return GetValuePtrAndLengthFromRawVector(vector, rowIndex, length);
     }
 
     static int64_t GetNullsAddr(Vector *vector)

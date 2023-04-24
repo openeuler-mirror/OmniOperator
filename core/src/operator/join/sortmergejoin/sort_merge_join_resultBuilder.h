@@ -25,48 +25,61 @@ public:
         int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
         std::string &filter, VectorAllocator *vecAllocator, JoinType joinType, OverflowConfig *overflowConfig);
 
-    void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId,
-        vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+    void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId);
 
-    void ParsingAndOrganizationResultsForRightTable(int32_t rightBatchId, int32_t rightRowId,
-        vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+    void ParsingAndOrganizationResultsForRightTable(int32_t rightBatchId, int32_t rightRowId);
 
-    void PaddingLeftTableNull(int64_t leftTableRowAddress, vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+    void PaddingLeftTableNull(int32_t rightBatchId, int32_t rightRowId);
 
-    void PaddingRightTableNull(int64_t leftTableRowAddress, vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount);
+    void PaddingRightTableNull(int32_t leftBatchId, int32_t leftRowId);
 
     int32_t AddJoinValueAddresses();
+
+    int32_t ConstructInnerJoinOutput();
+
+    int32_t ConstructLeftJoinOutput();
+
+    int32_t ConstructFullJoinOutput();
+
+    int32_t ConstructLeftSemiJoinOutput();
+
+    int32_t ConstructLeftAntiJoinOutput();
 
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch);
 
     void Finish();
 
-    std::vector<bool> &GetPreKeyMatched()
+    ALWAYS_INLINE std::vector<int8_t> &GetPreKeyMatched()
     {
         return isPreKeyMatched;
     }
 
-    std::vector<int64_t> &GetBufferedTableValueAddresses()
+    ALWAYS_INLINE std::vector<int32_t> &GetStartBufferedBatchIds()
+    {
+        return startBufferedBatchIds;
+    }
+
+    ALWAYS_INLINE std::vector<int64_t> &GetBufferedTableValueAddresses()
     {
         return bufferedTableValueAddresses;
     }
 
-    std::vector<int64_t> &GetStreamedTableValueAddresses()
+    ALWAYS_INLINE std::vector<int64_t> &GetStreamedTableValueAddresses()
     {
         return streamedTableValueAddresses;
     }
 
-    std::vector<bool> &GetSameBufferedKeyMatched()
+    ALWAYS_INLINE std::vector<int8_t> &GetSameBufferedKeyMatched()
     {
         return isSameBufferedKeyMatched;
     }
 
-    bool HasNext()
+    ALWAYS_INLINE bool HasNext()
     {
         return buildVectorBatchRowCount != 0;
     }
 
-    void Clear()
+    ALWAYS_INLINE void Clear()
     {
         VectorHelper::FreeVecBatch(buildVectorBatch);
         buildVectorBatchRowCount = 0;
@@ -81,6 +94,13 @@ public:
 
     ~JoinResultBuilder();
 
+    bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
+
+    ALWAYS_INLINE bool NeedDoFilter() const
+    {
+        return simpleFilter != nullptr;
+    }
+
 private:
     struct LeftAntiJoinHandler {
         bool hasSameBufferedRow = false;
@@ -89,21 +109,42 @@ private:
 
     void JoinFilterCodeGen(OverflowConfig *overflowConfig);
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
-    bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
-    void PaddingNullAndVerifyingTheOutput(std::vector<bool> &isPreKeyMatched, LeftAntiJoinHandler *leftAntiJoinHandler,
-        int64_t leftTableRowAddress, int64_t rightTableRowAddress, vec::VectorBatch *buildVectorBatch,
-        int32_t &buildRowCount, std::vector<bool> &isSameBufferedKeyMatched, bool &isPreRowMatched,
-        int32_t positionAddr);
     VectorBatch *NewEmptyVectorBatch() const;
-    void UpdateLeftAntiJoinHandler(LeftAntiJoinHandler *leftAntiJoinHandler, int32_t addressPosition,
-        std::vector<bool> &isSameBufferedKeyMatched, int32_t inputSize);
+    void UpdateLeftAntiJoinHandler(int32_t addressPosition, std::vector<int8_t> &isSameBufferedKeyMatched,
+        int32_t inputSize);
+
+    ALWAYS_INLINE void PaddingLeftTableNull()
+    {
+        for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+            auto vector = buildVectorBatch->GetVector(columnIdx);
+            auto typeId = vector->GetTypeId();
+            if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+            } else {
+                vector->SetValueNull(buildRowCount);
+            }
+        }
+    }
+
+    ALWAYS_INLINE void PaddingRightTableNull()
+    {
+        for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
+            int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+            auto vector = buildVectorBatch->GetVector(buildColumnIdx);
+            auto typeId = vector->GetTypeId();
+            if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+            } else {
+                vector->SetValueNull(buildRowCount);
+            }
+        }
+    }
 
     std::vector<DataTypePtr> leftTableOutputTypes;
     int32_t *leftTableOutputCols;
     int32_t leftTableOutputColsCount;
     int32_t originalLeftTableColsCount;
     DynamicPagesIndex *leftTablePagesIndex;
-    std::vector<DataTypePtr> rightTableOutputTypes;
     int32_t *rightTableOutputCols;
     int32_t rightTableOutputColsCount;
     int32_t originalRightTableColsCount;
@@ -111,11 +152,14 @@ private:
     std::string filterExpStr;
 
     int32_t lastUnMatchedStreamedBatchId = -1;
+    int32_t lastUnMatchedBufferedBatchId = -1;
 
     bool isFinished = false;
     int32_t maxRowCount;
 
     int64_t preStreamedRowAddress = INT64_MAX;
+    int32_t preStreamedBatchId = INT32_MAX;
+    int32_t preStreamedRowId = INT32_MAX;
     bool preLeftTableRowMatchedOut = false; // current left row matched out or pad null
 
     vec::VectorAllocator *vecAllocator;
@@ -137,12 +181,14 @@ private:
     bool isPreRowMatched = false;
     int32_t addressOffset = 0;
     int32_t buildRowCount = 0;
-    std::vector<bool> isPreKeyMatched;
+    std::vector<int8_t> isPreKeyMatched;
+    std::vector<int32_t> startBufferedBatchIds;
     // store the matched valueAddress
     std::vector<int64_t> streamedTableValueAddresses;
     std::vector<int64_t> bufferedTableValueAddresses;
-    std::vector<bool> isSameBufferedKeyMatched;
-    LeftAntiJoinHandler *leftAntiJoinHandler;
+    std::vector<int8_t> isSameBufferedKeyMatched;
+    LeftAntiJoinHandler leftAntiJoinHandler;
+    std::vector<DataTypePtr> allTypes;
 };
 }
 }

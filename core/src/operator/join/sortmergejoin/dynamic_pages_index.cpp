@@ -11,46 +11,68 @@ namespace op {
 using namespace omniruntime::vec;
 
 // function implements for class PagesIndex
-DynamicPagesIndex::DynamicPagesIndex(const omniruntime::type::DataTypes &types)
-    : typesCount(types.GetSize()), positionCount(0), finishAddData(false)
+DynamicPagesIndex::DynamicPagesIndex(const omniruntime::type::DataTypes &types, int32_t *computeCols,
+    int32_t computeColsCount)
+    : typesCount(types.GetSize()),
+      computeCols(computeCols),
+      computeColsCount(computeColsCount),
+      positionCount(0),
+      finishAddData(false)
 {}
 
-int32_t DynamicPagesIndex::AddVecBatches(const std::vector<VectorBatch *> &vecBatches)
+std::vector<bool> DynamicPagesIndex::CalculateNullsFromRawVectorBatch(VectorBatch *vectorBatch)
+{
+    std::vector<bool> result;
+    result.resize(vectorBatch->GetRowCount(), false);
+    for (int32_t id = 0; id < computeColsCount; ++id) {
+        auto colIdx = computeCols[id];
+        auto vec = vectorBatch->GetVector(colIdx);
+        auto totalRowSize = vec->GetSize();
+        auto nullSize = vec->GetNullCount();
+        if (nullSize == 0) {
+            continue;
+        }
+        auto nullValues = reinterpret_cast<bool *>(vec->GetValueNulls()) + vec->GetPositionOffset();
+        for (int32_t rowId = 0; rowId < totalRowSize && nullSize > 0; ++rowId) {
+            if (nullValues[rowId]) {
+                --nullSize;
+                result[rowId] = true;
+            }
+        }
+    }
+    return result;
+}
+
+int32_t DynamicPagesIndex::AddVecBatch(omniruntime::vec::VectorBatch *vecBatch)
 {
     if (finishAddData) {
         return 0;
     }
-    int32_t vecBatchCount = vecBatches.size();
-    int32_t vecBatchLastIndex = this->vecBatchFreeFlagDeque.size();
-    int32_t columnCount = this->typesCount;
 
-    for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
-        VectorBatch *vecBatch = vecBatches[vecBatchIdx];
-        int32_t rowCount = vecBatch->GetRowCount();
+    int32_t rowCount = vecBatch->GetRowCount();
+    if (rowCount == 0) {
         // no more vector batch will add
-        if (rowCount == 0) {
-            this->finishAddData = true;
-            this->vecBatchFreeFlagDeque.push_back(false);
-            this->vectorBatchDeque.push_back(vecBatch);
-            return 0;
-        }
-
-        this->positionCount += rowCount;
-        this->vecBatchFreeFlagDeque.push_back(false);
-        this->vectorBatchDeque.push_back(vecBatch);
-
-        // generate value address.
-        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            int64_t valueAddress = EncodeSyntheticAddress(vecBatchIdx + vecBatchLastIndex, rowIdx);
-            this->valueAddressesDeque.push_back(valueAddress);
-        }
-
-        std::vector<Vector *> vectorBatchColumns;
-        for (int32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
-            vectorBatchColumns.push_back(vecBatch->GetVector(colIdx));
-        }
-        this->columnsDeque.push_back(vectorBatchColumns);
+        this->finishAddData = true;
+        this->vecBatchFreeFlagDeque.emplace_back(false);
+        this->vectorBatchDeque.emplace_back(vecBatch);
+        return 0;
     }
+
+    this->positionCount += rowCount;
+    this->vecBatchFreeFlagDeque.emplace_back(false);
+    this->vectorBatchDeque.emplace_back(vecBatch);
+
+    // generate value address.
+    int32_t vecBatchLastIndex = this->columnsDeque.size();
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        int64_t valueAddress = EncodeSyntheticAddress(vecBatchLastIndex, rowIdx);
+        this->valueAddressesDeque.emplace_back(valueAddress);
+    }
+
+    std::vector<bool> nulls = CalculateNullsFromRawVectorBatch(vecBatch);
+    this->nullsDeque.insert(this->nullsDeque.end(), nulls.begin(), nulls.end());
+    this->columnsDeque.emplace_back(vecBatch->GetVectors());
+
     return 0;
 }
 

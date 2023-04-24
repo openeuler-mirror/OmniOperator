@@ -41,6 +41,18 @@ void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<Da
     }
 }
 
+void VectorBatch::NewFlatVectors(VectorAllocator *vecAllocator, const std::vector<DataTypePtr> &types)
+{
+    for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
+        auto omniId = types[colIndex]->GetId();
+        vectorTypeIds[colIndex] = omniId;
+        auto curVecType = types[colIndex];
+        auto capacity =
+            (omniId == type::OMNI_CHAR || omniId == type::OMNI_VARCHAR) ? (VarcharVector::initCapacityInBytes) : 0;
+        SetVector(colIndex, VectorHelper::CreateFlatVector(vecAllocator, omniId, capacity, rowCount));
+    }
+}
+
 void VectorBatch::SetVector(int index, Vector *vector)
 {
     vectors[index] = vector;

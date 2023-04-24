@@ -48,13 +48,13 @@ public:
 private:
     int32_t GetJoinResult();
 
-    type::DataTypes *streamedTypes;
+    const type::DataTypes *streamedTypes;
     std::vector<int32_t> streamedKeysCols;
     std::vector<int32_t> streamedOutputCols;
     int32_t originalStreamedColsCount;
     DynamicPagesIndex *streamedTblPagesIndex;
 
-    type::DataTypes *bufferedTypes;
+    const type::DataTypes *bufferedTypes;
     std::vector<int32_t> bufferedKeysCols;
     std::vector<int32_t> bufferedOutputCols;
     int32_t originalBufferedColsCount;

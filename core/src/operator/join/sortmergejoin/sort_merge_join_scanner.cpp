@@ -25,36 +25,76 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
       streamedPagesIndex(streamedTablePagesIndex),
       bufferedPagesIndex(bufferedTablePagesIndex),
       preStreamedValueAddress(-1),
+      preStreamedPagesIndexPosition(-1),
       preStatus(std::make_unique<InitialJoinStatus>())
-{}
+{
+    switch (joinType) {
+        case JoinType::OMNI_JOIN_TYPE_INNER:
+            scanFindNextRow = &SortMergeJoinScanner::InnerJoin<OMNI_JOIN_TYPE_INNER>;
+            break;
+        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
+            scanFindNextRow = &SortMergeJoinScanner::InnerJoin<OMNI_JOIN_TYPE_LEFT_SEMI>;
+            break;
+        case JoinType::OMNI_JOIN_TYPE_LEFT:
+            scanFindNextRow = &SortMergeJoinScanner::LeftOuterJoin<OMNI_JOIN_TYPE_LEFT>;
+            break;
+        case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI:
+            scanFindNextRow = &SortMergeJoinScanner::LeftOuterJoin<OMNI_JOIN_TYPE_LEFT_ANTI>;
+            break;
+        case JoinType::OMNI_JOIN_TYPE_FULL:
+            scanFindNextRow = &SortMergeJoinScanner::FullOuterJoin;
+            break;
+        default:
+            scanFindNextRow = &SortMergeJoinScanner::ErrorJoin;
+            break;
+    }
+
+    keyCompareFuncs.resize(streamedTableKeysTypes.GetSize());
+    for (int i = 0; i < streamedTableKeysTypes.GetSize(); ++i) {
+        auto colTypeId = streamedTableKeysTypes.GetIds()[i];
+        switch (colTypeId) {
+            case OMNI_BOOLEAN:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<BooleanVector>);
+                break;
+            case OMNI_INT:
+            case OMNI_DATE32:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<IntVector>);
+                break;
+            case OMNI_SHORT:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<ShortVector>);
+                break;
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<LongVector>);
+                break;
+            case OMNI_DOUBLE:
+                keyCompareFuncs[i] = (OperatorUtil::CompareDouble);
+                break;
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                keyCompareFuncs[i] = (OperatorUtil::CompareVarchar);
+                break;
+            case OMNI_DECIMAL128:
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<Decimal128Vector>);
+                break;
+            default:
+                throw omniruntime::exception::OmniException("sort merge join scanner",
+                    "unsupport compare funct in smj");
+        }
+    }
+}
 
 SortMergeJoinScanner::~SortMergeJoinScanner() {}
 
 int64_t SortMergeJoinScanner::FindNextJoinRows()
 {
-    switch (joinType) {
-        case JoinType::OMNI_JOIN_TYPE_INNER:
-        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
-            InnerJoin();
-            break;
-        case JoinType::OMNI_JOIN_TYPE_LEFT:
-        case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI:
-            LeftOuterJoin();
-            break;
-        case JoinType::OMNI_JOIN_TYPE_FULL:
-            FullOuterJoin();
-            break;
-        default:
-            LogError("Unsupported join type: %u.", joinType);
-            preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, false);
-            break;
-    }
+    (this->*scanFindNextRow)();
     return preStatus->GenerateStatus();
 }
 
-int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<bool> &isMatched,
+int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<int8_t> &isMatched,
     std::vector<int64_t> &streamedTblValueAddresses, std::vector<int64_t> &bufferedTblValueAddresses,
-    std::vector<bool> &isBufferedKeyMatched)
+    std::vector<int8_t> &isBufferedKeyMatched)
 {
     isMatched.insert(isMatched.end(), isPreKeyMatched.begin(), isPreKeyMatched.end());
     streamedTblValueAddresses.insert(streamedTblValueAddresses.end(), streamedValueAddress.begin(),
@@ -70,7 +110,7 @@ int32_t SortMergeJoinScanner::GetMatchedValueAddresses(std::vector<bool> &isMatc
     return 0;
 }
 
-void SortMergeJoinScanner::InnerJoin()
+template <JoinType templateJoinType> void SortMergeJoinScanner::InnerJoin()
 {
     if (preStatus->NewStreamedDataAdded()) { // streamedCode == NEED_DATA
         // new streamed add data
@@ -86,8 +126,8 @@ void SortMergeJoinScanner::InnerJoin()
         }
         if (PreKeyMatched()) {
             // The new streamed row has the same join key as the previous row, so return the same matches.
-            SavePrevMatchingRows(true);
-            return RunInnerJoin();
+            SavePrevMatchingRows<templateJoinType>(1);
+            return RunInnerJoin<templateJoinType>();
         }
     } else if (preStatus->NewBufferedDataAdded()) { // bufferedCode == NEED_DATA
         // new buffered add data
@@ -109,17 +149,17 @@ void SortMergeJoinScanner::InnerJoin()
             return;
         }
         if (PreKeyMatched()) {
-            SavePrevMatchingRows(true);
-            return RunInnerJoin();
+            SavePrevMatchingRows<templateJoinType>(1);
+            return RunInnerJoin<templateJoinType>();
         }
     }
-    if (!FindMatchingRows()) {
+    if (!FindMatchingRows<templateJoinType>()) {
         return;
     }
-    return RunInnerJoin();
+    return RunInnerJoin<templateJoinType>();
 }
 
-void SortMergeJoinScanner::LeftOuterJoin()
+template <JoinType templateJoinType> void SortMergeJoinScanner::LeftOuterJoin()
 {
     if (streamedPagesIndex->IsDataFinish(streamedPagesIndexPosition)) {
         preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, HasResult());
@@ -135,8 +175,8 @@ void SortMergeJoinScanner::LeftOuterJoin()
         }
         if (PreKeyMatchedWithNullValue()) {
             // The new streamed row has the same join key as the previous row, so return the same matches.
-            SavePrevMatchingRows(true);
-            return RunLeftOuterJoin();
+            SavePrevMatchingRows<templateJoinType>(1);
+            return RunLeftOuterJoin<templateJoinType>();
         }
     } else if (preStatus->NewBufferedDataAdded()) {
         if (!bufferedPagesIndex->IsDataFinish(bufferedPagesIndexPosition)) {
@@ -157,15 +197,15 @@ void SortMergeJoinScanner::LeftOuterJoin()
                 return;
             }
             if (PreKeyMatchedWithNullValue()) {
-                SavePrevMatchingRows(true);
-                return RunLeftOuterJoin();
+                SavePrevMatchingRows<templateJoinType>(1);
+                return RunLeftOuterJoin<templateJoinType>();
             }
         }
     }
-    if (!LeftOuterFindJoinRows()) {
+    if (!LeftOuterFindJoinRows<templateJoinType>()) {
         return;
     }
-    return RunLeftOuterJoin();
+    return RunLeftOuterJoin<templateJoinType>();
 }
 
 void SortMergeJoinScanner::FullOuterJoin()
@@ -184,7 +224,7 @@ void SortMergeJoinScanner::FullOuterJoin()
                 return;
             } else if (PreKeyMatchedWithNullValue()) {
                 // The new streamed row has the same join key as the previous row, so return the same matches.
-                SavePrevMatchingRows(true);
+                SavePrevMatchingRowsForFullOuter(streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition), 1);
                 return RunFullOuterJoin();
             }
         }
@@ -205,7 +245,7 @@ void SortMergeJoinScanner::FullOuterJoin()
                 return;
             }
             if (PreKeyMatchedWithNullValue()) {
-                SavePrevMatchingRows(true);
+                SavePrevMatchingRowsForFullOuter(streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition), 1);
                 return RunFullOuterJoin();
             }
         }
@@ -216,36 +256,42 @@ void SortMergeJoinScanner::FullOuterJoin()
     return RunFullOuterJoin();
 }
 
-void SortMergeJoinScanner::RunInnerJoin()
+void SortMergeJoinScanner::ErrorJoin()
+{
+    LogError("Unsupported join type: %u.", joinType);
+    preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, false);
+}
+
+template <JoinType templateJoinType> void SortMergeJoinScanner::RunInnerJoin()
 {
     if (!AdvancedStreamedWithNullFreeJoinKey()) {
         preStatus->TransToNeedStreamedData(HasResult());
         return;
     }
     if (PreKeyMatched()) {
-        SavePrevMatchingRows(true);
-        return RunInnerJoin();
+        SavePrevMatchingRows<templateJoinType>(1);
+        return RunInnerJoin<templateJoinType>();
     }
-    if (!FindMatchingRows()) {
+    if (!FindMatchingRows<templateJoinType>()) {
         return;
     }
-    return RunInnerJoin();
+    return RunInnerJoin<templateJoinType>();
 }
 
-void SortMergeJoinScanner::RunLeftOuterJoin()
+template <JoinType templateJoinType> void SortMergeJoinScanner::RunLeftOuterJoin()
 {
     if (!AdvancedStreamedJoinKey()) {
         preStatus->TransToNeedStreamedData(HasResult());
         return;
     }
     if (PreKeyMatchedWithNullValue()) {
-        SavePrevMatchingRows(true);
-        return RunLeftOuterJoin();
+        SavePrevMatchingRows<templateJoinType>(1);
+        return RunLeftOuterJoin<templateJoinType>();
     }
-    if (!LeftOuterFindJoinRows()) {
+    if (!LeftOuterFindJoinRows<templateJoinType>()) {
         return;
     }
-    return RunLeftOuterJoin();
+    return RunLeftOuterJoin<templateJoinType>();
 }
 
 void SortMergeJoinScanner::RunFullOuterJoin()
@@ -255,7 +301,7 @@ void SortMergeJoinScanner::RunFullOuterJoin()
         return;
     }
     if (PreKeyMatchedWithNullValue()) {
-        SavePrevMatchingRows(true);
+        SavePrevMatchingRowsForFullOuter(streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition), 1);
         return RunFullOuterJoin();
     }
 
@@ -265,7 +311,7 @@ void SortMergeJoinScanner::RunFullOuterJoin()
     return RunFullOuterJoin();
 }
 
-bool SortMergeJoinScanner::FindMatchingRows()
+template <JoinType templateJoinType> bool SortMergeJoinScanner::FindMatchingRows()
 {
     while (CurBufferedHasNull()) { // skip buffered null value
         if (!AdvancedBufferedJoinKey()) {
@@ -274,7 +320,7 @@ bool SortMergeJoinScanner::FindMatchingRows()
         }
     }
 
-    auto comp = FindNextMatchPos();
+    auto comp = FindNextMatchPos<templateJoinType>();
     if (NeedBufferedData()) {
         preStatus->TransToNeedBufferedData(HasResult());
         bufferedPagesIndexPosition--;
@@ -289,14 +335,14 @@ bool SortMergeJoinScanner::FindMatchingRows()
         return false;
     }
 
-    BufferMatchingRows();
+    BufferMatchingRows<templateJoinType>();
     return true;
 }
 
-bool SortMergeJoinScanner::LeftOuterFindJoinRows()
+template <JoinType templateJoinType> bool SortMergeJoinScanner::LeftOuterFindJoinRows()
 {
     // handle stream has Null && buffered no data situation
-    if (HandleLeftOuterStreamedNullAndBufferedDataFinishedSituation()) {
+    if (HandleLeftOuterStreamedNullAndBufferedDataFinishedSituation<templateJoinType>()) {
         return true;
     }
 
@@ -320,7 +366,7 @@ bool SortMergeJoinScanner::LeftOuterFindJoinRows()
             latestCompareStat = CompareCurRowKeys();
         } else {
             if (bufferedPagesIndex->IsDataFinish(bufferedPagesIndexPosition)) {
-                BufferMissingRows();
+                BufferMissingRows<templateJoinType>();
                 return true;
             }
             preStatus->TransToNeedBufferedData(HasResult());
@@ -329,13 +375,13 @@ bool SortMergeJoinScanner::LeftOuterFindJoinRows()
     }
 
     if (latestCompareStat < 0 && !curStreamRowMatchFlag) {
-        BufferMissingRows();
+        BufferMissingRows<templateJoinType>();
         curStreamRowMatchFlag = true;
         if (bufferedPagesIndexPosition > 0) {
             bufferedPagesIndexPosition--;
         }
     } else if (latestCompareStat == 0) {
-        BufferMatchingRows();
+        BufferMatchingRows<templateJoinType>();
         curStreamRowMatchFlag = true;
         if (preBufferedPagesIndexPosition == bufferedPagesIndexPosition) {
             curBufferRowMatchFlag = true;
@@ -383,7 +429,7 @@ bool SortMergeJoinScanner::FullOuterFindJoinRows()
         if (curStreamRowMatchFlag) {
             return true; // go to the next RunFullOuterJoin circle
         }
-        BufferMissingRows();
+        BufferMissingRowsForFullOuter();
         curStreamRowMatchFlag = true;
         bufferedPagesIndexPosition--;
     } else if (latestCompareStat > 0 && !curBufferRowMatchFlag) {
@@ -493,75 +539,133 @@ bool SortMergeJoinScanner::AdvancedBufferedJoinKey()
     return false;
 }
 
-void SortMergeJoinScanner::BufferMatchingRows()
+template <JoinType templateJoinType> void SortMergeJoinScanner::BufferMatchingRows()
 {
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     preStreamedValueAddress = streamedValueAddr;
+    preStreamedPagesIndexPosition = streamedPagesIndexPosition;
     preBufferedValueAddress.clear();
     preBufferedKeyMatched.clear();
-    int64_t bufferedValueAddr;
-    do {
-        bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
+    int64_t bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
+    if constexpr (templateJoinType == OMNI_JOIN_TYPE_INNER || templateJoinType == OMNI_JOIN_TYPE_LEFT) {
+        preBufferedValueAddress.emplace_back(bufferedValueAddr);
+    } else {
         if (!onlyBufferedFirstMatch || preBufferedValueAddress.empty()) {
             preBufferedKeyMatched.emplace_back(!preBufferedValueAddress.empty());
-            preBufferedValueAddress.push_back(bufferedValueAddr);
+            preBufferedValueAddress.emplace_back(bufferedValueAddr);
+        }
+    }
+    preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
+
+    auto streamBatchId = DecodeSliceIndex(streamedValueAddr);
+    auto streamRowId = DecodePosition(streamedValueAddr);
+    while (AdvancedBufferedToRowWithNullFreeJoinKey()) {
+        bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
+        auto bufferBatchId = DecodeSliceIndex(bufferedValueAddr);
+        auto bufferRowId = DecodePosition(bufferedValueAddr);
+        latestCompareStat = CompareRowKeys(streamBatchId, streamRowId, bufferBatchId, bufferRowId);
+        if (latestCompareStat != 0) {
+            break;
+        }
+        if constexpr (templateJoinType == OMNI_JOIN_TYPE_INNER || templateJoinType == OMNI_JOIN_TYPE_LEFT) {
+            preBufferedValueAddress.emplace_back(bufferedValueAddr);
+        } else {
+            if (!onlyBufferedFirstMatch || preBufferedValueAddress.empty()) {
+                preBufferedKeyMatched.emplace_back(!preBufferedValueAddress.empty());
+                preBufferedValueAddress.emplace_back(bufferedValueAddr);
+            }
         }
         preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
-    } while (AdvancedBufferedToRowWithNullFreeJoinKey() && ((latestCompareStat = CompareCurRowKeys()) == 0));
-    SavePrevMatchingRows(false);
+    }
+    SavePrevMatchingRows<templateJoinType>(0);
 }
 
 void SortMergeJoinScanner::BufferMatchingRowsForFullOuter()
 {
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     preStreamedValueAddress = streamedValueAddr;
+    preStreamedPagesIndexPosition = streamedPagesIndexPosition;
     preBufferedValueAddress.clear();
-    int64_t bufferedValueAddr;
-    do {
+    int64_t bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
+    preBufferedValueAddress.emplace_back(bufferedValueAddr);
+    preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
+
+    auto streamBatchId = DecodeSliceIndex(streamedValueAddr);
+    auto streamRowId = DecodePosition(streamedValueAddr);
+    while (AdvancedBufferedJoinKey()) {
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-        preBufferedValueAddress.push_back(bufferedValueAddr);
+        auto bufferBatchId = DecodeSliceIndex(bufferedValueAddr);
+        auto bufferRowId = DecodePosition(bufferedValueAddr);
+        latestCompareStat = CompareRowKeys(streamBatchId, streamRowId, bufferBatchId, bufferRowId);
+        if (latestCompareStat != 0) {
+            break;
+        }
+        preBufferedValueAddress.emplace_back(bufferedValueAddr);
         preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
-    } while (AdvancedBufferedJoinKey() && ((latestCompareStat = CompareCurRowKeys()) == 0));
-    SavePrevMatchingRows(false);
+    }
+    SavePrevMatchingRowsForFullOuter(streamedValueAddr, 0);
 }
 
+template <JoinType templateJoinType>
 bool SortMergeJoinScanner::HandleLeftOuterStreamedNullAndBufferedDataFinishedSituation()
 {
     if (CurStreamedHasNull() || bufferedPagesIndex->IsEmptyBatch() ||
         (bufferedPagesIndex->IsDataFinish(bufferedPagesIndexPosition) && curBufferRowMatchFlag)) {
         if (!curStreamRowMatchFlag) {
-            BufferMissingRows();
+            BufferMissingRows<templateJoinType>();
         }
         return true;
     }
     return false;
 }
 
-void SortMergeJoinScanner::BufferMissingRows()
+template <JoinType templateJoinType> void SortMergeJoinScanner::BufferMissingRows()
 {
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     preStreamedValueAddress = streamedValueAddr;
+    preStreamedPagesIndexPosition = streamedPagesIndexPosition;
     preBufferedValueAddress.clear();
-    preBufferedKeyMatched.clear();
     auto nullValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
-    preBufferedValueAddress.push_back(nullValueAddress);
-    preBufferedKeyMatched.emplace_back(false);
-    SavePrevMatchingRows(false);
+    preBufferedValueAddress.emplace_back(nullValueAddress);
+
+    if constexpr (templateJoinType == OMNI_JOIN_TYPE_LEFT_SEMI || templateJoinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
+        preBufferedKeyMatched.clear();
+        preBufferedKeyMatched.emplace_back(0);
+        isSameBufferedKeyMatched.emplace_back(0);
+    }
+
+    bufferedValueAddress.emplace_back(nullValueAddress);
+    streamedValueAddress.emplace_back(streamedValueAddr);
+    isPreKeyMatched.emplace_back(0);
+    preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
+}
+
+void SortMergeJoinScanner::BufferMissingRowsForFullOuter()
+{
+    auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
+    preStreamedValueAddress = streamedValueAddr;
+    preStreamedPagesIndexPosition = streamedPagesIndexPosition;
+    preBufferedValueAddress.clear();
+    auto nullValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
+    preBufferedValueAddress.emplace_back(nullValueAddress);
+    bufferedValueAddress.emplace_back(nullValueAddress);
+    streamedValueAddress.emplace_back(streamedValueAddr);
+    isPreKeyMatched.emplace_back(0);
     preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
 }
 
 void SortMergeJoinScanner::StreamMissingRowsForCompareValue()
 {
-    auto nullValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
-    preStreamedValueAddress = nullValueAddress;
+    preStreamedValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
+    preStreamedPagesIndexPosition = -1;
     preBufferedValueAddress.clear();
     int64_t bufferedValueAddr;
     do {
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-        preBufferedValueAddress.push_back(bufferedValueAddr);
+        preBufferedValueAddress.emplace_back(bufferedValueAddr);
         preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
     } while (AdvancedBufferedJoinKey() && ((latestCompareStat = CompareCurRowKeys()) > 0));
-    FullOuterJoinSavePrevMatchingRows(false);
+    SavePrevMatchingRowsForFullOuter(preStreamedValueAddress, 0);
 }
 
 bool SortMergeJoinScanner::HandleFullOuterStreamedIsFinishedSituation()
@@ -582,7 +686,7 @@ bool SortMergeJoinScanner::HandleFullOuterBufferedIsFinishedSituation()
     if (bufferedPagesIndex->IsEmptyBatch() ||
         (bufferedPagesIndex->IsDataFinish(bufferedPagesIndexPosition) && curBufferRowMatchFlag)) {
         if (!curStreamRowMatchFlag) {
-            BufferMissingRows();
+            BufferMissingRowsForFullOuter();
             curStreamRowMatchFlag = true;
         }
         return true;
@@ -593,7 +697,7 @@ bool SortMergeJoinScanner::HandleFullOuterBufferedIsFinishedSituation()
 bool SortMergeJoinScanner::HandleFullOuterStreamedNullValue()
 {
     if (CurStreamedHasNull()) {
-        BufferMissingRows();
+        BufferMissingRowsForFullOuter();
         curStreamRowMatchFlag = true;
         return true;
     }
@@ -624,33 +728,33 @@ bool SortMergeJoinScanner::HandleFullOuterNeedBufferedData()
 
 void SortMergeJoinScanner::StreamMissingRowsForStreamIsFinished()
 {
-    auto nullValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
-    preStreamedValueAddress = nullValueAddress;
+    preStreamedValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
+    preStreamedPagesIndexPosition = -1;
     preBufferedValueAddress.clear();
     int64_t bufferedValueAddr;
     do {
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-        preBufferedValueAddress.push_back(bufferedValueAddr);
+        preBufferedValueAddress.emplace_back(bufferedValueAddr);
     } while (AdvancedBufferedJoinKey());
-    FullOuterJoinSavePrevMatchingRows(false);
+    SavePrevMatchingRowsForFullOuter(preStreamedValueAddress, 0);
 }
 
 void SortMergeJoinScanner::StreamMissingRowsForNullBuffered()
 {
-    auto nullValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
-    preStreamedValueAddress = nullValueAddress;
+    preStreamedValueAddress = EncodeSyntheticAddress(JOIN_NULL_FLAG, JOIN_NULL_FLAG); // null row flag
+    preStreamedPagesIndexPosition = -1;
     preBufferedValueAddress.clear();
     int64_t bufferedValueAddr;
     do {
         bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-        preBufferedValueAddress.push_back(bufferedValueAddr);
+        preBufferedValueAddress.emplace_back(bufferedValueAddr);
         preBufferedPagesIndexPosition = bufferedPagesIndexPosition;
         curBufferRowMatchFlag = true;
     } while (AdvancedBufferedJoinKey() && CurBufferedHasNull());
-    FullOuterJoinSavePrevMatchingRows(false);
+    SavePrevMatchingRowsForFullOuter(preStreamedValueAddress, 0);
 }
 
-int32_t SortMergeJoinScanner::FindNextMatchPos()
+template <JoinType templateJoinType> int32_t SortMergeJoinScanner::FindNextMatchPos()
 {
     auto compare = CompareCurRowKeys();
     auto cur = streamedPagesIndexPosition;
@@ -659,7 +763,7 @@ int32_t SortMergeJoinScanner::FindNextMatchPos()
         compare = CompareCurRowKeys();
         // cur-stream-key duplicate with pre-key, also save although buffer not match cur-stream-key
         if (compare != 0 && (streamedPagesIndexPosition > cur) && PreKeyMatched()) {
-            SavePrevMatchingRows(true);
+            SavePrevMatchingRows<templateJoinType>(1);
         }
     }
     return compare;
@@ -671,8 +775,7 @@ bool SortMergeJoinScanner::PreKeyMatched()
         return false;
     }
     auto curValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
-    bool isMatched = CompareRowKeys(preStreamedValueAddress, streamedPagesIndex, streamedTableKeysCols, curValueAddr,
-        streamedPagesIndex, streamedTableKeysCols) == 0;
+    bool isMatched = CompareStreamedRowKeys(preStreamedValueAddress, curValueAddr) == 0;
     return isMatched;
 }
 
@@ -681,111 +784,38 @@ bool SortMergeJoinScanner::PreKeyMatchedWithNullValue()
     if (preStreamedValueAddress == -1 || preBufferedValueAddress.empty()) {
         return false;
     }
-    auto curValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
-    if (StreamedRowHasNull(preStreamedValueAddress) || StreamedRowHasNull(curValueAddr)) {
+    if (streamedPagesIndex->HaveNull(preStreamedPagesIndexPosition) ||
+        streamedPagesIndex->HaveNull(streamedPagesIndexPosition)) {
         // if one of them contain NULL return mismatch
         return false;
     }
-    bool isMatched = CompareRowKeys(preStreamedValueAddress, streamedPagesIndex, streamedTableKeysCols, curValueAddr,
-        streamedPagesIndex, streamedTableKeysCols) == 0;
+    auto curValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
+    bool isMatched = CompareStreamedRowKeys(preStreamedValueAddress, curValueAddr) == 0;
     return isMatched;
 }
 
-void SortMergeJoinScanner::SavePrevMatchingRows(bool isMatched)
-{
-    bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
-        preBufferedValueAddress.end());
-    isSameBufferedKeyMatched.insert(isSameBufferedKeyMatched.end(), preBufferedKeyMatched.begin(),
-        preBufferedKeyMatched.end());
-    auto valueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
-    streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), valueAddr);
-    isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);
-}
-
-void SortMergeJoinScanner::FullOuterJoinSavePrevMatchingRows(bool isMatched)
-{
-    bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
-        preBufferedValueAddress.end());
-    streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), preStreamedValueAddress);
-    isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);
-}
-
-// return true if streamedValueAddress bufferedValueAddress both not empty
-bool SortMergeJoinScanner::HasResult()
-{
-    return !streamedValueAddress.empty() && !bufferedValueAddress.empty();
-}
-
-int32_t SortMergeJoinScanner::CompareCurRowKeys()
+// isMatched = 1 means true, 0 means false
+template <JoinType templateJoinType> void SortMergeJoinScanner::SavePrevMatchingRows(int8_t isMatched)
 {
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
-    auto bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-    return CompareRowKeys(streamedValueAddr, bufferedValueAddr);
-}
-
-int32_t SortMergeJoinScanner::CompareRowKeys(int64_t leftRowIndex, DynamicPagesIndex *leftPagesIndex,
-    const int32_t *leftKeyCols, int64_t rightRowIndex, DynamicPagesIndex *rightPagesIndex, const int32_t *rightKeyCols)
-{
-    auto streamedBatchId = DecodeSliceIndex(leftRowIndex);
-    auto bufferedBatchId = DecodeSliceIndex(rightRowIndex);
-    for (int i = 0; i < keyColsCount; ++i) {
-        auto streamedColumn = leftPagesIndex->GetColumns(streamedBatchId, leftKeyCols[i]);
-        auto bufferedColumn = rightPagesIndex->GetColumns(bufferedBatchId, rightKeyCols[i]);
-        auto com = OperatorUtil::CompareVectorAtPosition(streamedTableKeysTypes.GetIds()[leftKeyCols[i]],
-            streamedColumn, DecodePosition(leftRowIndex), bufferedColumn, DecodePosition(rightRowIndex));
-        if (com != 0) {
-            return com;
-        }
+    auto matchedRowCount = preBufferedValueAddress.size();
+    bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
+        preBufferedValueAddress.end());
+    streamedValueAddress.insert(streamedValueAddress.end(), matchedRowCount, streamedValueAddr);
+    isPreKeyMatched.insert(isPreKeyMatched.end(), matchedRowCount, isMatched);
+    if constexpr (templateJoinType == OMNI_JOIN_TYPE_LEFT_SEMI || templateJoinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
+        isSameBufferedKeyMatched.insert(isSameBufferedKeyMatched.end(), preBufferedKeyMatched.begin(),
+            preBufferedKeyMatched.end());
     }
-
-    return 0;
 }
 
-int32_t SortMergeJoinScanner::CompareRowKeys(int64_t leftRowIndex, int64_t rightRowIndex)
+// isMatched = 1 means true, 0 means false
+void SortMergeJoinScanner::SavePrevMatchingRowsForFullOuter(int64_t inValueAddress, int8_t isMatched)
 {
-    return CompareRowKeys(leftRowIndex, streamedPagesIndex, streamedTableKeysCols, rightRowIndex, bufferedPagesIndex,
-        bufferedTableKeysCols);
-}
-
-/* * Returns true if there are any NULL values in this row. */
-bool SortMergeJoinScanner::CurStreamedHasNull()
-{
-    auto valueAddress = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
-    auto row = DecodePosition(valueAddress);
-    auto curBatchId = DecodeSliceIndex(valueAddress);
-    for (int i = 0; i < keyColsCount; ++i) {
-        if (streamedPagesIndex->GetColumns(curBatchId, streamedTableKeysCols[i])->IsValueNull(row)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/* * Returns true if there are any NULL values in this row. */
-bool SortMergeJoinScanner::StreamedRowHasNull(int64_t valueAddress)
-{
-    auto row = DecodePosition(valueAddress);
-    auto curBatchId = DecodeSliceIndex(valueAddress);
-    for (int i = 0; i < keyColsCount; ++i) {
-        if (streamedPagesIndex->GetColumns(curBatchId, streamedTableKeysCols[i])->IsValueNull(row)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/* * Returns true if there are any NULL values in this row. */
-bool SortMergeJoinScanner::CurBufferedHasNull()
-{
-    auto valueAddress = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndexPosition);
-    auto row = DecodePosition(valueAddress);
-    auto curBatchId = DecodeSliceIndex(valueAddress);
-    for (int i = 0; i < keyColsCount; ++i) {
-        if (bufferedPagesIndex->GetColumns(curBatchId, bufferedTableKeysCols[i])->IsValueNull(row)) {
-            return true;
-        }
-    }
-    return false;
+    bufferedValueAddress.insert(bufferedValueAddress.end(), preBufferedValueAddress.begin(),
+        preBufferedValueAddress.end());
+    streamedValueAddress.insert(streamedValueAddress.end(), preBufferedValueAddress.size(), inValueAddress);
+    isPreKeyMatched.insert(isPreKeyMatched.end(), preBufferedValueAddress.size(), isMatched);
 }
 
 bool SortMergeJoinScanner::NeedBufferedData()
@@ -795,73 +825,16 @@ bool SortMergeJoinScanner::NeedBufferedData()
     }
     auto streamedValueAddr = streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition);
     auto bufferedValueAddr = bufferedPagesIndex->GetValueAddresses(bufferedPagesIndex->GetPositionCount() - 1);
-    if (bufferedValueAddr > -1 && (CompareRowKeys(streamedValueAddr, bufferedValueAddr) >= 0)) {
-        return true;
+    if (bufferedValueAddr > -1) {
+        auto streamedBatchId = DecodeSliceIndex(streamedValueAddr);
+        auto streamedRowId = DecodePosition(streamedValueAddr);
+        auto bufferedBatchId = DecodeSliceIndex(bufferedValueAddr);
+        auto bufferedRowId = DecodePosition(bufferedValueAddr);
+        if (CompareRowKeys(streamedBatchId, streamedRowId, bufferedBatchId, bufferedRowId) >= 0) {
+            return true;
+        }
     }
     return false;
-}
-
-JoinStatus::JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, JoinResultCode resultCode)
-    : streamedCode(streamedCode), bufferedCode(bufferedCode), resultCode(resultCode)
-{}
-
-uint32_t JoinStatus::GenerateStatus()
-{
-    return (static_cast<uint32_t>(streamedCode) << STREAM_SHIFT_24) |
-        (static_cast<uint32_t>(bufferedCode) << BUFFER_SHIFT_16) | static_cast<uint32_t>(resultCode);
-}
-
-JoinStatus::JoinStatus(JoinTableCode streamedCode, JoinTableCode bufferedCode, bool hasResult)
-    : streamedCode(streamedCode),
-      bufferedCode(bufferedCode),
-      resultCode(hasResult ? JoinResultCode::HAS_RESULT : JoinResultCode::NO_RESULT)
-{}
-
-void JoinStatus::Set(JoinTableCode inputStreamedCode, JoinTableCode inputBufferedCode, bool hasResult)
-{
-    this->streamedCode = inputStreamedCode;
-    this->bufferedCode = inputBufferedCode;
-    this->resultCode = hasResult ? JoinResultCode::HAS_RESULT : JoinResultCode::NO_RESULT;
-}
-
-bool JoinStatus::NewStreamedDataAdded()
-{
-    return streamedCode == JoinTableCode::NEED_DATA;
-}
-
-bool JoinStatus::NewBufferedDataAdded()
-{
-    return bufferedCode == JoinTableCode::NEED_DATA;
-}
-
-void JoinStatus::Reset()
-{
-    streamedCode = JoinTableCode::INVALID;
-    bufferedCode = JoinTableCode::INVALID;
-}
-
-void JoinStatus::TransToNeedBufferedData(bool hasResult)
-{
-    if (bufferedCode == JoinTableCode::SCAN_FINISHED) {
-        // Inner Join Unique logic, need refactor
-        Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, hasResult);
-    } else {
-        auto streamStatus =
-            (streamedCode == JoinTableCode::SCAN_FINISHED) ? JoinTableCode::SCAN_FINISHED : JoinTableCode::NEED_SCAN;
-        Set(streamStatus, JoinTableCode::NEED_DATA, hasResult);
-    }
-}
-
-void JoinStatus::TransToNeedStreamedData(bool hasResult)
-{
-    if (streamedCode == JoinTableCode::SCAN_FINISHED) {
-        // Inner Join Unique logic, need refactor
-        Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, hasResult);
-    } else {
-        auto bufferedStatus =
-            (bufferedCode == JoinTableCode::SCAN_FINISHED) ? JoinTableCode::SCAN_FINISHED : JoinTableCode::NEED_SCAN;
-        Set(JoinTableCode::NEED_DATA, bufferedStatus, hasResult);
-    }
 }
 }
 }

@@ -15,65 +15,59 @@ namespace omniruntime {
 namespace op {
 class DynamicPagesIndex {
 public:
-    explicit DynamicPagesIndex(const omniruntime::type::DataTypes &types);
-    ~DynamicPagesIndex();
-    int32_t AddVecBatches(const std::vector<omniruntime::vec::VectorBatch *> &vecBatches);
+    explicit DynamicPagesIndex(const omniruntime::type::DataTypes &types, int32_t *computeCols,
+        int32_t computeColsCount);
 
-    int32_t GetTypesCount() const
+    ~DynamicPagesIndex();
+
+    int32_t AddVecBatch(omniruntime::vec::VectorBatch *vecBatch);
+
+    ALWAYS_INLINE int32_t GetTypesCount() const
     {
         return typesCount;
     }
 
-    int32_t GetPositionCount() const
+    ALWAYS_INLINE int32_t GetPositionCount() const
     {
         return this->positionCount;
     }
 
-    bool IsDataFinish() const
+    ALWAYS_INLINE bool IsDataFinish() const
     {
         return this->finishAddData;
     }
 
-    bool IsDataFinish(int32_t rowIndex) const
+    ALWAYS_INLINE bool IsDataFinish(int32_t rowIndex) const
     {
         return this->finishAddData && (rowIndex >= this->positionCount - 1);
     }
 
-    bool IsEmptyBatch() const
+    ALWAYS_INLINE bool IsEmptyBatch() const
     {
         return this->finishAddData && this->positionCount == 0;
     }
 
-    int64_t GetValueAddresses(int32_t rowIndex) const
+    ALWAYS_INLINE int64_t GetValueAddresses(int32_t rowIndex) const
     {
-        if (rowIndex >= this->positionCount) {
-            return -1;
-        }
         return this->valueAddressesDeque[rowIndex];
     }
 
-    omniruntime::vec::Vector *GetColumns(int32_t vectorBatchIndex, int32_t columnIndex) const
+    ALWAYS_INLINE bool HaveNull(int32_t rowIndex) const
     {
-        if (columnIndex >= typesCount) {
-            return nullptr;
-        }
+        return this->nullsDeque[rowIndex];
+    }
 
-        if (static_cast<size_t>(vectorBatchIndex) >= this->vecBatchFreeFlagDeque.size()) {
-            return nullptr;
-        }
-        // relate vector have freed
-        if (this->vecBatchFreeFlagDeque[vectorBatchIndex]) {
-            return nullptr;
-        }
+    ALWAYS_INLINE omniruntime::vec::Vector *GetColumn(int32_t vectorBatchIndex, int32_t columnIndex) const
+    {
         return this->columnsDeque[vectorBatchIndex][columnIndex];
     }
 
-    omniruntime::vec::Vector *GetColumnsFromCache(int32_t columnIndex) const
+    ALWAYS_INLINE omniruntime::vec::Vector *GetColumnFromCache(int32_t columnIndex) const
     {
         return this->cacheBatch[columnIndex];
     }
 
-    void CacheBatch(int32_t vectorBatchIndex)
+    ALWAYS_INLINE void CacheBatch(int32_t vectorBatchIndex)
     {
         if (vectorBatchIndex != cacheBatchId) {
             this->cacheBatchId = vectorBatchIndex;
@@ -87,15 +81,20 @@ public:
     // free all vecBatch
     void FreeAllRemainingVecBatch();
 
+    std::vector<bool> CalculateNullsFromRawVectorBatch(vec::VectorBatch *vectorBatch);
+
 private:
     int32_t typesCount;
+    int32_t *computeCols;
+    int32_t computeColsCount;
     int32_t lastFreedVecBatchIdx = -1;
 
     int32_t cacheBatchId = -1;
-    std::vector<omniruntime::vec::Vector *> cacheBatch;
+    omniruntime::vec::Vector **cacheBatch;
     // vector  first Level：vectorBatch second Level: columnar vector
-    std::vector<std::vector<omniruntime::vec::Vector *>> columnsDeque;
+    std::vector<omniruntime::vec::Vector **> columnsDeque;
     std::vector<int64_t> valueAddressesDeque; // row
+    std::vector<bool> nullsDeque;             // whether has a column whose value is null for gaven row
     int32_t positionCount;
     std::vector<bool> vecBatchFreeFlagDeque;                       // vectorBatch free flag
     std::vector<omniruntime::vec::VectorBatch *> vectorBatchDeque; // vectorBatch

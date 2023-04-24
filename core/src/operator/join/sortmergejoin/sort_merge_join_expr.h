@@ -63,7 +63,7 @@ public:
 
 private:
     SortMergeJoinOperator *smjOperator;
-    DataTypes streamedTypes;
+    const DataTypes &streamedTypes;
     std::vector<int32_t> streamedKeyCols;
     std::vector<ProjFunc> projectFuncs;
 };
