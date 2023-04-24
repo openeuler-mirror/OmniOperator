@@ -478,6 +478,12 @@ public:
             return DYNAMIC_TYPE_DISPATCH(GetDictionaryVectorValuePtrAndLength, typeId, vector, rowIndex, length);
         }
     }
+
+    static int64_t GetValuePtrAndLengthFromRawVector(vec::BaseVector *vector, int32_t rowIndex, int32_t *length,
+        int32_t typeId)
+    {
+        return DYNAMIC_TYPE_DISPATCH(GetFlatVectorValuePtrAndLength, typeId, vector, rowIndex, length);
+    }
 };
 }
 }

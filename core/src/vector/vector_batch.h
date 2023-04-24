@@ -47,6 +47,8 @@ public:
      */
     BaseVector *Get(int32_t index);
 
+    BaseVector **GetVectors();
+
     int GetRowCount() const;
 
     int GetVectorCount();

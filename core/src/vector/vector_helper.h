@@ -68,6 +68,13 @@ public:
         }
     }
 
+    static std::unique_ptr<BaseVector> CreateFlatVector(int32_t dataTypeId, int32_t size,
+                                                    int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    {
+        using namespace omniruntime::type;
+        return DYNAMIC_TYPE_DISPATCH(CreateFlatVector, dataTypeId, size, capacityInBytes);
+    }
+
     template <type::DataTypeId typeId>
     static std::unique_ptr<BaseVector> CreateFlatVector(int32_t size, int32_t capacityInBytes = INITIAL_STRING_SIZE)
     {

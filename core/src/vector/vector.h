@@ -14,6 +14,7 @@
 #include "type_utils.h"
 #include "dictionary_container.h"
 #include "util/debug.h"
+#include "util/bit_map.h"
 #include "util/compiler_util.h"
 #include "large_string_container.h"
 #include "memory/memory_trace.h"
@@ -142,6 +143,14 @@ public:
             bytesStream = farHalf; // for odd length, new size should be farHalf
         }
         return false;
+    }
+
+    int32_t GetNullCount() const
+    {
+        bool *nullsPtr = nulls.get();
+        return hasNull ?
+               BitMap::ComputeBitCount(reinterpret_cast<const uint8_t *>(nullsPtr), offset, size) :
+               0;
     }
 
     int32_t ALWAYS_INLINE GetOffset()

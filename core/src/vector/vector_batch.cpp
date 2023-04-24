@@ -53,6 +53,11 @@ BaseVector *VectorBatch::Get(int32_t index)
     return vectors[index];
 }
 
+BaseVector **VectorBatch::GetVectors()
+{
+    return vectors.data();
+}
+
 int VectorBatch::GetRowCount() const
 {
     return rowCnt;
