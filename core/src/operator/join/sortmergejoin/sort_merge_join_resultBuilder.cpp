@@ -20,10 +20,12 @@ JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOu
     const std::vector<DataTypePtr> &rightTableOutputTypes, int32_t *rightTableOutputCols,
     int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
     std::string &filter, JoinType joinType, OverflowConfig *overflowConfig)
-    : leftTableOutputCols(leftTableOutputCols),
+    : leftTableOutputTypes(leftTableOutputTypes),
+      leftTableOutputCols(leftTableOutputCols),
       leftTableOutputColsCount(leftTableOutputColsCount),
       originalLeftTableColsCount(originalLeftTableColsCount),
       leftTablePagesIndex(leftTablePagesIndex),
+      rightTableOutputTypes(rightTableOutputTypes),
       rightTableOutputCols(rightTableOutputCols),
       rightTableOutputColsCount(rightTableOutputColsCount),
       originalRightTableColsCount(originalRightTableColsCount),
@@ -83,7 +85,7 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
     auto *vectorBatch = new VectorBatch(maxRowCount);
 
     for (auto &type : allTypes) {
-        vectorBatch->Append(VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), maxRowCount));
+        vectorBatch->Append(VectorHelper::CreateFlatVector(type->GetId(), maxRowCount).release());
     }
     return vectorBatch;
 }
@@ -125,8 +127,7 @@ void AddValueNullToBuildVector(const DataTypePtr &dataType, BaseVector *vector, 
     }
 }
 
-void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId,
-    vec::VectorBatch *buildVectorBatch, int32_t &buildRowCount)
+void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId)
 {
     if (leftBatchId == JOIN_NULL_FLAG) {
         PaddingLeftTableNull();
@@ -204,12 +205,12 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
         if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
             for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
                 AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
-                    leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
+                    leftTableOutputTypes[columnIdx], leftRowId, buildVectorBatch->Get(columnIdx), buildRowCount);
             }
             for (int32_t columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
                 int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
                 AddValueToBuildVector(rightTablePagesIndex->GetColumn(rightBatchId, rightTableOutputCols[columnIdx]),
-                    rightRowId, buildVectorBatch->GetVector(buildColumnIdx), buildRowCount);
+                    rightTableOutputTypes[columnIdx], rightRowId, buildVectorBatch->Get(buildColumnIdx), buildRowCount);
             }
             buildRowCount++;
         }
@@ -358,7 +359,7 @@ int32_t JoinResultBuilder::ConstructLeftSemiJoinOutput()
             if (!isPreRowMatched && IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
                 for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
                     AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
-                        leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
+                        leftTableOutputTypes[columnIdx], leftRowId, buildVectorBatch->Get(columnIdx), buildRowCount);
                 }
                 buildRowCount++;
                 isPreRowMatched = true;
@@ -368,7 +369,7 @@ int32_t JoinResultBuilder::ConstructLeftSemiJoinOutput()
             if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
                 for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
                     AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
-                        leftRowId, buildVectorBatch->GetVector(columnIdx), buildRowCount);
+                       leftTableOutputTypes[columnIdx], leftRowId, buildVectorBatch->Get(columnIdx), buildRowCount);
                 }
                 buildRowCount++;
                 isPreRowMatched = true;
@@ -514,7 +515,7 @@ int32_t JoinResultBuilder::GetOutput(omniruntime::vec::VectorBatch **outputVecBa
         if (buildVectorBatchRowCount == maxRowCount) {
             *outputVecBatch = buildVectorBatch;
         } else {
-            *outputVecBatch = GetVectorBatchFromSlice(buildVectorBatch, allOutputTypes, buildVectorBatchRowCount);
+            *outputVecBatch = GetVectorBatchFromSlice(buildVectorBatch, allTypes, buildVectorBatchRowCount);
             VectorHelper::FreeVecBatch(buildVectorBatch);
         }
     } else {

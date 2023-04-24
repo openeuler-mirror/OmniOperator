@@ -251,8 +251,8 @@ private:
             auto colIdx = streamedTableKeysCols[i];
             auto leftColumn = streamedPagesIndex->GetColumn(leftBatchId, colIdx);
             auto rightColumn = streamedPagesIndex->GetColumn(rightBatchId, colIdx);
-            auto com = OperatorUtil::CompareVectorAtPosition(leftColumn->GetTypeId(), leftColumn, leftRowId,
-                rightColumn, rightRowId);
+
+            auto com = keyCompareFuncs[colIdx](leftColumn, leftRowId, rightColumn, rightRowId);
             if (com != 0) {
                 return com;
             }

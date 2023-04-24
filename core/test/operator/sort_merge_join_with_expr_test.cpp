@@ -2957,7 +2957,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinWithFilterEmpty)
     // select t1.a, t1.b from t1 left semi join t2 where t1.a = t2.d
     // streamedTbl(left table) t1:  int a, long b;
     // bufferedTbl(right table) t2: double c, int d;
-    std::string blank;
+    std::string blank = "";
     std::vector<DataTypePtr> streamTypeVector = { IntType(), LongType() };
     DataTypes streamedTblTypes(streamTypeVector);
     auto *col0 = new FieldExpr(0, IntType());
@@ -2969,7 +2969,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinWithFilterEmpty)
         streamedEqualKeyExprs, 1, streamedOutputCols, 2, JoinType::OMNI_JOIN_TYPE_LEFT_SEMI, blank, overflowConfig);
     omniruntime::op::Operator *streamedTblWithExprOperator = CreateTestOperator(streamedWithExprOperatorFactory);
 
-    std::vector<DataTypePtr> bufferTypesVector = { DoubleType(), IntType() };
+    std::vector<DataTypePtr> bufferTypesVector = { DoubleDataType::Instance(), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
     auto *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
@@ -4105,11 +4105,11 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
         "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1, \"isNull\":false, \"value\":2}}";
     std::vector<DataTypePtr> streamTypeVector = { IntType(), VarcharType(2000) };
     DataTypes streamedTblTypes(streamTypeVector);
-    auto *col0 = new FieldExpr(0, IntType());
+    FieldExpr *col0 = new FieldExpr(0, IntType());
     std::vector<Expr *> streamedEqualKeyExprs = { col0 };
 
     int streamedOutputCols[1] = {1};
-    auto *overflowConfig = new OverflowConfig();
+    auto overflowConfig = new OverflowConfig();
     StreamedTableWithExprOperatorFactory *streamedWithExprOperatorFactory =
         StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
         streamedEqualKeyExprs, 1, streamedOutputCols, 1, JoinType::OMNI_JOIN_TYPE_INNER, filterJsonStr, overflowConfig);
@@ -4117,10 +4117,10 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
 
     std::vector<DataTypePtr> bufferTypesVector = { VarcharType(2000), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
-    auto *col1 = new FieldExpr(1, IntType());
+    FieldExpr *col1 = new FieldExpr(1, IntType());
     std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
     int bufferedOutputCols[1] = {0};
-    auto streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
+    int64_t streamedWithExprOperatorFactoryAddr = reinterpret_cast<int64_t>(streamedWithExprOperatorFactory);
     BufferedTableWithExprOperatorFactory *bufferedWithExprOperatorFactory =
         BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(bufferedTblTypes,
         bufferedEqualKeyExprs, 1, bufferedOutputCols, 1, streamedWithExprOperatorFactoryAddr, overflowConfig);
@@ -4196,11 +4196,13 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInnerJoinExprGreaterThanIterat
     for (uint32_t i = 0; i < result.size(); i++) {
         ASSERT_EQ(result[i]->GetVectorCount(), 2);
         for (auto j = 0; j < result[i]->GetRowCount(); j++) {
-            long longValue = (static_cast<Vector<int64_t> *>(result[i]->Get(0)))->GetValue(j);
-            ASSERT_EQ(longValue, streamedTblCol2Data[index]);
+            auto value1 =
+                (static_cast<Vector<LargeStringContainer<std::string_view>> *>(result[i]->Get(0)))->GetValue(j);
+            ASSERT_EQ(value1, streamedTblCol2Data[index]);
 
-            double doubleValue = (static_cast<Vector<double> *>(result[i]->Get(1)))->GetValue(j);
-            ASSERT_EQ(doubleValue, bufferedTblCol1Data[index]);
+            auto value2 =
+                (static_cast<Vector<LargeStringContainer<std::string_view>> * >(result[i]->Get(1)))->GetValue(j);
+            ASSERT_EQ(value2, bufferedTblCol1Data[index]);
             index++;
         }
         VectorHelper::FreeVecBatch(result[i]);

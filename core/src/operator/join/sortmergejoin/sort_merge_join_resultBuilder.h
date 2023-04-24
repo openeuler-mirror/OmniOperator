@@ -115,12 +115,12 @@ private:
     ALWAYS_INLINE void PaddingLeftTableNull()
     {
         for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
-            auto vector = buildVectorBatch->GetVector(columnIdx);
-            auto typeId = vector->GetTypeId();
+            auto vector = buildVectorBatch->Get(columnIdx);
+            auto typeId = leftTableOutputTypes[columnIdx]->GetId();
             if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(buildRowCount);
             } else {
-                vector->SetValueNull(buildRowCount);
+                vector->SetNull(buildRowCount);
             }
         }
     }
@@ -129,12 +129,12 @@ private:
     {
         for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
             int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
-            auto vector = buildVectorBatch->GetVector(buildColumnIdx);
-            auto typeId = vector->GetTypeId();
+            auto vector = buildVectorBatch->Get(buildColumnIdx);
+            auto typeId = rightTableOutputTypes[columnIdx]->GetId();
             if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(buildRowCount);
             } else {
-                vector->SetValueNull(buildRowCount);
+                vector->SetNull(buildRowCount);
             }
         }
     }
@@ -144,11 +144,11 @@ private:
     int32_t leftTableOutputColsCount;
     int32_t originalLeftTableColsCount;
     DynamicPagesIndex *leftTablePagesIndex;
+    std::vector<DataTypePtr> rightTableOutputTypes;
     int32_t *rightTableOutputCols;
     int32_t rightTableOutputColsCount;
     int32_t originalRightTableColsCount;
     DynamicPagesIndex *rightTablePagesIndex;
-    std::vector<DataTypePtr> allOutputTypes;
     std::string filterExpStr;
 
     int32_t lastUnMatchedStreamedBatchId = -1;
