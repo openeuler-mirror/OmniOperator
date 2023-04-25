@@ -639,32 +639,32 @@ TEST(FunctionTest, Substr)
     const char *result;
     std::string actual;
 
-    result = SubstrEmptyString(contextptr, str.c_str(), strlen, 1, strlen, false, &outlen);
+    result = SubstrVarchar<int32_t, false, false>(contextptr, str.c_str(), strlen, 1, strlen, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrEmptyString(contextptr, str.c_str(), strlen, 1, 5, false, &outlen);
+    result = SubstrVarchar<int32_t, false, false>(contextptr, str.c_str(), strlen, 1, 5, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "Magic");
     EXPECT_EQ(outlen, 5);
 
-    result = SubstrEmptyString(contextptr, str.c_str(), strlen, 10, 10, false, &outlen);
+    result = SubstrVarchar<int32_t, false, false>(contextptr, str.c_str(), strlen, 10, 10, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "nson 123@#");
     EXPECT_EQ(outlen, 10);
 
-    result = SubstrEmptyString(contextptr, str.c_str(), strlen, -5, 7, false, &outlen);
+    result = SubstrVarchar<int32_t, false, false>(contextptr, str.c_str(), strlen, -5, 7, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "23@#$");
     EXPECT_EQ(outlen, 5);
 
-    result = SubstrEmptyString(contextptr, str.c_str(), strlen, 0, 0, false, &outlen);
+    result = SubstrVarchar<int32_t, false, false>(contextptr, str.c_str(), strlen, 0, 0, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = SubstrEmptyString(contextptr, str.c_str(), strlen, strlen, strlen + 5, false, &outlen);
+    result = SubstrVarchar<int32_t, false, false>(contextptr, str.c_str(), strlen, strlen, strlen + 5, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "$");
     EXPECT_EQ(outlen, 1);
@@ -681,42 +681,57 @@ TEST(FunctionTest, SubstrZh)
     const char *result;
     std::string actual;
 
-    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 1, 37, false, &outLen);
+    result = SubstrVarchar<int32_t, false, false>(contextPtr, str.c_str(), strLen, 1, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 1, 5, false, &outLen);
+    result = SubstrVarchar<int32_t, false, true>(contextPtr, str.c_str(), strLen, 0, 37, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outLen, strLen);
+
+    result = SubstrVarchar<int32_t, false, false>(contextPtr, str.c_str(), strLen, 1, 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯");
     EXPECT_EQ(outLen, 15);
 
-    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 10, 10, false, &outLen);
+    result = SubstrVarchar<int32_t, false, true>(contextPtr, str.c_str(), strLen, 0, 5, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "时欧基乌斯");
+    EXPECT_EQ(outLen, 15);
+
+    result = SubstrVarchar<int32_t, false, false>(contextPtr, str.c_str(), strLen, 10, 10, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "hello! 回复哦");
     EXPECT_EQ(outLen, 16);
 
-    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, -5, 7, false, &outLen);
+    result = SubstrVarchar<int32_t, false, false>(contextPtr, str.c_str(), strLen, -5, 7, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "色的圣诞袜");
     EXPECT_EQ(outLen, 15);
 
-    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 0, 0, false, &outLen);
+    result = SubstrVarchar<int32_t, false, false>(contextPtr, str.c_str(), strLen, 0, 0, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, 37, strLen + 5, false, &outLen);
+    result = SubstrVarchar<int32_t, false, true>(contextPtr, str.c_str(), strLen, 0, 0, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = SubstrVarchar<int32_t, false, false>(contextPtr, str.c_str(), strLen, 37, strLen + 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, -38, 10, false, &outLen);
+    result = SubstrVarchar<int32_t, false, false>(contextPtr, str.c_str(), strLen, -38, 10, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrEmptyString(contextPtr, str.c_str(), strLen, -37, 37, false, &outLen);
+    result = SubstrVarchar<int32_t, false, false>(contextPtr, str.c_str(), strLen, -37, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -735,32 +750,48 @@ TEST(FunctionTest, SubstrChar)
     const char *result;
     std::string actual;
 
-    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, 1, strlen, false, &outlen);
+    result = SubstrChar<int32_t, false, false>(contextptr, str.c_str(), width, strlen, 1, strlen, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "Magic Johnson 123@#$");
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, 1, 5, false, &outlen);
+    result = SubstrChar<int32_t, false, true>(contextptr, str.c_str(), width, strlen, 0, strlen, false, &outlen);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "Magic Johnson 123@#$");
+    EXPECT_EQ(outlen, strlen);
+
+    result = SubstrChar<int32_t, false, false>(contextptr, str.c_str(), width, strlen, 1, 5, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "Magic");
     EXPECT_EQ(outlen, 5);
 
-    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, 10, 10, false, &outlen);
+    result = SubstrChar<int32_t, false, true>(contextptr, str.c_str(), width, strlen, 0, 5, false, &outlen);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "Magic");
+    EXPECT_EQ(outlen, 5);
+
+    result = SubstrChar<int32_t, false, false>(contextptr, str.c_str(), width, strlen, 10, 10, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "nson 123@#");
     EXPECT_EQ(outlen, 10);
 
-    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, -5, 7, false, &outlen);
+    result = SubstrChar<int32_t, false, false>(contextptr, str.c_str(), width, strlen, -5, 7, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "23@#$");
     EXPECT_EQ(outlen, 5);
 
-    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, 0, 0, false, &outlen);
+    result = SubstrChar<int32_t, false, false>(contextptr, str.c_str(), width, strlen, 0, 0, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
 
-    result = SubstrCharEmptyString(contextptr, str.c_str(), width, strlen, strlen, strlen + 5, false, &outlen);
+    result = SubstrChar<int32_t, false, true>(contextptr, str.c_str(), width, strlen, 0, 0, false, &outlen);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outlen, 0);
+
+    result =
+        SubstrChar<int32_t, false, false>(contextptr, str.c_str(), width, strlen, strlen, strlen + 5, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "$");
     EXPECT_EQ(outlen, 1);
@@ -779,42 +810,57 @@ TEST(FunctionTest, SubstrCharZh)
     const char *result;
     std::string actual;
 
-    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 1, 37, false, &outLen);
+    result = SubstrChar<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 1, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 1, 5, false, &outLen);
+    result = SubstrChar<int32_t, false, true>(contextPtr, str.c_str(), width, strLen, 0, 37, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outLen, strLen);
+
+    result = SubstrChar<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 1, 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯");
     EXPECT_EQ(outLen, 15);
 
-    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 10, 10, false, &outLen);
+    result = SubstrChar<int32_t, false, true>(contextPtr, str.c_str(), width, strLen, 0, 5, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "时欧基乌斯");
+    EXPECT_EQ(outLen, 15);
+
+    result = SubstrChar<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 10, 10, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "hello! 回复哦");
     EXPECT_EQ(outLen, 16);
 
-    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, -5, 7, false, &outLen);
+    result = SubstrChar<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, -5, 7, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "色的圣诞袜");
     EXPECT_EQ(outLen, 15);
 
-    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 0, 0, false, &outLen);
+    result = SubstrChar<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 0, 0, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, 37, strLen + 5, false, &outLen);
+    result = SubstrChar<int32_t, false, true>(contextPtr, str.c_str(), width, strLen, 0, 0, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = SubstrChar<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 37, strLen + 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, -38, 10, false, &outLen);
+    result = SubstrChar<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, -38, 10, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrCharEmptyString(contextPtr, str.c_str(), width, strLen, -37, 37, false, &outLen);
+    result = SubstrChar<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, -37, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -832,22 +878,27 @@ TEST(FunctionTest, SubstrWithStart)
     const char *result;
     std::string actual;
 
-    result = SubstrWithStartEmptyString(contextptr, str.c_str(), strlen, 1, false, &outlen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextptr, str.c_str(), strlen, 1, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrWithStartEmptyString(contextptr, str.c_str(), strlen, 9, false, &outlen);
+    result = SubstrVarcharWithStart<int32_t, false, true>(contextptr, str.c_str(), strlen, 0, false, &outlen);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outlen, strlen);
+
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextptr, str.c_str(), strlen, 9, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "123 $%^");
     EXPECT_EQ(outlen, 7);
 
-    result = SubstrWithStartEmptyString(contextptr, str.c_str(), strlen, -3, false, &outlen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextptr, str.c_str(), strlen, -3, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "$%^");
     EXPECT_EQ(outlen, 3);
 
-    result = SubstrWithStartEmptyString(contextptr, str.c_str(), strlen, 0, false, &outlen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextptr, str.c_str(), strlen, 0, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
@@ -865,37 +916,42 @@ TEST(FunctionTest, SubstrWithZh)
     const char *result;
     std::string actual;
 
-    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, 1, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextPtr, str.c_str(), strLen, 1, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, 9, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, false, true>(contextPtr, str.c_str(), strLen, 0, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outLen, strLen);
+
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextPtr, str.c_str(), strLen, 9, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, " hello! 回复哦黑色的and magic粉色的圣诞袜");
     EXPECT_EQ(outLen, 53);
 
-    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, -3, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextPtr, str.c_str(), strLen, -3, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "圣诞袜");
     EXPECT_EQ(outLen, 9);
 
-    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, 0, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextPtr, str.c_str(), strLen, 0, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, 37, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextPtr, str.c_str(), strLen, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, -38, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextPtr, str.c_str(), strLen, -38, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrWithStartEmptyString(contextPtr, str.c_str(), strLen, -37, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, false, false>(contextPtr, str.c_str(), strLen, -37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -914,39 +970,44 @@ TEST(FunctionTest, SubstrWithZhForSpark)
     const char *result;
     std::string actual;
 
-    result = SubstrWithStartInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, true, false>(contextPtr, str.c_str(), strLen, -15, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, 5, false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, true, true>(contextPtr, str.c_str(), strLen, 0, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outLen, strLen);
+
+    result = SubstrVarchar<int32_t, true, false>(contextPtr, str.c_str(), strLen, -15, 5, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, 6, false, &outLen);
+    result = SubstrVarchar<int32_t, true, false>(contextPtr, str.c_str(), strLen, -15, 6, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, 14, false, &outLen);
+    result = SubstrVarchar<int32_t, true, false>(contextPtr, str.c_str(), strLen, -15, 14, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯侧后解 ");
     EXPECT_EQ(outLen, 25);
 
-    result = SubstrInterceptFromBeyond(contextPtr, str.c_str(), strLen, -15, 20, false, &outLen);
+    result = SubstrVarchar<int32_t, true, false>(contextPtr, str.c_str(), strLen, -15, 20, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "时欧基乌斯侧后解 h");
     EXPECT_EQ(outLen, 26);
 
     std::string strEn = "apple";
-    result = SubstrInterceptFromBeyond(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7, 3, false,
-        &outLen);
+    result = SubstrVarchar<int32_t, true, false>(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7, 3,
+        false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "a");
 
-    result = SubstrWithStartInterceptFromBeyond(contextPtr, strEn.c_str(), static_cast<int32_t>(strEn.length()), -7,
-        false, &outLen);
+    result = SubstrVarcharWithStart<int32_t, true, false>(contextPtr, strEn.c_str(),
+        static_cast<int32_t>(strEn.length()), -7, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "apple");
 
@@ -965,22 +1026,27 @@ TEST(FunctionTest, SubstrCharWithStart)
     const char *result;
     std::string actual;
 
-    result = SubstrCharWithStartEmptyString(contextptr, str.c_str(), width, strlen, 1, false, &outlen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextptr, str.c_str(), width, strlen, 1, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "ABC efg 123 $%^");
     EXPECT_EQ(outlen, strlen);
 
-    result = SubstrCharWithStartEmptyString(contextptr, str.c_str(), width, strlen, 9, false, &outlen);
+    result = SubstrCharWithStart<int32_t, false, true>(contextptr, str.c_str(), width, strlen, 0, false, &outlen);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "ABC efg 123 $%^");
+    EXPECT_EQ(outlen, strlen);
+
+    result = SubstrCharWithStart<int32_t, false, false>(contextptr, str.c_str(), width, strlen, 9, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "123 $%^");
     EXPECT_EQ(outlen, 7);
 
-    result = SubstrCharWithStartEmptyString(contextptr, str.c_str(), width, strlen, -3, false, &outlen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextptr, str.c_str(), width, strlen, -3, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "$%^");
     EXPECT_EQ(outlen, 3);
 
-    result = SubstrCharWithStartEmptyString(contextptr, str.c_str(), width, strlen, 0, false, &outlen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextptr, str.c_str(), width, strlen, 0, false, &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outlen, 0);
@@ -998,37 +1064,42 @@ TEST(FunctionTest, SubstrCharWithStartZh)
     const char *result;
     std::string actual;
 
-    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, 1, false, &outLen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 1, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
 
-    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, 9, false, &outLen);
+    result = SubstrCharWithStart<int32_t, false, true>(contextPtr, str.c_str(), width, strLen, 0, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, str);
+    EXPECT_EQ(outLen, strLen);
+
+    result = SubstrCharWithStart<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 9, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, " hello! 回复哦黑色的and magic粉色的圣诞袜");
     EXPECT_EQ(outLen, 53);
 
-    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, -3, false, &outLen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, -3, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "圣诞袜");
     EXPECT_EQ(outLen, 9);
 
-    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, 0, false, &outLen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 0, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, 37, false, &outLen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, 37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "袜");
     EXPECT_EQ(outLen, 3);
 
-    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, -38, false, &outLen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, -38, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, "");
     EXPECT_EQ(outLen, 0);
 
-    result = SubstrCharWithStartEmptyString(contextPtr, str.c_str(), width, strLen, -37, false, &outLen);
+    result = SubstrCharWithStart<int32_t, false, false>(contextPtr, str.c_str(), width, strLen, -37, false, &outLen);
     actual = std::string(result, outLen);
     EXPECT_EQ(actual, str);
     EXPECT_EQ(outLen, strLen);
@@ -1343,9 +1414,9 @@ TEST(FunctionTest, ReplaceStrStrStrZh)
     int64_t contextPtr = reinterpret_cast<int64_t>(context);
     int32_t outLen = 0;
 
-    std::vector<std::string> str{ "", "粉色的圣诞袜", "apple", "粉色de圣诞袜" };
-    std::vector<std::string> searchStr{ "", "粉色", "pp", "de圣" };
-    std::vector<std::string> replaceStr{ "", "黑色", "*w*", "*的*" };
+    std::vector<std::string> str { "", "粉色的圣诞袜", "apple", "粉色de圣诞袜" };
+    std::vector<std::string> searchStr { "", "粉色", "pp", "de圣" };
+    std::vector<std::string> replaceStr { "", "黑色", "*w*", "*的*" };
 
     auto result1 = ReplaceStrStrStrWithRepReplace(contextPtr, str[2].c_str(), str[2].length(), searchStr[0].c_str(),
         searchStr[0].length(), replaceStr[2].c_str(), replaceStr[2].length(), false, &outLen);
@@ -1678,7 +1749,7 @@ TEST(FunctionTest, EvaluateHiveUdfSingle)
     EXPECT_CALL(*env, GetStaticObjectField(_, _)).WillRepeatedly(Return(nullptr));
     EXPECT_CALL(*env, SetObjectArrayElement(_, _, _)).WillRepeatedly(Return());
 
-    InAndOutputInfos infos{};
+    InAndOutputInfos infos {};
     EXPECT_CALL(*env, CallStaticVoidMethodV(_, _, infos))
         .WillOnce(DoAll(Assign((int32_t *)(&outputValue), 8), Assign((int8_t *)(&outputNull), 0)))
         .WillRepeatedly(Return());

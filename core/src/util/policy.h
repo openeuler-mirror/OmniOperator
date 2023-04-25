@@ -84,6 +84,21 @@ enum class NegativeStartIndexOutOfBoundsRule {
 };
 
 /**
+ * Defines the difference that SubStr function returns the result if the startIndex equals zero.
+ */
+enum class ZeroStartIndexSupportRule {
+    /**
+     * Directly return an empty string when startIndex = 0
+     */
+    IS_NOT_SUPPORT = 0,
+
+    /**
+     * It refers to the first element when startIndex = 0
+     */
+    IS_SUPPORT
+};
+
+/**
  * Defines whether the engine supports container vector.
  * If the engine supports container vector, it doesn't need to flat container vector in sum/avg operations, otherwise
  * flat.
@@ -118,19 +133,20 @@ public:
     Policy()
         : Policy(RoundingRule::HALF_UP, CheckReScaleRule::NOT_CHECK_RESCALE, EmptySearchStrReplaceRule::REPLACE,
         CastDecimalToDoubleRule::CAST, NegativeStartIndexOutOfBoundsRule::EMPTY_STRING,
-        SupportContainerVecRule::SUPPORT, StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION,
-        SupportExprFilterRule::NO_EXPR) {};
+        ZeroStartIndexSupportRule::IS_NOT_SUPPORT, SupportContainerVecRule::SUPPORT,
+        StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION, SupportExprFilterRule::NO_EXPR) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
         NegativeStartIndexOutOfBoundsRule negativeStartIndexOutOfBoundsRule,
-        SupportContainerVecRule supportContainerVecRule, StringToDateFormatRule stringToDateFormatRule,
-        SupportExprFilterRule supportExprFilterRule)
+        ZeroStartIndexSupportRule zeroStartIndexSupportRule, SupportContainerVecRule supportContainerVecRule,
+        StringToDateFormatRule stringToDateFormatRule, SupportExprFilterRule supportExprFilterRule)
         : roundingRule(roundingRule),
           checkReScaleRule(checkReScaleRule),
           emptySearchStrReplaceRule(emptySearchStrReplaceRule),
           castDecimalToDoubleRule(castDecimalToDoubleRule),
           negativeStartIndexOutOfBoundsRule(negativeStartIndexOutOfBoundsRule),
+          zeroStartIndexSupportRule(zeroStartIndexSupportRule),
           supportContainerVecRule(supportContainerVecRule),
           stringToDateFormatRule(stringToDateFormatRule),
           supportExprFilterRule(supportExprFilterRule) {};
@@ -185,6 +201,16 @@ public:
         negativeStartIndexOutOfBoundsRule = rule;
     }
 
+    ZeroStartIndexSupportRule GetZeroStartIndexSupportRule() const
+    {
+        return zeroStartIndexSupportRule;
+    }
+
+    void SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule rule)
+    {
+        zeroStartIndexSupportRule = rule;
+    }
+
     SupportContainerVecRule GetSupportContainerVecRule() const
     {
         return supportContainerVecRule;
@@ -223,6 +249,7 @@ protected:
     EmptySearchStrReplaceRule emptySearchStrReplaceRule;
     CastDecimalToDoubleRule castDecimalToDoubleRule;
     NegativeStartIndexOutOfBoundsRule negativeStartIndexOutOfBoundsRule;
+    ZeroStartIndexSupportRule zeroStartIndexSupportRule;
     SupportContainerVecRule supportContainerVecRule;
     StringToDateFormatRule stringToDateFormatRule;
     SupportExprFilterRule supportExprFilterRule;

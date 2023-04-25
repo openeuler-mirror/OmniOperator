@@ -59,10 +59,19 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
         functionRegistries.push_back(make_unique<StringFunctionRegistryAllowReducePrecison>());
     }
 
-    if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::EMPTY_STRING) {
-        functionRegistries.push_back(make_unique<StringFunctionRegistryReplaceEmptyString>());
-    } else {
-        functionRegistries.push_back(make_unique<StringFunctionRegistryReplaceInterceptFromBeyond>());
+    if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND &&
+        policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_SUPPORT) {
+        functionRegistries.push_back(make_unique<StringFunctionRegistrySupportNegativeAndZeroIndex>());
+    } else if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::EMPTY_STRING &&
+        policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_SUPPORT) {
+        functionRegistries.push_back(make_unique<StringFunctionRegistrySupportNotNegativeAndZeroIndex>());
+    } else if (policy->GetNegativeStartIndexOutOfBoundsRule() ==
+        NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND &&
+        policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_NOT_SUPPORT) {
+        functionRegistries.push_back(make_unique<StringFunctionRegistrySupportNegativeAndNotZeroIndex>());
+    } else if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::EMPTY_STRING &&
+        policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_NOT_SUPPORT) {
+        functionRegistries.push_back(make_unique<StringFunctionRegistrySupportNotNegativeAndNotZeroIndex>());
     }
 
     return functionRegistries;
@@ -106,10 +115,19 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetBatchFunctionRegis
         functionRegistries.push_back(make_unique<BatchStringFunctionRegistryNotReplace>());
     }
 
-    if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::EMPTY_STRING) {
-        functionRegistries.push_back(make_unique<BatchStringFunctionRegistryReplaceEmptyString>());
-    } else {
-        functionRegistries.push_back(make_unique<BatchStringFunctionRegistryReplaceInterceptFromBeyond>());
+    if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND &&
+        policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_SUPPORT) {
+        functionRegistries.push_back(make_unique<BatchStringFunctionRegistrySupportNegativeAndZeroIndex>());
+    } else if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::EMPTY_STRING &&
+        policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_SUPPORT) {
+        functionRegistries.push_back(make_unique<BatchStringFunctionRegistrySupportNotNegativeAndZeroIndex>());
+    } else if (policy->GetNegativeStartIndexOutOfBoundsRule() ==
+        NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND &&
+        policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_NOT_SUPPORT) {
+        functionRegistries.push_back(make_unique<BatchStringFunctionRegistrySupportNegativeAndNotZeroIndex>());
+    } else if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::EMPTY_STRING &&
+        policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_NOT_SUPPORT) {
+        functionRegistries.push_back(make_unique<BatchStringFunctionRegistrySupportNotNegativeAndNotZeroIndex>());
     }
 
     return functionRegistries;

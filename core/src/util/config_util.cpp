@@ -215,6 +215,16 @@ NegativeStartIndexOutOfBoundsRule ConfigUtil::GetNegativeStartIndexOutOfBoundsRu
     return g_properties.GetPolicy()->GetNegativeStartIndexOutOfBoundsRule();
 }
 
+void ConfigUtil::SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule rule)
+{
+    g_properties.GetPolicy()->SetZeroStartIndexSupportRule(rule);
+}
+
+ZeroStartIndexSupportRule ConfigUtil::GetZeroStartIndexSupportRule()
+{
+    return g_properties.GetPolicy()->GetZeroStartIndexSupportRule();
+}
+
 void ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule rule)
 {
     g_properties.GetPolicy()->SetSupportContainerVecRule(rule);
@@ -259,6 +269,7 @@ Policy *ConfigUtil::InitializePolicy()
         { "EmptySearchStrReplaceRule", InitEmptySearchStrReplaceRule },
         { "CastDecimalToDoubleRule", InitCastDecimalToDoubleRule },
         { "NegativeStartIndexOutOfBoundsRule", InitNegativeStartIndexOutOfBoundsRule },
+        { "ZeroStartIndexSupportRule", InitZeroStartIndexSupportRule},
         { "SupportContainerVecRule", InitSupportContainerVecRule },
         { "StringToDateFormatRule", InitStringToDateFormatRule },
         { "SupportExprFilterRule", InitSupportExprFilterRule } };
@@ -305,6 +316,13 @@ void ConfigUtil::InitNegativeStartIndexOutOfBoundsRule(Policy *policy, const std
 {
     if (ruleValueStr == "INTERCEPT_FROM_BEYOND") {
         policy->SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
+    }
+}
+
+void ConfigUtil::InitZeroStartIndexSupportRule(Policy *policy, const std::string &ruleValueStr)
+{
+    if (ruleValueStr == "IS_SUPPORT") {
+        policy->SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_SUPPORT);
     }
 }
 

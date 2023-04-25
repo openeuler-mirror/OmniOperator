@@ -40,6 +40,10 @@ public:
 
     static NegativeStartIndexOutOfBoundsRule GetNegativeStartIndexOutOfBoundsRule();
 
+    static void SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule rule);
+
+    static ZeroStartIndexSupportRule GetZeroStartIndexSupportRule();
+
     static void SetSupportContainerVecRule(SupportContainerVecRule rule);
 
     static SupportContainerVecRule GetSupportContainerVecRule();
@@ -77,6 +81,8 @@ private:
     static void InitCastDecimalToDoubleRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitNegativeStartIndexOutOfBoundsRule(Policy *policy, const std::string &ruleValueStr);
+
+    static void InitZeroStartIndexSupportRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitSupportContainerVecRule(Policy *policy, const std::string &ruleValueStr);
 

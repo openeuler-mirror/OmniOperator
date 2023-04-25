@@ -38,12 +38,22 @@ public:
     std::vector<Function> GetFunctions() override;
 };
 
-class StringFunctionRegistryReplaceEmptyString : public BaseFunctionRegistry {
+class StringFunctionRegistrySupportNegativeAndZeroIndex : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };
 
-class StringFunctionRegistryReplaceInterceptFromBeyond : public BaseFunctionRegistry {
+class StringFunctionRegistrySupportNotNegativeAndZeroIndex : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringFunctionRegistrySupportNegativeAndNotZeroIndex : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringFunctionRegistrySupportNotNegativeAndNotZeroIndex : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };

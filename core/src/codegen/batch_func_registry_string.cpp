@@ -187,54 +187,108 @@ std::vector<Function> BatchStringFunctionRegistryReplace::GetFunctions()
     return batchStringFnRegistry;
 }
 
-std::vector<Function> BatchStringFunctionRegistryReplaceEmptyString::GetFunctions()
+std::vector<Function> BatchStringFunctionRegistrySupportNegativeAndZeroIndex::GetFunctions()
 {
     std::vector<Function> batchStringFnRegistry = {
         // substr functions
-        Function(reinterpret_cast<void *>(BatchSubstrEmptyString<int32_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrVarchar<int32_t, true, true>), SUBSTR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_INT, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrCharEmptyString<int32_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrChar<int32_t, true, true>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_INT, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrEmptyString<int64_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrVarchar<int64_t, true, true>), SUBSTR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_LONG, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrCharEmptyString<int64_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrChar<int64_t, true, true>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_LONG, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
 
         // substr with start index functions
-        Function(reinterpret_cast<void *>(BatchSubstrWithStartEmptyString<int32_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrVarcharWithStart<int32_t, true, true>), SUBSTR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrCharWithStartEmptyString<int32_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int32_t, true, true>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrWithStartEmptyString<int64_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrVarcharWithStart<int64_t, true, true>), SUBSTR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrCharWithStartEmptyString<int64_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int64_t, true, true>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
     };
 
     return batchStringFnRegistry;
 }
 
-std::vector<Function> BatchStringFunctionRegistryReplaceInterceptFromBeyond::GetFunctions()
+std::vector<Function> BatchStringFunctionRegistrySupportNotNegativeAndZeroIndex::GetFunctions()
 {
     std::vector<Function> batchStringFnRegistry = {
         // substr functions
-        Function(reinterpret_cast<void *>(BatchSubstrInterceptFromBeyond<int32_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrVarchar<int32_t, false, true>), SUBSTR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_INT, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrCharInterceptFromBeyond<int32_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrChar<int32_t, false, true>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_INT, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrInterceptFromBeyond<int64_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrVarchar<int64_t, false, true>), SUBSTR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_LONG, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrCharInterceptFromBeyond<int64_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrChar<int64_t, false, true>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_LONG, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
 
         // substr with start index functions
-        Function(reinterpret_cast<void *>(BatchSubstrWithStartInterceptFromBeyond<int32_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrVarcharWithStart<int32_t, false, true>), SUBSTR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrCharWithStartInterceptFromBeyond<int32_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int32_t, false, true>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrWithStartInterceptFromBeyond<int64_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrVarcharWithStart<int64_t, false, true>), SUBSTR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchSubstrCharWithStartInterceptFromBeyond<int64_t>), SUBSTR_FN_STR, {},
+        Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int64_t, false, true>), SUBSTR_FN_STR, {},
+            { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+    };
+
+    return batchStringFnRegistry;
+}
+
+std::vector<Function> BatchStringFunctionRegistrySupportNegativeAndNotZeroIndex::GetFunctions()
+{
+    std::vector<Function> batchStringFnRegistry = {
+        // substr functions
+        Function(reinterpret_cast<void *>(BatchSubstrVarchar<int32_t, true, false>), SUBSTR_FN_STR, {},
+            { OMNI_VARCHAR, OMNI_INT, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrChar<int32_t, true, false>), SUBSTR_FN_STR, {},
+            { OMNI_CHAR, OMNI_INT, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrVarchar<int64_t, true, false>), SUBSTR_FN_STR, {},
+            { OMNI_VARCHAR, OMNI_LONG, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrChar<int64_t, true, false>), SUBSTR_FN_STR, {},
+            { OMNI_CHAR, OMNI_LONG, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+
+        // substr with start index functions
+        Function(reinterpret_cast<void *>(BatchSubstrVarcharWithStart<int32_t, true, false>), SUBSTR_FN_STR, {},
+            { OMNI_VARCHAR, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int32_t, true, false>), SUBSTR_FN_STR, {},
+            { OMNI_CHAR, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrVarcharWithStart<int64_t, true, false>), SUBSTR_FN_STR, {},
+            { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int64_t, true, false>), SUBSTR_FN_STR, {},
+            { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+    };
+
+    return batchStringFnRegistry;
+}
+
+std::vector<Function> BatchStringFunctionRegistrySupportNotNegativeAndNotZeroIndex::GetFunctions()
+{
+    std::vector<Function> batchStringFnRegistry = {
+        // substr functions
+        Function(reinterpret_cast<void *>(BatchSubstrVarchar<int32_t, false, false>), SUBSTR_FN_STR, {},
+            { OMNI_VARCHAR, OMNI_INT, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrChar<int32_t, false, false>), SUBSTR_FN_STR, {},
+            { OMNI_CHAR, OMNI_INT, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrVarchar<int64_t, false, false>), SUBSTR_FN_STR, {},
+            { OMNI_VARCHAR, OMNI_LONG, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrChar<int64_t, false, false>), SUBSTR_FN_STR, {},
+            { OMNI_CHAR, OMNI_LONG, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+
+        // substr with start index functions
+        Function(reinterpret_cast<void *>(BatchSubstrVarcharWithStart<int32_t, false, false>), SUBSTR_FN_STR, {},
+            { OMNI_VARCHAR, OMNI_INT }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int32_t, false, false>), SUBSTR_FN_STR, {},
+            { OMNI_CHAR, OMNI_INT }, OMNI_CHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrVarcharWithStart<int64_t, false, false>), SUBSTR_FN_STR, {},
+            { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int64_t, false, false>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
     };
 
