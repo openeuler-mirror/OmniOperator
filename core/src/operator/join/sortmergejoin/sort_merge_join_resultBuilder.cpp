@@ -95,19 +95,13 @@ void AddValueToVector(BaseVector *inputVector, int32_t inputRowId, BaseVector *o
 {
     using Type = typename NativeAndVectorType<typeId>::type;
     using Vector = typename NativeAndVectorType<typeId>::vector;
-    using DictVector = typename NativeAndVectorType<typeId>::dictVector;
 
     if (inputVector->IsNull(inputRowId)) {
         reinterpret_cast<Vector *>(outputVector)->SetNull(outputRowId);
     } else {
-        Type value;
-        if (inputVector->GetEncoding() == OMNI_DICTIONARY) {
-            value = reinterpret_cast<DictVector *>(inputVector)->GetValue(inputRowId);
-            reinterpret_cast<Vector *>(outputVector)->SetValue(outputRowId, value);
-        } else {
-            value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
-            reinterpret_cast<Vector *>(outputVector)->SetValue(outputRowId, value);
-        }
+        // no dictionary input for smj
+        Type value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
+        reinterpret_cast<Vector *>(outputVector)->SetValue(outputRowId, value);
     }
 }
 
