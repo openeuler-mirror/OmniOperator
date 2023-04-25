@@ -104,12 +104,19 @@ static int32_t ALWAYS_INLINE Compare(const int32_t sortNullFirsts, const uint64_
     vec::BaseVector *leftColumn = columns[leftColumnIndex];
     vec::BaseVector *rightColumn = columns[rightColumnIndex];
 
-    int32_t compare = omniruntime::op::OperatorUtil::CompareNull(leftColumn, leftColumnPosition, rightColumn,
-                                                                 rightColumnPosition, sortNullFirsts);
-    if (compare == omniruntime::op::OperatorUtil::COMPARE_STATUS_OTHER) {
+    int32_t compare = omniruntime::op::OperatorUtil::COMPARE_STATUS_OTHER;
+    if constexpr (columnsNullFlag) {
+        compare = omniruntime::op::OperatorUtil::CompareNull(leftColumn, leftColumnPosition, rightColumn,
+            rightColumnPosition, sortNullFirsts);
+        if (compare == omniruntime::op::OperatorUtil::COMPARE_STATUS_OTHER) {
+            compare = compareFunc(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
+            if constexpr (sortAscendings == 0) {
+                compare = -compare;
+            }
+        }
+    } else {
         // neither the left nor the right is NULL
         compare = compareFunc(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
-
         if constexpr (sortAscendings == 0) {
             compare = -compare;
         }
