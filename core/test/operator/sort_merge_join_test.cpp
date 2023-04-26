@@ -1246,23 +1246,19 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     // build dictionary vector for test
     double leftData1_2[dataSize] = {0.0, 1.1, 2.2, 3.3, 4.4, 5.5};
     auto dataVector1 = CreateVector<double>(dataSize, leftData1_2);
-    int32_t ids1[dataSize] = {0, 1, 2, 3, 4, 5};
-    auto dicVector1 = CreateDictionary<OMNI_DOUBLE>(dataVector1.get(), ids1, dataSize);
 
     auto *leftVecBatch1 = new VectorBatch(dataSize);
     leftVecBatch1->Append(leftVector1.release());
-    leftVecBatch1->Append(dicVector1.release());
+    leftVecBatch1->Append(dataVector1.release());
 
     int32_t leftData21[dataSize] = {6, 7, 8, 9, 10, 11};
     auto leftVector2 = CreateVector<int32_t>(dataSize, leftData21);
     double leftData22[dataSize] = {6.6, 7.7, 8.8, 9.9, 10.1, 11.1};
     auto dataVector2 = CreateVector<double>(dataSize, leftData22);
-    int32_t ids2[dataSize] = {0, 1, 2, 3, 4, 5};
-    auto dicVector2 = CreateDictionary<OMNI_DOUBLE>(dataVector2.get(), ids2, dataSize);
 
     auto *leftVecBatch2 = new VectorBatch(dataSize);
     leftVecBatch2->Append(leftVector2.release());
-    leftVecBatch2->Append(dicVector2.release());
+    leftVecBatch2->Append(dataVector2.release());
     leftPagesIndex->AddVecBatch(leftVecBatch1);
     leftPagesIndex->AddVecBatch(leftVecBatch2);
 
