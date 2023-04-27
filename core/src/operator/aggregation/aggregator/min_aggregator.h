@@ -20,21 +20,21 @@ namespace op {
 template <typename T> T GetMax()
 {
     if constexpr (std::is_same_v<T, int8_t>) {
-        return 0x7F;
+        return std::numeric_limits<int8_t>::max();
     } else if constexpr (std::is_same_v<T, int16_t>) {
-        return 0x7FFF;
+        return std::numeric_limits<int16_t>::max();
     } else if constexpr (std::is_same_v<T, int32_t>) {
-        return 0x7FFFFFFF;
+        return std::numeric_limits<int32_t>::max();
     } else if constexpr (std::is_same_v<T, int64_t>) {
-        return 0x7FFFFFFFFFFFFFFF;
+        return std::numeric_limits<int64_t>::max();
     } else if constexpr (std::is_same_v<T, float>) {
-        return FLT_MAX;
+        return std::numeric_limits<float>::max();
     } else if constexpr (std::is_same_v<T, double>) {
-        return DBL_MAX;
+        return std::numeric_limits<double>::max();
     } else if constexpr (std::is_same_v<T, int128>) {
         return std::numeric_limits<int128>::max();
     } else if constexpr (std::is_same_v<T, omniruntime::type::Decimal128>) {
-        return omniruntime::type::Decimal128(0x7FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
+        return Decimal128(type::DECIMAL128_MAX_VALUE);
     } else {
         throw OmniException("LogicalError", "Unsupoorted data type");
     }

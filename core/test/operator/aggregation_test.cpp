@@ -19,6 +19,7 @@
 #include "util/config_util.h"
 #include "util/test_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
+#include "type/decimal128.h"
 
 namespace omniruntime {
 using namespace omniruntime::vec;
@@ -3827,6 +3828,420 @@ TEST(AggregatorTest, typed_aggregator_test)
     }
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(rawVectorBatch);
+}
+
+template <typename T> class ExtremumValueCreator {
+public:
+    static constexpr T MinValue = std::numeric_limits<T>::lowest();
+    static constexpr T MaxValue = std::numeric_limits<T>::max();
+    // result will be (extrame_min_value, rand_data... extrame_max_value)
+    std::vector<T> ProduceExtremumData(int32_t totoalNum)
+    {
+        std::vector<T> ret;
+        ret.reserve(totoalNum);
+        ret.emplace_back(MinValue);
+        if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+            for (int i = 1; i < totoalNum - 1; ++i) {
+                float d = float(i) * 0.01f;
+                ret.emplace_back(d);
+            }
+        } else if constexpr (std::is_same_v<T, Decimal128>) {
+            for (int i = 1; i < totoalNum - 1; ++i) {
+                Decimal128 d(i);
+                ret.emplace_back(d);
+            }
+        } else {
+            for (int i = 1; i < totoalNum - 1; ++i) {
+                T d = (i % MaxValue);
+                ret.emplace_back(d);
+            }
+        }
+        ret.emplace_back(MaxValue);
+        return ret;
+    }
+    std::vector<T> ProduceOnlyMinimum(int32_t totoalNum)
+    {
+        return std::vector<T>(totoalNum, MinValue);
+    }
+    std::vector<T> ProduceOnlyMaximum(int32_t totoalNum)
+    {
+        return std::vector<T>(totoalNum, MaxValue);
+    }
+
+    std::unique_ptr<vec::BaseVector> ProduceVec(int32_t totoalNum)
+    {
+        auto value = ProduceExtremumData(totoalNum);
+        auto dataPtr = const_cast<T *>(value.data());
+        return TestUtil::CreateVector<T>(totoalNum, dataPtr);
+    }
+    std::unique_ptr<vec::BaseVector> ProduceVecButOnlyMinimum(int32_t totoalNum)
+    {
+        auto value = ProduceOnlyMinimum(totoalNum);
+        auto dataPtr = const_cast<T *>(value.data());
+        return TestUtil::CreateVector<T>(totoalNum, dataPtr);
+    }
+    std::unique_ptr<vec::BaseVector> ProduceVecButOnlyMaximum(int32_t totoalNum)
+    {
+        auto value = ProduceOnlyMaximum(totoalNum);
+        auto dataPtr = const_cast<T *>(value.data());
+        return TestUtil::CreateVector<T>(totoalNum, dataPtr);
+    }
+};
+
+class DecimalCreator {
+public:
+    static Decimal128 MinValue;
+    static Decimal128 MaxValue;
+    // result will be (extrame_min_value, rand_data... extrame_max_value)
+    std::vector<Decimal128> ProduceExtremumData(int32_t totoalNum)
+    {
+        std::vector<Decimal128> ret;
+        ret.reserve(totoalNum);
+        ret.emplace_back(MinValue);
+        for (int i = 1; i < totoalNum - 1; ++i) {
+            Decimal128 d(i);
+            ret.emplace_back(d);
+        }
+        ret.emplace_back(MaxValue);
+        return ret;
+    }
+    std::vector<Decimal128> ProduceOnlyMinimum(int32_t totoalNum)
+    {
+        return std::vector<Decimal128>(totoalNum, MinValue);
+    }
+    std::vector<Decimal128> ProduceOnlyMaximum(int32_t totoalNum)
+    {
+        return std::vector<Decimal128>(totoalNum, MaxValue);
+    }
+
+    std::unique_ptr<vec::BaseVector> ProduceVec(int32_t totoalNum)
+    {
+        auto value = ProduceExtremumData(totoalNum);
+        auto dataPtr = const_cast<type::Decimal128 *>(value.data());
+        return TestUtil::CreateVector<Decimal128>(totoalNum, dataPtr);
+    }
+
+    std::unique_ptr<vec::BaseVector> ProduceVecButOnlyMinimum(int32_t totoalNum)
+    {
+        auto value = ProduceOnlyMinimum(totoalNum);
+        auto dataPtr = const_cast<type::Decimal128 *>(value.data());
+        return TestUtil::CreateVector<Decimal128>(totoalNum, dataPtr);
+    }
+
+    std::unique_ptr<vec::BaseVector> ProduceVecButOnlyMaximum(int32_t totoalNum)
+    {
+        auto value = ProduceOnlyMaximum(totoalNum);
+        auto dataPtr = const_cast<type::Decimal128 *>(value.data());
+        return TestUtil::CreateVector<Decimal128>(totoalNum, dataPtr);
+    }
+};
+
+Decimal128 DecimalCreator::MinValue = Decimal128(type::DECIMAL128_MIN_VALUE);
+Decimal128 DecimalCreator::MaxValue = Decimal128(type::DECIMAL128_MAX_VALUE);
+TEST(AggregatorTest, max_agg_extrame_value_test)
+{
+    int32_t rowPerVecBatch = 200;
+    auto maxFactory = new MaxAggregatorFactory();
+    auto minFactory = new MinAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0 };
+    std::vector<int32_t> channal1 = { 1 };
+    std::vector<int32_t> channal2 = { 2 };
+    std::vector<int32_t> channal3 = { 3 };
+    std::vector<int32_t> channal4 = { 4 };
+    std::vector<int32_t> channal5 = { 5 };
+    // max test types : long + decimal + varchar + dictionary + null
+    auto maxBoolean = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()), channal0, true, false, false);
+    auto maxShort = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(ShortType()).get()), channal1, true, false, false);
+    auto maxInt = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal2, true, false, false);
+    auto maxLong = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal3, true, false, false);
+    auto maxDouble = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal4, true, false, false);
+    auto maxDecimal = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()), channal5, true, false, false);
+
+    auto minBoolean = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()), channal0, true, false, false);
+    auto minShort = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(ShortType()).get()), channal1, true, false, false);
+    auto minInt = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal2, true, false, false);
+    auto minLong = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal3, true, false, false);
+    auto minDouble = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal4, true, false, false);
+    auto minDecimal = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()), channal5, true, false, false);
+
+    ExtremumValueCreator<int8_t> int8Creator;
+    auto boolVector = int8Creator.ProduceVec(rowPerVecBatch);
+    auto minBoolVector = int8Creator.ProduceVecButOnlyMinimum(rowPerVecBatch);
+    auto maxBoolVector = int8Creator.ProduceVecButOnlyMaximum(rowPerVecBatch);
+
+    ExtremumValueCreator<int16_t> int16Creator;
+    auto shortVector = int16Creator.ProduceVec(rowPerVecBatch);
+    auto minShortVector = int16Creator.ProduceVecButOnlyMinimum(rowPerVecBatch);
+    auto maxShortVector = int16Creator.ProduceVecButOnlyMaximum(rowPerVecBatch);
+
+    ExtremumValueCreator<int32_t> int32Creator;
+    auto intVector = int32Creator.ProduceVec(rowPerVecBatch);
+    auto minIntVector = int32Creator.ProduceVecButOnlyMinimum(rowPerVecBatch);
+    auto maxIntVector = int32Creator.ProduceVecButOnlyMaximum(rowPerVecBatch);
+
+    ExtremumValueCreator<int64_t> int64Creator;
+    auto longVector = int64Creator.ProduceVec(rowPerVecBatch);
+    auto minLongVector = int64Creator.ProduceVecButOnlyMinimum(rowPerVecBatch);
+    auto maxLongVector = int64Creator.ProduceVecButOnlyMaximum(rowPerVecBatch);
+
+    ExtremumValueCreator<double> doubleCreator;
+    auto doubleVector = doubleCreator.ProduceVec(rowPerVecBatch);
+    auto minDoubleVector = doubleCreator.ProduceVecButOnlyMinimum(rowPerVecBatch);
+    auto maxDoubleVector = doubleCreator.ProduceVecButOnlyMaximum(rowPerVecBatch);
+
+    DecimalCreator decimalCreator;
+    auto decimalVector = decimalCreator.ProduceVec(rowPerVecBatch);
+    auto minDecimalVector = decimalCreator.ProduceVecButOnlyMinimum(rowPerVecBatch);
+    auto maxDecimalVector = decimalCreator.ProduceVecButOnlyMaximum(rowPerVecBatch);
+
+    VectorBatch *vectorBatch = new VectorBatch(rowPerVecBatch);
+    vectorBatch->Append(boolVector.release());
+    vectorBatch->Append(shortVector.release());
+    vectorBatch->Append(intVector.release());
+    vectorBatch->Append(longVector.release());
+    vectorBatch->Append(doubleVector.release());
+    vectorBatch->Append(decimalVector.release());
+
+    VectorBatch *minVectorBatch = new VectorBatch(rowPerVecBatch);
+    minVectorBatch->Append(minBoolVector.release());
+    minVectorBatch->Append(minShortVector.release());
+    minVectorBatch->Append(minIntVector.release());
+    minVectorBatch->Append(minLongVector.release());
+    minVectorBatch->Append(minDoubleVector.release());
+    minVectorBatch->Append(minDecimalVector.release());
+
+    VectorBatch *maxVectorBatch = new VectorBatch(rowPerVecBatch);
+    maxVectorBatch->Append(maxBoolVector.release());
+    maxVectorBatch->Append(maxShortVector.release());
+    maxVectorBatch->Append(maxIntVector.release());
+    maxVectorBatch->Append(maxLongVector.release());
+    maxVectorBatch->Append(maxDoubleVector.release());
+    maxVectorBatch->Append(maxDecimalVector.release());
+
+    {
+        AggregateState state{ nullptr };
+        maxBoolean->InitState(state);
+        // process bool
+        maxBoolean->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxValue = *static_cast<int8_t *>(state.val);
+        EXPECT_EQ(int8Creator.MaxValue, maxValue);
+    }
+    {
+        // process short
+        AggregateState state{ nullptr };
+        maxShort->InitState(state);
+        maxShort->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxValue = *static_cast<int16_t *>(state.val);
+        EXPECT_EQ(int16Creator.MaxValue, maxValue);
+    }
+    {
+        // process short
+        AggregateState state{ nullptr };
+        maxShort->InitState(state);
+        maxShort->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxValue = *static_cast<int16_t *>(state.val);
+        EXPECT_EQ(int16Creator.MaxValue, maxValue);
+    }
+    {
+        // process int
+        AggregateState state{ nullptr };
+        maxInt->InitState(state);
+        maxInt->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto int64Value = *static_cast<int64_t *>(state.val);
+        int32_t value = (int32_t)(int64Value);
+        EXPECT_EQ(int32Creator.MaxValue, value);
+    }
+    {
+        // process int64
+        AggregateState state{ nullptr };
+        maxLong->InitState(state);
+        maxLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto int64Value = *static_cast<int64_t *>(state.val);
+        EXPECT_EQ(int64Creator.MaxValue, int64Value);
+    }
+    {
+        // process double
+        AggregateState state{ nullptr };
+        maxDouble->InitState(state);
+        maxDouble->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxValue = *static_cast<double *>(state.val);
+        EXPECT_EQ(doubleCreator.MaxValue, maxValue);
+    }
+    {
+        // process decimal
+        AggregateState state{ nullptr };
+        maxDecimal->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        EXPECT_EQ(decimalCreator.MaxValue, *static_cast<Decimal128 *>(state.val));
+    }
+    // test maxAggregator but only min value
+    {
+        AggregateState state{ nullptr };
+        maxBoolean->InitState(state);
+        // process bool
+        maxBoolean->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxValue = *static_cast<int8_t *>(state.val);
+        EXPECT_EQ(int8Creator.MinValue, maxValue);
+    }
+    {
+        AggregateState state{ nullptr };
+        maxShort->InitState(state);
+        maxShort->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxValue = *static_cast<int16_t *>(state.val);
+        EXPECT_EQ(int16Creator.MinValue, maxValue);
+    }
+    {
+        AggregateState state{ nullptr };
+        maxInt->InitState(state);
+        // process bool
+        maxInt->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto int64Value = *static_cast<int64_t *>(state.val);
+        int32_t value = (int32_t)(int64Value);
+        EXPECT_EQ(int32Creator.MinValue, value);
+    }
+    {
+        AggregateState state{ nullptr };
+        maxLong->InitState(state);
+        maxLong->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxValue = *static_cast<int64_t *>(state.val);
+        EXPECT_EQ(int64Creator.MinValue, maxValue);
+    }
+    {
+        AggregateState state{ nullptr };
+        maxDouble->InitState(state);
+        maxDouble->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxValue = *static_cast<double *>(state.val);
+        EXPECT_EQ(doubleCreator.MinValue, maxValue);
+    }
+    {
+        AggregateState state{ nullptr };
+        maxDecimal->InitState(state);
+        maxDecimal->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxValue = *static_cast<Decimal128 *>(state.val);
+        EXPECT_EQ(decimalCreator.MinValue, maxValue);
+    }
+
+
+    // test min aggregator
+    {
+        AggregateState state{ nullptr };
+        minBoolean->InitState(state);
+        minBoolean->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minValue = *static_cast<int8_t *>(state.val);
+        EXPECT_EQ(int8Creator.MinValue, minValue);
+    }
+    {
+        // process short
+        AggregateState state{ nullptr };
+        minShort->InitState(state);
+        minShort->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minValue = *static_cast<int16_t *>(state.val);
+        EXPECT_EQ(int16Creator.MinValue, minValue);
+    }
+    {
+        // process short
+        AggregateState state{ nullptr };
+        minShort->InitState(state);
+        minShort->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minValue = *static_cast<int16_t *>(state.val);
+        EXPECT_EQ(int16Creator.MinValue, minValue);
+    }
+    {
+        // process int
+        AggregateState state{ nullptr };
+        minInt->InitState(state);
+        minInt->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto int64Value = *static_cast<int64_t *>(state.val);
+        int32_t value = (int32_t)(int64Value);
+        EXPECT_EQ(int32Creator.MinValue, value);
+    }
+    {
+        // process int64
+        AggregateState state{ nullptr };
+        minLong->InitState(state);
+        minLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto int64Value = *static_cast<int64_t *>(state.val);
+        EXPECT_EQ(int64Creator.MinValue, int64Value);
+    }
+    {
+        // process double
+        AggregateState state{ nullptr };
+        minDouble->InitState(state);
+        minDouble->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minValue = *static_cast<double *>(state.val);
+        EXPECT_EQ(doubleCreator.MinValue, minValue);
+    }
+    {
+        // process decimal
+        AggregateState state{ nullptr };
+        minDecimal->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+        EXPECT_EQ(decimalCreator.MinValue, *static_cast<Decimal128 *>(state.val));
+    }
+
+    // test minAggregator but only max value
+    {
+        AggregateState state{ nullptr };
+        minBoolean->InitState(state);
+        // process bool
+        minBoolean->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minValue = *static_cast<int8_t *>(state.val);
+        EXPECT_EQ(int8Creator.MaxValue, minValue);
+    }
+    {
+        AggregateState state{ nullptr };
+        minShort->InitState(state);
+        // process bool
+        minShort->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minValue = *static_cast<int16_t *>(state.val);
+        EXPECT_EQ(int16Creator.MaxValue, minValue);
+    }
+    {
+        AggregateState state{ nullptr };
+        minInt->InitState(state);
+        // process bool
+        minInt->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto int64Value = *static_cast<int64_t *>(state.val);
+        int32_t value = (int32_t)(int64Value);
+        EXPECT_EQ(int32Creator.MaxValue, value);
+    }
+    {
+        AggregateState state{ nullptr };
+        minLong->InitState(state);
+        minLong->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minValue = *static_cast<int64_t *>(state.val);
+        EXPECT_EQ(int64Creator.MaxValue, minValue);
+    }
+    {
+        AggregateState state{ nullptr };
+        minDouble->InitState(state);
+        minDouble->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minValue = *static_cast<double *>(state.val);
+        EXPECT_EQ(doubleCreator.MaxValue, minValue);
+    }
+    {
+        AggregateState state{ nullptr };
+        minDecimal->InitState(state);
+        minDecimal->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minValue = *static_cast<Decimal128 *>(state.val);
+        EXPECT_EQ(decimalCreator.MaxValue, minValue);
+    }
+
+    VectorHelper::FreeVecBatch(maxVectorBatch);
+    VectorHelper::FreeVecBatch(minVectorBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+    delete maxFactory;
+    delete minFactory;
 }
 
 TEST(AggregatorTest, count_aggregator_exception)

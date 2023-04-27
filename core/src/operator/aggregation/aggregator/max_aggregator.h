@@ -20,21 +20,21 @@ namespace op {
 template <typename T> T GetMin()
 {
     if constexpr (std::is_same_v<T, int8_t>) {
-        return 0x81;
+        return std::numeric_limits<int8_t>::lowest();
     } else if constexpr (std::is_same_v<T, int16_t>) {
-        return 0x8001;
+        return std::numeric_limits<int16_t>::lowest();
     } else if constexpr (std::is_same_v<T, int32_t>) {
-        return 0x80000001;
+        return std::numeric_limits<int32_t>::lowest();
     } else if constexpr (std::is_same_v<T, int64_t>) {
-        return 0x8000000000000001;
+        return std::numeric_limits<int64_t>::lowest();
     } else if constexpr (std::is_same_v<T, float>) {
-        return -FLT_MAX;
+        return std::numeric_limits<float>::lowest();
     } else if constexpr (std::is_same_v<T, double>) {
-        return -DBL_MAX;
+        return std::numeric_limits<double>::lowest();
     } else if constexpr (std::is_same_v<T, int128>) {
-        return std::numeric_limits<int128>::min();
+        return std::numeric_limits<int128>::lowest();
     } else if constexpr (std::is_same_v<T, omniruntime::type::Decimal128>) {
-        return omniruntime::type::Decimal128(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
+        return Decimal128(type::DECIMAL128_MIN_VALUE);
     } else {
         throw OmniException("LogicalError", "Unsupoorted data type");
     }
