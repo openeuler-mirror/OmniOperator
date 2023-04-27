@@ -54,20 +54,20 @@ public:
 
     ~Projection() = default;
 
-    void ProjectHelperFixedWidth(omniruntime::vec::VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
-        int64_t *offsetAddrs, omniruntime::vec::Vector *outVec, int32_t numSelectedRows, int32_t selectedRows[],
-        ExecutionContext *context, int64_t *dictionaryVectors) const;
+    void ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
+        int64_t *offsetAddrs, std::unique_ptr<BaseVector> &outVec, int32_t numSelectedRows, int32_t selectedRows[],
+        ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &typeIds) const;
 
-    void ProjectHelperVarWidth(omniruntime::vec::VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
-        int64_t *offsetAddrs, omniruntime::vec::Vector *outVec, int32_t numSelectedRows, int32_t selectedRows[],
-        ExecutionContext *context, int64_t *dictionaryVectors) const;
+    void ProjectHelperVarWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
+        int64_t *offsetAddrs, std::unique_ptr<BaseVector> &outVec, int32_t numSelectedRows, int32_t selectedRows[],
+        ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &typeIds) const;
 
-    Vector *Project(VectorAllocator *vecAllocator, VectorBatch *vecBatch, int32_t selectedRows[],
-        int32_t numSelectedRows, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
-        ExecutionContext *context, int64_t *dictionaryVectors) const;
+    std::unique_ptr<BaseVector> Project(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows,
+        int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs, ExecutionContext *context,
+        int64_t *dictionaryVectors, const int32_t *typeIds) const;
 
-    Vector *Project(VectorAllocator *vectorAllocator, VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
-        int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors) const;
+    std::unique_ptr<BaseVector> Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
+        int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds) const;
 
     omniruntime::type::DataType &GetOutputType() const
     {
@@ -105,6 +105,32 @@ private:
     ProjFunc projector;
 
     bool Initialize(bool filter, const DataTypes &inputDataTypes, OverflowConfig *overflowConfig);
+    std::unique_ptr<BaseVector> ColumnProjectionProxy(VectorBatch *vecBatch, int32_t selectedRows[],
+        int32_t numSelectedRows, const int32_t *typeIds) const;
+
+    template <typename T>
+    std::unique_ptr<BaseVector> ColumnProjectionHelper(VectorBatch *vecBatch, const int32_t selectedRows[],
+        int32_t numSelectedRows) const;
+
+    template <typename T>
+    std::unique_ptr<BaseVector> ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+        int32_t numSelectedRows) const;
+
+    template <typename T>
+    std::unique_ptr<BaseVector> ColumnProjectionFlatVectorSliceHelper(int32_t numSelectedRows,
+        BaseVector *colVec) const;
+
+    template <typename T>
+    std::unique_ptr<BaseVector> ColumnProjectionDictionaryVectorSliceHelper(int32_t numSelectedRows,
+        BaseVector *colVec) const;
+
+    template <typename T>
+    std::unique_ptr<BaseVector> ColumnProjectionDictionaryVectorCopyPositionsHelper(const int32_t *selectedRows,
+        int32_t numSelectedRows, BaseVector *colVec) const;
+
+    template <typename T>
+    std::unique_ptr<BaseVector> ColumnProjectionFlatVectorCopyPositionsHelper(const int32_t *selectedRows,
+        int32_t numSelectedRows, BaseVector *colVec) const;
 };
 
 class ExpressionEvaluator {
@@ -131,6 +157,11 @@ public:
         return inputTypes;
     }
 
+    std::vector<type::DataTypePtr> &GetOutputDataTypes()
+    {
+        return outputTypes;
+    }
+
     FilterFunc GetFilterFunc()
     {
         return filter->GetFilterFunc();
@@ -146,7 +177,7 @@ public:
         return projectVecCount;
     }
 
-    VectorBatch *Evaluate(VectorBatch *vecBatch, ExecutionContext *context, VectorAllocator *vecAllocator);
+    VectorBatch *Evaluate(VectorBatch *vecBatch, ExecutionContext *context);
 
     bool IsSupportedExpr() const;
 
@@ -162,16 +193,16 @@ private:
     bool isSupportedExpr = true;
     bool hasFilter = false;
     DataTypes inputTypes;
+    std::vector<type::DataTypePtr> outputTypes;
 
     std::unique_ptr<Filter> filter;
     std::vector<std::unique_ptr<Projection>> projections;
 
     VectorBatch *ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context,
-        VectorAllocator *vecAllocator, intptr_t *valueAddrs, intptr_t *nullAddrs, intptr_t *offsetAddrs,
-        intptr_t *dictionaries);
-
-    VectorBatch *ProcessProject(VectorBatch *vecBatch, ExecutionContext *context, VectorAllocator *vecAllocator,
         intptr_t *valueAddrs, intptr_t *nullAddrs, intptr_t *offsetAddrs, intptr_t *dictionaries);
+
+    VectorBatch *ProcessProject(VectorBatch *vecBatch, ExecutionContext *context, intptr_t *valueAddrs,
+        intptr_t *nullAddrs, intptr_t *offsetAddrs, intptr_t *dictionaries);
 };
 }
 #endif // OMNI_RUNTIME_EXPR_EVALUATOR_H

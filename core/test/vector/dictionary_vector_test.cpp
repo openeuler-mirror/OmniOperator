@@ -4,432 +4,426 @@
 
 #include <gtest/gtest.h>
 #include "type/decimal128.h"
-#include "vector_common.h"
+#include "vector/vector_common.h"
 
 using namespace omniruntime::vec;
+using namespace omniruntime::type;
 
 namespace DictionaryVectorTest {
 TEST(DictionaryVector, appendVector)
 {
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_appendVector");
-    EXPECT_TRUE(allocator != nullptr);
-    int *ids1 = new int[5];
-    int *ids2 = new int[5];
-    int *ids = new int[10];
-    LongVector *dictionary = new LongVector(allocator, 100);
-    for (int32_t i = 0; i < 5; i++) {
-        ids1[i] = i;
-        ids2[i] = i + 5;
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
     }
-    for (int32_t i = 0; i < 10; i++) {
-        ids[i] = 0;
-    }
-    DictionaryVector *src1 = new DictionaryVector(dictionary, ids1, 5);
-    DictionaryVector *src2 = new DictionaryVector(dictionary, ids2, 5);
 
-    DictionaryVector *dest = new DictionaryVector(dictionary, ids, 10);
-    dest->Append(src1, 0, 5);
-    dest->Append(src2, 5, 5);
-    for (int i = 0; i < 5; i++) {
-        EXPECT_EQ(dest->GetId(i), i);
+    auto originVec = std::make_unique<Vector<int64_t>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        originVec->SetValue(j, j * j);
     }
-    delete dictionary;
-    delete src1;
-    delete src2;
-    delete dest;
-    delete[] ids1;
-    delete[] ids2;
-    delete[] ids;
-    delete allocator;
+
+    auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr.get());
+    Vector<int64_t> appendedVec{ valueSize + dicSize };
+    appendedVec.Append(dicVec, 0, valueSize);
+    appendedVec.Append(originVec.get(), valueSize, dicSize);
+
+    for (int32_t index = 0; index < appendedVec.GetSize(); ++index) {
+        auto value = appendedVec.GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
+    }
+    delete[] values;
 }
 
-TEST(DictionaryVector, CopyRegion)
+TEST(DictionaryVector, copyPositions_long)
 {
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_copyRegion");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new LongVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i);
+    int32_t dicSize = 10;
+    int32_t valueSize = 7;
+    auto originVec = std::make_unique<Vector<int64_t>>(dicSize);
+    for (int32_t i = 0; i < dicSize; ++i) {
+        if (i % 2 == 0) {
+            originVec->SetNull(i);
+            continue;
+        }
+        originVec->SetValue(i, i * i);
     }
 
-    int32_t ids[] = {6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
-    DictionaryVector *copyRegion = dictionaryVector->CopyRegion(1, 2);
-    EXPECT_EQ(copyRegion->GetLong(0), dictionary->GetValue(8));
-    EXPECT_EQ(copyRegion->GetLong(1), dictionary->GetValue(9));
+    int32_t values[] = {2, 3, 4, 5, 6, 8, 9};
+    auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr.get());
 
-    delete dictionary;
-    delete dictionaryVector;
-    delete copyRegion;
-    delete allocator;
-}
-
-TEST(DictionaryVector, copyPostions)
-{
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_copyRegions");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new LongVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i);
-    }
-
-    int32_t ids[] = {2, 3, 4, 5, 6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 7);
     int32_t positions[] = {1, 3, 5, 6};
-    DictionaryVector *copyPositions = dictionaryVector->CopyPositions(positions, 1, 3);
-    EXPECT_EQ(copyPositions->GetLong(0), dictionary->GetValue(5));
-    EXPECT_EQ(copyPositions->GetLong(1), dictionary->GetValue(8));
-    EXPECT_EQ(copyPositions->GetLong(2), dictionary->GetValue(9));
+    int32_t offset = 1;
+    int32_t newValueSize = 3;
+    auto copyPositions = dicVec->CopyPositions(positions, offset, newValueSize);
 
-    delete dictionary;
-    delete dictionaryVector;
-    delete copyPositions;
-
-    // dictionary data compress
-    auto *dictionary1 = new LongVector(allocator, 2);
-    dictionary1->SetValue(0, 100);
-    dictionary1->SetValue(1, 200);
-    int32_t ids1[] = {0, 0, 0, 1, 1, 1};
-    auto *dictionaryVector1 = new DictionaryVector(dictionary1, ids1, 6);
-    int32_t positions1[] = {1, 2, 3, 5};
-    DictionaryVector *copyPositions1 = dictionaryVector1->CopyPositions(positions1, 0, 4);
-
-    EXPECT_EQ(copyPositions1->GetLong(0), dictionary1->GetValue(0));
-    EXPECT_EQ(copyPositions1->GetLong(1), dictionary1->GetValue(0));
-    EXPECT_EQ(copyPositions1->GetLong(2), dictionary1->GetValue(1));
-    EXPECT_EQ(copyPositions1->GetLong(3), dictionary1->GetValue(1));
-
-    delete dictionary1;
-    delete dictionaryVector1;
-    delete copyPositions1;
-
-    delete allocator;
+    for (int32_t i = 0; i < newValueSize; ++i) {
+        if (values[positions[i + offset]] % 2 == 0) {
+            EXPECT_EQ(originVec->IsNull(values[positions[i + offset]]), copyPositions->IsNull(i));
+            continue;
+        }
+        auto value = copyPositions->GetValue(i);
+        EXPECT_EQ(originVec->GetValue(values[positions[i + offset]]), value);
+    }
 }
 
-TEST(DictionaryVector, LongType)
+TEST(DictionaryVector, copyPositions_string_view)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_LongType");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new LongVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i);
+    int32_t dicSize = 10;
+    int32_t valueSize = 7;
+    auto originVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(dicSize);
+    for (int32_t i = 0; i < dicSize; ++i) {
+        if (i % 2 == 0) {
+            originVec->SetNull(i);
+            continue;
+        }
+        auto str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.length());
+        originVec->SetValue(i, value);
     }
 
-    int32_t ids[] = {6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
-    EXPECT_EQ(dictionaryVector->GetLong(0), dictionary->GetValue(6));
-    EXPECT_EQ(dictionaryVector->GetLong(1), dictionary->GetValue(8));
-    EXPECT_EQ(dictionaryVector->GetLong(2), dictionary->GetValue(9));
-    int32_t nestedIds[] = {1, 2};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 2);
-    EXPECT_EQ(nested->GetLong(0), dictionary->GetValue(8));
-    EXPECT_EQ(nested->GetLong(1), dictionary->GetValue(9));
+    int32_t values[] = {2, 3, 4, 5, 6, 8, 9};
+    auto dicVecPtr = VectorHelper::CreateStringDictionary(values, valueSize,
+        reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(originVec.get()));
+    auto *dicVec =
+        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(dicVecPtr.get());
 
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
+    int32_t positions[] = {1, 3, 5, 6};
+    int32_t offset = 1;
+    int32_t newValueSize = 3;
+    auto copyPositions = dicVec->CopyPositions(positions, offset, newValueSize);
+
+    std::string_view value;
+    for (int32_t i = 0; i < newValueSize; ++i) {
+        if (values[positions[i + offset]] % 2 == 0) {
+            EXPECT_EQ(originVec->IsNull(values[positions[i + offset]]), copyPositions->IsNull(i));
+            continue;
+        }
+        value = copyPositions->GetValue(i);
+        EXPECT_EQ(originVec->GetValue(values[positions[i + offset]]), value);
+    }
 }
 
 TEST(DictionaryVector, ShortType)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_ShortType");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new ShortVector(allocator, 10);
-    for (int16_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i);
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
     }
 
-    int32_t ids[] = {6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
-    EXPECT_EQ(dictionaryVector->GetShort(0), dictionary->GetValue(6));
-    EXPECT_EQ(dictionaryVector->GetShort(1), dictionary->GetValue(8));
-    EXPECT_EQ(dictionaryVector->GetShort(2), dictionary->GetValue(9));
-    int32_t nestedIds[] = {1, 2};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 2);
-    EXPECT_EQ(nested->GetShort(0), dictionary->GetValue(8));
-    EXPECT_EQ(nested->GetShort(1), dictionary->GetValue(9));
+    auto originVec = std::make_unique<Vector<int16_t>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        originVec->SetValue(j, (int16_t)j);
+    }
 
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
+    auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(dicVecPtr.get());
+
+    for (int32_t index = 0; index < valueSize; ++index) {
+        auto value = dicVec->GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
+    }
+    delete[] values;
 }
 
 TEST(DictionaryVector, IntType)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_IntType");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new IntVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i);
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
     }
 
-    int32_t ids[] = {6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
-    EXPECT_EQ(dictionaryVector->GetInt(0), dictionary->GetValue(6));
-    EXPECT_EQ(dictionaryVector->GetInt(1), dictionary->GetValue(8));
-    EXPECT_EQ(dictionaryVector->GetInt(2), dictionary->GetValue(9));
-    int32_t nestedIds[] = {1, 2};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 2);
-    EXPECT_EQ(nested->GetInt(0), dictionary->GetValue(8));
-    EXPECT_EQ(nested->GetInt(1), dictionary->GetValue(9));
+    auto originVec = std::make_unique<Vector<int32_t>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        originVec->SetValue(j, j + 2);
+    }
 
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
+    auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(dicVecPtr.get());
+
+    for (int32_t index = 0; index < valueSize; ++index) {
+        auto value = dicVec->GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
+    }
+    delete[] values;
+}
+
+TEST(DictionaryVector, LongType)
+{
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
+    }
+
+    auto originVec = std::make_unique<Vector<int64_t>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        originVec->SetValue(j, j * j);
+    }
+
+    auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr.get());
+
+    for (int32_t index = 0; index < valueSize; ++index) {
+        auto value = dicVec->GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
+    }
+    delete[] values;
 }
 
 TEST(DictionaryVector, BooleanType)
 {
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_BooleanType");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new BooleanVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i % 2 == 0);
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
     }
 
-    int32_t ids[] = {6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
-    EXPECT_EQ(dictionaryVector->GetBoolean(0), dictionary->GetValue(6));
-    EXPECT_EQ(dictionaryVector->GetBoolean(1), dictionary->GetValue(8));
-    EXPECT_EQ(dictionaryVector->GetBoolean(2), dictionary->GetValue(9));
-    int32_t nestedIds[] = {1, 2};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 2);
-    EXPECT_EQ(nested->GetBoolean(0), dictionary->GetValue(8));
-    EXPECT_EQ(nested->GetBoolean(1), dictionary->GetValue(9));
+    auto originVec = std::make_unique<Vector<bool>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        if (j % 2 == 0) {
+            originVec->SetValue(j, true);
+            continue;
+        }
+        originVec->SetValue(j, false);
+    }
 
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
+    auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<bool>> *>(dictVecPtr.get());
+
+    for (int32_t index = 0; index < valueSize; ++index) {
+        auto value = dictVec->GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
+    }
+    delete[] values;
 }
 
 TEST(DictionaryVector, DoubleType)
 {
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_DoubleType");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new DoubleVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, 2.3 * i);
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
     }
 
-    int32_t ids[] = {6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
-    EXPECT_TRUE(dictionaryVector->GetDouble(0) - dictionary->GetValue(6) <= DBL_EPSILON);
-    EXPECT_TRUE(dictionaryVector->GetDouble(1) - dictionary->GetValue(8) <= DBL_EPSILON);
-    EXPECT_TRUE(dictionaryVector->GetDouble(2) - dictionary->GetValue(9) <= DBL_EPSILON);
-    int32_t nestedIds[] = {1, 2};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 2);
-    EXPECT_TRUE(nested->GetDouble(0) - dictionary->GetValue(8) <= DBL_EPSILON);
-    EXPECT_TRUE(nested->GetDouble(1) - dictionary->GetValue(9) <= DBL_EPSILON);
+    auto originVec = std::make_unique<Vector<double>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        originVec->SetValue(j, (double)sqrt(j));
+    }
 
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
+    auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<double>> *>(dictVecPtr.get());
+
+    for (int32_t index = 0; index < valueSize; ++index) {
+        auto value = dictVec->GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
+    }
+    delete[] values;
 }
 
 TEST(DictionaryVector, VarcharType)
 {
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_VarcharType");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new VarcharVector(allocator, 1024, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        std::string tmpStr = std::to_string(i);
-        dictionary->SetValue(i, reinterpret_cast<const uint8_t *>(tmpStr.c_str()), tmpStr.length());
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
     }
 
-    int32_t ids[] = {6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
-    std::vector<std::string> result;
-    for (int i = 0; i < dictionaryVector->GetSize(); i++) {
-        uint8_t *actual = nullptr;
-        int32_t dataLen = dictionaryVector->GetVarchar(i, &actual);
-        std::string tmpStr(actual, actual + dataLen);
-        result.push_back(tmpStr);
+    auto originVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        auto str = "string " + std::to_string(j);
+        std::string_view val(str.data(), str.length());
+        originVec->SetValue(j, val);
     }
-    EXPECT_EQ(result[0], std::to_string(6));
-    EXPECT_EQ(result[1], std::to_string(8));
-    EXPECT_EQ(result[2], std::to_string(9));
 
-    int32_t nestedIds[] = {1, 2};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 2);
-    result.clear();
-    for (int i = 0; i < nested->GetSize(); i++) {
-        uint8_t *actual = nullptr;
-        int32_t dataLen = nested->GetVarchar(i, &actual);
-        std::string tmpStr(actual, actual + dataLen);
-        result.push_back(tmpStr);
+    auto dictVecPtr = VectorHelper::CreateStringDictionary(values, valueSize,
+        reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(originVec.get()));
+    auto *dictVec =
+        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(dictVecPtr.get());
+
+    for (int32_t index = 0; index < valueSize; ++index) {
+        auto value = dictVec->GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
-    EXPECT_EQ(result[0], std::to_string(8));
-    EXPECT_EQ(result[1], std::to_string(9));
-
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
+    delete[] values;
 }
 
 TEST(DictionaryVector, Decimal128)
 {
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_Decimal128");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new Decimal128Vector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        Decimal128 decimal128(i, i);
-        dictionary->SetValue(i, decimal128);
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
     }
 
-    int32_t ids[] = {6, 8, 9};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 3);
-    EXPECT_EQ(dictionaryVector->GetDecimal128(0), dictionary->GetValue(6));
-    EXPECT_EQ(dictionaryVector->GetDecimal128(1), dictionary->GetValue(8));
-    EXPECT_EQ(dictionaryVector->GetDecimal128(2), dictionary->GetValue(9));
-    int32_t nestedIds[] = {1, 2};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 2);
-    EXPECT_EQ(nested->GetDecimal128(0), dictionary->GetValue(8));
-    EXPECT_EQ(nested->GetDecimal128(1), dictionary->GetValue(9));
-
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
-}
-
-TEST(DictionaryVector, NestedDictionaryVectorExtract)
-{
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_NestedDictionaryVectorExtract");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new LongVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i);
+    auto originVec = std::make_unique<Vector<Decimal128>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        Decimal128 val = Decimal128(j * j);
+        originVec->SetValue(j, val);
     }
 
-    int32_t ids[] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 10);
+    auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictVecPtr.get());
 
-    int32_t nestedIds[] = {1, 2, 3, 4, 5, 6, 7, 8};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 8);
-
-    Vector *checkDictionary = nested->ExtractDictionary();
-    EXPECT_EQ(nested->GetLong(0), dictionary->GetValue(1));
-    EXPECT_EQ(nested->GetLong(1), dictionary->GetValue(2));
-    EXPECT_EQ(nested->GetLong(2), dictionary->GetValue(2));
-    EXPECT_EQ(nested->GetLong(3), dictionary->GetValue(3));
-    EXPECT_EQ(nested->GetLong(4), dictionary->GetValue(3));
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete checkDictionary;
-    delete allocator;
-}
-
-TEST(DictionaryVector, NestedDictionaryVectorGetId)
-{
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_NestedDictionaryVectorGetId");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new LongVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i);
+    for (int32_t index = 0; index < valueSize; ++index) {
+        auto value = dictVec->GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
-
-    int32_t ids[] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 10);
-
-    int32_t nestedIds[] = {1, 2, 3, 4, 5, 6, 7, 8};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 8);
-
-    int32_t originalId;
-    nested->ExtractDictionaryAndId(0, originalId);
-    EXPECT_EQ(originalId, 1);
-    nested->ExtractDictionaryAndId(1, originalId);
-    EXPECT_EQ(originalId, 2);
-    nested->ExtractDictionaryAndId(2, originalId);
-    EXPECT_EQ(originalId, 2);
-    nested->ExtractDictionaryAndId(3, originalId);
-    EXPECT_EQ(originalId, 3);
-    nested->ExtractDictionaryAndId(4, originalId);
-    EXPECT_EQ(originalId, 3);
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
+    delete[] values;
 }
 
-TEST(DictionaryVector, NestedDictionaryVectorGetIds)
-{
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DictionaryVector_NestedDictionaryVectorGetIds");
-    EXPECT_TRUE(allocator != nullptr);
-    auto *dictionary = new LongVector(allocator, 10);
-    for (int32_t i = 0; i < 10; i++) {
-        dictionary->SetValue(i, i);
-    }
-
-    int32_t ids[] = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5};
-    auto *dictionaryVector = new DictionaryVector(dictionary, ids, 10);
-
-    int32_t nestedIds[] = {1, 2, 3, 4, 5, 6, 7, 8};
-    auto *nested = new DictionaryVector(dictionaryVector, nestedIds, 8);
-
-    int32_t originalIds[5];
-    nested->ExtractDictionaryAndIds(0, 5, originalIds);
-    EXPECT_EQ(originalIds[0], 1);
-    EXPECT_EQ(originalIds[1], 2);
-    EXPECT_EQ(originalIds[2], 2);
-    EXPECT_EQ(originalIds[3], 3);
-    EXPECT_EQ(originalIds[4], 3);
-    delete dictionary;
-    delete dictionaryVector;
-    delete nested;
-    delete allocator;
-}
 TEST(DictionaryVector, testNullFlag)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("testNullFlag");
-    auto *originalVector = new LongVector(allocator, 10);
-    for (int i = 0; i < 10; i++) {
-        if (i % 2 == 0) {
-            originalVector->SetValueNull(i);
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
+    }
+
+    auto originVec = std::make_unique<Vector<Decimal128>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        if (j % 2 == 0) {
+            originVec->SetNull(j);
         } else {
-            originalVector->SetValue(i, i);
+            Decimal128 val = Decimal128(j * j);
+            originVec->SetValue(j, val);
         }
     }
 
-    std::vector<int32_t> ids = { 6, 8, 9 };
-    auto *dictionaryVec = new DictionaryVector(originalVector, ids.data(), ids.size());
-    delete originalVector;
-    EXPECT_TRUE(dictionaryVec->MayHaveNull());
-    EXPECT_EQ(dictionaryVec->GetNullCount(), 2);
+    auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dicVecPtr.get());
+    EXPECT_TRUE(dicVec->HasNull());
+    auto sliceVec = dicVec->Slice(0, valueSize);
 
-    DictionaryVector *copyRegion = dictionaryVec->CopyRegion(1, 2);
-    EXPECT_TRUE(copyRegion->MayHaveNull());
-    EXPECT_EQ(copyRegion->GetNullCount(), 1);
-    delete copyRegion;
+    for (int32_t index = 0; index < valueSize; ++index) {
+        if (index % 2 == 0) {
+            EXPECT_TRUE(sliceVec->IsNull(index));
+            continue;
+        } else {
+            auto value = sliceVec->GetValue(index);
+            EXPECT_EQ(value, originVec->GetValue(index % dicSize));
+        }
+    }
+    delete[] values;
+}
 
-    DictionaryVector *slice = dictionaryVec->Slice(2, 1);
-    EXPECT_TRUE(slice->MayHaveNull());
-    EXPECT_EQ(slice->GetNullCount(), 0);
-    delete slice;
+TEST(DictionaryVector, getValue_with_null_Decimal128)
+{
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
+    }
 
-    std::vector<int32_t> positions = { 0, 2 };
-    DictionaryVector *copyPosition = dictionaryVec->CopyPositions(positions.data(), 0, 2);
-    EXPECT_TRUE(copyPosition->MayHaveNull());
-    EXPECT_EQ(copyPosition->GetNullCount(), 1);
-    delete copyPosition;
+    auto originVec = std::make_unique<Vector<Decimal128>>(dicSize);
+    for (int32_t i = 0; i < dicSize; ++i) {
+        if (i % 2 == 0) {
+            originVec->SetNull(i);
+            continue;
+        }
+        Decimal128 value = (Decimal128)(i * 2 / 3);
+        originVec->SetValue(i, value);
+    }
 
-    delete dictionaryVec;
-    delete allocator;
+    auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictVecPtr.get());
+
+    Decimal128 value;
+    for (int32_t i = 0; i < valueSize; ++i) {
+        if (values[i] % 2 == 0) {
+            EXPECT_EQ(originVec.get()->IsNull(values[i]), dictVec->IsNull(i));
+            continue;
+        }
+        value = dictVec->GetValue(i);
+        EXPECT_EQ(originVec->GetValue(i % dicSize), value);
+    }
+    delete[] values;
+}
+
+template <typename T, template <typename> typename CONTAINER> void getValue_with_null_container()
+{
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
+    }
+
+    auto originVec = std::make_unique<Vector<CONTAINER<T>>>(dicSize);
+
+    std::string valuePrefix;
+    valuePrefix = "hello_world__";
+
+    for (int32_t i = 0; i < dicSize; ++i) {
+        if (i % 2 == 0) {
+            originVec->SetNull(i);
+            continue;
+        }
+        std::string value = valuePrefix + std::to_string(i);
+        std::string_view input(value.data(), value.length());
+        originVec->SetValue(i, input);
+    }
+
+    auto dictVecPtr = VectorHelper::CreateStringDictionary(values, valueSize, originVec.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<T, CONTAINER>> *>(dictVecPtr.get());
+
+    for (int32_t i = 0; i < valueSize; ++i) {
+        if (values[i] % 2 == 0) {
+            EXPECT_EQ(originVec->IsNull(values[i]), dictVec->IsNull(i));
+            continue;
+        }
+        std::string_view output = dictVec->GetValue(i);
+        EXPECT_EQ(originVec->GetValue(i % dicSize), output);
+    }
+    delete[] values;
+}
+
+TEST(DictionaryVector, getValue_with_null_LargeString)
+{
+    getValue_with_null_container<std::string_view, LargeStringContainer>();
+}
+
+TEST(DictionaryVector, appendDictionaryStringVector)
+{
+    int32_t vecSize = 10;
+    int32_t valueSize = 6;
+    auto originVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(vecSize);
+
+    for (int32_t i = 0; i < valueSize; ++i) {
+        auto str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.length());
+        originVec->SetValue(i, value);
+    }
+
+    int32_t otherValueSize = 4;
+    int32_t otherValues[] = {0, 1, 2, 3};
+    auto otherOriginVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(otherValueSize);
+    for (int32_t i = 0; i < otherValueSize; ++i) {
+        auto str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.length());
+        otherOriginVec->SetValue(i, value);
+    }
+    auto otherDicVecPtr = VectorHelper::CreateStringDictionary(otherValues, otherValueSize,
+        reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(otherOriginVec.get()));
+    auto *otherDicVec =
+        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(otherDicVecPtr.get());
+
+    originVec->Append(otherDicVec, 6, 4);
+    for (int i = valueSize; i < valueSize + otherValueSize; i++) {
+        EXPECT_EQ(originVec->GetValue(i), otherOriginVec->GetValue(i - valueSize));
+    }
 }
 }

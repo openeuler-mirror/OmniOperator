@@ -16,17 +16,16 @@ namespace op {
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
-    auto vector = vectorBatch->GetVector(this->channels[0]);
+    auto vector = vectorBatch->Get(this->channels[0]);
 
-    auto offsets =
-        static_cast<int32_t *>(static_cast<int32_t *>(vector->GetValueOffsets()) + vector->GetPositionOffset());
+    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, IN_ID)));
     auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
     int32_t maxLen = 0;
     uint8_t *maxVal = this->executionContext->GetArena()->Allocate(3 * width);
 
     LogDebug("HMPP-Agg-max");
-    auto result =
-        HMPPS_Max_varchar(static_cast<uint8_t *>(vector->GetValues()), offsets, vector->GetSize(), maxVal, &maxLen);
+    auto result = HMPPS_Max_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector, IN_ID)), offsets,
+        vector->GetSize(), maxVal, &maxLen);
     if (result != HMPP_STS_NO_ERR) {
         throw OmniException("HMPP ERROR", "max failed for hmpp error");
     }
@@ -50,11 +49,11 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 bool MaxVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
     // must no null inpout
-    if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
+    if (vectorBatch->Get(this->channels[0])->HasNull()) {
         return false;
     }
     // not accept dictionnary vector
-    if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+    if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
         return false;
     }
     return true;
@@ -62,25 +61,23 @@ bool MaxVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &sta
 #endif
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)
 {
-    int32_t offset;
-    auto v = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+    auto v = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
     if (state.val == nullptr || state.count == 0) {
         // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
-        v->SetValueNull(offset);
+        v->SetNull(rowIndex);
     } else {
-        v->SetValue(offset, reinterpret_cast<uint8_t *>(state.val), state.count);
+        std::string_view val(reinterpret_cast<char *>(state.val), state.count);
+        v->SetValue(rowIndex, val);
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *v,
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
             AddChar<MaxCharOp>(state, vector, rowOffset, rowCount);
@@ -89,22 +86,20 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictChar<MaxCharOp>(state, vector, rowCount, indexMap);
+            AddDictChar<MaxDictCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            AddDictConditionalChar<MaxCharOp>(state, vector, rowCount, nullMap, indexMap);
+            AddDictConditionalChar<MaxDictCharOp>(state, vector, rowOffset, rowCount, nullMap);
         }
     }
     SaveState(state);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *v,
-    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector,
+    Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
@@ -114,9 +109,9 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateS
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictCharFilter<MaxCharOp>(state, vector, rowCount, indexMap, boolPtr);
+            AddDictCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, boolPtr);
         } else {
-            AddDictConditionalCharFilter<MaxCharOp>(state, vector, rowCount, nullMap, indexMap, boolPtr);
+            AddDictConditionalCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, nullMap, boolPtr);
         }
     }
     SaveState(state);
@@ -124,10 +119,8 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateS
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *v, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
             AddUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, rowOffset);
@@ -136,9 +129,9 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, indexMap);
+            AddDictUseRowIndexChar<MaxDictCharOp>(rowStates, aggIdx, rowOffset, vector);
         } else {
-            AddDictConditionalUseRowIndexChar<MaxCharOp>(rowStates, aggIdx, vector, nullMap, indexMap);
+            AddDictConditionalUseRowIndexChar<MaxDictCharOp>(rowStates, aggIdx, rowOffset, vector, nullMap);
         }
     }
 
@@ -150,24 +143,22 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *v, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    const size_t aggIdx, BaseVector *v, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
-    VarcharVector *vector = static_cast<VarcharVector *>(v);
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
     if (indexMap == nullptr) {
         if (nullMap == nullptr) {
-            AddUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, rowOffset, boolPtr);
+            AddUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, v, rowOffset, boolPtr);
         } else {
-            AddConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, rowOffset, nullMap, boolPtr);
+            AddConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, v, rowOffset, nullMap, boolPtr);
         }
     } else {
         if (nullMap == nullptr) {
-            AddDictUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, indexMap, boolPtr);
+            AddDictUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, rowOffset, v, boolPtr);
         } else {
-            AddDictConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, vector, nullMap, indexMap, boolPtr);
+            AddDictConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, rowOffset, v, nullMap, boolPtr);
         }
     }
 

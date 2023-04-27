@@ -6,7 +6,7 @@
 
 namespace omniruntime {
 namespace mem {
-Chunk::Chunk(BaseAllocator *allocator, void *address, int64_t sizeInBytes)
+Chunk::Chunk(Allocator *allocator, void *address, int64_t sizeInBytes)
     : address(address), sizeInBytes(sizeInBytes), allocator(allocator)
 {}
 
@@ -16,7 +16,8 @@ Chunk::~Chunk()
         std::cerr << "address is null in chunk." << std::endl;
         return;
     }
-    allocator->free(address, sizeInBytes);
+
+    allocator->Free(address, sizeInBytes);
     address = nullptr;
 }
 

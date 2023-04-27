@@ -87,7 +87,7 @@ public:
         : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
     {
         this->context = context;
-        this->context->GetArena()->SetAllocator(vecAllocator);
+        this->outputTypes = exprEvaluator->GetOutputDataTypes();
     }
 
     ~FilterAndProjectOperator() override

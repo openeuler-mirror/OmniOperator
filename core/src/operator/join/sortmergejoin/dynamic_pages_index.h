@@ -57,14 +57,19 @@ public:
         return this->nullsDeque[rowIndex];
     }
 
-    ALWAYS_INLINE omniruntime::vec::Vector *GetColumn(int32_t vectorBatchIndex, int32_t columnIndex) const
+    ALWAYS_INLINE omniruntime::vec::BaseVector *GetColumn(int32_t vectorBatchIndex, int32_t columnIndex) const
     {
         return this->columnsDeque[vectorBatchIndex][columnIndex];
     }
 
-    ALWAYS_INLINE omniruntime::vec::Vector *GetColumnFromCache(int32_t columnIndex) const
+    ALWAYS_INLINE omniruntime::vec::BaseVector *GetColumnFromCache(int32_t columnIndex) const
     {
         return this->cacheBatch[columnIndex];
+    }
+
+    ALWAYS_INLINE type::DataTypeId GetColumnTypeId(int32_t columnIndex) const
+    {
+        return this->dataTypes.GetType(columnIndex)->GetId();
     }
 
     ALWAYS_INLINE void CacheBatch(int32_t vectorBatchIndex)
@@ -90,15 +95,16 @@ private:
     int32_t lastFreedVecBatchIdx = -1;
 
     int32_t cacheBatchId = -1;
-    omniruntime::vec::Vector **cacheBatch;
+    omniruntime::vec::BaseVector **cacheBatch;
     // vector  first Level：vectorBatch second Level: columnar vector
-    std::vector<omniruntime::vec::Vector **> columnsDeque;
+    std::vector<omniruntime::vec::BaseVector **> columnsDeque;
     std::vector<int64_t> valueAddressesDeque; // row
     std::vector<bool> nullsDeque;             // whether has a column whose value is null for gaven row
     int32_t positionCount;
     std::vector<bool> vecBatchFreeFlagDeque;                       // vectorBatch free flag
     std::vector<omniruntime::vec::VectorBatch *> vectorBatchDeque; // vectorBatch
     bool finishAddData;
+    const omniruntime::type::DataTypes &dataTypes;
 };
 }
 }

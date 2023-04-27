@@ -117,8 +117,7 @@ WindowWithExprOperator::~WindowWithExprOperator()
 
 int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, sourceTypes, projectFuncs, argumentChannels, vecAllocator);
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, sourceTypes, projectFuncs, argumentChannels);
     if (newInputVecBatch != nullptr) {
         windowOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);
@@ -131,6 +130,7 @@ int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
 int32_t WindowWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t status = windowOperator->GetOutput(outputVecBatch);
+    outputTypes = windowOperator->GetOutputType();
     SetStatus(windowOperator->GetStatus());
     return status;
 }

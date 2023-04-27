@@ -85,10 +85,10 @@ public:
 
     bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
-        *expectedResult = new VectorBatch(2);
-        (*expectedResult)
-            ->SetVector(0, VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, 1));
-        (*expectedResult)->SetVector(1, new LongVector(this->vectorAllocator, 1));
+        *expectedResult = new VectorBatch(1);
+        std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
+        (*expectedResult)->Append(v.release());
+        (*expectedResult)->Append(new Vector<int64_t>(1));
 
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
             AggregatorTesterTemplate<IN_ID, OUT_ID>::GenerateVarcharResult(vvb, *expectedResult, true);
@@ -143,11 +143,11 @@ public:
                     "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
             }
 
-            static_cast<LongVector *>((*expectedResult)->GetVector(1))->SetValue(0, count);
+            static_cast<Vector<int64_t> *>((*expectedResult)->Get(1))->SetValue(0, count);
             if (overflow || count == 0) {
-                (*expectedResult)->GetVector(0)->SetValueNull(0);
+                (*expectedResult)->Get(0)->SetNull(0);
             } else {
-                static_cast<V_OUT *>((*expectedResult)->GetVector(0))->SetValue(0, result);
+                static_cast<V_OUT *>((*expectedResult)->Get(0))->SetValue(0, result);
             }
 
             return overflow;
@@ -208,16 +208,19 @@ public:
             using T_IN = typename NativeAndVectorType<IN_ID>::type;
             using T_OUT = typename NativeAndVectorType<OUT_ID>::type;
             using V_OUT = typename NativeAndVectorType<OUT_ID>::vector;
-            Vector *groups = (*expectedResult)->GetVector(0);
+            BaseVector *groups = (*expectedResult)->Get(0);
             bool overalOverflow = false;
             const int32_t valueIndex = this->GetValueColumnIndex();
             const int32_t maskIndex = this->GetMaskColumnIndex();
-            int32_t orgIdx;
 
             for (int32_t i = 0; i < groups->GetSize(); ++i) {
-                IntVector *orgGroups = static_cast<IntVector *>(VectorHelper::ExpandVectorAndIndex(groups, i, orgIdx));
-                int32_t filterValue = orgGroups->GetValue(orgIdx);
-                int32_t *filterValuePtr = groups->IsValueNull(i) ? nullptr : &filterValue;
+                int32_t filterValue;
+                if (groups->GetEncoding() == vec::OMNI_DICTIONARY) {
+                    filterValue = static_cast<Vector<DictionaryContainer<int32_t>> *>(groups)->GetValue(i);
+                } else {
+                    filterValue = static_cast<Vector<int32_t> *>(groups)->GetValue(i);
+                }
+                int32_t *filterValuePtr = groups->IsNull(i) ? nullptr : &filterValue;
                 T_OUT result{};
                 int64_t count = 0;
                 bool overflow;
@@ -260,12 +263,12 @@ public:
                         "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
                 }
 
-                static_cast<LongVector *>((*expectedResult)->GetVector(2))->SetValue(i, count);
+                static_cast<Vector<int64_t> *>((*expectedResult)->Get(2))->SetValue(i, count);
 
                 if (overflow || count == 0) {
-                    (*expectedResult)->GetVector(1)->SetValueNull(i);
+                    (*expectedResult)->Get(1)->SetNull(i);
                 } else {
-                    static_cast<V_OUT *>((*expectedResult)->GetVector(1))->SetValue(i, result);
+                    static_cast<V_OUT *>((*expectedResult)->Get(1))->SetValue(i, result);
                 }
 
                 overalOverflow |= overflow;
@@ -283,33 +286,37 @@ private:
         int32_t hasNull = 0;
         std::set<int32_t> groups;
         for (VectorBatch *vb : vvb) {
-            int32_t orgIdx;
-            Vector *v = vb->GetVector(0);
+            BaseVector *v = vb->Get(0);
             for (int32_t i = 0; i < v->GetSize(); ++i) {
-                if (v->IsValueNull(i)) {
+                if (v->IsNull(i)) {
                     hasNull = 1;
                 } else {
-                    IntVector *orgV = static_cast<IntVector *>(VectorHelper::ExpandVectorAndIndex(v, i, orgIdx));
-                    groups.insert(orgV->GetValue(orgIdx));
+                    int32_t val;
+                    if (v->GetEncoding() == vec::OMNI_DICTIONARY) {
+                        val = static_cast<Vector<DictionaryContainer<int32_t>> *>(v)->GetValue(i);
+                    } else {
+                        val = static_cast<Vector<int32_t> *>(v)->GetValue(i);
+                    }
+                    groups.insert(val);
                 }
             }
         }
 
         int32_t nGroups = groups.size() + hasNull;
-        VectorBatch *expectedResult = new VectorBatch(3);
-        IntVector *groupCol = new IntVector(this->vectorAllocator, nGroups);
+        VectorBatch *expectedResult = new VectorBatch(nGroups);
+        Vector<int32_t> *groupCol = new Vector<int32_t>(nGroups);
         int32_t rowIdx = 0;
         if (hasNull > 0) {
-            groupCol->SetValueNull(rowIdx++);
+            groupCol->SetNull(rowIdx++);
         }
         for (int32_t v : groups) {
             groupCol->SetValue(rowIdx++, v);
         }
 
-        expectedResult->SetVector(0, groupCol);
-        expectedResult->SetVector(1,
-            VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, nGroups));
-        expectedResult->SetVector(2, new LongVector(this->vectorAllocator, nGroups));
+        expectedResult->Append(groupCol);
+        std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, nGroups);
+        expectedResult->Append(v.release());
+        expectedResult->Append(new Vector<int64_t>(nGroups));
 
         return expectedResult;
     }
@@ -405,7 +412,8 @@ static std::unique_ptr<AggregatorTester> CreateAggregatorTester(const std::strin
     }
 }
 
-static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bool isSupported, const double error)
+static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bool isSupported,
+    std::vector<DataTypePtr> expectTypes, const double error)
 {
     const std::string expectedExceptionMessage = tester->GetExpectedExceptionMessage();
 
@@ -453,7 +461,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         EXPECT_EQ(expectedExceptionMessage.length(), 0);
         EXPECT_TRUE(ValidateOverflow("Final", tester->GetValueColumnIndex(), expectedResult, outputVecBatch));
     }
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedResult, error));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedResult, expectTypes, error));
 
     op::Operator::DeleteOperator(agg);
     VectorHelper::FreeVecBatch(expectedResult);
@@ -493,9 +501,21 @@ TEST_P(SingleStageCompleteTest, verify_correctness)
     printf("Random seed: %d\n", randSeed);
     srand(randSeed);
 
+    std::vector<DataTypePtr> expectTypes;
+    if (groupby) {
+        expectTypes.resize(3);
+        expectTypes[0] = IntType();
+        expectTypes[1] = GetType(outId);
+        expectTypes[2] = LongType();
+    } else {
+        expectTypes.resize(2);
+        expectTypes[0] = GetType(outId);
+        expectTypes[1] = LongType();
+    }
+
     RunAggregatorTest(std::move(
         CreateAggregatorTester(aggFuncName, inId, outId, nullPercent, isDict, hasMask, nullWhenOverflow, groupby)),
-        CheckSupported(aggFuncName, inId, outId), error);
+        CheckSupported(aggFuncName, inId, outId), expectTypes, error);
 }
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, SingleStageCompleteTest,

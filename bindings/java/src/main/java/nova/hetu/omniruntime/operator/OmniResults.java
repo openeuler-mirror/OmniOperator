@@ -51,6 +51,7 @@ public class OmniResults implements Closeable {
     @Override
     public void close() {
         if (vecBatch != null) {
+            vecBatch.releaseAllVectors();
             vecBatch.close();
         }
     }

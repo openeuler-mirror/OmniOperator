@@ -62,7 +62,7 @@ private:
 
     JoinType joinType;
     std::string filter;
-    //
+
     SortMergeJoinScanner *smjScanner;
     JoinResultBuilder *joinResultBuilder;
 

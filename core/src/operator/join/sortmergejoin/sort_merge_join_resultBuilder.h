@@ -13,7 +13,6 @@
 #include "expression/expressions.h"
 #include "operator/filter/filter_and_project.h"
 #include "operator/join/common_join.h"
-#include "vector/vector_allocator.h"
 
 namespace omniruntime {
 namespace op {
@@ -23,7 +22,7 @@ public:
         int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex *leftTablePagesIndex,
         const std::vector<DataTypePtr> &rightTableOutputTypes, int32_t *rightTableOutputCols,
         int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
-        std::string &filter, VectorAllocator *vecAllocator, JoinType joinType, OverflowConfig *overflowConfig);
+        std::string &filter, JoinType joinType, OverflowConfig *overflowConfig);
 
     void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId);
 
@@ -116,12 +115,12 @@ private:
     ALWAYS_INLINE void PaddingLeftTableNull()
     {
         for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
-            auto vector = buildVectorBatch->GetVector(columnIdx);
-            auto typeId = vector->GetTypeId();
+            auto vector = buildVectorBatch->Get(columnIdx);
+            auto typeId = leftTableOutputTypes[columnIdx]->GetId();
             if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(buildRowCount);
             } else {
-                vector->SetValueNull(buildRowCount);
+                vector->SetNull(buildRowCount);
             }
         }
     }
@@ -130,12 +129,12 @@ private:
     {
         for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
             int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
-            auto vector = buildVectorBatch->GetVector(buildColumnIdx);
-            auto typeId = vector->GetTypeId();
+            auto vector = buildVectorBatch->Get(buildColumnIdx);
+            auto typeId = rightTableOutputTypes[columnIdx]->GetId();
             if (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-                static_cast<VarcharVector *>(vector)->SetValueNull(buildRowCount);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(buildRowCount);
             } else {
-                vector->SetValueNull(buildRowCount);
+                vector->SetNull(buildRowCount);
             }
         }
     }
@@ -145,6 +144,7 @@ private:
     int32_t leftTableOutputColsCount;
     int32_t originalLeftTableColsCount;
     DynamicPagesIndex *leftTablePagesIndex;
+    std::vector<DataTypePtr> rightTableOutputTypes;
     int32_t *rightTableOutputCols;
     int32_t rightTableOutputColsCount;
     int32_t originalRightTableColsCount;
@@ -161,8 +161,6 @@ private:
     int32_t preStreamedBatchId = INT32_MAX;
     int32_t preStreamedRowId = INT32_MAX;
     bool preLeftTableRowMatchedOut = false; // current left row matched out or pad null
-
-    vec::VectorAllocator *vecAllocator;
 
     int32_t buildVectorBatchRowCount = 0;
     VectorBatch *buildVectorBatch = nullptr;

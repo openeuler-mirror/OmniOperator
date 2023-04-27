@@ -38,13 +38,12 @@ int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
 {
     int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t rowCount = vecBatch->GetRowCount();
-    auto outBatch = new VectorBatch(vectorCount, rowCount);
+    auto outBatch = new VectorBatch(rowCount);
     for (int32_t i = 0; i < vectorCount; ++i) {
-        Vector *inputVector = vecBatch->GetVector(i);
-        outBatch->SetVector(i, inputVector->Slice(0, rowCount));
+        BaseVector *inputVector = vecBatch->Get(i);
+        outBatch->Append(inputVector);
     }
     inputVecBatches.push_back(outBatch);
-    VectorHelper::FreeVecBatch(vecBatch);
     vecBatchCount++;
     return 0;
 }
@@ -59,6 +58,7 @@ int32_t UnionOperator::GetOutput(VectorBatch **outputVecBatch)
         return 0;
     }
 
+    this->outputTypes = sourceTypes.Get();
     *outputVecBatch = inputVecBatches[vecBatchIndex];
     vecBatchIndex++;
     if (vecBatchIndex == vecBatchCount) {

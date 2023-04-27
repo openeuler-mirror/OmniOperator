@@ -215,7 +215,7 @@ public class TestUtils {
      * @return VarcharVec
      */
     public static VarcharVec createVarcharVec(VarcharDataType varcharVecType, Object[] data) {
-        VarcharVec result = new VarcharVec(varcharVecType.getWidth() * data.length, data.length);
+        VarcharVec result = new VarcharVec(data.length);
         for (int j = 0; j < data.length; j++) {
             if (data[j] == null) {
                 result.setNull(j);
@@ -418,11 +418,7 @@ public class TestUtils {
      * @param expectedData data
      */
     public static void assertDictionaryVecEquals(DictionaryVec vec, Object[] expectedData) {
-        Vec dictionary = vec.getDictionary();
-        while (dictionary.getEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-            dictionary = ((DictionaryVec) dictionary).getDictionary();
-        }
-        DataType.DataTypeId typeId = dictionary.getType().getId();
+        DataType.DataTypeId typeId = vec.getType().getId();
 
         for (int i = 0; i < vec.getSize(); i++) {
             if (vec.isNull(i)) {
@@ -468,11 +464,7 @@ public class TestUtils {
      * @param expectedVec expectedVec
      */
     public static void assertDictionaryVecEquals(DictionaryVec vec, DictionaryVec expectedVec) {
-        Vec dictionary = vec.getDictionary();
-        while (dictionary.getEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-            dictionary = ((DictionaryVec) dictionary).getDictionary();
-        }
-        DataType.DataTypeId typeId = dictionary.getType().getId();
+        DataType.DataTypeId typeId = vec.getType().getId();
 
         for (int i = 0; i < vec.getSize(); i++) {
             if (vec.isNull(i) && expectedVec.isNull(i)) {

@@ -328,17 +328,6 @@ public class BenchmarkDoubleVec {
     }
 
     /**
-     * Copy region of double vec benchmark
-     *
-     * @return region size
-     */
-    @Benchmark
-    public int copyRegionDoubleVecBenchmark() {
-        DoubleVec copyRegion = vecGetData.copyRegion(2, rows / 2);
-        return copyRegion.getSize();
-    }
-
-    /**
      * Copy position of double vec benchmark
      *
      * @return position size

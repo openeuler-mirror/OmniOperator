@@ -21,15 +21,16 @@ import java.nio.charset.StandardCharsets;
  * @since 2021-7-2
  */
 public class TestVarcharVec {
+    private static final int INIT_CAPACITY_IN_BYTES = 4 * 1024; // 4K
+
     /**
      * test new vector
      */
     @Test
     public void testNewVector() {
-        VarcharVec vec = new VarcharVec(1024, 256);
+        VarcharVec vec = new VarcharVec(256);
         assertEquals(vec.getSize(), 256);
-        assertEquals(vec.getOffset(), 0);
-        assertEquals(vec.getCapacityInBytes(), 1024);
+        assertEquals(vec.getRealValueBufCapacityInBytes(), 0);
         assertEquals(vec.getType().getId(), OMNI_VARCHAR);
         vec.close();
     }
@@ -40,17 +41,18 @@ public class TestVarcharVec {
     @Test
     public void testSlice() {
         int size = 10;
-        VarcharVec originalVec = new VarcharVec(1024, size);
+        VarcharVec originalVec = new VarcharVec(size);
         String tmpStr = "testvarchar";
         for (int i = 0; i < size; i++) {
             String str = tmpStr.substring(0, i) + i;
             originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
+        assertEquals(originalVec.getRealValueBufCapacityInBytes(), 55);
 
         int offset = 3;
-        VarcharVec sliceVec1 = originalVec.slice(offset, 7);
-        assertEquals(sliceVec1.getOffset(), offset);
+        VarcharVec sliceVec1 = originalVec.slice(offset, 4);
         assertEquals(sliceVec1.getSize(), 4);
+        assertEquals(sliceVec1.getRealValueBufCapacityInBytes(), 22);
 
         for (int i = 0; i < sliceVec1.getSize(); i++) {
             byte[] actualValue = sliceVec1.get(i);
@@ -58,8 +60,7 @@ public class TestVarcharVec {
             assertEquals(actualValue, expectedValue);
         }
 
-        VarcharVec sliceVec2 = sliceVec1.slice(1, 3);
-        assertEquals(sliceVec2.getOffset(), offset + 1);
+        VarcharVec sliceVec2 = sliceVec1.slice(1, 2);
         assertEquals(sliceVec2.getSize(), 2);
 
         for (int i = 0; i < sliceVec2.getSize(); i++) {
@@ -78,7 +79,7 @@ public class TestVarcharVec {
     @Test
     public void testSetAndGetValue() {
         int size = 4;
-        VarcharVec varcharVec = new VarcharVec(1024, size);
+        VarcharVec varcharVec = new VarcharVec(size);
         String tmpStr = "test";
         for (int i = 0; i < 4; i++) {
             String str = tmpStr.substring(0, i) + i;
@@ -111,7 +112,7 @@ public class TestVarcharVec {
             data.append(str);
         }
 
-        VarcharVec values = new VarcharVec(data.toString().length(), size * 2);
+        VarcharVec values = new VarcharVec(size * 2);
         values.put(0, data.toString().getBytes(StandardCharsets.UTF_8), 0, offsets, 0, size);
         values.put(size, data.toString().getBytes(StandardCharsets.UTF_8), 0, offsets, size, size);
         ByteBuffer buffer = ByteBuffer.wrap(data.toString().getBytes(StandardCharsets.UTF_8));
@@ -119,8 +120,6 @@ public class TestVarcharVec {
             assertEquals(new String(values.get(i)),
                     new String(getDataFromBuffer(buffer, offsets[i], offsets[i + 1] - offsets[i])));
         }
-
-        assertEquals(offsets, values.getRawValueOffset());
         values.close();
     }
 
@@ -136,7 +135,7 @@ public class TestVarcharVec {
      */
     @Test
     public void testValueNull() {
-        VarcharVec varcharVec = new VarcharVec(4096, 256);
+        VarcharVec varcharVec = new VarcharVec(256);
         for (int i = 0; i < varcharVec.getSize(); i++) {
             if (i % 5 == 0) {
                 varcharVec.setNull(i);
@@ -162,11 +161,9 @@ public class TestVarcharVec {
         for (int i = 0; i < size; i++) {
             isNulls[i] = i % 2 == 0;
         }
-        VarcharVec varcharVec = new VarcharVec(1024, size);
+        VarcharVec varcharVec = new VarcharVec(size);
         varcharVec.setNulls(0, isNulls, 0, isNulls.length);
-        assertTrue(varcharVec.hasNullValue());
-        byte[] result = varcharVec.getRawValueNulls();
-        assertEquals(isNulls, varcharVec.transformByteToBoolean(result, 0, result.length));
+        assertTrue(varcharVec.hasNull());
         assertEquals(varcharVec.getValuesNulls(0, size), isNulls);
         int offset = 3;
         boolean[] acutal = varcharVec.getValuesNulls(offset, size / 2);
@@ -177,11 +174,11 @@ public class TestVarcharVec {
     }
 
     /**
-     * test copy postion
+     * test copy position
      */
     @Test
     public void testCopyPositions() {
-        VarcharVec originalVector = new VarcharVec(1024, 4);
+        VarcharVec originalVector = new VarcharVec(4);
         String tmpStr = "test";
         for (int i = 0; i < 4; i++) {
             String str = tmpStr.substring(0, i) + i;
@@ -201,35 +198,11 @@ public class TestVarcharVec {
         copyPostionVector.close();
     }
 
-    /**
-     * test copy region
-     */
-    @Test
-    public void testCopyRegion() {
-        VarcharVec originalVector = new VarcharVec(1024, 4);
-        String tmpStr = "test";
-        for (int i = 0; i < 4; i++) {
-            String str = tmpStr.substring(0, i) + i;
-            originalVector.set(i, str.getBytes(StandardCharsets.UTF_8));
-        }
-
-        VarcharVec copyRegionVector = originalVector.copyRegion(2, 2);
-
-        for (int i = 0; i < copyRegionVector.getSize(); i++) {
-            byte[] expectedValue = originalVector.get(i + 2);
-            byte[] actualValue = copyRegionVector.get(i);
-            assertEquals(actualValue, expectedValue);
-        }
-
-        originalVector.close();
-        copyRegionVector.close();
-    }
-
     @Test
     public void testGetValues() {
         int size = 10;
         StringBuilder getData = new StringBuilder();
-        VarcharVec getVec = new VarcharVec(1024 * 1024, size);
+        VarcharVec getVec = new VarcharVec(size);
         for (int i = 0; i < size; i++) {
             String str = "gets" + i;
             getVec.set(i, str.getBytes(StandardCharsets.UTF_8));
@@ -242,14 +215,20 @@ public class TestVarcharVec {
         for (int i = 0; i < size / 2; i++) {
             total += getVec.getDataLength(i);
         }
-        byte[] expected = getDataFromBuffer(buffer, getVec.getValueOffset(0), total);
+        byte[] expected = getDataFromBuffer(buffer, 0, total);
         assertEquals(getString(actual), getString(expected));
 
         int getLen = 5;
         int offset = 2;
         byte[] acutal1 = getVec.get(offset, getLen);
         ByteBuffer buffer1 = ByteBuffer.wrap(acutal1);
-        int[] offsets = getVec.getValueOffset(offset, getLen);
+        int[] offsets = new int[getLen + 1];
+        offsets[0] = 0;
+
+        for (int i = 1; i < offsets.length; i++) {
+            offsets[i] = getVec.getDataLength(offset + i - 1) + offsets[i - 1];
+        }
+
         for (int i = 0; i < getLen; i++) {
             assertEquals(getString(getDataFromBuffer(buffer1, offsets[i], offsets[i + 1] - offsets[i])),
                     getString(getVec.get(i + offset)));
@@ -262,7 +241,7 @@ public class TestVarcharVec {
         String[] data = new String[]{"a", "ef", "", "ef", "", ""};
         String[] expected = new String[]{"a", "ef", "", "ef", "", ""};
         int size = 6;
-        VarcharVec varcharVec = new VarcharVec(1024, size);
+        VarcharVec varcharVec = new VarcharVec(size);
         for (int i = 0; i < size; i++) {
             varcharVec.set(i, data[i].getBytes(StandardCharsets.UTF_8));
         }
@@ -274,7 +253,7 @@ public class TestVarcharVec {
 
         Assert.assertEquals(result, expected);
 
-        VarcharVec vec2 = new VarcharVec(1024, size);
+        VarcharVec vec2 = new VarcharVec(size);
         int[] offsets = new int[]{0, 1, 3, 3, 5, 5, 5};
         StringBuilder sb = new StringBuilder();
         for (String str : data) {
@@ -294,10 +273,6 @@ public class TestVarcharVec {
         String emptyString = "";
         Assert.assertEquals(getString(sliceEmpty.get(0)), emptyString);
 
-        // getRegion
-        VarcharVec copyRegionEmpty = varcharVec.copyRegion(2, 1);
-        Assert.assertEquals(getString(copyRegionEmpty.get(0)), emptyString);
-
         // copyPosition
         int[] positions = new int[]{2, 4, 5};
         VarcharVec copyPosition = varcharVec.copyPositions(positions, 0, 3);
@@ -308,22 +283,20 @@ public class TestVarcharVec {
         varcharVec.close();
         vec2.close();
         sliceEmpty.close();
-        copyRegionEmpty.close();
         copyPosition.close();
     }
 
     @Test
     public void testSetExpandCapacity() {
         int rowCount = 4;
-        VarcharVec varcharVec = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 1, 100);
+        VarcharVec varcharVec = new VarcharVec(rowCount);
         String baseStr = "test";
         for (int i = 0; i < rowCount; i++) {
             String str = baseStr.substring(0, i);
             str += i;
             varcharVec.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
-        int expectedExpandedCapacity = 16;
-        Assert.assertEquals(varcharVec.getCapacityInBytes(), expectedExpandedCapacity);
+        Assert.assertEquals(varcharVec.getCapacityInBytes(), INIT_CAPACITY_IN_BYTES);
 
         for (int i = 0; i < rowCount; i++) {
             String str = baseStr.substring(0, i);
@@ -333,24 +306,24 @@ public class TestVarcharVec {
 
         // no capacity specified when created, init capacity is 32K
         rowCount = 8000;
-        VarcharVec vector1 = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rowCount);
+        VarcharVec vector1 = new VarcharVec(rowCount);
         for (int i = 0; i < rowCount; i++) {
             String str = baseStr + i;
             vector1.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
 
         // init capacity is 32K, expansion to 64k at a time
-        int expectedExpandedCapacity1 = 32 * 1024 * 2;
+        int expectedExpandedCapacity1 = 65536;
         Assert.assertEquals(vector1.getCapacityInBytes(), expectedExpandedCapacity1);
         for (int i = 0; i < rowCount; i++) {
             Assert.assertEquals(getString(vector1.get(i)), baseStr + i);
         }
 
-        VarcharVec initZeroCapacityVector = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 0, 1);
+        VarcharVec initZeroCapacityVector = new VarcharVec(1);
         initZeroCapacityVector.set(0, "".getBytes(StandardCharsets.UTF_8));
-        Assert.assertEquals(initZeroCapacityVector.getCapacityInBytes(), 0);
+        Assert.assertEquals(initZeroCapacityVector.getCapacityInBytes(), INIT_CAPACITY_IN_BYTES);
         initZeroCapacityVector.set(0, baseStr.getBytes(StandardCharsets.UTF_8));
-        Assert.assertEquals(initZeroCapacityVector.getCapacityInBytes(), 32 * 1024);
+        Assert.assertEquals(initZeroCapacityVector.getCapacityInBytes(), INIT_CAPACITY_IN_BYTES);
         Assert.assertEquals(new String(initZeroCapacityVector.get(0)), baseStr);
         initZeroCapacityVector.close();
 
@@ -361,20 +334,20 @@ public class TestVarcharVec {
     @Test
     public void testAppendExpandCapacity() {
         int rowCount = 5;
-        VarcharVec src1 = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10, rowCount);
-        VarcharVec src2 = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10, rowCount);
+        VarcharVec src1 = new VarcharVec(rowCount);
+        VarcharVec src2 = new VarcharVec(rowCount);
 
         for (int i = 0; i < rowCount; i++) {
             src1.set(i, String.valueOf(i + 1).getBytes(StandardCharsets.UTF_8));
             src2.set(i, String.valueOf(i + 6).getBytes(StandardCharsets.UTF_8));
         }
 
-        VarcharVec appended = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10, 10);
+        VarcharVec appended = new VarcharVec(10);
         appended.append(src1, 0, rowCount);
         appended.append(src2, 5, rowCount);
 
         int expectedExpandCapacity = 20;
-        Assert.assertEquals(appended.getCapacityInBytes(), expectedExpandCapacity);
+        Assert.assertEquals(appended.getCapacityInBytes(), INIT_CAPACITY_IN_BYTES);
 
         for (int i = 0; i < 10; i++) {
             Assert.assertEquals(getString(appended.get(i)), String.valueOf(i + 1));
@@ -388,20 +361,18 @@ public class TestVarcharVec {
     @Test
     public void testNullFlagWithSet() {
         // no null value
-        VarcharVec noNull = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
-        assertFalse(noNull.mayHaveNull());
-        assertEquals(noNull.getNullCount(), 0);
+        VarcharVec noNull = new VarcharVec(10);
+        assertFalse(noNull.hasNull());
         noNull.close();
 
         // has null value
-        VarcharVec hasNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
-        byte[] nulls = new byte[] {0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+        VarcharVec hasNulls = new VarcharVec(10);
+        byte[] nulls = new byte[]{0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
         hasNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
+        assertTrue(hasNulls.hasNull());
         hasNulls.close();
 
-        VarcharVec hasNull = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
+        VarcharVec hasNull = new VarcharVec(10);
         for (int i = 0; i < hasNull.size; i++) {
             if (i % 2 == 0) {
                 hasNull.setNull(i);
@@ -409,30 +380,31 @@ public class TestVarcharVec {
                 hasNull.set(i, String.valueOf(i).getBytes(StandardCharsets.UTF_8));
             }
         }
-        assertTrue(hasNull.mayHaveNull());
-        assertEquals(hasNull.getNullCount(), 5);
+        assertTrue(hasNull.hasNull());
         hasNull.close();
     }
 
     @Test
     public void testNullFlagWithCopyPosition() {
         // has null value
-        VarcharVec hasNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
-        byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
+        VarcharVec hasNulls = new VarcharVec(10);
+        byte[] nulls = new byte[]{0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
         hasNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
+        for (int i = 0; i < 10; i++) {
+            if (nulls[i] == 0) {
+                hasNulls.set(i, "".getBytes(StandardCharsets.UTF_8));
+            }
+        }
+        assertTrue(hasNulls.hasNull());
 
         int[] positions = new int[]{0, 1};
         VarcharVec copyPositionNoNull = hasNulls.copyPositions(positions, 0, 2);
-        assertFalse(copyPositionNoNull.mayHaveNull());
-        assertEquals(copyPositionNoNull.getNullCount(), 0);
+        assertFalse(copyPositionNoNull.hasNull());
         copyPositionNoNull.close();
 
         positions = new int[]{1, 2, 3, 4};
         VarcharVec copyPositionHasNull = hasNulls.copyPositions(positions, 0, 4);
-        assertTrue(copyPositionHasNull.mayHaveNull());
-        assertEquals(copyPositionHasNull.getNullCount(), 2);
+        assertTrue(copyPositionHasNull.hasNull());
         copyPositionHasNull.close();
 
         hasNulls.close();
@@ -441,43 +413,18 @@ public class TestVarcharVec {
     @Test
     public void testNullFlagWithSlice() {
         // has null value
-        VarcharVec hasNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
-        byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
+        VarcharVec hasNulls = new VarcharVec(10);
+        byte[] nulls = new byte[]{0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
         hasNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
+        assertTrue(hasNulls.hasNull());
 
         VarcharVec sliceNoNull = hasNulls.slice(0, 1);
-        assertTrue(sliceNoNull.mayHaveNull());
-        assertEquals(sliceNoNull.getNullCount(), 0);
+        assertFalse(sliceNoNull.hasNull());
         sliceNoNull.close();
 
         VarcharVec sliceHasNull = hasNulls.slice(1, 4);
-        assertTrue(sliceHasNull.mayHaveNull());
-        assertEquals(sliceHasNull.getNullCount(), 2);
+        assertTrue(sliceHasNull.hasNull());
         sliceHasNull.close();
-
-        hasNulls.close();
-    }
-
-    @Test
-    public void testNullFlagWithCopyRegion() {
-        // has null value
-        VarcharVec hasNulls = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 10);
-        byte[] nulls = new byte[] {0, 0, 1, 1, 0, 1, 0, 1, 0, 1};
-        hasNulls.setNulls(0, nulls, 0, nulls.length);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
-
-        VarcharVec copyRegionNoNull = hasNulls.copyRegion(0, 2);
-        assertFalse(copyRegionNoNull.mayHaveNull());
-        assertEquals(copyRegionNoNull.getNullCount(), 0);
-        copyRegionNoNull.close();
-
-        VarcharVec copyRegionHasNull = hasNulls.copyRegion(1, 4);
-        assertTrue(copyRegionHasNull.mayHaveNull());
-        assertEquals(copyRegionHasNull.getNullCount(), 2);
-        copyRegionHasNull.close();
 
         hasNulls.close();
     }
@@ -485,30 +432,27 @@ public class TestVarcharVec {
     @Test
     public void testNullFlagWithAppend() {
         int rowCount = 5;
-        VarcharVec src = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rowCount);
+        VarcharVec src = new VarcharVec(rowCount);
 
         for (int i = 0; i < rowCount; i++) {
             src.set(i, String.valueOf(i + 1).getBytes(StandardCharsets.UTF_8));
         }
 
-        VarcharVec appended = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 15);
+        VarcharVec appended = new VarcharVec(15);
         appended.append(src, 0, rowCount);
         src.close();
-        assertFalse(appended.mayHaveNull());
-        assertEquals(appended.getNullCount(), 0);
+        assertFalse(appended.hasNull());
 
-        VarcharVec withNull = new VarcharVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rowCount);
-        byte[] nulls = new byte[] {0, 1, 1, 0, 1};
+        VarcharVec withNull = new VarcharVec(rowCount);
+        byte[] nulls = new byte[]{0, 1, 1, 0, 1};
         withNull.setNulls(0, nulls, 0, 5);
-        int[] offsets = new int[] {0, 2, 2, 2, 3, 3};
+        int[] offsets = new int[]{0, 2, 2, 2, 3, 3};
         withNull.put(0, "abe".getBytes(StandardCharsets.UTF_8), 0, offsets, 0, rowCount);
         appended.append(withNull, 5, rowCount);
-        assertTrue(appended.mayHaveNull());
-        assertEquals(appended.getNullCount(), 3);
+        assertTrue(appended.hasNull());
 
         appended.append(withNull, 10, rowCount);
-        assertTrue(appended.mayHaveNull());
-        assertEquals(appended.getNullCount(), 6);
+        assertTrue(appended.hasNull());
         withNull.close();
 
         appended.close();

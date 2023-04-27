@@ -9,10 +9,29 @@
 
 namespace omniruntime {
 namespace op {
-inline uint8_t *MaxCharOp(uint8_t *res, int64_t &lenAndFlag, const VarcharVector *vector, const int32_t idx)
+inline const char *MaxCharOp(const char *res, int64_t &lenAndFlag, BaseVector *vector, const int32_t idx)
 {
-    uint8_t *curVal = nullptr;
-    int32_t curLen = vector->GetValue(idx, &curVal);
+    auto *rawStringVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>>*>(vector);
+    auto strView = rawStringVector->GetValue(idx);
+    int32_t curLen = strView.size();
+    auto *curVal = strView.data();
+    int32_t len = static_cast<int32_t>(lenAndFlag & VALUE_FLAG);
+    auto result = memcmp(res, curVal, std::min(len, curLen));
+    if (result < 0 || (result == 0 && len < curLen)) {
+        lenAndFlag = curLen;
+        lenAndFlag |= UPDATE_FLAG;
+        return curVal;
+    } else {
+        return res;
+    }
+}
+
+inline const char *MaxDictCharOp(const char *res, int64_t &lenAndFlag, BaseVector *vector, const int32_t idx)
+{
+    auto *rawStringVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>>*>(vector);
+    auto strView = rawStringVector->GetValue(idx);
+    int32_t curLen = strView.size();
+    auto *curVal = strView.data();
     int32_t len = static_cast<int32_t>(lenAndFlag & VALUE_FLAG);
     auto result = memcmp(res, curVal, std::min(len, curLen));
     if (result < 0 || (result == 0 && len < curLen)) {
@@ -34,7 +53,7 @@ public:
     bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 #endif
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
@@ -69,16 +88,16 @@ protected:
         isOverflowAsNull)
     {}
 
-    void ProcessSingleInternal(AggregateState &state, Vector *v, const int32_t rowOffset, const int32_t rowCount,
+    void ProcessSingleInternal(AggregateState &state, BaseVector *v, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessSingleInternalFilter(AggregateState &state, Vector *v, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *v, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
-    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *v,
-        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
+        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap) override;
 
 private:

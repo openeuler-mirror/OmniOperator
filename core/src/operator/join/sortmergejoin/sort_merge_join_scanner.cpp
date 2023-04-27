@@ -54,18 +54,18 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
         auto colTypeId = streamedTableKeysTypes.GetIds()[i];
         switch (colTypeId) {
             case OMNI_BOOLEAN:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<BooleanVector>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<bool>);
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<IntVector>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<int32_t>);
                 break;
             case OMNI_SHORT:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<ShortVector>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<int16_t>);
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<LongVector>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<int64_t>);
                 break;
             case OMNI_DOUBLE:
                 keyCompareFuncs[i] = (OperatorUtil::CompareDouble);
@@ -75,7 +75,7 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
                 keyCompareFuncs[i] = (OperatorUtil::CompareVarchar);
                 break;
             case OMNI_DECIMAL128:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<Decimal128Vector>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<Decimal128>);
                 break;
             default:
                 throw omniruntime::exception::OmniException("sort merge join scanner",
@@ -484,6 +484,11 @@ bool SortMergeJoinScanner::IsValidAddedBufferedData()
         return false;
     }
     return true;
+}
+
+static ALWAYS_INLINE bool HasNext(int32_t pos, DynamicPagesIndex *pagesIndex)
+{
+    return pos < pagesIndex->GetPositionCount() - 1;
 }
 
 /**

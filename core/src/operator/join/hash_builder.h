@@ -48,6 +48,12 @@ public:
 
     OmniStatus Close() override;
 
+    // for test
+    DataTypes &GetBuildTypes()
+    {
+        return buildTypes;
+    }
+
 private:
     DataTypes buildTypes;
     std::vector<int32_t> buildHashCols;

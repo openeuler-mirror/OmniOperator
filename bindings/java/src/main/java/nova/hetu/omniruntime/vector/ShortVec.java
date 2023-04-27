@@ -18,26 +18,20 @@ public class ShortVec extends FixedWidthVec {
         super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, ShortDataType.SHORT);
     }
 
-    public ShortVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, ShortDataType.SHORT);
-    }
-
     public ShortVec(long nativeVector) {
-        super(nativeVector, ShortDataType.SHORT);
+        super(nativeVector, ShortDataType.SHORT, BYTES);
     }
 
-    public ShortVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, ShortDataType.SHORT);
+    public ShortVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, BYTES * size, size, ShortDataType.SHORT);
     }
 
-    private ShortVec(ShortVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    private ShortVec(ShortVec vector, int offset, int length) {
+        super(vector, offset, length, length * BYTES);
     }
 
     private ShortVec(ShortVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
+        super(vector, positions, offset, length, length * BYTES);
     }
 
     /**
@@ -47,7 +41,7 @@ public class ShortVec extends FixedWidthVec {
      * @return short value
      */
     public short get(int index) {
-        return valuesBuf.getShort((index + offset) * BYTES);
+        return valuesBuf.getShort(index * BYTES);
     }
 
     /**
@@ -59,7 +53,7 @@ public class ShortVec extends FixedWidthVec {
      */
     public short[] get(int index, int length) {
         short[] target = new short[length];
-        valuesBuf.getShortArray((index + offset) * BYTES, target, 0, length * BYTES);
+        valuesBuf.getShortArray(index * BYTES, target, 0, length * BYTES);
         return target;
     }
 
@@ -86,13 +80,8 @@ public class ShortVec extends FixedWidthVec {
     }
 
     @Override
-    public ShortVec slice(int start, int end) {
-        return new ShortVec(this, start, end - start, true);
-    }
-
-    @Override
-    public ShortVec copy() {
-        return null;
+    public ShortVec slice(int start, int length) {
+        return new ShortVec(this, start, length);
     }
 
     @Override
@@ -101,12 +90,12 @@ public class ShortVec extends FixedWidthVec {
     }
 
     @Override
-    public ShortVec copyRegion(int positionOffset, int length) {
-        return new ShortVec(this, positionOffset, length, false);
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
     }
 
     @Override
-    public int getRealValueBufCapacityInBytes() {
+    public int getCapacityInBytes() {
         return size * BYTES;
     }
 }

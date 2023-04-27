@@ -328,17 +328,6 @@ public class BenchmarkLongVec {
     }
 
     /**
-     * Copy region of long vec benchmark
-     *
-     * @return region size
-     */
-    @Benchmark
-    public int copyRegionLongVecBenchmark() {
-        LongVec copyRegion = vecGetData.copyRegion(2, rows / 2);
-        return copyRegion.getSize();
-    }
-
-    /**
      * Copy position of long vec benchmark
      *
      * @return position size

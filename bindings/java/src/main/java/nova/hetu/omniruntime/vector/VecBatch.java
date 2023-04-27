@@ -74,24 +74,21 @@ public class VecBatch implements Closeable {
      * @param nativeVectorValueBufAddresses valueBuf address of native vector
      * @param nativeVectorNullBufAddresses nullBuf address of native vector
      * @param nativeVectorOffsetBufAddresses offsetBuf address of native vector
-     * @param nativeVectorAllocators allocator address of native vector
-     * @param capacityInBytes capacity in bytes of vector
-     * @param offsets offset of positions in the input parameter
      * @param encodings the encoding type array of vector batch
      * @param dataTypeIds the type array of this vector batch
      * @param rowCount the row count of vector batch
      */
     public VecBatch(long nativeVecBatch, long[] nativeVectors, long[] nativeVectorValueBufAddresses,
-            long[] nativeVectorNullBufAddresses, long[] nativeVectorOffsetBufAddresses, long[] nativeVectorAllocators,
-            int[] capacityInBytes, int[] offsets, int[] encodings, int[] dataTypeIds, int rowCount) {
+            long[] nativeVectorNullBufAddresses, long[] nativeVectorOffsetBufAddresses, int[] encodings,
+            int[] dataTypeIds, int rowCount) {
         int vecCount = nativeVectors.length;
         Vec[] newVectors = new Vec[vecCount];
         for (int idx = 0; idx < vecCount; idx++) {
             long nativeVector = nativeVectors[idx];
             DataType dataType = DataType.create(dataTypeIds[idx]);
             newVectors[idx] = VecFactory.create(nativeVector, nativeVectorValueBufAddresses[idx],
-                    nativeVectorNullBufAddresses[idx], nativeVectorOffsetBufAddresses[idx], nativeVectorAllocators[idx],
-                    capacityInBytes[idx], rowCount, offsets[idx], VecEncoding.values()[encodings[idx]], dataType);
+                    nativeVectorNullBufAddresses[idx], nativeVectorOffsetBufAddresses[idx], rowCount,
+                    VecEncoding.values()[encodings[idx]], dataType);
         }
         this.rowCount = rowCount;
         this.nativeVectorBatch = nativeVecBatch;

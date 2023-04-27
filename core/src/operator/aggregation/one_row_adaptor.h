@@ -7,60 +7,64 @@
 #define OMNI_RUNTIME_ONE_ROW_ADAPTOR_H
 #include <vector/vector_batch.h>
 #include <functional>
-#include <vector/fixed_width_vector.h>
-#include <vector/variable_width_vector.h>
+#include "memory/allocator.h"
+#include "type/decimal128.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
+using namespace vec;
+using namespace type;
 namespace op {
-template <typename RawDataType, typename VectorType>
-static void SetValueIntoVector(vec::VectorBatch *vecBatch, int32_t columnIndex, uintptr_t dataPtr, int32_t len)
+template <typename T>
+static void SetValueIntoVector(VectorBatch *vecBatch, int32_t columnIndex, uintptr_t dataPtr, int32_t len)
 {
-    auto *vec = reinterpret_cast<VectorType *>(vecBatch->GetVector(columnIndex));
+    auto *vec = reinterpret_cast<Vector<T> *>(vecBatch->Get(columnIndex));
     if (len == -1) {
-        vec->SetValueNull(0);
+        vec->SetNull(0);
         return;
     }
-    auto value = *(reinterpret_cast<RawDataType *>(dataPtr));
+    auto value = *(reinterpret_cast<T *>(dataPtr));
     vec->SetValue(0, value);
     // the null will be reAssign if SetValueIntoVector call again
-    vec->SetValueNull(0, false);
+    vec->SetNotNull(0);
 }
 using SetValueFunction =
-    std::function<void(vec::VectorBatch *vecBatch, int32_t columnIndex, uintptr_t dataPtr, int32_t len)>;
+    std::function<void(VectorBatch *vecBatch, int32_t columnIndex, uintptr_t dataPtr, int32_t len)>;
 
 template <>
-void SetValueIntoVector<uint8_t *, vec::VarcharVector>(vec::VectorBatch *vecBatch, int32_t columnIndex,
+void SetValueIntoVector<uint8_t *>(VectorBatch *vecBatch, int32_t columnIndex,
     uintptr_t dataPtr, int32_t len)
 {
-    auto *vec = reinterpret_cast<vec::VarcharVector *>(vecBatch->GetVector(columnIndex));
+    auto *vec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vecBatch->Get(columnIndex));
     if (len == -1) {
-        vec->SetValueNull(0);
+        vec->SetNull(0);
         return;
     }
-    vec->SetValue(0, reinterpret_cast<const uint8_t *>(dataPtr), len);
+    std::string_view str(reinterpret_cast<const char *>(dataPtr), len);
+    vec->SetValue(0, str);
     // the null will be reAssign if SetValueIntoVector call again
-    vec->SetValueNull(0, false);
+    vec->SetNotNull(0);
 }
 
 static std::vector<SetValueFunction> setValueFunctions {
-    nullptr,                                                     // OMNI_NONE = 0
-    SetValueIntoVector<int32_t, vec::IntVector>,                 // OMNI_INT = 1
-    SetValueIntoVector<int64_t, vec::LongVector>,                // OMNI_LONG = 2
-    SetValueIntoVector<double, vec::DoubleVector>,               // OMNI_DOUBLE = 3
-    SetValueIntoVector<uint8_t, vec::BooleanVector>,             // OMNI_BOOLEAN = 4
-    SetValueIntoVector<int16_t, vec::ShortVector>,               // OMNI_SHORT = 5
-    SetValueIntoVector<int64_t, vec::LongVector>,                // OMNI_DECIMAL64 = 6
-    SetValueIntoVector<type::Decimal128, vec::Decimal128Vector>, // OMNI_DECIMAL128 = 7
-    SetValueIntoVector<int32_t, vec::IntVector>,                 // OMNI_DATE32 = 8
-    SetValueIntoVector<int64_t, vec::LongVector>,                // OMNI_DATE64 = 9
-    SetValueIntoVector<int32_t, vec::IntVector>,                 // OMNI_TIME32 = 10
-    SetValueIntoVector<int64_t, vec::LongVector>,                // OMNI_TIME64 = 11
-    SetValueIntoVector<int64_t, vec::LongVector>,                // OMNI_TIMESTAMP = 12
-    SetValueIntoVector<int64_t, vec::LongVector>,                // OMNI_INTERVAL_MONTHS = 13
-    SetValueIntoVector<int64_t, vec::LongVector>,                // OMNI_INTERVAL_DAY_TIME = 14
-    SetValueIntoVector<uint8_t *, vec::VarcharVector>,           // OMNI_VARCHAR = 15
-    SetValueIntoVector<uint8_t *, vec::VarcharVector>,           // OMNI_CHAR = 16
-    nullptr,                                                     // OMNI_CONTAINER = 17
+    nullptr,                                 // OMNI_NONE = 0
+    SetValueIntoVector<int32_t>,             // OMNI_INT = 1
+    SetValueIntoVector<int64_t>,             // OMNI_LONG = 2
+    SetValueIntoVector<double>,              // OMNI_DOUBLE = 3
+    SetValueIntoVector<uint8_t>,             // OMNI_BOOLEAN = 4
+    SetValueIntoVector<int16_t>,             // OMNI_SHORT = 5
+    SetValueIntoVector<int64_t>,             // OMNI_DECIMAL64 = 6
+    SetValueIntoVector<Decimal128>,    // OMNI_DECIMAL128 = 7
+    SetValueIntoVector<int32_t>,             // OMNI_DATE32 = 8
+    SetValueIntoVector<int64_t>,             // OMNI_DATE64 = 9
+    SetValueIntoVector<int32_t>,             // OMNI_TIME32 = 10
+    SetValueIntoVector<int64_t>,             // OMNI_TIME64 = 11
+    SetValueIntoVector<int64_t>,             // OMNI_TIMESTAMP = 12
+    SetValueIntoVector<int64_t>,             // OMNI_INTERVAL_MONTHS = 13
+    SetValueIntoVector<int64_t>,             // OMNI_INTERVAL_DAY_TIME = 14
+    SetValueIntoVector<uint8_t *>,           // OMNI_VARCHAR = 15
+    SetValueIntoVector<uint8_t *>,           // OMNI_CHAR = 16
+    nullptr,                                 // OMNI_CONTAINER = 17
 };
 /**
  * handle resource by RAII
@@ -68,9 +72,7 @@ static std::vector<SetValueFunction> setValueFunctions {
 class OneRowAdaptor {
 public:
     OneRowAdaptor()
-    {
-        vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("adaptor_header");
-    };
+    {}
 
     void Init(const std::vector<type::DataTypeId> &inputTypes)
     {
@@ -97,10 +99,9 @@ public:
             VectorHelper::FreeVecBatch(rowVectorBatch);
             rowVectorBatch = nullptr;
         }
-        delete vecAllocator;
     }
 
-    vec::VectorBatch *Trans2VectorBatch(uintptr_t data[], int32_t len[])
+    VectorBatch *Trans2VectorBatch(uintptr_t data[], int32_t len[])
     {
         for (int32_t i = 0; i < totalTypeSize; ++i) {
             setFuncs[i](rowVectorBatch, i, data[i], len[i]);
@@ -125,7 +126,7 @@ private:
             return;
         }
 
-        rowVectorBatch = new vec::VectorBatch(totalTypeSize, 1);
+        rowVectorBatch = new VectorBatch(1);
         // use typeAdaptors to trans std::vector<OmniId> , the NewVectors need this structure
         std::vector<DataTypePtr> typeAdaptors;
         typeAdaptors.reserve(totalTypeSize);
@@ -133,15 +134,15 @@ private:
             auto id = types[i];
             typeAdaptors.push_back(std::make_shared<DataType>(id));
         }
-        rowVectorBatch->NewVectors(vecAllocator, typeAdaptors);
+        type::DataTypes outDataTypes(typeAdaptors);
+        VectorHelper::AppendVectors(rowVectorBatch, outDataTypes, rowVectorBatch->GetRowCount());
     }
 
 private:
     std::vector<SetValueFunction> setFuncs;
-    std::vector<type::DataTypeId> types;
+    std::vector<DataTypeId> types;
     int totalTypeSize = 0;
-    vec::VectorAllocator *vecAllocator;
-    vec::VectorBatch *rowVectorBatch = nullptr;
+    VectorBatch *rowVectorBatch = nullptr;
 };
 }
 }

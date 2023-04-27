@@ -80,7 +80,7 @@ Operator *FilterAndProjectOperatorFactory::CreateOperator()
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
-    projectedVecs = this->exprEvaluator->Evaluate(vecBatch, this->context, this->vecAllocator);
+    projectedVecs = this->exprEvaluator->Evaluate(vecBatch, this->context);
     return 0;
 }
 

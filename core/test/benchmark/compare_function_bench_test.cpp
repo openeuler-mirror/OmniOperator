@@ -10,6 +10,7 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
 using namespace TestUtil;
+using VarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
 
 const int32_t ROW_SIZE = 1000000;
 const int32_t VAR_LEN = 10;
@@ -27,22 +28,21 @@ static string GetString(int32_t index, int32_t offset, int32_t width)
     return str;
 }
 
-static int32_t CompareVarchar(Vector *leftColumn, int32_t leftColumnPosition, Vector *rightColumn,
+static int32_t CompareVarchar(BaseVector *leftColumn, int32_t leftColumnPosition, BaseVector *rightColumn,
     int32_t rightColumnPosition)
 {
     auto leftVarCharColumn = static_cast<VarcharVector *>(leftColumn);
     auto rightVarCharColumn = static_cast<VarcharVector *>(rightColumn);
-    uint8_t *leftValue = nullptr;
-    int32_t leftLength = leftVarCharColumn->GetValue(leftColumnPosition, &leftValue);
-    uint8_t *rightValue = nullptr;
-    int32_t rightLength = rightVarCharColumn->GetValue(rightColumnPosition, &rightValue);
-    int32_t result = memcmp(leftValue, rightValue, std::min(leftLength, rightLength));
+
+    auto leftValue = leftVarCharColumn->GetValue(leftColumnPosition);
+    auto rightValue = rightVarCharColumn->GetValue(rightColumnPosition);
+    int32_t result = leftValue.compare(rightValue);
     if (result != 0) {
         return (result > 0) ? 1 : -1;
-    } else if (leftLength == rightLength) {
+    } else if (leftValue.size() == rightValue.size()) {
         return 0;
     } else {
-        return (leftLength > rightLength) ? 1 : -1;
+        return (leftValue.size() > rightValue.size()) ? 1 : -1;
     }
 }
 
@@ -58,7 +58,7 @@ int64_t LongBytesToLong(int64_t bytes)
     return ReverseBytes(bytes) ^ LONG_MIN;
 }
 
-int32_t CmpByLong(uint8_t *var1, uint8_t *var2, int32_t compareLength)
+int32_t CmpByLong(char *var1, char *var2, int32_t compareLength)
 {
     auto *left = reinterpret_cast<int64_t *>(var1);
     auto *right = reinterpret_cast<int64_t *>(var2);
@@ -87,35 +87,34 @@ int32_t CmpByLong(uint8_t *var1, uint8_t *var2, int32_t compareLength)
     return 0;
 }
 
-int32_t CompareVarcharByLong(Vector *leftColumn, int32_t leftColumnPosition, Vector *rightColumn,
+int32_t CompareVarcharByLong(BaseVector *leftColumn, int32_t leftColumnPosition, BaseVector *rightColumn,
     int32_t rightColumnPosition)
 {
     auto leftVarCharColumn = static_cast<VarcharVector *>(leftColumn);
     auto rightVarCharColumn = static_cast<VarcharVector *>(rightColumn);
-    uint8_t *leftValue = nullptr;
-    int32_t leftLength = leftVarCharColumn->GetValue(leftColumnPosition, &leftValue);
-    uint8_t *rightValue = nullptr;
-    int32_t rightLength = rightVarCharColumn->GetValue(rightColumnPosition, &rightValue);
-    int32_t result = CmpByLong(leftValue, rightValue, std::min(leftLength, rightLength));
+    auto leftValue = leftVarCharColumn->GetValue(leftColumnPosition);
+    auto rightValue = rightVarCharColumn->GetValue(rightColumnPosition);
+    int32_t result = CmpByLong((char*)leftValue.data(), (char*)rightValue.data(),
+                               std::min(leftValue.size(), rightValue.size()));
     if (result != 0) {
         return (result > 0) ? 1 : -1;
-    } else if (leftLength == rightLength) {
+    } else if (leftValue.size() == rightValue.size()) {
         return 0;
     } else {
-        return (leftLength > rightLength) ? 1 : -1;
+        return (leftValue.size() > rightValue.size()) ? 1 : -1;
     }
 }
 
 TEST(varcharType, CompareVarcharPerf)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("varchar");
-    VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
-    VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
+    VarcharVector *vector1 = new VarcharVector(ROW_SIZE);
+    VarcharVector *vector2 = new VarcharVector(ROW_SIZE);
 
     for (int i = 0; i < ROW_SIZE; i++) {
         std::string str = GetString(i, 10, VAR_LEN);
-        vector1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
-        vector2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+        std::string_view value(str);
+        vector1->SetValue(i, value);
+        vector2->SetValue(i, value);
     }
 
     std::cout << "Test times: " << ROW_SIZE << std::endl;
@@ -143,10 +142,11 @@ TEST(varcharType, CompareVarcharPerf)
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "comp: " << comp << std::endl;
 
-    VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
+    VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
         std::string str = GetString(i, 20, VAR_LEN);
-        vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+        std::string_view value(str);
+        vector3->SetValue(i, value);
     }
 
     std::cout << "Compare different varchar:" << std::endl;
@@ -170,19 +170,18 @@ TEST(varcharType, CompareVarcharPerf)
     delete vector1;
     delete vector2;
     delete vector3;
-    delete allocator;
 }
 
 TEST(varcharType, CompareVarcharByLongPerf)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("varchar");
-    VarcharVector *vector1 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
-    VarcharVector *vector2 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
+    VarcharVector *vector1 = new VarcharVector(ROW_SIZE);
+    VarcharVector *vector2 = new VarcharVector(ROW_SIZE);
 
     for (int i = 0; i < ROW_SIZE; i++) {
         std::string str = GetString(i, 10, VAR_LEN);
-        vector1->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
-        vector2->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+        std::string_view value(str);
+        vector1->SetValue(i, value);
+        vector2->SetValue(i, value);
     }
 
     // Test perf
@@ -211,10 +210,11 @@ TEST(varcharType, CompareVarcharByLongPerf)
     std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
     std::cout << "comp: " << comp << std::endl;
 
-    VarcharVector *vector3 = new VarcharVector(allocator, ROW_SIZE * VAR_LEN, ROW_SIZE);
+    VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
         std::string str = GetString(i, 20, VAR_LEN);
-        vector3->SetValue(i, reinterpret_cast<const uint8_t *>(str.c_str()), str.length());
+        std::string_view value(str);
+        vector3->SetValue(i, value);
     }
 
     std::cout << "Compare not equal varchar" << std::endl;
@@ -238,6 +238,5 @@ TEST(varcharType, CompareVarcharByLongPerf)
     delete vector1;
     delete vector2;
     delete vector3;
-    delete allocator;
 }
 }

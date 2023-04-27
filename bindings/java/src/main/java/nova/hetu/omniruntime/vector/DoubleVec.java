@@ -18,26 +18,21 @@ public class DoubleVec extends FixedWidthVec {
         super(size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, DoubleDataType.DOUBLE);
     }
 
-    public DoubleVec(VecAllocator allocator, int size) {
-        super(allocator, size * BYTES, size, VecEncoding.OMNI_VEC_ENCODING_FLAT, DoubleDataType.DOUBLE);
-    }
-
     public DoubleVec(long nativeVector) {
-        super(nativeVector, DoubleDataType.DOUBLE);
+        super(nativeVector, DoubleDataType.DOUBLE, BYTES);
     }
 
-    public DoubleVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, DoubleDataType.DOUBLE);
+    public DoubleVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, BYTES * size, size,
+                DoubleDataType.DOUBLE);
     }
 
-    private DoubleVec(DoubleVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    private DoubleVec(DoubleVec vector, int offset, int length) {
+        super(vector, offset, length, length * BYTES);
     }
 
     private DoubleVec(DoubleVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
+        super(vector, positions, offset, length, length * BYTES);
     }
 
     /**
@@ -47,7 +42,7 @@ public class DoubleVec extends FixedWidthVec {
      * @return double value
      */
     public double get(int index) {
-        return valuesBuf.getDouble((index + offset) * BYTES);
+        return valuesBuf.getDouble(index * BYTES);
     }
 
     /**
@@ -59,7 +54,7 @@ public class DoubleVec extends FixedWidthVec {
      */
     public double[] get(int index, int length) {
         double[] target = new double[length];
-        valuesBuf.getDoubleArray((index + offset) * BYTES, target, 0, length * BYTES);
+        valuesBuf.getDoubleArray(index * BYTES, target, 0, length * BYTES);
         return target;
     }
 
@@ -86,13 +81,8 @@ public class DoubleVec extends FixedWidthVec {
     }
 
     @Override
-    public DoubleVec slice(int start, int end) {
-        return new DoubleVec(this, start, end - start, true);
-    }
-
-    @Override
-    public DoubleVec copy() {
-        return null;
+    public DoubleVec slice(int start, int length) {
+        return new DoubleVec(this, start, length);
     }
 
     @Override
@@ -101,12 +91,12 @@ public class DoubleVec extends FixedWidthVec {
     }
 
     @Override
-    public DoubleVec copyRegion(int positionOffset, int length) {
-        return new DoubleVec(this, positionOffset, length, false);
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
     }
 
     @Override
-    public int getRealValueBufCapacityInBytes() {
-        return size * BYTES;
+    public int getCapacityInBytes() {
+        return BYTES * size;
     }
 }

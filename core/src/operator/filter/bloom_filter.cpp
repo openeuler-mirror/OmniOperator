@@ -4,12 +4,14 @@
  */
 
 #include "bloom_filter.h"
+#include "util/type_util.h"
 #include "codegen/functions/murmur3_hash.h"
 
 namespace omniruntime {
 namespace op {
 using namespace std;
 using namespace omniruntime::codegen::function;
+using namespace omniruntime::type;
 
 BloomFilter::BloomFilter(int8_t *in, int32_t versionJava) : version(versionJava)
 {
@@ -117,8 +119,8 @@ int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
         VectorHelper::FreeVecBatch(inputVecBatch);
         throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "vecBatch col should be 1 for bloom filter");
     }
-    Vector *colVec = inputVecBatch->GetVector(0);
-    int64_t valuesAddress = VectorHelper::GetValuesAddr(colVec);
+    BaseVector *colVec = inputVecBatch->Get(0);
+    auto valuesAddress = reinterpret_cast<int64_t>(VectorHelper::UnsafeGetValues(colVec, OMNI_INT));
 
     // init BloomFilter
     bloomFilterAddress = new BloomFilter(reinterpret_cast<int8_t *>((uintptr_t)valuesAddress), version);
@@ -127,11 +129,12 @@ int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
 
 int32_t BloomFilterOperator::GetOutput(VectorBatch **blOutPut)
 {
-    auto outPut = new VectorBatch(1, 1);
-    LongVector *col = new LongVector(vecAllocator, 1);
+    auto outPut = new VectorBatch(1);
+    auto *col = new Vector<int64_t>(1);
     col->SetValue(0, reinterpret_cast<int64_t>(bloomFilterAddress));
-    outPut->SetVector(0, col);
+    outPut->Append(col);
     *blOutPut = outPut;
+    this->outputTypes = { LongType() };
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }

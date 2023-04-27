@@ -4,6 +4,7 @@
  */
 
 #include "window_function.h"
+#include "operator/util/operator_util.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
 using namespace omniruntime::op;
@@ -18,20 +19,24 @@ WindowIndex::WindowIndex(PagesIndex *pagesIndex, int32_t start, int32_t end)
 
 WindowIndex::~WindowIndex() = default;
 
-RankingWindowFunction::RankingWindowFunction(std::unique_ptr<WindowFrameInfo> frame)
-    : WindowFunction(std::move(frame)), windowIndex(nullptr), currentPeerGroupStart(0), currentPosition(0)
+RankingWindowFunction::RankingWindowFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType,
+    DataTypePtr outputType)
+    : WindowFunction(std::move(frame), std::move(inputType), std::move(outputType)),
+      windowIndex(nullptr),
+      currentPeerGroupStart(0),
+      currentPosition(0)
 {}
 
 RankingWindowFunction::~RankingWindowFunction() = default;
 
-RankFunction::RankFunction(std::unique_ptr<WindowFrameInfo> frame)
-    : RankingWindowFunction(std::move(frame)), rank(0), count(1)
+RankFunction::RankFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType)
+    : RankingWindowFunction(std::move(frame), std::move(inputType), std::move(outputType)), rank(0), count(1)
 {}
 
 RankFunction::~RankFunction() = default;
 
-void RankingWindowFunction::ProcessRow(VectorBatch *vectorBatch, Vector *column, int32_t index, int32_t peerGroupStart,
-    int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd)
+void RankingWindowFunction::ProcessRow(VectorBatch *vectorBatch, BaseVector *column, int32_t index,
+    int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd)
 {
     bool newPeerGroup = false;
     if (peerGroupStart != currentPeerGroupStart) {
@@ -57,7 +62,7 @@ void RankFunction::Reset()
     count = 1;
 }
 
-void RankFunction::RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+void RankFunction::RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
     int32_t currentPositionIndex)
 {
     if (newPeerGroup) {
@@ -66,28 +71,24 @@ void RankFunction::RankingProcessRow(Vector *column, int32_t index, bool newPeer
     } else {
         count++;
     }
-    VectorHelper::SetValue(column, index, &rank);
+    VectorHelper::SetValue(column, index, &rank, outputType->GetId());
 }
 
-void RowNumberFunction::RankingProcessRow(Vector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+void RowNumberFunction::RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
     int32_t currentPositionIndex)
 {
     int64_t value = currentPositionIndex + 1;
-    VectorHelper::SetValue(column, index, &value);
+    VectorHelper::SetValue(column, index, &value, outputType->GetId());
 }
 
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType,
-    DataTypePtr inputType, DataTypePtr outputType, VectorAllocator *allocator, std::unique_ptr<WindowFrameInfo> frame,
-    bool isOverflowAsNull)
-    : WindowFunction(std::move(frame)),
+    DataTypePtr inputType, DataTypePtr outputType, std::unique_ptr<WindowFrameInfo> frame, bool isOverflowAsNull)
+    : WindowFunction(std::move(frame), std::move(inputType), std::move(outputType)),
       windowIndex(nullptr),
       currentStart(0),
       currentEnd(0),
-      inputType(std::move(inputType)),
-      outputType(std::move(outputType)),
-      allocator(allocator),
       isOverflowAsNull(isOverflowAsNull)
 {
     this->argumentChannels.push_back(argumentChannel);
@@ -103,7 +104,7 @@ void AggregateWindowFunction::Reset(WindowIndex *pWindowIndex)
 /*
  * for aggregation function, we will build vector based on the window partition and pass it to the aggregator
  */
-void AggregateWindowFunction::ProcessRow(VectorBatch *inputVecBatchForAgg, Vector *column, int32_t index,
+void AggregateWindowFunction::ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index,
     int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd)
 {
     if (frameStart < 0) {
@@ -129,7 +130,6 @@ void AggregateWindowFunction::ResetAccumulator()
         std::vector<int32_t> winChannels = { 0 };
         aggregator = aggregatorFactory->CreateAggregator(*DataTypes::GenerateDataTypes(inputType),
             *DataTypes::GenerateDataTypes(outputType), winChannels, true, false, isOverflowAsNull);
-        aggregator->SetExecutionContextAllocator(allocator);
         aggregateState = std::make_unique<omniruntime::op::AggregateState>();
         aggregator->InitState(*aggregateState);
         currentStart = -1;
@@ -137,10 +137,10 @@ void AggregateWindowFunction::ResetAccumulator()
     }
 }
 
-void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregator> &pAggregator, Vector *pColumn,
+void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregator> &pAggregator, BaseVector *pColumn,
     int32_t index) const
 {
-    std::vector<Vector *> extractVectors;
+    std::vector<BaseVector *> extractVectors;
     extractVectors.push_back(pColumn);
     pAggregator->ExtractValues(aggregateState.operator*(), extractVectors, index);
 }
@@ -151,11 +151,11 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
         return;
     }
 
-    Vector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
+    BaseVector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
     auto rowCount = end - start + 1;
-    Vector *vector = nullptr;
+    BaseVector *vector = nullptr;
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-        vector = new LongVector(allocator, rowCount);
+        vector = new Vector<int64_t>(rowCount);
         inputVecBatchForAgg->SetVector(0, vector);
         aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, start, rowCount);
         delete vector;

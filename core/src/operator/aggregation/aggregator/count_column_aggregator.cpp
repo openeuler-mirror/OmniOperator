@@ -18,8 +18,6 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalCountRaw(int64_t &res, const size_t 
         }
 #endif
 
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-
         for (size_t i = 0; i < rowCount; ++i) {
             res += (condition[i] == addIf);
         }
@@ -37,8 +35,6 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalCountRawFilter(int64_t &res, const s
         }
 #endif
 
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-
         for (size_t i = 0; i < rowCount; ++i) {
             if (boolPtr[i]) {
                 res += (condition[i] == addIf);
@@ -49,17 +45,15 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalCountRawFilter(int64_t &res, const s
 
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
-    int32_t rowIndex)
+void CountColumnAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state,
+    std::vector<BaseVector *> &vectors, int32_t rowIndex)
 {
-    int32_t offset;
-    Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-    static_cast<LongVector *>(vector)->SetValue(offset, state.count);
+    static_cast<Vector<int64_t> *>(vectors[0])->SetValue(rowIndex, state.count);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool RAW_IN>
-void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(AggregateState &state, Vector *vector,
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if constexpr (RAW_IN) {
@@ -69,12 +63,10 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
             AddConditionalCountRaw<false>(state.count, rowCount, nullMap);
         }
     } else {
-        int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
-
         int64_t noUsed {};
 
         if (indexMap == nullptr) {
+            auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
                 Add<int64_t, int64_t, CountAllOp>(&(state.count), noUsed, ptr, rowCount);
@@ -83,6 +75,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
                     nullMap);
             }
         } else {
+            auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(vector));
             if (nullMap == nullptr) {
                 AddDict<int64_t, int64_t, CountAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
             } else {
@@ -95,12 +88,11 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool RAW_IN>
-void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilterFunction(AggregateState &state, Vector *vector,
-    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
-    const int32_t *indexMap)
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilterFunction(AggregateState &state,
+    BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
-    uint8_t *boolPtr = reinterpret_cast<uint8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    uint8_t *boolPtr = reinterpret_cast<uint8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
     if constexpr (RAW_IN) {
         if (nullMap == nullptr) {
             for (int32_t i = 0; i < rowCount; ++i) {
@@ -112,12 +104,10 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilterFunction(A
             AddConditionalCountRawFilter<false>(state.count, rowCount, nullMap, boolPtr);
         }
     } else {
-        int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
-
         int64_t noUsed {};
 
         if (indexMap == nullptr) {
+            auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
                 Add<int64_t, int64_t, CountAllOp>(&(state.count), noUsed, ptr, rowCount);
@@ -126,6 +116,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilterFunction(A
                     nullMap);
             }
         } else {
+            auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(vector));
             if (nullMap == nullptr) {
                 AddDict<int64_t, int64_t, CountAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
             } else {
@@ -138,14 +129,14 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilterFunction(A
 
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *vector,
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     return (this->*processSingleInternalPtr)(state, vector, rowOffset, rowCount, nullMap, indexMap);
 }
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *vector,
-    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector,
+    Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
     return (this->*processSingleInternalFilterPtr)(state, vector, booleanVector, rowOffset, rowCount, nullMap,
@@ -156,7 +147,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(Aggregate
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool RAW_IN>
 void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if constexpr (RAW_IN) {
         if (nullMap == nullptr) {
@@ -172,12 +163,11 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(std::vec
             }
         }
     } else {
-        int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
         size_t rowCount = rowStates.size();
         int64_t unsedFlag = 0;
 
         if (indexMap == nullptr) {
+            auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
                 for (size_t i = 0; i < rowCount; ++i) {
@@ -189,6 +179,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(std::vec
                 }
             }
         } else {
+            auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(vector));
             if (nullMap == nullptr) {
                 for (size_t i = 0; i < rowCount; ++i) {
                     CountAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL);
@@ -206,8 +197,8 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(std::vec
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool RAW_IN>
 void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilterFunction(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-    const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
     size_t rowCount = rowStates.size();
     if constexpr (RAW_IN) {
@@ -225,11 +216,11 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilterFunction(st
             }
         }
     } else {
-        int64_t *ptr = reinterpret_cast<int64_t *>(static_cast<LongVector *>(vector)->GetValues());
-        ptr += vector->GetPositionOffset();
+        size_t rowCount = rowStates.size();
         int64_t unsedFlag = 0;
 
         if (indexMap == nullptr) {
+            auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
                 for (size_t i = 0; i < rowCount; ++i) {
@@ -241,6 +232,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilterFunction(st
                 }
             }
         } else {
+            auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(vector));
             if (nullMap == nullptr) {
                 for (size_t i = 0; i < rowCount; ++i) {
                     CountAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL);
@@ -258,15 +250,15 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilterFunction(st
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
     return (this->*processGroupInternalPtr)(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-    const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
     return (this->*processGroupInternalFilterPtr)(rowStates, aggIdx, vector, booleanVector, rowOffset, nullMap,
         indexMap);

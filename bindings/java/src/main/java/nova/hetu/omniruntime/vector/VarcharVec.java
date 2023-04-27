@@ -18,16 +18,12 @@ public class VarcharVec extends VariableWidthVec {
     public static final int INIT_CAPACITY_IN_BYTES = 32 * 1024; // 32K
     private static final int EXPAND_FACTOR = 2;
 
-    public VarcharVec(VecAllocator allocator, int size) {
-        super(INIT_CAPACITY_IN_BYTES, size, VarcharDataType.VARCHAR);
+    public VarcharVec(int size) {
+        super(4 * 1024, size, VarcharDataType.VARCHAR);
     }
 
     public VarcharVec(int capacityInBytes, int size) {
         super(capacityInBytes, size, VarcharDataType.VARCHAR);
-    }
-
-    public VarcharVec(VecAllocator allocator, int capacityInBytes, int size) {
-        super(allocator, capacityInBytes, size, VarcharDataType.VARCHAR);
     }
 
     public VarcharVec(long nativeVector) {
@@ -35,13 +31,13 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     public VarcharVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
+            long nativeVectorOffsetBufAddress, int size) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorOffsetBufAddress,
-                nativeVectorAllocator, capacityInBytes, size, offset, VarcharDataType.VARCHAR);
+                getCapacityInBytesNative(nativeVector), size, VarcharDataType.VARCHAR);
     }
 
-    private VarcharVec(VarcharVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    private VarcharVec(VarcharVec vector, int offset, int length) {
+        super(vector, offset, length);
     }
 
     private VarcharVec(VarcharVec vector, int[] positions, int offset, int length) {
@@ -99,7 +95,7 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     private void checkCapacity(int needCapacityInBytes) {
-        if (needCapacityInBytes <= 0) {
+        if (needCapacityInBytes < 0) {
             return;
         }
         int toCapacityInBytes = (capacityInBytes > 0) ? capacityInBytes : INIT_CAPACITY_IN_BYTES;
@@ -156,23 +152,13 @@ public class VarcharVec extends VariableWidthVec {
     }
 
     @Override
-    public VarcharVec slice(int start, int end) {
-        return new VarcharVec(this, start, end - start, true);
-    }
-
-    @Override
-    public Vec copy() {
-        return null;
+    public VarcharVec slice(int start, int length) {
+        return new VarcharVec(this, start, length);
     }
 
     @Override
     public VarcharVec copyPositions(int[] positions, int offset, int length) {
         return new VarcharVec(this, positions, offset, length);
-    }
-
-    @Override
-    public VarcharVec copyRegion(int positionOffset, int length) {
-        return new VarcharVec(this, positionOffset, length, false);
     }
 
     @Override
@@ -182,7 +168,8 @@ public class VarcharVec extends VariableWidthVec {
         // check expand
         if (newCapacityInBytes != capacityInBytes) {
             capacityInBytes = newCapacityInBytes;
-            valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector), capacityInBytes);
+            valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector, VarcharDataType.VARCHAR.getId().toValue()),
+                    capacityInBytes);
         }
     }
 

@@ -24,7 +24,7 @@ static constexpr int32_t PARTIAL_FIRST_OUTPUT_LENGTH = sizeof(FirstState);
 // input: InputType
 // intermediate: InputType + bool(wrap with ContainerDataType and ContainerVector)
 // final: InputType
-template <bool INPUT_RAW, bool OUT_PARTIAL, typename InputVecType, typename InputType>
+template <bool INPUT_RAW, bool OUT_PARTIAL, typename InputType>
 class FirstAggregator : public Aggregator {
 public:
     FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out,
@@ -49,77 +49,78 @@ public:
         ProcessGroup(state, vectorBatch, rowIndex);
     }
 
+    void UpdateFirstState(int32_t rowIndex, FirstState *firstState, BaseVector *vector) const
+    {
+        if (vector->GetEncoding() == OMNI_DICTIONARY) {
+            *reinterpret_cast<InputType *>(firstState->val) =
+                static_cast<Vector<DictionaryContainer<InputType>> *>(vector)->GetValue(rowIndex);
+        } else {
+            *reinterpret_cast<InputType *>(firstState->val) =
+                static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
+        }
+        firstState->valIsNull = vector->IsNull(rowIndex);
+    }
+
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         if (state.val == nullptr) {
             InitiateGroup(state, vectorBatch, rowIndex);
             return;
         }
-        int32_t offset;
         auto firstState = static_cast<FirstState *>(state.val);
         if constexpr (INPUT_RAW) {
-            Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
+            BaseVector *vector = vectorBatch->Get(channels[0]);
             if (isIgnoreNull) {
-                if (!firstState->valueSet && !vector->IsValueNull(offset)) {
-                    *reinterpret_cast<InputType *>(firstState->val) =
-                        static_cast<InputVecType *>(vector)->GetValue(offset);
-                    firstState->valIsNull = vector->IsValueNull(offset);
+                if (!firstState->valueSet && !vector->IsNull(rowIndex)) {
+                    UpdateFirstState(rowIndex, firstState, vector);
                 }
-                firstState->valueSet = firstState->valueSet || !vector->IsValueNull(offset);
+                firstState->valueSet = firstState->valueSet || !vector->IsNull(rowIndex);
             } else {
                 if (!firstState->valueSet) {
-                    *reinterpret_cast<InputType *>(firstState->val) =
-                        static_cast<InputVecType *>(vector)->GetValue(offset);
-                    firstState->valIsNull = vector->IsValueNull(offset);
+                    UpdateFirstState(rowIndex, firstState, vector);
                 }
                 firstState->valueSet = true;
             }
         } else {
-            auto firstVector = reinterpret_cast<InputVecType *>(
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset));
-            auto valueSetVector = reinterpret_cast<BooleanVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[1]), rowIndex, offset));
+            BaseVector *firstVector = vectorBatch->Get(channels[0]);
+            BaseVector *valueSetVector = vectorBatch->Get(channels[1]);
 
             if (!firstState->valueSet) {
-                *reinterpret_cast<InputType *>(firstState->val) =
-                    static_cast<InputVecType *>(firstVector)->GetValue(offset);
-                firstState->valIsNull = firstVector->IsValueNull(offset);
+                UpdateFirstState(rowIndex, firstState, firstVector);
             }
-            firstState->valueSet = firstState->valueSet || valueSetVector->GetValue(offset);
+            bool IntermediateState;
+            if (valueSetVector->GetEncoding() == OMNI_DICTIONARY) {
+                IntermediateState = static_cast<Vector<DictionaryContainer<bool>>*>(valueSetVector)->GetValue(rowIndex);
+            } else {
+                IntermediateState = reinterpret_cast<Vector<bool> *>(valueSetVector)->GetValue(rowIndex);
+            }
+            firstState->valueSet = firstState->valueSet || IntermediateState;
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        int32_t offset;
-        auto firstVector =
-            reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+        auto firstVector = reinterpret_cast<Vector<InputType> *>(vectors[0]);
         if (state.val == nullptr) {
-            firstVector->SetValueNull(rowIndex);
+            firstVector->SetNull(rowIndex);
             return;
         }
         auto firstState = static_cast<FirstState *>(state.val);
         if constexpr (OUT_PARTIAL) {
-            firstVector =
-                reinterpret_cast<InputVecType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
-
             if (firstState->valIsNull) {
-                firstVector->SetValueNull(rowIndex);
+                firstVector->SetNull(rowIndex);
             } else {
-                firstVector->SetValueNotNull(rowIndex);
+                firstVector->SetNotNull(rowIndex);
                 firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
             }
-            auto valueSetVector =
-                reinterpret_cast<BooleanVector *>(VectorHelper::ExpandVectorAndIndex(vectors[1], rowIndex, offset));
+            auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
             valueSetVector->SetValue(rowIndex, firstState->valueSet);
         } else {
-            Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-            auto toSetVector = static_cast<InputVecType *>(vector);
             if (firstState->valIsNull) {
-                toSetVector->SetValueNull(rowIndex);
+                firstVector->SetNull(rowIndex);
             } else {
-                toSetVector->SetValueNotNull(rowIndex);
-                toSetVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
+                firstVector->SetNotNull(rowIndex);
+                firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
             }
         }
     }

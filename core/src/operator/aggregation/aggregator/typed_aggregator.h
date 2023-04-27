@@ -13,84 +13,86 @@
 #include <iomanip> // for setpercision
 
 #include "type/decimal_operations.h"
+#include "operator/aggregation/vector_getter.h"
 
 namespace omniruntime {
+using namespace mem;
 namespace op {
 using DecimalPartialResult = struct DecimalPartialResult {
     Decimal128 sum = 0;
     int64_t count = 0;
 };
 
-template <type::DataTypeId dataTypeId> struct NativeAndVectorType {};
+template <type::DataTypeId dataTypeId> struct AggNativeAndVectorType {};
 
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_BOOLEAN> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_BOOLEAN> {
     using type = int8_t;
-    using vector = vec::BooleanVector;
+    using vector = Vector<type>;
 };
 
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_SHORT> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_SHORT> {
     using type = int16_t;
-    using vector = vec::ShortVector;
+    using vector = Vector<type>;
 };
 
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_INT> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_INT> {
     using type = int32_t;
-    using vector = vec::IntVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DATE32> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_DATE32> {
     using type = int32_t;
-    using vector = vec::IntVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_TIME32> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_TIME32> {
     using type = int32_t;
-    using vector = vec::IntVector;
+    using vector = Vector<type>;
 };
 
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_LONG> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_LONG> {
     using type = int64_t;
-    using vector = vec::LongVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DATE64> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_DATE64> {
     using type = int64_t;
-    using vector = vec::LongVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_TIME64> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_TIME64> {
     using type = int64_t;
-    using vector = vec::LongVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_TIMESTAMP> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_TIMESTAMP> {
     using type = int64_t;
-    using vector = vec::LongVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DOUBLE> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_DOUBLE> {
     using type = double;
-    using vector = vec::DoubleVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DECIMAL64> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_DECIMAL64> {
     using type = int64_t;
-    using vector = vec::LongVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DECIMAL128> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_DECIMAL128> {
     using type = Decimal128;
-    using vector = vec::Decimal128Vector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_VARCHAR> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_VARCHAR> {
     using type = DecimalPartialResult;
-    using vector = vec::VarcharVector;
+    using vector = Vector<LargeStringContainer<std::string_view>>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_CHAR> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_CHAR> {
     using type = uint8_t;
-    using vector = vec::VarcharVector;
+    using vector = Vector<LargeStringContainer<std::string_view>>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_CONTAINER> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_CONTAINER> {
     using type = double;
-    using vector = vec::DoubleVector;
+    using vector = Vector<type>;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_NONE> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_NONE> {
     using type = void;
     using vector = void;
 };
-template <> struct NativeAndVectorType<type::DataTypeId::OMNI_INVALID> {
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_INVALID> {
     using type = void;
     using vector = void;
 };
@@ -98,12 +100,12 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_INVALID> {
 template <typename T> struct AggregatorBuffer {
     AggregatorBuffer() = default;
 
-    AggregatorBuffer(BaseAllocator *allocator, const size_t length, const bool zeroFill)
+    AggregatorBuffer(mem::Allocator *allocator, const size_t length, const bool zeroFill)
     {
         Create(allocator, length, zeroFill);
     }
 
-    void Create(BaseAllocator *allocator, const size_t length, const bool zeroFill)
+    void Create(mem::Allocator *allocator, const size_t length, const bool zeroFill)
     {
         Release();
         chunk = omniruntime::mem::Chunk::NewChunk(allocator, length * sizeof(T), zeroFill);
@@ -140,7 +142,7 @@ public:
     {
         AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
-        Vector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
 
         ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
     }
@@ -153,9 +155,9 @@ public:
         uint8_t *nullMap = nullptr;
 
         int32_t rowCount = vectorBatch->GetRowCount();
-        Vector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
 
-        BooleanVector *booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterIndex));
+        Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
 
         bool needFilterJude = false;
         for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
@@ -179,7 +181,7 @@ public:
         AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
 
-        Vector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
         ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
     }
 
@@ -190,10 +192,10 @@ public:
         AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
 
-        Vector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
         int32_t rowCount = rowStates.size();
 
-        BooleanVector *booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterStart + aggIdx));
+        Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
         bool needFilterJude = false;
 
         for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
@@ -220,36 +222,36 @@ protected:
         const std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial,
         const bool isOverflowAsNull);
 
-    virtual void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,
+    virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
-    virtual void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+    virtual void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
-    virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
     virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap) = 0;
     // set vector value null or throw exception when overflow
-    void SetNullOrThrowException(Vector *vector, const int index, const char *errorMsg)
+    void SetNullOrThrowException(BaseVector *vector, const int index, const char *errorMsg)
     {
         if (!IsOverflowAsNull()) {
             throw OmniException("OPERATOR_RUNTIME_ERROR", errorMsg);
         }
-        vector->SetValueNull(index);
+        vector->SetNull(index);
     }
 
-    virtual Vector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
+    virtual BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
         uint8_t **nullMap, AggregatorBuffer<int32_t> &indexMap, const size_t channelIdx);
 
     // this is needed in case, we directly create aggregator (using Aggregator::Create) without using AggregatorFactory
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,
         const DataTypeId inId, const DataTypeId outId);
 
-    // template<DataTypeId IN_ID, DataTypeId OUT_ID, typename OutType = typename NativeAndVectorType<OUT_ID>::type,
-    // typename InType = typename NativeAndVectorType<IN_ID>::type>
+    // template<DataTypeId IN_ID, DataTypeId OUT_ID, typename OutType = typename AggNativeAndVectorType<OUT_ID>::type,
+    // typename InType = typename AggNativeAndVectorType<IN_ID>::type>
     template <typename InType, typename OutType> OutType CastWithOverflow(const InType &val, bool &overflow)
     {
         if (overflow) {
@@ -262,6 +264,27 @@ protected:
             return CastWithOverflowDecimalOutput<InType>(val, overflow);
         } else {
             return CastWithOverflowNonDecimal<InType, OutType>(val, overflow);
+        }
+    }
+
+    Allocator *allocator = Allocator::GetAllocator();
+
+    GetIdsWithOffFunction getIdsWithOffFunction;
+
+    static inline bool CheckType(const DataTypeId actual, const DataTypeId expected)
+    {
+        switch (actual) {
+            case OMNI_DATE32:
+            case OMNI_TIME32:
+            case OMNI_INT:
+                return expected == OMNI_INT;
+            case OMNI_LONG:
+            case OMNI_DATE64:
+            case OMNI_TIME64:
+            case OMNI_TIMESTAMP:
+                return expected == OMNI_LONG;
+            default:
+                return expected == actual;
         }
     }
 
@@ -515,23 +538,6 @@ private:
             }
         }
         return res;
-    }
-
-    static inline bool CheckType(const DataTypeId actual, const DataTypeId expected)
-    {
-        switch (actual) {
-            case OMNI_DATE32:
-            case OMNI_TIME32:
-            case OMNI_INT:
-                return expected == OMNI_INT;
-            case OMNI_LONG:
-            case OMNI_DATE64:
-            case OMNI_TIME64:
-            case OMNI_TIMESTAMP:
-                return expected == OMNI_LONG;
-            default:
-                return expected == actual;
-        }
     }
 };
 } // end of namespace op

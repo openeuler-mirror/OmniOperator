@@ -8,6 +8,7 @@
 #include <jni.h>
 #include "expression/parserhelper.h"
 #include "expression/jsonparser/jsonparser.h"
+#include "codegen/expr_evaluator.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +19,7 @@ extern "C" {
  * Signature: (JJ)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_createOperatorNative(JNIEnv *env,
-    jobject jObj, jlong jNativeFactoryObj, jlong jNativeVecAllocatorObj);
+    jobject jObj, jlong jNativeFactoryObj);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperatorFactory

@@ -4,14 +4,16 @@
  */
 #include "vector_batch_spiller.h"
 #include <sys/types.h>
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::type;
+using namespace omniruntime::vec;
 
 ErrorCode VectorBatchSpiller::Spill(SpillUnitIter &vecBatches)
 {
-    auto writer = new VectorBatchWriter(tracker);
+    auto writer = new VectorBatchWriter(tracker, sourceTypes);
     auto result = writer->CreateTempFile(path);
     if (result != ErrorCode::SUCCESS) {
         return result;
@@ -27,7 +29,7 @@ void VectorBatchSpiller::MergeFromDiskAndMemory(SpillUnitIter &memoryIter)
     auto writerSize = writers.size();
     for (size_t i = 0; i < writerSize; i++) {
         auto writer = writers[i];
-        auto reader = new VectorBatchReader(writer->GetFd(), writer->GetFileLength(), tracker, vectorAllocator);
+        auto reader = new VectorBatchReader(writer->GetFd(), writer->GetFileLength(), tracker);
         reader->ReadFileTailAndHead();
         totalRowCount += reader->GetRowCount();
         auto spillIterator = new SpillIterator(reader);
@@ -60,25 +62,27 @@ bool VectorBatchSpiller::HasNext()
 }
 
 template <typename V>
-void SetValue(Vector *inputVector, int32_t inputPosition, Vector *outputVector, int32_t outputPosition)
+void SetValue(BaseVector *inputVector, int32_t inputPosition, BaseVector *outputVector,
+              int32_t outputPosition)
 {
-    auto resultVector = static_cast<V *>(outputVector);
-    if (inputVector->IsValueNull(inputPosition)) {
-        resultVector->SetValueNull(outputPosition);
+    auto resultVector = static_cast<Vector<V> *>(outputVector);
+    if (inputVector->IsNull(inputPosition)) {
+        resultVector->SetNull(outputPosition);
     } else {
-        resultVector->SetValue(outputPosition, static_cast<V *>(inputVector)->GetValue(inputPosition));
+        resultVector->SetValue(outputPosition, static_cast<Vector<V> *>(inputVector)->GetValue(inputPosition));
     }
 }
 
-void SetVarcharValue(Vector *inputVector, int32_t inputPosition, Vector *outputVector, int32_t outputPosition)
+void SetVarcharValue(BaseVector *inputVector, int32_t inputPosition, BaseVector *outputVector,
+                     int32_t outputPosition)
 {
+    using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     auto resultVector = static_cast<VarcharVector *>(outputVector);
-    if (inputVector->IsValueNull(inputPosition)) {
-        resultVector->SetValueNull(outputPosition);
+    if (inputVector->IsNull(inputPosition)) {
+        resultVector->SetNull(outputPosition);
     } else {
-        uint8_t *value = nullptr;
-        int32_t length = static_cast<VarcharVector *>(inputVector)->GetValue(inputPosition, &value);
-        resultVector->SetValue(outputPosition, value, length);
+        std::string_view value = static_cast<VarcharVector *>(inputVector)->GetValue(inputPosition);
+        resultVector->SetValue(outputPosition, value);
     }
 }
 
@@ -86,8 +90,8 @@ VectorBatchUnit *VectorBatchSpiller::Next()
 {
     auto rowCount = static_cast<int32_t>(std::min((int64_t)maxRowCountPerVecBatch, remainingRowCount));
     auto colCount = static_cast<int32_t>(outputCols.size());
-    auto output = new VectorBatch(colCount, rowCount);
-    output->NewVectors(VectorAllocator::GetGlobalAllocator(), outputTypes);
+    auto output = new VectorBatch(rowCount);
+    VectorHelper::AppendVectors(output, DataTypes(outputTypes), rowCount);
     int32_t rowIndex = 0;
 
     do {
@@ -99,29 +103,27 @@ VectorBatchUnit *VectorBatchSpiller::Next()
             switch (outputTypes[i]->GetId()) {
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    SetValue<IntVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);
+                    SetValue<int32_t>(vectorBatch->Get(outputCol), position, output->Get(i), rowIndex);
                     break;
                 case OMNI_SHORT:
-                    SetValue<ShortVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);
+                    SetValue<int16_t>(vectorBatch->Get(outputCol), position, output->Get(i), rowIndex);
                     break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
-                    SetValue<LongVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);
+                    SetValue<int64_t>(vectorBatch->Get(outputCol), position, output->Get(i), rowIndex);
                     break;
                 case OMNI_BOOLEAN:
-                    SetValue<BooleanVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i),
-                        rowIndex);
+                    SetValue<bool>(vectorBatch->Get(outputCol), position, output->Get(i), rowIndex);
                     break;
                 case OMNI_DOUBLE:
-                    SetValue<DoubleVector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);
+                    SetValue<double>(vectorBatch->Get(outputCol), position, output->Get(i), rowIndex);
                     break;
                 case OMNI_CHAR:
                 case OMNI_VARCHAR:
-                    SetVarcharValue(vectorBatch->GetVector(outputCol), position, output->GetVector(i), rowIndex);
+                    SetVarcharValue(vectorBatch->Get(outputCol), position, output->Get(i), rowIndex);
                     break;
                 case OMNI_DECIMAL128:
-                    SetValue<Decimal128Vector>(vectorBatch->GetVector(outputCol), position, output->GetVector(i),
-                        rowIndex);
+                    SetValue<Decimal128>(vectorBatch->Get(outputCol), position, output->Get(i), rowIndex);
                     break;
                 default:
                     break;

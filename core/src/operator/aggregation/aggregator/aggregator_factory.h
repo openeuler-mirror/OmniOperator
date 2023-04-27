@@ -151,7 +151,7 @@ class FirstAggregatorFactory : public AggregatorFactory {
 public:
     explicit FirstAggregatorFactory(FunctionType aggregateType) : aggregateType(aggregateType) {}
     ~FirstAggregatorFactory() override = default;
-    template <typename InputVecType, typename InputType>
+    template <typename InputType>
     std::unique_ptr<Aggregator> CreateFirstAggregatorHelper(FunctionType aggregateType, const DataTypes &inputTypes,
         const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
         bool isOverflowAsNull = true);

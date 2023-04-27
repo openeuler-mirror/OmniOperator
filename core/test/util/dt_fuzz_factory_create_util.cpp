@@ -9,9 +9,7 @@
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/join/lookup_join.h"
-#include "operator/limit/limit.h"
 #include "operator/limit/distinct_limit.h"
-#include "operator/partitionedoutput/partitionedoutput.h"
 #include "operator/union/union.h"
 #include "operator/topn/topn.h"
 #include "operator/join/sortmergejoin/sort_merge_join.h"
@@ -132,14 +130,6 @@ std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataType
     return operatorfactories;
 }
 
-OperatorFactory *CreateLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount)
-{
-    const int64_t limitCount = loopCount - 1;
-    auto operatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(limitCount);
-    return operatorFactory;
-}
-
-
 OperatorFactory *CreateDistinctLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount)
 {
     const int64_t limitCount = loopCount - 1;
@@ -147,24 +137,6 @@ OperatorFactory *CreateDistinctLimitFactory(omniruntime::type::DataTypes &source
 
     auto operatorFactory =
         DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(sourceTypes, distinctCols, 10, -1, limitCount);
-    return operatorFactory;
-}
-
-OperatorFactory *CreatePartitionedOutputFactory(omniruntime::type::DataTypes &sourceTypes)
-{
-    bool replicatesAnyRow = false;
-    int32_t nullChannel = -1;
-    int32_t partitionChannels[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    int32_t partitionCount = 10;
-    int32_t bucketToPartition[1] = {1};
-    bool isHashPrecomputed = false;
-    DataTypes hashChannelTypes(std::vector<DataTypePtr>{ IntType(), VarcharType() });
-    int32_t hashChannels[2] = {1, 8};
-    int32_t hashChannelsCount = 2;
-
-    auto operatorFactory = PartitionedOutputOperatorFactory::CreatePartitionedOutputOperatorFactory(sourceTypes, 10,
-        replicatesAnyRow, nullChannel, partitionChannels, 10, partitionCount, bucketToPartition, 1, isHashPrecomputed,
-        hashChannelTypes, hashChannels, hashChannelsCount);
     return operatorFactory;
 }
 

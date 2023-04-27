@@ -6,24 +6,25 @@
 
 #include <iostream>
 #include <jemalloc/jemalloc.h>
-#include "memory_statistic.h"
+#include "util/debug.h"
+#include "util/omni_exception.h"
 
 using namespace std;
 namespace omniruntime {
 namespace mem {
-
 class SimpleAllocator {
 public:
     static int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
     {
-        if (size < 0) {
-            std::cout << "allocate size is negative." << std::endl;
-            return -1;
+        // background: If size is 0, then malloc() returns either NULL, or a unique pointer value that can later be
+        // successfully passed to free().
+        if (size <= 0) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is non-positive.");
         }
 
         if (zeroFill) {
             // alloc based on the size
-            *buffer = static_cast<uint8_t *>(calloc(static_cast<size_t>(size), static_cast<size_t>(size)));
+            *buffer = static_cast<uint8_t *>(calloc(1, static_cast<size_t>(size)));
         } else {
             // alloc based on the size
             *buffer = static_cast<uint8_t *>(malloc(static_cast<size_t>(size)));
@@ -43,9 +44,8 @@ class JemallocAllocator {
 public:
     static int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
     {
-        if (size < 0) {
-            std::cout << "allocate size is negative." << std::endl;
-            return -1;
+        if (size <= 0) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is non-positive.");
         }
         // jemalloc alloc
         if (zeroFill) {
@@ -72,10 +72,6 @@ template <typename Allocator> class BaseMemoryPoolImpl : public MemoryPool {
 public:
     int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false) override
     {
-#ifdef DEBUG_VECTOR
-        static omniruntime::mem::MemoryStatistic statistic;
-        statistic.RecordSize(size);
-#endif
         Allocator::Allocate(size, buffer, zeroFill);
         return 0;
     }
@@ -107,7 +103,7 @@ public:
             return smallSize;
         }
         uint32_t bits = 63 - __builtin_clzll(size);
-        size_t lower = 1U << bits;
+        size_t lower = 1ULL << bits;
         // Size is a power of 2.
         if (lower == size) {
             return size;
@@ -151,7 +147,11 @@ public:
     }
 };
 
-static omniruntime::mem::JemallocMemoryPool g_memoryPoolInstance;
+#ifdef COVERAGE
+        static omniruntime::mem::SimpleMemoryPool g_memoryPoolInstance;
+#else
+        static omniruntime::mem::JemallocMemoryPool g_memoryPoolInstance;
+#endif
 
 MemoryPool *GetMemoryPool()
 {

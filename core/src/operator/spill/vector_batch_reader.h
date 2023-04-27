@@ -8,15 +8,13 @@
 
 #include "spill_iterator.h"
 #include "spill_tracker.h"
-#include "vector/vector_allocator.h"
 
 namespace omniruntime {
 namespace op {
 class VectorBatchReader : public VectorBatchUnitIter {
 public:
-    VectorBatchReader(int32_t fd, uint64_t fileLength, SpillTracker *tracker,
-        omniruntime::vec::VectorAllocator *vectorAllocator)
-        : fd(fd), fileLength(fileLength), tracker(tracker), vectorAllocator(vectorAllocator)
+    VectorBatchReader(int32_t fd, uint64_t fileLength, SpillTracker *tracker)
+        : fd(fd), fileLength(fileLength), tracker(tracker)
     {}
 
     ~VectorBatchReader() override
@@ -38,16 +36,15 @@ public:
     }
 
 private:
-    omniruntime::vec::Vector *ReadVarcharVector(int32_t rowCount);
+    std::unique_ptr<omniruntime::vec::BaseVector> ReadVarcharVector(int32_t rowCount);
 
-    template <typename V, typename T> omniruntime::vec::Vector *ReadVector(int32_t rowCount);
+    template <typename T> std::unique_ptr<omniruntime::vec::BaseVector> ReadVector(int32_t rowCount);
 
     omniruntime::vec::VectorBatch *ReadVecBatch();
 
     int32_t fd;
     uint64_t fileLength;
     SpillTracker *tracker;
-    omniruntime::vec::VectorAllocator *vectorAllocator;
     int64_t rowOffset = 0;
 
     // file header

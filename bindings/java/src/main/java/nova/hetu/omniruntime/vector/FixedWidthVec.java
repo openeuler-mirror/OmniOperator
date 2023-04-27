@@ -16,25 +16,24 @@ public abstract class FixedWidthVec extends Vec {
         super(capacityInBytes, size, encoding, type);
     }
 
-    public FixedWidthVec(VecAllocator allocator, int capacityInBytes, int size, VecEncoding encoding, DataType type) {
-        super(allocator, capacityInBytes, size, encoding, type);
+    public FixedWidthVec(Vec dictionary, int[] ids, int capacityInBytes, DataType type) {
+        super(dictionary, ids, capacityInBytes, type);
     }
 
-    public FixedWidthVec(FixedWidthVec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    public FixedWidthVec(FixedWidthVec vector, int offset, int length, int capacityInBytes) {
+        super(vector, offset, length, capacityInBytes);
     }
 
-    public FixedWidthVec(FixedWidthVec vector, int[] positions, int offset, int length) {
-        super(vector, positions, offset, length);
+    public FixedWidthVec(FixedWidthVec vector, int[] positions, int offset, int length, int capacityInBytes) {
+        super(vector, positions, offset, length, capacityInBytes);
     }
 
-    public FixedWidthVec(long nativeVector, DataType type) {
-        super(nativeVector, type);
+    public FixedWidthVec(long nativeVector, DataType type, int typeLength) {
+        super(nativeVector, type, typeLength);
     }
 
     public FixedWidthVec(long nativeVector, long nativeVectorValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset, DataType type) {
-        super(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator,
-                capacityInBytes, size, offset, type);
+            int capacityInBytes, int size, DataType type) {
+        super(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, capacityInBytes, size, type);
     }
 }

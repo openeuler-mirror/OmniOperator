@@ -10,7 +10,6 @@ import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
 
-import java.math.BigDecimal;
 import java.util.Arrays;
 
 /**
@@ -26,8 +25,7 @@ public class TestDoubleVec {
     public void testNewVector() {
         DoubleVec vec = new DoubleVec(256);
         assertEquals(vec.getSize(), 256);
-        assertEquals(vec.getOffset(), 0);
-        assertEquals(vec.getCapacityInBytes(), 2048);
+        assertEquals(vec.getRealValueBufCapacityInBytes(), 2048);
         assertEquals(vec.getType().getId(), OMNI_DOUBLE);
         vec.close();
     }
@@ -37,14 +35,12 @@ public class TestDoubleVec {
      */
     @Test
     public void testSlice() {
-        VecAllocator allocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("test", VecAllocator.UNLIMIT,
-                0);
-        DoubleVec originalVec = new DoubleVec(allocator, 10);
+        DoubleVec originalVec = new DoubleVec(10);
         for (int i = 0; i < originalVec.getSize(); i++) {
             originalVec.set(i, (double) i / 3);
         }
         int offset = 3;
-        DoubleVec slice1 = originalVec.slice(offset, 7);
+        DoubleVec slice1 = originalVec.slice(offset, 4);
         assertEquals(slice1.getSize(), 4);
         for (int i = 0; i < slice1.getSize(); i++) {
             assertEquals(slice1.get(i), originalVec.get(i + offset), "Error item value at: " + i);
@@ -59,7 +55,6 @@ public class TestDoubleVec {
         originalVec.close();
         slice1.close();
         slice2.close();
-        allocator.close();
     }
 
     /**
@@ -136,35 +131,13 @@ public class TestDoubleVec {
 
         int[] positions = {1, 3};
         DoubleVec copyPositionVector = originalVector.copyPositions(positions, 0, 2);
-        assertEquals(copyPositionVector.getCapacityInBytes(), 16);
+        assertEquals(copyPositionVector.getRealValueBufCapacityInBytes(), 16);
         for (int i = 0; i < copyPositionVector.getSize(); i++) {
             assertEquals(copyPositionVector.get(i), originalVector.get(positions[i]));
         }
 
         originalVector.close();
         copyPositionVector.close();
-    }
-
-    /**
-     * test copy region
-     */
-    @Test
-    public void testCopyRegion() {
-        DoubleVec originalVector = new DoubleVec(4);
-        for (int i = 0; i < 4; i++) {
-            BigDecimal bd1 = new BigDecimal(i);
-            BigDecimal bd2 = new BigDecimal("3.3");
-            originalVector.set(i, bd1.multiply(bd2).doubleValue());
-        }
-
-        DoubleVec copyRegionVector = originalVector.copyRegion(2, 2);
-        assertEquals(copyRegionVector.getCapacityInBytes(), 16);
-        for (int i = 0; i < copyRegionVector.getSize(); i++) {
-            assertEquals(copyRegionVector.get(i), originalVector.get(i + 2));
-        }
-
-        originalVector.close();
-        copyRegionVector.close();
     }
 
     /**

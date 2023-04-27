@@ -26,8 +26,7 @@ public class TestLongVec {
     public void testNewVector() {
         LongVec vec = new LongVec(256);
         assertEquals(vec.getSize(), 256);
-        assertEquals(vec.getOffset(), 0);
-        assertEquals(vec.getCapacityInBytes(), 2048);
+        assertEquals(vec.getRealValueBufCapacityInBytes(), 2048);
         assertEquals(vec.getType(), LongDataType.LONG);
         vec.close();
     }
@@ -42,13 +41,13 @@ public class TestLongVec {
             originalVec.set(i, i);
         }
         int offset = 3;
-        LongVec slice1 = originalVec.slice(offset, 7);
+        LongVec slice1 = originalVec.slice(offset, 4);
         assertEquals(slice1.getSize(), 4);
         for (int i = 0; i < slice1.getSize(); i++) {
             assertEquals(slice1.get(i), originalVec.get(i + offset), "Error item value at: " + i);
         }
 
-        LongVec slice2 = slice1.slice(1, 3);
+        LongVec slice2 = slice1.slice(1, 2);
 
         for (int i = 0; i < slice2.getSize(); i++) {
             assertEquals(slice2.get(i), originalVec.get(i + offset + 1), "Error item value at: " + i);
@@ -133,33 +132,13 @@ public class TestLongVec {
 
         int[] positions = {1, 3};
         LongVec copyPositionVector = originalVector.copyPositions(positions, 0, 2);
-        assertEquals(copyPositionVector.getCapacityInBytes(), 16);
+        assertEquals(copyPositionVector.getRealValueBufCapacityInBytes(), 16);
         for (int i = 0; i < copyPositionVector.getSize(); i++) {
             assertEquals(copyPositionVector.get(i), originalVector.get(positions[i]));
         }
 
         originalVector.close();
         copyPositionVector.close();
-    }
-
-    /**
-     * test copy region
-     */
-    @Test
-    public void testCopyRegion() {
-        LongVec originalVector = new LongVec(4);
-        for (int i = 0; i < 4; i++) {
-            originalVector.set(i, i * 2);
-        }
-
-        LongVec copyRegionVector = originalVector.copyRegion(2, 2);
-        assertEquals(copyRegionVector.getCapacityInBytes(), 16);
-        for (int i = 0; i < copyRegionVector.getSize(); i++) {
-            assertEquals(copyRegionVector.get(i), originalVector.get(i + 2));
-        }
-
-        originalVector.close();
-        copyRegionVector.close();
     }
 
     /**

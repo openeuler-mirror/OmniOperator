@@ -27,7 +27,6 @@ import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.VariableWidthVec;
 import nova.hetu.omniruntime.vector.Vec;
-import nova.hetu.omniruntime.vector.VecAllocator;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecEncoding;
 import nova.hetu.omniruntime.vector.VecFactory;
@@ -70,17 +69,10 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 break;
             case OMNI_VEC_ENCODING_DICTIONARY: {
                 DictionaryVec dictionaryVec = (DictionaryVec) vec;
-                int[] preIds = dictionaryVec.getIds();
-                int[] nowIds;
-                if (ids != null) {
-                    nowIds = new int[ids.length];
-                    for (int i = 0; i < ids.length; i++) {
-                        nowIds[i] = preIds[ids[i]];
-                    }
-                } else {
-                    nowIds = preIds;
-                }
-                return buildProtoVec(dictionaryVec.getDictionary(), nowIds);
+                Vec dictionary = dictionaryVec.expandDictionary();
+                VecBatchSerde.Vec protoVec = buildProtoVec(dictionary, null);
+                dictionary.close();
+                return protoVec;
             }
             case OMNI_VEC_ENCODING_CONTAINER: {
                 ContainerVec containerVec = (ContainerVec) vec;
@@ -116,8 +108,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         valueNullsBuf.limit(compactVec.getRealNullBufCapacityInBytes());
         VecBatchSerde.Vec protoVec = protoVecBuilder.setTypeExt(protoDataTypeExtBuild.build())
                 .setVecEncoding(protoVecEncodingBuild.build()).setSize(compactVec.getSize())
-                .setOffset(compactVec.getOffset()).setValues(ByteString.copyFrom(valueBuf))
-                .setNulls(ByteString.copyFrom(valueNullsBuf)).build();
+                .setValues(ByteString.copyFrom(valueBuf)).setNulls(ByteString.copyFrom(valueNullsBuf)).build();
 
         if (compactVec != vec) {
             compactVec.close();
@@ -176,10 +167,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         if (ids != null) {
             return vec.copyPositions(ids, 0, ids.length);
         }
-        // original vec slice
-        if (vec.getOffset() != 0) {
-            return vec.copyRegion(0, vec.getSize());
-        }
+        // original vec
         return vec;
     }
 
@@ -191,7 +179,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             int rowCount = protoVecBatch.getRowCount();
             Vec[] vecs = new Vec[vecCount];
             for (int i = 0; i < vecCount; i++) {
-                vecs[i] = buildVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, protoVecBatch.getVectors(i));
+                vecs[i] = buildVec(protoVecBatch.getVectors(i));
             }
             return new VecBatch(vecs, rowCount);
         } catch (InvalidProtocolBufferException e) {
@@ -199,23 +187,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         }
     }
 
-    @Override
-    public VecBatch deserialize(VecAllocator vecAllocator, byte[] bytes) {
-        try {
-            VecBatchSerde.VecBatch protoVecBatch = VecBatchSerde.VecBatch.parseFrom(bytes);
-            int vecCount = protoVecBatch.getVecCount();
-            int rowCount = protoVecBatch.getRowCount();
-            Vec[] vecs = new Vec[vecCount];
-            for (int i = 0; i < vecCount; i++) {
-                vecs[i] = buildVec(vecAllocator, protoVecBatch.getVectors(i));
-            }
-            return new VecBatch(vecs, rowCount);
-        } catch (InvalidProtocolBufferException e) {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_INNER_ERROR, "deserialize failed." + e.getCause());
-        }
-    }
-
-    private Vec buildVec(VecAllocator vecAllocator, VecBatchSerde.Vec protoVec) {
+    private Vec buildVec(VecBatchSerde.Vec protoVec) {
         VecBatchSerde.DataTypeExt protoTypeExt = protoVec.getTypeExt();
         VecEncoding vecEncoding = VecEncoding.values()[protoVec.getVecEncoding().getEncodingId()];
         VecBatchSerde.DataTypeExt.DataTypeId dataTypeId = protoTypeExt.getId();
@@ -223,7 +195,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         Vec vec;
         switch (vecEncoding) {
             case OMNI_VEC_ENCODING_FLAT:
-                vec = createFlatVec(vecAllocator, vecSize, dataTypeId, protoVec);
+                vec = createFlatVec(vecSize, dataTypeId, protoVec);
                 vec.setValuesBuf(protoVec.getValues().toByteArray());
                 vec.setNullsBuf(protoVec.getNulls().toByteArray());
                 return vec;
@@ -232,46 +204,46 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 long[] subVecAddresses = new long[vecCount];
                 DataType[] subDataTypes = new DataType[vecCount];
                 for (int i = 0; i < vecCount; i++) {
-                    Vec subVec = buildVec(vecAllocator, protoVec.getSubVectors(i));
+                    Vec subVec = buildVec(protoVec.getSubVectors(i));
                     subVecAddresses[i] = subVec.getNativeVector();
                     subDataTypes[i] = subVec.getType();
                 }
-                return new ContainerVec(vecAllocator, vecCount, protoVec.getSize(), subVecAddresses, subDataTypes);
+                return new ContainerVec(vecCount, protoVec.getSize(), subVecAddresses, subDataTypes);
             default:
                 throw new IllegalStateException("Unexpected encoding: " + vecEncoding);
         }
     }
 
-    private Vec createFlatVec(VecAllocator vecAllocator, int vecSize, VecBatchSerde.DataTypeExt.DataTypeId dataTypeId,
+    private Vec createFlatVec(int vecSize, VecBatchSerde.DataTypeExt.DataTypeId dataTypeId,
             VecBatchSerde.Vec protoVec) {
         Vec vec;
         switch (dataTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
-                vec = new IntVec(vecAllocator, vecSize);
+                vec = new IntVec(vecSize);
                 break;
             case OMNI_LONG:
             case OMNI_DATE64:
             case OMNI_DECIMAL64:
-                vec = new LongVec(vecAllocator, vecSize);
+                vec = new LongVec(vecSize);
                 break;
             case OMNI_SHORT:
-                vec = new ShortVec(vecAllocator, vecSize);
+                vec = new ShortVec(vecSize);
                 break;
             case OMNI_BOOLEAN:
-                vec = new BooleanVec(vecAllocator, vecSize);
+                vec = new BooleanVec(vecSize);
                 break;
             case OMNI_DOUBLE:
-                vec = new DoubleVec(vecAllocator, vecSize);
+                vec = new DoubleVec(vecSize);
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                VarcharVec varcharVec = new VarcharVec(vecAllocator, protoVec.getValues().size(), protoVec.getSize());
+                VarcharVec varcharVec = new VarcharVec(protoVec.getValues().size(), vecSize);
                 varcharVec.setOffsetsBuf(protoVec.getOffsets().toByteArray());
                 vec = varcharVec;
                 break;
             case OMNI_DECIMAL128:
-                vec = new Decimal128Vec(vecAllocator, vecSize);
+                vec = new Decimal128Vec(vecSize);
                 break;
             case OMNI_TIME32:
             case OMNI_TIME64:

@@ -13,6 +13,8 @@ namespace omniruntime {
 namespace op {
 template <bool INPUT_RAW, bool OUT_PARTIAL, typename RawInputVectorType, typename ResultType = double>
 class AverageFlatIMAggregator : public Aggregator {
+using FixedVector = Vector<RawInputVectorType>;
+using DicVector = Vector<DictionaryContainer<RawInputVectorType>>;
 public:
     AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
@@ -28,9 +30,8 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
+        BaseVector *vector = vectorBatch->Get(channels[0]);
+        if (vector->IsNull(rowIndex)) {
             return;
         }
 
@@ -41,19 +42,29 @@ public:
 
         if constexpr (INPUT_RAW) {
             auto currentVal = static_cast<ResultType *>(state.val);
-            *reinterpret_cast<ResultType *>(state.val) =
-                (static_cast<RawInputVectorType *>(vector))->GetValue(offset) + *currentVal;
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                *reinterpret_cast<ResultType *>(state.val) =
+                    (static_cast<DicVector *>(vector))->GetValue(rowIndex) + *currentVal;
+            } else {
+                *reinterpret_cast<ResultType *>(state.val) =
+                    (static_cast<FixedVector *>(vector))->GetValue(rowIndex) + *currentVal;
+            }
             ++state.count;
         } else {
-            int32_t avgValOffset;
-            auto avgValVector = reinterpret_cast<DoubleVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, avgValOffset));
-            double avgVal = avgValVector->GetValue(avgValOffset);
+            double avgVal;
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                avgVal = static_cast<Vector<DictionaryContainer<double>> *>(vector)->GetValue(rowIndex);
+            } else {
+                avgVal = static_cast<Vector<double> *>(vector)->GetValue(rowIndex);
+            }
 
-            int32_t avgCountOffset;
-            auto avgCountVector = reinterpret_cast<LongVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[1]), rowIndex, avgCountOffset));
-            int64_t avgCnt = avgCountVector->GetValue(avgCountOffset);
+            auto avgCountVector = vectorBatch->Get(channels[1]);
+            int64_t avgCnt;
+            if (avgCountVector->GetEncoding() == OMNI_DICTIONARY) {
+                avgCnt = static_cast<Vector<DictionaryContainer<int64_t>> *>(avgCountVector)->GetValue(rowIndex);
+            } else {
+                avgCnt = static_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
+            }
 
             auto currentVal = static_cast<ResultType *>(state.val);
             state.count += avgCnt;
@@ -63,30 +74,38 @@ public:
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
+        BaseVector *vector = vectorBatch->Get(channels[0]);
+        if (vector->IsNull(rowIndex)) {
             return;
         }
 
         // for partial aggregation
         if constexpr (INPUT_RAW) {
-            auto rowVal = (static_cast<RawInputVectorType *>(vector))->GetValue(offset);
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
-            *reinterpret_cast<ResultType *>(ptr) = rowVal;
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                auto rowVal = (static_cast<DicVector *>(vector))->GetValue(rowIndex);
+                *reinterpret_cast<ResultType *>(ptr) = rowVal;
+            } else {
+                auto rowVal = (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
+                *reinterpret_cast<ResultType *>(ptr) = rowVal;
+            }
             state.val = ptr;
             state.count = 1;
         } else {
-            int32_t avgValOffset;
-            auto avgValVector = reinterpret_cast<DoubleVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, avgValOffset));
-            double avgVal = avgValVector->GetValue(avgValOffset);
+            double avgVal;
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                avgVal = static_cast<Vector<DictionaryContainer<double>> *>(vector)->GetValue(rowIndex);
+            } else {
+                avgVal = static_cast<Vector<double> *>(vector)->GetValue(rowIndex);
+            }
 
-            int32_t avgCountOffset;
-            auto avgCountVector = reinterpret_cast<LongVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[1]), rowIndex, avgCountOffset));
-            int64_t avgCnt = avgCountVector->GetValue(avgCountOffset);
-
+            auto avgCountVector = vectorBatch->Get(channels[1]);
+            int64_t avgCnt;
+            if (avgCountVector->GetEncoding() == OMNI_DICTIONARY) {
+                avgCnt = static_cast<Vector<DictionaryContainer<int64_t>> *>(avgCountVector)->GetValue(rowIndex);
+            } else {
+                avgCnt = static_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
+            }
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
             *reinterpret_cast<ResultType *>(ptr) = avgVal;
             state.val = ptr;
@@ -94,16 +113,11 @@ public:
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         if constexpr (OUT_PARTIAL) {
-            int32_t avgValOffset;
-            auto avgValVector = reinterpret_cast<DoubleVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, avgValOffset));
-
-            int32_t avgCountOffset;
-            auto avgCountVector = reinterpret_cast<LongVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectors[1], rowIndex, avgCountOffset));
+            auto avgValVector = static_cast<Vector<double> *>(vectors[0]);
+            auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
             // all input are nulls, return 0
             if (state.val == nullptr) {
                 avgValVector->SetValue(rowIndex, 0);
@@ -114,11 +128,9 @@ public:
             avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
             avgCountVector->SetValue(rowIndex, state.count);
         } else {
-            int32_t avgValOffset;
-            auto avgValVector = reinterpret_cast<DoubleVector *>(
-                VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, avgValOffset));
+            auto avgValVector = static_cast<Vector<double> *>(vectors[0]);
             if (state.count <= 0 || state.val == nullptr) {
-                avgValVector->SetValueNull(rowIndex);
+                avgValVector->SetNull(rowIndex);
                 return;
             }
             auto currentVal = *(static_cast<ResultType *>(state.val));

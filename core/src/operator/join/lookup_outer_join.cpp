@@ -57,6 +57,13 @@ LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, st
     int32_t outputRowSize =
         OperatorUtil::GetRowSize(this->buildOutputTypes.Get()) + OperatorUtil::GetRowSize(this->probeOutputTypes.Get());
     maxRowCount = OperatorUtil::GetMaxRowCount((outputColsCount == 0) ? DEFAULT_ROW_SIZE : outputRowSize);
+
+    for (auto &probeOutputType : probeOutputTypes.Get()) {
+        outputTypes.push_back(probeOutputType);
+    }
+    for (auto &buildOutputType : buildOutputTypes.Get()) {
+        outputTypes.push_back(buildOutputType);
+    }
 }
 
 LookupOuterJoinOperator::~LookupOuterJoinOperator()
@@ -81,7 +88,7 @@ int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
     }
     int32_t rowCount = std::min(maxRowCount, static_cast<int32_t>(totalRowCount) - outputtedRowCount);
     outputtedRowCount += rowCount;
-    auto result = new VectorBatch(outputColsCount, rowCount);
+    auto result = new VectorBatch(rowCount);
     BuildVecBatch(result);
     *outputVecBatch = result;
     if (!HasNext()) {
@@ -90,26 +97,22 @@ int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         outputtedRowCount = 0;
     }
-    return 0;
-}
+        return 0;
+    }
 
 void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
 {
     auto rowCount = vectorBatch->GetRowCount();
-    int32_t col;
-    for (col = 0; col < probeOutputTypes.GetSize(); col++) {
-        auto vector =
-            VectorHelper::CreateVector(vecAllocator, OMNI_VEC_ENCODING_FLAT, *probeOutputTypes.GetType(col), rowCount);
-        vectorBatch->SetVector(col, vector);
+    for (int32_t col = 0; col < probeOutputTypes.GetSize(); col++) {
+        auto vector = VectorHelper::CreateVector(OMNI_FLAT, probeOutputTypes.GetType(col)->GetId(), rowCount);
         for (int32_t row = 0; row < rowCount; row++) {
-            vectorBatch->GetVector(col)->SetValueNull(row);
+            vector->SetNull(row);
         }
+        vectorBatch->Append(vector.release());
     }
     for (int32_t buildCol = 0; buildCol < buildOutputTypes.GetSize(); buildCol++) {
-        auto vector = VectorHelper::CreateVector(vecAllocator, OMNI_VEC_ENCODING_FLAT,
-            *buildOutputTypes.GetType(buildCol), rowCount);
-        vectorBatch->SetVector(col, vector);
-        col++;
+        auto vector = VectorHelper::CreateVector(OMNI_FLAT, buildOutputTypes.GetType(buildCol)->GetId(), rowCount);
+        vectorBatch->Append(vector.release());
     }
     int32_t rows = 0;
     auto outputIds = buildOutputTypes.GetIds();
@@ -121,33 +124,26 @@ void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
     }
 }
 
-template <typename T>
-void AppendTo(VectorBatch *vectorBatch, int32_t destCol, int32_t destRowIndex, uint32_t srcRowIndex, Vector *src)
+template <DataTypeId typeId>
+void AppendTo(VectorBatch *vectorBatch, int32_t destCol, int32_t destRowIndex, uint32_t srcRowIndex, BaseVector *src)
 {
-    auto dest = static_cast<T *>(vectorBatch->GetVector(destCol));
-    int32_t originalRowIndex;
-    T *originalVector =
-        static_cast<T *>(VectorHelper::ExpandVectorAndIndex(src, static_cast<int32_t>(srcRowIndex), originalRowIndex));
-    if (originalVector->IsValueNull(originalRowIndex)) {
-        dest->SetValueNull(destRowIndex);
-    } else {
-        dest->SetValue(destRowIndex, originalVector->GetValue(originalRowIndex));
-    }
-}
+    using Type = typename omniruntime::op::NativeAndVectorType<typeId>::type;
+    using Vector = typename omniruntime::op::NativeAndVectorType<typeId>::vector;
+    using DictVector = typename omniruntime::op::NativeAndVectorType<typeId>::dictVector;
 
-void AppendToVarchar(VectorBatch *vectorBatch, int32_t destCol, int32_t destRowIndex, uint32_t srcRowIndex, Vector *src)
-{
-    auto dest = static_cast<VarcharVector *>(vectorBatch->GetVector(destCol));
-    int32_t originalRowIndex;
-    auto buildVector = static_cast<VarcharVector *>(
-        VectorHelper::ExpandVectorAndIndex(src, static_cast<int32_t>(srcRowIndex), originalRowIndex));
-    if (buildVector->IsValueNull(originalRowIndex)) {
-        dest->SetValueNull(destRowIndex);
-    } else {
-        uint8_t *value = nullptr;
-        int32_t valueLen = buildVector->GetValue(originalRowIndex, &value);
-        dest->SetValue(destRowIndex, value, valueLen);
+    auto destVector = static_cast<Vector *>(vectorBatch->Get(destCol));
+    if (src->IsNull(srcRowIndex)) {
+        destVector->SetNull(destRowIndex);
+        return;
     }
+
+    Type value;
+    if (src->GetEncoding() == OMNI_DICTIONARY) {
+        value = static_cast<DictVector *>(src)->GetValue(srcRowIndex);
+    } else {
+        value = static_cast<Vector *>(src)->GetValue(srcRowIndex);
+    }
+    destVector->SetValue(destRowIndex, value);
 }
 
 void LookupOuterJoinOperator::AppendToNext(VectorBatch *vectorBatch, const int32_t *buildOutputIds,
@@ -163,36 +159,7 @@ void LookupOuterJoinOperator::AppendToNext(VectorBatch *vectorBatch, const int32
         auto buildOutputCol = buildOutputCols[col];
         auto destCol = col + probeOutputColsCount;
         auto src = hashTable->GetPagesHash()->GetPagesHashStrategy()->GetBuildColumns()[buildOutputCol][vecBatchIndex];
-        switch (buildOutputIds[col]) {
-            case OMNI_SHORT:
-                AppendTo<ShortVector>(vectorBatch, destCol, destRowIndex, srcRowIndex, src);
-                break;
-            case OMNI_INT:
-            case OMNI_DATE32:
-                AppendTo<IntVector>(vectorBatch, destCol, destRowIndex, srcRowIndex, src);
-                break;
-            case OMNI_LONG:
-            case OMNI_DECIMAL64:
-                AppendTo<LongVector>(vectorBatch, destCol, destRowIndex, srcRowIndex, src);
-                break;
-            case OMNI_DOUBLE:
-                AppendTo<DoubleVector>(vectorBatch, destCol, destRowIndex, srcRowIndex, src);
-                break;
-            case OMNI_BOOLEAN:
-                AppendTo<BooleanVector>(vectorBatch, destCol, destRowIndex, srcRowIndex, src);
-                break;
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                AppendToVarchar(vectorBatch, destCol, destRowIndex, srcRowIndex, src);
-                break;
-            }
-            case OMNI_DECIMAL128:
-                AppendTo<Decimal128Vector>(vectorBatch, destCol, destRowIndex, srcRowIndex, src);
-                break;
-            default:
-                LogError("No such data type %d", buildOutputIds[col]);
-                break;
-        }
+        DYNAMIC_TYPE_DISPATCH(AppendTo, buildOutputIds[col], vectorBatch, destCol, destRowIndex, srcRowIndex, src);
     }
 }
 

@@ -72,7 +72,7 @@ extern "C" DLLEXPORT void CopyInt64(int64_t *dataArray, int64_t *output, int32_t
 
 extern "C" DLLEXPORT void CopyDouble(double *dataArray, double *output, int32_t rowCnt);
 
-extern "C" DLLEXPORT void CopyDecimal128(__int128_t *dataArray, __int128_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void CopyDecimal128(Decimal128 *dataArray, Decimal128 *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void CopyString(uint8_t **dataArray, uint8_t **output, int32_t rowCnt);
 

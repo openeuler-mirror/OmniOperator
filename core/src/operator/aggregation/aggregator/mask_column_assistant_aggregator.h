@@ -38,31 +38,29 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *maskVector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(maskColumnId), rowIndex, offset);
-        if (maskVector->IsValueNull(offset)) {
+        BaseVector *maskVector = vectorBatch->Get(maskColumnId);
+        if (maskVector->IsNull(rowIndex)) {
             return;
         }
 
-        if (static_cast<BooleanVector *>(maskVector)->GetValue(offset)) {
+        if (static_cast<Vector<bool> *>(maskVector)->GetValue(rowIndex)) {
             realAggregator->ProcessGroup(state, vectorBatch, rowIndex);
         }
     }
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *maskVector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(maskColumnId), rowIndex, offset);
-        if (maskVector->IsValueNull(offset)) {
+        BaseVector *maskVector = vectorBatch->Get(maskColumnId);
+        if (maskVector->IsNull(rowIndex)) {
             return;
         }
 
-        if (static_cast<BooleanVector *>(maskVector)->GetValue(offset)) {
+        if (static_cast<Vector<bool> *>(maskVector)->GetValue(rowIndex)) {
             realAggregator->InitiateGroup(state, vectorBatch, rowIndex);
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);
     }

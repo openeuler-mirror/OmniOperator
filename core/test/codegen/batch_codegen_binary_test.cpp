@@ -47,17 +47,16 @@ TEST(BatchCodeGenTest, IntCompare1)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_IntCompare1");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(25, numSelectedRows);
     for (int i = 0; i < numSelectedRows; ++i) {
-        int32_t val = ((IntVector *)ret->GetVector(0))->GetValue(i);
+        int32_t val = (reinterpret_cast<Vector<int32_t> *>(ret->Get(0)))->GetValue(i);
         EXPECT_TRUE(val < 50 && val >= 25);
     }
 
@@ -66,7 +65,6 @@ TEST(BatchCodeGenTest, IntCompare1)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -94,18 +92,17 @@ TEST(BatchCodeGenTest, IntCompare2)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_IntCompare2");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(75, numSelectedRows);
 
     for (int i = 0; i < numSelectedRows; ++i) {
-        int32_t val = ((IntVector *)ret->GetVector(0))->GetValue(i);
+        int32_t val = (reinterpret_cast<Vector<int32_t> *>(ret->Get(0)))->GetValue(i);
         EXPECT_TRUE(val > 50 || val <= 25);
     }
 
@@ -114,7 +111,6 @@ TEST(BatchCodeGenTest, IntCompare2)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -145,18 +141,17 @@ TEST(BatchCodeGenTest, LongCompare1)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ LongType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LongCompare1");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(76, numSelectedRows);
 
     for (int i = 0; i < numSelectedRows; ++i) {
-        int32_t val = ((IntVector *)ret->GetVector(0))->GetValue(i);
+        int32_t val = (reinterpret_cast<Vector<int32_t> *>(ret->Get(0)))->GetValue(i);
         EXPECT_TRUE(val >= 50 || val <= 25);
     }
 
@@ -165,7 +160,6 @@ TEST(BatchCodeGenTest, LongCompare1)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -193,18 +187,17 @@ TEST(BatchCodeGenTest, LongCompare2)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ LongType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_LongCompare2");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(1, numSelectedRows);
 
     for (int i = 0; i < numSelectedRows; ++i) {
-        int32_t val = ((IntVector *)ret->GetVector(0))->GetValue(i);
+        int32_t val = (reinterpret_cast<Vector<int32_t> *>(ret->Get(0)))->GetValue(i);
         EXPECT_TRUE(val == 9);
     }
 
@@ -213,7 +206,6 @@ TEST(BatchCodeGenTest, LongCompare2)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -241,18 +233,17 @@ TEST(BatchCodeGenTest, DoubleCompare1)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_DoubleCompare1");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(26, numSelectedRows);
 
     for (int i = 0; i < numSelectedRows; ++i) {
-        double val = ((DoubleVector *)ret->GetVector(0))->GetValue(i);
+        double val = (reinterpret_cast<Vector<double> *>(ret->Get(0)))->GetValue(i);
         EXPECT_TRUE(val == 50.0 || val < 25.0);
     }
 
@@ -261,7 +252,6 @@ TEST(BatchCodeGenTest, DoubleCompare1)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -289,18 +279,17 @@ TEST(BatchCodeGenTest, DoubleCompare2)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_DoubleCompare2");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(75, numSelectedRows);
 
     for (int i = 0; i < numSelectedRows; ++i) {
-        double val = ((DoubleVector *)ret->GetVector(0))->GetValue(i);
+        double val = (reinterpret_cast<Vector<double> *>(ret->Get(0)))->GetValue(i);
         EXPECT_TRUE(val > 50.0 || val <= 25.0);
     }
 
@@ -309,7 +298,6 @@ TEST(BatchCodeGenTest, DoubleCompare2)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -324,36 +312,35 @@ TEST(BatchCodeGenTest, StringCompare)
 
     const int32_t numCols = 1;
     const int32_t numRows = 1000;
-    vector<string> strings;
-    for (int32_t i = 0; i < numRows; i++) {
-        if (i % 40 == 0) {
-            strings.emplace_back("hello");
-        } else {
-            strings.emplace_back("abcdefghijklmhjs");
-        }
-    }
-    vector<bool> nulls;
-    for (int32_t i = 0; i < numRows; i++) {
-        nulls.emplace_back(false);
-    }
 
-    std::vector<Vector *> cols = { CreateVarcharVector(strings, nulls) };
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_StringCompare");
-    auto *vecBatch = CreateVectorBatch(numRows, cols);
+
+    auto *col1 = new Vector<LargeStringContainer<std::string_view>>(numRows);
+    std::string value;
+    for (int i = 0; i < numRows; i++) {
+        if (i % 40 == 0) {
+            value = "hello";
+        } else {
+            value = "abcdefghijklmhjs";
+        }
+        std::string_view input(value.data(), value.size());
+        col1->SetValue(i, input);
+        col1->SetNotNull(i);
+    }
+    auto *t = new VectorBatch(numRows);
+    t->Append(col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, t, numSelectedRows, inputTypes);
     EXPECT_EQ(25, numSelectedRows);
 
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(exprs);
-    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(t);
     VectorHelper::FreeVecBatch(ret);
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -379,15 +366,13 @@ TEST(BatchCodeGenTest, Decimal64Compare1)
 
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Compare1");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, data1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(1, numSelectedRows);
 
     Expr::DeleteExprs({ filterExpr });
@@ -395,7 +380,6 @@ TEST(BatchCodeGenTest, Decimal64Compare1)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] data1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -421,15 +405,13 @@ TEST(BatchCodeGenTest, Decimal64Compare2)
 
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Compare2");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, data1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(6, numSelectedRows);
 
     Expr::DeleteExprs({ filterExpr });
@@ -437,7 +419,6 @@ TEST(BatchCodeGenTest, Decimal64Compare2)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] data1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -467,15 +448,13 @@ TEST(BatchCodeGenTest, Decimal128Compare1)
 
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128Compare1");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, data1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(1, numSelectedRows);
 
     Expr::DeleteExprs({ filterExpr });
@@ -483,7 +462,6 @@ TEST(BatchCodeGenTest, Decimal128Compare1)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] data1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -513,15 +491,13 @@ TEST(BatchCodeGenTest, Decimal128Compare2)
 
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128Compare2");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, data1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = 0;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, nullptr);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
     EXPECT_EQ(5, numSelectedRows);
 
     Expr::DeleteExprs({ filterExpr });
@@ -529,7 +505,6 @@ TEST(BatchCodeGenTest, Decimal128Compare2)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] data1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -574,23 +549,22 @@ TEST(BatchCodeGenTest, IntArith)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType(), IntType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_IntArith");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3, col4);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
     for (int32_t i = 0; i < numRows; i++) {
-        int32_t val0 = ((IntVector *)ret->GetVector(0))->GetValue(i);
+        int32_t val0 = (reinterpret_cast<Vector<int32_t> *>(ret->Get(0)))->GetValue(i);
         EXPECT_EQ(val0, i);
-        int32_t val1 = ((IntVector *)ret->GetVector(1))->GetValue(i);
+        int32_t val1 = (reinterpret_cast<Vector<int32_t> *>(ret->Get(1)))->GetValue(i);
         EXPECT_EQ(val1, i);
-        int32_t val2 = ((IntVector *)ret->GetVector(2))->GetValue(i);
+        int32_t val2 = (reinterpret_cast<Vector<int32_t> *>(ret->Get(2)))->GetValue(i);
         EXPECT_EQ(val2, i * 2);
-        int32_t val3 = ((IntVector *)ret->GetVector(3))->GetValue(i);
+        int32_t val3 = (reinterpret_cast<Vector<int32_t> *>(ret->Get(3)))->GetValue(i);
         EXPECT_EQ(val3, i);
     }
     Expr::DeleteExprs(exprs);
@@ -600,7 +574,6 @@ TEST(BatchCodeGenTest, IntArith)
     delete[] col2;
     delete[] col3;
     delete[] col4;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -645,29 +618,27 @@ TEST(BatchCodeGenTest, LongArith)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_IntArith");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3, col4);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
     for (int32_t i = 0; i < numRows; i++) {
-        int64_t val0 = ((LongVector *)ret->GetVector(0))->GetValue(i);
+        int64_t val0 = (reinterpret_cast<Vector<int64_t> *>(ret->Get(0)))->GetValue(i);
         EXPECT_EQ(val0, i);
-        int64_t val1 = ((LongVector *)ret->GetVector(1))->GetValue(i);
+        int64_t val1 = (reinterpret_cast<Vector<int64_t> *>(ret->Get(1)))->GetValue(i);
         EXPECT_EQ(val1, i);
-        int64_t val2 = ((LongVector *)ret->GetVector(2))->GetValue(i);
+        int64_t val2 = (reinterpret_cast<Vector<int64_t> *>(ret->Get(2)))->GetValue(i);
         EXPECT_EQ(val2, i * 2);
-        int64_t val3 = ((LongVector *)ret->GetVector(3))->GetValue(i);
+        int64_t val3 = (reinterpret_cast<Vector<int64_t> *>(ret->Get(3)))->GetValue(i);
         EXPECT_EQ(val3, i);
     }
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
-    delete vecAllocator;
     delete[] col1;
     delete[] col2;
     delete[] col3;
@@ -716,23 +687,22 @@ TEST(BatchCodeGenTest, DoubleArith)
     }
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType(), DoubleType() }));
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_IntArith");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3, col4);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
     for (int32_t i = 0; i < numRows; i++) {
-        double val0 = ((DoubleVector *)ret->GetVector(0))->GetValue(i);
+        double val0 = (reinterpret_cast<Vector<double> *>(ret->Get(0)))->GetValue(i);
         EXPECT_EQ(val0, i);
-        double val1 = ((DoubleVector *)ret->GetVector(1))->GetValue(i);
+        double val1 = (reinterpret_cast<Vector<double> *>(ret->Get(1)))->GetValue(i);
         EXPECT_EQ(val1, i);
-        double val2 = ((DoubleVector *)ret->GetVector(2))->GetValue(i);
+        double val2 = (reinterpret_cast<Vector<double> *>(ret->Get(2)))->GetValue(i);
         EXPECT_EQ(val2, i * 2.0);
-        double val3 = ((DoubleVector *)ret->GetVector(3))->GetValue(i);
+        double val3 = (reinterpret_cast<Vector<double> *>(ret->Get(3)))->GetValue(i);
         EXPECT_EQ(val3, i);
     }
     Expr::DeleteExprs(exprs);
@@ -742,7 +712,6 @@ TEST(BatchCodeGenTest, DoubleArith)
     delete[] col2;
     delete[] col3;
     delete[] col4;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -761,23 +730,21 @@ TEST(BatchCodeGenTest, Decimal64Arith1)
     col1[0] = 4321563;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(7, 3) };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Arith1");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
-    int64_t val0 = ((LongVector *)ret->GetVector(0))->GetValue(0);
+    int64_t val0 = (reinterpret_cast<Vector<int64_t> *>(ret->Get(0)))->GetValue(0);
     EXPECT_EQ(val0, 43092162);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -797,23 +764,21 @@ TEST(BatchCodeGenTest, Decimal64Arith2)
     col1[0] = 100;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(7, 2) };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Arith2");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
-    int64_t val0 = ((LongVector *)ret->GetVector(0))->GetValue(0);
+    int64_t val0 = (reinterpret_cast<Vector<int64_t> *>(ret->Get(0)))->GetValue(0);
     EXPECT_EQ(val0, 10000L);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -833,23 +798,21 @@ TEST(BatchCodeGenTest, Decimal64Arith3)
     col1[0] = 1225;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(4, 2) };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Arith3");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
-    int64_t val0 = ((LongVector *)ret->GetVector(0))->GetValue(0);
+    int64_t val0 = (reinterpret_cast<Vector<int64_t> *>(ret->Get(0)))->GetValue(0);
     EXPECT_EQ(val0, 98L);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -869,23 +832,21 @@ TEST(BatchCodeGenTest, Decimal64Arith4)
     col1[0] = 12250;
     std::vector<DataTypePtr> vecOfTypes = { Decimal64Type(5, 3) };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal64Arith4");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
-    int64_t val0 = ((LongVector *)ret->GetVector(0))->GetValue(0);
+    int64_t val0 = (reinterpret_cast<Vector<int64_t> *>(ret->Get(0)))->GetValue(0);
     EXPECT_EQ(val0, 1000L);
 
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -904,17 +865,16 @@ TEST(BatchCodeGenTest, Decimal128Arith1)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128Arith1");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret->GetVector(0))->GetValue(i);
+        Decimal128 val0 = reinterpret_cast<Vector<Decimal128> *>(ret->Get(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i * 10 + 20);
     }
@@ -922,7 +882,6 @@ TEST(BatchCodeGenTest, Decimal128Arith1)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -941,18 +900,18 @@ TEST(BatchCodeGenTest, Decimal128Arith2)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128Arith2");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col0);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret->GetVector(0))->GetValue(i);
-        Decimal128 old0 = ((Decimal128Vector *)vecBatch->GetVector(0))->GetValue(i);
+        Decimal128 val0 = reinterpret_cast<Vector<Decimal128> *>(ret->Get(0))->GetValue(i);
+        Decimal128 old0 = reinterpret_cast<Vector<Decimal128> *>(vecBatch->Get(0))->GetValue(i);
+
         if (i <= 5) {
             EXPECT_EQ(val0.HighBits(), 1LL << 63);
             EXPECT_EQ(val0.LowBits() - 1, old0.LowBits() * 10);
@@ -965,7 +924,6 @@ TEST(BatchCodeGenTest, Decimal128Arith2)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col0;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -984,17 +942,16 @@ TEST(BatchCodeGenTest, Decimal128Arith3)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128Arith3");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
 
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret->GetVector(0))->GetValue(i);
+        Decimal128 val0 = reinterpret_cast<Vector<Decimal128> *>(ret->Get(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i * 3);
     }
@@ -1002,7 +959,6 @@ TEST(BatchCodeGenTest, Decimal128Arith3)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
@@ -1019,17 +975,15 @@ TEST(BatchCodeGenTest, Decimal128Arith4)
     const int32_t numCols = 1;
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
-    VectorAllocator *vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter_Decimal128Arith4");
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
-
     int32_t numSelectedRows = numRows;
-    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, vecAllocator);
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
 
     for (int32_t i = 0; i < numRows; i++) {
-        Decimal128 val0 = ((Decimal128Vector *)ret->GetVector(0))->GetValue(i);
+        Decimal128 val0 = reinterpret_cast<Vector<Decimal128> *>(ret->Get(0))->GetValue(i);
         EXPECT_EQ(val0.HighBits(), 0);
         EXPECT_EQ(val0.LowBits(), i / 20);
     }
@@ -1037,6 +991,5 @@ TEST(BatchCodeGenTest, Decimal128Arith4)
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(ret);
     delete[] col1;
-    delete vecAllocator;
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }

@@ -7,6 +7,7 @@
 #include "operator/aggregation/aggregator/all_aggregators.h"
 #include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/aggregation/non_group_aggregation.h"
+#include "operator/omni_id_type_vector_traits.h"
 #include "vector/vector_helper.h"
 #include "test/util/test_util.h"
 
@@ -23,7 +24,7 @@ inline static std::map<std::string, FunctionType> aggFuncs = { { "sum", OMNI_AGG
                                                                { "min", OMNI_AGGREGATION_TYPE_MIN },
                                                                { "max", OMNI_AGGREGATION_TYPE_MAX } };
 
-inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForSum { { OMNI_BOOLEAN, {} },
+inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForSum{ { OMNI_BOOLEAN, {} },
     { OMNI_SHORT, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_INT, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_LONG, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
@@ -33,7 +34,7 @@ inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForSum { 
     { OMNI_CHAR, {} },
     { OMNI_VARCHAR, {} } };
 
-inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForAvg { { OMNI_BOOLEAN, {} },
+inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForAvg{ { OMNI_BOOLEAN, {} },
     { OMNI_SHORT, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_INT, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_LONG, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
@@ -43,7 +44,7 @@ inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForAvg { 
     { OMNI_CHAR, {} },
     { OMNI_VARCHAR, {} } };
 
-inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForMin { { OMNI_BOOLEAN,
+inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForMin{ { OMNI_BOOLEAN,
     { OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_SHORT, { OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_INT, { OMNI_CHAR, OMNI_VARCHAR } },
@@ -56,21 +57,20 @@ inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForMin { 
     { OMNI_VARCHAR,
     { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR } } };
 
-inline static std::map<std::string, std::map<DataTypeId, std::vector<DataTypeId>>> unsupported { { "sum",
+inline static std::map<std::string, std::map<DataTypeId, std::vector<DataTypeId>>> unsupported{ { "sum",
     unsupportedForSum },
     { "avg", unsupportedForAvg },
     { "min", unsupportedForMin },
     { "max", unsupportedForMin } };
 
-inline static std::vector<std::string> aggFuncName__ { "sum", "min", "max", "avg" };
-inline static std::vector<DataTypeId> dataTypes__ { OMNI_BOOLEAN,    OMNI_SHORT,  OMNI_INT,
-    OMNI_LONG,       OMNI_DOUBLE, OMNI_DECIMAL64,
-    OMNI_DECIMAL128, OMNI_CHAR,   OMNI_VARCHAR };
-inline static std::vector<int32_t> nullPercent__ { 0, 25, 100 };
-inline static std::vector<bool> isDict__ { false, true };
-inline static std::vector<bool> hasMask__ { false, true };
-inline static std::vector<bool> nullWhenOverflow__ { false, true };
-inline static std::vector<bool> groupby__ { false, true };
+inline static std::vector<std::string> aggFuncName__{ "sum", "min", "max", "avg" };
+inline static std::vector<DataTypeId> dataTypes__{ OMNI_BOOLEAN,   OMNI_SHORT,      OMNI_INT,  OMNI_LONG,   OMNI_DOUBLE,
+    OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR, OMNI_VARCHAR };
+inline static std::vector<int32_t> nullPercent__{ 0, 25, 100 };
+inline static std::vector<bool> isDict__{ false, true };
+inline static std::vector<bool> hasMask__{ false, true };
+inline static std::vector<bool> nullWhenOverflow__{ false, true };
+inline static std::vector<bool> groupby__{ false, true };
 
 inline bool CheckSupported(const std::string &aggFuncName, const DataTypeId inId, const DataTypeId outId)
 {
@@ -82,8 +82,8 @@ inline bool CheckSupported(const std::string &aggFuncName, const DataTypeId inId
 }
 
 template <DataTypeId TYPE_ID>
-Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nRows, const int32_t nullPercent,
-    const int32_t range, const bool isDict)
+BaseVector *CreateFixedSizeVector(const int32_t nRows, const int32_t nullPercent, const int32_t range,
+    const bool isDict)
 {
     using V = typename NativeAndVectorType<TYPE_ID>::vector;
     using T = typename NativeAndVectorType<TYPE_ID>::type;
@@ -91,14 +91,14 @@ Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nR
 
     if (isDict) {
         int32_t valueStartIdx = nullPercent > 0 ? 1 : 0;
-        V *vector = new V(vectorAllocator, 256 + valueStartIdx);
+        V *vector = new V(256 + valueStartIdx);
         if (nullPercent > 0) {
-            vector->SetValueNull(0);
+            vector->SetNull(0);
         }
 
         std::set<double> dictValues;
         dictValues.insert(0);
-        if constexpr (std::is_same_v<V, Decimal128Vector>) {
+        if constexpr (std::is_same_v<V, Vector<Decimal128>>) {
             vector->SetValue(valueStartIdx, Decimal128Wrapper(static_cast<int64_t>(0)).ToDecimal128());
         } else {
             vector->SetValue(valueStartIdx, static_cast<T>(0));
@@ -108,7 +108,7 @@ Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nR
                 v = (rand() % range) - ((4 * range) / 10) + ((rand() % 100) / 100.0);
             } while (!dictValues.insert(v).second);
 
-            if constexpr (std::is_same_v<V, Decimal128Vector>) {
+            if constexpr (std::is_same_v<V, Vector<Decimal128>>) {
                 vector->SetValue(i, Decimal128Wrapper(static_cast<int64_t>(v * 100)).ToDecimal128());
             } else {
                 vector->SetValue(i, static_cast<T>(v));
@@ -123,14 +123,14 @@ Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nR
                 ids[i] = (rand() % 256) + valueStartIdx;
             }
         }
-        auto dictVector = new DictionaryVector(vector, ids, nRows);
+        auto dictVector = VectorHelper::CreateDictionary(ids, nRows, vector);
         delete vector;
-        return dictVector;
+        return dictVector.release();
     } else {
-        V *vector = new V(vectorAllocator, nRows);
+        V *vector = new V(nRows);
         for (int32_t i = 0; i < nRows; ++i) {
             if ((rand() % 100) < nullPercent) {
-                vector->SetValueNull(i);
+                vector->SetNull(i);
             } else {
                 if ((rand() % 100) < 5) {
                     // 10% of rows are set to 0
@@ -138,7 +138,7 @@ Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nR
                 } else {
                     v = (rand() % range) - ((4 * range) / 10) + ((rand() % 100) / 100.0);
                 }
-                if constexpr (std::is_same_v<V, Decimal128Vector>) {
+                if constexpr (std::is_same_v<V, Vector<Decimal128>>) {
                     vector->SetValue(i, Decimal128Wrapper(static_cast<int64_t>(v * 100)).ToDecimal128());
                 } else {
                     vector->SetValue(i, static_cast<T>(v));
@@ -149,16 +149,16 @@ Vector *CreateFixedSizeVector(VectorAllocator *vectorAllocator, const int32_t nR
     }
 }
 
-inline Vector *CreateVarcharVector(VectorAllocator *vectorAllocator, const int32_t nRows, const int32_t nullPercent,
-    const int32_t range, const bool isDict)
+inline BaseVector *CreateVarcharVector(const int32_t nRows, const int32_t nullPercent, const int32_t range,
+    const bool isDict)
 {
     uint8_t charBuffer[MAX_VARCHAR_LENGTH];
     if (isDict) {
         int32_t valueStartIdx = nullPercent > 0 ? 1 : 0;
-        VarcharVector *vector =
-            new VarcharVector(vectorAllocator, MAX_VARCHAR_LENGTH * (range + valueStartIdx), range + valueStartIdx);
+        Vector<LargeStringContainer<std::string_view>> *vector =
+            new Vector<LargeStringContainer<std::string_view>>(range + valueStartIdx);
         if (nullPercent > 0) {
-            vector->SetValueNull(0);
+            vector->SetNull(0);
         }
 
         for (int32_t r = valueStartIdx; r < vector->GetSize(); ++r) {
@@ -166,7 +166,8 @@ inline Vector *CreateVarcharVector(VectorAllocator *vectorAllocator, const int32
             for (int32_t i = 0; i < valLen; ++i) {
                 charBuffer[i] = rand() % 95 + 32;
             }
-            vector->SetValue(r, charBuffer, valLen);
+            std::string_view str((char *)charBuffer, valLen);
+            vector->SetValue(r, str);
         }
 
         int32_t ids[nRows];
@@ -177,20 +178,22 @@ inline Vector *CreateVarcharVector(VectorAllocator *vectorAllocator, const int32
                 ids[i] = (rand() % range) + valueStartIdx;
             }
         }
-        auto dictVector = new DictionaryVector(vector, ids, nRows);
+        auto dictVector = VectorHelper::CreateStringDictionary(ids, nRows, vector);
         delete vector;
-        return dictVector;
+        return dictVector.release();
     } else {
-        VarcharVector *vector = new VarcharVector(vectorAllocator, MAX_VARCHAR_LENGTH * nRows, nRows);
+        Vector<LargeStringContainer<std::string_view>> *vector =
+            new Vector<LargeStringContainer<std::string_view>>(nRows);
         for (int32_t r = 0; r < nRows; ++r) {
             if ((rand() % 100) < nullPercent) {
-                vector->SetValueNull(r);
+                vector->SetNull(r);
             } else {
                 const auto valLen = (rand() % (MAX_VARCHAR_LENGTH - 1)) + 1;
                 for (int32_t i = 0; i < valLen; ++i) {
                     charBuffer[i] = rand() % 95 + 32;
                 }
-                vector->SetValue(r, charBuffer, valLen);
+                std::string_view str((char *)charBuffer, valLen);
+                vector->SetValue(r, str);
             }
         }
         return vector;
@@ -259,7 +262,7 @@ template <typename IN, typename OUT> inline bool DoCast(OUT &result, const IN &c
 
 template <typename IN, typename OUT> inline bool MinFunc(OUT &result, const IN &cur, const bool isFirst)
 {
-    OUT casted {};
+    OUT casted{};
     if (!DoCast(casted, cur)) {
         return false;
     }
@@ -272,7 +275,7 @@ template <typename IN, typename OUT> inline bool MinFunc(OUT &result, const IN &
 
 template <typename IN, typename OUT> inline bool MaxFunc(OUT &result, const IN &cur, const bool isFirst)
 {
-    OUT casted {};
+    OUT casted{};
     if (!DoCast(casted, cur)) {
         return false;
     }
@@ -285,7 +288,7 @@ template <typename IN, typename OUT> inline bool MaxFunc(OUT &result, const IN &
 
 template <typename IN, typename OUT> inline bool SumFunc(OUT &result, const IN &cur, const bool isFirst)
 {
-    OUT casted {};
+    OUT casted{};
     if (!DoCast(casted, cur)) {
         return false;
     }
@@ -337,15 +340,15 @@ inline bool ValidateOverflow(const std::string &stageName, const int32_t valueCo
 {
     std::set<int32_t> matchRows;
     for (int32_t i = 0; i < expectedResult->GetRowCount(); ++i) {
-        if (expectedResult->GetVector(valueColIdx)->IsValueNull(i)) {
-            int64_t expectedCount = static_cast<LongVector *>(expectedResult->GetVector(valueColIdx + 1))->GetValue(i);
+        if (expectedResult->Get(valueColIdx)->IsNull(i)) {
+            int64_t expectedCount = static_cast<Vector<int64_t> *>(expectedResult->Get(valueColIdx + 1))->GetValue(i);
             bool found = false;
             for (int32_t j = 0; j < expectedResult->GetRowCount(); ++j) {
                 if (matchRows.find(j) != matchRows.end()) {
                     continue;
                 }
-                if (expectedCount == static_cast<LongVector *>(actualResult->GetVector(valueColIdx + 1))->GetValue(j) &&
-                    actualResult->GetVector(valueColIdx)->IsValueNull(j)) {
+                if (expectedCount == static_cast<Vector<int64_t> *>(actualResult->Get(valueColIdx + 1))->GetValue(j) &&
+                    actualResult->Get(valueColIdx)->IsNull(j)) {
                     matchRows.insert(j);
                     found = true;
                     break;
@@ -354,9 +357,7 @@ inline bool ValidateOverflow(const std::string &stageName, const int32_t valueCo
             if (!found) {
                 printf("ERROR: no raws in result matches expected row %d\n", i);
                 printf("================== Expected Result (%s) ==================\n", stageName.c_str());
-                VectorHelper::PrintVecBatch(expectedResult);
                 printf("================== Actual Result (%s) ==================\n", stageName.c_str());
-                VectorHelper::PrintVecBatch(actualResult);
                 return false;
             }
         }
@@ -369,7 +370,6 @@ inline void PrintVectorBatches(std::vector<VectorBatch *> &vvb, const std::strin
     printf("============ %s ===========\n", name.c_str());
     for (size_t i = 0; i < vvb.size(); ++i) {
         printf("------- %ld / %ld -------\n", i, vvb.size());
-        VectorHelper::PrintVecBatch(vvb[i]);
     }
 }
 
@@ -405,15 +405,19 @@ inline bool AllMatchFilter(const int32_t *filterValue, VectorBatch *vb, const in
 
 inline bool GroupByFilter(const int32_t *filterValue, VectorBatch *vb, const int32_t colIdx, const int32_t rowIdx)
 {
-    Vector *v = vb->GetVector(colIdx);
+    BaseVector *v = vb->Get(colIdx);
     if (filterValue == nullptr) {
-        return v->IsValueNull(rowIdx);
-    } else if (v->IsValueNull(rowIdx)) {
+        return v->IsNull(rowIdx);
+    } else if (v->IsNull(rowIdx)) {
         return false;
     } else {
-        int32_t orgRowIdx;
-        IntVector *orgVector = static_cast<IntVector *>(VectorHelper::ExpandVectorAndIndex(v, rowIdx, orgRowIdx));
-        return orgVector->GetValue(orgRowIdx) == *filterValue;
+        int32_t val;
+        if (v->GetEncoding() == vec::OMNI_DICTIONARY) {
+            val = static_cast<Vector<DictionaryContainer<int32_t>> *>(v)->GetValue(rowIdx);
+        } else {
+            val = static_cast<Vector<int32_t> *>(v)->GetValue(rowIdx);
+        }
+        return val == *filterValue;
     }
 }
 
@@ -443,31 +447,35 @@ uint8_t *GenerateExpectedResultVarchar(std::vector<VectorBatch *> &vvb, const in
     count = 0;
     uint8_t *result = nullptr;
     resultLen = 0;
-
-    int32_t orgIdx;
-    VarcharVector *orgVector;
     bool valid;
 
     for (VectorBatch *vb : vvb) {
-        Vector *maskVector = maskIndex < 0 ? nullptr : vb->GetVector(maskIndex);
-        Vector *vector = vb->GetVector(valueIndex);
+        BaseVector *maskVector = maskIndex < 0 ? nullptr : vb->Get(maskIndex);
+        BaseVector *vector = vb->Get(valueIndex);
 
         for (int32_t i = 0; i < vector->GetSize(); ++i) {
             valid = true;
             if (maskVector != nullptr) {
-                if (maskVector->IsValueNull(i)) {
+                if (maskVector->IsNull(i)) {
                     valid = false;
                 } else {
-                    BooleanVector *v =
-                        static_cast<BooleanVector *>(VectorHelper::ExpandVectorAndIndex(maskVector, i, orgIdx));
-                    valid = v->GetValue(orgIdx);
+                    if (maskVector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                        valid = static_cast<Vector<DictionaryContainer<bool>> *>(maskVector)->GetValue(i);
+                    } else {
+                        valid = static_cast<Vector<bool> *>(maskVector)->GetValue(i);
+                    }
                 }
             }
-            valid &= !vector->IsValueNull(i) & FilterFunc(filterValue, vb, groupbyColIdx, i);
+            valid &= !vector->IsNull(i) & FilterFunc(filterValue, vb, groupbyColIdx, i);
             if (valid) {
-                orgVector = static_cast<VarcharVector *>(VectorHelper::ExpandVectorAndIndex(vector, i, orgIdx));
-                uint8_t *curVal = nullptr;
-                int32_t curLen = orgVector->GetValue(orgIdx, &curVal);
+                std::string_view str;
+                if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                    str = static_cast<Vector<DictionaryContainer<std::string_view>> *>(vector)->GetValue(i);
+                } else {
+                    str = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->GetValue(i);
+                }
+                uint8_t *curVal = (uint8_t *)str.data();
+                int32_t curLen = str.size();
                 if (count == 0) {
                     resultLen = curLen;
                     result = curVal;
@@ -489,37 +497,42 @@ bool GenerateExpectedResultNumeric(std::vector<VectorBatch *> &vvb, const int32_
     const int32_t groupbyColIdx = -1)
 {
     using V_IN = typename NativeAndVectorType<IN>::vector;
+    using D_IN = typename NativeAndVectorType<IN>::dictVector;
     count = 0;
 
-    int32_t orgIdx;
-    Vector *orgVector;
     bool valid;
-    ResultType midRes {};
+    ResultType midRes{};
     bool overflow = false;
 
     for (VectorBatch *vb : vvb) {
-        Vector *maskVector = maskIndex < 0 ? nullptr : vb->GetVector(maskIndex);
-        Vector *vector = vb->GetVector(valueIndex);
+        BaseVector *maskVector = maskIndex < 0 ? nullptr : vb->Get(maskIndex);
+        BaseVector *vector = vb->Get(valueIndex);
 
         for (int32_t i = 0; i < vector->GetSize(); ++i) {
             valid = true;
             if (maskVector != nullptr) {
-                if (maskVector->IsValueNull(i)) {
+                if (maskVector->IsNull(i)) {
                     valid = false;
                 } else {
-                    BooleanVector *v =
-                        static_cast<BooleanVector *>(VectorHelper::ExpandVectorAndIndex(maskVector, i, orgIdx));
-                    valid = v->GetValue(orgIdx);
+                    if (maskVector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                        valid = static_cast<Vector<DictionaryContainer<bool>> *>(maskVector)->GetValue(i);
+                    } else {
+                        valid = static_cast<Vector<bool> *>(maskVector)->GetValue(i);
+                    }
                 }
             }
-            valid &= !vector->IsValueNull(i) & FilterFunc(filterValue, vb, groupbyColIdx, i);
+            valid &= !vector->IsNull(i) & FilterFunc(filterValue, vb, groupbyColIdx, i);
             if (valid) {
                 if (overflow) {
                     count++;
                     continue;
                 }
-                orgVector = VectorHelper::ExpandVectorAndIndex(vector, i, orgIdx);
-                overflow |= !updateFunc(midRes, static_cast<V_IN *>(orgVector)->GetValue(orgIdx), count == 0);
+
+                if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                    overflow |= !updateFunc(midRes, static_cast<D_IN *>(vector)->GetValue(i), count == 0);
+                } else {
+                    overflow |= !updateFunc(midRes, static_cast<V_IN *>(vector)->GetValue(i), count == 0);
+                }
                 count++;
             }
         }
@@ -541,17 +554,9 @@ public:
           isDict(isDict),
           hasMask(hasMask),
           nullWhenOverflow(nullWhenOverflow)
-    {
-        vectorAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("AggregatorCompleteTest_" +
-            aggFuncName + "_" + TypeUtil::TypeToStringLog(IN_ID) + "_" + TypeUtil::TypeToStringLog(OUT_ID) + "_" +
-            std::to_string(nullPercent) + "_" + (isDict ? "dict_" : "flat_") + (hasMask ? "withMask_" : "noMask_") +
-            (nullWhenOverflow ? "overflowNull_" : "overflowExcep_") + "noGroupBy");
-    }
+    {}
 
-    ~AggregatorTesterTemplate() override
-    {
-        delete vectorAllocator;
-    }
+    ~AggregatorTesterTemplate() override {}
 
     virtual int32_t GetValueColumnIndex()
     {
@@ -564,51 +569,48 @@ public:
         std::vector<VectorBatch *> input(vecBatchNum);
 
         for (int32_t i = 0; i < vecBatchNum; ++i) {
-            VectorBatch *vecBatch = new VectorBatch(this->GetNumberOfInputColumns());
-            Vector *vector = nullptr;
+            VectorBatch *vecBatch = new VectorBatch(rowPerVecBatch);
+            BaseVector *vector = nullptr;
 
             switch (IN_ID) {
                 case OMNI_BOOLEAN:
-                    vector = CreateFixedSizeVector<OMNI_BOOLEAN>(this->vectorAllocator, rowPerVecBatch,
-                        this->nullPercent, 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_BOOLEAN>(rowPerVecBatch, this->nullPercent, 256, this->isDict);
                     break;
                 case OMNI_SHORT:
-                    vector = CreateFixedSizeVector<OMNI_SHORT>(this->vectorAllocator, rowPerVecBatch, this->nullPercent,
-                        256 * 256, this->isDict);
+                    vector =
+                        CreateFixedSizeVector<OMNI_SHORT>(rowPerVecBatch, this->nullPercent, 256 * 256, this->isDict);
                     break;
                 case OMNI_INT:
-                    vector = CreateFixedSizeVector<OMNI_INT>(this->vectorAllocator, rowPerVecBatch, this->nullPercent,
-                        256 * 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_INT>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
+                        this->isDict);
                     break;
                 case OMNI_DECIMAL64:
                 case OMNI_LONG:
-                    vector = CreateFixedSizeVector<OMNI_LONG>(this->vectorAllocator, rowPerVecBatch, this->nullPercent,
-                        256 * 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_LONG>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
+                        this->isDict);
                     break;
                 case OMNI_DOUBLE:
-                    vector = CreateFixedSizeVector<OMNI_DOUBLE>(this->vectorAllocator, rowPerVecBatch,
-                        this->nullPercent, 256 * 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_DOUBLE>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
+                        this->isDict);
                     break;
                 case OMNI_DECIMAL128:
-                    vector = CreateFixedSizeVector<OMNI_DECIMAL128>(this->vectorAllocator, rowPerVecBatch,
-                        this->nullPercent, 256 * 256 * 256, this->isDict);
+                    vector = CreateFixedSizeVector<OMNI_DECIMAL128>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
+                        this->isDict);
                     break;
                 case OMNI_VARCHAR:
                 case OMNI_CHAR:
-                    vector = CreateVarcharVector(this->vectorAllocator, rowPerVecBatch, this->nullPercent, 256,
-                        this->isDict);
+                    vector = CreateVarcharVector(rowPerVecBatch, this->nullPercent, 256, this->isDict);
                     break;
                 default:
                     throw OmniException("Invalid Arguement",
                         "Unexpected input type " + TypeUtil::TypeToStringLog(IN_ID));
             }
-            vecBatch->SetVector(this->GetValueColumnIndex(), vector);
+            vecBatch->Append(vector);
 
             if (this->hasMask) {
-                Vector *maskVector = CreateFixedSizeVector<OMNI_BOOLEAN>(this->vectorAllocator, rowPerVecBatch,
-                    this->nullPercent, 256, this->isDict);
-                ;
-                vecBatch->SetVector(this->GetMaskColumnIndex(), maskVector);
+                BaseVector *maskVector =
+                    CreateFixedSizeVector<OMNI_BOOLEAN>(rowPerVecBatch, this->nullPercent, 256, this->isDict);
+                vecBatch->Append(maskVector);
             }
 
             input[i] = vecBatch;
@@ -636,35 +638,35 @@ public:
 
             if (TypeUtil::IsDecimalType(IN_ID) &&
                 (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
-                Decimal128 result {};
+                Decimal128 result{};
                 overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, Decimal128, Decimal128>(vvb, valueIndex,
                     maskIndex, SumFunc<T_IN, Decimal128>, count, result);
 
-                static_cast<LongVector *>((*expectedResult)->GetVector(1))->SetValue(0, count);
+                static_cast<Vector<int64_t> *>((*expectedResult)->Get(1))->SetValue(0, count);
                 if (overflow || count == 0) {
-                    (*expectedResult)->GetVector(0)->SetValueNull(0);
+                    (*expectedResult)->Get(0)->SetNull(0);
                 } else {
-                    static_cast<Decimal128Vector *>((*expectedResult)->GetVector(0))->SetValue(0, result);
+                    static_cast<Vector<Decimal128> *>((*expectedResult)->Get(0))->SetValue(0, result);
                 }
 
                 return overflow;
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                double result {};
+                double result{};
                 overflow = GenerateExpectedResultNumeric<AllMatchFilter, IN_ID, double, double>(vvb, valueIndex,
                     maskIndex, SumFunc<T_IN, double>, count, result);
 
-                static_cast<LongVector *>((*expectedResult)->GetVector(1))->SetValue(0, count);
+                static_cast<Vector<int64_t> *>((*expectedResult)->Get(1))->SetValue(0, count);
                 if (overflow || count == 0) {
-                    (*expectedResult)->GetVector(0)->SetValueNull(0);
+                    (*expectedResult)->Get(0)->SetNull(0);
                 } else {
-                    static_cast<DoubleVector *>((*expectedResult)->GetVector(0))->SetValue(0, result);
+                    static_cast<Vector<double> *>((*expectedResult)->Get(0))->SetValue(0, result);
                 }
 
                 return overflow;
             } else {
                 using T_OUT = typename NativeAndVectorType<OUT_ID>::type;
                 using V_OUT = typename NativeAndVectorType<OUT_ID>::vector;
-                T_OUT result {};
+                T_OUT result{};
 
                 if (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM) {
                     using T_MID = std::conditional_t<std::is_floating_point_v<T_IN>, double, int64_t>;
@@ -681,11 +683,11 @@ public:
                         "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
                 }
 
-                static_cast<LongVector *>((*expectedResult)->GetVector(1))->SetValue(0, count);
+                static_cast<Vector<int64_t> *>((*expectedResult)->Get(1))->SetValue(0, count);
                 if (overflow || count == 0) {
-                    (*expectedResult)->GetVector(0)->SetValueNull(0);
+                    (*expectedResult)->Get(0)->SetNull(0);
                 } else {
-                    static_cast<V_OUT *>((*expectedResult)->GetVector(0))->SetValue(0, result);
+                    static_cast<V_OUT *>((*expectedResult)->Get(0))->SetValue(0, result);
                 }
 
                 return overflow;
@@ -697,19 +699,19 @@ public:
 
     bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
-        *expectedResult = new VectorBatch(2);
-        (*expectedResult)
-            ->SetVector(0, VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, 1));
-        (*expectedResult)->SetVector(1, new LongVector(this->vectorAllocator, 1));
+        *expectedResult = new VectorBatch(1);
+        std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
+        (*expectedResult)->Append(v.release());
+        (*expectedResult)->Append(new Vector<int64_t>(1));
 
         int64_t count = 0;
         for (VectorBatch *vb : vvb) {
-            count += static_cast<LongVector *>(vb->GetVector(1))->GetValue(0);
+            count += static_cast<Vector<int64_t> *>(vb->Get(1))->GetValue(0);
         }
 
         if constexpr (OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CHAR) {
             this->GenerateVarcharResult(vvb, *expectedResult, false);
-            static_cast<LongVector *>((*expectedResult)->GetVector(1))->SetValue(0, count);
+            static_cast<Vector<int64_t> *>((*expectedResult)->Get(1))->SetValue(0, count);
             VectorHelper::FreeVecBatches(vvb);
             return false;
         } else if constexpr (OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CHAR) {
@@ -719,7 +721,7 @@ public:
         } else {
             using T_OUT = typename NativeAndVectorType<OUT_ID>::type;
             using V_OUT = typename NativeAndVectorType<OUT_ID>::vector;
-            T_OUT result {};
+            T_OUT result{};
             int64_t validCount = 0;
             bool overflow;
             const int32_t valueIndex = this->GetValueColumnIndex();
@@ -732,7 +734,7 @@ public:
                     overflow = GenerateExpectedResultNumeric<AllMatchFilter, OMNI_DECIMAL128, T_OUT, Decimal128>(vvb,
                         valueIndex, maskIndex, SumFunc<Decimal128, Decimal128>, validCount, result);
                 } else {
-                    Decimal128 result128 {};
+                    Decimal128 result128{};
                     overflow = GenerateExpectedResultNumeric<AllMatchFilter, OMNI_DECIMAL128, Decimal128, Decimal128>(
                         vvb, valueIndex, maskIndex, SumFunc<Decimal128, Decimal128>, validCount, result128);
                     if (!overflow && validCount > 0) {
@@ -746,7 +748,7 @@ public:
                 overflow = GenerateExpectedResultNumeric<AllMatchFilter, OUT_ID, T_OUT, T_MID>(vvb, valueIndex,
                     maskIndex, SumFunc<T_OUT, T_MID>, validCount, result);
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                double resultDouble {};
+                double resultDouble{};
                 overflow = GenerateExpectedResultNumeric<AllMatchFilter, OMNI_DOUBLE, double, double>(vvb, valueIndex,
                     maskIndex, SumFunc<double, double>, validCount, resultDouble);
                 if (!overflow && validCount > 0) {
@@ -764,11 +766,11 @@ public:
                     "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)));
             }
 
-            static_cast<LongVector *>((*expectedResult)->GetVector(1))->SetValue(0, count);
+            static_cast<Vector<int64_t> *>((*expectedResult)->Get(1))->SetValue(0, count);
             if (overflow || validCount == 0) {
-                (*expectedResult)->GetVector(0)->SetValueNull(0);
+                (*expectedResult)->Get(0)->SetNull(0);
             } else {
-                static_cast<V_OUT *>((*expectedResult)->GetVector(0))->SetValue(0, result);
+                static_cast<V_OUT *>((*expectedResult)->Get(0))->SetValue(0, result);
             }
 
             VectorHelper::FreeVecBatches(vvb);
@@ -878,7 +880,7 @@ protected:
                 if (TypeUtil::IsDecimalType(IN_ID)) {
                     outputTypeVector[0] = VarcharType(sizeof(DecimalPartialResult));
                 } else {
-                    std::vector<DataTypePtr> fieldTypes { DoubleType(), LongType() };
+                    std::vector<DataTypePtr> fieldTypes{ DoubleType(), LongType() };
                     outputTypeVector[0] = ContainerType(fieldTypes);
                 }
                 break;
@@ -925,7 +927,7 @@ protected:
                 if (TypeUtil::IsDecimalType(IN_ID)) {
                     inputTypeVector[0] = VarcharType(sizeof(DecimalPartialResult));
                 } else {
-                    std::vector<DataTypePtr> fieldTypes { DoubleType(), LongType() };
+                    std::vector<DataTypePtr> fieldTypes{ DoubleType(), LongType() };
                     inputTypeVector[0] = ContainerType(fieldTypes);
                 }
                 break;
@@ -960,15 +962,15 @@ protected:
                 "Invalid aggregation type " + std::to_string(as_integer(this->aggFunc)) + " for Varchar input");
         }
 
-        static_cast<LongVector *>(expectedResult->GetVector(1))->SetValue(0, count);
+        static_cast<Vector<int64_t> *>(expectedResult->Get(1))->SetValue(0, count);
         if (count > 0) {
-            static_cast<VarcharVector *>(expectedResult->GetVector(0))->SetValue(0, result, resultLen);
+            std::string_view str((char *)result, resultLen);
+            static_cast<Vector<LargeStringContainer<std::string_view>> *>(expectedResult->Get(0))->SetValue(0, str);
         } else {
-            static_cast<VarcharVector *>(expectedResult->GetVector(0))->SetValueNull(0);
+            static_cast<Vector<LargeStringContainer<std::string_view>> *>(expectedResult->Get(0))->SetNull(0);
         }
     }
 
-    VectorAllocator *vectorAllocator;
     const FunctionType aggFunc;
     const int32_t nullPercent;
     const bool isDict;
@@ -978,22 +980,22 @@ protected:
 private:
     VectorBatch *InitializeExpectedPartialResult(std::vector<VectorBatch *> &vvb)
     {
-        VectorBatch *expectedResult = new VectorBatch(2);
-        expectedResult->SetVector(1, new LongVector(this->vectorAllocator, 1));
+        VectorBatch *expectedResult = new VectorBatch(1);
 
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
-            expectedResult->SetVector(0, new VarcharVector(this->vectorAllocator, MAX_VARCHAR_LENGTH, 1));
+            expectedResult->Append(new Vector<LargeStringContainer<std::string_view>>(1));
         } else {
             if (TypeUtil::IsDecimalType(IN_ID) &&
                 (this->aggFunc == OMNI_AGGREGATION_TYPE_SUM || this->aggFunc == OMNI_AGGREGATION_TYPE_AVG)) {
-                expectedResult->SetVector(0, new Decimal128Vector(this->vectorAllocator, 1));
+                expectedResult->Append(new Vector<Decimal128>(1));
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                expectedResult->SetVector(0, new DoubleVector(this->vectorAllocator, 1));
+                expectedResult->Append(new Vector<double>(1));
             } else {
-                expectedResult->SetVector(0,
-                    VectorHelper::CreateFlatVector(this->vectorAllocator, OUT_ID, MAX_VARCHAR_LENGTH, 1));
+                std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
+                expectedResult->Append(v.release());
             }
         }
+        expectedResult->Append(new Vector<int64_t>(1));
 
         return expectedResult;
     }

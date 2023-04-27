@@ -38,7 +38,7 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     this->probeTypes = std::make_unique<DataTypes>(newProbeTypes);
     auto hashBuilderWithExprOperatorFactory =
         reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
-    this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes.get()),
+    this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes),
         probeOutputCols, probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols,
         buildOutputColsCount, std::move(buildOutputTypes), joinType,
         (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()), probeTypes.GetSize(),
@@ -62,7 +62,9 @@ LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &pr
       probeHashCols(probeHashCols),
       projectFuncs(projectFuncs),
       lookupJoinOperator(lookupJoinOperator)
-{}
+{
+    this->outputTypes = lookupJoinOperator->GetOutputType();
+}
 
 LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 {
@@ -71,8 +73,7 @@ LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 
 int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, probeTypes, projectFuncs, probeHashCols, vecAllocator);
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, probeTypes, projectFuncs, probeHashCols);
     if (newInputVecBatch != nullptr) {
         lookupJoinOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

@@ -60,8 +60,7 @@ HashBuilderWithExprOperator::~HashBuilderWithExprOperator()
 
 int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, buildTypes, projectFuncs, buildHashCols, vecAllocator);
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, buildTypes, projectFuncs, buildHashCols);
     if (newInputVecBatch != nullptr) {
         hashBuilderOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(vecBatch);

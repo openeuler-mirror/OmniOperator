@@ -17,7 +17,8 @@ DynamicPagesIndex::DynamicPagesIndex(const omniruntime::type::DataTypes &types, 
       computeCols(computeCols),
       computeColsCount(computeColsCount),
       positionCount(0),
-      finishAddData(false)
+      finishAddData(false),
+      dataTypes(types)
 {}
 
 std::vector<bool> DynamicPagesIndex::CalculateNullsFromRawVectorBatch(VectorBatch *vectorBatch)
@@ -26,13 +27,13 @@ std::vector<bool> DynamicPagesIndex::CalculateNullsFromRawVectorBatch(VectorBatc
     result.resize(vectorBatch->GetRowCount(), false);
     for (int32_t id = 0; id < computeColsCount; ++id) {
         auto colIdx = computeCols[id];
-        auto vec = vectorBatch->GetVector(colIdx);
+        auto vec = vectorBatch->Get(colIdx);
         auto totalRowSize = vec->GetSize();
         auto nullSize = vec->GetNullCount();
         if (nullSize == 0) {
             continue;
         }
-        auto nullValues = reinterpret_cast<bool *>(vec->GetValueNulls()) + vec->GetPositionOffset();
+        auto nullValues = unsafe::UnsafeBaseVector::GetNulls(vec);
         for (int32_t rowId = 0; rowId < totalRowSize && nullSize > 0; ++rowId) {
             if (nullValues[rowId]) {
                 --nullSize;

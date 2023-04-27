@@ -64,10 +64,10 @@ SIMD_ALWAYS_INLINE void MaxConditionalOp(OUT *res, int64_t &flag, const IN &in, 
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxAggregator : public TypedAggregator {
-    using InVector = typename NativeAndVectorType<IN_ID>::vector;
-    using InType = typename NativeAndVectorType<IN_ID>::type;
-    using OutVector = typename NativeAndVectorType<OUT_ID>::vector;
-    using OutType = typename NativeAndVectorType<OUT_ID>::type;
+    using InVector = typename AggNativeAndVectorType<IN_ID>::vector;
+    using InType = typename AggNativeAndVectorType<IN_ID>::type;
+    using OutVector = typename AggNativeAndVectorType<OUT_ID>::vector;
+    using OutType = typename AggNativeAndVectorType<OUT_ID>::type;
     // note: for some reason when g++ vectorizes min operation loop, it cannot correctly
     // evaluate min value for int16_t, so for that type intermediate result is promoted to int32
     // once we figure out how to resolve this issue in g++m we can set ResultType = InType
@@ -82,7 +82,7 @@ public:
     bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
 #endif
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 
     void InitState(AggregateState &state) override;
 
@@ -114,17 +114,17 @@ protected:
     MaxAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
-    void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override;
+    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
+        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap) override;
 };
 }

@@ -7,12 +7,13 @@
 #include "gtest/gtest.h"
 #include "operator/hash_util.h"
 #include "util/test_util.h"
+#include "operator/hmpp_hash_util.h"
 
 namespace HmppHashTest {
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
-using namespace TestUtil;
+using namespace omniruntime::TestUtil;
 
 bool MatchHash(int len, int64_t *combinedHashOmni, int64_t *combinedHash)
 {
@@ -42,21 +43,18 @@ std::string GetRandomString(int len)
 
 TEST(HmppHash, VarcharPerf)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_hmpp");
     int vectorSize = 10000000;
-    VarcharVector *varcharVector = new VarcharVector(allocator, 1024, vectorSize);
+    auto *varcharVector = new Vector<LargeStringContainer<std::string_view>>(vectorSize, 1024);
     // Generate random varchar.
-    std::string s;
     srand((unsigned)time(nullptr));
     for (int i = 0; i < vectorSize; i++) {
-        s = GetRandomString(15);
-        varcharVector->SetValue(i, reinterpret_cast<const uint8_t *>(s.c_str()), s.length());
+        std::string str = GetRandomString(15);
+        std::string_view stringView(str.data(), str.length());
+        varcharVector->SetValue(i, stringView);
     }
 
     int64_t hashVal;
-    uint8_t *varcharValue = nullptr;
-    int32_t valueLength;
-    int64_t *combinedHashOmni = new int64_t[varcharVector->GetSize()];
+    auto *combinedHashOmni = new int64_t[varcharVector->GetSize()];
     for (int i = 0; i < varcharVector->GetSize(); i++) {
         combinedHashOmni[i] = 0;
     }
@@ -66,9 +64,9 @@ TEST(HmppHash, VarcharPerf)
     timer.Reset();
 
     for (int i = 0; i < varcharVector->GetSize(); i++) {
-        varcharValue = nullptr;
-        valueLength = static_cast<VarcharVector *>(varcharVector)->GetValue(i, &varcharValue);
-        hashVal = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
+        auto varcharValue = varcharVector->GetValue(i);
+        hashVal = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(varcharValue.data())),
+            varcharValue.length());
         combinedHashOmni[i] = HashUtil::CombineHash(combinedHashOmni[i], hashVal);
     }
 
@@ -78,17 +76,17 @@ TEST(HmppHash, VarcharPerf)
     std::cout << " wall-varchar:" << wallElapsed << " cpu-varchar:" << cpuElapsed << std::endl;
 
     int8_t *nullAddr = nullptr;
-    int32_t positionOffset = varcharVector->GetPositionOffset();
-    int64_t *resultVarchar = new int64_t[varcharVector->GetSize()];
-    uint8_t *varcharVectorAddr = static_cast<uint8_t *>((varcharVector)->GetValues());
-    int32_t *offest = static_cast<int32_t *>((varcharVector)->GetValueOffsets()) + positionOffset;
-    int64_t *combinedHashVarchar = new int64_t[varcharVector->GetSize()];
+    auto *resultVarchar = new int64_t[varcharVector->GetSize()];
+    auto *varcharVectorAddr =
+        reinterpret_cast<const varchar *>(VectorHelper::UnsafeGetValues(varcharVector, OMNI_VARCHAR));
+    auto *offset = static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(varcharVector, OMNI_VARCHAR));
+    auto *combinedHashVarchar = new int64_t[varcharVector->GetSize()];
     for (int i = 0; i < varcharVector->GetSize(); i++) {
         combinedHashVarchar[i] = 0;
     }
 
     timer.Reset();
-    HMPPS_Hash_varchar(varcharVectorAddr, offest, varcharVector->GetSize(), nullAddr, resultVarchar);
+    HMPPS_Hash_varchar(varcharVectorAddr, offset, varcharVector->GetSize(), nullAddr, resultVarchar);
     HMPPS_CombineHash(combinedHashVarchar, resultVarchar, varcharVector->GetSize(), combinedHashVarchar);
 
     timer.CalculateElapse();
@@ -101,19 +99,16 @@ TEST(HmppHash, VarcharPerf)
     delete[] combinedHashOmni;
     delete[] resultVarchar;
     delete varcharVector;
-    delete allocator;
 }
 
 TEST(HmppHash, LongPerf)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_hmpp");
     int vectorSize = 10000000;
     // long combiehash
     int64_t hashVal;
-    int8_t *nullAddr = nullptr;
-    LongVector *longVector = new LongVector(allocator, vectorSize);
-    int64_t *combinedHashLong = new int64_t[longVector->GetSize()]();
-    int64_t *combinedHashOmni = new int64_t[longVector->GetSize()]();
+    auto *longVector = new Vector<int64_t>(vectorSize);
+    auto *combinedHashLong = new int64_t[longVector->GetSize()]();
+    auto *combinedHashOmni = new int64_t[longVector->GetSize()]();
     // Generate long random number.
     std::uniform_int_distribution<long long> dist(INT32_MIN, INT32_MAX);
     std::default_random_engine rd;
@@ -141,14 +136,13 @@ TEST(HmppHash, LongPerf)
     double cpuElapsed = timer.GetCpuElapse() * 1000;
     std::cout << " wall-long:" << wallElapsed << " cpu-long:" << cpuElapsed << std::endl;
 
-    nullAddr = nullptr;
-    int64_t *resultLong = new int64_t[longVector->GetSize()];
-    int32_t positionOffset = longVector->GetPositionOffset();
+    int8_t *nullAddr = nullptr;
+    auto *resultLong = new int64_t[longVector->GetSize()];
 
     timer.Reset();
 
-    HMPPS_Hash_64s(reinterpret_cast<const int64_t *>(longVector->GetValues()) + positionOffset, longVector->GetSize(),
-        nullAddr, resultLong);
+    HMPPS_Hash_64s(reinterpret_cast<const int64_t *>(VectorHelper::UnsafeGetValues(longVector, OMNI_LONG)),
+        longVector->GetSize(), nullAddr, resultLong);
     HMPPS_CombineHash(combinedHashLong, resultLong, longVector->GetSize(), combinedHashLong);
 
     timer.CalculateElapse();
@@ -163,14 +157,12 @@ TEST(HmppHash, LongPerf)
     delete[] combinedHashOmni;
     delete[] resultLong;
     delete longVector;
-    delete allocator;
 }
 
 TEST(HmppHash, DoublePerf)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_hmpp");
     int vectorSize = 10000000;
-    DoubleVector *doubleVector = new DoubleVector(allocator, vectorSize);
+    auto *doubleVector = new Vector<double>(vectorSize);
     // Generate double random number.
     uniform_real_distribution<double> dist(DBL_MIN, DBL_MAX);
     default_random_engine rd;
@@ -178,10 +170,9 @@ TEST(HmppHash, DoublePerf)
         doubleVector->SetValue(i, dist(rd));
     }
     int64_t hashVal;
-    int8_t *nullAddr = nullptr;
 
-    int64_t *combinedHashDouble = new int64_t[doubleVector->GetSize()];
-    int64_t *combinedHashOmni = new int64_t[doubleVector->GetSize()];
+    auto *combinedHashDouble = new int64_t[doubleVector->GetSize()];
+    auto *combinedHashOmni = new int64_t[doubleVector->GetSize()];
     for (int i = 0; i < doubleVector->GetSize(); i++) {
         combinedHashOmni[i] = 0;
     }
@@ -202,15 +193,13 @@ TEST(HmppHash, DoublePerf)
     double wallElapsed = timer.GetWallElapse() * 1000;
     double cpuElapsed = timer.GetCpuElapse() * 1000;
     std::cout << " wall-double:" << wallElapsed << " cpu-double:" << cpuElapsed << std::endl;
-    nullAddr = nullptr;
-    int64_t *resultDouble = new int64_t[doubleVector->GetSize()]();
+    auto *resultDouble = new int64_t[doubleVector->GetSize()]();
 
-    int32_t positionOffset = doubleVector->GetPositionOffset();
-    nullAddr = static_cast<int8_t *>(doubleVector->GetValueNulls());
+    auto *nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(doubleVector));
 
     timer.Reset();
 
-    HMPPS_Hash_64f(reinterpret_cast<const double *>(doubleVector->GetValues()) + positionOffset,
+    HMPPS_Hash_64f(reinterpret_cast<const double *>(VectorHelper::UnsafeGetValues(doubleVector, OMNI_DOUBLE)),
         doubleVector->GetSize(), nullAddr, resultDouble);
     HMPPS_CombineHash(combinedHashDouble, resultDouble, doubleVector->GetSize(), combinedHashDouble);
 
@@ -226,26 +215,23 @@ TEST(HmppHash, DoublePerf)
     delete[] combinedHashOmni;
     delete[] resultDouble;
     delete doubleVector;
-    delete allocator;
 }
 
 TEST(HmppHash, Decimal128hashtest)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Decimal128Vector_hmpp");
-
-    Decimal128Vector *decimal128Vector = new Decimal128Vector(allocator, 4);
-    auto *value = new uint64_t[4 * 2];
+    auto *decimal128Vector = new Vector<Decimal128>(4);
+    auto *value = new Decimal128[4 * 2];
     for (int i = 0; i < 4; i++) {
         value[i * 2] = 12;
         value[i * 2 + 1] = i * 2;
     }
-    decimal128Vector->SetValues(0, value, 4);
+    for (int32_t j = 0; j < 4; ++j) {
+        decimal128Vector->SetValue(j, value[j]);
+    }
 
     int64_t hashVal;
-    int8_t *nullAddr = nullptr;
-
-    int64_t *combinedHashDecimal128 = new int64_t[decimal128Vector->GetSize()];
-    int64_t *combinedHashOmni = new int64_t[decimal128Vector->GetSize()];
+    auto *combinedHashDecimal128 = new int64_t[decimal128Vector->GetSize()];
+    auto *combinedHashOmni = new int64_t[decimal128Vector->GetSize()];
     for (int i = 0; i < decimal128Vector->GetSize(); i++) {
         combinedHashOmni[i] = 0;
     }
@@ -254,7 +240,7 @@ TEST(HmppHash, Decimal128hashtest)
     }
 
     for (long i = 0; i < decimal128Vector->GetSize(); i++) {
-        if (decimal128Vector->IsValueNull(i)) {
+        if (decimal128Vector->IsNull(i)) {
             continue;
         }
         hashVal =
@@ -264,13 +250,13 @@ TEST(HmppHash, Decimal128hashtest)
 
 
     // hmpp
-    nullAddr = nullptr;
-    int64_t *resultDecimal128 = new int64_t[decimal128Vector->GetSize()]();
+    auto *resultDecimal128 = new int64_t[decimal128Vector->GetSize()]();
     for (int i = 0; i < decimal128Vector->GetSize(); i++) {
         combinedHashDecimal128[i] = 0;
     }
-    nullAddr = static_cast<int8_t *>(decimal128Vector->GetValueNulls());
-    HmppDecimal128 *decimalAddr = static_cast<HmppDecimal128 *>((decimal128Vector)->GetValues());
+    auto *nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(decimal128Vector));
+    auto *decimalAddr =
+        reinterpret_cast<const HmppDecimal128 *>(VectorHelper::UnsafeGetValues(decimal128Vector, OMNI_DECIMAL128));
     HMPPS_Hash_decimal128(decimalAddr, decimal128Vector->GetSize(), nullAddr, resultDecimal128);
     HMPPS_CombineHash(combinedHashDecimal128, resultDecimal128, decimal128Vector->GetSize(), combinedHashDecimal128);
 
@@ -282,14 +268,12 @@ TEST(HmppHash, Decimal128hashtest)
     delete[] combinedHashOmni;
     delete[] resultDecimal128;
     delete decimal128Vector;
-    delete allocator;
 }
 
 TEST(HmppHash, IntPerf)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IntVector_hmpp");
     int vectorSize = 10000000;
-    IntVector *intVector = new IntVector(allocator, vectorSize);
+    auto *intVector = new Vector<int32_t>(vectorSize);
     // Generate int random number.
     std::uniform_int_distribution<int> dist(INT32_MIN, INT32_MAX);
     std::default_random_engine rd;
@@ -298,10 +282,9 @@ TEST(HmppHash, IntPerf)
     }
 
     int64_t hashVal;
-    int8_t *nullAddr = nullptr;
 
-    int64_t *combinedHashInt = new int64_t[intVector->GetSize()];
-    int64_t *combinedHashOmni = new int64_t[intVector->GetSize()];
+    auto *combinedHashInt = new int64_t[intVector->GetSize()];
+    auto *combinedHashOmni = new int64_t[intVector->GetSize()];
     for (int i = 0; i < intVector->GetSize(); i++) {
         combinedHashOmni[i] = 0;
     }
@@ -321,13 +304,12 @@ TEST(HmppHash, IntPerf)
     std::cout << " wall-int:" << wallElapsed << " cpu-int:" << cpuElapsed << std::endl;
 
     // hmpp
-    nullAddr = nullptr;
-    int64_t *resultInt = new int64_t[intVector->GetSize()];
+    int8_t *nullAddr = nullptr;
+    auto *resultInt = new int64_t[intVector->GetSize()];
 
-    int32_t positionOffset = intVector->GetPositionOffset();
     timer.Reset();
-    HMPPS_Hash_32s(reinterpret_cast<const int32_t *>(intVector->GetValues()) + positionOffset, intVector->GetSize(),
-        nullAddr, resultInt);
+    HMPPS_Hash_32s(reinterpret_cast<const int32_t *>(VectorHelper::UnsafeGetValues(intVector, OMNI_INT)),
+        intVector->GetSize(), nullAddr, resultInt);
     HMPPS_CombineHash(combinedHashInt, resultInt, intVector->GetSize(), combinedHashInt);
     timer.CalculateElapse();
     wallElapsed = timer.GetWallElapse() * 1000;
@@ -341,23 +323,19 @@ TEST(HmppHash, IntPerf)
     delete[] combinedHashOmni;
     delete[] resultInt;
     delete intVector;
-    delete allocator;
 }
 
 TEST(HmppHash, Boolhashtest)
 {
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("BoolVector_hmpp");
     int vectorSize = 10000000;
-    BooleanVector *booleanVector = new BooleanVector(allocator, vectorSize);
+    auto *booleanVector = new Vector<bool>(vectorSize);
     for (int i = 0; i < booleanVector->GetSize(); i++) {
         booleanVector->SetValue(i, i % 2 == 0);
     }
 
     int64_t hashVal;
-    int8_t *nullAddr = nullptr;
-
-    int64_t *combinedHashBool = new int64_t[booleanVector->GetSize()];
-    int64_t *combinedHashOmni = new int64_t[booleanVector->GetSize()];
+    auto *combinedHashBool = new int64_t[booleanVector->GetSize()];
+    auto *combinedHashOmni = new int64_t[booleanVector->GetSize()];
     for (int i = 0; i < booleanVector->GetSize(); i++) {
         combinedHashOmni[i] = 0;
     }
@@ -366,7 +344,7 @@ TEST(HmppHash, Boolhashtest)
     }
 
     for (long i = 0; i < booleanVector->GetSize(); i++) {
-        if (booleanVector->IsValueNull(i)) {
+        if (booleanVector->IsNull(i)) {
             continue;
         }
         hashVal = HashUtil::HashValue(booleanVector->GetValue(i));
@@ -374,13 +352,11 @@ TEST(HmppHash, Boolhashtest)
     }
 
     // hmpp
-    nullAddr = nullptr;
-    int64_t *resultBool = new int64_t[booleanVector->GetSize()]();
+    auto *resultBool = new int64_t[booleanVector->GetSize()]();
 
-    nullAddr = static_cast<int8_t *>(booleanVector->GetValueNulls());
-    bool *boolAddr = static_cast<bool *>((booleanVector)->GetValues());
-    int32_t positionOffset = booleanVector->GetPositionOffset();
-    HMPPS_Hash_bool(boolAddr + positionOffset, booleanVector->GetSize(), nullAddr, resultBool);
+    auto *nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(booleanVector));
+    bool *boolAddr = static_cast<bool *>(VectorHelper::UnsafeGetValues(booleanVector, OMNI_BOOLEAN));
+    HMPPS_Hash_bool(boolAddr, booleanVector->GetSize(), nullAddr, resultBool);
     HMPPS_CombineHash(combinedHashBool, resultBool, booleanVector->GetSize(), combinedHashBool);
 
     std::cout << "compare: ***********" << std::endl;
@@ -390,48 +366,45 @@ TEST(HmppHash, Boolhashtest)
     delete[] combinedHashOmni;
     delete[] resultBool;
     delete booleanVector;
-    delete allocator;
 }
 
 TEST(HmppHash, VarcharSlicetest)
 {
     int vectorSize = 1000;
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_hmpp");
-    VarcharVector *varcharVector = new VarcharVector(allocator, 1024, vectorSize);
+    auto *varcharVector = new Vector<LargeStringContainer<std::string_view>>(vectorSize, 1024);
     // hash vachar test
-    std::string s;
+    std::string str;
     srand((unsigned)time(nullptr));
     for (int i = 0; i < vectorSize; i++) {
-        s = GetRandomString(15);
-        varcharVector->SetValue(i, reinterpret_cast<const uint8_t *>(s.c_str()), s.length());
+        str = GetRandomString(15);
+        std::string_view stringView(str.data(), str.length());
+        varcharVector->SetValue(i, stringView);
     }
-    VarcharVector *varcharSliceVector = varcharVector->Slice(10, 100);
+    auto *varcharSliceVector = varcharVector->Slice(10, 100).release();
     int64_t hashVal;
-    uint8_t *varcharValue = nullptr;
-    int32_t valueLength;
-    int64_t *combinedHashOmni = new int64_t[varcharSliceVector->GetSize()];
+    auto *combinedHashOmni = new int64_t[varcharSliceVector->GetSize()];
     for (int i = 0; i < varcharSliceVector->GetSize(); i++) {
         combinedHashOmni[i] = 0;
     }
 
     for (int i = 0; i < varcharSliceVector->GetSize(); i++) {
-        varcharValue = nullptr;
-        valueLength = static_cast<VarcharVector *>(varcharSliceVector)->GetValue(i, &varcharValue);
-        hashVal = HashUtil::HashValue(reinterpret_cast<int8_t *>(varcharValue), valueLength);
+        auto varcharValue = varcharSliceVector->GetValue(i);
+        hashVal = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(varcharValue.data())),
+            varcharValue.length());
         combinedHashOmni[i] = HashUtil::CombineHash(combinedHashOmni[i], hashVal);
     }
 
     int8_t *nullAddr = nullptr;
-    int32_t positionOffset = varcharSliceVector->GetPositionOffset();
-    int64_t *resultVarchar = new int64_t[varcharSliceVector->GetSize()];
-    uint8_t *varcharSliceVectorAddr = static_cast<uint8_t *>((varcharSliceVector)->GetValues());
-    int32_t *offest = static_cast<int32_t *>((varcharSliceVector)->GetValueOffsets()) + positionOffset;
-    int64_t *combinedHashVarchar = new int64_t[varcharSliceVector->GetSize()];
+    auto *resultVarchar = new int64_t[varcharSliceVector->GetSize()];
+    auto *varcharSliceVectorAddr =
+        reinterpret_cast<const varchar *>(VectorHelper::UnsafeGetValues(varcharSliceVector, OMNI_VARCHAR));
+    auto *offset = static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(varcharSliceVector, OMNI_VARCHAR));
+    auto *combinedHashVarchar = new int64_t[varcharSliceVector->GetSize()];
     for (int i = 0; i < varcharSliceVector->GetSize(); i++) {
         combinedHashVarchar[i] = 0;
     }
 
-    HMPPS_Hash_varchar(varcharSliceVectorAddr, offest, varcharSliceVector->GetSize(), nullAddr, resultVarchar);
+    HMPPS_Hash_varchar(varcharSliceVectorAddr, offset, varcharSliceVector->GetSize(), nullAddr, resultVarchar);
     HMPPS_CombineHash(combinedHashVarchar, resultVarchar, varcharSliceVector->GetSize(), combinedHashVarchar);
 
     EXPECT_TRUE(MatchHash(varcharSliceVector->GetSize(), combinedHashOmni, combinedHashVarchar));
@@ -441,6 +414,5 @@ TEST(HmppHash, VarcharSlicetest)
     delete[] resultVarchar;
     delete varcharVector;
     delete varcharSliceVector;
-    delete allocator;
 }
 }

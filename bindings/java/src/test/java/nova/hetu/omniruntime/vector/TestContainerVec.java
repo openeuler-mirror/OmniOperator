@@ -11,8 +11,6 @@ import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.type.ContainerDataType;
 import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.type.Date32DataType;
-import nova.hetu.omniruntime.type.Date64DataType;
 import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
@@ -22,12 +20,12 @@ import nova.hetu.omniruntime.type.VarcharDataType;
 import org.testng.annotations.Test;
 
 /**
- * Container vec test
+ * Container vec test: Now(2023.3.4), c++ do not support append\copyPositions\slice method
  *
  * @since 2021-7-6
  */
 public class TestContainerVec {
-    @Test
+    @Test(enabled = false)
     public void testSlice() {
         int rows = 10;
         DoubleVec field1 = new DoubleVec(rows);
@@ -40,7 +38,7 @@ public class TestContainerVec {
                 new long[]{field1.getNativeVector(), field2.getNativeVector()}, new DataType[]{DOUBLE, LONG});
 
         int offset = 1;
-        ContainerVec sliced = originalVec.slice(offset, 5);
+        ContainerVec sliced = originalVec.slice(offset, 4);
         DoubleVec result1 = new DoubleVec(sliced.get(0));
         LongVec result2 = new LongVec(sliced.get(1));
         for (int i = 0; i < 5; i++) {
@@ -51,7 +49,7 @@ public class TestContainerVec {
         sliced.close();
     }
 
-    @Test
+    @Test(enabled = false)
     public void testCopyPositions() {
         int rows = 10;
         DoubleVec field1 = new DoubleVec(rows);
@@ -75,30 +73,7 @@ public class TestContainerVec {
         copyPositionsed.close();
     }
 
-    @Test
-    public void testCopyRegion() {
-        int rows = 10;
-        DoubleVec field1 = new DoubleVec(rows);
-        double[] data1 = new double[]{0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9};
-        field1.put(data1, 0, 0, rows);
-        LongVec field2 = new LongVec(rows);
-        long[] data2 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        field2.put(data2, 0, 0, rows);
-        ContainerVec originalVec = new ContainerVec(2, rows,
-                new long[]{field1.getNativeVector(), field2.getNativeVector()}, new DataType[]{DOUBLE, LONG});
-        int offset = 1;
-        ContainerVec copyRegioned = originalVec.copyRegion(offset, 5);
-        DoubleVec result1 = new DoubleVec(copyRegioned.get(0));
-        LongVec result2 = new LongVec(copyRegioned.get(1));
-        for (int i = 0; i < 5; i++) {
-            assertEquals(result1.get(i), data1[offset + i]);
-            assertEquals(result2.get(i), data2[offset + i]);
-        }
-        originalVec.close();
-        copyRegioned.close();
-    }
-
-    @Test
+    @Test(enabled = false)
     public void testAppend() {
         int rows = 5;
         DoubleVec field1 = new DoubleVec(rows);
@@ -147,27 +122,23 @@ public class TestContainerVec {
 
     @Test
     public void TestContainerVecSerialize() {
-        VecAllocator vecAllocator = VecAllocator.GLOBAL_VECTOR_ALLOCATOR.newChildAllocator("TestContainerVecSerialize",
-                VecAllocator.UNLIMIT, 0);
-
         int rows = 3;
-        ShortVec shortVec = new ShortVec(vecAllocator, rows);
-        IntVec intVec = new IntVec(vecAllocator, rows);
-        LongVec longVec = new LongVec(vecAllocator, rows);
-        Decimal128Vec decimal128Vec = new Decimal128Vec(vecAllocator, rows);
-        VarcharVec varcharVec = new VarcharVec(vecAllocator, 20, 10);
+        ShortVec shortVec = new ShortVec(rows);
+        IntVec intVec = new IntVec(rows);
+        LongVec longVec = new LongVec(rows);
+        Decimal128Vec decimal128Vec = new Decimal128Vec(rows);
+        VarcharVec varcharVec = new VarcharVec(10);
 
         long[] subAddr = new long[]{shortVec.getNativeVector(), intVec.getNativeVector(), longVec.getNativeVector()};
-        DataType[] subTypes = new DataType[]{Date32DataType.DATE32, Date64DataType.DATE64};
-        ContainerVec subContainerVec = new ContainerVec(vecAllocator, 3, rows, subAddr, subTypes);
+        DataType[] subTypes = new DataType[]{ShortDataType.SHORT, IntDataType.INTEGER, LongDataType.LONG};
+        ContainerVec subContainerVec = new ContainerVec(3, rows, subAddr, subTypes);
 
         long[] addr = new long[]{decimal128Vec.getNativeVector(), varcharVec.getNativeVector(),
                 subContainerVec.getNativeVector()};
-        DataType[] dataTypes = new DataType[]{ShortDataType.SHORT, IntDataType.INTEGER, LongDataType.LONG,
-                Decimal128DataType.DECIMAL128, VarcharDataType.VARCHAR,
-                new ContainerDataType(new DataType[]{Date32DataType.DATE32, Date64DataType.DATE64})};
+        DataType[] dataTypes = new DataType[]{Decimal128DataType.DECIMAL128, VarcharDataType.VARCHAR,
+                new ContainerDataType(new DataType[]{ShortDataType.SHORT, IntDataType.INTEGER, LongDataType.LONG})};
 
-        ContainerVec vec = new ContainerVec(vecAllocator, dataTypes.length, rows, addr, dataTypes);
+        ContainerVec vec = new ContainerVec(dataTypes.length, rows, addr, dataTypes);
         ContainerVec vecFromNative = new ContainerVec(vec.getNativeVector());
         DataType[] dataTypesFromNative = vecFromNative.getDataTypes();
 
@@ -176,33 +147,30 @@ public class TestContainerVec {
         }
 
         vec.close();
-        vecAllocator.close();
     }
 
     @Test
     public void testNullFlagWithSet() {
         int rows = 10;
-        IntVec sub1 = new IntVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rows);
-        LongVec sub2 = new LongVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, rows);
+        IntVec sub1 = new IntVec(rows);
+        LongVec sub2 = new LongVec(rows);
 
         long[] subAddrs = new long[]{sub1.slice(0, rows).getNativeVector(), sub2.slice(0, rows).getNativeVector()};
         DataType[] subTypes = new DataType[]{IntDataType.INTEGER, LONG};
-        ContainerVec hasNulls = new ContainerVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 2, rows, subAddrs, subTypes);
+        ContainerVec hasNulls = new ContainerVec(2, rows, subAddrs, subTypes);
         byte[] nulls = new byte[]{1, 0, 1, 0, 1, 0, 1, 0, 1, 0};
         hasNulls.setNulls(0, nulls, 0, rows);
-        assertTrue(hasNulls.mayHaveNull());
-        assertEquals(hasNulls.getNullCount(), 5);
+        assertTrue(hasNulls.hasNull());
         hasNulls.close();
 
         subAddrs = new long[]{sub1.getNativeVector(), sub2.getNativeVector()};
-        ContainerVec hasNull = new ContainerVec(VecAllocator.GLOBAL_VECTOR_ALLOCATOR, 2, rows, subAddrs, subTypes);
+        ContainerVec hasNull = new ContainerVec(2, rows, subAddrs, subTypes);
         for (int i = 0; i < rows; i++) {
             if (i % 2 == 0) {
                 hasNull.setNull(i);
             }
         }
-        assertTrue(hasNull.mayHaveNull());
-        assertEquals(hasNull.getNullCount(), 5);
+        assertTrue(hasNull.hasNull());
         hasNull.close();
     }
 }

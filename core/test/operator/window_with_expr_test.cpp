@@ -10,7 +10,8 @@
 
 using namespace std;
 using namespace omniruntime::vec;
-using namespace TestUtil;
+using namespace omniruntime::TestUtil;
+using namespace omniruntime::type;
 
 namespace WindowWithExprTest {
 const int32_t DATA_SIZE = 6;
@@ -44,7 +45,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType() }));
     DataTypes outputTypes(std::vector<DataTypePtr>({ DoubleType() }));
 
     std::string argumentChannels[1] = { "ADD:3(#2, 50:3)" };
@@ -60,8 +60,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
         preSortedChannelPrefix, expectedPositions, outputTypes, argumentChannelsExprs, 1, windowFrameTypes,
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, overflowConfig);
 
-    WindowWithExprOperator *windowOperator =
-        dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
+    auto *windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
@@ -79,11 +78,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -91,9 +90,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
@@ -143,11 +139,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -155,9 +151,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
@@ -205,11 +198,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     int64_t expectData3[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -217,9 +210,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
@@ -268,11 +258,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -280,9 +270,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRank)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
@@ -331,11 +318,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -343,9 +330,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
@@ -399,11 +383,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -411,17 +395,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
     double data2[DATA_SIZE] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2);
-    vecBatch->GetVector(0)->SetValueNull(1);
-    vecBatch->GetVector(0)->SetValueNull(5);
+    vecBatch->Get(0)->SetNull(1);
+    vecBatch->Get(0)->SetNull(5);
 
     int32_t outputCols[3] = {0, 1, 2};
     int32_t sortCols[1] = {1};
@@ -467,14 +448,15 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     int64_t expectData5[DATA_SIZE] = {1, 2, 1, 1, 1, 2};
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
-    expectVecBatch->GetVector(0)->SetValueNull(4);
-    expectVecBatch->GetVector(0)->SetValueNull(5);
+    expectVecBatch->Get(0)->SetNull(4);
+    expectVecBatch->Get(0)->SetNull(5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -482,12 +464,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(
-        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI),
+        std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
         LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
@@ -575,11 +554,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -588,9 +567,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI), LongType(),
         Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
@@ -680,11 +656,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -692,12 +668,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
 
     // construct the input data
     DataTypes sourceTypes(
-        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI),
+        std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
         LongType(), Decimal64Type(5, 0), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
@@ -738,8 +713,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     int32_t preSortedChannelPrefix = 0;
     int32_t expectedPositions = 10000;
 
-    DataTypes outputTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY),
-        Date32Type(omniruntime::vec::MILLI), LongType(), Decimal128Type(10, 0), DoubleType(), Decimal128Type(4, 2) }));
+    DataTypes outputTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY),
+        Date32Type(MILLI), LongType(), Decimal128Type(10, 0), DoubleType(), Decimal128Type(4, 2) }));
     string argumentChannels[7] = {"ADD:1(2:1, #0)", "#1", "#2", "#3", "#4", "#5", "#8"};
 
     // create expression objects
@@ -760,10 +735,10 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY),
-        Date32Type(omniruntime::vec::MILLI), LongType(), Decimal64Type(5, 0), DoubleType(), BooleanType(),
-        VarcharType(3), Decimal128Type(2, 2), IntType(), IntType(), Date32Type(omniruntime::vec::DAY),
-        Date32Type(omniruntime::vec::MILLI), LongType(), Decimal128Type(10, 0), DoubleType(), Decimal128Type(4, 2) }));
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY),
+        Date32Type(MILLI), LongType(), Decimal64Type(5, 0), DoubleType(), BooleanType(),
+        VarcharType(3), Decimal128Type(2, 2), IntType(), IntType(), Date32Type(DAY),
+        Date32Type(MILLI), LongType(), Decimal128Type(10, 0), DoubleType(), Decimal128Type(4, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
     int32_t expectData2[DATA_SIZE] = {111, 111, 222, 222, 333, 333};
@@ -789,11 +764,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -801,12 +776,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
 
     // construct the input data
     DataTypes sourceTypes(
-        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI),
+        std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
         LongType(), Decimal64Type(5, 2), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -868,8 +842,8 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
-    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY),
-        Date32Type(omniruntime::vec::MILLI), LongType(), Decimal64Type(5, 2), DoubleType(), BooleanType(),
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY),
+        Date32Type(MILLI), LongType(), Decimal64Type(5, 2), DoubleType(), BooleanType(),
         VarcharType(3), Decimal128Type(10, 4), IntType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(),
         Decimal64Type(10, 4), DoubleType(), Decimal128Type(4, 4) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
@@ -894,12 +868,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
-
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -907,12 +880,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(
-        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI),
+        std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
         LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -1003,11 +973,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -1015,12 +985,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(
-        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI),
+        std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
         LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -1083,9 +1050,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI),
+        std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
         LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(),
-        IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI), LongType(),
+        IntType(), Date32Type(DAY), Date32Type(MILLI), LongType(),
         Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -1111,11 +1078,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -1123,12 +1090,9 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     DataTypes sourceTypes(
-        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI),
+        std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
         LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t data0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t data1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -1215,11 +1179,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -1227,8 +1191,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
     // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI), LongType(),
         Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2) }));
@@ -1245,12 +1207,12 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
 
-    VectorBatch *vecBatch =
-        CreateVectorBatch(sourceTypes, DATA_SIZE, data0, data1, data2, data3, data4, data5, data6, data7, data8);
+    auto *vecBatch = new vec::VectorBatch(DATA_SIZE);
+
+    void *datas[9] = {data0, data1, data2, data3, data4, data5, data6, data7, data8};
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
-        DictionaryVector *dictionaryVector = new DictionaryVector(vecBatch->GetVector(i), ids, DATA_SIZE);
-        delete vecBatch->GetVector(i);
-        vecBatch->SetVector(i, dictionaryVector);
+        const DataTypePtr &dataType = sourceTypes.GetType(i);
+        vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]).release());
     }
 
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
@@ -1300,7 +1262,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::vec::DAY), Date32Type(omniruntime::vec::MILLI),
+        std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
         LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(),
         LongType(), LongType(), LongType(), LongType(), DoubleType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
@@ -1326,11 +1288,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -1338,9 +1300,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
     DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType() }));
@@ -1396,11 +1355,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -1408,9 +1367,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
     DataTypes sourceTypes(
@@ -1472,11 +1428,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
@@ -1484,9 +1440,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
 
 TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
 {
-    using namespace omniruntime::op;
-    using namespace omniruntime::expressions;
-
     // construct the input data
     const int MY_DATA_SIZE = DATA_SIZE + DATA_SIZE;
     DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(20), VarcharType(20), LongType() }));
@@ -1542,11 +1495,11 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;

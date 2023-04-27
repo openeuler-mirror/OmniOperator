@@ -103,6 +103,47 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
 };
 
+#define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
+    [&]() {                                                                                 \
+        switch (typeId) {                                                                   \
+            case OMNI_INT: {                                                                \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_INT>(__VA_ARGS__);        \
+            }                                                                               \
+            case OMNI_DATE32: {                                                             \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_DATE32>(__VA_ARGS__);     \
+            }                                                                               \
+            case OMNI_LONG: {                                                               \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_LONG>(__VA_ARGS__);       \
+            }                                                                               \
+            case OMNI_DATE64: {                                                             \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_DATE64>(__VA_ARGS__);     \
+            }                                                                               \
+            case OMNI_DECIMAL64: {                                                          \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_DECIMAL64>(__VA_ARGS__);  \
+            }                                                                               \
+            case OMNI_DOUBLE: {                                                             \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_DOUBLE>(__VA_ARGS__);     \
+            }                                                                               \
+            case OMNI_BOOLEAN: {                                                            \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_BOOLEAN>(__VA_ARGS__);    \
+            }                                                                               \
+            case OMNI_SHORT: {                                                              \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_SHORT>(__VA_ARGS__);      \
+            }                                                                               \
+            case OMNI_DECIMAL128: {                                                         \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_DECIMAL128>(__VA_ARGS__); \
+            }                                                                               \
+            case OMNI_CHAR: {                                                               \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_CHAR>(__VA_ARGS__);       \
+            }                                                                               \
+            case OMNI_VARCHAR: {                                                            \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_VARCHAR>(__VA_ARGS__);    \
+            }                                                                               \
+            default:                                                                        \
+                LogError("Can not handle this type %d", typeId);                            \
+        }                                                                                   \
+    }()
+
 enum DateUnit {
     DAY = 0,
     MILLI = 1

@@ -4,13 +4,14 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "vector/vector_helper.h"
+#include "vector/vector.h"
 #include "operator/limit/distinct_limit.h"
 #include "util/test_util.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace std;
-using namespace TestUtil;
+using namespace omniruntime::TestUtil;
 
 namespace DistinctLimitTest {
 // supported data types cover
@@ -46,8 +47,7 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitBasic)
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
 
-    DistinctLimitOperator *distinctLimitOperator =
-        dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
+    auto distinctLimitOperator = dynamic_cast<DistinctLimitOperator *>(operatorFactory->CreateOperator());
 
     distinctLimitOperator->AddInput(vecBatch1);
 
@@ -68,31 +68,31 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitBasic)
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2, expData3, expData4,
         expData5, expData6, expData7, expData8, expData9, expData10);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1, types));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    Operator::DeleteOperator(distinctLimitOperator);
-    DeleteOperatorFactory(operatorFactory);
+    omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
+    delete operatorFactory;
 }
 
 static void TestDistinctLimitTypeCheckAction(const DataTypes &sourceTypes, int32_t typeId, bool support)
 {
     const int32_t limitSize = 1;
     DistinctLimitOperatorFactory *operatorFactory = nullptr;
-    Operator *distinctLimitOperator = nullptr;
+    omniruntime::op::Operator *distinctLimitOperator = nullptr;
     int32_t distinctCols[] = {0};
 
     distinctCols[0] = typeId; // requires: typeId == colId in sourceTypes vector
     operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(sourceTypes, distinctCols,
         sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
-    distinctLimitOperator = CreateTestOperator(operatorFactory);
+    distinctLimitOperator = operatorFactory->CreateOperator();
     EXPECT_TRUE((distinctLimitOperator != nullptr) == support);
 
     if (distinctLimitOperator != nullptr) {
-        Operator::DeleteOperator(distinctLimitOperator);
+        omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
     }
-    DeleteOperatorFactory(operatorFactory);
+    delete operatorFactory;
 }
 
 // data type check
@@ -159,20 +159,19 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithNull)
     std::vector<DataTypePtr> types = { IntType(), DoubleType(), ShortType() };
     DataTypes sourceTypes(types);
     VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
-    Vector **vectors1 = vecBatch1->GetVectors();
 
     // set data to NULL
-    vectors1[nullColIndex0]->SetValueNull(nullRowIndex);
-    vectors1[nullColIndex1]->SetValueNull(nullRowIndex);
-    vectors1[nullColIndex2]->SetValueNull(nullRowIndex);
+    vecBatch1->Get(nullColIndex0)->SetNull(nullRowIndex);
+    vecBatch1->Get(nullColIndex1)->SetNull(nullRowIndex);
+    vecBatch1->Get(nullColIndex2)->SetNull(nullRowIndex);
 
     int32_t distinctCols[] = {0, 1, 2};
 
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
 
-    DistinctLimitOperator *distinctLimitOperator =
-        dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
+    auto distinctLimitOperator =
+        dynamic_cast<DistinctLimitOperator *>(operatorFactory->CreateOperator());
 
     distinctLimitOperator->AddInput(vecBatch1);
 
@@ -186,19 +185,17 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithNull)
     int16_t expData3[resultDataSize] = {6, 5000, 4, 2, 1};
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2, expData3);
 
-    // set data to NULL
-    Vector **vectors2 = expVecBatch1->GetVectors();
-    vectors2[nullColIndex0]->SetValueNull(nullRowIndex);
-    vectors2[nullColIndex1]->SetValueNull(nullRowIndex);
-    vectors2[nullColIndex2]->SetValueNull(nullRowIndex);
+    expVecBatch1->Get(nullColIndex0)->SetNull(nullRowIndex);
+    expVecBatch1->Get(nullColIndex1)->SetNull(nullRowIndex);
+    expVecBatch1->Get(nullColIndex2)->SetNull(nullRowIndex);
 
-    VectorHelper::PrintVecBatch(outputVecBatch);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
+    VectorHelper::PrintVecBatch(outputVecBatch, types);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1, types));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    Operator::DeleteOperator(distinctLimitOperator);
-    DeleteOperatorFactory(operatorFactory);
+    omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
+    delete operatorFactory;
 }
 
 TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithRepeat)
@@ -222,8 +219,8 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithRepeat)
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
 
-    DistinctLimitOperator *distinctLimitOperator =
-        dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
+    auto distinctLimitOperator =
+        dynamic_cast<DistinctLimitOperator *>(operatorFactory->CreateOperator());
 
     distinctLimitOperator->AddInput(vecBatch1);
 
@@ -232,12 +229,12 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitWithRepeat)
 
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, data1, data2, data3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1, types));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    Operator::DeleteOperator(distinctLimitOperator);
-    DeleteOperatorFactory(operatorFactory);
+    omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
+    delete operatorFactory;
 }
 
 // core data types cover
@@ -269,8 +266,8 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypesCover)
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
 
-    DistinctLimitOperator *distinctLimitOperator =
-        dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
+    auto distinctLimitOperator =
+        dynamic_cast<DistinctLimitOperator *>(operatorFactory->CreateOperator());
     distinctLimitOperator->AddInput(vecBatch1);
     VectorBatch *outputVecBatch;
     distinctLimitOperator->GetOutput(&outputVecBatch);
@@ -279,12 +276,12 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypesCover)
     DataTypes expectedTypes(outTypes);
     VectorBatch *expVecBatch1 = CreateVectorBatch(expectedTypes, resultDataSize, data1, data3, data4, data5, data6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1, outTypes));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    Operator::DeleteOperator(distinctLimitOperator);
-    DeleteOperatorFactory(operatorFactory);
+    omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
+    delete operatorFactory;
 }
 
 TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitVarchar)
@@ -310,8 +307,8 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitVarchar)
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), -1, limitSize);
 
-    DistinctLimitOperator *distinctLimitOperator =
-        dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
+    auto distinctLimitOperator =
+        dynamic_cast<DistinctLimitOperator *>(operatorFactory->CreateOperator());
     distinctLimitOperator->AddInput(vecBatch1);
     VectorBatch *outputVecBatch;
     distinctLimitOperator->GetOutput(&outputVecBatch);
@@ -322,12 +319,12 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitVarchar)
         "tuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKL"
         "MNOPQRSTUVWXYZ1234567890"};
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1, types));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    Operator::DeleteOperator(distinctLimitOperator);
-    DeleteOperatorFactory(operatorFactory);
+    omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
+    delete operatorFactory;
 }
 
 // test with hash col
@@ -359,8 +356,8 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitHashCol)
     DistinctLimitOperatorFactory *operatorFactory = DistinctLimitOperatorFactory::CreateDistinctLimitOperatorFactory(
         sourceTypes, distinctCols, sizeof(distinctCols) / sizeof(distinctCols[0]), hashChannelIndex, limitSize);
 
-    DistinctLimitOperator *distinctLimitOperator =
-        dynamic_cast<DistinctLimitOperator *>(CreateTestOperator(operatorFactory));
+    auto distinctLimitOperator =
+        dynamic_cast<DistinctLimitOperator *>(operatorFactory->CreateOperator());
     distinctLimitOperator->AddInput(vecBatch1);
     VectorBatch *outputVecBatch;
     distinctLimitOperator->GetOutput(&outputVecBatch);
@@ -373,11 +370,11 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitHashCol)
     DataTypes expTypes(std::vector<DataTypePtr> { IntType(), DoubleType(), ShortType(), LongType() });
     VectorBatch *expVecBatch1 = CreateVectorBatch(expTypes, resultDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1, expTypes.Get()));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    Operator::DeleteOperator(distinctLimitOperator);
-    DeleteOperatorFactory(operatorFactory);
+    omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
+    delete operatorFactory;
 }
 }

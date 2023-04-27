@@ -10,7 +10,6 @@
 #include "execution_context.h"
 #include "status.h"
 #include "vector/vector_batch.h"
-#include "vector/vector_allocator.h"
 #include "vector/vector_helper.h"
 
 namespace omniruntime {
@@ -20,7 +19,6 @@ class Operator {
 public:
     Operator()
         : sourceTypes(nullptr),
-          vecAllocator(vec::GetProcessGlobalVecAllocator()),
           context(nullptr),
           status(OMNI_STATUS_NORMAL)
     {}
@@ -57,22 +55,14 @@ public:
         return OMNI_STATUS_NORMAL;
     }
 
-    void SetVecAllocator(vec::VectorAllocator *vectorAllocator)
+    std::vector<type::DataTypePtr> &GetOutputType()
     {
-        this->vecAllocator = vectorAllocator;
-        if (context != nullptr) {
-            context->GetArena()->SetAllocator(vectorAllocator);
-        }
-    }
-
-    vec::VectorAllocator ALWAYS_INLINE *GetVecAllocator() const
-    {
-        return vecAllocator;
+        return outputTypes;
     }
 
 protected:
     int32_t *sourceTypes;
-    vec::VectorAllocator *vecAllocator;
+    std::vector<type::DataTypePtr> outputTypes;
     ExecutionContext *context;
 
 private:

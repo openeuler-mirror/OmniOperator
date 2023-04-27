@@ -4,7 +4,9 @@
 
 #include "topn.h"
 #include <vector>
-#include "operator/sort/sort.h"
+#include "vector/vector_helper.h"
+#include "operator/util/operator_util.h"
+#include "operator/omni_id_type_vector_traits.h"
 
 namespace omniruntime {
 namespace op {
@@ -13,13 +15,11 @@ using namespace std;
 
 TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t n, int32_t *sortCols,
     int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
-    : sourceTypes(sourceTypes)
+    : sourceTypes(sourceTypes), n(n), sortColCount(sortColCount)
 {
-    this->n = n;
     this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
     this->sortAscendings.insert(this->sortAscendings.end(), sortAscendings, sortAscendings + sortColCount);
     this->sortNullFirsts.insert(this->sortNullFirsts.end(), sortNullFirsts, sortNullFirsts + sortColCount);
-    this->sortColCount = sortColCount;
 }
 
 TopNOperatorFactory::~TopNOperatorFactory() = default;
@@ -31,29 +31,30 @@ Operator *TopNOperatorFactory::CreateOperator()
 
 TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount)
-    : sourceTypes(sourceTypes), sourceTypesCount(this->sourceTypes.GetSize())
+    : sourceTypes(sourceTypes),
+      sourceTypesCount(this->sourceTypes.GetSize()),
+      n(n),
+      sortCols(sortCols),
+      sortColCount(sortColCount),
+      sortAscendings(sortAscendings),
+      sortNullFirsts(sortNullFirsts)
 {
-    this->n = n;
-    this->sortCols = sortCols;
-    this->sortAscendings = sortAscendings;
-    this->sortNullFirsts = sortNullFirsts;
-    this->sortColCount = sortColCount;
     int32_t eachRowSize = OperatorUtil::GetRowSize(sourceTypes.Get());
     maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
+    outputTypes.insert(outputTypes.end(), this->sourceTypes.Get().begin(), this->sourceTypes.Get().end());
 }
 
 TopNOperator::~TopNOperator()
 {
     for (const auto &item : singleRowVectorBatchSet) {
-        item->ReleaseAllVectors();
-        delete item;
+        VectorHelper::FreeVecBatch(item);
     }
     resultVectorBatchList.clear();
 }
 
-int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPosition, VectorBatch *right,
-    int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts)
+int CompareVectorBatch(int32_t leftPosition, omniruntime::vec::VectorBatch *left, int32_t rightPosition,
+    omniruntime::vec::VectorBatch *right, int32_t sortColCount, const int32_t *sortCols, const int32_t *sourceTypeIds,
+    const int32_t *sortAscendings, const int32_t *sortNullFirsts)
 {
     int compare = 0;
 
@@ -61,23 +62,18 @@ int CompareVectorBatch(int32_t leftPosition, VectorBatch *left, int32_t rightPos
         int32_t sortCol = sortCols[i];
         int32_t colTypeId = sourceTypeIds[sortCol];
 
-        Vector *leftVector = left->GetVector(sortCol);
-        Vector *rightVector = right->GetVector(sortCol);
+        BaseVector *leftVector = left->Get(sortCol);
+        BaseVector *rightVector = right->Get(sortCol);
 
-        int32_t originalLeftPosition, originalRightPosition;
-        leftVector = VectorHelper::ExpandVectorAndIndex(leftVector, leftPosition, originalLeftPosition);
-        rightVector = VectorHelper::ExpandVectorAndIndex(rightVector, rightPosition, originalRightPosition);
-
-        compare = OperatorUtil::CompareNull(leftVector, originalLeftPosition, rightVector, originalRightPosition,
-            sortNullFirsts[i]);
+        compare = OperatorUtil::CompareNull(leftVector, leftPosition, rightVector, rightPosition, sortNullFirsts[i]);
         if (compare == OperatorUtil::COMPARE_STATUS_GREATER_THAN || compare == OperatorUtil::COMPARE_STATUS_LESS_THAN) {
             break;
         } else if (compare == OperatorUtil::COMPARE_STATUS_EQUAL) {
             continue;
         }
 
-        compare = OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, originalLeftPosition, rightVector,
-            originalRightPosition);
+        compare =
+            OperatorUtil::CompareVectorAtPosition(colTypeId, leftVector, leftPosition, rightVector, rightPosition);
         if (sortAscendings[i] == 0) {
             compare = -compare;
         }
@@ -113,29 +109,51 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
     return 0;
 }
 
-template <typename T>
-static void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex, Vector *vector,
-    int32_t position)
+template <type::DataTypeId typeId>
+static void ALWAYS_INLINE SetValueForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
+    BaseVector *vector, int32_t position)
 {
-    auto resultVector = static_cast<T *>(singleRowVecBatch->GetVector(colIndex));
-    auto inputVector = static_cast<T *>(vector);
-    resultVector->SetValueNull(0, inputVector->IsValueNull(position));
-    resultVector->SetValue(0, inputVector->GetValue(position));
+    using Type = typename NativeAndVectorType<typeId>::type;
+    using Vector = typename NativeAndVectorType<typeId>::vector;
+    using DictVector = typename NativeAndVectorType<typeId>::dictVector;
+
+    auto resultVector = static_cast<Vector *>(singleRowVecBatch->Get(colIndex));
+    if (vector->IsNull(position)) {
+        resultVector->SetNull(0);
+        return;
+    }
+
+    Type value;
+    if (vector->GetEncoding() == OMNI_DICTIONARY) {
+        value = (static_cast<DictVector *>(vector))->GetValue(position);
+    } else {
+        value = (static_cast<Vector *>(vector))->GetValue(position);
+    }
+    resultVector->SetNotNull(0);
+    resultVector->SetValue(0, value);
 }
 
 static void ALWAYS_INLINE SetVarCharForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
-    Vector *vector, int32_t position)
+    BaseVector *vector, int32_t position)
 {
-    auto resultVector = static_cast<VarcharVector *>(singleRowVecBatch->GetVector(colIndex));
-    auto inputVector = static_cast<VarcharVector *>(vector);
+    using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+    using VarcharDictVector = Vector<DictionaryContainer<std::string_view>>;
+
+    auto resultVector = static_cast<VarcharVector *>(singleRowVecBatch->Get(colIndex));
     // we just need to set value null
-    if (inputVector->IsValueNull(position)) {
-        resultVector->SetValueNull(0, true);
+    if (vector->IsNull(position)) {
+        resultVector->SetNull(0);
         return;
     }
-    // we need to delete then re-allocate;
-    delete resultVector;
-    singleRowVecBatch->SetVector(colIndex, inputVector->CopyRegion(position, 1));
+
+    std::string_view value;
+    if (vector->GetEncoding() == OMNI_DICTIONARY) {
+        value = static_cast<VarcharDictVector *>(vector)->GetValue(position);
+    } else {
+        value = static_cast<VarcharVector *>(vector)->GetValue(position);
+    }
+    resultVector->SetNotNull(0);
+    resultVector->SetValue(0, value);
 }
 
 void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBatch *singleRowVecBatch,
@@ -143,33 +161,32 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
 {
     auto typeIds = sourceTypes.GetIds();
     for (int i = 0; i < sourceTypesCount; ++i) {
-        int32_t originalPosition;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);
+        BaseVector *vector = vectorBatch->Get(i);
         switch (typeIds[i]) {
             case OMNI_BOOLEAN:
-                SetValueForSingleRowVecBatch<BooleanVector>(singleRowVecBatch, i, vector, originalPosition);
+                SetValueForSingleRowVecBatch<OMNI_BOOLEAN>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                SetValueForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, originalPosition);
+                SetValueForSingleRowVecBatch<OMNI_INT>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_SHORT:
-                SetValueForSingleRowVecBatch<ShortVector>(singleRowVecBatch, i, vector, originalPosition);
+                SetValueForSingleRowVecBatch<OMNI_SHORT>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                SetValueForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, originalPosition);
+                SetValueForSingleRowVecBatch<OMNI_LONG>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_DOUBLE:
-                SetValueForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, originalPosition);
+                SetValueForSingleRowVecBatch<OMNI_DOUBLE>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                SetVarCharForSingleRowVecBatch(singleRowVecBatch, i, vector, originalPosition);
+                SetVarCharForSingleRowVecBatch(singleRowVecBatch, i, vector, position);
                 break;
             }
             case OMNI_DECIMAL128:
-                SetValueForSingleRowVecBatch<Decimal128Vector>(singleRowVecBatch, i, vector, originalPosition);
+                SetValueForSingleRowVecBatch<OMNI_DECIMAL128>(singleRowVecBatch, i, vector, position);
                 break;
             default:
                 break;
@@ -177,56 +194,53 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
     }
 }
 
-template <typename T>
-static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(VectorBatch *singleRowVecBatch, int32_t colIndex,
-    Vector *vector, int32_t position)
+template <type::DataTypeId typeId>
+static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(omniruntime::vec::VectorBatch *singleRowVecBatch,
+    BaseVector *vector, int32_t position)
 {
-    singleRowVecBatch->SetVector(colIndex, (static_cast<T *>(vector))->CopyRegion(position, 1));
+    using Type = typename NativeAndVectorType<typeId>::type;
+    using Vector = typename NativeAndVectorType<typeId>::vector;
+    using DictVector = typename NativeAndVectorType<typeId>::dictVector;
+
+    auto flatVector = VectorHelper::CreateFlatVector<typeId>(1);
+    if (vector->IsNull(position)) {
+        (static_cast<Vector *>(flatVector.get()))->SetNull(0);
+    } else {
+        Type value;
+        if (vector->GetEncoding() == OMNI_DICTIONARY) {
+            value = (static_cast<DictVector *>(vector))->GetValue(position);
+        } else {
+            value = (static_cast<Vector *>(vector))->GetValue(position);
+        }
+        (static_cast<Vector *>(flatVector.get()))->SetValue(0, value);
+    }
+    singleRowVecBatch->Append(flatVector.release());
 }
 
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
 {
     auto typeIds = sourceTypes.GetIds();
-    auto singleRowVecBatch = new VectorBatch(sourceTypesCount, 1);
+    auto singleRowVecBatch = new VectorBatch(1);
     for (int i = 0; i < sourceTypesCount; ++i) {
-        int32_t originalPosition;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(i), position, originalPosition);
-        switch (typeIds[i]) {
-            case OMNI_BOOLEAN:
-                SetVectorForSingleRowVecBatch<BooleanVector>(singleRowVecBatch, i, vector, originalPosition);
-                break;
-            case OMNI_INT:
-            case OMNI_DATE32:
-                SetVectorForSingleRowVecBatch<IntVector>(singleRowVecBatch, i, vector, originalPosition);
-                break;
-            case OMNI_SHORT:
-                SetVectorForSingleRowVecBatch<ShortVector>(singleRowVecBatch, i, vector, originalPosition);
-                break;
-            case OMNI_LONG:
-            case OMNI_DECIMAL64:
-                SetVectorForSingleRowVecBatch<LongVector>(singleRowVecBatch, i, vector, originalPosition);
-                break;
-            case OMNI_DOUBLE:
-                SetVectorForSingleRowVecBatch<DoubleVector>(singleRowVecBatch, i, vector, originalPosition);
-                break;
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                SetVectorForSingleRowVecBatch<VarcharVector>(singleRowVecBatch, i, vector, originalPosition);
-                break;
-            }
-            case OMNI_DECIMAL128:
-                SetVectorForSingleRowVecBatch<Decimal128Vector>(singleRowVecBatch, i, vector, originalPosition);
-                break;
-            default:
-                break;
-        }
+        BaseVector *vector = vectorBatch->Get(i);
+        DYNAMIC_TYPE_DISPATCH(SetVectorForSingleRowVecBatch, typeIds[i], singleRowVecBatch, vector, position);
     }
     return singleRowVecBatch;
 }
 
-template <typename T> static void ALWAYS_INLINE SetValueForVector(Vector *pqVector, Vector *tmpVector, int64_t index)
+template <type::DataTypeId typeId>
+static void ALWAYS_INLINE SetValueForVector(BaseVector *pqVector, BaseVector *tmpVector, int64_t index)
 {
-    (static_cast<T *>(tmpVector))->SetValue(index, (static_cast<T *>(pqVector))->GetValue(0));
+    using Type = typename NativeAndVectorType<typeId>::type;
+    using Vector = typename NativeAndVectorType<typeId>::vector;
+
+    if (pqVector->IsNull(0)) {
+        (static_cast<Vector *>(tmpVector))->SetNull(index);
+        return;
+    }
+    auto value = (static_cast<Vector *>(pqVector))->GetValue(0);
+    (static_cast<Vector *>(tmpVector))->SetValue(index, value);
+    return;
 }
 
 void TopNOperator::FillResultVectorBatchList()
@@ -250,17 +264,16 @@ int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
         hasFilledResult = true;
     }
     int64_t rowCount = std::min(maxRowCount, totalRowCount - outputtedRowCount);
-    auto resultVecBatch = new VectorBatch(sourceTypesCount, rowCount);
-    resultVecBatch->NewVectors(vecAllocator, sourceTypes.Get());
+    auto resultVecBatch = new VectorBatch(rowCount);
+    omniruntime::vec::VectorHelper::AppendVectors(resultVecBatch, sourceTypes, rowCount);
     auto typeIds = sourceTypes.GetIds();
     for (int64_t i = 0; i < rowCount; i++) {
         VectorBatch *singleVecBatch = resultVectorBatchList[i + outputtedRowCount];
         for (int j = 0; j < sourceTypesCount; ++j) {
-            Vector *singleVector = singleVecBatch->GetVector(j);
-            Vector *resultVector = resultVecBatch->GetVector(j);
+            BaseVector *singleVector = singleVecBatch->Get(j);
+            BaseVector *resultVector = resultVecBatch->Get(j);
             if (typeIds[j] == OMNI_VARCHAR || typeIds[j] == OMNI_CHAR) {
-                SetVarcharValueForVectorBatch(i, static_cast<VarcharVector *>(singleVector),
-                    static_cast<VarcharVector *>(resultVector));
+                SetVarcharValueForVectorBatch(i, singleVector, resultVector);
             } else {
                 SetValueForVectorBatch(typeIds[j], i, singleVector, resultVector);
             }
@@ -276,60 +289,37 @@ int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
     return 0;
 }
 
-void TopNOperator::SetValueForVectorBatch(int32_t typeId, int64_t index, Vector *pqVector, Vector *tmpVector) const
+void TopNOperator::SetValueForVectorBatch(int32_t typeId, int64_t index, BaseVector *pqVector,
+    BaseVector *tmpVector) const
 {
-    if (pqVector->IsValueNull(0)) {
-        tmpVector->SetValueNull(index);
+    if (pqVector->IsNull(0)) {
+        tmpVector->SetNull(index);
         return;
     }
-    switch (typeId) {
-        case OMNI_BOOLEAN:
-            SetValueForVector<BooleanVector>(pqVector, tmpVector, index);
-            break;
-        case OMNI_INT:
-        case OMNI_DATE32:
-            SetValueForVector<IntVector>(pqVector, tmpVector, index);
-            break;
-        case OMNI_SHORT:
-            SetValueForVector<ShortVector>(pqVector, tmpVector, index);
-            break;
-        case OMNI_LONG:
-        case OMNI_DECIMAL64:
-            SetValueForVector<LongVector>(pqVector, tmpVector, index);
-            break;
-        case OMNI_DOUBLE:
-            SetValueForVector<DoubleVector>(pqVector, tmpVector, index);
-            break;
-        case OMNI_DECIMAL128:
-            SetValueForVector<Decimal128Vector>(pqVector, tmpVector, index);
-            break;
-        default:
-            break;
-    }
+
+    DYNAMIC_TYPE_DISPATCH(SetValueForVector, typeId, pqVector, tmpVector, index);
 }
 
-void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, VarcharVector *pqVector,
-    VarcharVector *tmpVector) const
+void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, BaseVector *pqVector, BaseVector *tmpVector) const
 {
-    if (pqVector->IsValueNull(0)) {
-        tmpVector->SetValueNull(rowNum);
+    using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+    if (pqVector->IsNull(0)) {
+        static_cast<VarcharVector *>(tmpVector)->SetNull(rowNum);
         return;
     }
-    uint8_t *value = nullptr;
-    int32_t valueLength = pqVector->GetValue(0, &value);
-    tmpVector->SetValue(rowNum, reinterpret_cast<const uint8_t *>(value), valueLength);
+    auto value = static_cast<VarcharVector *>(pqVector)->GetValue(0);
+    static_cast<VarcharVector *>(tmpVector)->SetValue(rowNum, value);
 }
 
 RowComparator::RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortColCount, omniruntime::vec::VectorBatch *vectorBatch)
-    : sourceTypes(sourceTypes)
-{
-    this->sortCols = sortCols;
-    this->sortAscendings = sortAscendings;
-    this->sortNullFirsts = sortNullFirsts;
-    this->sortColCount = sortColCount;
-    this->vectorBatch = vectorBatch;
-}
+    : sourceTypes(sourceTypes),
+      sortCols(sortCols),
+      sortAscendings(sortAscendings),
+      sortNullFirsts(sortNullFirsts),
+      sortColCount(sortColCount),
+      vectorBatch(vectorBatch)
+{}
 
 RowComparator::~RowComparator() = default;
 

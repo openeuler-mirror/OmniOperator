@@ -28,27 +28,26 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
+        BaseVector *vector = vectorBatch->Get(channels[0]);
         // null rows dont count
-        if (vector->IsValueNull(offset)) {
+        if (vector->IsNull(rowIndex)) {
             return;
         }
 
         if constexpr (INPUT_RAW) {
-            ProcessGroupInputRaw(state, vector, offset);
+            ProcessGroupInputRaw(state, vector, rowIndex);
         } else {
             // get value from containerVector
             int128 curVal;
-            if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                curVal = reinterpret_cast<LongVector *>(vectorBatch->GetVector(channels[0]))->GetValue(offset);
-            } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
-                curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset).ToInt128();
+            GetDecimalValue(vector, inputTypes.GetIds()[0], rowIndex, curVal);
+
+            BaseVector *avgCountVector = vectorBatch->Get(channels[1]);
+            int64_t avgCnt;
+            if (avgCountVector->GetEncoding() == OMNI_DICTIONARY) {
+                avgCnt = reinterpret_cast<Vector<DictionaryContainer<long>> *>(avgCountVector)->GetValue(rowIndex);
+            } else {
+                avgCnt = reinterpret_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
             }
-            int32_t avgCountOffset;
-            Vector *avgCountVector =
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[1]), rowIndex, avgCountOffset);
-            int64_t avgCnt = reinterpret_cast<LongVector *>(avgCountVector)->GetValue(avgCountOffset);
 
             // 2. decode current state and intermediate state
             int128 leftVal;
@@ -74,34 +73,28 @@ public:
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
+        BaseVector *vector = vectorBatch->Get(channels[0]);
+        if (vector->IsNull(rowIndex)) {
             return;
         }
         if constexpr (INPUT_RAW) {
             int128 initState;
-            if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                initState = (static_cast<LongVector *>(vector))->GetValue(offset);
-            } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
-                initState = (static_cast<Decimal128Vector *>(vector))->GetValue(offset).ToInt128();
-            }
+            GetDecimalValue(vector, inputTypes.GetIds()[0], rowIndex, initState);
 
             state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
             DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), initState, 0, 1);
         } else {
             // get value from containerVector
             int128 curVal;
-            if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                curVal = reinterpret_cast<LongVector *>(vector)->GetValue(offset);
-            } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
-                curVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(offset).ToInt128();
-            }
+            GetDecimalValue(vector, inputTypes.GetIds()[0], rowIndex, curVal);
 
-            int32_t avgCountOffset;
-            Vector *avgCountVector =
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[1]), rowIndex, avgCountOffset);
-            int64_t avgCnt = reinterpret_cast<LongVector *>(avgCountVector)->GetValue(avgCountOffset);
+            BaseVector *avgCountVector = vectorBatch->Get(channels[1]);
+            int64_t avgCnt;
+            if (avgCountVector->GetEncoding() == OMNI_DICTIONARY) {
+                avgCnt = static_cast<Vector<DictionaryContainer<long>> *>(avgCountVector)->GetValue(rowIndex);
+            } else {
+                avgCnt = static_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
+            }
 
             state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
             DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), curVal, 0, avgCnt);
@@ -114,11 +107,9 @@ public:
         DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), 0, 0, 0);
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
-
+        BaseVector *vector = vectors[0];
         int64_t overflowAccumulator = 0;
         int64_t count = 0;
         int128 decodedDec;
@@ -143,22 +134,23 @@ public:
             MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
 
             if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-                auto longVector = reinterpret_cast<LongVector *>(vector);
+                auto longVector = reinterpret_cast<Vector<int64_t> *>(vector);
                 int64_t shortResult = static_cast<int64_t>(resultDec);
                 longVector->SetValue(rowIndex, shortResult);
             } else {
-                auto decimal128Vector = reinterpret_cast<Decimal128Vector *>(vector);
-                static_cast<Decimal128Vector *>(decimal128Vector)->SetValue(rowIndex, Decimal128(resultDec));
+                auto decimal128Vector = reinterpret_cast<Vector<Decimal128> *>(vector);
+                Decimal128 decimal128Result(resultDec);
+                static_cast<Vector<Decimal128> *>(decimal128Vector)->SetValue(rowIndex, decimal128Result);
             }
-            int32_t avgCountOffset;
-            Vector *avgCountVector = VectorHelper::ExpandVectorAndIndex(vectors[1], rowIndex, avgCountOffset);
-            reinterpret_cast<LongVector *>(avgCountVector)
+
+            BaseVector *avgCountVector = vectors[1];
+            reinterpret_cast<Vector<int64_t> *>(avgCountVector)
                 ->SetValue(rowIndex, static_cast<DecimalAverageState *>(state.val)->count);
         } else {
             int128 finalResultDec;
             // if count is zero, it means all input is null
             if (countDec == 0) {
-                vector->SetValueNull(rowIndex);
+                vector->SetNull(rowIndex);
                 return;
             }
             OpStatus status = CalcAvg(inputDecimalType, decodedDec, countDec, outputDecimalType, finalResultDec);
@@ -168,27 +160,25 @@ public:
             }
             if (outputTypes.GetIds()[0] == OMNI_DECIMAL64) {
                 int64_t shortResult = static_cast<int64_t>(finalResultDec);
-                static_cast<LongVector *>(vector)->SetValue(rowIndex, shortResult);
+                static_cast<Vector<int64_t> *>(vector)->SetValue(rowIndex, shortResult);
             } else {
-                static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, Decimal128(finalResultDec));
+                Decimal128 decimal128Result(finalResultDec);
+                static_cast<Vector<Decimal128> *>(vector)->SetValue(rowIndex, decimal128Result);
             }
         }
     }
 
 private:
     // ProcessGroup in inputRaw mode
-    void ProcessGroupInputRaw(AggregateState &state, Vector *vector, int32_t offset)
+    void ProcessGroupInputRaw(AggregateState &state, BaseVector *vector, int32_t rowIndex)
     {
         // val and state to sum. The value of state.val transforms to overflowFlag(8 bytes) + decimal(16 bytes)
         // 1. get a new value
         int64_t oldOverflow = 0;
         int64_t oldCount = 0;
         int128 curVal;
-        if (inputTypes.GetIds()[0] == OMNI_DECIMAL64) {
-            curVal = static_cast<LongVector *>(vector)->GetValue(offset);
-        } else if (inputTypes.GetIds()[0] == OMNI_DECIMAL128) {
-            curVal = static_cast<Decimal128Vector *>(vector)->GetValue(offset).ToInt128();
-        }
+        GetDecimalValue(vector, inputTypes.GetIds()[0], rowIndex, curVal);
+
         int128 leftVal;
         // 2. decode current state
         DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
@@ -246,15 +236,14 @@ private:
         return isOverflow ? OpStatus::OP_OVERFLOW : OpStatus::SUCCESS;
     }
     // set vector value null or throw exception when overflow
-    void SetNullOrThrowException(Vector *vector, int index)
+    void SetNullOrThrowException(BaseVector *vector, int index)
     {
         if (!IsOverflowAsNull()) {
             throw OmniException("OPERATOR_RUNTIME_ERROR", "Overflow in avg of decimals");
         }
-        vector->SetValueNull(index);
+        vector->SetNull(index);
     }
-
-    // avg = (sum/count).cast(targetDecimalType)
+    
     // GetDivideResultDecimalType get the sum/count result decimal type, and count's type is always Decimal(20,0)
     void GetDivideResultDecimalType(int32_t sumPrec, int32_t sumScale, int32_t &resultPrec, int32_t &resultScale)
     {

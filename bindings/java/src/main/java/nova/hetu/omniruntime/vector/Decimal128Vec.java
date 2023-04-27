@@ -6,9 +6,7 @@ package nova.hetu.omniruntime.vector;
 
 import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_INNER_ERROR;
 
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.Decimal128DataType;
-import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.math.BigInteger;
@@ -26,27 +24,17 @@ public class Decimal128Vec extends DecimalVec {
         super(size, BYTES, Decimal128DataType.DECIMAL128);
     }
 
-    public Decimal128Vec(VecAllocator allocator, int size) {
-        super(allocator, size, BYTES, Decimal128DataType.DECIMAL128);
-    }
-
-    @Deprecated
-    public Decimal128Vec(long nativeVector, DataType type) {
-        super(nativeVector, BYTES, type);
-    }
-
     public Decimal128Vec(long nativeVector) {
         super(nativeVector, BYTES, Decimal128DataType.DECIMAL128);
     }
 
-    public Decimal128Vec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, BYTES, Decimal128DataType.DECIMAL128);
+    public Decimal128Vec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, size * BYTES, size, BYTES,
+                Decimal128DataType.DECIMAL128);
     }
 
-    private Decimal128Vec(Decimal128Vec vector, int offset, int length, boolean isSlice) {
-        super(vector, offset, length, isSlice);
+    private Decimal128Vec(Decimal128Vec vector, int offset, int length) {
+        super(vector, offset, length);
     }
 
     private Decimal128Vec(Decimal128Vec vector, int[] positions, int offset, int length) {
@@ -57,22 +45,12 @@ public class Decimal128Vec extends DecimalVec {
      * split a vec into two vec according to the specified index and length.
      *
      * @param start starting index
-     * @param end ending index
+     * @param length slice length
      * @return new vec
      */
     @Override
-    public Decimal128Vec slice(int start, int end) {
-        return new Decimal128Vec(this, start, end - start, true);
-    }
-
-    /**
-     * copy a new vec according to the vec.
-     *
-     * @return new vec
-     */
-    @Override
-    public Decimal128Vec copy() {
-        throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, "Decimal128Vec is not supported");
+    public Decimal128Vec slice(int start, int length) {
+        return new Decimal128Vec(this, start, length);
     }
 
     /**
@@ -86,18 +64,6 @@ public class Decimal128Vec extends DecimalVec {
     @Override
     public Decimal128Vec copyPositions(int[] positions, int offset, int length) {
         return new Decimal128Vec(this, positions, offset, length);
-    }
-
-    /**
-     * copy a vec based on the starting position and the number of elements.
-     *
-     * @param positionOffset staring position
-     * @param length the number of elements
-     * @return new vec
-     */
-    @Override
-    public Decimal128Vec copyRegion(int positionOffset, int length) {
-        return new Decimal128Vec(this, positionOffset, length, false);
     }
 
     /**

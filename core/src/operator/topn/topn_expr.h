@@ -5,13 +5,10 @@
 #ifndef OMNI_RUNTIME_TOPN_EXPR_H
 #define OMNI_RUNTIME_TOPN_EXPR_H
 
-#include "operator/operator_factory.h"
 #include "operator/projection/projection.h"
 #include "operator/topn/topn.h"
-#include "type/data_types.h"
 
-namespace omniruntime {
-namespace op {
+namespace omniruntime::op {
 class TopNWithExprOperatorFactory : public OperatorFactory {
 public:
     TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
@@ -32,7 +29,7 @@ private:
 
 class TopNWithExprOperator : public Operator {
 public:
-    TopNWithExprOperator(type::DataTypes sourceTypes, std::vector<int32_t> &sortCols,
+    TopNWithExprOperator(const type::DataTypes& sourceTypes, std::vector<int32_t> &sortCols,
         std::vector<ProjFunc> &projectFuncs, TopNOperator *topNOperator);
 
     ~TopNWithExprOperator() override;
@@ -50,6 +47,5 @@ private:
     TopNOperator *topNOperator;
     std::vector<VectorBatch *> inputVecBatches;
 };
-}
 }
 #endif // OMNI_RUNTIME_TOPN_EXPR_H

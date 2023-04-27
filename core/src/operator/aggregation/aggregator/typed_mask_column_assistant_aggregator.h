@@ -108,14 +108,13 @@ public:
         }
 
         AggregatorBuffer<int32_t> indexMap;
-        Vector *vector = nullptr;
+        BaseVector *vector = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
-            vector = vectorBatch->GetVector(aggChannels[0]);
-            if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-                indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount,
-                    indexMap.data);
+            vector = vectorBatch->Get(aggChannels[0]);
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                indexMap.Create(this->allocator, rowCount, false);
+                TypedAggregator::getIdsWithOffFunction(vector,indexMap.data, rowOffset, rowCount);
             }
         }
 
@@ -132,14 +131,13 @@ public:
         }
 
         AggregatorBuffer<int32_t> indexMap;
-        Vector *vector = nullptr;
+        BaseVector *vector = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
-            vector = vectorBatch->GetVector(aggChannels[0]);
-            if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-                indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount,
-                    indexMap.data);
+            vector = vectorBatch->Get(aggChannels[0]);
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                indexMap.Create(this->allocator, rowCount, false);
+                TypedAggregator::getIdsWithOffFunction(vector,indexMap.data, rowOffset, rowCount);
             }
         }
 
@@ -156,14 +154,13 @@ public:
         }
 
         AggregatorBuffer<int32_t> indexMap;
-        Vector *vector = nullptr;
+        BaseVector *vector = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
-            vector = vectorBatch->GetVector(aggChannels[0]);
-            if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-                indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount,
-                    indexMap.data);
+            vector = vectorBatch->Get(aggChannels[0]);
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                indexMap.Create(this->allocator, rowCount, false);
+                TypedAggregator::getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
             }
         }
 
@@ -181,17 +178,16 @@ public:
         }
 
         AggregatorBuffer<int32_t> indexMap;
-        Vector *vector = nullptr;
+        BaseVector *vector = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
-            vector = vectorBatch->GetVector(aggChannels[0]);
-            if (vector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
-                indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-                vector = static_cast<DictionaryVector *>(vector)->ExtractDictionaryAndIds(rowOffset, rowCount,
-                    indexMap.data);
+            vector = vectorBatch->Get(aggChannels[0]);
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                indexMap.Create(this->allocator, rowCount, false);
+                TypedAggregator::getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
             }
         }
-        auto booleanVector = static_cast<BooleanVector *>(vectorBatch->GetVector(filterStart + aggIdx));
+        auto booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
 
         bool needFilterJude = false;
         for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
@@ -213,7 +209,7 @@ public:
         realAggregator->InitState(state);
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);
     }
@@ -268,21 +264,24 @@ protected:
     {
         this->realAggregator =
             std::unique_ptr<TypedAggregator>(static_cast<TypedAggregator *>(realAggregator.release()));
+        getBooleanValuesFunction = getValuesFromVectorFunctions.at(OMNI_BOOLEAN);
+        getBooleanValuesFromDictFunction = getValuesFromDictFunctions.at(OMNI_BOOLEAN);
+        getIdsWithOffFromBooleanDictFunction = getIdsWithOffsetFunctions.at(OMNI_BOOLEAN);
     }
 
-    void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
+    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
-    void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}
-    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
+        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
 private:
@@ -293,11 +292,11 @@ private:
             throw OmniException("Illegal Arguement", "Aggregator maskColumnId " + std::to_string(maskColumnId) +
                 " out of range [0, " + std::to_string(vectorBatch->GetVectorCount()) + ") for masked aggregator");
         }
-        auto maskVector = vectorBatch->GetVector(maskColumnId);
-        uint8_t *maskNullMap =
-            maskVector->MayHaveNull() ? reinterpret_cast<uint8_t *>(maskVector->GetValueNulls()) : nullptr;
+        auto maskVector = vectorBatch->Get(maskColumnId);
+        uint8_t *maskNullMap = maskVector->HasNull() ?
+            reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(maskVector)) : nullptr;
         if (maskNullMap != nullptr) {
-            maskNullMap += maskVector->GetPositionOffset() + rowOffset;
+            maskNullMap += rowOffset;
         }
 
         uint8_t *aggNullMap = nullptr;
@@ -308,11 +307,11 @@ private:
                 throw OmniException("Illegal Arguement", "Aggregator columnId " + std::to_string(aggColumnId) +
                     " out of range [0, " + std::to_string(vectorBatch->GetVectorCount()) + ") for masked aggregator");
             } else if (aggColumnId >= 0) {
-                auto aggVector = vectorBatch->GetVector(aggColumnId);
-                aggNullMap =
-                    aggVector->MayHaveNull() ? reinterpret_cast<uint8_t *>(aggVector->GetValueNulls()) : nullptr;
+                auto aggVector = vectorBatch->Get(aggColumnId);
+                aggNullMap = aggVector->HasNull() ?
+                    reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(aggVector)) : nullptr;
                 if (aggNullMap != nullptr) {
-                    aggNullMap += aggVector->GetPositionOffset() + rowOffset;
+                    aggNullMap += rowOffset;
                 }
             }
         }
@@ -320,7 +319,7 @@ private:
         nullMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
 
         bool hasValidRows;
-        if (maskVector->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+        if (maskVector->GetEncoding() == OMNI_DICTIONARY) {
             hasValidRows = GenerateNullMapDict(nullMap, rowOffset, rowCount, maskVector, maskNullMap, aggNullMap);
         } else {
             hasValidRows = GenerateNullMapFlat(nullMap, rowOffset, rowCount, maskVector, maskNullMap, aggNullMap);
@@ -332,14 +331,12 @@ private:
     }
 
     bool GenerateNullMapDict(AggregatorBuffer<uint8_t> &nullMap, const int32_t rowOffset, const size_t rowCount,
-        Vector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
+        BaseVector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
     {
         uint8_t hasValidRows;
-        AggregatorBuffer<int32_t> indexMap(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-        BooleanVector *orgVector = static_cast<BooleanVector *>(
-            static_cast<DictionaryVector *>(maskVector)->ExtractDictionaryAndIds(rowOffset, rowCount, indexMap.data));
-        uint8_t *maskPtr = reinterpret_cast<uint8_t *>(orgVector->GetValues());
-        maskPtr += orgVector->GetPositionOffset();
+        AggregatorBuffer<int32_t> indexMap(this->allocator, rowCount, false);
+        getIdsWithOffFromBooleanDictFunction(maskVector, indexMap.data, rowOffset,rowCount);
+        uint8_t *maskPtr = reinterpret_cast<uint8_t *>(getBooleanValuesFromDictFunction(maskVector));
 
         if (maskNullMap == nullptr) {
             if (aggNullMap == nullptr) {
@@ -359,11 +356,11 @@ private:
     }
 
     bool GenerateNullMapFlat(AggregatorBuffer<uint8_t> &nullMap, const int32_t rowOffset, const size_t rowCount,
-        Vector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
+        BaseVector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
     {
         uint8_t hasValidRows;
-        uint8_t *maskPtr = reinterpret_cast<uint8_t *>(static_cast<BooleanVector *>(maskVector)->GetValues());
-        maskPtr += maskVector->GetPositionOffset() + rowOffset;
+        uint8_t *maskPtr = reinterpret_cast<uint8_t *>(getBooleanValuesFunction(maskVector));
+        maskPtr += rowOffset;
 
         if (maskNullMap == nullptr) {
             if (aggNullMap == nullptr) {
@@ -384,6 +381,10 @@ private:
 
     int32_t maskColumnId;
     std::unique_ptr<TypedAggregator> realAggregator;
+protected:
+    GetValuesFunction getBooleanValuesFunction;
+    GetValuesFunction getBooleanValuesFromDictFunction;
+    GetIdsWithOffFunction getIdsWithOffFromBooleanDictFunction;
 };
 }
 }

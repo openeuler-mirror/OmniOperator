@@ -331,19 +331,6 @@ public class BenchmarkShortVec {
     }
 
     /**
-     * Copy region of int vec benchmark
-     *
-     * @return region size
-     */
-    @Benchmark
-    public int copyRegionShortVecBenchmark() {
-        ShortVec copyRegion = vecGetData.copyRegion(2, rows / 2);
-        int size = copyRegion.getSize();
-        copyRegion.close();
-        return size;
-    }
-
-    /**
      * Copy position of int vec benchmark
      *
      * @return position size

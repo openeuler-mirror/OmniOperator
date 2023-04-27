@@ -328,17 +328,6 @@ public class BenchmarkIntVec {
     }
 
     /**
-     * Copy region of int vec benchmark
-     *
-     * @return region size
-     */
-    @Benchmark
-    public int copyRegionIntVecBenchmark() {
-        IntVec copyRegion = vecGetData.copyRegion(2, rows / 2);
-        return copyRegion.getSize();
-    }
-
-    /**
      * Copy position of int vec benchmark
      *
      * @return position size

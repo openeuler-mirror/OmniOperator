@@ -27,31 +27,13 @@ public class ContainerVec extends FixedWidthVec {
     /**
      * The routine will use the specialized vector allocator to allocate new vector.
      *
-     * @param allocator the specialized vector allocator
-     * @param vectorCount the number of vector
-     * @param positionCount the actual number of value of vector
-     * @param vectorAddresses the address of vector
-     * @param dataTypes the data type of this vector
-     */
-    public ContainerVec(VecAllocator allocator, int vectorCount, int positionCount, long[] vectorAddresses,
-            DataType[] dataTypes) {
-        super(allocator, vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
-        this.positionCount = positionCount;
-        this.dataTypes = dataTypes;
-        setDataTypesNative(getNativeVector(), DataTypeSerializer.serialize(dataTypes));
-        put(vectorAddresses, 0, 0, vectorAddresses.length);
-    }
-
-    /**
-     * The routine will use the specialized vector allocator to allocate new vector.
-     *
      * @param vectorCount the number of vector
      * @param positionCount the actual number of value of vector
      * @param vectorAddresses the address of vector
      * @param dataTypes the data type of this vector
      */
     public ContainerVec(int vectorCount, int positionCount, long[] vectorAddresses, DataType[] dataTypes) {
-        super(vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
+        super(vectorCount * BYTES, vectorCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
         this.positionCount = positionCount;
         this.dataTypes = dataTypes;
         setDataTypesNative(getNativeVector(), DataTypeSerializer.serialize(dataTypes));
@@ -66,7 +48,7 @@ public class ContainerVec extends FixedWidthVec {
      * @param nativeVector native vector address
      */
     public ContainerVec(long nativeVector) {
-        super(nativeVector, ContainerDataType.CONTAINER);
+        super(nativeVector, ContainerDataType.CONTAINER, BYTES);
         // get other attributes from native
         this.positionCount = getPositionNative(nativeVector);
         this.dataTypes = DataTypeSerializer.deserialize(getDataTypesNative(nativeVector));
@@ -78,15 +60,11 @@ public class ContainerVec extends FixedWidthVec {
      * @param nativeVector native vector address
      * @param nativeValueBufAddress valueBuf address of native vector
      * @param nativeVectorNullBufAddress nullBuf address of native vector
-     * @param nativeVectorAllocator allocator address of native vector
-     * @param capacityInBytes capacity in bytes of vector
      * @param size the actual number of value of vector
-     * @param offset offset of positions in the input parameter
      */
-    public ContainerVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorAllocator, int capacityInBytes, int size, int offset) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, ContainerDataType.CONTAINER);
+    public ContainerVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, size * BYTES, size,
+                ContainerDataType.CONTAINER);
         // get other attributes from native
         this.positionCount = getPositionNative(nativeVector);
         this.dataTypes = DataTypeSerializer.deserialize(getDataTypesNative(nativeVector));
@@ -104,16 +82,14 @@ public class ContainerVec extends FixedWidthVec {
         super(capacityInBytes, data.limit(), OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
     }
 
-    private ContainerVec(ContainerVec containerVec, int start, int length, boolean isSlice, DataType[] dataTypes) {
-        super(containerVec, start, length, isSlice);
+    private ContainerVec(ContainerVec containerVec, int start, int length, DataType[] dataTypes) {
+        super(containerVec, start, length, dataTypes.length * BYTES);
         this.positionCount = length;
         this.dataTypes = dataTypes;
-        // for container vec offset is always 0.
-        offset = 0;
     }
 
     private ContainerVec(ContainerVec vector, int[] positions, int offset, int length, DataType[] dataTypes) {
-        super(vector, positions, offset, length);
+        super(vector, positions, offset, length, dataTypes.length * BYTES);
         this.positionCount = length;
         this.dataTypes = dataTypes;
     }
@@ -131,7 +107,7 @@ public class ContainerVec extends FixedWidthVec {
      * @return the value of long
      */
     public long get(int index) {
-        return valuesBuf.getLong((index + getOffset()) * BYTES);
+        return valuesBuf.getLong(index * BYTES);
     }
 
     /**
@@ -141,7 +117,7 @@ public class ContainerVec extends FixedWidthVec {
      * @param value the value of vec
      */
     public void set(int index, long value) {
-        valuesBuf.setLong((index + getOffset()) * BYTES, value);
+        valuesBuf.setLong((index) * BYTES, value);
     }
 
     /**
@@ -194,13 +170,8 @@ public class ContainerVec extends FixedWidthVec {
     }
 
     @Override
-    public ContainerVec slice(int start, int end) {
-        return new ContainerVec(this, start, end - start, true, dataTypes);
-    }
-
-    @Override
-    public ContainerVec copy() {
-        return null;
+    public ContainerVec slice(int start, int length) {
+        return new ContainerVec(this, start, length, dataTypes);
     }
 
     @Override
@@ -209,13 +180,13 @@ public class ContainerVec extends FixedWidthVec {
     }
 
     @Override
-    public ContainerVec copyRegion(int positionOffset, int length) {
-        return new ContainerVec(this, positionOffset, length, false, dataTypes);
+    public int getRealValueBufCapacityInBytes() {
+        return size * BYTES;
     }
 
     @Override
-    public int getRealValueBufCapacityInBytes() {
-        return getCapacityInBytes();
+    public int getCapacityInBytes() {
+        return size * BYTES;
     }
 
     @Override

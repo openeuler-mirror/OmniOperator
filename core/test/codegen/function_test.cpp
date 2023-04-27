@@ -12,9 +12,7 @@
 #include "codegen/functions/murmur3_hash.h"
 #include "codegen/functions/xxhash64_hash.h"
 #include "codegen/functions/dictionaryfunctions.h"
-#include "codegen/functions/varcharVectorfunctions.h"
 #include "codegen/functions/udffunctions.h"
-#include "vector/vector_helper.h"
 #include "jni_mock.h"
 #include "udf/cplusplus/jni_util.h"
 
@@ -23,136 +21,6 @@ using namespace omniruntime::op;
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace omniruntime::codegen::function;
-
-/*
- * Dictionary funtion tests
- */
-TEST(FunctionTest, GetIntFromDictionaryVector)
-{
-    int size = 5;
-    auto vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("IntVector_GetIntFromDictionaryVector");
-    auto intVector = new IntVector(vecAllocator, size * 2);
-    for (int i = 0; i < intVector->GetSize(); i++) {
-        intVector->SetValue(i, i * 10);
-    }
-    int32_t ids[] = { 0, 2, 4, 6, 8 };
-    auto dict = new DictionaryVector(intVector, ids, size);
-    int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++) {
-        EXPECT_EQ(GetIntFromDictionaryVector(dictptr, i), intVector->GetValue(ids[i]));
-    }
-    delete intVector;
-    delete dict;
-    delete vecAllocator;
-}
-
-TEST(FunctionTest, GetLongFromDictionaryVector)
-{
-    int size = 5;
-    auto vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("LongVector_GetLongFromDictionaryVector");
-    auto longVector = new LongVector(vecAllocator, size * 2);
-    for (int i = 0; i < longVector->GetSize(); i++) {
-        longVector->SetValue(i, static_cast<int64_t>(i * 10));
-    }
-    int32_t ids[] = { 0, 2, 4, 6, 8 };
-    auto dict = new DictionaryVector(longVector, ids, size);
-    int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++) {
-        EXPECT_EQ(GetLongFromDictionaryVector(dictptr, i), longVector->GetValue(ids[i]));
-    }
-    delete longVector;
-    delete dict;
-    delete vecAllocator;
-}
-
-TEST(FunctionTest, GetDoubleFromDictionaryVector)
-{
-    int size = 5;
-    auto vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DoubleVector_GetDoubleFromDictionaryVector");
-    auto doubleVector = new DoubleVector(vecAllocator, size * 2);
-    for (int i = 0; i < doubleVector->GetSize(); i++) {
-        doubleVector->SetValue(i, 3.14159 * i);
-    }
-    int32_t ids[] = { 0, 2, 4, 6, 8 };
-    auto dict = new DictionaryVector(doubleVector, ids, size);
-    int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++) {
-        EXPECT_EQ(GetDoubleFromDictionaryVector(dictptr, i), doubleVector->GetValue(ids[i]));
-    }
-    delete doubleVector;
-    delete dict;
-    delete vecAllocator;
-}
-
-TEST(FunctionTest, GetBooleanFromDictionaryVector)
-{
-    int size = 5;
-    auto vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("BooleanVector_GetBooleanFromDictionaryVector");
-    auto booleanVector = new BooleanVector(vecAllocator, size * 2);
-    for (int i = 0; i < booleanVector->GetSize(); i++) {
-        booleanVector->SetValue(i, i % 2 == 0);
-    }
-    int32_t ids[] = { 0, 2, 4, 6, 8 };
-    auto dict = new DictionaryVector(booleanVector, ids, size);
-    int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    for (int i = 0; i < size; i++) {
-        EXPECT_EQ(GetBooleanFromDictionaryVector(dictptr, i), booleanVector->GetValue(ids[i]));
-    }
-    delete booleanVector;
-    delete dict;
-    delete vecAllocator;
-}
-
-TEST(FunctionTest, GetVarcharFromDictionaryVector)
-{
-    int size = 5;
-    auto vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("VarcharVector_GetVarcharFromDictionaryVector");
-    auto varcharVector = new VarcharVector(vecAllocator, size * 2);
-    for (int i = 0; i < varcharVector->GetSize(); i++) {
-        varcharVector->SetValue(i, reinterpret_cast<const unsigned char *>(std::string(i, 'a').c_str()), i);
-    }
-    int32_t ids[] = { 0, 2, 4, 6, 8 };
-    auto dict = new DictionaryVector(varcharVector, ids, size);
-    int32_t length = 0;
-    int64_t dictptr = reinterpret_cast<int64_t>(dict);
-    unsigned char *actual = nullptr;
-    unsigned char *expected = nullptr;
-    for (int i = 0; i < size; i++) {
-        varcharVector->GetValue(ids[i], &actual);
-        expected = GetVarcharFromDictionaryVector(dictptr, i, &length);
-        EXPECT_EQ(expected, actual);
-    }
-    delete varcharVector;
-    delete dict;
-    delete vecAllocator;
-}
-
-/*
- * varcharVector tests
- */
-TEST(FunctionTest, WrapVarcharVector)
-{
-    auto vecAllocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("WrapVarcharVector_GetWrapVarcharVector");
-    auto varcharVector = new VarcharVector(vecAllocator, 1024, 5);
-    int64_t vecptr = reinterpret_cast<int64_t>(varcharVector);
-    WrapVarcharVector(vecptr, 0, (uint8_t *)"hello", 5);
-    WrapVarcharVector(vecptr, 3, (uint8_t *)"world", 5);
-    uint8_t *temp = nullptr;
-    int len = varcharVector->GetValue(0, &temp);
-    std::string result(reinterpret_cast<char *>(temp), len);
-    EXPECT_EQ(result, "hello");
-    len = varcharVector->GetValue(3, &temp);
-    std::string result2(reinterpret_cast<char *>(temp), len);
-    EXPECT_EQ(result2, "world");
-    delete varcharVector;
-    delete vecAllocator;
-}
 
 /*
  * context helper tests
@@ -1369,7 +1237,7 @@ TEST(FunctionTest, ReplaceStrCharStr)
 
     std::string str[] = { "", " varchar2", "", "varchar4", "varchar5", "varchar6", "varchar7" };
     std::string searchStr[] =
-        { "          ", " char200  ", "char300   ", "char400   ", "char500   ", "char600   ", "char700   " };
+                { "          ", " char200  ", "char300   ", "char400   ", "char500   ", "char600   ", "char700   " };
     std::string replaceStr[] = { "", " varchar2", "", "varchar4", "varchar5", "varchar6", "varchar7" };
     int32_t resultLen[] = { 0, 9, 0, 8, 8, 8, 8 };
     std::string expected[] = { "", " varchar2", "", "varchar4", "varchar5", "varchar6", "varchar7" };
@@ -1390,14 +1258,14 @@ TEST(FunctionTest, ReplaceCharCharChar)
     int32_t outLen = 0;
 
     std::string str[] = { "          ", " char200  ", "          ", "char400   ", "char500   ", "char600   ",
-        "char700   " };
+                              "char700   " };
     std::string searchStr[] =
-        { "cha1     ", " char2     ", "char3     ", "char4     ", "char5     ", "char6     ", "char7     " };
+                { "cha1     ", " char2     ", "char3     ", "char4     ", "char5     ", "char6     ", "char7     " };
     std::string replaceStr[] =
-        { "varchar100", "varchar200", "varchar300", "varchar400", "varchar500", "varchar600", "varchar700" };
+                { "varchar100", "varchar200", "varchar300", "varchar400", "varchar500", "varchar600", "varchar700" };
     int32_t resultLen[] = { 10, 10, 10, 10, 10, 10, 10 };
     std::string expected[] =
-        { "          ", " char200  ", "          ", "char400   ", "char500   ", "char600   ", "char700   " };
+                { "          ", " char200  ", "          ", "char400   ", "char500   ", "char600   ", "char700   " };
 
     for (int32_t i = 0; i < 7; i++) {
         auto result = ReplaceStrStrStrWithRepReplace(contextPtr, str[i].c_str(), str[i].length(), searchStr[i].c_str(),

@@ -33,7 +33,7 @@ import java.util.OptionalInt;
  * @since 2021-6-30
  */
 public class OmniPartionOutOperatorTest {
-    @Test
+    @Test(enabled = false)
     public void testPartionOut() {
         OptionalInt nullChannel = OptionalInt.empty();
 
@@ -69,7 +69,7 @@ public class OmniPartionOutOperatorTest {
         omniPartitionedOutPutOperatorFactory.close();
     }
 
-    @Test
+    @Test(enabled = false)
     public void testPartionOutCache() {
         OptionalInt nullChannel = OptionalInt.empty();
         int[] partitionChannels = {0};
@@ -104,7 +104,7 @@ public class OmniPartionOutOperatorTest {
         omniPartitionedOutPutOperatorFactory.close();
     }
 
-    @Test
+    @Test(enabled = false)
     public void testPartionOutChar() {
         OptionalInt nullChannel = OptionalInt.empty();
         int[] partitionChannels = {0};

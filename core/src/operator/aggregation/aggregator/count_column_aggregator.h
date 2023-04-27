@@ -28,7 +28,7 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class CountColumnAggregator : pub
 public:
     ~CountColumnAggregator() override = default;
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override;
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inRaw, bool outPartial, bool isOverflowAsNull)
@@ -90,50 +90,50 @@ protected:
         }
     }
 
-    void ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override;
+    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessSingleInternalFilter(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
-        BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-        const int32_t *indexMap) override;
+    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
+        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 
     template <bool RAW_IN>
-    void ProcessSingleInternalFunction(AggregateState &state, Vector *vector, const int32_t rowOffset,
+    void ProcessSingleInternalFunction(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap);
 
     template <bool RAW_IN>
-    void ProcessSingleInternalFilterFunction(AggregateState &state, Vector *vector, BooleanVector *booleanVector,
+    void ProcessSingleInternalFilterFunction(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap);
 
     template <bool RAW_IN>
-    void ProcessGroupInternalFunction(std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector,
+    void ProcessGroupInternalFunction(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap);
+
     template <bool RAW_IN>
     void ProcessGroupInternalFilterFunction(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
+        BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap);
 
 private:
     void (CountColumnAggregator<IN_ID, OUT_ID>::*processGroupInternalPtr)(std::vector<AggregateState *> &rowStates,
-        const size_t aggIdx, Vector *vector, const int32_t rowOffset, const uint8_t *nullMap,
+        const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap,
         const int32_t *indexMap) = nullptr;
 
     void (CountColumnAggregator<IN_ID, OUT_ID>::*processGroupInternalFilterPtr)(
-        std::vector<AggregateState *> &rowStates, const size_t aggIdx, Vector *vector, BooleanVector *booleanVector,
+        std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector, Vector<bool> *booleanVector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) = nullptr;
 
-    void (CountColumnAggregator<IN_ID, OUT_ID>::*processSingleInternalPtr)(AggregateState &state, Vector *vector,
+    void (CountColumnAggregator<IN_ID, OUT_ID>::*processSingleInternalPtr)(AggregateState &state, BaseVector *vector,
         const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = nullptr;
 
-    void (CountColumnAggregator<IN_ID, OUT_ID>::*processSingleInternalFilterPtr)(AggregateState &state, Vector *vector,
-        BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
-        const int32_t *indexMap) = nullptr;
+    void (CountColumnAggregator<IN_ID, OUT_ID>::*processSingleInternalFilterPtr)(AggregateState &state,
+        BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount,
+        const uint8_t *nullMap, const int32_t *indexMap) = nullptr;
 };
 }
 }

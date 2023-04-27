@@ -36,10 +36,9 @@ private:
 
 class WindowPartition {
 public:
-    WindowPartition(const type::DataTypes &sourceTypes, omniruntime::op::PagesIndex *pagesIndex, int32_t partitionStart,
+    WindowPartition(const type::DataTypes &sourceTypes, PagesIndex *pagesIndex, int32_t partitionStart,
         int32_t partitionEnd, int32_t *outputChannels, int32_t outputChannelsCount,
-        std::vector<std::unique_ptr<WindowFunction>> &windowFunctions,
-        omniruntime::op::PagesHashStrategy *peerGroupHashStrategy);
+        std::vector<std::unique_ptr<WindowFunction>> &windowFunctions, PagesHashStrategy *peerGroupHashStrategy);
 
     ~WindowPartition();
 
@@ -53,8 +52,8 @@ public:
         return currentPosition < partitionEnd;
     }
 
-    void ProcessNextRow(omniruntime::vec::VectorBatch *inputVecBatchForAgg,
-        omniruntime::vec::VectorBatch *outputVecBatch, int32_t index);
+    void ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBatch *outputVecBatch, int32_t index,
+        int32_t outputColsCount, std::vector<type::DataTypePtr> &types);
 
     void UpdatePeerGroup();
 
@@ -79,12 +78,12 @@ private:
 
 private:
     type::DataTypes sourceTypes;
-    omniruntime::op::PagesIndex *pagesIndex;
+    PagesIndex *pagesIndex;
     int32_t partitionStart;
     int32_t partitionEnd;
     int32_t *outputChannels;
     int32_t outputChannelsCount;
-    omniruntime::op::PagesHashStrategy *peerGroupHashStrategy;
+    PagesHashStrategy *peerGroupHashStrategy;
     int32_t currentPosition;
     int32_t peerGroupStart;
     int32_t peerGroupEnd;
@@ -92,8 +91,8 @@ private:
     std::shared_ptr<WindowIndex> windowIndex;
 };
 
-bool PositionEqualsPosition(omniruntime::op::PagesIndex *pagesIndex,
-    omniruntime::op::PagesHashStrategy *partitionHashStrategy, int32_t leftPosition, int32_t rightPosition);
+bool PositionEqualsPosition(PagesIndex *pagesIndex, PagesHashStrategy *partitionHashStrategy, int32_t leftPosition,
+    int32_t rightPosition);
 }
 }
 #endif

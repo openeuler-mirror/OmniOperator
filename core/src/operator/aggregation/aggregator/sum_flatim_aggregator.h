@@ -9,9 +9,10 @@
 
 namespace omniruntime {
 namespace op {
-template <bool INPUT_RAW, bool OUTPUT_PARTIAL, typename RawInputVectorType, typename IntermediateVectorType,
-    typename ResultType>
+template <bool INPUT_RAW, bool OUTPUT_PARTIAL, typename RawInputVectorType, typename ResultType>
 class SumFlatIMAggregator : public Aggregator {
+using FixedVector = Vector<RawInputVectorType>;
+using DictVector = Vector<DictionaryContainer<RawInputVectorType>>;
 public:
     SumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
@@ -25,9 +26,8 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
+        BaseVector *vector = vectorBatch->Get(channels[0]);
+        if (vector->IsNull(rowIndex)) {
             return;
         }
         if (state.val == nullptr) {
@@ -35,41 +35,58 @@ public:
             return;
         }
         if constexpr (INPUT_RAW) {
-            *(static_cast<ResultType *>(state.val)) += (static_cast<RawInputVectorType *>(vector))->GetValue(offset);
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                *(static_cast<ResultType *>(state.val)) += (static_cast<DictVector *>(vector))->GetValue(rowIndex);
+            } else {
+                *(static_cast<ResultType *>(state.val)) += (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
+            }
         } else {
-            *(static_cast<ResultType *>(state.val)) +=
-                (static_cast<IntermediateVectorType *>(vector))->GetValue(offset);
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                *(static_cast<ResultType *>(state.val)) +=
+                    (static_cast<Vector<DictionaryContainer<ResultType>> *>(vector))->GetValue(rowIndex);
+            } else {
+                *(static_cast<ResultType *>(state.val)) +=
+                    (static_cast<Vector<ResultType> *>(vector))->GetValue(rowIndex);
+            }
         }
     }
 
     void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
-        if (vector->IsValueNull(offset)) {
+        BaseVector *vector = vectorBatch->Get(channels[0]);
+        if (vector->IsNull(rowIndex)) {
             return;
         }
         if constexpr (INPUT_RAW) {
-            auto curVal = (static_cast<RawInputVectorType *>(vector))->GetValue(offset);
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
-            *reinterpret_cast<ResultType *>(ptr) = curVal;
-            state.val = ptr;
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                auto curVal = (static_cast<DictVector *>(vector))->GetValue(rowIndex);
+                *reinterpret_cast<ResultType *>(ptr) = curVal;
+                state.val = ptr;
+            } else {
+                auto curVal = (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
+                *reinterpret_cast<ResultType *>(ptr) = curVal;
+                state.val = ptr;
+            }
         } else {
-            auto curVal = (static_cast<IntermediateVectorType *>(vector))->GetValue(offset);
             auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
+            ResultType curVal;
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                curVal = (static_cast<Vector<DictionaryContainer<ResultType>> *>(vector))->GetValue(rowIndex);
+            } else {
+                curVal = (static_cast<Vector<ResultType> *>(vector))->GetValue(rowIndex);
+            }
             *reinterpret_cast<ResultType *>(ptr) = curVal;
             state.val = ptr;
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        int32_t offset;
-        auto v =
-            static_cast<IntermediateVectorType *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+        auto v = static_cast<Vector<ResultType> *>(vectors[0]);
         // all null as null
         if (state.val == nullptr) {
-            v->SetValueNull(rowIndex);
+            v->SetNull(rowIndex);
             return;
         }
         v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));

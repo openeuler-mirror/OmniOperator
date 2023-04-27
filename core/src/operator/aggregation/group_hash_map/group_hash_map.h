@@ -14,7 +14,7 @@
 #include <jemalloc/jemalloc.h>
 #include "group_hasher.h"
 #include "memory/memory_pool.h"
-#include "memory/base_allocator.h"
+#include "memory/allocator.h"
 #include "null_key_traits.h"
 #include "type/string_ref.h"
 
@@ -167,12 +167,12 @@ class OmniHashmapAllocator {
 public:
     OmniHashmapAllocator()
     {
-        pool = mem::BaseAllocator::GetRootAllocator();
+        pool = mem::Allocator::GetAllocator();
     }
 
     int Allocate(uint64_t size, uint8_t **buffer)
     {
-        auto ret = pool->alloc(static_cast<int64_t>(size), true);
+        auto ret = pool->Alloc(static_cast<int64_t>(size), true);
         *buffer = static_cast<uint8_t *>(ret);
         if (ret == nullptr) {
             throw exception::OmniException("allocate in OmniHashmapAllocator", "allocate memory fail");
@@ -182,13 +182,13 @@ public:
 
     void Release(uint8_t *buffer, uint64_t size)
     {
-        pool->free((void *)buffer, size);
+        pool->Free((void *)buffer, size);
     }
 
     ~OmniHashmapAllocator() = default;
 
 private:
-    mem::BaseAllocator *pool = nullptr;
+    mem::Allocator *pool = nullptr;
 };
 
 template <typename ValueType> class InsertResult {

@@ -4,6 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
+import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_VARCHAR;
 import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_VEC_ENCODING_FLAT;
 
 import nova.hetu.omniruntime.type.DataType;
@@ -38,39 +39,17 @@ public abstract class VariableWidthVec extends Vec {
     }
 
     /**
-     * The routine will use the specialized vector allocator to allocate new vector.
-     *
-     * @param capacityInBytes the capacity in bytes of vector
-     * @param size the actual number of value of vector
-     * @param type the data type of this vector
-     * @param allocator the specialized vector allocator
-     */
-    public VariableWidthVec(VecAllocator allocator, int capacityInBytes, int size, DataType type) {
-        super(allocator, capacityInBytes, size, OMNI_VEC_ENCODING_FLAT, type);
-        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
-    }
-
-    /**
      * The routine is just for slicing and copyRegion vector operator.
      *
      * @param vec the vector need to be sliced or copyRegion
      * @param offset When a vector has been sliced or copyRegion, this value will
      *            point to where is the new slice {@link Vec} start
      * @param length the number of value
-     * @param isSlice Whether the current vector is sliced
      */
-    protected VariableWidthVec(Vec vec, int offset, int length, boolean isSlice) {
-        super(vec, offset, length, isSlice);
-        int offsetsBufCapacityInBytes;
-        if (isSlice) {
-            offsetsBufCapacityInBytes = vec instanceof VariableWidthVec
-                    ? ((VariableWidthVec) vec).offsetsBuf.getCapacity()
-                    : 0;
-        } else {
-            offsetsBufCapacityInBytes = (length + 1) * Integer.BYTES;
-        }
-
-        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), offsetsBufCapacityInBytes);
+    protected VariableWidthVec(Vec vec, int offset, int length) {
+        super(vec, offset, length, vec.getCapacityInBytes());
+        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()),
+                (length + 1) * Integer.BYTES);
     }
 
     /**
@@ -82,8 +61,10 @@ public abstract class VariableWidthVec extends Vec {
      * @param length number of elements copied
      */
     protected VariableWidthVec(Vec vec, int[] positions, int offset, int length) {
-        super(vec, positions, offset, length);
-        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (length + 1) * Integer.BYTES);
+        super(vec, positions, offset, length, vec.getCapacityInBytes());
+        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()),
+                (length + 1) * Integer.BYTES);
+        this.capacityInBytes = getCapacityInBytesNative(nativeVector);
     }
 
     /**
@@ -104,17 +85,13 @@ public abstract class VariableWidthVec extends Vec {
      * @param nativeValueBufAddress valueBuf address of native vector
      * @param nativeVectorNullBufAddress nullBuf address of native vector
      * @param nativeVectorOffsetBufAddress offsetBuf address of native vector
-     * @param nativeVectorAllocator allocator address of native vector
      * @param capacityInBytes capacity in bytes of vector
      * @param size the actual number of value of vector
-     * @param offset offset of positions in the input parameter
      * @param dataType the type of this vector
      */
     protected VariableWidthVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
-            long nativeVectorOffsetBufAddress, long nativeVectorAllocator, int capacityInBytes, int size, int offset,
-            DataType dataType) {
-        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, nativeVectorAllocator, capacityInBytes,
-                size, offset, dataType);
+            long nativeVectorOffsetBufAddress, int capacityInBytes, int size, DataType dataType) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, capacityInBytes, size, dataType);
         this.offsetsBuf = OmniBufFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Integer.BYTES);
     }
 
@@ -133,7 +110,7 @@ public abstract class VariableWidthVec extends Vec {
      * @return offset value
      */
     public int getValueOffset(int index) {
-        return offsetsBuf.getInt((index + offset) * Integer.BYTES);
+        return offsetsBuf.getInt(index * Integer.BYTES);
     }
 
     /**
@@ -164,7 +141,7 @@ public abstract class VariableWidthVec extends Vec {
     public int[] getRawValueOffset() {
         // the length of the array is size + offset, so that the caller
         // and vec can have the same offset.
-        int[] rawValueOffset = new int[offset + size + 1];
+        int[] rawValueOffset = new int[size + 1];
         offsetsBuf.getIntArray(0, rawValueOffset, 0, rawValueOffset.length * Integer.BYTES);
         return rawValueOffset;
     }

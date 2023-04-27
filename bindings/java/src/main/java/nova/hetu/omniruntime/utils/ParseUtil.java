@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.utils;
 
-import static nova.hetu.omniruntime.vector.VecAllocator.UNLIMIT;
+import static nova.hetu.omniruntime.memory.MemoryManager.UNLIMIT;
 
 import com.sun.management.OperatingSystemMXBean;
 

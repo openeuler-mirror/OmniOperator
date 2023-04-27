@@ -44,10 +44,9 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[0]), rowIndex, offset);
+        BaseVector *vector = vectorBatch->Get(channels[0]);
         SparkDecimalSumState *stateVal = static_cast<SparkDecimalSumState *>(state.val);
-        if (vector->IsValueNull(offset)) {
+        if (vector->IsNull(rowIndex)) {
             static_cast<SparkDecimalSumState *>(state.val)->isUnprocessed = false;
             return;
         }
@@ -57,7 +56,7 @@ public:
         if constexpr (INPUT_RAW) {
             // 1. get a new value
             int128 curVal;
-            GetValFromVector(vector, offset, inputType, curVal);
+            GetDecimalValue(vector, inputType, rowIndex, curVal);
 
             // 2. decode current state
             int128 decodedDec = stateVal->val;
@@ -74,11 +73,9 @@ public:
         } else {
             // 1. get partial sum and isEmptyInVec
             int128 curVal;
-            GetValFromVector(vector, offset, inputType, curVal);
-            int32_t emptyOffset;
-            Vector *emptyVector =
-                VectorHelper::ExpandVectorAndIndex(vectorBatch->GetVector(channels[1]), rowIndex, emptyOffset);
-            bool isEmptyInVec = reinterpret_cast<BooleanVector *>(emptyVector)->GetValue(emptyOffset);
+            GetDecimalValue(vector, inputType, rowIndex, curVal);
+            BaseVector *emptyVector = vectorBatch->Get(channels[1]);
+            bool isEmptyInVec = reinterpret_cast<Vector<bool> *>(emptyVector)->GetValue(rowIndex);
 
             // 2. decode current state and intermediate state
             int128 decodedDec = stateVal->val;
@@ -100,10 +97,9 @@ public:
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        int32_t offset;
-        Vector *vector = VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset);
+        BaseVector *vector = vectors[0];
         SparkDecimalSumState *stateVal = static_cast<SparkDecimalSumState *>(state.val);
 
         int128 decodedDec = stateVal->val;
@@ -124,14 +120,13 @@ public:
         if constexpr (OUTPUT_PARTIAL) {
             if (isOverflow) {
                 // partial output vector is sum, it will be set to NULL if overflowed.
-                vector->SetValueNull(rowIndex);
+                vector->SetNull(rowIndex);
             } else {
                 SetValToVector(vector, rowIndex, outputType, resultDec);
             }
 
-            int32_t emptyOffset;
-            Vector *emptyVector = VectorHelper::ExpandVectorAndIndex(vectors[1], rowIndex, emptyOffset);
-            reinterpret_cast<BooleanVector *>(emptyVector)->SetValue(rowIndex, isEmpty);
+            BaseVector *emptyVector = vectors[1];
+            reinterpret_cast<Vector<bool> *>(emptyVector)->SetValue(rowIndex, isEmpty);
         } else {
             if (isOverflow) {
                 SetNullOrThrowException(vector, rowIndex);
@@ -139,7 +134,7 @@ public:
             }
             if (isEmpty) {
                 // isEmpty is true means that all row is NULL, so we set the result to NULL.
-                vector->SetValueNull(rowIndex);
+                vector->SetNull(rowIndex);
                 return;
             }
             SetValToVector(vector, rowIndex, outputType, resultDec);
@@ -154,12 +149,12 @@ public:
 
 private:
     // set vector value null or throw exception when overflow
-    void SetNullOrThrowException(Vector *vector, int index)
+    void SetNullOrThrowException(BaseVector *vector, int index)
     {
         if (!IsOverflowAsNull()) {
             throw OmniException("OPERATOR_RUNTIME_ERROR", "Overflow in sum of decimals");
         }
-        vector->SetValueNull(index);
+        vector->SetNull(index);
     }
 
     void EncodeSumState(SparkDecimalSumState *statePtr, const int128 &val, const bool isOverflow, const bool isEmpty,
@@ -172,24 +167,14 @@ private:
     }
 
     // Set decimal val to output vector in Extract function. The outputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128.
-    void SetValToVector(Vector *vector, int32_t rowIndex, int32_t outputType, int128 &deciVal)
+    void SetValToVector(BaseVector *vector, int32_t rowIndex, int32_t outputType, int128 &deciVal)
     {
         if (outputType == OMNI_DECIMAL64) {
             int64_t longVal = static_cast<int64_t>(deciVal);
-            static_cast<LongVector *>(vector)->SetValue(rowIndex, longVal);
+            static_cast<Vector<int64_t> *>(vector)->SetValue(rowIndex, longVal);
         } else {
-            static_cast<Decimal128Vector *>(vector)->SetValue(rowIndex, Decimal128(deciVal));
-        }
-    }
-
-    // Get decimal val from input vector. The inputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128. The deciVal is the
-    // result.
-    void GetValFromVector(Vector *vector, int32_t rowIndex, int32_t inputType, int128 &deciVal)
-    {
-        if (inputType == OMNI_DECIMAL64) {
-            deciVal = reinterpret_cast<LongVector *>(vector)->GetValue(rowIndex);
-        } else {
-            deciVal = reinterpret_cast<Decimal128Vector *>(vector)->GetValue(rowIndex).ToInt128();
+            Decimal128 decimal128Val(deciVal);
+            static_cast<Vector<Decimal128> *>(vector)->SetValue(rowIndex, decimal128Val);
         }
     }
 };

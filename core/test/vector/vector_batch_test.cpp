@@ -1,90 +1,52 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  */
 
-#include <gtest/gtest.h>
-#include "util/type_util.h"
-#include "vector_common.h"
+#include "gtest/gtest.h"
+#include "vector/vector_batch.h"
+#include "test.h"
+#include "vector/dictionary_container.h"
 
-using namespace omniruntime::vec;
-
-namespace VectorBatchTest {
-void VectorBatchTestInitDataTypes(std::vector<DataTypePtr> &types)
+namespace omniruntime::vec::test {
+TEST(vector2, vec_batch)
 {
-    types.push_back(ShortType());
-    types.push_back(IntType());
-    types.push_back(DoubleType());
-    types.push_back(LongType());
-    types.push_back(DoubleType());
-    types.push_back(ContainerType());
-}
-
-TEST(VectorBatch, constructVectorBatchWithVectorCount)
-{
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_constructVectorBatchWithVectorCount");
-    VectorBatch *vectorBatch = new VectorBatch(4);
-    LongVector *vector0 = new LongVector(allocator, 1024);
-    LongVector *vector1 = new LongVector(allocator, 1024);
-    LongVector *vector2 = new LongVector(allocator, 1024);
-    LongVector *vector3 = new LongVector(allocator, 1024);
-
-    vectorBatch->SetVector(0, vector0);
-    vectorBatch->SetVector(1, vector1);
-    vectorBatch->SetVector(2, vector2);
-    vectorBatch->SetVector(3, vector3);
-
-    for (int i = 0; i < 4; ++i) {
-        EXPECT_EQ(vectorBatch->GetVector(0)->GetSize(), 1024);
+    int32_t rowCnt = 32;
+    auto intVec = std::make_unique<Vector<int32_t>>(rowCnt);
+    auto stringVec = std::make_unique<Vector<std::string>>(rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        intVec->SetValue(i, i * 2);
+        std::string value("hello" + std::to_string(i));
+        stringVec->SetValue(i, value);
     }
-    VectorHelper::FreeVecBatch(vectorBatch);
-    delete allocator;
-}
 
-TEST(VectorBatch, constructVectorBatchWithTypes)
-{
-    std::vector<DataTypePtr> types;
-    VectorBatchTestInitDataTypes(types);
-    VectorBatch *vectorBatch = new VectorBatch(types.size(), 1024);
-    VectorAllocator *allocator =
-        VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_constructVectorBatchWithTypes");
-    vectorBatch->NewVectors(allocator, types);
-
-    for (std::size_t i = 0; i < types.size(); ++i) {
-        EXPECT_EQ(vectorBatch->GetVector(i)->GetSize(), 1024);
+    int32_t dictSize = 4;
+    int32_t *values = new int32_t[rowCnt];
+    for (int32_t i = 0; i < rowCnt; i++) {
+        values[i] = i % dictSize;
     }
-    VectorHelper::FreeVecBatch(vectorBatch);
-    delete allocator;
-}
-
-TEST(VectorBatch, getVectorCount)
-{
-    std::vector<DataTypePtr> types;
-    VectorBatchTestInitDataTypes(types);
-    VectorBatch *vectorBatch = new VectorBatch(types.size(), 1024);
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorCount");
-    vectorBatch->NewVectors(allocator, types);
-
-    EXPECT_EQ(types.size(), vectorBatch->GetVectorCount());
-    EXPECT_EQ(1024, vectorBatch->GetRowCount());
-
-    VectorHelper::FreeVecBatch(vectorBatch);
-    delete allocator;
-}
-
-TEST(VectorBatch, getVectorTypes)
-{
-    std::vector<DataTypePtr> types;
-    VectorBatchTestInitDataTypes(types);
-    VectorBatch *vectorBatch = new VectorBatch(types.size(), 1024);
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("vectorBatch_getVectorTypes");
-    vectorBatch->NewVectors(allocator, types);
-
-    const int32_t *vectorTypeIds = vectorBatch->GetVectorTypeIds();
-    for (std::size_t i = 0; i < types.size(); ++i) {
-        EXPECT_EQ(types[i]->GetId(), vectorTypeIds[i]);
+    using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<int32_t>::DICTIONARY_TYPE;
+    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictSize);
+    auto container = std::make_shared<DictionaryContainer<int32_t>>(values, rowCnt, dictionary, dictSize, 0);
+    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[rowCnt]);
+    for (int i = 0; i < rowCnt; i++) {
+        nulls[i] = false;
     }
-    VectorHelper::FreeVecBatch(vectorBatch);
-    delete allocator;
+    auto intDictVec = std::make_unique<Vector<DictionaryContainer<int32_t>>>(rowCnt, container, nulls);
+
+    VectorBatch vectorBatch(rowCnt);
+    vectorBatch.Append(intVec.release());
+    vectorBatch.Append(stringVec.release());
+    vectorBatch.Append(intDictVec.release());
+
+    auto intCol0 = reinterpret_cast<Vector<int32_t> *>(vectorBatch.Get(0));
+    auto stringCol1 = reinterpret_cast<Vector<std::string> *>(vectorBatch.Get(1));
+    auto intDictCol2 = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vectorBatch.Get(2));
+    for (int32_t i = 0; i < rowCnt; i++) {
+        EXPECT_EQ(intCol0->GetValue(i), i * 2);
+        EXPECT_EQ(stringCol1->GetValue(i), "hello" + std::to_string(i));
+        EXPECT_EQ(intDictCol2->GetValue(i), (i % dictSize) * 2 / 3);
+    }
+    delete[] values;
+    vectorBatch.FreeAllVectors();
 }
 }

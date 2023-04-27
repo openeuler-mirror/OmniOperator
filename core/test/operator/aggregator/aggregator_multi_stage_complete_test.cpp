@@ -105,7 +105,8 @@ static std::unique_ptr<AggregatorTester> CreateAggregatorTester(const std::strin
     }
 }
 
-static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bool isSupported, const double error)
+static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bool isSupported,
+    std::vector<DataTypePtr> expectTypes, const double error)
 {
     const std::string expectedExceptionMessage = tester->GetExpectedExceptionMessage();
     int32_t valueColIdx = tester->GetValueColumnIndex();
@@ -250,7 +251,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         EXPECT_TRUE(ValidateOverflow("Final", valueColIdx, expectedResultFinal, finalOutputVecBatch));
     }
 
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(finalOutputVecBatch, expectedResultFinal, error));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(finalOutputVecBatch, expectedResultFinal, expectTypes, error));
 
     op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatch(expectedResultFinal);
@@ -289,9 +290,21 @@ TEST_P(MultiStageCompleteTest, verify_correctness)
     printf("Random seed: %d\n", randSeed);
     srand(randSeed);
 
+    std::vector<DataTypePtr> expectTypes;
+    if (groupby) {
+        expectTypes.resize(3);
+        expectTypes[0] = IntType();
+        expectTypes[1] = GetType(outId);
+        expectTypes[2] = LongType();
+    } else {
+        expectTypes.resize(2);
+        expectTypes[0] = GetType(outId);
+        expectTypes[1] = LongType();
+    }
+
     RunAggregatorTest(std::move(
         CreateAggregatorTester(aggFuncName, inId, outId, nullPercent, isDict, hasMask, nullWhenOverflow, groupby)),
-        CheckSupported(aggFuncName, inId, outId), error);
+        CheckSupported(aggFuncName, inId, outId), expectTypes, error);
 }
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, MultiStageCompleteTest,

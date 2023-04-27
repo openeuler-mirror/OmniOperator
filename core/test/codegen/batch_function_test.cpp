@@ -16,7 +16,7 @@
 using namespace omniruntime::op;
 using namespace omniruntime::codegen::function;
 using namespace std;
-using namespace TestUtil;
+using namespace omniruntime::TestUtil;
 
 template <typename T> bool CmpArray(T *x, T *y, int32_t rowCnt)
 {
@@ -32,23 +32,23 @@ TEST(BatchFunctionTest, CastBasicTypes)
 {
     ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     int32_t rowCnt = 2;
-    int32_t col1[2] = { -10, 10 };
-    int64_t col2[2] = { -20L, 20L };
-    double col3[2] = { -30.0, 30.0 };
-    bool resIsNull[2] = { false, false };
+    int32_t col1[2] = {-10, 10};
+    int64_t col2[2] = {-20L, 20L};
+    double col3[2] = {-30.0, 30.0};
+    bool resIsNull[2] = {false, false};
 
     double outDouble[2];
     BatchCastInt32ToDouble(col1, resIsNull, outDouble, rowCnt);
-    double expectDouble1[2] = { -10.0, 10.0 };
+    double expectDouble1[2] = {-10.0, 10.0};
     EXPECT_TRUE(CmpArray<double>(outDouble, expectDouble1, rowCnt));
 
     BatchCastInt64ToDouble(col2, resIsNull, outDouble, rowCnt);
-    double expectDouble2[2] = { -20.0, 20.0 };
+    double expectDouble2[2] = {-20.0, 20.0};
     EXPECT_TRUE(CmpArray<double>(outDouble, expectDouble2, rowCnt));
 
     int32_t outInt[2];
     BatchCastInt64ToInt32(col2, resIsNull, outInt, rowCnt);
-    int32_t expectInt1[2] = { -20, 20 };
+    int32_t expectInt1[2] = {-20, 20};
     EXPECT_TRUE(CmpArray<int32_t>(outInt, expectInt1, rowCnt));
 
     BatchCastDoubleToInt32HalfUp(col3, resIsNull, outInt, rowCnt);
@@ -1639,7 +1639,7 @@ TEST(BatchFunctionTest, LengthStrZh)
     bool isAnyNull[] = { false, false };
     BatchLengthStr(strAddr.data(), inputLen.data(), isAnyNull, outLen.data(), rowCnt);
     std::vector<int64_t> expected { 37, 15 };
-    AssertEquals(expected, outLen);
+    AssertLongEquals(expected, outLen);
 }
 
 
@@ -1669,7 +1669,7 @@ TEST(BatchFunctionTest, LikeStrZh)
     BatchLikeStr(strAddr.data(), inputLen.data(), patternAddr.data(), patternLen.data(), isAnyNull, output, rowCnt);
 
     std::vector<bool> expected { true, false, true, false };
-    AssertEquals(expected, std::vector<bool>(output, output + rowCnt));
+    AssertBoolEquals(expected, output);
 }
 
 TEST(BatchFunctionTest, LikeCharZh)
@@ -2131,10 +2131,10 @@ TEST(FunctionTest, CastStringToDate)
         srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[row].c_str()));
     }
     BatchCastStringToDateAllowReducePrecison(contextPtr, srcAddr.data(), strLen.data(), isNull, output.data(), rowCnt);
-    AssertEquals(expected, output);
+    AssertIntEquals(expected, output);
 
     BatchCastStringToDateRetNullAllowReducePrecison(isNull, srcAddr.data(), strLen.data(), output.data(), rowCnt);
-    AssertEquals(expected, output);
+    AssertIntEquals(expected, output);
     ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION);
     delete context;
 }

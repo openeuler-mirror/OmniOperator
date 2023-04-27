@@ -15,10 +15,9 @@ namespace op {
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
 {
-    auto vector = vectorBatch->GetVector(this->channels[0]);
+    auto vector = vectorBatch->Get(this->channels[0]);
 
-    auto vectorValues = vector->GetValues();
-    auto positionOffset = vector->GetPositionOffset();
+    auto vectorValues = VectorHelper::UnsafeGetValues(vector, IN_ID);
     auto rowCount = vector->GetSize();
 
     HmppResult result = HMPP_STS_NO_ERR;
@@ -27,28 +26,27 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
 
     if constexpr (IN_ID == OMNI_SHORT) {
         LogDebug("HMPP-Agg-max");
-        result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues) + positionOffset), rowCount,
+        result = HMPPS_Max_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues)), rowCount,
             reinterpret_cast<int16_t *>(maxVal));
         int16_t realVal = *reinterpret_cast<int16_t *>(maxVal);
         *maxVal = static_cast<ResultType>(realVal);
     } else if constexpr (IN_ID == OMNI_INT || IN_ID == OMNI_DATE32) {
         LogDebug("HMPP-Agg-max");
-        result = HMPPS_Max_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues) + positionOffset), rowCount,
+        result = HMPPS_Max_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues)), rowCount,
             reinterpret_cast<int32_t *>(maxVal));
         int32_t realVal = *reinterpret_cast<int32_t *>(maxVal);
         *maxVal = static_cast<ResultType>(realVal);
     } else if constexpr (IN_ID == OMNI_LONG || IN_ID == OMNI_DECIMAL64) {
         LogDebug("HMPP-Agg-max");
-        result = HMPPS_Max_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues) + positionOffset), rowCount,
+        result = HMPPS_Max_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)), rowCount,
             reinterpret_cast<int64_t *>(maxVal));
     } else if constexpr (IN_ID == OMNI_DOUBLE) {
         LogDebug("HMPP-Agg-max");
-        result = HMPPS_Max_64f(static_cast<double *>(static_cast<double *>(vectorValues) + positionOffset), rowCount,
+        result = HMPPS_Max_64f(static_cast<double *>(static_cast<double *>(vectorValues)), rowCount,
             reinterpret_cast<double *>(maxVal));
     } else if constexpr (IN_ID == OMNI_DECIMAL128) {
         LogDebug("HMPP-Agg-max");
-        result = HMPPS_Max_decimal(
-            static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues) + positionOffset), rowCount,
+        result = HMPPS_Max_decimal(static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)), rowCount,
             reinterpret_cast<HmppDecimal128 *>(maxVal));
     } else {
         throw OmniException("NOT SUPPORT", "Unsupported input type for max aggregate");
@@ -74,11 +72,11 @@ bool MaxAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, Vec
     if (!inputRaw) {
         return false;
     } else {
-        if (vectorBatch->GetVector(this->channels[0])->MayHaveNull()) {
+        if (vectorBatch->Get(this->channels[0])->HasNull()) {
             return false;
         }
         // not accept dictionnary vector
-        if (vectorBatch->GetVector(this->channels[0])->GetEncoding() == OMNI_VEC_ENCODING_DICTIONARY) {
+        if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
             return false;
         }
         // type check with whitelist for max
@@ -89,25 +87,24 @@ bool MaxAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, Vec
 #endif
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<Vector *> &vectors,
+void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)
 {
-    int32_t offset;
-    auto v = static_cast<OutVector *>(VectorHelper::ExpandVectorAndIndex(vectors[0], rowIndex, offset));
+    auto v = static_cast<OutVector *>(vectors[0]);
     if (state.count == 0 || (state.count > 0 && state.val == nullptr)) {
-        v->SetValueNull(offset);
+        v->SetNull(rowIndex);
         return;
     }
 
     bool overflow = state.count < 0;
-    OutType result =
+    auto result =
         this->template CastWithOverflow<ResultType, OutType>(*reinterpret_cast<ResultType *>(state.val), overflow);
 
-    v->SetValue(offset, result);
+    v->SetValue(rowIndex, result);
     if (overflow) {
-        this->SetNullOrThrowException(v, offset, "max_aggregator overflow.");
+        this->SetNullOrThrowException(v, rowIndex, "max_aggregator overflow.");
     } else if (state.count == 0 || state.val == nullptr) {
-        v->SetValueNull(offset);
+        v->SetNull(rowIndex);
     }
 }
 
@@ -119,18 +116,16 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, Vector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         InitState(state);
     }
-    ResultType *res = reinterpret_cast<ResultType *>(state.val);
-
-    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-    ptr += vector->GetPositionOffset();
+    auto *res = reinterpret_cast<ResultType *>(state.val);
 
     if (indexMap == nullptr) {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             Add<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount);
@@ -139,6 +134,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
                 rowCount, nullMap);
         }
     } else {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         if (nullMap == nullptr) {
             AddDict<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
         } else {
@@ -149,22 +145,19 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, Vector *vector,
-    BooleanVector *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
+void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector,
+    Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
     const int32_t *indexMap)
 {
     if (state.val == nullptr) {
         InitState(state);
     }
-    ResultType *res = reinterpret_cast<ResultType *>(state.val);
+    auto *res = reinterpret_cast<ResultType *>(state.val);
 
-    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-    ptr += vector->GetPositionOffset();
-
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
     if (indexMap == nullptr) {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             AddFilter<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, boolPtr);
@@ -173,6 +166,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &s
                 rowCount, nullMap, boolPtr);
         }
     } else {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         if (nullMap == nullptr) {
             AddDictFilter<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap,
                 boolPtr);
@@ -185,12 +179,10 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &s
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    Vector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
-    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-    ptr += vector->GetPositionOffset();
-
     if (indexMap == nullptr) {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             AddUseRowIndex<InType, ResultType, MaxOp<InType, ResultType>>(rowStates, aggIdx, ptr);
@@ -199,6 +191,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
                 aggIdx, ptr, nullMap);
         }
     } else {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         if (nullMap == nullptr) {
             AddDictUseRowIndex<InType, ResultType, MaxOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
         } else {
@@ -211,15 +204,13 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, Vector *vector, BooleanVector *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-    const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset,
+    const uint8_t *nullMap, const int32_t *indexMap)
 {
-    InType *ptr = reinterpret_cast<InType *>(static_cast<InVector *>(vector)->GetValues());
-    ptr += vector->GetPositionOffset();
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(booleanVector->GetValues());
-    boolPtr += booleanVector->GetPositionOffset();
+    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
 
     if (indexMap == nullptr) {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             AddUseRowIndexFilter<InType, ResultType, MaxOp<InType, ResultType>>(rowStates, aggIdx, ptr, boolPtr);
@@ -228,6 +219,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<Aggreg
                 aggIdx, ptr, nullMap, boolPtr);
         }
     } else {
+        auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         if (nullMap == nullptr) {
             AddDictUseRowIndexFilter<InType, ResultType, MaxOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap,
                 boolPtr);

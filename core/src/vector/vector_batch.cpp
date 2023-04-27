@@ -1,78 +1,88 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 
+#include <cstdint>
 #include "vector_batch.h"
-#include "vector_helper.h"
 
-namespace omniruntime {
-namespace vec {
-VectorBatch::VectorBatch(int vectorCount, int rowCount)
-    : vectorCount(vectorCount), rowCount(rowCount), vectors(nullptr), vectorTypeIds(nullptr)
-{
-    Init();
-}
+namespace omniruntime::vec {
+/**
+ * auto v1 = std::make_unique<Vector<int32_t>>(8).release();
+ * auto v2 = std::make_unique<Vector<std::string>>(8).release();
+ * int32_t ids[8] = {0, 1, 2, 3, 0, 1, 2, 3};
+ * auto dict = createDictionary<TYPE_UTIL<int32_t>::DICTIONARY_TYPE>(4);
+ * auto container = std::make_shared<DictionaryArrayContainer<int32_t>>(ids, 8, dict, 4);
+ * auto v3 = std::make_unique<Vector<DictionaryArrayContainer<int32_t>>>(8, container).release();
+ * VectorBatch vb(8);
+ * vb.Append(v1);
+ * vb.Append(v2);
+ * vb.Append(v3);
+ * auto col0 = reinterpret_cast<Vector<int32_t> *>(vb.Get(0));
+ * auto col1 = reinterpret_cast<Vector<std::string> *>(vb.Get(1));
+ * auto col2 = reinterpret_cast<Vector<DictionaryArrayContainer<int32_t>> *>(vb.Get(2));
+ * vb.FreeAllVectors();
+ * delete vb;
+ * @param rowCnt
+ */
+VectorBatch::VectorBatch(size_t rowCnt) : rowCnt(rowCnt) {}
 
-VectorBatch::VectorBatch(int vectorCount) : VectorBatch(vectorCount, 0) {}
+VectorBatch::~VectorBatch() = default;
 
-void VectorBatch::Init()
-{
-    if (vectorCount < 0) {
-        return;
-    }
-    vectors = new Vector *[vectorCount];
-    vectorTypeIds = new int32_t[vectorCount];
-}
-
-VectorBatch::~VectorBatch()
-{
-    delete[] vectors;
-    delete[] vectorTypeIds;
-}
-
-void VectorBatch::NewVectors(VectorAllocator *vecAllocator, const std::vector<DataTypePtr> &types)
-{
-    for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
-        vectorTypeIds[colIndex] = types[colIndex]->GetId();
-        auto currVecType = types[colIndex];
-        int32_t vectorEncodingId =
-            currVecType->GetId() == type::OMNI_CONTAINER ? OMNI_VEC_ENCODING_CONTAINER : OMNI_VEC_ENCODING_FLAT;
-        SetVector(colIndex, VectorHelper::CreateVector(vecAllocator, vectorEncodingId, *currVecType, rowCount));
-    }
-}
-
-void VectorBatch::NewFlatVectors(VectorAllocator *vecAllocator, const std::vector<DataTypePtr> &types)
-{
-    for (int colIndex = 0; colIndex < vectorCount; ++colIndex) {
-        auto omniId = types[colIndex]->GetId();
-        vectorTypeIds[colIndex] = omniId;
-        auto curVecType = types[colIndex];
-        auto capacity =
-            (omniId == type::OMNI_CHAR || omniId == type::OMNI_VARCHAR) ? (VarcharVector::initCapacityInBytes) : 0;
-        SetVector(colIndex, VectorHelper::CreateFlatVector(vecAllocator, omniId, capacity, rowCount));
-    }
-}
-
-void VectorBatch::SetVector(int index, Vector *vector)
+/**
+ * Set the vector at the indicated index, need ResizeVectorCount before SetVector
+ * @param vector
+ */
+void VectorBatch::SetVector(int32_t index, BaseVector *vector)
 {
     vectors[index] = vector;
-    vectorTypeIds[index] = vector->GetTypeId();
-    if (rowCount == 0) {
-        rowCount = vector->GetSize();
-    }
 }
 
-const int32_t *VectorBatch::GetVectorTypeIds()
+/**
+ * @param vector
+ *     */
+void VectorBatch::Append(BaseVector *vector)
 {
-    return vectorTypeIds;
+    vectors.emplace_back(vector);
 }
 
-void VectorBatch::ReleaseAllVectors()
+/**
+ * @param index
+ */
+BaseVector *VectorBatch::Get(int32_t index)
 {
-    for (int vecIndex = 0; vecIndex < vectorCount; ++vecIndex) {
+    return vectors[index];
+}
+
+BaseVector **VectorBatch::GetVectors()
+{
+    return vectors.data();
+}
+
+int VectorBatch::GetRowCount() const
+{
+    return rowCnt;
+}
+
+int VectorBatch::GetVectorCount()
+{
+    return vectors.size();
+}
+
+/**
+ * @param vectorCnt
+ */
+void VectorBatch::ResizeVectorCount(size_t vectorCnt)
+{
+    vectors.resize(vectorCnt);
+}
+
+void VectorBatch::FreeAllVectors()
+{
+    auto vectorSize = vectors.size();
+    for (int vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
         delete vectors[vecIndex];
         vectors[vecIndex] = nullptr;
     }
+    vectors.clear();
 }
-} // namespace vec
-} // namespace omniruntime
+}
