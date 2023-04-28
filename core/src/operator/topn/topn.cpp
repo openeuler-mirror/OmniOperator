@@ -33,11 +33,11 @@ TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::v
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount)
     : sourceTypes(sourceTypes),
       sourceTypesCount(this->sourceTypes.GetSize()),
-      n(n),
       sortCols(sortCols),
-      sortColCount(sortColCount),
+      n(n),
       sortAscendings(sortAscendings),
-      sortNullFirsts(sortNullFirsts)
+      sortNullFirsts(sortNullFirsts),
+      sortColCount(sortColCount)
 {
     int32_t eachRowSize = OperatorUtil::GetRowSize(sourceTypes.Get());
     maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
@@ -231,7 +231,6 @@ VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int
 template <type::DataTypeId typeId>
 static void ALWAYS_INLINE SetValueForVector(BaseVector *pqVector, BaseVector *tmpVector, int64_t index)
 {
-    using Type = typename NativeAndVectorType<typeId>::type;
     using Vector = typename NativeAndVectorType<typeId>::vector;
 
     if (pqVector->IsNull(0)) {
@@ -240,14 +239,13 @@ static void ALWAYS_INLINE SetValueForVector(BaseVector *pqVector, BaseVector *tm
     }
     auto value = (static_cast<Vector *>(pqVector))->GetValue(0);
     (static_cast<Vector *>(tmpVector))->SetValue(index, value);
-    return;
 }
 
 void TopNOperator::FillResultVectorBatchList()
 {
     totalRowCount = static_cast<int64_t>(pq.size());
     resultVectorBatchList.resize(totalRowCount);
-    for (int32_t i = totalRowCount; i > 0; i--) {
+    for (int64_t i = totalRowCount; i > 0; i--) {
         resultVectorBatchList[i - 1] = pq.top().GetVecBatch();
         pq.pop();
     }
@@ -256,7 +254,7 @@ void TopNOperator::FillResultVectorBatchList()
 int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (!hasFilledResult) {
-        if (pq.size() <= 0) {
+        if (pq.empty()) {
             SetStatus(OMNI_STATUS_FINISHED);
             return 0;
         }
@@ -293,7 +291,7 @@ void TopNOperator::SetValueForVectorBatch(int32_t typeId, int64_t index, BaseVec
     BaseVector *tmpVector) const
 {
     if (pqVector->IsNull(0)) {
-        tmpVector->SetNull(index);
+        tmpVector->SetNull(static_cast<int32_t>(index));
         return;
     }
 
@@ -304,11 +302,11 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, BaseVector *pqV
 {
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     if (pqVector->IsNull(0)) {
-        static_cast<VarcharVector *>(tmpVector)->SetNull(rowNum);
+        static_cast<VarcharVector *>(tmpVector)->SetNull(static_cast<int32_t>(rowNum));
         return;
     }
     auto value = static_cast<VarcharVector *>(pqVector)->GetValue(0);
-    static_cast<VarcharVector *>(tmpVector)->SetValue(rowNum, value);
+    static_cast<VarcharVector *>(tmpVector)->SetValue(static_cast<int32_t>(rowNum), value);
 }
 
 RowComparator::RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings,

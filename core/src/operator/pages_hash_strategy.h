@@ -7,9 +7,9 @@
 
 #include <cstdint>
 #include <cstring>
-#include "BaseVector/BaseVector.h"
-#include "BaseVector/BaseVector_common.h"
-#include "BaseVector/BaseVector_helper.h"
+#include "vector/vector.h"
+#include "vector/vector_common.h"
+#include "vector/vector_helper.h"
 #include "pages_index.h"
 #include "hash_util.h"
 #include "util/operator_util.h"
@@ -28,11 +28,9 @@ public:
 
     bool IsPositionNull(int32_t pageIndex, int rowIndex) const
     {
-        int32_t originalRowIndex;
         for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
-            omniruntime::vec::BaseVector *BaseVector = buildHashColumns[columnIdx][pageIndex];
-            BaseVector = omniruntime::vec::BaseVectorHelper::ExpandBaseVectorAndIndex(BaseVector, rowIndex, originalRowIndex);
-            if (BaseVector->IsValueNull(originalRowIndex)) {
+            omniruntime::vec::BaseVector *vector = buildHashColumns[columnIdx][pageIndex];
+            if (vector->IsNull(rowIndex)) {
                 return true;
             }
         }
@@ -66,10 +64,10 @@ public:
 
 private:
     omniruntime::vec::BaseVector ***buildColumns;     // BaseVector *[colCount][vecBatchCount]
-    uint32_t buildColumnCount;                    // column count
-    int32_t *buildHashColTypes;                   // build hash column types
+    uint32_t buildColumnCount;                        // column count
+    int32_t *buildHashColTypes;                       // build hash column types
     omniruntime::vec::BaseVector ***buildHashColumns; // BaseVector *[join colCount][vecBatchCount]
-    uint32_t buildHashColsCount;                  // join column count
+    uint32_t buildHashColsCount;                      // join column count
 };
 
 bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftBaseVector, uint32_t leftRowIndex,

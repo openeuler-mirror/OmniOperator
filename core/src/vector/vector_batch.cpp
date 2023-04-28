@@ -58,14 +58,14 @@ BaseVector **VectorBatch::GetVectors()
     return vectors.data();
 }
 
-int VectorBatch::GetRowCount() const
+int32_t VectorBatch::GetRowCount() const
 {
-    return rowCnt;
+    return static_cast<int32_t>(rowCnt);
 }
 
-int VectorBatch::GetVectorCount()
+int32_t VectorBatch::GetVectorCount()
 {
-    return vectors.size();
+    return static_cast<int32_t>(vectors.size());
 }
 
 /**
@@ -79,7 +79,7 @@ void VectorBatch::ResizeVectorCount(size_t vectorCnt)
 void VectorBatch::FreeAllVectors()
 {
     auto vectorSize = vectors.size();
-    for (int vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
+    for (size_t vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
         delete vectors[vecIndex];
         vectors[vecIndex] = nullptr;
     }

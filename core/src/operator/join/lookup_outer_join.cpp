@@ -97,8 +97,8 @@ int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         outputtedRowCount = 0;
     }
-        return 0;
-    }
+    return 0;
+}
 
 void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
 {

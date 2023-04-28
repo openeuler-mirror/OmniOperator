@@ -163,7 +163,7 @@ void IsSameNodeFuncVarcharImpl(BaseVector *vector, const uint32_t offset, const 
         std::string_view str = static_cast<V *>(vector)->GetValue(offset);
         auto valLen = str.size();
         auto *data = reinterpret_cast<uint8_t *>(const_cast<char *>(str.data()));
-        isSame = (valLen == slot.count) && (memcmp(data, slot.val, static_cast<size_t>(valLen)) == 0);
+        isSame = (static_cast<int64_t>(valLen) == slot.count) && (memcmp(data, slot.val, valLen) == 0);
         return;
     }
     if (isInputNull != isIntermediateNull) {

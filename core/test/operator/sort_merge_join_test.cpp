@@ -1262,7 +1262,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     leftPagesIndex->AddVecBatch(leftVecBatch1);
     leftPagesIndex->AddVecBatch(leftVecBatch2);
 
-    std::vector<DataTypePtr> leftTableOutputTypes{ IntType(), DoubleType() };
+    std::vector<DataTypePtr> leftTableOutputTypes { IntType(), DoubleType() };
     int32_t leftTableOutputCols[2] = {0, 1};
     int32_t leftTableOutputColsCount = 2;
 
@@ -1278,7 +1278,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     rightPagesIndex->AddVecBatch(rightVecBatch1);
     rightPagesIndex->AddVecBatch(rightVecBatch2);
 
-    std::vector<DataTypePtr> rightTableOutputTypes{ DoubleType(), VarcharType(3) };
+    std::vector<DataTypePtr> rightTableOutputTypes { DoubleType(), VarcharType(3) };
     int32_t rightTableOutputCols[2] = {1, 2};
     int32_t rightTableOutputColsCount = 2;
     string filter;
@@ -1319,7 +1319,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     string expectedData4[6] = {"555", "33", "1", "111", "99", "7"};
 
     std::vector<DataTypePtr> outputTypes = { IntType(), DoubleType(), DoubleType(), VarcharType(3) };
-    AssertVecBatchEquals(outputVecBatch, 4, 6, outputTypes, expectedData1, expectedData2, expectedData3, expectedData4);
+    AssertVecBatchEquals(outputVecBatch, 4, outputTypes, 6, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
@@ -1347,7 +1347,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
 
     VectorBatch *leftVecBatch = CreateVectorBatch(leftSourceTypes, dataSize, leftData11, leftData12);
     leftPagesIndex->AddVecBatch(leftVecBatch);
-    std::vector<DataTypePtr> leftTableOutputTypes{ IntType(), DoubleType() };
+    std::vector<DataTypePtr> leftTableOutputTypes { IntType(), DoubleType() };
     int32_t leftTableOutputCols[2] = {0, 1};
     int32_t leftTableOutputColsCount = 2;
 
@@ -1357,7 +1357,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
 
     VectorBatch *rightVecBatch = CreateVectorBatch(rightSourceTypes, dataSize, rightData11, rightData12, rightData1_3);
     rightPagesIndex->AddVecBatch(rightVecBatch);
-    std::vector<DataTypePtr> rightTableOutputTypes{ DoubleType(), VarcharType(3) };
+    std::vector<DataTypePtr> rightTableOutputTypes { DoubleType(), VarcharType(3) };
     int32_t rightTableOutputCols[2] = {1, 2};
     int32_t rightTableOutputColsCount = 2;
     string filter = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\",\"left\":{\"exprType\":"
@@ -1395,7 +1395,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     string expectedData4[2] = {"33", "1"};
 
     std::vector<DataTypePtr> outputTypes = { IntType(), DoubleType(), DoubleType(), VarcharType(3) };
-    AssertVecBatchEquals(outputVecBatch, 4, 2, outputTypes, expectedData1, expectedData2, expectedData3, expectedData4);
+    AssertVecBatchEquals(outputVecBatch, 4, outputTypes, 2, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
@@ -1523,14 +1523,14 @@ TEST(NativeSortMergeJoinTest, TestSmjIterativeGetOutput)
 
     std::vector<DataTypePtr> streamTypesVector = { IntType(), VarcharType(2000) };
     DataTypes streamedTblTypes(streamTypesVector);
-    std::vector<int32_t> streamedKeysCols{ 0 };
-    std::vector<int32_t> streamedOutputCols{ 1 };
+    std::vector<int32_t> streamedKeysCols { 0 };
+    std::vector<int32_t> streamedOutputCols { 1 };
     smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols, streamedTblTypes.GetSize());
 
     std::vector<DataTypePtr> bufferTypesVector = { VarcharType(2000), IntType() };
     DataTypes bufferedTblTypes(bufferTypesVector);
-    std::vector<int32_t> bufferedKeysCols{ 1 };
-    std::vector<int32_t> bufferedOutputCols{ 0 };
+    std::vector<int32_t> bufferedKeysCols { 1 };
+    std::vector<int32_t> bufferedOutputCols { 0 };
     smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols, bufferedTblTypes.GetSize());
     smjOp->InitScannerAndResultBuilder(nullptr);
 

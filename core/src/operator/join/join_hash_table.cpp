@@ -168,7 +168,8 @@ ALWAYS_INLINE void ReadColumnHashes(uint32_t maxStep, uint64_t *addresses, BaseV
         if (!dictionary) {
             hash = HashUtil::HashValue(static_cast<FlatVector *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
         } else {
-            hash = HashUtil::HashValue(static_cast<DictionaryVector *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
+            hash =
+                HashUtil::HashValue(static_cast<DictionaryVector *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
         }
         hashes[step] = HashUtil::CombineHash(hashes[step], hash);
     }
@@ -202,7 +203,7 @@ static void ReadColumnDecimal64Hashes(uint32_t maxStep, uint64_t *addresses, Bas
                 static_cast<Vector<int64_t> *>(column)->GetValue(static_cast<int32_t>(rowIndex)));
         } else {
             hash = HashUtil::HashDecimal64Value(
-                    static_cast<Vector<DictionaryContainer<int64_t>> *>(column)->GetValue(rowIndex));
+                static_cast<Vector<DictionaryContainer<int64_t>> *>(column)->GetValue(rowIndex));
         }
         hashes[step] = HashUtil::CombineHash(hashes[step], hash);
     }
@@ -268,12 +269,10 @@ static void ReadColumnCharHashes(uint32_t maxStep, uint64_t *addresses, BaseVect
             varcharValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(column)->GetValue(
                 static_cast<int32_t>(rowIndex));
         } else {
-            varcharValue =
-                    static_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(column)->GetValue(
-                            rowIndex);
+            varcharValue = static_cast<Vector<DictionaryContainer<std::string_view>> *>(column)->GetValue(rowIndex);
         }
         auto hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(varcharValue.data())),
-                                        varcharValue.length());
+            varcharValue.length());
         hashes[step] = HashUtil::CombineHash(hashes[step], hash);
     }
 }
@@ -423,7 +422,7 @@ NO_INLINE bool PagesHash::PositionEqualsPositionIgnoreNulls(uint32_t leftPositio
         auto leftColumn = buildHashColumns[columnIdx][leftTableIndex];
         auto rightColumn = buildHashColumns[columnIdx][rightTableIndex];
         if (!ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], leftColumn, leftRowIndex, rightColumn,
-                                         rightRowIndex)) {
+            rightRowIndex)) {
             return false;
         }
     }

@@ -18,13 +18,13 @@ namespace omniruntime {
 namespace op {
 class LookupJoinOutputBuilder {
 public:
-    LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
-        int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, int32_t outputRowSize);
+    LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, const int32_t *probeOutputTypes,
+        int32_t *buildOutputCols, int32_t buildOutputColsCount, const int32_t *buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, const JoinHashTable *hashtable, uint32_t joinPosition);
-    void BuildOutput(VectorAllocator *vecAllocator, BaseVector **probeOutputColumns, VectorBatch **outputVecBatch);
+    void BuildOutput(BaseVector **probeOutputColumns, VectorBatch **outputVecBatch);
     void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns);
-    void ConstructBuildColumns(VectorBatch *vectorBatch, VectorAllocator *vecAllocator);
+    void ConstructBuildColumns(VectorBatch *vectorBatch);
 
     ALWAYS_INLINE bool IsFull()
     {
@@ -37,19 +37,21 @@ public:
     }
 
 private:
-    ALWAYS_INLINE void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, Vector **probeOutputColumns)
+    ALWAYS_INLINE void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
     {
-        BaseVector *probeColumn = nullptr;
+        std::unique_ptr<BaseVector> probeColumn = nullptr;
+        auto probePositions = probeIndex.data();
         for (int32_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
+            auto type = probeOutputTypes[j];
             // we want to keep only one level dictionary vector here
             // if the data is non-dictionary, we build dictionary to avoid data copy
             if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
-                probeColumn = column->CopyPositions(&probeIndex[0], 0, probeRowCount);
+                probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, probeRowCount, type);
             } else {
-                probeColumn = new DictionaryVector(column, &probeIndex[0], probeRowCount);
+                probeColumn = VectorHelper::CreateDictionaryVector(probePositions, probeRowCount, column, type);
             }
-            vectorBatch->SetVector(j, probeColumn);
+            vectorBatch->Append(probeColumn.release());
         }
     }
 
@@ -57,8 +59,8 @@ private:
     {
         for (int32_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
-            column = column->Slice(0, column->GetSize());
-            vectorBatch->SetVector(j, column);
+            auto resultColumn = VectorHelper::SliceVector(column, probeOutputTypes[j], 0, column->GetSize());
+            vectorBatch->Append(resultColumn.release());
         }
     }
 
@@ -66,17 +68,18 @@ private:
     {
         for (int32_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
-            auto probeColumn = column->Slice(probeIndex[0], probeRowCount);
-            vectorBatch->SetVector(j, probeColumn);
+            auto resultColumn = VectorHelper::SliceVector(column, probeOutputTypes[j], probeIndex[0], probeRowCount);
+            vectorBatch->Append(resultColumn.release());
         }
     }
 
     int32_t maxRowCount = 0;
     int32_t *probeOutputCols;
     int32_t probeOutputColsCount;
+    const int32_t *probeOutputTypes;
     int32_t *buildOutputCols;
     int32_t buildOutputColsCount;
-    DataTypes buildOutputTypes;
+    const int32_t *buildOutputTypes;
     int32_t probeRowCount = 0;
     std::vector<int32_t> probeIndex;
     std::vector<std::pair<BaseVector ***, uint64_t>> buildIndex;
@@ -149,6 +152,7 @@ private:
     std::vector<int32_t> probeHashCols;
     std::vector<int32_t> probeHashColTypes;
     std::vector<int32_t> buildOutputCols;
+    DataTypes probeOutputTypes;
     DataTypes buildOutputTypes;
     JoinHashTables *hashTables;
 
@@ -171,6 +175,8 @@ private:
     int32_t *lengths = nullptr;
     std::vector<int32_t> probeFilterCols;
     std::vector<int32_t> buildFilterCols;
+    int32_t *probeFilterTypeIds = nullptr;
+    int32_t *buildFilterTypeIds = nullptr;
     bool firstVecBatch = false;
 };
 } // end of op

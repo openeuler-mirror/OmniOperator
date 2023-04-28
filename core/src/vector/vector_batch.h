@@ -49,9 +49,9 @@ public:
 
     BaseVector **GetVectors();
 
-    int GetRowCount() const;
+    int32_t GetRowCount() const;
 
-    int GetVectorCount();
+    int32_t GetVectorCount();
 
     /* *
      * @param vectorCnt

@@ -81,7 +81,6 @@ void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
 
 VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
 {
-    int32_t outputColCount = leftTableOutputColsCount + rightTableOutputColsCount;
     auto *vectorBatch = new VectorBatch(maxRowCount);
 
     for (auto &type : allTypes) {
@@ -128,8 +127,7 @@ void JoinResultBuilder::ParsingAndOrganizationResultsForLeftTable(int32_t leftBa
     } else {
         for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
             AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
-                leftTableOutputTypes[columnIdx], leftRowId,
-                buildVectorBatch->Get(columnIdx), buildRowCount);
+                leftTableOutputTypes[columnIdx], leftRowId, buildVectorBatch->Get(columnIdx), buildRowCount);
         }
     }
 }
@@ -142,8 +140,7 @@ void JoinResultBuilder::ParsingAndOrganizationResultsForRightTable(int32_t right
         for (int columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
             int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
             AddValueToBuildVector(rightTablePagesIndex->GetColumn(rightBatchId, rightTableOutputCols[columnIdx]),
-                rightTableOutputTypes[columnIdx], rightRowId,
-                buildVectorBatch->Get(buildColumnIdx), buildRowCount);
+                rightTableOutputTypes[columnIdx], rightRowId, buildVectorBatch->Get(buildColumnIdx), buildRowCount);
         }
     }
 }
@@ -363,7 +360,7 @@ int32_t JoinResultBuilder::ConstructLeftSemiJoinOutput()
             if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
                 for (int columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
                     AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
-                       leftTableOutputTypes[columnIdx], leftRowId, buildVectorBatch->Get(columnIdx), buildRowCount);
+                        leftTableOutputTypes[columnIdx], leftRowId, buildVectorBatch->Get(columnIdx), buildRowCount);
                 }
                 buildRowCount++;
                 isPreRowMatched = true;
@@ -537,8 +534,8 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
         auto leftVector = leftTablePagesIndex->GetColumnFromCache(col);
         nulls[col] = leftVector->IsNull(leftRowId);
         auto leftDataType = leftTablePagesIndex->GetColumnTypeId(col);
-        values[col] = OperatorUtil::GetValuePtrAndLengthFromRawVector(leftVector, leftRowId, lengths + col,
-                                                                      leftDataType);
+        values[col] =
+            OperatorUtil::GetValuePtrAndLengthFromRawVector(leftVector, leftRowId, lengths + col, leftDataType);
     }
     rightTablePagesIndex->CacheBatch(rightBatchId);
     for (int32_t i = 0; i < bufferedColsCountInFilter; i++) {
@@ -547,8 +544,8 @@ bool JoinResultBuilder::IsJoinPositionEligible(int32_t leftBatchId, int32_t left
         auto colIdx = col + originalLeftTableColsCount;
         nulls[colIdx] = rightVector->IsNull(rightRowId);
         auto rightDataType = rightTablePagesIndex->GetColumnTypeId(col);
-        values[colIdx] = OperatorUtil::GetValuePtrAndLengthFromRawVector(rightVector, rightRowId, lengths + colIdx,
-                                                                         rightDataType);
+        values[colIdx] =
+            OperatorUtil::GetValuePtrAndLengthFromRawVector(rightVector, rightRowId, lengths + colIdx, rightDataType);
     }
 
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));

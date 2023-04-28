@@ -179,14 +179,13 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch,
-                                     (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
 
     int32_t expectData1[dataSize] = {-1, 0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {-1, 4, 3, 2, 1, 0};
 
-    AssertVecBatchEquals(outputVecBatch, 2, dataSize,
-        (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), expectData1, expectData2);
+    AssertVecBatchEquals(outputVecBatch, 2, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), dataSize,
+        expectData1, expectData2);
 
     // free memory
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -217,13 +216,12 @@ TEST(NativeOmniSortTest, TestSortWithNullLast)
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch,
-                                     (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4, -1};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0, -1};
-    AssertVecBatchEquals(outputVecBatch, 2, dataSize,
-        (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), expectData1, expectData2);
+    AssertVecBatchEquals(outputVecBatch, 2, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), dataSize,
+        expectData1, expectData2);
 
     // free memory
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -256,13 +254,12 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch,
-                                     (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
 
     int32_t expectData1[dataSize] = {-1, 2, 1, 0, 3, 4};
     int64_t expectData2[dataSize] = {-1, -1, -1, -1, 1, 0};
-    AssertVecBatchEquals(outputVecBatch, 2, dataSize,
-        (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), expectData1, expectData2);
+    AssertVecBatchEquals(outputVecBatch, 2, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), dataSize,
+        expectData1, expectData2);
 
     // free memory
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -417,7 +414,7 @@ SortOperatorFactory *PrepareOrderBy(bool isOriginal)
 
 void TestOrderBy(struct SortThreadArgs *threadArgs)
 {
-    std::vector<DataTypePtr> allTypes{ LongType(), LongType(), LongType(), LongType() };
+    std::vector<DataTypePtr> allTypes { LongType(), LongType(), LongType(), LongType() };
     // create operator
     SortOperatorFactory *operatorFactory = threadArgs->operatorFactory;
     SortOperator *sortOperator;
@@ -439,7 +436,7 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
 
 TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
 {
-    std::vector<DataTypePtr> allTypes{ LongType(), LongType(), LongType(), LongType() };
+    std::vector<DataTypePtr> allTypes { LongType(), LongType(), LongType(), LongType() };
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT];
 
     BuildSortTestData(vecBatches, COLUMN_COUNT_4);
@@ -775,8 +772,8 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
-VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize,
-    int32_t loopCount, bool isDictionary, bool hasNull)
+VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize, int32_t loopCount,
+    bool isDictionary, bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
@@ -819,8 +816,8 @@ VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas
     return sortVecBatch;
 }
 
-VectorBatch *CreateSortExpectForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize,
-    int32_t loopCount, bool hasNull)
+VectorBatch *CreateSortExpectForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize, int32_t loopCount,
+    bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());

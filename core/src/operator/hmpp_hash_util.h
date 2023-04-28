@@ -14,7 +14,7 @@ namespace op {
 using namespace omniruntime::type;
 class HmppHashUtil {
 public:
-    template <type::DataTypeId OmniId>
+    template <type::DataTypeId typeId>
     static HmppResult ComputeHash(vec::BaseVector *vector, int64_t *combinedHash, int64_t start, int64_t rowCount)
     {
         int64_t *resultHash = new int64_t[rowCount]();
@@ -22,12 +22,13 @@ public:
         if (vector->HasNull()) {
             nullAddr = (int8_t *)(vec::unsafe::UnsafeBaseVector::GetNulls(vector)) + start;
         }
-        HmppResult result = computeHmppHash(OmniId, vector, start, rowCount, resultHash, nullAddr);
+        HmppResult result = ComputeHmppHash(typeId, vector, start, rowCount, resultHash, nullAddr);
         if (result == HMPP_STS_NULL_PTR_ERR) {
             delete[] resultHash;
             return result;
         }
         if (result != HMPP_STS_NO_ERR) {
+            delete[] resultHash;
             return result;
         }
         result = HMPPS_CombineHash(combinedHash, resultHash, rowCount, combinedHash);
@@ -36,10 +37,10 @@ public:
     }
 
 private:
-    static HmppResult computeHmppHash(type::DataTypeId OmniId, vec::BaseVector *vector, int64_t start, int64_t rowCount,
+    static HmppResult ComputeHmppHash(type::DataTypeId typeId, vec::BaseVector *vector, int64_t start, int64_t rowCount,
         int64_t *resultHash, int8_t *nullAddr)
     {
-        switch (OmniId) {
+        switch (typeId) {
             case OMNI_SHORT: {
                 auto vectorValues = reinterpret_cast<int16_t *>(vec::VectorHelper::UnsafeGetValues(vector, OMNI_SHORT));
                 return HMPPS_Hash_16s(reinterpret_cast<const int16_t *>(vectorValues) + start, rowCount, nullAddr,

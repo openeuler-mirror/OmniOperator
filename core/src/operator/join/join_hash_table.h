@@ -116,7 +116,7 @@ public:
 
 private:
     bool ALWAYS_INLINE PositionEqualsCurrentRowIgnoreNulls(uint32_t buildPosition, uint32_t probePosition,
-                                                           BaseVector **probeColumns) const
+        BaseVector **probeColumns) const
     {
         auto address = addresses[buildPosition];
         auto vecBatchIndex = DecodeSliceIndex(address);
@@ -130,7 +130,7 @@ private:
             auto buildColumn = buildHashColumns[columnIdx][vecBatchIndex];
             auto probeColumn = probeColumns[columnIdx];
             if (!ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], buildColumn, rowIndex, probeColumn,
-                                             probePosition)) {
+                probePosition)) {
                 return false;
             }
         }

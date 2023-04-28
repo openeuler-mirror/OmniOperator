@@ -41,7 +41,7 @@ TEST(SpillTest, TestWriteRead)
         auto result = reader.Next();
         auto resultVecBatch = result->GetVectorBatch();
         VectorHelper::PrintVecBatch(resultVecBatch, types);
-        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), dataSize, types, data1, data2, data3);
+        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), types, dataSize, data1, data2, data3);
         VectorHelper::FreeVecBatch(resultVecBatch);
     }
     rmdir(path.c_str());
@@ -87,7 +87,7 @@ TEST(SpillTest, TestSpiller)
         auto result = spiller.Next();
         auto resultVecBatch = result->GetVectorBatch();
         delete result;
-        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), expectedDataSize, types, expectedData1,
+        TestUtil::AssertVecBatchEquals(resultVecBatch, sourceTypes.GetSize(), types, expectedDataSize, expectedData1,
             expectedData2, expectedData3);
         VectorHelper::PrintVecBatch(resultVecBatch, types);
         VectorHelper::FreeVecBatch(resultVecBatch);

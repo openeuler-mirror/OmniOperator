@@ -45,14 +45,41 @@ template <typename T>
 static ALWAYS_INLINE bool ValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector, uint32_t leftIndex,
     omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
 {
-    return static_cast<Vector<T> *>(leftVector)->GetValue(leftIndex) == static_cast<Vector<T> *>(rightVector)->GetValue(rightIndex);
+    using DictionaryVector = Vector<DictionaryContainer<T>>;
+    using FlatVector = Vector<T>;
+    T leftValue;
+    T rightValue;
+    if (leftVector->GetEncoding() == OMNI_DICTIONARY) {
+        leftValue = static_cast<DictionaryVector *>(leftVector)->GetValue(leftIndex);
+    } else {
+        leftValue = static_cast<FlatVector *>(leftVector)->GetValue(leftIndex);
+    }
+    if (rightVector->GetEncoding() == OMNI_DICTIONARY) {
+        rightValue = static_cast<DictionaryVector *>(rightVector)->GetValue(rightIndex);
+    } else {
+        rightValue = static_cast<FlatVector *>(rightVector)->GetValue(rightIndex);
+    }
+    return leftValue == rightValue;
 }
 
-static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector, uint32_t leftIndex,
-    omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
+static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector,
+    uint32_t leftIndex, omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
 {
-    double leftValue = static_cast<Vector<double> *>(leftVector)->GetValue(leftIndex);
-    double rightValue = static_cast<Vector<double> *>(rightVector)->GetValue(rightIndex);
+    using DictionaryVector = Vector<DictionaryContainer<double>>;
+    using FlatVector = Vector<double>;
+    double leftValue;
+    double rightValue;
+    if (leftVector->GetEncoding() == OMNI_DICTIONARY) {
+        leftValue = static_cast<DictionaryVector *>(leftVector)->GetValue(leftIndex);
+    } else {
+        leftValue = static_cast<FlatVector *>(leftVector)->GetValue(leftIndex);
+    }
+    if (rightVector->GetEncoding() == OMNI_DICTIONARY) {
+        rightValue = static_cast<DictionaryVector *>(rightVector)->GetValue(rightIndex);
+    } else {
+        rightValue = static_cast<FlatVector *>(rightVector)->GetValue(rightIndex);
+    }
+
     if (std::abs(leftValue - rightValue) < __DBL_EPSILON__) {
         return true;
     } else {
@@ -60,11 +87,24 @@ static ALWAYS_INLINE bool DoubleValueEqualsValueIgnoreNulls(omniruntime::vec::Ba
     }
 }
 
-static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector, uint32_t leftIndex,
-    omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
+static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::BaseVector *leftVector,
+    uint32_t leftIndex, omniruntime::vec::BaseVector *rightVector, uint32_t rightIndex)
 {
-    auto leftValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftVector)->GetValue(leftIndex);
-    auto rightValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightVector)->GetValue(rightIndex);
+    using DictionaryVector = Vector<DictionaryContainer<std::string_view>>;
+    using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+    std::string_view leftValue;
+    std::string_view rightValue;
+    if (leftVector->GetEncoding() == OMNI_DICTIONARY) {
+        leftValue = static_cast<DictionaryVector *>(leftVector)->GetValue(leftIndex);
+    } else {
+        leftValue = static_cast<VarcharVector *>(leftVector)->GetValue(leftIndex);
+    }
+    if (rightVector->GetEncoding() == OMNI_DICTIONARY) {
+        rightValue = static_cast<DictionaryVector *>(rightVector)->GetValue(rightIndex);
+    } else {
+        rightValue = static_cast<VarcharVector *>(rightVector)->GetValue(rightIndex);
+    }
+
     auto leftLength = leftValue.length();
     if (leftLength != rightValue.length()) {
         return false;
@@ -76,8 +116,8 @@ static ALWAYS_INLINE bool VarcharValueEqualsValueIgnoreNulls(omniruntime::vec::B
     }
 }
 
-bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint32_t leftRowIndex, BaseVector *rightVector,
-    uint32_t rightRowIndex)
+bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint32_t leftRowIndex,
+    BaseVector *rightVector, uint32_t rightRowIndex)
 {
     switch (dataType) {
         case OMNI_INT:
@@ -105,18 +145,11 @@ bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint3
 bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t leftRowIndex, int32_t rightTableIndex,
     int32_t rightRowIndex) const
 {
-    BaseVector *leftColumn = nullptr;
-    BaseVector *rightColumn = nullptr;
-    bool leftIsNull = false;
-    bool rightIsNull = false;
-    bool result = true;
-
-    int32_t originalLeftRowIndex, originalRightRowIndex;
     for (uint32_t columnIdx = 0; columnIdx < buildHashColsCount; columnIdx++) {
-        leftColumn = buildHashColumns[columnIdx][leftTableIndex];
-        rightColumn = buildHashColumns[columnIdx][rightTableIndex];
-        leftIsNull = leftColumn->IsNull(leftRowIndex);
-        rightIsNull = rightColumn->IsNull(rightRowIndex);
+        auto leftColumn = buildHashColumns[columnIdx][leftTableIndex];
+        auto rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+        auto leftIsNull = leftColumn->IsNull(leftRowIndex);
+        auto rightIsNull = rightColumn->IsNull(rightRowIndex);
         if (leftIsNull && rightIsNull) {
             continue;
         }
@@ -124,8 +157,8 @@ bool PagesHashStrategy::PositionEqualsPosition(int32_t leftTableIndex, int32_t l
             return false;
         }
 
-        result = ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], leftColumn, originalLeftRowIndex,
-            rightColumn, originalRightRowIndex);
+        auto result = ValueEqualsValueIgnoreNulls(buildHashColTypes[columnIdx], leftColumn, leftRowIndex,
+            rightColumn, rightRowIndex);
         if (!result) {
             return false;
         }
