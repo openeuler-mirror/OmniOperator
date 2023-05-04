@@ -79,10 +79,10 @@ public:
         }
 
         bool *startAddr = reinterpret_cast<bool *>(this->nulls.get());
-        errno_t ret =
-            memcpy_s(startAddr + startIndex, GetNullsCapacity(this->nulls.get()), nullsPtr, length * sizeof(bool));
+        errno_t ret = memcpy_s(startAddr + startIndex, length * sizeof(bool), nullsPtr, length * sizeof(bool));
         if (ret != EOK) {
-            LogError("memory copy failed.");
+            LogError("memory copy failed %d, vec size %d, length %d, startIndex %d startAddr %x.", ret, this->size,
+                length, startIndex, startAddr);
         }
     }
 
@@ -148,9 +148,7 @@ public:
     int32_t GetNullCount() const
     {
         bool *nullsPtr = nulls.get();
-        return hasNull ?
-               BitMap::ComputeBitCount(reinterpret_cast<const uint8_t *>(nullsPtr), offset, size) :
-               0;
+        return hasNull ? BitMap::ComputeBitCount(reinterpret_cast<const uint8_t *>(nullsPtr), offset, size) : 0;
     }
 
     int32_t ALWAYS_INLINE GetOffset()
@@ -256,10 +254,11 @@ public:
         }
 
         RAW_DATA_TYPE *startAddr = reinterpret_cast<RAW_DATA_TYPE *>(this->values.get());
-        errno_t ret = memcpy_s(startAddr + startIndex, GetValuesCapacity(this->values.get()), values,
-            length * sizeof(RAW_DATA_TYPE));
+        errno_t ret =
+            memcpy_s(startAddr + startIndex, length * sizeof(RAW_DATA_TYPE), values, length * sizeof(RAW_DATA_TYPE));
         if (ret != EOK) {
-            LogError("memory copy failed.");
+            LogError("memory copy failed %d, vec size %d, length %d, startIndex %d startAddr %x.", ret, this->size,
+                length, startIndex, startAddr);
         }
     }
 
