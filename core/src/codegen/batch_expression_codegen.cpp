@@ -1292,12 +1292,16 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
     }
 }
 
-
 void BatchExpressionCodeGen::BatchBinaryExprIntLongHelper(const omniruntime::expressions::BinaryExpr *binaryExpr,
     llvm::Value *left, llvm::Value *right, llvm::Value *leftIsNull, llvm::Value *rightIsNull)
 {
     DataTypeId returnTypeId = binaryExpr->GetReturnTypeId();
-    std::vector<omniruntime::type::DataTypeId> typeParams(2, binaryExpr->left->GetReturnTypeId());
+    std::vector<omniruntime::type::DataTypeId> typeParams;
+    if (binaryExpr->left->GetReturnTypeId() == OMNI_INT || binaryExpr->left->GetReturnTypeId() == OMNI_DATE32) {
+        typeParams = { OMNI_INT, OMNI_INT };
+    } else {
+        typeParams = { OMNI_LONG, OMNI_LONG };
+    }
     std::vector<omniruntime::type::DataTypeId> boolParams { OMNI_BOOLEAN, OMNI_BOOLEAN };
     AllocaInst *logicalArrayPtr = nullptr;
     std::vector<Value *> logicalFuncParams;
@@ -1644,6 +1648,8 @@ void BatchExpressionCodeGen::BatchVisitBetweenExprHelper(BetweenExpr &bExpr, con
     std::vector<omniruntime::type::DataTypeId> params;
     if (TypeUtil::IsStringType(bExpr.value->GetReturnTypeId())) {
         params = { OMNI_VARCHAR, OMNI_VARCHAR };
+    } else if (bExpr.value->GetReturnTypeId() == type::OMNI_DATE32) {
+        params = { OMNI_INT, OMNI_INT };
     } else {
         params = { bExpr.value->GetReturnTypeId(), bExpr.value->GetReturnTypeId() };
     }

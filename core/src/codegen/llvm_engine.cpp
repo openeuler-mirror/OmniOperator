@@ -107,7 +107,6 @@ void LLVMEngine::InitializeCodegenTargets()
 
 void LLVMEngine::RegisterFunctions(const std::vector<Function> &functions)
 {
-    std::set<std::string> jitRegisteredFuncs;
     for (auto &func : functions) {
         auto &jd = jit->getMainJITDylib();
         auto &dl = jit->getDataLayout();
