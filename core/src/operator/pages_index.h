@@ -64,7 +64,6 @@ public:
 
 private:
     const DataTypes dataTypes;
-    const int32_t *dataTypeIds;
     uint32_t typesCount;
     omniruntime::vec::BaseVector ***columns; // Vector* [columnIndex][tableIndex]
     uint64_t *valueAddresses;
