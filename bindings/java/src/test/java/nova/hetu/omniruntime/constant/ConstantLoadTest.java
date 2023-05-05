@@ -53,8 +53,9 @@ public class ConstantLoadTest {
     @Test
     public void testGetVersion() {
         String version = OmniLibs.getVersion();
-        String expected = "Software-Title: boostkit-omnioperatorjit" + System.lineSeparator()
-                + "Software-Version: 1.2.0" + System.lineSeparator() + "Software-Vendor: Kunpeng BoostKit";
+        String expected = "Product Name: Kunpeng BoostKit" + System.lineSeparator()
+                + "Product Version: 23.0.RC2" + System.lineSeparator() + "Component Name: BoostKit-omniop"
+                + System.lineSeparator() + "Component Version: 1.2.0";
         assertEquals(version, expected);
     }
 }
