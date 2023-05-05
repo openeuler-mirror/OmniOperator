@@ -72,8 +72,8 @@ public:
     {
         return keySize;
     }
-    void SetAddressIndex(ArrayPositionLinks &positionLinks, uint32_t realPosition, int64_t hash, uint32_t initialPos,
-        uint64_t &totalHashCollisions) const;
+    void SetAddressIndex(uint32_t *links, uint32_t realPosition, int64_t hash, uint32_t pos, BaseVector ***hashColumns,
+        int32_t *hashColTypes, uint32_t hashColCount) const;
 
     ALWAYS_INLINE uint32_t GetAddressIndex(uint32_t probePosition, BaseVector **probeColumns, int64_t rawHash) const
     {
@@ -137,7 +137,8 @@ private:
         return true;
     }
 
-    bool PositionEqualsPositionIgnoreNulls(uint32_t leftPosition, uint32_t rightPosition) const;
+    bool PositionEqualsPositionIgnoreNulls(uint32_t leftPosition, uint32_t rightPosition, BaseVector ***hashColumns,
+        int32_t *hashColTypes, uint32_t hashColCount) const;
 
     PagesHashStrategy *pagesHashStrategy;
     uint64_t *addresses;

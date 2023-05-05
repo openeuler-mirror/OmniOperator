@@ -336,13 +336,12 @@ PagesHash::PagesHash(uint64_t *addresses, uint32_t addressesCount, PagesHashStra
 {
     ArraysFill(key, keySize, INVALID_POSITION);
 
-    uint64_t hashCollisionsLocal = 0;
-    auto columns = pagesHashStrategy->GetBuildHashColumns();
-    auto types = pagesHashStrategy->GetBuildHashColTypes();
-    auto colCount = pagesHashStrategy->GetBuildHashColsCount();
-    // rawHashPositions == -1: row has null column
+    auto hashColumns = pagesHashStrategy->GetBuildHashColumns();
+    auto hashColTypes = pagesHashStrategy->GetBuildHashColTypes();
+    auto hashColCount = pagesHashStrategy->GetBuildHashColsCount();
+    auto links = positionLinks->GetPositionLinks();
     int64_t hashes[BLOCK_SIZE];
-    int64_t rawHashPositions[BLOCK_SIZE];
+    int64_t rawHashPositions[BLOCK_SIZE]; // rawHashPositions == -1: row has null column
     for (uint32_t offset = 0; offset < addressesCount; offset += BLOCK_SIZE) {
         uint32_t maxStep = std::min(addressesCount - offset, BLOCK_SIZE);
         for (uint32_t step = 0; step < maxStep; step++) {
@@ -350,7 +349,7 @@ PagesHash::PagesHash(uint64_t *addresses, uint32_t addressesCount, PagesHashStra
             rawHashPositions[step] = 0;
         }
 
-        ProcessColumns(maxStep, addresses + offset, columns, types, colCount, hashes, rawHashPositions);
+        ProcessColumns(maxStep, addresses + offset, hashColumns, hashColTypes, hashColCount, hashes, rawHashPositions);
         auto positionToHashesBegin = positionToHashes + offset;
         for (uint32_t step = 0; step < maxStep; ++step) {
             int64_t h = hashes[step];
@@ -363,11 +362,10 @@ PagesHash::PagesHash(uint64_t *addresses, uint32_t addressesCount, PagesHashStra
         for (uint32_t step = 0; step < maxStep; ++step) {
             int64_t pos = rawHashPositions[step];
             if (pos != -1) {
-                SetAddressIndex(*positionLinks, offset + step, hashes[step], pos, hashCollisionsLocal);
+                SetAddressIndex(links, offset + step, hashes[step], pos, hashColumns, hashColTypes, hashColCount);
             }
         }
     }
-    hashCollisions = hashCollisionsLocal;
 }
 
 PagesHash::~PagesHash()
@@ -377,17 +375,14 @@ PagesHash::~PagesHash()
     delete pagesHashStrategy;
 }
 
-void ALWAYS_INLINE PagesHash::SetAddressIndex(ArrayPositionLinks &positionLinks, uint32_t realPosition, int64_t hash,
-    uint32_t pos, uint64_t &totalHashCollisions) const
+void ALWAYS_INLINE PagesHash::SetAddressIndex(uint32_t *links, uint32_t realPosition, int64_t hash, uint32_t pos,
+    BaseVector ***hashColumns, int32_t *hashColTypes, uint32_t hashColCount) const
 {
-    auto links = positionLinks.GetPositionLinks();
-
-    uint64_t hashCollisionsLocal = 0;
     // look for an empty slot or a slot containing this key
     uint32_t currentKey = key[pos];
     while (currentKey != INVALID_POSITION) {
         if (static_cast<int8_t>(hash) == positionToHashes[currentKey] &&
-            PositionEqualsPositionIgnoreNulls(currentKey, realPosition)) {
+            PositionEqualsPositionIgnoreNulls(currentKey, realPosition, hashColumns, hashColTypes, hashColCount)) {
             // found a slot for this key
             // link the new key position to the current key position
             links[realPosition] = currentKey;
@@ -398,13 +393,12 @@ void ALWAYS_INLINE PagesHash::SetAddressIndex(ArrayPositionLinks &positionLinks,
         // increment position and mask to handler wrap around
         pos = (pos + 1) & mask;
         currentKey = key[pos];
-        hashCollisionsLocal++;
     }
     key[pos] = realPosition;
-    totalHashCollisions += hashCollisionsLocal;
 }
 
-NO_INLINE bool PagesHash::PositionEqualsPositionIgnoreNulls(uint32_t leftPosition, uint32_t rightPosition) const
+NO_INLINE bool PagesHash::PositionEqualsPositionIgnoreNulls(uint32_t leftPosition, uint32_t rightPosition,
+    BaseVector ***hashColumns, int32_t *hashColTypes, uint32_t hashColCount) const
 {
     auto leftAddress = addresses[leftPosition];
     auto leftTableIndex = DecodeSliceIndex(leftAddress);
@@ -414,13 +408,10 @@ NO_INLINE bool PagesHash::PositionEqualsPositionIgnoreNulls(uint32_t leftPositio
     auto rightTableIndex = DecodeSliceIndex(rightAddress);
     auto rightRowIndex = DecodePosition(rightAddress);
 
-    auto buildHashColumns = pagesHashStrategy->GetBuildHashColumns();
-    auto hashColTypes = pagesHashStrategy->GetBuildHashColTypes();
-    auto hashColCount = pagesHashStrategy->GetBuildHashColsCount();
-
     for (uint32_t columnIdx = 0; columnIdx < hashColCount; columnIdx++) {
-        auto leftColumn = buildHashColumns[columnIdx][leftTableIndex];
-        auto rightColumn = buildHashColumns[columnIdx][rightTableIndex];
+        auto buildHashVecBatches = hashColumns[columnIdx];
+        auto leftColumn = buildHashVecBatches[leftTableIndex];
+        auto rightColumn = buildHashVecBatches[rightTableIndex];
         if (!ValueEqualsValueIgnoreNulls(hashColTypes[columnIdx], leftColumn, leftRowIndex, rightColumn,
             rightRowIndex)) {
             return false;
