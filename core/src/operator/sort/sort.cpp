@@ -65,6 +65,7 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     this->sortNullFirsts = sortNullFirsts;
     this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
     maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputCols.size());
+    maxRowCountPerBatch = maxRowCountPerBatch == 0 ? 1 : maxRowCountPerBatch;
 
     for (int32_t col : outputCols) {
         this->outputTypes.insert(this->outputTypes.end(), sourceTypes.Get().at(col));

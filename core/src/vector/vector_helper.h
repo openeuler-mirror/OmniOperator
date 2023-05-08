@@ -113,7 +113,7 @@ public:
         return DYNAMIC_TYPE_DISPATCH(VectorSetValue, typeId, vector, index, value);
     }
 
-    static void PrintVecBatch(VectorBatch *vecBatch, std::vector<type::DataTypePtr> &types)
+    static void PrintVecBatch(VectorBatch *vecBatch, const std::vector<type::DataTypePtr> &types)
     {
         int32_t vectorCount = vecBatch->GetVectorCount();
         int32_t rowCount = vecBatch->GetRowCount();
