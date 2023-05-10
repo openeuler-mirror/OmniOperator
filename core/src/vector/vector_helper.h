@@ -61,7 +61,7 @@ public:
         if (vectorEncodingId == OMNI_FLAT) {
             return DYNAMIC_TYPE_DISPATCH(CreateFlatVector, dataTypeId, size, capacityInBytes);
         } else if (vectorEncodingId == OMNI_ENCODING_CONTAINER) {
-            return std::make_unique<ContainerVector>(size);
+            return std::make_unique<ContainerVector>(capacityInBytes, size);
         } else {
             LogError("No such encoding type %d", vectorEncodingId);
             return nullptr;

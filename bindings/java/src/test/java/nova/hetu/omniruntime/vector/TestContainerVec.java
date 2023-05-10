@@ -73,7 +73,7 @@ public class TestContainerVec {
         copyPositionsed.close();
     }
 
-    @Test(enabled = false)
+    @Test
     public void testAppend() {
         int rows = 5;
         DoubleVec field1 = new DoubleVec(rows);
