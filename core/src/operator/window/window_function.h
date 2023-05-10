@@ -117,10 +117,10 @@ public:
     }
 
     WindowFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType)
-        : frameInfo(std::move(frame)), inputType(std::move(inputType)), outputType(std::move(outputType))
+        : inputType(std::move(inputType)), outputType(std::move(outputType)), frameInfo(std::move(frame))
     {}
 
-    virtual ~WindowFunction() {}
+    virtual ~WindowFunction() = default;
 
     virtual void Reset(WindowIndex *windowIndex) {};
     virtual void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column,

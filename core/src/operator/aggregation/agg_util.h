@@ -86,8 +86,7 @@ public:
                 // append withexpr colmun
                 newInputVecBatch->Append(DYNAMIC_TYPE_DISPATCH(OperatorUtil::ProjectVector,
                     inputTypes.GetType(i)->GetId(), projectFuncs[projectFuncsIndex++], valueAddresses, valueNulls,
-                    valueOffsets, dictVectorAddrs, rowCount)
-                                             .release());
+                    valueOffsets, dictVectorAddrs, rowCount));
             }
         }
         return newInputVecBatch;

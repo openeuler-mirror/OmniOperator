@@ -192,8 +192,8 @@ OmniStatus HashAggregationOperator::Init()
     }
 
     // agg source types
-    for (int i = 0; i < aggInputCols.size(); ++i) {
-        for (int j = 0; j < aggInputCols[i].size(); ++j) {
+    for (size_t i = 0; i < aggInputCols.size(); ++i) {
+        for (size_t j = 0; j < aggInputCols[i].size(); ++j) {
             sourceTypes[aggInputCols[i][j]] = aggInputTypes[i].GetType(j)->GetId();
         }
     }
@@ -262,7 +262,7 @@ int32_t HashAggregationOperator::InitMaxRowCountAndOutputTypes()
 void HashAggregationOperator::SetVectors(mem::Allocator *vecAllocator, VectorBatch *vectorBatch,
     const std::vector<DataTypePtr> &types, int32_t rowCount)
 {
-    for (int colIndex = 0; colIndex < types.size(); ++colIndex) {
+    for (size_t colIndex = 0; colIndex < types.size(); ++colIndex) {
         const DataTypePtr &type = types[colIndex];
         GROUP_AGG_FUNCTIONS[type->GetId()].setVector(vectorBatch, *type, colIndex, vecAllocator, rowCount);
     }

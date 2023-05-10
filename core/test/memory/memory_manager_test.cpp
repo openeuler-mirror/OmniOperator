@@ -358,31 +358,6 @@ TEST(MemoryManager, testDictionaryFixedVectorStatisticsFunction)
     EXPECT_EQ(globalMemoryAmount, 0);
 }
 
-// test: statistics function of Peak
-TEST(MemoryManager, testStatisticsFunctionMemoryPeak)
-{
-    auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
-    threadMemoryManager->Clear();
-
-    auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
-    int size = 1024 * 1024;
-    auto vectorInt32 = std::make_unique<Vector<int32_t>>(size);
-    auto vectorInt64 = std::make_unique<Vector<int64_t>>(size);
-    auto vectorDouble = std::make_unique<Vector<double>>(size);
-    auto vectorDecimal64 = std::make_unique<Vector<boost_dec64>>(size);
-    auto vectorString = std::make_unique<Vector<std::string>>(size);
-    vectorInt32.reset();
-    vectorInt64.reset();
-    vectorDouble.reset();
-    vectorDecimal64.reset();
-    vectorString.reset();
-
-    int64_t globalMemoryPeak = globalMemoryManager->GetMemoryPeak();
-    // due to aggregation,
-    // expectedMemoryPeak equals null size of shared_ptr(32) + value size of boost_dec64(size * 64);
-    int64_t expectedMemoryPeak = size * 64 + 32;
-}
-
 // test: set global memory limit
 TEST(MemoryManager, testSetGlobalMemoryLimit)
 {

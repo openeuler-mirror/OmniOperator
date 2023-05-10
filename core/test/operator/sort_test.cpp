@@ -179,14 +179,13 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch,
-                                     (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
 
     int32_t expectData1[dataSize] = {-1, 0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {-1, 4, 3, 2, 1, 0};
 
-    AssertVecBatchEquals(outputVecBatch, 2, dataSize,
-        (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), expectData1, expectData2);
+    AssertVecBatchEquals(outputVecBatch, 2, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), dataSize,
+        expectData1, expectData2);
 
     // free memory
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -217,13 +216,12 @@ TEST(NativeOmniSortTest, TestSortWithNullLast)
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch,
-                                     (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4, -1};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0, -1};
-    AssertVecBatchEquals(outputVecBatch, 2, dataSize,
-        (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), expectData1, expectData2);
+    AssertVecBatchEquals(outputVecBatch, 2, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), dataSize,
+        expectData1, expectData2);
 
     // free memory
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -256,13 +254,12 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch,
-                                     (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get());
 
     int32_t expectData1[dataSize] = {-1, 2, 1, 0, 3, 4};
     int64_t expectData2[dataSize] = {-1, -1, -1, -1, 1, 0};
-    AssertVecBatchEquals(outputVecBatch, 2, dataSize,
-        (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), expectData1, expectData2);
+    AssertVecBatchEquals(outputVecBatch, 2, (std::vector<omniruntime::type::DataTypePtr> &)sourceTypes.Get(), dataSize,
+        expectData1, expectData2);
 
     // free memory
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -417,7 +414,7 @@ SortOperatorFactory *PrepareOrderBy(bool isOriginal)
 
 void TestOrderBy(struct SortThreadArgs *threadArgs)
 {
-    std::vector<DataTypePtr> allTypes{ LongType(), LongType(), LongType(), LongType() };
+    std::vector<DataTypePtr> allTypes { LongType(), LongType(), LongType(), LongType() };
     // create operator
     SortOperatorFactory *operatorFactory = threadArgs->operatorFactory;
     SortOperator *sortOperator;
@@ -439,7 +436,7 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
 
 TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
 {
-    std::vector<DataTypePtr> allTypes{ LongType(), LongType(), LongType(), LongType() };
+    std::vector<DataTypePtr> allTypes { LongType(), LongType(), LongType(), LongType() };
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT];
 
     BuildSortTestData(vecBatches, COLUMN_COUNT_4);
@@ -775,8 +772,8 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
-VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize,
-    int32_t loopCount, bool isDictionary, bool hasNull)
+VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize, int32_t loopCount,
+    bool isDictionary, bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
@@ -819,8 +816,8 @@ VectorBatch *CreateSortInputForAllTypes(DataTypes &sourceTypes, void **sortDatas
     return sortVecBatch;
 }
 
-VectorBatch *CreateSortExpectForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize,
-    int32_t loopCount, bool hasNull)
+VectorBatch *CreateSortExpectForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize, int32_t loopCount,
+    bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
@@ -1276,6 +1273,77 @@ TEST(NativeOmniSortTest, TestSortDescendingWithSpill)
     int32_t expectData2[] = {12, 36, 48, 12, 36, 48, 12, 36, 48, 24, 24, 24, 36, 12, 24, 36, 12, 24, 36, 12, 24, 36, 12,
                              24, 36, 12, 24, 36, 12, 24, 36, 12, 48, 24, 48, 48, 48, 48, 48, 48};
     auto expectVecBatch = TestUtil::CreateVectorBatch(sourceTypes, 40, expectData0, expectData1, expectData2);
+    ASSERT_TRUE(TestUtil::VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortAscendings)
+{
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(200), LongType() }));
+    const int32_t dataSize = 7;
+    std::string_view data0[] = {"",
+                                "Able villages enforce present holes; users will win increasingly wrong forces.",
+                                "Able, strong pictures understand especially.",
+                                "A little national lines take.",
+                                "Able, widespread elections could not apply to the powers.",
+                                "",
+                                "Able, widespread elections could not apply to the powers."};
+    int64_t data1[] = {0, 7395, 294, 630, 647, 0, 757};
+
+    auto vec0 = new Vector<LargeStringContainer<std::string_view>>(dataSize);
+    auto vec1 = new Vector<int64_t>(dataSize);
+    for (int32_t i = 0; i < dataSize; i++) {
+        if (data0[i].empty()) {
+            vec0->SetNull(i);
+            vec1->SetNull(i);
+        } else {
+            vec0->SetValue(i, data0[i]);
+            vec1->SetValue(i, data1[i]);
+        }
+    }
+
+    auto input = new VectorBatch(dataSize);
+    input->Append(vec0);
+    input->Append(vec1);
+
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {1, 1};
+    int32_t nullFirsts[] = {1, 1};
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+
+    sortOperator->AddInput(input);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    std::string_view expectData0[] = {"",
+                                      "",
+                                      "A little national lines take.",
+                                      "Able villages enforce present holes; users will win increasingly wrong forces.",
+                                      "Able, strong pictures understand especially.",
+                                      "Able, widespread elections could not apply to the powers.",
+                                      "Able, widespread elections could not apply to the powers."};
+    int64_t expectData1[] = {0, 0, 630, 7395, 294, 647, 757};
+    auto expectVec0 = new Vector<LargeStringContainer<std::string_view>>(dataSize);
+    auto expectVec1 = new Vector<int64_t>(dataSize);
+    for (int32_t i = 0; i < dataSize; i++) {
+        if (expectData0[i].empty()) {
+            expectVec0->SetNull(i);
+            expectVec1->SetNull(i);
+        } else {
+            expectVec0->SetValue(i, expectData0[i]);
+            expectVec1->SetValue(i, expectData1[i]);
+        }
+    }
+    auto expectVecBatch = new VectorBatch(dataSize);
+    expectVecBatch->Append(expectVec0);
+    expectVecBatch->Append(expectVec1);
     ASSERT_TRUE(TestUtil::VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
 
     VectorHelper::FreeVecBatch(outputVecBatch);

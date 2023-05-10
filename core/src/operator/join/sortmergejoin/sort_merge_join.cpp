@@ -73,8 +73,7 @@ void SortMergeJoinOperator::InitScannerAndResultBuilder(OverflowConfig *overflow
     }
     joinResultBuilder = new JoinResultBuilder(streamedOutputTypes, streamedOutputCols.data(), streamedOutputCols.size(),
         originalStreamedColsCount, streamedTblPagesIndex, bufferedOutputTypes, bufferedOutputCols.data(),
-        bufferedOutputCols.size(), originalBufferedColsCount, bufferedTblPagesIndex, filter, joinType,
-        overflowConfig);
+        bufferedOutputCols.size(), originalBufferedColsCount, bufferedTblPagesIndex, filter, joinType, overflowConfig);
 }
 
 int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPagesIndex,

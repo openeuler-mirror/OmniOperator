@@ -9,8 +9,8 @@
 #ifndef OMNI_RUNTIME_STRING_UTILS_H
 #define OMNI_RUNTIME_STRING_UTILS_H
 namespace omniruntime::vec {
-static constexpr uint32_t STRING_SIZE_THRESHOLD = 12;
-static constexpr uint32_t INITIAL_STRING_SIZE = 1 << 15; // 32K
+static constexpr int32_t STRING_SIZE_THRESHOLD = 12;
+static constexpr int32_t INITIAL_STRING_SIZE = 1 << 15; // 32K
 
 enum StringWidthType {
     OMNI_SMALL_WIDTH = STRING_SIZE_THRESHOLD,

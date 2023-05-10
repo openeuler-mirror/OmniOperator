@@ -107,7 +107,7 @@ omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatc
 void FreeVecBatches(vec::VectorBatch **vecBatches, int32_t vecBatchCount);
 
 void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
-    int32_t expectedRowCount, std::vector<type::DataTypePtr> allTypes, ...);
+    std::vector<type::DataTypePtr> allTypes, int32_t expectedRowCount, ...);
 void AssertDoubleVectorEquals(omniruntime::vec::BaseVector *vector, double *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::BaseVector *vector, std::string *expectedValues);
 

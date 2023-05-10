@@ -122,7 +122,7 @@ private:
 
 class InitialJoinStatus : public JoinStatus {
 public:
-    InitialJoinStatus() : JoinStatus(JoinTableCode::INVALID, JoinTableCode::INVALID, JoinResultCode::NO_RESULT){};
+    InitialJoinStatus() : JoinStatus(JoinTableCode::INVALID, JoinTableCode::INVALID, JoinResultCode::NO_RESULT) {};
     ~InitialJoinStatus() override = default;
 };
 
@@ -282,7 +282,7 @@ private:
     void (SortMergeJoinScanner::*scanFindNextRow)() = nullptr;
 
     using CompareFunc = int32_t (*)(vec::BaseVector *leftColumn, int32_t leftColumnPosition,
-            vec::BaseVector *rightColumn, int32_t rightColumnPosition);
+        vec::BaseVector *rightColumn, int32_t rightColumnPosition);
 
     std::vector<CompareFunc> keyCompareFuncs;
 

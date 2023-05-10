@@ -12,6 +12,8 @@ namespace omniruntime {
 namespace type {
 class DataTypes {
 public:
+    DataTypes() : dataTypesSize(0), dataTypeIds(nullptr) {}
+
     DataTypes(const DataTypes &types) : DataTypes(types.dataTypes) {}
 
     explicit DataTypes(const std::vector<DataTypePtr> &dataTypes)

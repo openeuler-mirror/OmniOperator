@@ -27,7 +27,7 @@ public:
     void Prepare();
 
     void Sort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-        const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to) const;
+        const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to);
 
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
         const int32_t *sourceTypes, int32_t offset, int32_t length) const;
@@ -64,10 +64,8 @@ public:
 
 private:
     const DataTypes dataTypes;
-    const int32_t *dataTypeIds;
     uint32_t typesCount;
-    vec::BaseVector ***columns; // Vector* [columnIndex][tableIndex]
-    std::vector<bool> mayHaveNulls;
+    omniruntime::vec::BaseVector ***columns; // Vector* [columnIndex][tableIndex]
     uint64_t *valueAddresses;
     uint32_t positionCount;
     std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;

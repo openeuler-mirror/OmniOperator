@@ -347,52 +347,50 @@ public:
     }
 
     template <DataTypeId typeId>
-    static std::unique_ptr<BaseVector> ProjectVector(ProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls,
+    static BaseVector *ProjectVector(ProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls,
         int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount)
     {
         using Type = typename omniruntime::op::NativeAndVectorType<typeId>::type;
         using Vector = typename omniruntime::op::NativeAndVectorType<typeId>::vector;
 
-        auto result = std::make_unique<Vector>(rowCount);
+        auto outputVec = new Vector(rowCount);
         ExecutionContext context;
-        int64_t outData = reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(result.get(), typeId));
-        bool *outNull = unsafe::UnsafeBaseVector::GetNulls(result.get());
-        int32_t *outOffset = reinterpret_cast<int32_t *>(vec::VectorHelper::UnsafeGetOffsetsAddr(result.get(), typeId));
+        bool *outNull = unsafe::UnsafeBaseVector::GetNulls(outputVec);
+        int32_t *outOffset = reinterpret_cast<int32_t *>(vec::VectorHelper::UnsafeGetOffsetsAddr(outputVec, typeId));
 
         if constexpr (std::is_same_v<Type, std::string_view>) {
-            func(valuesAddresses, rowCount, reinterpret_cast<int64_t>(result.get()), nullptr, rowCount, valueNulls,
+            func(valuesAddresses, rowCount, reinterpret_cast<int64_t>(outputVec), nullptr, rowCount, valueNulls,
                 valueOffsets, outNull, outOffset, reinterpret_cast<int64_t>(&context), dictVectorAddrs);
         } else {
+            auto outData = reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(outputVec, typeId));
             func(valuesAddresses, rowCount, outData, nullptr, rowCount, valueNulls, valueOffsets, outNull, outOffset,
                 reinterpret_cast<int64_t>(&context), dictVectorAddrs);
         }
 
-        return std::move(result);
+        return outputVec;
     }
 
     static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<ProjFunc> &projectFuncs,
         const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
         int64_t *dictVectorAddrs, int32_t rowCount, vec::VectorBatch *newVecBatch)
     {
-        int32_t projectColsCount = projectCols.size();
+        auto projectColsCount = projectCols.size();
         int32_t projectFuncsIndex = 0;
-        for (int32_t i = 0; i < projectColsCount; i++) {
+        for (size_t i = 0; i < projectColsCount; i++) {
             int32_t projectCol = projectCols[i];
             // skip the project key which is not expression
-            if (projectCol < newInputTypes.GetSize() - projectFuncs.size()) {
+            if (projectCol < static_cast<int32_t>(newInputTypes.GetSize() - projectFuncs.size())) {
                 continue;
             }
             newVecBatch->Append(DYNAMIC_TYPE_DISPATCH(ProjectVector, newInputTypes.GetType(projectCol)->GetId(),
-                projectFuncs[projectFuncsIndex++], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount)
-                                    .release());
+                projectFuncs[projectFuncsIndex++], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
         }
     }
 
     static vec::VectorBatch *ProjectVectors(vec::VectorBatch *inputVecBatch, const DataTypes &inputTypes,
         const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
     {
-        int32_t projectFuncsCount = projectFuncs.size();
-        if (projectFuncsCount <= 0) {
+        if (projectFuncs.size() == 0) {
             return nullptr;
         }
 
@@ -410,24 +408,22 @@ public:
         int64_t valueNulls[vecCount];
         int64_t valueOffsets[vecCount];
         int64_t dictVectorAddrs[vecCount];
-
+        auto inputTypeIds = inputTypes.GetIds();
         for (int32_t i = 0; i < vecCount; i++) {
             auto inputVector = inputVecBatch->Get(i);
-            std::unique_ptr<BaseVector> newInputVec =
-                vec::VectorHelper::SliceVector(inputVector, inputTypes.GetIds()[i], 0, rowCount);
-
+            auto newInputVec = vec::VectorHelper::SliceVector(inputVector, inputTypeIds[i], 0, rowCount).release();
             if (newInputVec->GetEncoding() != vec::OMNI_DICTIONARY) {
-                valueAddresses[i] = reinterpret_cast<int64_t>(
-                    vec::VectorHelper::UnsafeGetValues(newInputVec.get(), inputTypes.GetIds()[i]));
+                valueAddresses[i] =
+                    reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(newInputVec, inputTypeIds[i]));
                 dictVectorAddrs[i] = 0;
             } else {
                 valueAddresses[i] = 0;
-                dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(newInputVec.get()));
+                dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(newInputVec));
             }
-            valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(newInputVec.get()));
-            valueOffsets[i] = reinterpret_cast<int64_t>(
-                vec::VectorHelper::UnsafeGetOffsetsAddr(newInputVec.get(), inputTypes.GetIds()[i]));
-            newInputVecBatch->Append(newInputVec.release());
+            valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(newInputVec));
+            valueOffsets[i] =
+                reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetOffsetsAddr(newInputVec, inputTypes.GetIds()[i]));
+            newInputVecBatch->Append(newInputVec);
         }
 
         ProjectVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets, dictVectorAddrs,
