@@ -43,7 +43,7 @@ void RecordOutputVectorsStack(VectorBatch &outputVecBatch, JNIEnv *env)
 #endif
 }
 
-jobject transform(JNIEnv *env, VectorBatch &result, std::vector<omniruntime::type::DataTypePtr> &outputTypes)
+jobject transform(JNIEnv *env, VectorBatch &result)
 {
     int32_t vecCount = result.GetVectorCount();
     long vecAddresses[vecCount];
@@ -55,7 +55,7 @@ jobject transform(JNIEnv *env, VectorBatch &result, std::vector<omniruntime::typ
     for (int i = 0; i < vecCount; ++i) {
         BaseVector *vector = result.Get(i);
         vecAddresses[i] = reinterpret_cast<uintptr_t>(vector);
-        dataTypeIds[i] = outputTypes[i]->GetId();
+        dataTypeIds[i] = vector->GetDataTypeId();
         encodings[i] = vector->GetEncoding();
         // By default, all 3 buf arrays will have a value,
         // if not, it will be 0, which means a null pointer.
@@ -123,7 +123,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     jobject result = nullptr;
     if (outputVecBatch) {
         RecordOutputVectorsStack(*outputVecBatch, env);
-        result = transform(env, *outputVecBatch, nativeOperator->GetOutputType());
+        result = transform(env, *outputVecBatch);
     }
     return env->NewObject(omniResultsCls, omniResultsInitMethodId, result, nativeOperator->GetStatus());
 }

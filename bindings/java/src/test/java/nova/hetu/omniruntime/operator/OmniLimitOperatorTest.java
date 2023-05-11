@@ -36,7 +36,7 @@ import java.util.List;
  * @since 2021-11-27
  */
 public class OmniLimitOperatorTest {
-    @Test(enabled = false)
+    @Test
     public void testLimitByTwoColum() {
         DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
         Object[][] sourceDatas1 = {{0, 1, 2, 0, 1, 2}, {6.6, 5.5, 4.4, 3.3, 2.2, 1.1}};
@@ -58,7 +58,7 @@ public class OmniLimitOperatorTest {
         limitOperatorFactory.close();
     }
 
-    @Test(enabled = false)
+    @Test
     public void testLimitWithNull() {
         DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
         Object[][] sourceDatas1 = {{0, 1, 2, 3, 4, 5}, {6.6, 5.5, 4.4, 3.3, 2.2, 1.1}};
@@ -113,7 +113,7 @@ public class OmniLimitOperatorTest {
         }
     }
 
-    @Test(enabled = false)
+    @Test
     public void testLimitMultiBatchGetOutput() {
         int dataSize = 32800;
         int maxRowCount = 32768; // 1M / (4 + 4 + 8 + 8)
