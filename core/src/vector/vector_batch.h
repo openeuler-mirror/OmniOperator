@@ -30,7 +30,10 @@ public:
     /* *
      * @param index
      */
-    BaseVector *Get(int32_t index);
+    BaseVector *Get(int32_t index)
+    {
+        return vectors[index];
+    }
 
     BaseVector **GetVectors();
 

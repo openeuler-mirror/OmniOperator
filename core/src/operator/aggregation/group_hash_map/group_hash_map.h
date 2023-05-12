@@ -272,7 +272,7 @@ public:
 private:
     void CalculateThreshHold()
     {
-        threshHold = std::ceil((1ULL << (degree - 1)));
+        threshHold = static_cast<uint64_t>(std::ceil((1ULL << (degree - 1))));
     }
     uint64_t threshHold = 0;
     uint8_t degree;
@@ -524,7 +524,7 @@ private:
     bool NeedRehash()
     {
         return elementsSize > grower.GetThreshHold();
-    };
+    }
 
     size_t FindPosition(const KeyType &key, size_t hashValue)
     {

@@ -14,8 +14,6 @@ import org.slf4j.LoggerFactory;
  */
 
 public class NativeLog {
-    private static final Logger logger = LoggerFactory.getLogger(NativeLog.class);
-
     /**
      * Native Log init.
      *

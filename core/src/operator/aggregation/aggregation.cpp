@@ -67,7 +67,7 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 break;
             }
             default: {
-                LogError("No such agg func type %d", maskCols[i]);
+                LogError("No such agg func type %d", funcTypesContext[i]);
                 ret = OMNI_STATUS_ERROR;
             }
         }
