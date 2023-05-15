@@ -144,6 +144,16 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
         }                                                                                   \
     }()
 
+template<typename T> constexpr DataTypeId TYPE_ID = DataTypeId::OMNI_INVALID;
+template <> inline constexpr DataTypeId TYPE_ID<int16_t> = DataTypeId::OMNI_SHORT;
+template <> inline constexpr DataTypeId TYPE_ID<int32_t> = DataTypeId::OMNI_INT;
+template <> inline constexpr DataTypeId TYPE_ID<int64_t> = DataTypeId::OMNI_LONG;
+template <> inline constexpr DataTypeId TYPE_ID<double> = DataTypeId::OMNI_DOUBLE;
+template <> inline constexpr DataTypeId TYPE_ID<bool> = DataTypeId::OMNI_BOOLEAN;
+template <> inline constexpr DataTypeId TYPE_ID<Decimal128> = DataTypeId::OMNI_DECIMAL128;
+template <> inline constexpr DataTypeId TYPE_ID<std::string_view> = DataTypeId::OMNI_CHAR;
+
+
 enum DateUnit {
     DAY = 0,
     MILLI = 1

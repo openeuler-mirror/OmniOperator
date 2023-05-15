@@ -18,6 +18,7 @@
 #include "util/compiler_util.h"
 #include "large_string_container.h"
 #include "memory/memory_trace.h"
+#include "type/data_type.h"
 
 namespace omniruntime::vec::unsafe {
 class UnsafeBaseVector;
@@ -27,6 +28,7 @@ class UnsafeStringVector;
 }
 
 namespace omniruntime::vec {
+using namespace type;
 enum Encoding {
     OMNI_FLAT = 0,       // ordinary vector, storing primitive data types, such as int, long, boolean
     OMNI_DICTIONARY = 1, // if dictionary needs to be combined with varchar, get encoding by enum 'StringEncoding'
@@ -156,6 +158,11 @@ public:
         return offset;
     }
 
+    DataTypeId ALWAYS_INLINE GetDataTypeId()
+    {
+        return dataTypeId;
+    }
+
 protected:
     int64_t ALWAYS_INLINE GetNullsCapacity(bool *nulls)
     {
@@ -174,6 +181,7 @@ protected:
     std::shared_ptr<bool[]> nulls; // whether the element is null
     bool hasNull;
     bool isSliced;
+    DataTypeId dataTypeId;
 };
 
 /**
@@ -186,9 +194,13 @@ public:
      * Constructor for data types of arithematic types without encoding
      * fixme: Initialization of values should replace new with make_shared, when the C++ version is upgraded to 20.
      * @param vSize: size of array in variables nulls and values
+     * @param dataTypeId: the dataTypeId of vector
      */
-    explicit Vector(int vSize) : BaseVector(vSize), values(std::shared_ptr<RAW_DATA_TYPE[]>(new RAW_DATA_TYPE[vSize]))
+    // TODO: the dataTypeId will be used in operator in the future.
+    Vector(int vSize, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
+        : BaseVector(vSize), values(std::shared_ptr<RAW_DATA_TYPE[]>(new RAW_DATA_TYPE[vSize]))
     {
+        this->dataTypeId = dataTypeId;
         // vector class, values total capacity and nulls total capacity
         int64_t vectorCapacity =
             sizeof(Vector<RAW_DATA_TYPE>) + GetValuesCapacity(values.get()) + BaseVector::GetNullsCapacity(nulls.get());
@@ -218,9 +230,11 @@ public:
     {}
 
     // used for vector slice, sliced vector use same values as parent vector
-    Vector(int vSize, Encoding encoding, std::shared_ptr<bool[]> nulls, std::shared_ptr<RAW_DATA_TYPE[]> values)
+    Vector(int vSize, Encoding encoding, std::shared_ptr<bool[]> nulls, std::shared_ptr<RAW_DATA_TYPE[]> values,
+        DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
         : BaseVector(vSize, encoding, nulls)
     {
+        this->dataTypeId = dataTypeId;
         this->values = values; // copy the data field shared_ptr
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>);
@@ -365,9 +379,10 @@ template <typename RAW_DATA_TYPE, template <typename> typename CONTAINER>
 class Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> final : public Vector<RAW_DATA_TYPE> {
 public:
     Vector(int size, std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> container,
-        std::shared_ptr<bool[]> nulls)
+        std::shared_ptr<bool[]> nulls, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
         : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
     {
+        this->dataTypeId = dataTypeId;
         // vector class capacity, nulls total capacity and container total capacity.
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>) +
             BaseVector::GetNullsCapacity(nulls.get()) + container->GetContainerCapacity();
@@ -379,9 +394,10 @@ public:
 
     // used for vector slice, sliced vector use same container as parent vector
     Vector(int size, std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> container,
-        std::shared_ptr<bool[]> nulls, bool isSliced)
+        std::shared_ptr<bool[]> nulls, bool isSliced, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
         : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
     {
+        this->dataTypeId = dataTypeId;
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
@@ -452,7 +468,8 @@ public:
         // new container
         std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> newContainer =
             container->CopyPositions(newPositions.data(), length);
-        return std::make_unique<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>>(length, newContainer, newNulls);
+        return std::make_unique<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>>(length, newContainer, newNulls,
+            this->dataTypeId);
     }
 
     /* *
@@ -473,7 +490,7 @@ public:
         }
         // copy the data field shared_ptr
         auto sliced = std::make_unique<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>>(length, this->container,
-            this->nulls, true);
+            this->nulls, true, this->dataTypeId);
         sliced->offset = this->offset + positionOffset; // update offset
         sliced->isSliced = true;
         return std::move(sliced);
@@ -494,6 +511,7 @@ public:
     explicit Vector(int size, int capacityInBytes = INITIAL_STRING_SIZE)
         : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */)
     {
+        this->dataTypeId = OMNI_CHAR;
         this->stringEncoding = OMNI_LARGE_STRING;
         // default string_view vector use large string encoding
         this->container = std::make_shared<LargeStringContainer<std::string_view>>(size, capacityInBytes);
@@ -508,9 +526,10 @@ public:
 
     // used for vector slice, sliced vector use same container as parent vector
     explicit Vector(int size, std::shared_ptr<LargeStringContainer<std::string_view>> container,
-        std::shared_ptr<bool[]> nulls)
+        std::shared_ptr<bool[]> nulls, DataTypeId dataTypeId = OMNI_CHAR)
         : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */, nulls), container(container)
     {
+        this->dataTypeId = dataTypeId;
         this->stringEncoding = OMNI_LARGE_STRING;
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>);

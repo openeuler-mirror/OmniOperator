@@ -27,7 +27,7 @@ public:
             unsafe::UnsafeStringVector::GetContainer(
             reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)),
             vector->GetSize(), vector->GetOffset());
-        return std::make_unique<Vector<DictionaryContainer<std::string_view>>>(valueSize, dictionary, nulls);
+        return std::make_unique<Vector<DictionaryContainer<std::string_view>>>(valueSize, dictionary, nulls, OMNI_CHAR);
     }
 
     template <typename T>
@@ -40,7 +40,7 @@ public:
 
         auto dictionary = std::make_shared<DictionaryContainer<T>>(values, valueSize,
             unsafe::UnsafeVector::GetValues<T>(vector), vector->GetSize(), vector->GetOffset());
-        return std::make_unique<Vector<DictionaryContainer<T>>>(valueSize, dictionary, nulls);
+        return std::make_unique<Vector<DictionaryContainer<T>>>(valueSize, dictionary, nulls, TYPE_ID<T>);
     }
 
     /* *
@@ -82,7 +82,7 @@ public:
         if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
             return std::make_unique<Vector<LargeStringContainer<std::string_view>>>(size, capacityInBytes);
         }
-        return std::make_unique<Vector<T>>(size);
+        return std::make_unique<Vector<T>>(size, typeId);
     }
 
     template <type::DataTypeId typeId> static void VectorSetValue(vec::BaseVector *vector, int32_t index, void *value)

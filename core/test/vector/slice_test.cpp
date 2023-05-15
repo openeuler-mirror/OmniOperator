@@ -26,6 +26,7 @@ template <typename T> void v2_slice_get_set_value()
     }
 
     auto vector = parent->Slice(g_offset, g_len, false);
+    EXPECT_EQ(vector->GetDataTypeId(), parent->GetDataTypeId());
     delete parent;
 
     for (int i = 0; i < g_len; i++) {
@@ -83,7 +84,7 @@ template <typename T> void v2_slice_container()
 
     auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionary_size);
     auto container = std::make_shared<DictionaryContainer<T>>(values, value_size, dictionary, dictionary_size, 0);
-    auto parent = new Vector<DictionaryContainer<T>>(value_size, container, nulls);
+    auto parent = new Vector<DictionaryContainer<T>>(value_size, container, nulls, TYPE_ID<T>);
 
     auto vector = parent->Slice(g_offset, g_len);
     delete parent; // purposely deleting parent;

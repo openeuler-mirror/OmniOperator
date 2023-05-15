@@ -14,6 +14,7 @@ template <typename T> void vector_get_set_value()
 {
     int vecSize = 100;
     auto vector = std::make_unique<Vector<T>>(vecSize);
+    EXPECT_EQ(vector->GetDataTypeId(), TYPE_ID<T>);
     for (int i = 0; i < vecSize; i++) {
         T value;
         if constexpr (std::is_same_v<std::string, T>) {

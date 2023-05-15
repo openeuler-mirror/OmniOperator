@@ -24,6 +24,7 @@ public:
         std::vector<omniruntime::type::DataTypePtr> &dataTypes)
         : Vector<int64_t>(positionCount, OMNI_ENCODING_CONTAINER), dataTypes(dataTypes)
     {
+        dataTypeId = OMNI_CONTAINER;
         values = std::shared_ptr<int64_t[]>(new int64_t[dataTypes.size()]);
         // init nulls
         for (int32_t rowIndex = 0; rowIndex < positionCount; rowIndex++) {
