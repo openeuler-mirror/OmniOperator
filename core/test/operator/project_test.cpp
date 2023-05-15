@@ -8,7 +8,7 @@
 #include <chrono>
 #include "gtest/gtest.h"
 #include "operator/projection/projection.h"
-#include "operator/filter/bloom_filter.h"
+#include "codegen/bloom_filter.h"
 #include "util/test_util.h"
 #include "util/config_util.h"
 

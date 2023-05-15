@@ -13,7 +13,7 @@
 #include "operator/aggregation/non_group_aggregation.h"
 #include "operator/aggregation/non_group_aggregation_expr.h"
 #include "operator/filter/filter_and_project.h"
-#include "operator/filter/bloom_filter.h"
+#include "codegen/bloom_filter.h"
 #include "operator/window/window.h"
 #include "operator/join/hash_builder.h"
 #include "operator/join/lookup_join.h"

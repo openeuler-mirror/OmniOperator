@@ -23,5 +23,8 @@ omniruntime::vec::VectorBatch *CreateVectorBatch(uint32_t encoding,
 
 std::vector<VectorBatchSupplier> VectorBatchToVectorBatchSupplier(
     std::vector<omniruntime::vec::VectorBatch *> vectorBatches);
+
+void SetVectorBatchRow(omniruntime::vec::VectorBatch *vb, std::vector<omniruntime::type::DataTypeId> dataTypes,
+    int index, std::vector<std::string> value);
 }
 #endif // OMNI_RUNTIME_VECTOR_UTIL_H

@@ -1,5 +1,6 @@
 aux_source_directory(${CMAKE_CURRENT_LIST_DIR} BENCHMARK_ROOT_SRCS)
 
+add_subdirectory(codegen)
 add_subdirectory(operator)
 
 set(OM_BENCHMARK_TARGET ombenchmark)
