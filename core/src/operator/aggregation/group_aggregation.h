@@ -249,7 +249,7 @@ public:
 private:
     int32_t InitMaxRowCountAndOutputTypes();
 
-    void SetVectors(VectorBatch *vectorBatch, const std::vector<DataTypePtr> &types, int32_t rowCount);
+    void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
     void SetGroupByColumnsHandleType(GroupByFieldHandleType t);
@@ -272,8 +272,7 @@ private:
     OutputState outputState;
 
     template <typename Deserialize>
-    void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, const int32_t groupByColSize,
-        VectorBatch *result);
+    void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, VectorBatch *output);
 
     int32_t rowsPerBatch;
 };

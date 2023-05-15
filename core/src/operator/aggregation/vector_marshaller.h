@@ -21,11 +21,11 @@ namespace op {
  */
 using VectorDeSerializer = const char *(*)(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 
-using VectorSerializer = type::StringRef (*)(BaseVector *baseVector, int32_t rowIdx,
-    mem::SimpleArenaAllocator &arenaAllocator, const char *&begin);
+using VectorSerializer = void (*)(BaseVector *baseVector, int32_t rowIdx, mem::SimpleArenaAllocator &arenaAllocator,
+    type::StringRef &result);
 
 template <type::DataTypeId id>
-const char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
+char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 
 extern std::vector<VectorSerializer> vectorSerializerCenter;
 extern std::vector<VectorSerializer> dicVectorSerializerCenter;

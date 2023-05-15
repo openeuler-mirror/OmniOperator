@@ -15,12 +15,12 @@ struct StringRef {
     StringRef() = default;
 
     template <typename T, typename = std::enable_if_t<sizeof(T) == 1>>
-    StringRef(const T *d, size_t s) : data(reinterpret_cast<const char *>(d)), size(s)
+    StringRef(const T *d, size_t s) : data(reinterpret_cast<char *>(d)), size(s)
     {}
 
-    StringRef(const std::string &s) : data(s.data()), size(s.size()) {}
+    StringRef(const std::string &s) : data(const_cast<char *>(s.data())), size(s.size()) {}
 
-    explicit StringRef(const char *data_) : data(data_), size(strlen(data_)) {}
+    explicit StringRef(char *data_) : data(data_), size(strlen(data_)) {}
 
     friend bool operator == (const StringRef &lhs, const StringRef &rhs)
     {

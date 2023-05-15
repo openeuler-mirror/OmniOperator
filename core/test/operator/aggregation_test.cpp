@@ -632,17 +632,6 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     VectorHelper::FreeVecBatch(outputVecBatch3);
 }
 
-template <typename VectorType>
-static void FlatVectorCopy(BaseVector *resultVector, BaseVector *originVector, int offset, int len)
-{
-    auto rVector = static_cast<VectorType *>(originVector);
-    auto lVector = static_cast<VectorType *>(resultVector);
-    for (int i = 0; i < len; ++i) {
-        auto value = rVector->GetValue(i);
-        lVector->SetValue(offset + i, value);
-    }
-}
-
 TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
 {
     // create 10 pages

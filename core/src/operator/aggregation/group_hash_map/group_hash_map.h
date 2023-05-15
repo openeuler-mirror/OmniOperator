@@ -205,18 +205,12 @@ public:
     // for copyable object use value it self, for only movable object use std::move(value)
     void SetValue(const ValueType &value)
     {
-        if (not inserted) {
-            throw std::runtime_error("can not Set a value to Cell which is not insert");
-        }
         emplaceValue = value;
     }
 
     // this interface will be used for only movable object
     void SetValue(ValueType &&value)
     {
-        if (not inserted) {
-            throw std::runtime_error("can not Set a value to Cell which is not insert");
-        }
         emplaceValue = std::move(value);
     }
 

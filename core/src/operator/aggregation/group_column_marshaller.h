@@ -25,40 +25,29 @@ public:
     Hashmap hashmap;
     using Result = typename Hashmap::ResultType;
 
-    type::StringRef HandleOneRow(size_t rowId, BaseVector **groupVectors, int32_t groupColNum,
+    Result InsertValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
         mem::SimpleArenaAllocator &arenaAllocator)
     {
-        const char *ptr = nullptr;
-        uint32_t len = 0;
-        for (int i = 0; i < groupColNum; i++) {
-            auto curVector = groupVectors[i];
-            auto &curFunc = serializers[i];
-            auto strRef = curFunc(curVector, rowId, arenaAllocator, ptr);
-            len += strRef.size;
+        type::StringRef key;
+        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
+            auto curVector = groupVectors[groupColIdx];
+            auto &curFunc = serializers[groupColIdx];
+            curFunc(curVector, rowIdx, arenaAllocator, key);
         }
-
-        return { ptr, len };
+        return hashmap.Emplace(key);
     }
 
-    Result InsertValueToHashmap(size_t rowId, BaseVector **groupVectors, int32_t groupColNum,
-        mem::SimpleArenaAllocator &arenaAllocator)
-    {
-        auto emplaceKey = HandleOneRow(rowId, groupVectors, groupColNum, arenaAllocator);
-        return hashmap.Emplace(emplaceKey);
-    }
-
-    void ParseKeyToCols(const StringRef &key, VectorBatch *vectorBatch, const int32_t start, const int32_t length,
-        const int rowId)
+    void ParseKeyToCols(const StringRef &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int rowIdx)
     {
         auto *pos = key.data;
-        const int32_t end = start + length;
-        for (int32_t i = start; i < end; ++i) {
-            auto curVectorPtr = vectorBatch->Get(i);
+        for (int32_t i = 0; i < groupColNum; ++i) {
+            auto curVectorPtr = groupOutputVectors[i];
             auto deserializeFunc = deserializers[i];
-            pos = deserializeFunc(curVectorPtr, rowId, pos);
+            pos = deserializeFunc(curVectorPtr, rowIdx, pos);
         }
     }
-    
+
     void InitSize(int groupBySize)
     {
         serializers.reserve(groupBySize);
