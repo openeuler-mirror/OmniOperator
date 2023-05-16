@@ -173,7 +173,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &sta
         auto *cntVector = reinterpret_cast<Vector<int64_t> *>(v->GetValue(1));
 
         if (indexMap == nullptr) {
-            auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(sumVector));
+            auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(cntVector));
             ptr += rowOffset;
             cntPtr += rowOffset;
@@ -188,7 +188,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &sta
                 }
             }
         } else {
-            auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(sumVector));
+            auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(cntVector));
             if (nullMap == nullptr) {
                 AddDictAvg<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, cntPtr, rowCount,
@@ -215,7 +215,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
         auto *cntVector = reinterpret_cast<Vector<int64_t> *>(v->GetValue(1));
 
         if (indexMap == nullptr) {
-            auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(sumVector));
+            auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(cntVector));
             ptr += rowOffset;
             cntPtr += rowOffset;
@@ -227,7 +227,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
                     aggIdx, ptr, cntPtr, nullMap);
             }
         } else {
-            auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(sumVector));
+            auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(cntVector));
             if (nullMap == nullptr) {
                 AddDictUseRowIndexAvg<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, cntPtr,

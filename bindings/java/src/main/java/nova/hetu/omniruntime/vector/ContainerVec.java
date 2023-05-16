@@ -33,7 +33,7 @@ public class ContainerVec extends FixedWidthVec {
      * @param dataTypes the data type of this vector
      */
     public ContainerVec(int vectorCount, int positionCount, long[] vectorAddresses, DataType[] dataTypes) {
-        super(vectorCount * BYTES, vectorCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
+        super(vectorCount * BYTES, positionCount, OMNI_VEC_ENCODING_CONTAINER, ContainerDataType.CONTAINER);
         this.positionCount = positionCount;
         this.dataTypes = dataTypes;
         setDataTypesNative(getNativeVector(), DataTypeSerializer.serialize(dataTypes));
@@ -181,12 +181,7 @@ public class ContainerVec extends FixedWidthVec {
 
     @Override
     public int getRealValueBufCapacityInBytes() {
-        return size * BYTES;
-    }
-
-    @Override
-    public int getCapacityInBytes() {
-        return size * BYTES;
+        return getCapacityInBytes();
     }
 
     @Override

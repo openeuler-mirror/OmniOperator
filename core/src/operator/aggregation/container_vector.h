@@ -49,8 +49,11 @@ public:
 #endif
     }
 
-    ContainerVector(int32_t vectorCount) : Vector<int64_t>(vectorCount, OMNI_ENCODING_CONTAINER)
+    ContainerVector(int32_t capacityInBytes, int32_t positionCount)
+        : Vector<int64_t>(positionCount, OMNI_ENCODING_CONTAINER)
     {
+        using T = typename type::NativeType<type::OMNI_CONTAINER>::type;
+        int32_t vectorCount = capacityInBytes / sizeof(T);
         values = std::shared_ptr<int64_t[]>(new int64_t[vectorCount]);
 
         // init vec is null in container
@@ -93,8 +96,26 @@ public:
         return dataTypes;
     }
 
+    static void AppendToVector(BaseVector *destVector, int32_t offset, BaseVector *srcVector, int32_t length,
+        int32_t dataTypeId)
+    {
+        switch (dataTypeId) {
+            case type::OMNI_LONG: {
+                reinterpret_cast<Vector<int64_t> *>(destVector)->Append(srcVector, offset, length);
+                break;
+            }
+            case type::OMNI_DOUBLE: {
+                reinterpret_cast<Vector<double> *>(destVector)->Append(srcVector, offset, length);
+                break;
+            }
+            default: {
+                LogError("No such data type %d", dataTypeId);
+                break;
+            }
+        }
+    }
+
     /* *
-     * not support
      *
      * @param other the dst data from
      * @param positionOffset element position
@@ -102,8 +123,26 @@ public:
      */
     void Append(BaseVector *other, int positionOffset, int length)
     {
-        throw exception::OmniException(omniruntime::op::GetErrorCode(omniruntime::op::ErrorCode::UNSUPPORTED),
-            "container vector not support append");
+        auto *otherContainer = reinterpret_cast<ContainerVector *>(other);
+        if (otherContainer->GetVectorCount() != this->GetVectorCount()) {
+            LogError("this vec count %d is not equal other vec count %d, container vec append failed.",
+                this->GetVectorCount(), otherContainer->GetVectorCount());
+            throw omniruntime::exception::OmniException("CONTAINER_VEC", "container vector append count error");
+        }
+        if (other->GetEncoding() != OMNI_ENCODING_CONTAINER) {
+            LogError("this vec type %d is not equal other type %d, container vec append failed.",
+                OMNI_ENCODING_CONTAINER, other->GetEncoding());
+            throw omniruntime::exception::OmniException("CONTAINER_VEC", "container vector append encoding error");
+        }
+
+        for (int32_t i = 0; i < GetVectorCount(); i++) {
+            auto *thisVector = reinterpret_cast<BaseVector *>(GetValue(i));
+            auto *otherVector = reinterpret_cast<BaseVector *>(otherContainer->GetValue(i));
+            AppendToVector(thisVector, positionOffset, otherVector, length, dataTypes[i]->GetId());
+        }
+        // set nulls
+        bool *otherValueNulls = unsafe::UnsafeBaseVector::GetNulls(other);
+        SetNulls(positionOffset, otherValueNulls, length);
     }
 
     /* *
