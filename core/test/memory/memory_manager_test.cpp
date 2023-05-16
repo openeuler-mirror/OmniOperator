@@ -138,7 +138,6 @@ TEST(MemoryManager, testAsanStatisticsFunction)
     auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
 
-
     // actual mem 564 = vector size(64) + null size(100) + value size(400). Take null as an example,
     // 100 indicates the overhead of new bool[100].
     auto int32Vector = CreateVector<int32_t>(100);
@@ -372,7 +371,7 @@ TEST(MemoryManager, testSetGlobalMemoryLimit)
 }
 
 // test: get global accounted memory
-TEST(ThreadMemoryManager, testGetGlobalAccountedMemory)
+TEST(MemoryManager, testGetGlobalAccountedMemory)
 {
     auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
@@ -524,5 +523,6 @@ TEST(MemoryManager, testLimitedAccount)
     EXPECT_TRUE(globalMemoryManager != nullptr);
     int64_t parentMemoryAmount = parentMemoryManager->GetMemoryAmount();
     EXPECT_EQ(parentMemoryAmount, globalThreshold - positiveSize);
+    threadMemoryManager->Clear();
 }
 }

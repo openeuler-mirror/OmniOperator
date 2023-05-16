@@ -15,11 +15,23 @@
 #include "memory/thread_memory_manager.h"
 
 using namespace omniruntime::vec;
+using namespace omniruntime::mem;
 
 static BaseVector *TransformVector(long vectorAddr)
 {
     BaseVector *nativeVector = reinterpret_cast<BaseVector *>(vectorAddr);
     return nativeVector;
+}
+
+static void RecordStack(BaseVector *vector, JNIEnv *env)
+{
+    jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId);
+    auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);
+    std::string stack(stackChars);
+    MemoryTrace *trace = MemoryTrace::GetMemoryTrace();
+    // replace c++ stack with java stack after vector is created.
+    trace->ReplaceVectorPtrAllocated(reinterpret_cast<uintptr_t>(vector), stack);
+    env->ReleaseStringUTFChars(jstack, stackChars);
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *env, jclass jcls,
@@ -33,6 +45,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
             "return a null pointer when creating flat vector");
     }
     JNI_METHOD_END(0)
+#ifdef TRACE
+    RecordStack(vector, env);
+#endif
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
 
@@ -51,6 +66,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVecto
             "return a null pointer when creating dictionary vector");
     }
     JNI_METHOD_END(0)
+#ifdef TRACE
+    RecordStack(vector, env);
+#endif
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
 
@@ -62,6 +80,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(
     JNI_METHOD_START
     sliceVector = VectorHelper::SliceVector(nativeVector, dataTypeId, jStartIndex, jLength).release();
     JNI_METHOD_END(0)
+#ifdef TRACE
+    RecordStack(sliceVector, env);
+#endif
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(sliceVector));
 }
 
@@ -78,6 +99,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
         VectorHelper::CopyPositionsVector(nativeVector, reinterpret_cast<int *>(positions), 0, jLength, dataTypeId)
             .release();
     JNI_METHOD_END(0)
+#ifdef TRACE
+    RecordStack(copyVector, env);
+#endif
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(copyVector));
 }
 

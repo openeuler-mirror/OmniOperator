@@ -103,11 +103,7 @@ private:
      * The benefit is to avoid frequent updates of each thread and global memory usage.
      *      */
     int64_t untrackedMemory = 0;
-#ifdef TRACE
-    int64_t untrackedMemoryThreshold = 0;
-#else
     int64_t untrackedMemoryThreshold = 1 * 1024 * 1024;
-#endif
 };
 } // mem
 } // omniruntime

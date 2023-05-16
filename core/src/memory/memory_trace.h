@@ -43,25 +43,33 @@ public:
 
     int64_t GetArenaAllocated();
 
-    void AddVectorPtrAllocated(uintptr_t ptr, std::pair<int64_t, std::string> pair);
+    void ReplaceVectorPtrAllocated(uintptr_t ptr, const std::string &stack);
+
+    void AddVectorPtrAllocated(uintptr_t ptr, const std::pair<int64_t, std::string> &pair);
 
     void SubVectorPtrAllocated(uintptr_t ptr, int64_t size);
 
-    void AddArenaPtrAllocated(uintptr_t ptr, std::pair<int64_t, std::string> pair);
+    PtrMap GetVectorPtrAllocated();
+
+    void AddArenaPtrAllocated(uintptr_t ptr, const std::pair<int64_t, std::string> &pair);
 
     void SubArenaPtrAllocated(uintptr_t ptr, int64_t size);
+
+    PtrMap GetArenaPtrAllocated();
 
     bool HasMemoryLeak();
 
     void FreeLeakedMemory();
+
+    void Clear();
 
 private:
     std::mutex vectorLock;                   // keep memoryAllocatedByDataType thread-safely
     std::mutex arenaLock;                    // keep arenaAllocated thread-safely
     std::atomic<int64_t> curVectorAllocated; // current vector allocated memory size
     std::atomic<int64_t> curArenaAllocated;  // current arena allocated memory size
-    PtrMap curVectorPtrAllocated;            // <uintptr : pair<size, stackLog>>
-    PtrMap curArenaPtrAllocated;             // <uintptr : pair<size, stackLog>>
+    PtrMap curVectorPtrAllocated; // <uintptr : pair<size, stackLog>>, record the size and stack of each vector.
+    PtrMap curArenaPtrAllocated;  // <uintptr : pair<size, stackLog>>, record the size and stack of each arena.
 };
 }
 }

@@ -124,5 +124,6 @@ TEST(Allocator, testSlicedVectorSize)
 
     delete sliceVector;
     EXPECT_EQ(threadMemoryManager->GetUntrackedMemory(), 0);
+    threadMemoryManager->Clear();
 }
 }
