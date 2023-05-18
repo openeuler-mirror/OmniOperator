@@ -17,6 +17,7 @@
         <maven.compiler.target>8</maven.compiler.target>
         <omniop.version>1.2.0</omniop.version>
         <hive.version>3.1.2-1</hive.version>
+        <guava.version>30.0-jre</guava.version>
         <testng.version>6.10</testng.version>
         <openhft.version>3.2.4</openhft.version>
         <jacoco.version>0.7.9</jacoco.version>
@@ -34,6 +35,13 @@
             <groupId>io.prestosql.hive</groupId>
             <artifactId>hive-apache</artifactId>
             <version>${hive.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!--For test-->
@@ -53,6 +61,7 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${log.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
