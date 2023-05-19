@@ -914,7 +914,7 @@ static ALWAYS_INLINE void SetVarcharValue(BaseVector *inputVector, int32_t input
     int32_t outputIndex)
 {
     if (UNLIKELY(inputVector->IsNull(inputIndex))) {
-        outputVector->SetNull(outputIndex);
+        reinterpret_cast<VarcharVector*>(outputVector)->SetNull(outputIndex);
         return;
     }
 
