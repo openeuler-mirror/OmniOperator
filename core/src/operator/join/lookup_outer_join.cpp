@@ -104,9 +104,14 @@ void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
 {
     auto rowCount = vectorBatch->GetRowCount();
     for (int32_t col = 0; col < probeOutputTypes.GetSize(); col++) {
-        auto vector = VectorHelper::CreateVector(OMNI_FLAT, probeOutputTypes.GetType(col)->GetId(), rowCount);
+        auto typeId = probeOutputTypes.GetType(col)->GetId();
+        auto vector = VectorHelper::CreateVector(OMNI_FLAT, typeId, rowCount);
         for (int32_t row = 0; row < rowCount; row++) {
-            vector->SetNull(row);
+            if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR) {
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector.get())->SetNull(row);
+            } else {
+                vector->SetNull(row);
+            }
         }
         vectorBatch->Append(vector.release());
     }

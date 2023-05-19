@@ -233,10 +233,6 @@ static void ALWAYS_INLINE SetValueForVector(BaseVector *pqVector, BaseVector *tm
 {
     using Vector = typename NativeAndVectorType<typeId>::vector;
 
-    if (pqVector->IsNull(0)) {
-        (static_cast<Vector *>(tmpVector))->SetNull(index);
-        return;
-    }
     auto value = (static_cast<Vector *>(pqVector))->GetValue(0);
     (static_cast<Vector *>(tmpVector))->SetValue(index, value);
 }
