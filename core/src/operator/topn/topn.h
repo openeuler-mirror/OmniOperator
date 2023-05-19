@@ -19,7 +19,19 @@ namespace op {
 class RowComparator {
 public:
     RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
-        int32_t sortColCount, omniruntime::vec::VectorBatch *vectorBatch);
+        int32_t sortColCount, omniruntime::vec::VectorBatch *vectorBatch)
+        : sourceTypes(sourceTypes),
+          sortCols(sortCols),
+          sortAscendings(sortAscendings),
+          sortNullFirsts(sortNullFirsts),
+          sortColCount(sortColCount),
+          vectorBatch(vectorBatch)
+    {}
+
+    RowComparator(const int32_t *sourceTypes, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
+        int32_t sortColCount)
+        : RowComparator(sourceTypes, sortCols, sortAscendings, sortNullFirsts, sortColCount, nullptr)
+    {}
 
     ~RowComparator();
 
