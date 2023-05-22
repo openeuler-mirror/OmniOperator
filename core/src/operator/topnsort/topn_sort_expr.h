@@ -11,7 +11,7 @@
 namespace omniruntime::op {
 class TopNSortWithExprOperatorFactory : public OperatorFactory {
 public:
-    TopNSortWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
+    TopNSortWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n, bool isStrictTopN,
         const std::vector<omniruntime::expressions::Expr *> &partitionKeys,
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
         std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig);

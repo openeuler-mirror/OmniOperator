@@ -302,6 +302,15 @@ JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_filter_OmniBloomFilterOperatorFactory_createBloomFilterOperatorFactory(JNIEnv *env,
     jclass jObj, jint jInputVersion);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory
+ * Method:    createTopNSortWithExprOperatorFactory
+ * Signature: (Ljava/lang/String;IZ[Ljava/lang/String;[Ljava/lang/String;[I[ILjava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory_createTopNSortWithExprOperatorFactory
+    (JNIEnv *, jclass, jstring, jint, jboolean, jobjectArray, jobjectArray, jintArray, jintArray, jstring);
+
 #ifdef __cplusplus
 }
 #endif

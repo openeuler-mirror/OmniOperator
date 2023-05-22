@@ -104,6 +104,61 @@ bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightV
 }
 
 template <type::DataTypeId typeId>
+void UpdateValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec, int32_t outputPos)
+{
+    auto inputNull = inputVec->IsNull(inputPos);
+    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+        using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+        auto outputVarcharVec = static_cast<VarcharVector *>(outputVec);
+        auto inputVarcharVec = static_cast<VarcharVector *>(inputVec);
+        if (inputNull) {
+            outputVarcharVec->SetNull(outputPos);
+        } else {
+            outputVarcharVec->SetNotNull(outputPos);
+            auto value = inputVarcharVec->GetValue(inputPos);
+            outputVarcharVec->SetValue(outputPos, value);
+        }
+    } else {
+        using RawDataType = typename NativeAndVectorType<typeId>::type;
+        if (inputNull) {
+            static_cast<Vector<RawDataType> *>(outputVec)->SetNull(outputPos);
+        } else {
+            static_cast<Vector<RawDataType> *>(outputVec)->SetNotNull(outputPos);
+            auto value = static_cast<Vector<RawDataType> *>(inputVec)->GetValue(inputPos);
+            static_cast<Vector<RawDataType> *>(outputVec)->SetValue(outputPos, value);
+        }
+    }
+}
+
+template <type::DataTypeId typeId>
+void UpdateValueFromDictionary(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
+    int32_t outputPos)
+{
+    auto inputNull = inputVec->IsNull(inputPos);
+    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
+        using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+        auto outputVarcharVec = static_cast<VarcharVector *>(outputVec);
+        auto inputVarcharVec = static_cast<Vector<DictionaryContainer<std::string_view>> *>(inputVec);
+        if (inputNull) {
+            outputVarcharVec->SetNull(outputPos);
+        } else {
+            outputVarcharVec->SetNotNull(outputPos);
+            auto value = inputVarcharVec->GetValue(inputPos);
+            outputVarcharVec->SetValue(outputPos, value);
+        }
+    } else {
+        using RawDataType = typename NativeAndVectorType<typeId>::type;
+        if (inputNull) {
+            static_cast<Vector<RawDataType> *>(outputVec)->SetNull(outputPos);
+        } else {
+            static_cast<Vector<RawDataType> *>(outputVec)->SetNotNull(outputPos);
+            auto value = static_cast<Vector<DictionaryContainer<RawDataType>> *>(inputVec)->GetValue(inputPos);
+            static_cast<Vector<RawDataType> *>(outputVec)->SetValue(outputPos, value);
+        }
+    }
+}
+
+template <type::DataTypeId typeId>
 void SetValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec, int32_t outputPos)
 {
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
@@ -163,6 +218,7 @@ template <type::DataTypeId typeId> static BaseVector *CreateVectorFromFlat(BaseV
         outputVec = new Vector<RawDataType>(1);
     }
     SetValueFromFlat<typeId>(inputVec, inputPos, outputVec, 0);
+    return outputVec;
 }
 
 template <type::DataTypeId typeId> static BaseVector *CreateVectorFromDictionary(BaseVector *inputVec, int32_t inputPos)
@@ -175,6 +231,7 @@ template <type::DataTypeId typeId> static BaseVector *CreateVectorFromDictionary
         outputVec = new Vector<RawDataType>(1);
     }
     SetValueFromDictionary<typeId>(inputVec, inputPos, outputVec, 0);
+    return outputVec;
 }
 
 template <type::DataTypeId typeId>
@@ -195,7 +252,7 @@ static int32_t CompareValueFromFlat(BaseVector *leftVec, int32_t leftPos, BaseVe
         using RawDataType = typename NativeAndVectorType<typeId>::type;
         auto leftValue = static_cast<Vector<RawDataType> *>(leftVec)->GetValue(leftPos);
         auto rightValue = static_cast<Vector<RawDataType> *>(rightVec)->GetValue(rightPos);
-        return leftValue > leftValue ? 1 : leftValue < leftValue ? -1 : 0;
+        return leftValue > rightValue ? 1 : leftValue < rightValue ? -1 : 0;
     }
 }
 
@@ -217,72 +274,9 @@ static int32_t CompareValueFromDictionary(BaseVector *leftVec, int32_t leftPos, 
         using RawDataType = typename NativeAndVectorType<typeId>::type;
         auto leftValue = static_cast<Vector<DictionaryContainer<RawDataType>> *>(leftVec)->GetValue(leftPos);
         auto rightValue = static_cast<Vector<RawDataType> *>(rightVec)->GetValue(rightPos);
-        return leftValue > leftValue ? 1 : leftValue < leftValue ? -1 : 0;
+        return leftValue > rightValue ? 1 : leftValue < rightValue ? -1 : 0;
     }
 }
-
-static std::vector<HashFunc> hashFromFlatFuncs = {
-    nullptr,                            // OMNI_NONE,
-    HashValueFromFlat<OMNI_INT>,        // OMNI_INT
-    HashValueFromFlat<OMNI_LONG>,       // OMNI_LONG
-    HashValueFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    HashValueFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    HashValueFromFlat<OMNI_SHORT>,      // OMNI_SHORT
-    HashValueFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    HashValueFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    HashValueFromFlat<OMNI_DATE32>,     // OMNI_DATE32
-    HashValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
-    HashValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
-    HashValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                            // OMNI_TIMESTAMP
-    nullptr,                            // OMNI_INTERVAL_MONTHS
-    nullptr,                            // OMNI_INTERVAL_DAY_TIME
-    HashValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    HashValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr                             // OMNI_CONTAINER,
-};
-
-static std::vector<EqualFunc> equalValueFuncs = {
-    nullptr,                             // OMNI_NONE,
-    EqualValueTemplate<OMNI_INT>,        // OMNI_INT
-    EqualValueTemplate<OMNI_LONG>,       // OMNI_LONG
-    EqualValueTemplate<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    EqualValueTemplate<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    EqualValueTemplate<OMNI_SHORT>,      // OMNI_SHORT
-    EqualValueTemplate<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    EqualValueTemplate<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    EqualValueTemplate<OMNI_DATE32>,     // OMNI_DATE32
-    EqualValueTemplate<OMNI_DATE64>,     // OMNI_DATE64
-    EqualValueTemplate<OMNI_TIME32>,     // OMNI_TIME32
-    EqualValueTemplate<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                             // OMNI_TIMESTAMP
-    nullptr,                             // OMNI_INTERVAL_MONTHS
-    nullptr,                             // OMNI_INTERVAL_DAY_TIME
-    EqualValueTemplate<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    EqualValueTemplate<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr                              // OMNI_CONTAINER,
-};
-
-static std::vector<HashFunc> hashFromDictionaryFuncs = {
-    nullptr,                                  // OMNI_NONE,
-    HashValueFromDictionary<OMNI_INT>,        // OMNI_INT
-    HashValueFromDictionary<OMNI_LONG>,       // OMNI_LONG
-    HashValueFromDictionary<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    HashValueFromDictionary<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    HashValueFromDictionary<OMNI_SHORT>,      // OMNI_SHORT
-    HashValueFromDictionary<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    HashValueFromDictionary<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    HashValueFromDictionary<OMNI_DATE32>,     // OMNI_DATE32
-    HashValueFromDictionary<OMNI_DATE64>,     // OMNI_DATE64
-    HashValueFromDictionary<OMNI_TIME32>,     // OMNI_TIME32
-    HashValueFromDictionary<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                                  // OMNI_TIMESTAMP
-    nullptr,                                  // OMNI_INTERVAL_MONTHS
-    nullptr,                                  // OMNI_INTERVAL_DAY_TIME
-    HashValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    HashValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr                                   // OMNI_CONTAINER,
-};
 
 static std::vector<CompareFunc> compareFromFlatFuncs = {
     nullptr,                               // OMNI_NONE,
@@ -324,6 +318,27 @@ static std::vector<CompareFunc> compareFromDictionaryFuncs = {
     CompareValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr                                      // OMNI_CONTAINER,
+};
+
+static std::vector<EqualFunc> equalFromFlatFuncs = {
+    nullptr,                             // OMNI_NONE,
+    EqualValueTemplate<OMNI_INT>,        // OMNI_INT
+    EqualValueTemplate<OMNI_LONG>,       // OMNI_LONG
+    EqualValueTemplate<OMNI_DOUBLE>,     // OMNI_DOUBLE
+    EqualValueTemplate<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
+    EqualValueTemplate<OMNI_SHORT>,      // OMNI_SHORT
+    EqualValueTemplate<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
+    EqualValueTemplate<OMNI_DECIMAL128>, // OMNI_DECIMAL128
+    EqualValueTemplate<OMNI_DATE32>,     // OMNI_DATE32
+    EqualValueTemplate<OMNI_DATE64>,     // OMNI_DATE64
+    EqualValueTemplate<OMNI_TIME32>,     // OMNI_TIME32
+    EqualValueTemplate<OMNI_TIME64>,     // OMNI_TIME64
+    nullptr,                             // OMNI_TIMESTAMP
+    nullptr,                             // OMNI_INTERVAL_MONTHS
+    nullptr,                             // OMNI_INTERVAL_DAY_TIME
+    EqualValueTemplate<OMNI_VARCHAR>,    // OMNI_VARCHAR
+    EqualValueTemplate<OMNI_CHAR>,       // OMNI_CHAR,
+    nullptr                              // OMNI_CONTAINER,
 };
 
 static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
@@ -368,6 +383,48 @@ static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
     nullptr                                      // OMNI_CONTAINER,
 };
 
+static std::vector<UpdateValueFunc> updateValueFromFlatFuncs = {
+    nullptr,                              // OMNI_NONE,
+    UpdateValueFromFlat<OMNI_INT>,        // OMNI_INT
+    UpdateValueFromFlat<OMNI_LONG>,       // OMNI_LONG
+    UpdateValueFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE
+    UpdateValueFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
+    UpdateValueFromFlat<OMNI_SHORT>,      // OMNI_SHORT
+    UpdateValueFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
+    UpdateValueFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128
+    UpdateValueFromFlat<OMNI_DATE32>,     // OMNI_DATE32
+    UpdateValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
+    UpdateValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
+    UpdateValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
+    nullptr,                              // OMNI_TIMESTAMP
+    nullptr,                              // OMNI_INTERVAL_MONTHS
+    nullptr,                              // OMNI_INTERVAL_DAY_TIME
+    UpdateValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
+    UpdateValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
+    nullptr                               // OMNI_CONTAINER,
+};
+
+static std::vector<UpdateValueFunc> updateValueFromDictionaryFuncs = {
+    nullptr,                                    // OMNI_NONE,
+    UpdateValueFromDictionary<OMNI_INT>,        // OMNI_INT
+    UpdateValueFromDictionary<OMNI_LONG>,       // OMNI_LONG
+    UpdateValueFromDictionary<OMNI_DOUBLE>,     // OMNI_DOUBLE
+    UpdateValueFromDictionary<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
+    UpdateValueFromDictionary<OMNI_SHORT>,      // OMNI_SHORT
+    UpdateValueFromDictionary<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
+    UpdateValueFromDictionary<OMNI_DECIMAL128>, // OMNI_DECIMAL128
+    UpdateValueFromDictionary<OMNI_DATE32>,     // OMNI_DATE32
+    UpdateValueFromDictionary<OMNI_DATE64>,     // OMNI_DATE64
+    UpdateValueFromDictionary<OMNI_TIME32>,     // OMNI_TIME32
+    UpdateValueFromDictionary<OMNI_TIME64>,     // OMNI_TIME64
+    nullptr,                                    // OMNI_TIMESTAMP
+    nullptr,                                    // OMNI_INTERVAL_MONTHS
+    nullptr,                                    // OMNI_INTERVAL_DAY_TIME
+    UpdateValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
+    UpdateValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
+    nullptr                                     // OMNI_CONTAINER,
+};
+
 static std::vector<SetValueFunc> setValueFromFlatFuncs = {
     nullptr,                           // OMNI_NONE,
     SetValueFromFlat<OMNI_INT>,        // OMNI_INT
@@ -410,29 +467,30 @@ static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
     nullptr                                  // OMNI_CONTAINER,
 };
 
-TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n,
+TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n, bool isStrictTopN,
     const std::vector<int32_t> &partitionCols, const std::vector<int32_t> &sortCols,
     const std::vector<int32_t> &sortAscendings, const std::vector<int32_t> &sortNullFirsts)
     : sourceTypes(sourceTypes),
       n(n),
+      isStrictTopN(isStrictTopN),
       partitionCols(partitionCols),
+      partitionColNum(static_cast<int32_t>(partitionCols.size())),
       sortCols(sortCols),
       sortAscendings(sortAscendings),
       sortNullFirsts(sortNullFirsts),
-      sortColNum(sortCols.size()),
-      partitionColNum(partitionCols.size())
+      sortColNum(static_cast<int32_t>(sortCols.size()))
 {
     auto sourceTypeIds = sourceTypes.GetIds();
-    for (size_t i = 0; i < sortColNum; i++) {
+    for (int32_t i = 0; i < sortColNum; i++) {
         auto type = sourceTypeIds[sortCols[i]];
         sortColTypes.emplace_back(type);
     }
     sortCompareFuncs.resize(sortColNum);
-    partitionHashFuncs.resize(partitionColNum);
-
     executionContext = std::make_unique<op::ExecutionContext>();
+    serializers.resize(partitionColNum);
 
     auto inputColNum = sourceTypes.GetSize();
+    equalFuncs.resize(inputColNum);
     createVectorFuncs.resize(inputColNum);
     updatePartitionValueFuncs.resize(inputColNum);
     setOutputValueFuncs.resize(inputColNum);
@@ -442,9 +500,22 @@ TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n
 
     int32_t eachRowSize = OperatorUtil::GetRowSize(sourceTypes.Get());
     maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
+    outputTypes = sourceTypes.Get();
 }
 
-int32_t TopNSortOperator::FindInsertPosition(BaseVector **insertSortVectors, int32_t insertRowIdx,
+type::StringRef TopNSortOperator::GeneratePartitionKey(BaseVector **partitionVectors, int32_t partitionColNum,
+    int32_t rowIdx, mem::SimpleArenaAllocator &arenaAllocator)
+{
+    type::StringRef key;
+    for (int32_t colIdx = 0; colIdx < partitionColNum; colIdx++) {
+        auto curVector = partitionVectors[colIdx];
+        auto &curFunc = serializers[colIdx];
+        curFunc(curVector, rowIdx, arenaAllocator, key);
+    }
+    return key;
+}
+
+int32_t TopNSortOperator::FindInsertPositionWhenNotFull(BaseVector **insertSortVectors, int32_t insertRowIdx,
     VectorBatch **vecBatches, int32_t position)
 {
     while (position >= 0) {
@@ -459,77 +530,89 @@ int32_t TopNSortOperator::FindInsertPosition(BaseVector **insertSortVectors, int
     return position + 1;
 }
 
-void TopNSortOperator::Prepare(VectorBatch *inputVecBatch)
+int32_t TopNSortOperator::FindInsertPositionWhenFull(BaseVector **insertSortVectors, int32_t insertRowIdx,
+    VectorBatch **vecBatches, int32_t position, bool &needAppend)
+{
+    while (position >= 0) {
+        auto left = vecBatches[position];
+        // the value to bo inserted is less than the current position value, then go on
+        int32_t result = CompareForSortCols(insertSortVectors, insertRowIdx, left);
+        if (result == 0) {
+            needAppend = true;
+            break;
+        } else if (result > 0) {
+            needAppend = false;
+            break;
+        } else {
+            position--;
+        }
+    }
+    return position + 1;
+}
+
+void TopNSortOperator::Prepare(BaseVector **inputVectors, int32_t inputColNum)
 {
     auto sourceTypeIds = sourceTypes.GetIds();
     for (int32_t i = 0; i < partitionColNum; ++i) {
         auto partitionCol = partitionCols[i];
-        auto curVector = inputVecBatch->Get(partitionCol);
+        auto curVector = inputVectors[partitionCol];
         auto curTypeId = sourceTypeIds[partitionCol];
         if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
-            partitionHashFuncs[i] = hashFromDictionaryFuncs[curTypeId];
+            serializers[i] = dicVectorSerializerCenter[curTypeId];
         } else {
-            partitionHashFuncs[i] = hashFromFlatFuncs[curTypeId];
+            serializers[i] = vectorSerializerCenter[curTypeId];
         }
-        partitionEqualFuncs[i] = equalValueFuncs[curTypeId];
     }
 
     for (int32_t i = 0; i < sortColNum; i++) {
         auto sortCol = sortCols[i];
-        if (inputVecBatch->Get(sortCol)->GetEncoding() == OMNI_DICTIONARY) {
-            sortCompareFuncs[i] = compareFromDictionaryFuncs[sourceTypeIds[sortCol]];
+        auto curTypeId = sourceTypeIds[sortCol];
+        if (inputVectors[sortCol]->GetEncoding() == OMNI_DICTIONARY) {
+            sortCompareFuncs[i] = compareFromDictionaryFuncs[curTypeId];
+            equalFuncs[i] = equalFromFlatFuncs[curTypeId];
         } else {
-            sortCompareFuncs[i] = compareFromFlatFuncs[sourceTypeIds[sortCol]];
+            sortCompareFuncs[i] = compareFromFlatFuncs[curTypeId];
+            equalFuncs[i] = equalFromFlatFuncs[curTypeId];
         }
     }
 
-    auto inputColNum = sourceTypes.GetSize();
     for (int32_t i = 0; i < inputColNum; i++) {
-        if (inputVecBatch->Get(i)->GetEncoding() == OMNI_DICTIONARY) {
-            createVectorFuncs[i] = createVectorFromDictionaryFuncs[i];
-            updatePartitionValueFuncs[i] = setValueFromDictionaryFuncs[i];
+        auto curTypeId = sourceTypeIds[i];
+        if (inputVectors[i]->GetEncoding() == OMNI_DICTIONARY) {
+            createVectorFuncs[i] = createVectorFromDictionaryFuncs[curTypeId];
+            updatePartitionValueFuncs[i] = updateValueFromDictionaryFuncs[curTypeId];
         } else {
-            createVectorFuncs[i] = createVectorFromFlatFuncs[i];
-            updatePartitionValueFuncs[i] = setValueFromFlatFuncs[i];
+            createVectorFuncs[i] = createVectorFromFlatFuncs[curTypeId];
+            updatePartitionValueFuncs[i] = updateValueFromFlatFuncs[curTypeId];
         }
     }
 }
 
-void TopNSortOperator::InsertNewPartition(const PartitionKey &key, BaseVector **inputVectors, int32_t inputColNum,
-    int32_t rowIdx, HashFunc *partitionHashFuncs, EqualFunc *partitionEqualFuncs)
+void TopNSortOperator::InsertNewPartition(StringRef &key, BaseVector **inputVectors, int32_t inputColNum,
+    int32_t rowIdx)
 {
-    // construct partition key
-    auto newPartitionVectors = new BaseVector *[partitionColNum];
-    auto partitionVectors = key.partitionVectors;
-    for (int32_t i = 0; i < partitionColNum; i++) {
-        auto partitionCol = partitionCols[i];
-        auto vector = createVectorFuncs[partitionCol](partitionVectors[i], rowIdx);
-        newPartitionVectors[i] = vector;
-    }
-
     // construct vector batch which has only one row
     auto singleRow = new VectorBatch(1);
     for (int32_t i = 0; i < inputColNum; i++) {
         auto vector = createVectorFuncs[i](inputVectors[i], rowIdx);
         singleRow->Append(vector);
     }
-    auto value = new PartitionValue(n);
+    auto value = new PartitionValue(sortColNum, n);
     value->vecBatches[0] = singleRow;
-    value->currentSize = 1;
-
-    PartitionKey newKey(partitionHashFuncs, partitionEqualFuncs, partitionColNum, newPartitionVectors, 0);
-    partitionedMap[newKey] = value;
+    value->nextIndex = 1;
+    partitionedMap[key] = value;
 }
 
 void TopNSortOperator::InsertNewValue(PartitionValue &value, BaseVector **inputVectors, int32_t inputColNum,
     BaseVector **sortVectors, int32_t rowIdx)
 {
     auto vecBatches = value.vecBatches;
-    auto lastPosition = value.currentSize - 1;
+    auto vecBatchSize = value.nextIndex;
+    auto lastPosition = vecBatchSize - 1;
 
     // find insert position
-    auto insertPos = FindInsertPosition(sortVectors, rowIdx, vecBatches, lastPosition);
-    for (int32_t pos = value.currentSize; pos > insertPos; pos--) {
+    auto insertPos = FindInsertPositionWhenNotFull(sortVectors, rowIdx, vecBatches, lastPosition);
+    for (int32_t pos = vecBatchSize; pos > insertPos; pos--) {
         vecBatches[pos] = vecBatches[pos - 1];
     }
 
@@ -540,62 +623,86 @@ void TopNSortOperator::InsertNewValue(PartitionValue &value, BaseVector **inputV
         singleRow->Append(vector);
     }
     vecBatches[insertPos] = singleRow;
-    value.currentSize++;
+    value.nextIndex++;
 }
 
 void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, BaseVector **inputVectors, int32_t inputColNum,
     BaseVector **sortVectors, int32_t rowIdx)
 {
     auto vecBatches = value.vecBatches;
-    auto lastPosition = value.currentSize - 1;
-    int32_t result = CompareForSortCols(sortVectors, rowIdx, vecBatches[lastPosition]);
-    // if the value to be inserted is greater or equals to the last, then skip
-    if (result >= 0) {
+
+    // compare the last value
+    int32_t result = CompareForSortCols(sortVectors, rowIdx, vecBatches[n - 1]);
+    if (result > 0) {
+        // if the value to be inserted is greater or equals to the last, then skip
         return;
     }
+    if (result == 0) {
+        // for rank function, if the value is same, we should append
+        auto singleRow = new VectorBatch(1);
+        for (int32_t i = 0; i < inputColNum; i++) {
+            auto vector = createVectorFuncs[i](inputVectors[i], rowIdx);
+            singleRow->Append(vector);
+        }
+        vecBatches[value.nextIndex] = singleRow;
+        value.nextIndex++;
+    } else {
+        auto singleRow = new VectorBatch(1);
+        for (int32_t i = 0; i < inputColNum; i++) {
+            auto vector = createVectorFuncs[i](inputVectors[i], rowIdx);
+            singleRow->Append(vector);
+        }
 
-    auto insertPos = FindInsertPosition(sortVectors, rowIdx, vecBatches, lastPosition - 1);
-    for (int32_t pos = lastPosition; pos > insertPos; pos--) {
-        vecBatches[pos] = vecBatches[pos - 1];
-    }
-
-    // directly write the values to be inserted into the insert position
-    auto singleRow = vecBatches[insertPos];
-    for (int32_t i = 0; i < inputColNum; i++) {
-        updatePartitionValueFuncs[i](inputVectors[i], rowIdx, singleRow->Get(i), 0);
+        auto insertPos = FindInsertPositionWhenNotFull(sortVectors, rowIdx, vecBatches, n - 2);
+        for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
+            vecBatches[pos] = vecBatches[pos - 1];
+        }
+        vecBatches[insertPos] = singleRow;
+        value.nextIndex++;
+        if (insertPos == (n - 1)) {
+            value.nextIndex = n;
+        } else {
+            // check the nth and (n-1)th values are equal
+            auto isDistinct = CheckDistinctForLast(vecBatches[n - 1], vecBatches[n]);
+            if (isDistinct) {
+                value.nextIndex = n;
+            }
+        }
     }
 }
 
-int32_t TopNSortOperator::AddInput(VectorBatch *inputVecBatch)
+int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
 {
-    Prepare(inputVecBatch);
+    auto inputVectors = inputVecBatch->GetVectors();
+    auto inputColNum = sourceTypes.GetSize();
+    Prepare(inputVectors, inputColNum);
 
     BaseVector *partitionVectors[partitionColNum];
     for (int32_t i = 0; i < partitionColNum; ++i) {
-        partitionVectors[i] = inputVecBatch->Get(partitionCols[i]);
+        partitionVectors[i] = inputVectors[partitionCols[i]];
     }
     BaseVector *sortVectors[sortColNum];
     for (int32_t i = 0; i < sortColNum; i++) {
-        sortVectors[i] = inputVecBatch->Get(sortCols[i]);
+        sortVectors[i] = inputVectors[sortCols[i]];
     }
 
     auto &arenaAllocator = *(executionContext->GetArena());
-    auto partitionHashFuncsPtr = partitionHashFuncs.data();
-    auto partitionEqualFuncsPtr = partitionEqualFuncs.data();
-    auto inputVectors = inputVecBatch->GetVectors();
     auto inputRowCount = inputVecBatch->GetRowCount();
-    auto inputColNum = inputVecBatch->GetVectorCount();
     for (int32_t rowIdx = 0; rowIdx < inputRowCount; rowIdx++) {
-        // check whether the key is inserted
-        PartitionKey key(partitionHashFuncsPtr, partitionEqualFuncsPtr, partitionColNum, partitionVectors, rowIdx);
+        // first, serialize partition row
+        type::StringRef key = GeneratePartitionKey(partitionVectors, partitionColNum, rowIdx, arenaAllocator);
+
+        // second, check whether the key is inserted
         auto keyPos = partitionedMap.find(key);
         if (keyPos == partitionedMap.end()) {
             // this is a new partition
-            InsertNewPartition(key, inputVectors, inputColNum, rowIdx, partitionHashFuncsPtr, partitionEqualFuncsPtr);
+            InsertNewPartition(key, inputVectors, inputColNum, rowIdx);
         } else {
+            arenaAllocator.RollBackContinualMem();
+
             // this is an existing partition
             auto value = keyPos->second;
-            if (value->currentSize < n) {
+            if (value->nextIndex < n) {
                 // case 1, the vecBatches is not full
                 InsertNewValue(*value, inputVectors, inputColNum, sortVectors, rowIdx);
             } else {
@@ -613,10 +720,11 @@ int32_t TopNSortOperator::AddInput(VectorBatch *inputVecBatch)
 int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
     int32_t outputRowCount = 0;
-    std::unordered_map<PartitionKey, PartitionValue *, PartitionKeyHash, PartitionKeyEqual>::iterator mapPos;
-    for (mapPos = currentIter; mapPos != partitionedMap.end(); ++mapPos) {
+    std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator mapPos;
+    auto mapEnd = partitionedMap.end();
+    for (mapPos = currentIter; mapPos != mapEnd; ++mapPos) {
         auto value = mapPos->second;
-        outputRowCount += value->currentSize;
+        outputRowCount += value->nextIndex;
         if (outputRowCount >= maxRowCount) {
             break;
         }
@@ -626,26 +734,29 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
         return 0;
     }
 
-    auto end = mapPos++;
+    std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator end;
+    if (mapPos == mapEnd) {
+        end = mapEnd;
+        SetStatus(OMNI_STATUS_FINISHED);
+    } else {
+        end = mapPos++;
+    }
+
     auto outputColNum = sourceTypes.GetSize();
     auto result = new VectorBatch(outputRowCount);
     int32_t resultRowIdx = 0;
     VectorHelper::AppendVectors(result, sourceTypes, outputRowCount);
     for (auto iter = currentIter; iter != end; ++iter) {
-        auto partitionValue = iter->second;
-        if (partitionValue->currentSize == 0) {
-            delete partitionValue;
-            continue;
-        }
-        auto vecBatches = partitionValue->vecBatches;
-        for (int32_t i = 0; i < partitionValue->currentSize; i++) {
+        auto mapValue = iter->second;
+        auto vecBatches = mapValue->vecBatches;
+        auto vecBatchSize = mapValue->nextIndex;
+        for (int32_t i = 0; i < vecBatchSize; i++) {
             auto vecBatch = vecBatches[i];
             for (int32_t j = 0; j < outputColNum; j++) {
-                setOutputValueFuncs[i](vecBatch->Get(i), 0, result->Get(i), resultRowIdx);
+                setOutputValueFuncs[j](vecBatch->Get(j), 0, result->Get(j), resultRowIdx);
             }
             resultRowIdx++;
         }
-        delete partitionValue;
     }
     *outputVecBatch = result;
     currentIter = end;
@@ -654,5 +765,10 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
 
 OmniStatus TopNSortOperator::Close()
 {
+    auto end = partitionedMap.end();
+    for (auto iter = partitionedMap.begin(); iter != end; iter++) {
+        auto mapValue = iter->second;
+        delete mapValue;
+    }
     return OMNI_STATUS_NORMAL;
 }
