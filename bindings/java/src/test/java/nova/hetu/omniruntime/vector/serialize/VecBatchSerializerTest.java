@@ -341,6 +341,147 @@ public class VecBatchSerializerTest {
     }
 
     @Test
+    public void testSerializeSlicedVarCharVec() {
+        // prepare vector batch
+        VarcharVec varcharVec = new VarcharVec(ROW_COUNT);
+        for (int i = 0; i < ROW_COUNT; i++) {
+            varcharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
+        }
+
+        int size = 10;
+        VarcharVec slicedVec = varcharVec.slice(10, size);
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{slicedVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        VarcharVec checkResultVec = (VarcharVec) checkVecBatch.getVectors()[0];
+        assertEquals(size, checkResultVec.getSize());
+        for (int i = 0; i < size; i++) {
+            int tmp = i + 10;
+            assertEquals("test" + tmp, new String(checkResultVec.get(i)));
+        }
+
+        varcharVec.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
+
+    @Test
+    public void testSerializeSlicedVarCharVecWithNull() {
+        // prepare vector batch
+        VarcharVec varcharVec = new VarcharVec(ROW_COUNT);
+        for (int i = 0; i < ROW_COUNT; i++) {
+            if (i % 2 == 0) {
+                varcharVec.set(i, ("test" + i).getBytes(StandardCharsets.UTF_8));
+            } else {
+                varcharVec.setNull(i);
+            }
+        }
+
+        int positionOffset = 5;
+        int size = 10;
+        VarcharVec slicedVec = varcharVec.slice(positionOffset, size);
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{slicedVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        VarcharVec checkResultVec = (VarcharVec) checkVecBatch.getVectors()[0];
+        assertEquals(size, checkResultVec.getSize());
+        for (int i = 0; i < size; i++) {
+            if (i % 2 == positionOffset % 2) {
+                int tmp = i + positionOffset;
+                assertEquals("test" + tmp, new String(checkResultVec.get(i)));
+            } else {
+                assertTrue(checkResultVec.isNull(i));
+            }
+        }
+
+        varcharVec.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
+
+    @Test
+    public void testSerializeSlicedVarCharVecWithFullNull() {
+        // prepare vector batch
+        VarcharVec varcharVec = new VarcharVec(ROW_COUNT);
+        for (int i = 0; i < ROW_COUNT; i++) {
+            varcharVec.setNull(i);
+        }
+
+        int positionOffset = 5;
+        int size = 10;
+        VarcharVec slicedVec = varcharVec.slice(positionOffset, size);
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{slicedVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        VarcharVec checkResultVec = (VarcharVec) checkVecBatch.getVectors()[0];
+        assertEquals(size, checkResultVec.getSize());
+        for (int i = 0; i < size; i++) {
+            assertTrue(checkResultVec.isNull(i));
+        }
+
+        varcharVec.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
+
+    @Test
+    public void testSerializeSlicedVarCharVecWithEmptyValue() {
+        // prepare vector batch
+        VarcharVec varcharVec = new VarcharVec(ROW_COUNT);
+        for (int i = 0; i < ROW_COUNT; i++) {
+            varcharVec.set(i, (" ").getBytes(StandardCharsets.UTF_8));
+        }
+
+        int positionOffset = 5;
+        int size = 10;
+        VarcharVec slicedVec = varcharVec.slice(positionOffset, size);
+
+        VecBatch vecBatch = new VecBatch(new Vec[]{slicedVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        VarcharVec checkResultVec = (VarcharVec) checkVecBatch.getVectors()[0];
+        assertEquals(size, checkResultVec.getSize());
+        for (int i = 0; i < size; i++) {
+            assertEquals(" ", new String(checkResultVec.get(i)));
+        }
+
+        varcharVec.close();
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
+
+    @Test
     public void testSerializeVectorSizeReset() {
         int size = 1000;
         LongVec col1 = new LongVec(size);

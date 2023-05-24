@@ -23,15 +23,17 @@ import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.LongVec;
+import nova.hetu.omniruntime.vector.OmniBuf;
+import nova.hetu.omniruntime.vector.OmniBufFactory;
 import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
-import nova.hetu.omniruntime.vector.VariableWidthVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecEncoding;
 import nova.hetu.omniruntime.vector.VecFactory;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * VecBatchSerializer implementation of protobuf.
@@ -92,17 +94,17 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
 
         Vec compactVec = compactVec(vec, ids);
 
-        if (compactVec instanceof VariableWidthVec) {
-            VariableWidthVec variableWidthVec = (VariableWidthVec) compactVec;
-            ByteBuffer buffer = JvmUtils.directBuffer(variableWidthVec.getOffsetsBuf());
-            // only serialize the actual offset size
-            buffer.limit(variableWidthVec.getRealOffsetBufCapacityInBytes());
-            protoVecBuilder.setOffsets(ByteString.copyFrom(buffer));
+        ByteBuffer valueBuf;
+        if (compactVec instanceof VarcharVec) {
+            VarcharVec varcharVec = (VarcharVec) compactVec;
+            valueBuf = serializeVarcharVector(protoVecBuilder, varcharVec);
+        } else {
+            // For fixed vector, only serialize value.
+            valueBuf = JvmUtils.directBuffer(compactVec.getValuesBuf());
+            // only serialize the data actually written
+            valueBuf.limit(compactVec.getRealValueBufCapacityInBytes());
         }
 
-        ByteBuffer valueBuf = JvmUtils.directBuffer(compactVec.getValuesBuf());
-        // only serialize the data actually written
-        valueBuf.limit(compactVec.getRealValueBufCapacityInBytes());
         ByteBuffer valueNullsBuf = JvmUtils.directBuffer(compactVec.getValueNullsBuf());
         // only serialize the actual null size
         valueNullsBuf.limit(compactVec.getRealNullBufCapacityInBytes());
@@ -169,6 +171,42 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         }
         // original vec
         return vec;
+    }
+
+    private ByteBuffer serializeVarcharVector(VecBatchSerde.Vec.Builder protoVecBuilder, VarcharVec varcharVec) {
+        ByteBuffer valueBuf;
+        ByteBuffer offsetBuf;
+        int size = varcharVec.getSize();
+        int startOffset = varcharVec.getValueOffset(0);
+        int realOffsetBufCapacity = varcharVec.getRealOffsetBufCapacityInBytes();
+        int realValueBufCapacity = varcharVec.getRealValueBufCapacityInBytes();
+        if (startOffset > 0) {
+            // For sliced varchar vector, offset the value base address and offsets to
+            // ensure that the serialized value is correct.
+            offsetBuf = ByteBuffer.allocate(realOffsetBufCapacity).order(ByteOrder.LITTLE_ENDIAN);
+            for (int i = 0; i < size + 1; i++) {
+                offsetBuf.putInt(varcharVec.getValueOffset(i) - startOffset);
+            }
+            offsetBuf.flip();
+            protoVecBuilder.setOffsets(ByteString.copyFrom(offsetBuf));
+
+            long valueBufAddress = varcharVec.getValuesBuf().getAddress() + startOffset;
+            OmniBuf omniValueBuf = OmniBufFactory.create(valueBufAddress, realValueBufCapacity);
+            valueBuf = JvmUtils.directBuffer(omniValueBuf);
+            // only serialize the data actually written
+            valueBuf.limit(realValueBufCapacity);
+        } else {
+            // For not sliced varchar vector, serialize value and offset.
+            offsetBuf = JvmUtils.directBuffer(varcharVec.getOffsetsBuf());
+            // only serialize the actual offset size
+            offsetBuf.limit(realOffsetBufCapacity);
+            protoVecBuilder.setOffsets(ByteString.copyFrom(offsetBuf));
+
+            valueBuf = JvmUtils.directBuffer(varcharVec.getValuesBuf());
+            // only serialize the data actually written
+            valueBuf.limit(realValueBufCapacity);
+        }
+        return valueBuf;
     }
 
     @Override
