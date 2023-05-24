@@ -77,7 +77,7 @@ extern "C" DLLEXPORT void FillString(int64_t contextPtr, uint8_t **dataArray, bo
     errno_t err;
     char *ret;
     for (int i = 0; i < rowCnt; i++) {
-        ret = ArenaAllocatorMalloc(contextPtr, length);
+        ret = ArenaAllocatorMalloc(contextPtr, length + 1);
         err = memcpy_s(ret, length + 1, literal, length);
         if (err != EOK) {
             SetError(contextPtr, "Fill string failed");
