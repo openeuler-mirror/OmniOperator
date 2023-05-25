@@ -21,11 +21,7 @@ OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sour
 std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataTypes &sourceTypes,
     OverflowConfig *overflowConfig);
 
-OperatorFactory *CreateLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount);
-
 OperatorFactory *CreateDistinctLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount);
-
-OperatorFactory *CreatePartitionedOutputFactory(omniruntime::type::DataTypes &sourceTypes);
 
 OperatorFactory *CreateProjectFactory(omniruntime::type::DataTypes &sourceTypes,
     std::vector<Expr *> exprs, OverflowConfig *overflowConfig);

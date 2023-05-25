@@ -11,9 +11,7 @@
 #include "vector/vector_helper.h"
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/non_group_aggregation.h"
-#include "operator/limit/limit.h"
 #include "operator/limit/distinct_limit.h"
-#include "operator/partitionedoutput/partitionedoutput.h"
 #include "operator/sort/sort.h"
 #include "operator/union/union.h"
 #include "operator/topn/topn.h"
@@ -48,7 +46,7 @@ std::vector<DataTypePtr> allSupportedBaseTypes = { ShortType(),
                                                    CharType(CHAR_SIZE) };
 
 VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize, int32_t loopCount,
-    VectorAllocator *vectorAllocator, bool isDictionary, bool hasNull)
+    bool isDictionary, bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     std::vector<DataTypePtr> sourceTypesVec = sourceTypes.Get();
@@ -56,23 +54,23 @@ VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, in
     int32_t totalDataSize = dataSize * loopCount;
     const int32_t modValue = 4;
 
-    Vector *sourceVectors[sourceTypesSize];
+    BaseVector *sourceVectors[sourceTypesSize];
     for (int32_t i = 0; i < sourceTypesSize; i++) {
         int32_t capacityInBytes = (sourceTypeIds[i] == OMNI_CHAR || sourceTypeIds[i] == OMNI_VARCHAR) ?
             static_cast<int32_t>(static_cast<VarcharDataType *>(sourceTypesVec[i].get())->GetWidth()) * totalDataSize :
             0;
-        sourceVectors[i] = VectorHelper::CreateVector(vectorAllocator, OMNI_VEC_ENCODING_FLAT, sourceTypeIds[i],
-            capacityInBytes, totalDataSize);
-        VectorHelper::SetValue(sourceVectors[i], 0, sortDatas[i]);
+        sourceVectors[i] =
+            VectorHelper::CreateVector(OMNI_FLAT, sourceTypeIds[i], totalDataSize, capacityInBytes).release();
+        VectorHelper::SetValue(sourceVectors[i], 0, sortDatas[i], sourceTypeIds[i]);
     }
     for (int32_t i = 1; i < totalDataSize; i++) {
         for (int32_t j = 0; j < sourceTypesSize; j++) {
             if ((i % modValue == 0) && hasNull && (sourceTypeIds[j] == OMNI_VARCHAR || sourceTypeIds[j] == OMNI_CHAR)) {
-                static_cast<VarcharVector *>(sourceVectors[j])->SetValueNull(i);
+                reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(sourceVectors[j])->SetNull(i);
             } else if ((i % modValue == 0) && hasNull) {
-                sourceVectors[j]->SetValueNull(i);
+                sourceVectors[j]->SetNull(i);
             } else {
-                VectorHelper::SetValue(sourceVectors[j], i, sortDatas[j]);
+                VectorHelper::SetValue(sourceVectors[j], i, sortDatas[j], sourceTypeIds[j]);
             }
         }
     }
@@ -84,14 +82,15 @@ VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, in
         }
         for (int32_t i = 0; i < sourceTypesSize; i++) {
             auto sortVector = sourceVectors[i];
-            sourceVectors[i] = new DictionaryVector(sortVector, ids, totalDataSize);
+            sourceVectors[i] =
+                VectorHelper::CreateDictionaryVector(ids, totalDataSize, sortVector, sourceTypeIds[i]).release();
             delete sortVector;
         }
     }
 
-    auto sortVecBatch = new VectorBatch(sourceTypesSize, totalDataSize);
+    auto sortVecBatch = new VectorBatch(totalDataSize);
     for (int32_t i = 0; i < sourceTypesSize; i++) {
-        sortVecBatch->SetVector(i, sourceVectors[i]);
+        sortVecBatch->Append(sourceVectors[i]);
     }
     return sortVecBatch;
 }
@@ -101,19 +100,10 @@ void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory)
     delete operatorFactory;
 }
 
-VectorBatch *CreateEmptyVectorBatch(std::vector<DataTypePtr> &dataTypes)
-{
-    VectorAllocator *allocator = VectorAllocator::GetGlobalAllocator();
-    VectorBatch *vectorBatch = new VectorBatch(dataTypes.size());
-    vectorBatch->NewVectors(allocator, dataTypes);
-    return vectorBatch;
-}
-
 void TestFilter(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "Filter Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("filter");
-    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     FieldExpr *col1Expr = new FieldExpr(2, LongType());
     FieldExpr *col2Expr = new FieldExpr(4, DoubleType());
@@ -130,18 +120,18 @@ void TestFilter(void **testData, omniruntime::type::DataTypes &sourceTypes, int3
     VectorBatch *resultVecBatch = nullptr;
     op->GetOutput(&resultVecBatch);
 
-    VectorHelper::FreeVecBatch(resultVecBatch);
+    if (resultVecBatch) {
+        VectorHelper::FreeVecBatch(resultVecBatch);
+    }
     omniruntime::op::Operator::DeleteOperator(op);
     DeleteOperatorFactory(factory);
     delete overflowConfig;
-    delete vecAllocator;
 }
 
 void TestSort(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "Sort Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("sort");
-    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     auto operatorFactory = dynamic_cast<SortOperatorFactory *>(CreateSortFactory(sourceTypes));
     auto sortOperator = dynamic_cast<SortOperator *>(operatorFactory->CreateOperator());
@@ -149,17 +139,17 @@ void TestSort(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
-    VectorHelper::FreeVecBatch(outputVecBatch);
+    if (outputVecBatch) {
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteOperatorFactory(operatorFactory);
-    delete vecAllocator;
 }
 
 void TestAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "Aggregation Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("aggregation");
-    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     AggregationOperatorFactory *nativeOperatorFactory =
         dynamic_cast<AggregationOperatorFactory *>(CreateAggregationFactory(sourceTypes));
@@ -169,18 +159,18 @@ void TestAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes,
     VectorBatch *resultVecBatch = nullptr;
     groupBy->GetOutput(&resultVecBatch);
 
-    VectorHelper::FreeVecBatch(resultVecBatch);
+    if (resultVecBatch) {
+        VectorHelper::FreeVecBatch(resultVecBatch);
+    }
     omniruntime::op::Operator::DeleteOperator(groupBy);
     DeleteOperatorFactory(nativeOperatorFactory);
-    delete vecAllocator;
 }
 
 void TestHashAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize,
     int32_t loopCount)
 {
     std::cout << "HashAggregation Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("HashAggregation");
-    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     HashAggregationOperatorFactory *nativeOperatorFactory =
         dynamic_cast<HashAggregationOperatorFactory *>(CreateHashAggregationFactory(sourceTypes));
@@ -190,18 +180,17 @@ void TestHashAggregation(void **testData, omniruntime::type::DataTypes &sourceTy
     VectorBatch *resultVecBatch = nullptr;
     groupBy->GetOutput(&resultVecBatch);
 
-    VectorHelper::FreeVecBatch(resultVecBatch);
+    if (resultVecBatch) {
+        VectorHelper::FreeVecBatch(resultVecBatch);
+    }
     omniruntime::op::Operator::DeleteOperator(groupBy);
     DeleteOperatorFactory(nativeOperatorFactory);
-    delete vecAllocator;
 }
 
 void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "HashJoin Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("HashJoin");
-    auto vecBatch =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, (loopCount / 10) + 1, vecAllocator, true, true);
+    auto vecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, (loopCount / 10) + 1, true, true);
 
     auto overflowConfig = new OverflowConfig();
     auto operatorFactories = CreateHashJoinFactory(sourceTypes, overflowConfig);
@@ -211,8 +200,7 @@ void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     VectorBatch *hashBuildOutput = nullptr;
     hashBuilderOperator->GetOutput(&hashBuildOutput);
 
-    VectorBatch *probeVecBatch =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    VectorBatch *probeVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     auto lookupJoinFactory = dynamic_cast<LookupJoinOperatorFactory *>(operatorFactories[1]);
     auto lookupJoinOperator = lookupJoinFactory->CreateOperator();
@@ -220,41 +208,21 @@ void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     VectorBatch *outputVecBatch = nullptr;
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
-    VectorHelper::FreeVecBatch(outputVecBatch);
+    if (outputVecBatch) {
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     for (auto operatorFactory : operatorFactories) {
         DeleteOperatorFactory(operatorFactory);
     }
     delete overflowConfig;
-    delete vecAllocator;
-}
-
-void TestLimit(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
-{
-    std::cout << "Limit Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Limit");
-    VectorBatch *vecBatch =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
-
-    auto operatorFactory = dynamic_cast<LimitOperatorFactory *>(CreateLimitFactory(sourceTypes, loopCount));
-    auto limitOperator = operatorFactory->CreateOperator();
-    limitOperator->AddInput(vecBatch);
-    VectorBatch *outputVecBatch = nullptr;
-    limitOperator->GetOutput(&outputVecBatch);
-
-    VectorHelper::FreeVecBatch(outputVecBatch);
-    omniruntime::op::Operator::DeleteOperator(limitOperator);
-    DeleteOperatorFactory(operatorFactory);
-    delete vecAllocator;
 }
 
 void TestDistinctLimit(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "DistinctLimit Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("DistinctLimit");
-    VectorBatch *vecBatch =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    VectorBatch *vecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     auto operatorFactory =
         dynamic_cast<DistinctLimitOperatorFactory *>(CreateDistinctLimitFactory(sourceTypes, loopCount));
@@ -263,38 +231,17 @@ void TestDistinctLimit(void **testData, omniruntime::type::DataTypes &sourceType
     VectorBatch *outputVecBatch = nullptr;
     distinctLimitOperator->GetOutput(&outputVecBatch);
 
-    VectorHelper::FreeVecBatch(outputVecBatch);
+    if (outputVecBatch) {
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
     omniruntime::op::Operator::DeleteOperator(distinctLimitOperator);
     DeleteOperatorFactory(operatorFactory);
-    delete vecAllocator;
-}
-
-void TestPartitionedOutput(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize,
-    int32_t loopCount)
-{
-    std::cout << "PartitionedOutput Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("PartitionedOutput");
-    VectorBatch *vecBatch =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
-    auto operatorFactory =
-        dynamic_cast<PartitionedOutputOperatorFactory *>(CreatePartitionedOutputFactory(sourceTypes));
-    auto partitionedOperator = operatorFactory->CreateOperator();
-    partitionedOperator->AddInput(vecBatch);
-    VectorBatch *outputVecBatch = nullptr;
-    partitionedOperator->GetOutput(&outputVecBatch);
-
-    VectorHelper::FreeVecBatch(outputVecBatch);
-    omniruntime::op::Operator::DeleteOperator(partitionedOperator);
-    DeleteOperatorFactory(operatorFactory);
-    delete vecAllocator;
 }
 
 void TestProject(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "Project Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Project");
-    VectorBatch *vecBatch =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    VectorBatch *vecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     FieldExpr *addLeft = new FieldExpr(1, IntType());
     LiteralExpr *addRight = new LiteralExpr(5, IntType());
@@ -310,21 +257,19 @@ void TestProject(void **testData, omniruntime::type::DataTypes &sourceTypes, int
     VectorBatch *resultVecBatch = nullptr;
     projectOperator->GetOutput(&resultVecBatch);
 
-    VectorHelper::FreeVecBatch(resultVecBatch);
+    if (resultVecBatch) {
+        VectorHelper::FreeVecBatch(resultVecBatch);
+    }
     omniruntime::op::Operator::DeleteOperator(projectOperator);
     DeleteOperatorFactory(operatorFactory);
-    delete vecAllocator;
     delete overflowConfig;
 }
 
 void TestUnion(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "Union Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Union");
-    VectorBatch *vecBatch1 =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
-    VectorBatch *vecBatch2 =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    VectorBatch *vecBatch1 = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
+    VectorBatch *vecBatch2 = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     UnionOperatorFactory *operatorFactory = dynamic_cast<UnionOperatorFactory *>(CreateUnionFactory(sourceTypes));
     auto unionOperator = operatorFactory->CreateOperator();
@@ -340,22 +285,18 @@ void TestUnion(void **testData, omniruntime::type::DataTypes &sourceTypes, int32
     VectorHelper::FreeVecBatches(outputVecBatches);
     omniruntime::op::Operator::DeleteOperator(unionOperator);
     DeleteOperatorFactory(operatorFactory);
-    delete vecAllocator;
 }
 
 void TestSortMergeJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "SortMergeJoin Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("SortMergeJoin");
     auto overflowConfig = new OverflowConfig();
     auto smjOp = dynamic_cast<SortMergeJoinOperator *>(CreateSortMergeJoinOperator(sourceTypes, overflowConfig));
 
     // construct data
-    VectorBatch *streamedTblVecBatch1 =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    VectorBatch *streamedTblVecBatch1 = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, false, true);
 
-    VectorBatch *bufferedTblVecBatch1 =
-        CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    VectorBatch *bufferedTblVecBatch1 = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, false, true);
 
     // need add buffered table data
     smjOp->AddStreamedTableInput(streamedTblVecBatch1);
@@ -374,7 +315,7 @@ void TestSortMergeJoin(void **testData, omniruntime::type::DataTypes &sourceType
         VarcharType(CHAR_SIZE),
         CharType(CHAR_SIZE) };
     // add eof flag to buffered table , need add streamed table data
-    VectorBatch *bufferedTblVecBatchEof = CreateEmptyVectorBatch(bufferTypesVector);
+    VectorBatch *bufferedTblVecBatchEof = omniruntime::TestUtil::CreateEmptyVectorBatch(DataTypes(bufferTypesVector));
     smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
 
     // add eof flag to streamed table
@@ -388,28 +329,28 @@ void TestSortMergeJoin(void **testData, omniruntime::type::DataTypes &sourceType
         Decimal128Type(LONG_DECIMAL_SIZE, LONG_DECIMAL_SIZE),
         VarcharType(CHAR_SIZE),
         CharType(CHAR_SIZE) };
-    VectorBatch *streamedTblVecBatchEof = CreateEmptyVectorBatch(streamTypesVector);
+    VectorBatch *streamedTblVecBatchEof = omniruntime::TestUtil::CreateEmptyVectorBatch(DataTypes(streamTypesVector));
     smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
 
     VectorBatch *result = nullptr;
     smjOp->GetOutput(&result);
 
-    auto streamedTblVecBatchEof1 = CreateEmptyVectorBatch(streamTypesVector);
+    auto streamedTblVecBatchEof1 = omniruntime::TestUtil::CreateEmptyVectorBatch(DataTypes(streamTypesVector));
     smjOp->AddStreamedTableInput(streamedTblVecBatchEof1);
 
     // check the join result
-    VectorHelper::FreeVecBatch(result);
+    if (result) {
+        VectorHelper::FreeVecBatch(result);
+    }
 
     omniruntime::op::Operator::DeleteOperator(smjOp);
     delete overflowConfig;
-    delete vecAllocator;
 }
 
 void TestTopN(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "TopN Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("TopN");
-    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
 
     TopNOperatorFactory *topNOperatorFactory = dynamic_cast<TopNOperatorFactory *>(CreateTopNFactory(sourceTypes));
     auto topNOperator = topNOperatorFactory->CreateOperator();
@@ -417,17 +358,17 @@ void TestTopN(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_
     VectorBatch *outputVectorBatch = nullptr;
     topNOperator->GetOutput(&outputVectorBatch);
 
-    VectorHelper::FreeVecBatch(outputVectorBatch);
+    if (outputVectorBatch) {
+        VectorHelper::FreeVecBatch(outputVectorBatch);
+    }
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteOperatorFactory(topNOperatorFactory);
-    delete vecAllocator;
 }
 
 void TestWindow(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
 {
     std::cout << "Window Fuzz" << std::endl;
-    auto vecAllocator = VectorAllocator::GetGlobalAllocator()->NewChildAllocator("Window");
-    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, vecAllocator, true, true);
+    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
     DataTypes allTypes(std::vector<DataTypePtr>({ ShortType(), IntType(), LongType(), BooleanType(), DoubleType(),
         Date32Type(DAY), Decimal64Type(SHORT_DECIMAL_SIZE, 0), Decimal128Type(LONG_DECIMAL_SIZE, 0),
         VarcharType(CHAR_SIZE), CharType(CHAR_SIZE), DoubleType() }));
@@ -440,9 +381,10 @@ void TestWindow(void **testData, omniruntime::type::DataTypes &sourceTypes, int3
     windowOperator->GetOutput(&outputVecBatch);
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
-    VectorHelper::FreeVecBatch(outputVecBatch);
+    if (outputVecBatch) {
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
     DeleteOperatorFactory(operatorFactory);
-    delete vecAllocator;
 }
 
 int GlobalFuzz(int16_t shortValue, int32_t intValue, int64_t longValue, bool boolValue, double doubleValue,
@@ -461,9 +403,7 @@ int GlobalFuzz(int16_t shortValue, int32_t intValue, int64_t longValue, bool boo
     TestFilter(inputDatas, sourceTypes, dataSize, loopCount);
     TestHashAggregation(inputDatas, sourceTypes, dataSize, loopCount);
     TestHashJoin(inputDatas, sourceTypes, dataSize, loopCount);
-    TestLimit(inputDatas, sourceTypes, dataSize, loopCount);
     TestDistinctLimit(inputDatas, sourceTypes, dataSize, loopCount);
-    TestPartitionedOutput(inputDatas, sourceTypes, dataSize, loopCount);
     TestProject(inputDatas, sourceTypes, dataSize, loopCount);
     TestSort(inputDatas, sourceTypes, dataSize, loopCount);
     TestSortMergeJoin(inputDatas, sourceTypes, dataSize, loopCount);
