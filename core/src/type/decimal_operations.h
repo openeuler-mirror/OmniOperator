@@ -931,8 +931,8 @@ private:
             return result;
         }
         if (scale > newScale) {
-            result = (val + TenOfScaleMultipliers[newScale - scale] / 2) /
-                TenOfScaleMultipliers[newScale - scale];
+            result = (val + TenOfScaleMultipliers[scale - newScale] / 2) /
+                TenOfScaleMultipliers[scale - newScale];
         } else {
             result *= TenOfScaleMultipliers[newScale - scale];
         }
@@ -1200,8 +1200,8 @@ public:
             return result;
         }
         if (scale > newScale) {
-            result = (val + TenOfScaleMultipliers[newScale - scale] / 2) /
-                TenOfScaleMultipliers[newScale - scale];
+            result = (val + TenOfScaleMultipliers[scale - newScale] / 2) /
+                TenOfScaleMultipliers[scale - newScale];
         } else {
             result *= TenOfScaleMultipliers[newScale - scale];
         }
