@@ -11,8 +11,9 @@ namespace omniruntime {
 namespace op {
 template <bool INPUT_RAW, bool OUTPUT_PARTIAL, typename RawInputVectorType, typename ResultType>
 class SumFlatIMAggregator : public Aggregator {
-using FixedVector = Vector<RawInputVectorType>;
-using DictVector = Vector<DictionaryContainer<RawInputVectorType>>;
+    using FixedVector = Vector<RawInputVectorType>;
+    using DictVector = Vector<DictionaryContainer<RawInputVectorType>>;
+
 public:
     SumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
         : Aggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels)
@@ -41,13 +42,7 @@ public:
                 *(static_cast<ResultType *>(state.val)) += (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
             }
         } else {
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                *(static_cast<ResultType *>(state.val)) +=
-                    (static_cast<Vector<DictionaryContainer<ResultType>> *>(vector))->GetValue(rowIndex);
-            } else {
-                *(static_cast<ResultType *>(state.val)) +=
-                    (static_cast<Vector<ResultType> *>(vector))->GetValue(rowIndex);
-            }
+            *(static_cast<ResultType *>(state.val)) += (static_cast<Vector<ResultType> *>(vector))->GetValue(rowIndex);
         }
     }
 
