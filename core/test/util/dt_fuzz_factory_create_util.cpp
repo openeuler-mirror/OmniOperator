@@ -70,7 +70,7 @@ OperatorFactory *CreateAggregationFactory(omniruntime::type::DataTypes &sourceTy
     auto outputPartialsWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeContext.size());
 
     auto operatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeContext, aggInputColsContextWrap,
-        maskColsContext, aggOutputTypesWrap, inputRawsWrap, outputPartialsWrap);
+        maskColsContext, aggOutputTypesWrap, inputRawsWrap, outputPartialsWrap, true);
 
     return operatorFactory;
 }
@@ -98,7 +98,7 @@ OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sour
 
     auto operatorFactory =
         new HashAggregationOperatorFactory(groupByColContext, groupTypes, aggColContextWrap, aggInputTypesWrap,
-        aggOutputTypesWrap, aggFuncTypeContext, maskColsContext, inputRawsWrap, outputPartialsWrap, false);
+        aggOutputTypesWrap, aggFuncTypeContext, maskColsContext, inputRawsWrap, outputPartialsWrap, true);
     return operatorFactory;
 }
 
@@ -212,7 +212,7 @@ OperatorFactory *CreateWindowFactory(omniruntime::type::DataTypes &sourceTypes)
     auto operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 9,
         windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 1, windowFrameTypes,
-        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels);
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, true);
     return operatorFactory;
 }
 }
