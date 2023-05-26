@@ -86,8 +86,8 @@ public:
     bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
         *expectedResult = new VectorBatch(1);
-        std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
-        (*expectedResult)->Append(v.release());
+        BaseVector *v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
+        (*expectedResult)->Append(v);
         (*expectedResult)->Append(new Vector<int64_t>(1));
 
         if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
@@ -314,8 +314,8 @@ private:
         }
 
         expectedResult->Append(groupCol);
-        std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, nGroups);
-        expectedResult->Append(v.release());
+        BaseVector *v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, nGroups);
+        expectedResult->Append(v);
         expectedResult->Append(new Vector<int64_t>(nGroups));
 
         return expectedResult;

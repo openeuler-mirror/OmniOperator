@@ -380,7 +380,7 @@ TEST(HmppHash, VarcharSlicetest)
         std::string_view stringView(str.data(), str.length());
         varcharVector->SetValue(i, stringView);
     }
-    auto *varcharSliceVector = varcharVector->Slice(10, 100).release();
+    auto *varcharSliceVector = varcharVector->Slice(10, 100);
     int64_t hashVal;
     auto *combinedHashOmni = new int64_t[varcharSliceVector->GetSize()];
     for (int i = 0; i < varcharSliceVector->GetSize(); i++) {

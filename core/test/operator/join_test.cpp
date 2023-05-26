@@ -97,12 +97,13 @@ VectorBatch *ConstructSimpleExpectedData()
     auto expectedVec0 = CreateVector<int64_t>(originalDataSize, expectedData0);
     int32_t ids[expectedDataSize] = {0, 0, 0, 1, 1, 2, 3, 4, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9};
     auto expectedDictVec0 =
-        VectorHelper::CreateDictionary(ids, expectedDataSize, reinterpret_cast<Vector<int64_t> *>(expectedVec0.get()));
+        VectorHelper::CreateDictionary(ids, expectedDataSize, reinterpret_cast<Vector<int64_t> *>(expectedVec0));
     auto expectedVec1 = CreateVector<int64_t>(expectedDataSize, expectedData1);
+    delete expectedVec0;
 
     auto *vectorBatch = new VectorBatch(expectedDataSize);
-    vectorBatch->Append(expectedDictVec0.release());
-    vectorBatch->Append(expectedVec1.release());
+    vectorBatch->Append(expectedDictVec0);
+    vectorBatch->Append(expectedVec1);
     return vectorBatch;
 }
 
@@ -1110,10 +1111,10 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     auto *buildVecBatch = new VectorBatch(dataSize);
-    buildVecBatch->Append(CreateVector<int64_t>(dataSize, buildData0).release());
+    buildVecBatch->Append(CreateVector<int64_t>(dataSize, buildData0));
     const DataTypePtr &dataType = buildTypes.GetType(1);
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->Append(CreateDictionaryVector(*dataType, dataSize, ids, dataSize, buildData1).release());
+    buildVecBatch->Append(CreateDictionaryVector(*dataType, dataSize, ids, dataSize, buildData1));
 
     int32_t buildJoinCols[1] = {1};
     int32_t joinColsCount = 1;
@@ -1130,9 +1131,9 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     auto *probeVecBatch = new VectorBatch(dataSize);
-    probeVecBatch->Append(CreateVector<int64_t>(dataSize, probeData0).release());
+    probeVecBatch->Append(CreateVector<int64_t>(dataSize, probeData0));
     const DataTypePtr &probeDataType = probeTypes.GetType(1);
-    probeVecBatch->Append(CreateDictionaryVector(*probeDataType, dataSize, ids, dataSize, probeData1).release());
+    probeVecBatch->Append(CreateDictionaryVector(*probeDataType, dataSize, ids, dataSize, probeData1));
 
     int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -1226,12 +1227,14 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNulls)
     int32_t ids[2] = {0, 2};
     auto *expectedVecBatch = new VectorBatch(expectedDataSize);
     DataTypePtr dataType = LongType();
-    expectedVecBatch->Append(CreateDictionary<OMNI_LONG>(expectedProbeVec0.get(), ids, expectedDataSize).release());
-    expectedVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1.get(), ids, expectedDataSize).release());
-    expectedVecBatch->Append(expectedVector2.release());
-    expectedVecBatch->Append(expectedVector3.release());
+    expectedVecBatch->Append(CreateDictionary<OMNI_LONG>(expectedProbeVec0, ids, expectedDataSize));
+    expectedVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1, ids, expectedDataSize));
+    expectedVecBatch->Append(expectedVector2);
+    expectedVecBatch->Append(expectedVector3);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch, lookupJoinOperator->GetOutputType()));
 
+    delete expectedProbeVec0;
+    delete expectedProbeVec1;
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectedVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
@@ -1297,11 +1300,14 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNullsChar)
 
     auto expectedVecBatch = new VectorBatch(expectedDataSize);
     int32_t ids[2] = {0, 2};
-    expectedVecBatch->Append(CreateDictionary<OMNI_LONG>(expectedProbeVec0.get(), ids, expectedDataSize).release());
-    expectedVecBatch->Append(CreateDictionary<OMNI_CHAR>(expectedProbeVec1.get(), ids, expectedDataSize).release());
-    expectedVecBatch->Append(expectedVector2.release());
-    expectedVecBatch->Append(expectedVector3.release());
+    expectedVecBatch->Append(CreateDictionary<OMNI_LONG>(expectedProbeVec0, ids, expectedDataSize));
+    expectedVecBatch->Append(CreateDictionary<OMNI_CHAR>(expectedProbeVec1, ids, expectedDataSize));
+    expectedVecBatch->Append(expectedVector2);
+    expectedVecBatch->Append(expectedVector3);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch, lookupJoinOperator->GetOutputType()));
+
+    delete expectedProbeVec0;
+    delete expectedProbeVec1;
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectedVecBatch);
@@ -1372,15 +1378,17 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     int32_t expectData2[expectDataSize] = {20, 16, 19};
     int32_t expectData3[expectDataSize] = {31904, 31904, 31904};
     auto expectVecBatch = new VectorBatch(expectDataSize);
-    expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec0.get(), ids, expectDataSize).release());
-    expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec1.get(), ids, expectDataSize).release());
-    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2).release());
-    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData3).release());
+    expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec0, ids, expectDataSize));
+    expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec1, ids, expectDataSize));
+    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
+    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData3));
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, lookupJoinOperator->GetOutputType()));
 
     Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());
     Expr::DeleteExprs({ filterExpr });
 
+    delete expectedProbeVec0;
+    delete expectedProbeVec1;
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
@@ -1479,14 +1487,16 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
     std::string expectData3[expectDataSize] = {"31904", "31904", "31904"};
     int32_t ids[expectDataSize] = {0, 1, 7};
     auto expectVecBatch = new VectorBatch(expectDataSize);
-    expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec0.get(), ids, expectDataSize).release());
-    expectVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1.get(), ids, expectDataSize).release());
-    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2).release());
-    expectVecBatch->Append(CreateVarcharVector(*VarcharType(5), expectData3, expectDataSize).release());
+    expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec0, ids, expectDataSize));
+    expectVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1, ids, expectDataSize));
+    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
+    expectVecBatch->Append(CreateVarcharVector(*VarcharType(5), expectData3, expectDataSize));
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, lookupJoinOperator->GetOutputType()));
 
     Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());
     Expr::DeleteExprs({ filterExpr });
+    delete expectedProbeVec0;
+    delete expectedProbeVec1;
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
@@ -1555,14 +1565,16 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     std::string expectData3[expectDataSize] = {"35709", "35709", "35709"};
     int32_t ids[expectDataSize] = {3, 5, 9};
     auto expectVecBatch = new VectorBatch(expectDataSize);
-    expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec0.get(), ids, expectDataSize).release());
-    expectVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1.get(), ids, expectDataSize).release());
-    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2).release());
-    expectVecBatch->Append(CreateVarcharVector(*VarcharType(5), expectData3, expectDataSize).release());
+    expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec0, ids, expectDataSize));
+    expectVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1, ids, expectDataSize));
+    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
+    expectVecBatch->Append(CreateVarcharVector(*VarcharType(5), expectData3, expectDataSize));
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, lookupJoinOperator->GetOutputType()));
 
     Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());
     Expr::DeleteExprs({ filterExpr });
+    delete expectedProbeVec0;
+    delete expectedProbeVec1;
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
@@ -1600,7 +1612,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     std::string probeData1[dataSize] = {"35709", "35709", "31904", "12477", "31904", "38721", "90419", "35709",
                                         "88371", "35709"};
     auto probeVec0 = CreateVector<int32_t>(dataSize, probeData0);
-    auto probeVec1 = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(dataSize);
+    auto probeVec1 = new Vector<LargeStringContainer<std::string_view>>(dataSize);
     for (int32_t i = 0; i < dataSize; i++) {
         if (i % 5 == 4) {
             probeVec1->SetNull(i);
@@ -1610,8 +1622,8 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
         }
     }
     auto probeVecBatch = new VectorBatch(dataSize);
-    probeVecBatch->Append(probeVec0.release());
-    probeVecBatch->Append(probeVec1.release());
+    probeVecBatch->Append(probeVec0);
+    probeVecBatch->Append(probeVec1);
     auto expectedProbeVec0 = SliceVector(probeVecBatch->Get(0), 0, dataSize, probeTypes.GetType(0)->GetId());
     auto expectedProbeVec1 = SliceVector(probeVecBatch->Get(1), 0, dataSize, probeTypes.GetType(1)->GetId());
 
@@ -1634,8 +1646,8 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     const int32_t expectDataSize = 10;
     int32_t expectData2[expectDataSize] = {20, 16, -1, -1, -1, -1, -1, 19, -1, -1};
     std::string expectData3[expectDataSize] = {"31904", "31904", "", "", "", "", "", "31904", "", ""};
-    auto expectVec2 = std::make_unique<Vector<int32_t>>(expectDataSize);
-    auto expectVec3 = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(expectDataSize);
+    auto expectVec2 = new Vector<int32_t>(expectDataSize);
+    auto expectVec3 = new Vector<LargeStringContainer<std::string_view>>(expectDataSize);
     for (int32_t i = 0; i < expectDataSize; i++) {
         if (i == 0 || i == 1 || i == 7) {
             expectVec2->SetValue(i, expectData2[i]);
@@ -1648,10 +1660,10 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     }
 
     auto expectVecBatch = new VectorBatch(expectDataSize);
-    expectVecBatch->Append(expectedProbeVec0.release());
-    expectVecBatch->Append(expectedProbeVec1.release());
-    expectVecBatch->Append(expectVec2.release());
-    expectVecBatch->Append(expectVec3.release());
+    expectVecBatch->Append(expectedProbeVec0);
+    expectVecBatch->Append(expectedProbeVec1);
+    expectVecBatch->Append(expectVec2);
+    expectVecBatch->Append(expectVec3);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, lookupJoinOperator->GetOutputType()));
 
     Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());
@@ -1668,17 +1680,17 @@ VectorBatch *CreateBuildInputForAllTypes(DataTypes &buildTypes, void **buildData
     int32_t buildTypesSize = buildTypes.GetSize();
     auto &buildTypesVec = buildTypes.Get();
     auto *buildTypeIds = const_cast<int32_t *>(buildTypes.GetIds());
-    std::unique_ptr<BaseVector> buildVectors[buildTypesSize];
+    BaseVector *buildVectors[buildTypesSize];
     for (int32_t i = 0; i < buildTypesSize; i++) {
         buildVectors[i] = VectorHelper::CreateVector(OMNI_FLAT, buildTypeIds[i], dataSize);
-        SetValue(buildVectors[i].get(), 0, buildDatas[i], buildTypesVec[i]->GetId());
+        SetValue(buildVectors[i], 0, buildDatas[i], buildTypesVec[i]->GetId());
     }
     for (int32_t i = 1; i < dataSize; i++) {
         for (int32_t j = 0; j < buildTypesSize; j++) {
             if (i == j + 1) {
                 buildVectors[j]->SetNull(i);
             } else {
-                SetValue(buildVectors[j].get(), i, buildDatas[j], buildTypesVec[j]->GetId());
+                SetValue(buildVectors[j], i, buildDatas[j], buildTypesVec[j]->GetId());
             }
         }
     }
@@ -1690,14 +1702,15 @@ VectorBatch *CreateBuildInputForAllTypes(DataTypes &buildTypes, void **buildData
             ids[i] = i;
         }
         for (int32_t i = 0; i < buildTypesSize; i++) {
-            auto buildVector = buildVectors[i].get();
+            auto buildVector = buildVectors[i];
             buildVectors[i] = DYNAMIC_TYPE_DISPATCH(CreateDictionary, buildTypeIds[i], buildVector, ids, dataSize);
+            delete buildVector;
         }
     }
 
     auto buildVecBatch = new VectorBatch(dataSize);
     for (int32_t i = 0; i < buildTypesSize; i++) {
-        buildVecBatch->Append(buildVectors[i].release());
+        buildVecBatch->Append(buildVectors[i]);
     }
     return buildVecBatch;
 }
@@ -1707,7 +1720,7 @@ VectorBatch *CreateProbeInputForAllTypes(DataTypes &probeTypes, void **probeData
     int32_t probeTypesSize = probeTypes.GetSize();
     auto &probeTypesVec = probeTypes.Get();
     auto *probeTypeIds = const_cast<int32_t *>(probeTypes.GetIds());
-    std::unique_ptr<BaseVector> probeVectors[probeTypesSize];
+    BaseVector *probeVectors[probeTypesSize];
     for (int32_t i = 0; i < probeTypesSize; i++) {
         probeVectors[i] = VectorHelper::CreateVector(OMNI_FLAT, probeTypeIds[i], dataSize);
     }
@@ -1716,12 +1729,12 @@ VectorBatch *CreateProbeInputForAllTypes(DataTypes &probeTypes, void **probeData
             if (i == j) {
                 probeVectors[j]->SetNull(i);
             } else {
-                SetValue(probeVectors[j].get(), i, probeDatas[j], probeTypesVec[j]->GetId());
+                SetValue(probeVectors[j], i, probeDatas[j], probeTypesVec[j]->GetId());
             }
         }
     }
     for (int32_t j = 0; j < probeTypesSize; j++) {
-        SetValue(probeVectors[j].get(), probeTypesSize, probeDatas[j], probeTypesVec[j]->GetId());
+        SetValue(probeVectors[j], probeTypesSize, probeDatas[j], probeTypesVec[j]->GetId());
     }
     if (isDictionary) {
         int32_t ids[dataSize];
@@ -1729,13 +1742,14 @@ VectorBatch *CreateProbeInputForAllTypes(DataTypes &probeTypes, void **probeData
             ids[i] = i;
         }
         for (int32_t i = 0; i < probeTypesSize; i++) {
-            auto probeVector = probeVectors[i].get();
+            auto probeVector = probeVectors[i];
             probeVectors[i] = DYNAMIC_TYPE_DISPATCH(CreateDictionary, probeTypeIds[i], probeVector, ids, dataSize);
+            delete probeVector;
         }
     }
     auto probeVecBatch = new VectorBatch(dataSize);
     for (int32_t j = 0; j < probeTypesSize; j++) {
-        probeVecBatch->Append(probeVectors[j].release());
+        probeVecBatch->Append(probeVectors[j]);
     }
     return probeVecBatch;
 }
@@ -1754,12 +1768,12 @@ VectorBatch *CreateExpectVecBatchForAllTypes(DataTypes &probeTypes, VectorBatch 
     auto expectVecBatch = new VectorBatch(expectDataSize);
     for (int32_t i = 0; i < probeVecCount; i++) {
         BaseVector *col = probeVecBatch->Get(i);
-        expectVecBatch->Append(SliceVector(col, probeVecCount, 1, types[index % typeSize]->GetId()).release());
+        expectVecBatch->Append(SliceVector(col, probeVecCount, 1, types[index % typeSize]->GetId()));
         index++;
     }
     for (int32_t i = 0; i < buildVecCount; i++) {
         auto buildVector = buildVecBatch->Get(i);
-        expectVecBatch->Append(SliceVector(buildVector, 0, 1, types[index % typeSize]->GetId()).release());
+        expectVecBatch->Append(SliceVector(buildVector, 0, 1, types[index % typeSize]->GetId()));
         index++;
     }
     return expectVecBatch;
@@ -2036,8 +2050,8 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithOneBuildOp)
     auto expectedVec0 = CreateVector(1, expectedData0);
     auto expectedVec1 = CreateVector(1, expectedData1);
     auto vectorBatch = new VectorBatch(1);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
     vectorBatch->Get(0)->SetNull(0);
     EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch, expectTypes.Get()));
 
@@ -2085,8 +2099,8 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithTwoBuildOp)
     auto expectedVec0 = CreateVector(1, expectedData0);
     auto expectedVec1 = CreateVector(1, expectedData1);
     auto vectorBatch = new VectorBatch(1);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
     vectorBatch->Get(0)->SetNull(0);
     EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch, expectTypes.Get()));
 
@@ -2168,10 +2182,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoin)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedData2);
     auto expectedVec3 = CreateVector(expectedDatasSize, expectedData3);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
-    vectorBatch->Append(expectedVec2.release());
-    vectorBatch->Append(expectedVec3.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -2252,10 +2266,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinChar)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedDatas2);
     auto expectedVec3 = CreateVarcharVector(*VarcharType(4), expectedDatas3, expectedDatasSize);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
-    vectorBatch->Append(expectedVec2.release());
-    vectorBatch->Append(expectedVec3.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -2337,10 +2351,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDate32)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedDatas2);
     auto expectedVec3 = CreateVector(expectedDatasSize, expectedDatas3);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
-    vectorBatch->Append(expectedVec2.release());
-    vectorBatch->Append(expectedVec3.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -2424,10 +2438,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal64)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedDatas2);
     auto expectedVec3 = CreateVector(expectedDatasSize, expectedDatas3);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
-    vectorBatch->Append(expectedVec2.release());
-    vectorBatch->Append(expectedVec3.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -2513,10 +2527,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal128)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedDatas2);
     auto expectedVec3 = CreateVector(expectedDatasSize, expectedDatas3);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
-    vectorBatch->Append(expectedVec2.release());
-    vectorBatch->Append(expectedVec3.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -2598,10 +2612,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinShort)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedDatas2);
     auto expectedVec3 = CreateVector(expectedDatasSize, expectedDatas3);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
-    vectorBatch->Append(expectedVec2.release());
-    vectorBatch->Append(expectedVec3.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -2625,10 +2639,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDictionary)
     int64_t buildData0[] = {1, 2, 3, 4};
     int64_t buildData1[] = {111, 11, 333, 33};
     auto *buildVecBatch = new VectorBatch(dataSize);
-    buildVecBatch->Append(CreateVector(dataSize, buildData0).release());
+    buildVecBatch->Append(CreateVector(dataSize, buildData0));
     const DataTypePtr &dataType = buildTypes.GetType(1);
     int32_t ids[] = {0, 1, 2, 3};
-    buildVecBatch->Append(CreateDictionaryVector(*dataType, dataSize, ids, dataSize, buildData1).release());
+    buildVecBatch->Append(CreateDictionaryVector(*dataType, dataSize, ids, dataSize, buildData1));
 
     int32_t buildJoinCols[1] = {1};
     int32_t joinColsCount = 1;
@@ -2645,9 +2659,9 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDictionary)
     int64_t probeData0[] = {1, 2, 3, 4};
     int64_t probeData1[] = {11, 22, 33, 44};
     auto *probeVecBatch = new VectorBatch(dataSize);
-    probeVecBatch->Append(CreateVector(dataSize, probeData0).release());
+    probeVecBatch->Append(CreateVector(dataSize, probeData0));
     const DataTypePtr &probeDataType = probeTypes.GetType(1);
-    probeVecBatch->Append(CreateDictionaryVector(*probeDataType, dataSize, ids, dataSize, probeData1).release());
+    probeVecBatch->Append(CreateDictionaryVector(*probeDataType, dataSize, ids, dataSize, probeData1));
 
     int32_t probeOutputCols[2] = {0, 1};
     int32_t probeOutputColsCount = 2;
@@ -2690,10 +2704,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDictionary)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedDatas2);
     auto expectedVec3 = CreateVector(expectedDatasSize, expectedDatas3);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
-    vectorBatch->Append(expectedVec2.release());
-    vectorBatch->Append(expectedVec3.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -2772,13 +2786,11 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinHasOutputNulls)
     auto expectedVector3 = CreateVarcharVector(*VarcharType(3), expectedData3, expectedDataSize);
     auto expectedVecBatch = new VectorBatch(expectedDataSize);
     expectedVecBatch->Append(
-        CreateDictionaryVector(*expectedTypes.GetType(0), expectedDataSize, ids, expectedDataSize, expectedData0)
-            .release());
+        CreateDictionaryVector(*expectedTypes.GetType(0), expectedDataSize, ids, expectedDataSize, expectedData0));
     expectedVecBatch->Append(
-        CreateDictionaryVector(*expectedTypes.GetType(1), expectedDataSize, ids, expectedDataSize, expectedData1)
-            .release());
-    expectedVecBatch->Append(expectedVector2.release());
-    expectedVecBatch->Append(expectedVector3.release());
+        CreateDictionaryVector(*expectedTypes.GetType(1), expectedDataSize, ids, expectedDataSize, expectedData1));
+    expectedVecBatch->Append(expectedVector2);
+    expectedVecBatch->Append(expectedVector3);
     expectedVecBatch->Get(0)->SetNull(0);
     expectedVecBatch->Get(0)->SetNull(2);
     expectedVecBatch->Get(3)->SetNull(1);
@@ -2797,10 +2809,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinHasOutputNulls)
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedDatas2);
     auto expectedVec3 = CreateVarcharVector(*VarcharType(3), expectedDatas3, expectedDatasSize);
     auto vectorBatch = new VectorBatch(expectedDatasSize);
-    vectorBatch->Append(expectedVec0.release());
-    vectorBatch->Append(expectedVec1.release());
-    vectorBatch->Append(expectedVec2.release());
-    vectorBatch->Append(expectedVec3.release());
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
@@ -2866,8 +2878,8 @@ TEST(NativeOmniJoinTest, TestLeftSemiEqualityJoin)
     auto expectedVector0 = CreateVector<int64_t>(expectedDataSize, expectedData0);
     auto expectedVector1 = CreateVarcharVector(*VarcharType(3), expectedData1, expectedDataSize);
     auto expectedVecBatch = new VectorBatch(expectedDataSize);
-    expectedVecBatch->Append(expectedVector0.release());
-    expectedVecBatch->Append(expectedVector1.release());
+    expectedVecBatch->Append(expectedVector0);
+    expectedVecBatch->Append(expectedVector1);
     DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(2) }));
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch, expectedTypes.Get()));
 
@@ -2929,8 +2941,8 @@ TEST(NativeOmniJoinTest, TestLeftSemiEqualityJoinWithCharFilter)
     int32_t expectData0[expectDataSize] = {20, 16, 20, 19, 20};
     std::string expectData1[expectDataSize] = {"35709", "35709", "31904", "35709", "88371"};
     auto expectVecBatch = new VectorBatch(expectDataSize);
-    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData0).release());
-    expectVecBatch->Append(CreateVarcharVector(*VarcharType(5), expectData1, expectDataSize).release());
+    expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData0));
+    expectVecBatch->Append(CreateVarcharVector(*VarcharType(5), expectData1, expectDataSize));
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, lookupJoinOperator->GetOutputType()));
 
     Expr *filterExpr = const_cast<Expr *>(hashBuilderFactory->GetHashTables()->GetSimpleFilter()->GetExpression());

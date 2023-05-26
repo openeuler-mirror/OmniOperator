@@ -278,7 +278,7 @@ private:
         uint8_t charBuffer[varcharLength];
         if (!IsDictionary(state)) {
             auto *vector =
-                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, varcharLength * rowsPerPage).release();
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, varcharLength * rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 const auto valLen = (rand() % (varcharLength - 1)) + 1;
                 for (int32_t i = 0; i < valLen; ++i) {
@@ -289,7 +289,7 @@ private:
             }
             return vector;
         } else {
-            auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, 256, varcharLength * 256).release();
+            auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, 256, varcharLength * 256);
             for (int32_t k = 0; k < 256; ++k) {
                 const auto valLen = (rand() % (varcharLength - 1)) + 1;
                 for (int32_t i = 0; i < valLen; ++i) {
@@ -303,7 +303,7 @@ private:
                 ids[r] = rand() % 256;
             }
             auto dictVector =
-                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR).release();
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR);
             delete vector;
             return dictVector;
         }
@@ -327,7 +327,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector);
             delete vector;
             return dictVector;
         }
@@ -351,7 +351,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector);
             delete vector;
             return dictVector;
         }
@@ -375,7 +375,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector);
             delete vector;
             return dictVector;
         }
@@ -399,7 +399,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector);
             delete vector;
             return dictVector;
         }
@@ -411,8 +411,7 @@ private:
         DecimalPartialResult v;
         if (!IsDictionary(state)) {
             auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,
-                sizeof(DecimalPartialResult) * rowsPerPage)
-                               .release();
+                sizeof(DecimalPartialResult) * rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 v.sum = Decimal128(static_cast<int64_t>(rand() % 256 - 128));
                 v.count = rand() % 1024 + 1;
@@ -422,8 +421,7 @@ private:
             return vector;
         } else {
             auto *vector =
-                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, sizeof(DecimalPartialResult) * 256)
-                    .release();
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, sizeof(DecimalPartialResult) * 256);
             for (int32_t k = 0; k < 256; ++k) {
                 v.sum = Decimal128(static_cast<int64_t>(rand() % 256 - 128));
                 v.count = rand() % 1024 + 1;
@@ -435,7 +433,7 @@ private:
                 ids[r] = rand() % 256;
             }
             auto dictVector =
-                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR).release();
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR);
             delete vector;
             return dictVector;
         }
@@ -447,8 +445,7 @@ private:
         DecimalPartialResult v;
         if (!IsDictionary(state)) {
             auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,
-                sizeof(DecimalPartialResult) * rowsPerPage)
-                               .release();
+                sizeof(DecimalPartialResult) * rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 v.sum = Decimal128(static_cast<int64_t>(rand() % 256 - 128));
                 v.count = 1;
@@ -458,8 +455,7 @@ private:
             return vector;
         } else {
             auto *vector =
-                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, sizeof(DecimalPartialResult) * 256)
-                    .release();
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, sizeof(DecimalPartialResult) * 256);
             for (int32_t k = 0; k < 256; ++k) {
                 v.sum = Decimal128(static_cast<int64_t>(rand() % 256 - 128));
                 v.count = 1;
@@ -471,7 +467,7 @@ private:
                 ids[r] = rand() % 256;
             }
             auto dictVector =
-                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR).release();
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR);
             delete vector;
             return dictVector;
         }
@@ -512,7 +508,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % nGroups;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector);
             delete vector;
             return dictVector;
         }
@@ -536,7 +532,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 1024;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector);
             delete vector;
             return dictVector;
         }
@@ -559,7 +555,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = ((rand() % 100) < maskValidRatio) ? 1 : 0;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector);
             delete vector;
             return dictVector;
         }

@@ -264,7 +264,7 @@ TEST(MemoryManager, testFixedVectorStatisticsFunction)
     auto int32Vector = std::make_unique<Vector<int32_t>>(1000);
     auto slicedIntVector = int32Vector->Slice(0, 100);
     int32Vector.reset();
-    slicedIntVector.reset();
+    delete slicedIntVector;
 
     auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
     auto globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
@@ -280,7 +280,7 @@ TEST(MemoryManager, testVarcharVectorStatisticsFunction)
     auto varcharVector = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(1000);
     auto slicedVarcharVector = varcharVector->Slice(0, 100);
     varcharVector.reset();
-    slicedVarcharVector.reset();
+    delete slicedVarcharVector;
 
     auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
     auto globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
@@ -322,7 +322,7 @@ TEST(MemoryManager, testDictionaryVarcharVectorStatisticsFunction)
     originVec.reset();
     dictionary.reset();
     dictionaryVarcharVector.reset();
-    slicedDictionaryVarcharVector.reset();
+    delete slicedDictionaryVarcharVector;
 
     auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
     auto globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
@@ -350,7 +350,7 @@ TEST(MemoryManager, testDictionaryFixedVectorStatisticsFunction)
     originVec.reset();
     dictionary.reset();
     dictionaryFixedVector.reset();
-    slicedDictionaryFixedVector.reset();
+    delete slicedDictionaryFixedVector;
 
     auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
     auto globalMemoryAmount = globalMemoryManager->GetMemoryAmount();

@@ -108,6 +108,7 @@ template <typename T> void bm_slice_vector_getvalue(benchmark::State &state)
 
     std::cerr << "total: " << total << std::endl;
     delete parent;
+    delete vector;
 }
 
 template <> void bm_slice_vector_getvalue<std::string>(benchmark::State &state)
@@ -115,7 +116,7 @@ template <> void bm_slice_vector_getvalue<std::string>(benchmark::State &state)
     int parent_vec_size = 20000;
     int vecSize = 10000;
     int offset = 867;
-    std::unique_ptr<Vector<std::string>> vector;
+    Vector<std::string> *vector = nullptr;
     { // scope to ensure deletion of parent
         auto parent = std::make_unique<Vector<std::string>>(parent_vec_size);
         for (int i = 0; i < parent_vec_size; i++) {
@@ -131,7 +132,6 @@ template <> void bm_slice_vector_getvalue<std::string>(benchmark::State &state)
             total += vector->GetValue(i % vecSize).length();
         }
     }
-
     std::cerr << "total: " << total << std::endl;
 }
 

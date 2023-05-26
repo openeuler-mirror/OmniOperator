@@ -152,7 +152,7 @@ public:
      * @param offset
      * @param length
      */
-    std::unique_ptr<Vector<int64_t>> CopyPositions(const int *positions, int positionOffset, int length)
+    Vector<int64_t> *CopyPositions(const int *positions, int positionOffset, int length)
     {
         throw exception::OmniException(omniruntime::op::GetErrorCode(omniruntime::op::ErrorCode::UNSUPPORTED),
             "container vector not support CopyPositions");
@@ -164,7 +164,7 @@ public:
      * @param length
      * @param isCopy reserved parameters
      */
-    std::unique_ptr<ContainerVector> Slice(int positionOffset, int length, bool isCopy = false)
+    ContainerVector *Slice(int positionOffset, int length, bool isCopy = false)
     {
         throw exception::OmniException(omniruntime::op::GetErrorCode(omniruntime::op::ErrorCode::UNSUPPORTED),
             "container vector not support CopyPositions");

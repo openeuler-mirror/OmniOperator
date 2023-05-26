@@ -32,11 +32,11 @@ bool ColumnMatch(vec::BaseVector *actualColumn, vec::BaseVector *expectColumn, i
 
 vec::VectorBatch *CreateVectorBatch(const type::DataTypes &types, int32_t rowCount, ...);
 
-std::unique_ptr<omniruntime::vec::BaseVector> CreateVector(type::DataType &dataType, int32_t rowCount, va_list &args);
+omniruntime::vec::BaseVector *CreateVector(type::DataType &dataType, int32_t rowCount, va_list &args);
 
-template <typename T> std::unique_ptr<vec::BaseVector> CreateVector(int32_t length, T *values)
+template <typename T> vec::BaseVector *CreateVector(int32_t length, T *values)
 {
-    std::unique_ptr<vec::Vector<T>> vector = std::make_unique<vec::Vector<T>>(length);
+    vec::Vector<T> *vector = new vec::Vector<T>(length);
     for (int32_t i = 0; i < length; i++) {
         vector->SetValue(i, values[i]);
     }
@@ -44,13 +44,13 @@ template <typename T> std::unique_ptr<vec::BaseVector> CreateVector(int32_t leng
 }
 
 template <omniruntime::type::DataTypeId typeId>
-std::unique_ptr<vec::BaseVector> CreateFlatVector(int32_t length, va_list &args)
+vec::BaseVector *CreateFlatVector(int32_t length, va_list &args)
 {
     using namespace omniruntime::type;
     using T = typename NativeType<typeId>::type;
     using VarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
     if constexpr (std::is_same_v<T, std::string_view>) {
-        std::unique_ptr<VarcharVector> vector = std::make_unique<VarcharVector>(length);
+        VarcharVector *vector = new VarcharVector(length);
         std::string *str = va_arg(args, std::string *);
         for (int32_t i = 0; i < length; i++) {
             std::string_view value(str[i].data(), str[i].length());
@@ -58,7 +58,7 @@ std::unique_ptr<vec::BaseVector> CreateFlatVector(int32_t length, va_list &args)
         }
         return vector;
     } else {
-        std::unique_ptr<vec::Vector<T>> vector = std::make_unique<vec::Vector<T>>(length);
+        vec::Vector<T> *vector = new vec::Vector<T>(length);
         T *value = va_arg(args, T *);
         for (int32_t i = 0; i < length; i++) {
             vector->SetValue(i, value[i]);
@@ -70,7 +70,7 @@ std::unique_ptr<vec::BaseVector> CreateFlatVector(int32_t length, va_list &args)
 void SetValue(vec::BaseVector *vector, int32_t index, void *value, int32_t typeId);
 
 template <type::DataTypeId typeId>
-std::unique_ptr<vec::BaseVector> DictionaryVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
+vec::BaseVector *DictionaryVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
 {
     using T = typename type::NativeType<typeId>::type;
     if constexpr (std::is_same_v<T, std::string_view>) {
@@ -82,7 +82,7 @@ std::unique_ptr<vec::BaseVector> DictionaryVectorSlice(vec::BaseVector *vector, 
 }
 
 template <type::DataTypeId typeId>
-std::unique_ptr<vec::BaseVector> FlatVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
+vec::BaseVector *FlatVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
 {
     using T = typename type::NativeType<typeId>::type;
     if constexpr (std::is_same_v<T, std::string_view>) {
@@ -93,7 +93,7 @@ std::unique_ptr<vec::BaseVector> FlatVectorSlice(vec::BaseVector *vector, int32_
     }
 }
 
-std::unique_ptr<vec::BaseVector> SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length, int32_t typeId);
+vec::BaseVector *SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length, int32_t typeId);
 
 omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory);
 
@@ -111,11 +111,11 @@ void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t ex
 void AssertDoubleVectorEquals(omniruntime::vec::BaseVector *vector, double *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::BaseVector *vector, std::string *expectedValues);
 
-std::unique_ptr<vec::BaseVector> CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
+vec::BaseVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
     int32_t *ids, int32_t idsCount, ...);
 
 template <type::DataTypeId typeId>
-std::unique_ptr<vec::BaseVector> CreateDictionary(vec::BaseVector *vector, int32_t *ids, int32_t size)
+vec::BaseVector *CreateDictionary(vec::BaseVector *vector, int32_t *ids, int32_t size)
 {
     using T = typename type::NativeType<typeId>::type;
     if constexpr (std::is_same_v<T, std::string_view>) {
@@ -149,7 +149,7 @@ template <typename T> void AssertVectorEquals(vec::BaseVector *vector, T *expect
     }
 }
 
-std::unique_ptr<vec::BaseVector> CreateVarcharVector(type::DataType &type, std::string *values, int32_t length);
+vec::BaseVector *CreateVarcharVector(type::DataType &type, std::string *values, int32_t length);
 
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
     std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);

@@ -46,7 +46,7 @@ template <typename T> std::shared_ptr<Vector<DictionaryContainer<T>>> CreateDict
     return vector;
 }
 
-template <typename CONTAINER> std::shared_ptr<BaseVector> CreateStringTestVector()
+template <typename CONTAINER> BaseVector *CreateStringTestVector()
 {
     int valueSize = 1000;
     uint32_t stringWidth = OMNI_LARGE_WIDTH;
@@ -55,7 +55,7 @@ template <typename CONTAINER> std::shared_ptr<BaseVector> CreateStringTestVector
     valuePrefix = "hello_world__";
 
     auto baseVector = VectorHelper::CreateStringVector(valueSize, stringWidth);
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
 
     for (int i = 0; i < valueSize; i++) {
         std::string value = valuePrefix + std::to_string(i);
@@ -105,8 +105,8 @@ template <typename DATA_TYPE> void VectorSliceGetValuesAndNulls()
 
     auto vector2 = vector->Slice(offSet, sliceLength);
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2.get());
-    DATA_TYPE *vectorValues = UnsafeVector::GetRawValues(vector2.get());
+    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2);
+    DATA_TYPE *vectorValues = UnsafeVector::GetRawValues(vector2);
 
     for (int i = 0; i < sliceLength; i++) {
         if (i % 2) {
@@ -115,6 +115,7 @@ template <typename DATA_TYPE> void VectorSliceGetValuesAndNulls()
             EXPECT_EQ(vectorValues[i], vector2->GetValue(i));
         }
     }
+    delete vector2;
 }
 
 template <typename DATA_TYPE> void DictionaryVectorGetValuesAndNulls()
@@ -141,7 +142,7 @@ void DictionaryStringVectorGetValuesAndNulls()
 {
     int dictionarySize = 10;
     auto vector = VectorHelper::CreateStringVector(dictionarySize);
-    auto stringVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector.get());
+    auto stringVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
 
     for (int i = 0; i < dictionarySize; i++) {
         if (i % 2 == 0) {
@@ -159,9 +160,9 @@ void DictionaryStringVectorGetValuesAndNulls()
         values[i] = i % dictionarySize;
     }
 
-    std::unique_ptr<BaseVector> vectorPtr = VectorHelper::CreateStringDictionary(values, size, stringVector);
+    BaseVector *vectorPtr = VectorHelper::CreateStringDictionary(values, size, stringVector);
     auto dictVector =
-        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vectorPtr.get());
+        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vectorPtr);
 
     bool *vectorNulls = UnsafeBaseVector::GetNulls(dictVector);
     char *vectorValues = UnsafeDictionaryVector::GetVarCharDictionary(dictVector);
@@ -175,6 +176,8 @@ void DictionaryStringVectorGetValuesAndNulls()
         }
     }
     delete[] values;
+    delete dictVector;
+    delete stringVector;
 }
 
 template <typename DATA_TYPE> void DictionaryVectorSliceGetValuesAndNulls()
@@ -187,9 +190,9 @@ template <typename DATA_TYPE> void DictionaryVectorSliceGetValuesAndNulls()
 
     auto vector2 = vector->Slice(offSet, sliceLength);
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2.get());
-    DATA_TYPE *vectorValues = UnsafeDictionaryVector::GetDictionary(vector2.get());
-    int *valuesIds = UnsafeDictionaryVector::GetIds(vector2.get());
+    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2);
+    DATA_TYPE *vectorValues = UnsafeDictionaryVector::GetDictionary(vector2);
+    int *valuesIds = UnsafeDictionaryVector::GetIds(vector2);
 
     for (int i = 0; i < sliceLength; i++) {
         if (i % 2) {
@@ -198,6 +201,7 @@ template <typename DATA_TYPE> void DictionaryVectorSliceGetValuesAndNulls()
             EXPECT_EQ(vectorValues[valuesIds[i]], vector2->GetValue(i));
         }
     }
+    delete vector2;
 }
 
 template <typename CONTAINER> void StringVectorGetValuesAndNulls()
@@ -205,10 +209,10 @@ template <typename CONTAINER> void StringVectorGetValuesAndNulls()
     int size = 100;
 
     auto baseVector = CreateStringTestVector<CONTAINER>();
-    VectorSetNull(baseVector.get());
+    VectorSetNull(baseVector);
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(baseVector.get());
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    bool *vectorNulls = UnsafeBaseVector::GetNulls(baseVector);
+    auto *vector = (Vector<CONTAINER> *)baseVector;
     char *vectorValues = UnsafeStringVector::GetValues(vector);
     auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, OMNI_VARCHAR));
     for (int i = 0; i < size; i++) {
@@ -218,6 +222,7 @@ template <typename CONTAINER> void StringVectorGetValuesAndNulls()
             EXPECT_EQ(vectorValues + valueOffsets[i], vector->GetValue(i).data());
         }
     }
+    delete vector;
 }
 
 template <typename CONTAINER> void StringVectorSliceGetValuesAndNulls()
@@ -226,14 +231,14 @@ template <typename CONTAINER> void StringVectorSliceGetValuesAndNulls()
     int sliceLength = 50;
 
     auto baseVector = CreateStringTestVector<CONTAINER>();
-    VectorSetNull(baseVector.get());
+    VectorSetNull(baseVector);
 
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
-    auto vector2 = vector->Slice(offSet, sliceLength);
+    auto *vector = (Vector<CONTAINER> *)baseVector;
+    auto vector2 = (Vector<CONTAINER> *)(vector->Slice(offSet, sliceLength));
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2.get());
-    char *vectorValues = UnsafeStringVector::GetValues(vector2.get());
-    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector2.get(), OMNI_VARCHAR));
+    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2);
+    char *vectorValues = UnsafeStringVector::GetValues(vector2);
+    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector2, OMNI_VARCHAR));
     for (int i = 0; i < sliceLength; i++) {
         if (i % 2) {
             EXPECT_TRUE(vectorNulls[i]);
@@ -241,12 +246,14 @@ template <typename CONTAINER> void StringVectorSliceGetValuesAndNulls()
             EXPECT_EQ(vectorValues + valueOffsets[i], vector2->GetValue(i).data());
         }
     }
+    delete vector2;
+    delete vector;
 }
 
 template <typename CONTAINER> void StringVectorGetStringBuffer()
 {
     auto baseVector = CreateStringTestVector<CONTAINER>();
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
     auto vectorCapacityInBytes =
         UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
 
@@ -260,13 +267,14 @@ template <typename CONTAINER> void StringVectorGetStringBuffer()
     auto newCapacityInBytes =
         UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_EQ(vectorCapacityInBytes, newCapacityInBytes);
+    delete vector;
 }
 
 template <typename CONTAINER> void StringVectorGetStringExpandBuffer()
 {
     int requestSize = INITIAL_STRING_SIZE + 10;
     auto baseVector = CreateStringTestVector<CONTAINER>();
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
     auto vectorCapacityInBytes =
         UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
 
@@ -279,6 +287,7 @@ template <typename CONTAINER> void StringVectorGetStringExpandBuffer()
     auto newCapacityInBytes =
         UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_GE(newCapacityInBytes, vectorCapacityInBytes + requestSize);
+    delete vector;
 }
 
 template <typename CONTAINER> void StringVectorGetStringFirstBuffer()
@@ -286,7 +295,7 @@ template <typename CONTAINER> void StringVectorGetStringFirstBuffer()
     int valueSize = 1000;
 
     auto baseVector = VectorHelper::CreateStringVector(valueSize);
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
 
     int requestSize = 10;
     auto expect =
@@ -298,6 +307,7 @@ template <typename CONTAINER> void StringVectorGetStringFirstBuffer()
     auto newCapacityInBytes =
         UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_EQ(newCapacityInBytes, INITIAL_STRING_SIZE);
+    delete vector;
 }
 
 void GetVarcharDictionaryWithEmptyStrings()

@@ -43,7 +43,7 @@ template <typename T> static BaseVector *CreateDictionaryVector()
         originVec->SetValue(i, i * i);
     }
 
-    auto dicVec = VectorHelper::CreateDictionary(values, valueSize, originVec.get()).release();
+    auto dicVec = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
     return dicVec;
 }
 

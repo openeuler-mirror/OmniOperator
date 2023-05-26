@@ -22,13 +22,15 @@ template <typename CONTAINER> void bm_vector_setvalue_string(benchmark::State &s
 
     for (auto _ : state) {
         auto baseVector = VectorHelper::CreateStringVector(vecSize, stringWidth);
-        auto *vector = (Vector<CONTAINER> *)baseVector.get();
+        auto *vector = (Vector<CONTAINER> *)baseVector;
 
         for (int i = 0; i < 1'000'000; i++) {
             std::string value{ valuePrefix + std::to_string(i % 100000) };
             std::string_view input(value.data(), value.size());
             vector->SetValue(i % vecSize, input);
         }
+
+        delete vector;
     }
 }
 
@@ -40,8 +42,8 @@ template <typename CONTAINER> void bm_vector_getvalue_string(benchmark::State &s
     std::string valuePrefix;
     valuePrefix = "hello hello hello hello hello: ";
 
-    std::shared_ptr<BaseVector> baseVector = VectorHelper::CreateStringVector(vecSize, stringWidth);
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    BaseVector *baseVector = VectorHelper::CreateStringVector(vecSize, stringWidth);
+    auto *vector = (Vector<CONTAINER> *)baseVector;
 
     for (int i = 0; i < vecSize; i++) {
         std::string value{ valuePrefix + std::to_string(i % 100000) };
@@ -55,6 +57,8 @@ template <typename CONTAINER> void bm_vector_getvalue_string(benchmark::State &s
             std::string output(getValue);
         }
     }
+
+    delete vector;
 }
 
 template <typename CONTAINER> void bm_vector_create(benchmark::State &state)
@@ -64,8 +68,9 @@ template <typename CONTAINER> void bm_vector_create(benchmark::State &state)
 
     for (auto _ : state) {
         auto baseVector = VectorHelper::CreateStringVector(vecSize, stringWidth);
-        auto *vector = (Vector<CONTAINER> *)baseVector.get();
+        auto *vector = (Vector<CONTAINER> *)baseVector;
         vector->GetStringEncoding();
+        delete vector;
     }
 }
 

@@ -1212,7 +1212,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     void *datas[9] = {data0, data1, data2, data3, data4, data5, data6, data7, data8};
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
         const DataTypePtr &dataType = sourceTypes.GetType(i);
-        vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]).release());
+        vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]));
     }
 
     int32_t outputCols[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};

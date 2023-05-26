@@ -320,13 +320,13 @@ public:
      * @param offset
      * @param length
      */
-    std::unique_ptr<Vector<RAW_DATA_TYPE>> CopyPositions(const int *positions, int positionOffset, int length)
+    Vector<RAW_DATA_TYPE> *CopyPositions(const int *positions, int positionOffset, int length)
     {
         if ((positions == nullptr) || (length < 0)) {
             LogError("positions is null or the input length is incorrect: %d.", length);
             return nullptr;
         }
-        auto vector = std::make_unique<Vector<RAW_DATA_TYPE>>(length);
+        auto vector = new Vector<RAW_DATA_TYPE>(length);
         auto startPositions = positions + positionOffset;
         for (int32_t i = 0; i < length; i++) {
             int position = startPositions[i];
@@ -345,16 +345,16 @@ public:
      * @param length
      * @param isCopy reserved parameters
      */
-    std::unique_ptr<Vector<RAW_DATA_TYPE>> Slice(int positionOffset, int length, bool isCopy = false)
+    Vector<RAW_DATA_TYPE> *Slice(int positionOffset, int length, bool isCopy = false)
     {
         if (positionOffset + length > this->size) {
             LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
             return nullptr;
         }
-        auto sliced = std::make_unique<Vector<RAW_DATA_TYPE>>(length, this->encoding, nulls, values);
+        auto sliced = new Vector<RAW_DATA_TYPE>(length, this->encoding, nulls, values);
         sliced->offset = offset + positionOffset; // update offset
         sliced->isSliced = true;
-        return std::move(sliced);
+        return sliced;
     }
 
 protected:
@@ -445,7 +445,7 @@ public:
      * @param offset
      * @param length
      */
-    std::unique_ptr<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>> CopyPositions(const int *positions,
+    Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *CopyPositions(const int *positions,
         int positionOffset, int length)
     {
         if ((positions == nullptr) || (length < 0)) {
@@ -468,7 +468,7 @@ public:
         // new container
         std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> newContainer =
             container->CopyPositions(newPositions.data(), length);
-        return std::make_unique<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>>(length, newContainer, newNulls,
+        return new Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(length, newContainer, newNulls,
             this->dataTypeId);
     }
 
@@ -481,19 +481,18 @@ public:
      * @param length
      * @param isCopy
      */
-    std::unique_ptr<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>> Slice(int positionOffset, int length,
-        bool isCopy = false)
+    Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *Slice(int positionOffset, int length, bool isCopy = false)
     {
         if (positionOffset + length > this->size) {
             LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
             return nullptr;
         }
         // copy the data field shared_ptr
-        auto sliced = std::make_unique<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>>(length, this->container,
+        auto sliced = new Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(length, this->container,
             this->nulls, true, this->dataTypeId);
         sliced->offset = this->offset + positionOffset; // update offset
         sliced->isSliced = true;
-        return std::move(sliced);
+        return sliced;
     }
 
 private:
@@ -629,15 +628,14 @@ public:
      * @param offset
      * @param length
      */
-    std::unique_ptr<Vector<LargeStringContainer<std::string_view>>> CopyPositions(const int *positions, int offset,
-        int length)
+    Vector<LargeStringContainer<std::string_view>> *CopyPositions(const int *positions, int offset, int length)
     {
         if ((positions == nullptr) || (length < 0)) {
             LogError("positions is null or the input length is incorrect: %d.", length);
             return nullptr;
         }
 
-        auto vector = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(length);
+        auto vector = new Vector<LargeStringContainer<std::string_view>>(length);
         auto startPositions = positions + offset;
         for (int32_t i = 0; i < length; i++) {
             auto position = startPositions[i];
@@ -659,15 +657,14 @@ public:
      * @param positionOffset
      * @param length
      */
-    std::unique_ptr<Vector<LargeStringContainer<std::string_view>>> Slice(int positionOffset, int length,
-        bool isCopy = false)
+    Vector<LargeStringContainer<std::string_view>> *Slice(int positionOffset, int length, bool isCopy = false)
     {
         if (positionOffset + length > this->size) {
             LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
             return nullptr;
         }
         // copy the data field shared_ptr
-        auto sliced = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(length, container, this->nulls);
+        auto sliced = new Vector<LargeStringContainer<std::string_view>>(length, container, this->nulls);
         sliced->offset = this->offset + positionOffset; // update offset
         sliced->isSliced = true;
         return std::move(sliced);

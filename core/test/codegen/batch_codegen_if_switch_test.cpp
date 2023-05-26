@@ -197,7 +197,7 @@ TEST(BatchCodeGenTest, StringIf)
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(10) }));
 
     auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1.get();
+    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
         if (i % 3 == 0) {
@@ -209,7 +209,7 @@ TEST(BatchCodeGenTest, StringIf)
         vector->SetValue(i, input);
     }
     auto *t = new VectorBatch(numRows);
-    t->Append(col1.release());
+    t->Append(col1);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
@@ -486,7 +486,7 @@ TEST(BatchCodeGenTest, StringSwitch)
     VectorBatch *vecBatch = CreateVectorBatch(inputTypes1, numRows, col1);
 
     auto col2 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col2.get();
+    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col2;
     std::string value;
     for (int32_t i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
@@ -497,7 +497,7 @@ TEST(BatchCodeGenTest, StringSwitch)
         std::string_view input(value.data(), value.size());
         vector->SetValue(i, input);
     }
-    vecBatch->Append(col2.release());
+    vecBatch->Append(col2);
 
     std::vector<DataTypePtr> vecOfTypes = { IntType(), VarcharType(10) };
     DataTypes inputTypes2(vecOfTypes);

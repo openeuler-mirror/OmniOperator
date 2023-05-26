@@ -370,7 +370,7 @@ TEST(BatchCodeGenTest, DictionaryVecDouble)
     }
     auto dicVec = VectorHelper::CreateDictionary(ids, numRows, dictionary.get());
     auto *t = new VectorBatch(numRows);
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     LiteralExpr *addRight = new LiteralExpr(10.0, DoubleType());
     std::vector<Expr *> exprs = { new BinaryExpr(omniruntime::expressions::Operator::ADD,
@@ -414,7 +414,7 @@ TEST(BatchCodeGenTest, DictionaryVecDecimal128)
     }
     auto dicVec = VectorHelper::CreateDictionary(ids1, numRows, dictionary.get());
     auto *t = new VectorBatch(numRows);
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
@@ -451,7 +451,7 @@ TEST(BatchCodeGenTest, DictionaryVecDecimal64)
     }
     auto dicVec = VectorHelper::CreateDictionary(ids, numRows, dictionary.get());
     auto *t = new VectorBatch(numRows);
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     int32_t numSelectedRows = numRows;
 
@@ -495,7 +495,7 @@ TEST(BatchCodeGenTest, DictionaryVecBoolean)
     }
     auto dicVec = VectorHelper::CreateDictionary(ids, numRows, dictionary.get());
     auto *t = new VectorBatch(numRows);
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     LiteralExpr *andRight = new LiteralExpr(true, BooleanType());
     BinaryExpr *andExpr = new BinaryExpr(omniruntime::expressions::Operator::OR, new FieldExpr(0, BooleanType()),
@@ -553,7 +553,7 @@ TEST(BatchCodeGenTest, DictionaryVarchar)
     }
 
     auto dicVec = VectorHelper::CreateStringDictionary(ids, numRows, dictionary.get());
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     std::vector<std::unique_ptr<Projection>> projections;
     auto filter = GenerateFilterAndProjections(filterExpr, exprs, inputTypes, projections, nullptr);
@@ -601,7 +601,7 @@ TEST(BatchCodeGenTest, DictionaryVec)
         dictionary->SetValue(i, (i % 21) - 3);
     }
     auto dicVec = VectorHelper::CreateDictionary(ids, numRows, dictionary.get());
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     std::vector<DataTypePtr> vecOfTypes({ IntType(), IntType(), IntType() });
     DataTypes inputTypes2(vecOfTypes);

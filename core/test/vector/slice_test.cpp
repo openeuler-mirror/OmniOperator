@@ -38,6 +38,7 @@ template <typename T> void v2_slice_get_set_value()
         }
         EXPECT_EQ(value, vector->GetValue(i));
     }
+    delete vector;
 }
 
 TEST(vector2, v2_slice_get_set_value_int32)
@@ -96,6 +97,7 @@ template <typename T> void v2_slice_container()
     }
 
     delete[] values;
+    delete vector;
 }
 
 TEST(vector2, slice_container_int32)

@@ -170,7 +170,7 @@ VectorBatch *CreateVectorBatch(const DataTypes &types, int32_t rowCount, ...)
     va_start(args, rowCount);
     for (int32_t i = 0; i < typesCount; i++) {
         auto &type = types.GetType(i);
-        vectorBatch->Append(CreateVector(*type, rowCount, args).release());
+        vectorBatch->Append(CreateVector(*type, rowCount, args));
     }
     va_end(args);
     return vectorBatch;
@@ -215,12 +215,12 @@ void AssertBoolEquals(std::vector<bool> &expected, bool *result)
     }
 }
 
-std::unique_ptr<BaseVector> CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
+BaseVector *CreateVector(DataType &dataType, int32_t rowCount, va_list &args)
 {
     return DYNAMIC_TYPE_DISPATCH(CreateFlatVector, dataType.GetId(), rowCount, args);
 }
 
-std::unique_ptr<vec::BaseVector> SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length, int32_t typeId)
+vec::BaseVector *SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length, int32_t typeId)
 {
     using namespace omniruntime::type;
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
@@ -387,7 +387,7 @@ VectorBatch *DuplicateVectorBatch(VectorBatch *input, std::vector<DataTypePtr> &
     auto rowCount = input->GetRowCount();
     auto duplication = new VectorBatch(rowCount);
     for (int32_t i = 0; i < vecCount; i++) {
-        duplication->Append(SliceVector(input->Get(i), 0, rowCount, allTypes[i]->GetId()).release());
+        duplication->Append(SliceVector(input->Get(i), 0, rowCount, allTypes[i]->GetId()));
     }
     return duplication;
 }
@@ -579,21 +579,21 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, st
     va_end(args);
 }
 
-std::unique_ptr<BaseVector> CreateDictionaryVector(DataType &dataType, int32_t rowCount, int32_t *ids, int32_t idsCount,
+BaseVector *CreateDictionaryVector(DataType &dataType, int32_t rowCount, int32_t *ids, int32_t idsCount,
     ...)
 {
     va_list args;
     va_start(args, idsCount);
-    std::unique_ptr<BaseVector> dictionary = CreateVector(dataType, rowCount, args);
+    auto dictionary = std::unique_ptr<BaseVector>(CreateVector(dataType, rowCount, args));
     va_end(args);
     return DYNAMIC_TYPE_DISPATCH(CreateDictionary, dataType.GetId(), dictionary.get(), ids, idsCount);
 }
 
-std::unique_ptr<BaseVector> CreateVarcharVector(DataType &type, std::string *values, int32_t length)
+BaseVector *CreateVarcharVector(DataType &type, std::string *values, int32_t length)
 {
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
 
-    std::unique_ptr<VarcharVector> vector = std::make_unique<VarcharVector>(length);
+    VarcharVector *vector = new VarcharVector(length);
     for (int32_t i = 0; i < length; i++) {
         std::string_view value(values[i].data(), values[i].length());
         vector->SetValue(i, value);
@@ -696,10 +696,10 @@ VectorBatch *CreateEmptyVectorBatch(const DataTypes &dataTypes)
     auto *vectorBatch = new VectorBatch(0);
     auto *dataTypeIds = const_cast<int32_t *>(dataTypes.GetIds());
     auto vectorCnt = dataTypes.GetSize();
-    std::unique_ptr<BaseVector> vectors[vectorCnt];
+    BaseVector *vectors[vectorCnt];
     for (int32_t i = 0; i < vectorCnt; ++i) {
         vectors[i] = VectorHelper::CreateVector(OMNI_FLAT, dataTypeIds[i], 0);
-        vectorBatch->Append(std::move(vectors[i]).release());
+        vectorBatch->Append(std::move(vectors[i]));
     }
     return vectorBatch;
 }

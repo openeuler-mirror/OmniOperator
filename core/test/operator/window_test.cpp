@@ -1891,7 +1891,7 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
     void *datas[10] = {data0, data1, data2, data3, data4, data5, data6, data7, data8, data9};
     for (int32_t i = 0; i < sourceTypes.GetSize(); i++) {
         DataTypePtr dataType = sourceTypes.GetType(i);
-        vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]).release());
+        vecBatch->Append(CreateDictionaryVector(*dataType, DATA_SIZE, ids, DATA_SIZE, datas[i]));
     }
 
     int32_t outputCols[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};

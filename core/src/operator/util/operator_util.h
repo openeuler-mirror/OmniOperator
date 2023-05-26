@@ -411,7 +411,7 @@ public:
         auto inputTypeIds = inputTypes.GetIds();
         for (int32_t i = 0; i < vecCount; i++) {
             auto inputVector = inputVecBatch->Get(i);
-            auto newInputVec = vec::VectorHelper::SliceVector(inputVector, inputTypeIds[i], 0, rowCount).release();
+            auto newInputVec = vec::VectorHelper::SliceVector(inputVector, inputTypeIds[i], 0, rowCount);
             if (newInputVec->GetEncoding() != vec::OMNI_DICTIONARY) {
                 valueAddresses[i] =
                     reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(newInputVec, inputTypeIds[i]));

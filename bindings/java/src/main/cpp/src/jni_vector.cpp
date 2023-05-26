@@ -39,7 +39,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
 {
     BaseVector *vector = nullptr;
     JNI_METHOD_START
-    vector = VectorHelper::CreateVector(jVectorEncodingId, jVectorTypeId, jValueCount, jCapacityInBytes).release();
+    vector = VectorHelper::CreateVector(jVectorEncodingId, jVectorTypeId, jValueCount, jCapacityInBytes);
     if (UNLIKELY(vector == nullptr)) {
         throw omniruntime::exception::OmniException("CREATE_FLAT_VECTOR_FAILED",
             "return a null pointer when creating flat vector");
@@ -60,7 +60,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVecto
     jint *ids = idsArray;
     BaseVector *vector = nullptr;
     JNI_METHOD_START
-    vector = VectorHelper::CreateDictionaryVector(ids, size, dictionaryVector, dataTypeId).release();
+    vector = VectorHelper::CreateDictionaryVector(ids, size, dictionaryVector, dataTypeId);
     if (UNLIKELY(vector == nullptr)) {
         throw omniruntime::exception::OmniException("CREATE_DICTIONARY_VECTOR_FAILED",
             "return a null pointer when creating dictionary vector");
@@ -78,7 +78,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(
     BaseVector *nativeVector = TransformVector(jNativeVector);
     BaseVector *sliceVector = nullptr;
     JNI_METHOD_START
-    sliceVector = VectorHelper::SliceVector(nativeVector, dataTypeId, jStartIndex, jLength).release();
+    sliceVector = VectorHelper::SliceVector(nativeVector, dataTypeId, jStartIndex, jLength);
     JNI_METHOD_END(0)
 #ifdef TRACE
     RecordStack(sliceVector, env);
@@ -96,8 +96,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
     BaseVector *copyVector = nullptr;
     JNI_METHOD_START
     copyVector =
-        VectorHelper::CopyPositionsVector(nativeVector, reinterpret_cast<int *>(positions), 0, jLength, dataTypeId)
-            .release();
+        VectorHelper::CopyPositionsVector(nativeVector, reinterpret_cast<int *>(positions), 0, jLength, dataTypeId);
     JNI_METHOD_END(0)
 #ifdef TRACE
     RecordStack(copyVector, env);

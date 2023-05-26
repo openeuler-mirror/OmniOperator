@@ -68,7 +68,7 @@ std::vector<VectorBatchSupplier> LoadVectorBatchFromPath(const std::string &path
             auto vectorBatch = new VectorBatch(lineCount);
             auto dataTypeIds = std::vector<DataTypeId>((int)dataTypes.size());
             for (int i = 0; i < dataTypes.size(); ++i) {
-                auto *vector = VectorHelper::CreateVector(OMNI_FLAT, dataTypes[i]->GetId(), lineCount).release();
+                auto *vector = VectorHelper::CreateVector(OMNI_FLAT, dataTypes[i]->GetId(), lineCount);
                 vectorBatch->Append(vector);
                 dataTypeIds[i] = dataTypes[i]->GetId();
             }

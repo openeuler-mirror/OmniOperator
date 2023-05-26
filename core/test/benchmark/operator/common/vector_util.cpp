@@ -12,7 +12,7 @@ VectorBatch *CreateSequenceVectorBatch(const std::vector<DataTypePtr> &types, in
 {
     auto *vectorBatch = new VectorBatch(length);
     for (const auto &type : types) {
-        auto *vector = VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), length).release();
+        auto *vector = VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), length);
         for (int index = 0; index < length; ++index) {
             switch (type->GetId()) {
                 case OMNI_INT:
@@ -50,7 +50,7 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
     auto *vectorBatch = new VectorBatch(length);
     int ratio = 5;
     for (const auto &type : types) {
-        auto *inner = VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), length / ratio).release();
+        auto *inner = VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), length / ratio);
         for (int index = 0; index < length / ratio; ++index) {
             switch (type->GetId()) {
                 case OMNI_INT:
@@ -84,7 +84,7 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
         }
         auto vector = VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), inner, type->GetId());
         delete inner;
-        vectorBatch->Append(vector.release());
+        vectorBatch->Append(vector);
     }
     return vectorBatch;
 }
@@ -94,7 +94,7 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
 {
     auto *vectorBatch = new VectorBatch(rowCount);
     for (int i = 0; i < (int32_t)types.size(); ++i) {
-        auto *vector = VectorHelper::CreateVector(OMNI_FLAT, types[i]->GetId(), (int32_t)values[i].size()).release();
+        auto *vector = VectorHelper::CreateVector(OMNI_FLAT, types[i]->GetId(), (int32_t)values[i].size());
         for (int index = 0; index < (int32_t)values[i].size(); ++index) {
             switch (types[i]->GetId()) {
                 case OMNI_INT:
@@ -129,8 +129,7 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
                 ids[j] = j;
             }
             vectorBatch->Append(
-                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, types[i]->GetId())
-                    .release());
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, types[i]->GetId()));
             delete vector;
             continue;
         }

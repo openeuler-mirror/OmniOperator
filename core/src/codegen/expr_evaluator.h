@@ -55,18 +55,18 @@ public:
     ~Projection() = default;
 
     void ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
-        int64_t *offsetAddrs, std::unique_ptr<BaseVector> &outVec, int32_t numSelectedRows, int32_t selectedRows[],
+        int64_t *offsetAddrs, BaseVector **outVec, int32_t numSelectedRows, int32_t selectedRows[],
         ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &typeIds) const;
 
     void ProjectHelperVarWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
-        int64_t *offsetAddrs, std::unique_ptr<BaseVector> &outVec, int32_t numSelectedRows, int32_t selectedRows[],
+        int64_t *offsetAddrs, BaseVector **outVec, int32_t numSelectedRows, int32_t selectedRows[],
         ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &typeIds) const;
 
-    std::unique_ptr<BaseVector> Project(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows,
+    BaseVector *Project(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows,
         int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs, ExecutionContext *context,
         int64_t *dictionaryVectors, const int32_t *typeIds) const;
 
-    std::unique_ptr<BaseVector> Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
+    BaseVector *Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
         int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds) const;
 
     omniruntime::type::DataType &GetOutputType() const
@@ -105,31 +105,31 @@ private:
     ProjFunc projector;
 
     bool Initialize(bool filter, const DataTypes &inputDataTypes, OverflowConfig *overflowConfig);
-    std::unique_ptr<BaseVector> ColumnProjectionProxy(VectorBatch *vecBatch, int32_t selectedRows[],
+    BaseVector *ColumnProjectionProxy(VectorBatch *vecBatch, int32_t selectedRows[],
         int32_t numSelectedRows, const int32_t *typeIds) const;
 
     template <typename T>
-    std::unique_ptr<BaseVector> ColumnProjectionHelper(VectorBatch *vecBatch, const int32_t selectedRows[],
+    BaseVector *ColumnProjectionHelper(VectorBatch *vecBatch, const int32_t selectedRows[],
         int32_t numSelectedRows) const;
 
     template <typename T>
-    std::unique_ptr<BaseVector> ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+    BaseVector *ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
         int32_t numSelectedRows) const;
 
     template <typename T>
-    std::unique_ptr<BaseVector> ColumnProjectionFlatVectorSliceHelper(int32_t numSelectedRows,
+    BaseVector *ColumnProjectionFlatVectorSliceHelper(int32_t numSelectedRows,
         BaseVector *colVec) const;
 
     template <typename T>
-    std::unique_ptr<BaseVector> ColumnProjectionDictionaryVectorSliceHelper(int32_t numSelectedRows,
+    BaseVector *ColumnProjectionDictionaryVectorSliceHelper(int32_t numSelectedRows,
         BaseVector *colVec) const;
 
     template <typename T>
-    std::unique_ptr<BaseVector> ColumnProjectionDictionaryVectorCopyPositionsHelper(const int32_t *selectedRows,
+    BaseVector *ColumnProjectionDictionaryVectorCopyPositionsHelper(const int32_t *selectedRows,
         int32_t numSelectedRows, BaseVector *colVec) const;
 
     template <typename T>
-    std::unique_ptr<BaseVector> ColumnProjectionFlatVectorCopyPositionsHelper(const int32_t *selectedRows,
+    BaseVector *ColumnProjectionFlatVectorCopyPositionsHelper(const int32_t *selectedRows,
         int32_t numSelectedRows, BaseVector *colVec) const;
 };
 

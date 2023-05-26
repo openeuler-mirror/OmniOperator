@@ -39,7 +39,7 @@ public:
 private:
     ALWAYS_INLINE void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
     {
-        std::unique_ptr<BaseVector> probeColumn = nullptr;
+        BaseVector *probeColumn = nullptr;
         auto probePositions = probeIndex.data();
         for (int32_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
@@ -51,7 +51,7 @@ private:
             } else {
                 probeColumn = VectorHelper::CreateDictionaryVector(probePositions, probeRowCount, column, type);
             }
-            vectorBatch->Append(probeColumn.release());
+            vectorBatch->Append(probeColumn);
         }
     }
 
@@ -60,7 +60,7 @@ private:
         for (int32_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
             auto resultColumn = VectorHelper::SliceVector(column, probeOutputTypes[j], 0, column->GetSize());
-            vectorBatch->Append(resultColumn.release());
+            vectorBatch->Append(resultColumn);
         }
     }
 
@@ -69,7 +69,7 @@ private:
         for (int32_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
             auto resultColumn = VectorHelper::SliceVector(column, probeOutputTypes[j], probeIndex[0], probeRowCount);
-            vectorBatch->Append(resultColumn.release());
+            vectorBatch->Append(resultColumn);
         }
     }
 

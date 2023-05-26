@@ -149,7 +149,7 @@ private:
         std::string prefix = GenVarcharPrefix(state);
         if (!IsDictionary(state)) {
             auto *varcharVector =
-                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, 200 * rowsPerPage).release();
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, 200 * rowsPerPage);
             int vecIndex = 0;
             for (int k = 0; k < groupsPerPage; k++) {
                 std::string groupKey = prefix + std::to_string(pageId * groupsPerPage + k);
@@ -160,7 +160,7 @@ private:
             return varcharVector;
         } else {
             auto *varcharVector =
-                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, groupsPerPage, 200 * rowsPerPage).release();
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, groupsPerPage, 200 * rowsPerPage);
 
             for (int k = 0; k < groupsPerPage; k++) {
                 std::string groupKey = prefix + std::to_string(pageId * groupsPerPage + k);
@@ -171,8 +171,7 @@ private:
                 ids[k] = k % groupsPerPage;
             }
             auto vec =
-                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), varcharVector, OMNI_VARCHAR)
-                    .release();
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), varcharVector, OMNI_VARCHAR);
             delete varcharVector;
             return vec;
         }
@@ -200,7 +199,7 @@ private:
             for (int k = 0; k < rowsPerPage; k++) {
                 ids[k] = k % groupsPerPage;
             }
-            auto vec = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), longVector).release();
+            auto vec = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), longVector);
             delete longVector;
             return vec;
         }
@@ -228,7 +227,7 @@ private:
             for (int k = 0; k < rowsPerPage; k++) {
                 ids[k] = k % groupsPerPage;
             }
-            auto vec = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), intVector).release();
+            auto vec = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), intVector);
             delete intVector;
             return vec;
         }

@@ -79,9 +79,9 @@ public:
             if (sourceColId >= 0) {
                 // source col append project colmun
                 auto inputVector = inputVecBatch->Get(sourceColId);
-                std::unique_ptr<BaseVector> newInputVec =
+                BaseVector *newInputVec =
                     VectorHelper::SliceVector(inputVector, inputTypes.GetIds()[i], 0, rowCount);
-                newInputVecBatch->Append(newInputVec.release());
+                newInputVecBatch->Append(newInputVec);
             } else if (sourceColId == -1 && projectFuncsCount > 0) {
                 // append withexpr colmun
                 newInputVecBatch->Append(DYNAMIC_TYPE_DISPATCH(OperatorUtil::ProjectVector,

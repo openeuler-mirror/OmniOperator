@@ -60,7 +60,7 @@ VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, in
             static_cast<int32_t>(static_cast<VarcharDataType *>(sourceTypesVec[i].get())->GetWidth()) * totalDataSize :
             0;
         sourceVectors[i] =
-            VectorHelper::CreateVector(OMNI_FLAT, sourceTypeIds[i], totalDataSize, capacityInBytes).release();
+            VectorHelper::CreateVector(OMNI_FLAT, sourceTypeIds[i], totalDataSize, capacityInBytes);
         VectorHelper::SetValue(sourceVectors[i], 0, sortDatas[i], sourceTypeIds[i]);
     }
     for (int32_t i = 1; i < totalDataSize; i++) {
@@ -83,7 +83,7 @@ VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, in
         for (int32_t i = 0; i < sourceTypesSize; i++) {
             auto sortVector = sourceVectors[i];
             sourceVectors[i] =
-                VectorHelper::CreateDictionaryVector(ids, totalDataSize, sortVector, sourceTypeIds[i]).release();
+                VectorHelper::CreateDictionaryVector(ids, totalDataSize, sortVector, sourceTypeIds[i]);
             delete sortVector;
         }
     }

@@ -60,7 +60,7 @@ using NewUniqueVectorFunction = std::function<void(VectorBatch *, int)>;
 template <type::DataTypeId OmniId> ALWAYS_INLINE static void NewUniqueVector(VectorBatch *vectorBatch, int size)
 {
     auto vector = VectorHelper::CreateVector(OMNI_FLAT, OmniId, size);
-    vectorBatch->Append(vector.release());
+    vectorBatch->Append(vector);
 }
 
 template <>

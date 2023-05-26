@@ -108,16 +108,16 @@ void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
         auto vector = VectorHelper::CreateVector(OMNI_FLAT, typeId, rowCount);
         for (int32_t row = 0; row < rowCount; row++) {
             if (typeId == type::OMNI_VARCHAR || typeId == type::OMNI_CHAR) {
-                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector.get())->SetNull(row);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(row);
             } else {
                 vector->SetNull(row);
             }
         }
-        vectorBatch->Append(vector.release());
+        vectorBatch->Append(vector);
     }
     for (int32_t buildCol = 0; buildCol < buildOutputTypes.GetSize(); buildCol++) {
         auto vector = VectorHelper::CreateVector(OMNI_FLAT, buildOutputTypes.GetType(buildCol)->GetId(), rowCount);
-        vectorBatch->Append(vector.release());
+        vectorBatch->Append(vector);
     }
     int32_t rows = 0;
     auto outputIds = buildOutputTypes.GetIds();

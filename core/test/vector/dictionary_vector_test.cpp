@@ -25,7 +25,7 @@ TEST(DictionaryVector, appendVector)
     }
 
     auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr);
     Vector<int64_t> appendedVec{ valueSize + dicSize };
     appendedVec.Append(dicVec, 0, valueSize);
     appendedVec.Append(originVec.get(), valueSize, dicSize);
@@ -35,6 +35,7 @@ TEST(DictionaryVector, appendVector)
         EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
     delete[] values;
+    delete dicVec;
 }
 
 TEST(DictionaryVector, copyPositions_long)
@@ -52,7 +53,7 @@ TEST(DictionaryVector, copyPositions_long)
 
     int32_t values[] = {2, 3, 4, 5, 6, 8, 9};
     auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr);
 
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
@@ -67,6 +68,8 @@ TEST(DictionaryVector, copyPositions_long)
         auto value = copyPositions->GetValue(i);
         EXPECT_EQ(originVec->GetValue(values[positions[i + offset]]), value);
     }
+    delete copyPositions;
+    delete dicVec;
 }
 
 TEST(DictionaryVector, copyPositions_string_view)
@@ -88,7 +91,7 @@ TEST(DictionaryVector, copyPositions_string_view)
     auto dicVecPtr = VectorHelper::CreateStringDictionary(values, valueSize,
         reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(originVec.get()));
     auto *dicVec =
-        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(dicVecPtr.get());
+        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(dicVecPtr);
 
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
@@ -104,6 +107,8 @@ TEST(DictionaryVector, copyPositions_string_view)
         value = copyPositions->GetValue(i);
         EXPECT_EQ(originVec->GetValue(values[positions[i + offset]]), value);
     }
+    delete copyPositions;
+    delete dicVec;
 }
 
 TEST(DictionaryVector, ShortType)
@@ -121,13 +126,14 @@ TEST(DictionaryVector, ShortType)
     }
 
     auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(dicVecPtr.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(dicVecPtr);
 
     for (int32_t index = 0; index < valueSize; ++index) {
         auto value = dicVec->GetValue(index);
         EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
     delete[] values;
+    delete dicVec;
 }
 
 TEST(DictionaryVector, IntType)
@@ -145,13 +151,14 @@ TEST(DictionaryVector, IntType)
     }
 
     auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(dicVecPtr.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(dicVecPtr);
 
     for (int32_t index = 0; index < valueSize; ++index) {
         auto value = dicVec->GetValue(index);
         EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
     delete[] values;
+    delete dicVec;
 }
 
 TEST(DictionaryVector, LongType)
@@ -169,13 +176,14 @@ TEST(DictionaryVector, LongType)
     }
 
     auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(dicVecPtr);
 
     for (int32_t index = 0; index < valueSize; ++index) {
         auto value = dicVec->GetValue(index);
         EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
     delete[] values;
+    delete dicVec;
 }
 
 TEST(DictionaryVector, BooleanType)
@@ -197,13 +205,14 @@ TEST(DictionaryVector, BooleanType)
     }
 
     auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<bool>> *>(dictVecPtr.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<bool>> *>(dictVecPtr);
 
     for (int32_t index = 0; index < valueSize; ++index) {
         auto value = dictVec->GetValue(index);
         EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
     delete[] values;
+    delete dictVec;
 }
 
 TEST(DictionaryVector, DoubleType)
@@ -221,13 +230,14 @@ TEST(DictionaryVector, DoubleType)
     }
 
     auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<double>> *>(dictVecPtr.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<double>> *>(dictVecPtr);
 
     for (int32_t index = 0; index < valueSize; ++index) {
         auto value = dictVec->GetValue(index);
         EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
     delete[] values;
+    delete dictVec;
 }
 
 TEST(DictionaryVector, VarcharType)
@@ -249,13 +259,14 @@ TEST(DictionaryVector, VarcharType)
     auto dictVecPtr = VectorHelper::CreateStringDictionary(values, valueSize,
         reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(originVec.get()));
     auto *dictVec =
-        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(dictVecPtr.get());
+        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(dictVecPtr);
 
     for (int32_t index = 0; index < valueSize; ++index) {
         auto value = dictVec->GetValue(index);
         EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
     delete[] values;
+    delete dictVec;
 }
 
 TEST(DictionaryVector, Decimal128)
@@ -274,13 +285,14 @@ TEST(DictionaryVector, Decimal128)
     }
 
     auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictVecPtr.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictVecPtr);
 
     for (int32_t index = 0; index < valueSize; ++index) {
         auto value = dictVec->GetValue(index);
         EXPECT_EQ(value, originVec->GetValue(index % dicSize));
     }
     delete[] values;
+    delete dictVec;
 }
 
 TEST(DictionaryVector, testNullFlag)
@@ -303,7 +315,7 @@ TEST(DictionaryVector, testNullFlag)
     }
 
     auto dicVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dicVecPtr.get());
+    auto *dicVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dicVecPtr);
     EXPECT_TRUE(dicVec->HasNull());
     auto sliceVec = dicVec->Slice(0, valueSize);
 
@@ -317,6 +329,8 @@ TEST(DictionaryVector, testNullFlag)
         }
     }
     delete[] values;
+    delete sliceVec;
+    delete dicVec;
 }
 
 TEST(DictionaryVector, getValue_with_null_Decimal128)
@@ -339,7 +353,7 @@ TEST(DictionaryVector, getValue_with_null_Decimal128)
     }
 
     auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
-    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictVecPtr.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictVecPtr);
 
     Decimal128 value;
     for (int32_t i = 0; i < valueSize; ++i) {
@@ -351,6 +365,7 @@ TEST(DictionaryVector, getValue_with_null_Decimal128)
         EXPECT_EQ(originVec->GetValue(i % dicSize), value);
     }
     delete[] values;
+    delete dictVec;
 }
 
 template <typename T, template <typename> typename CONTAINER> void getValue_with_null_container()
@@ -378,7 +393,7 @@ template <typename T, template <typename> typename CONTAINER> void getValue_with
     }
 
     auto dictVecPtr = VectorHelper::CreateStringDictionary(values, valueSize, originVec.get());
-    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<T, CONTAINER>> *>(dictVecPtr.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<T, CONTAINER>> *>(dictVecPtr);
 
     for (int32_t i = 0; i < valueSize; ++i) {
         if (values[i] % 2 == 0) {
@@ -389,6 +404,7 @@ template <typename T, template <typename> typename CONTAINER> void getValue_with
         EXPECT_EQ(originVec->GetValue(i % dicSize), output);
     }
     delete[] values;
+    delete dictVec;
 }
 
 TEST(DictionaryVector, getValue_with_null_LargeString)
@@ -419,11 +435,12 @@ TEST(DictionaryVector, appendDictionaryStringVector)
     auto otherDicVecPtr = VectorHelper::CreateStringDictionary(otherValues, otherValueSize,
         reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(otherOriginVec.get()));
     auto *otherDicVec =
-        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(otherDicVecPtr.get());
+        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(otherDicVecPtr);
 
     originVec->Append(otherDicVec, 6, 4);
     for (int i = valueSize; i < valueSize + otherValueSize; i++) {
         EXPECT_EQ(originVec->GetValue(i), otherOriginVec->GetValue(i - valueSize));
     }
+    delete otherDicVec;
 }
 }

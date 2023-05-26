@@ -107,8 +107,8 @@ template <typename T> void dict_vector_get_value_with_null()
         dictionary->SetValue(i, value);
     }
 
-    std::shared_ptr<BaseVector> vectorPtr = VectorHelper::CreateDictionary(values, valueSize, dictionary.get());
-    auto *vector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vectorPtr.get());
+    BaseVector *vectorPtr = VectorHelper::CreateDictionary(values, valueSize, dictionary.get());
+    auto *vector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vectorPtr);
 
     T value;
     for (int i = 0; i < valueSize; i++) {
@@ -120,6 +120,7 @@ template <typename T> void dict_vector_get_value_with_null()
         EXPECT_EQ(dictionary->GetValue(i % dicSize), value);
     }
     delete[] values;
+    delete vector;
 }
 
 template <typename T> T GetTestValue(int32_t index)
@@ -223,6 +224,10 @@ template <typename T> void vector_copy_positions_value()
     EXPECT_EQ(v3Empty->GetSize(), 0);
     auto v4OverBounds = vector.CopyPositions(index, offset1, -1);
     EXPECT_EQ(v4OverBounds, nullptr);
+    delete v1OffsetZero;
+    delete v2OffsetNotZero;
+    delete v3Empty;
+    delete v4OverBounds;
 }
 
 template <typename T> void dict_copy_positions_value()
@@ -245,8 +250,8 @@ template <typename T> void dict_copy_positions_value()
     }
 
     int32_t values[] = {2, 3, 4, 5, 6, 8, 9};
-    std::unique_ptr<BaseVector> vectorPtr = VectorHelper::CreateDictionary(values, valueSize, dictionary.get());
-    auto vector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vectorPtr.get());
+    BaseVector *vectorPtr = VectorHelper::CreateDictionary(values, valueSize, dictionary.get());
+    auto vector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vectorPtr);
 
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
@@ -267,6 +272,10 @@ template <typename T> void dict_copy_positions_value()
     EXPECT_EQ(v3Empty->GetSize(), 0);
     auto v4OverBounds = vector->CopyPositions(positions, offset, -1);
     EXPECT_EQ(v4OverBounds, nullptr);
+    delete copyPositions;
+    delete v3Empty;
+    delete v4OverBounds;
+    delete vector;
 }
 
 template <typename T> void vec_set_values(int32_t valueSize = 100)

@@ -16,7 +16,7 @@ template <typename CONTAINER> void string_vector_get_set_value()
     uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
 
     std::string valuePrefix;
     valuePrefix = "hello_world__";
@@ -32,6 +32,8 @@ template <typename CONTAINER> void string_vector_get_set_value()
         std::string_view output = vector->GetValue(i);
         EXPECT_EQ(value, output);
     }
+
+    delete vector;
 }
 
 template <typename CONTAINER> void string_vector_get_set_empty_value()
@@ -40,7 +42,7 @@ template <typename CONTAINER> void string_vector_get_set_empty_value()
     uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
 
     std::string empty = "";
     for (int i = 0; i < vectorSize; i++) {
@@ -52,6 +54,7 @@ template <typename CONTAINER> void string_vector_get_set_empty_value()
         std::string_view output = vector->GetValue(i);
         EXPECT_EQ(output.size(), 0);
     }
+    delete vector;
 }
 
 template <typename CONTAINER> void string_vector_size_invalid()
@@ -66,7 +69,7 @@ template <typename CONTAINER> void string_vector_append_value()
     uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     auto v1BaseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *v1 = (Vector<CONTAINER> *)v1BaseVector.get();
+    auto *v1 = (Vector<CONTAINER> *)v1BaseVector;
 
     std::string valuePrefix;
     valuePrefix = "hello_world__";
@@ -81,11 +84,11 @@ template <typename CONTAINER> void string_vector_append_value()
 
     int32_t appendedVecSize = 15;
     auto appendedBaseVector = VectorHelper::CreateStringVector(appendedVecSize, stringWidth);
-    auto *appended = (Vector<CONTAINER> *)appendedBaseVector.get();
+    auto *appended = (Vector<CONTAINER> *)appendedBaseVector;
     appended->Append(v1, 0, vectorSize);
 
     auto v2BaseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *v2WithNull = (Vector<CONTAINER> *)v2BaseVector.get();
+    auto *v2WithNull = (Vector<CONTAINER> *)v2BaseVector;
     for (int32_t i = 0; i < vectorSize; i++) {
         if (i % 2 == 0) {
             v2WithNull->SetNull(i);
@@ -97,11 +100,11 @@ template <typename CONTAINER> void string_vector_append_value()
     appended->Append(v2WithNull, 5, 5);
 
     auto v3BaseVector = VectorHelper::CreateStringVector(0, stringWidth);
-    auto *v3Emtpy = (Vector<CONTAINER> *)v3BaseVector.get();
+    auto *v3Emtpy = (Vector<CONTAINER> *)v3BaseVector;
     appended->Append(v3Emtpy, 10, 0);
 
     auto v4BaseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *v4OverBounds = (Vector<CONTAINER> *)v4BaseVector.get();
+    auto *v4OverBounds = (Vector<CONTAINER> *)v4BaseVector;
     for (int32_t i = 0; i < vectorSize; i++) {
         std::string_view input(expected[i].data(), expected[i].size());
         v4OverBounds->SetValue(i, input);
@@ -122,6 +125,11 @@ template <typename CONTAINER> void string_vector_append_value()
         }
         EXPECT_EQ(expected[i % 5], appended->GetValue(i));
     }
+    delete appended;
+    delete v4OverBounds;
+    delete v3Emtpy;
+    delete v2WithNull;
+    delete v1;
 }
 
 template <typename CONTAINER> void string_vector_copy_positions()
@@ -133,7 +141,7 @@ template <typename CONTAINER> void string_vector_copy_positions()
     valuePrefix = "hello_world__";
 
     auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
 
     for (int i = 0; i < vectorSize; i++) {
         if (i % 2 == 0) {
@@ -170,6 +178,11 @@ template <typename CONTAINER> void string_vector_copy_positions()
     EXPECT_EQ(vectorEmpty->GetSize(), 0);
     auto vectorNegtive = vector->CopyPositions(index, offset1, -1);
     EXPECT_EQ(vectorNegtive, nullptr);
+    delete vectorOffsetZero;
+    delete vectorOffsetNotZero;
+    delete vectorEmpty;
+    delete vectorNegtive;
+    delete vector;
 }
 
 
@@ -181,7 +194,7 @@ template <typename CONTAINER> void string_vector_slice()
     uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *parent = (Vector<CONTAINER> *)baseVector.get();
+    auto *parent = (Vector<CONTAINER> *)baseVector;
 
     std::string valuePrefix;
     valuePrefix = "hello_world__";
@@ -204,6 +217,8 @@ template <typename CONTAINER> void string_vector_slice()
         auto output = vector->GetValue(i);
         EXPECT_EQ(value, output);
     }
+    delete vector;
+    delete parent;
 }
 
 template <typename CONTAINER> void string_vector_get_encoding()
@@ -213,10 +228,11 @@ template <typename CONTAINER> void string_vector_get_encoding()
     StringEncoding expect = OMNI_LARGE_STRING;
 
     auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
 
     EXPECT_EQ(vector->GetStringEncoding(), expect);
     EXPECT_EQ(baseVector->GetStringEncoding(), expect);
+    delete vector;
 }
 
 template <typename CONTAINER> void string_vector_get_used_bytes()
@@ -225,7 +241,7 @@ template <typename CONTAINER> void string_vector_get_used_bytes()
     uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
-    auto *vector = (Vector<CONTAINER> *)baseVector.get();
+    auto *vector = (Vector<CONTAINER> *)baseVector;
 
     std::string valuePrefix;
     valuePrefix = "hello_world__";
@@ -241,6 +257,7 @@ template <typename CONTAINER> void string_vector_get_used_bytes()
     size_t real =
         unsafe::UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
     EXPECT_LE(expect, real);
+    delete vector;
 }
 
 template <typename CONTAINER> void string_vector_zero_capacity_init()
