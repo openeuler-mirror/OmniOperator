@@ -281,7 +281,7 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
             dynamic_cast<DecimalValue &>(*right.get()), left->isNull, right->isNull);
         return;
     }
-    LogWarn("Unsupported binary operator %d", bExpr->op);
+    LogWarn("Unsupported binary operator %u", static_cast<uint32_t>(bExpr->op));
     this->value = CreateInvalidCodeGenValue();
 }
 
@@ -1308,7 +1308,7 @@ llvm::Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr
             return CallExternFunction("modulus", intParams, OMNI_INT, { leftPhi, rightPhi },
                 codegenContext->executionContext, "arithmetic_mod");
         default: {
-            LogError("Unsupported int binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogError("Unsupported int binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
         }
     }
@@ -1356,7 +1356,7 @@ Value *ExpressionCodeGen::BinaryExprLongHelper(const BinaryExpr *binaryExpr, Val
             return CallExternFunction("modulus", longParams, OMNI_LONG, { leftPhi, rightPhi },
                 codegenContext->executionContext, "larithmetic_mod");
         default: {
-            LogWarn("Unsupported long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogWarn("Unsupported long binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
         }
     }
@@ -1450,7 +1450,7 @@ void ExpressionCodeGen::BinaryExprDecimal64Helper(const BinaryExpr *binaryExpr, 
             break;
         }
         default: {
-            LogWarn("Unsupported decimal64 binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogWarn("Unsupported decimal64 binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             output = nullptr;
             break;
         }
@@ -1512,7 +1512,7 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
             return CallExternFunction("modulus", doubleParams, OMNI_DOUBLE, { leftPhi, rightPhi }, nullptr,
                 "farithmetic_mod");
         default: {
-            LogWarn("Unsupported double binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogWarn("Unsupported double binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
         }
     }
@@ -1545,7 +1545,7 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, V
             return builder->CreateAnd(isNeitherNull, builder->CreateICmpNE(
                 this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         default: {
-            LogWarn("Unsupported string binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogWarn("Unsupported string binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
         }
     }
@@ -1638,7 +1638,7 @@ void ExpressionCodeGen::BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr,
             break;
         }
         default: {
-            LogWarn("Unsupported decimal128 binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogWarn("Unsupported decimal128 binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             output = nullptr;
             break;
         }

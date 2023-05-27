@@ -1368,7 +1368,7 @@ void BatchExpressionCodeGen::BatchBinaryExprIntLongHelper(const omniruntime::exp
             this->value = std::make_shared<CodeGenValue>(left, leftIsNull);
             return;
         default: {
-            LogError("Unsupported int or long binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogError("Unsupported int or long binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             this->value = CreateInvalidCodeGenValue();
             return;
         }
@@ -1443,7 +1443,7 @@ void BatchExpressionCodeGen::BatchBinaryExprDoubleHelper(const omniruntime::expr
             this->value = std::make_shared<CodeGenValue>(left, leftIsNull);
             return;
         default: {
-            LogError("Unsupported double binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogError("Unsupported double binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             this->value = CreateInvalidCodeGenValue();
             return;
         }
@@ -1552,7 +1552,7 @@ void BatchExpressionCodeGen::BatchBinaryExprDecimalHelper(const omniruntime::exp
                 batchCodegenContext->executionContext, "arithmetic_mod", this->overflowConfig, overflowNull);
             break;
         default: {
-            LogError("Unsupported decimal binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogError("Unsupported decimal binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             this->value = CreateInvalidCodeGenValue();
             return;
         }
@@ -1632,7 +1632,7 @@ void BatchExpressionCodeGen::BatchBinaryExprStringHelper(const omniruntime::expr
             this->value = std::make_shared<CodeGenValue>(logicalArrayPtr, leftIsNull);
             return;
         default: {
-            LogError("Unsupported string binary operator %d", static_cast<uint32_t>(binaryExpr->op));
+            LogError("Unsupported string binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             this->value = CreateInvalidCodeGenValue();
             return;
         }
