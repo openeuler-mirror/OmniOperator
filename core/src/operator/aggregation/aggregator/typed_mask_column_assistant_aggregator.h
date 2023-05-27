@@ -335,7 +335,7 @@ private:
     {
         uint8_t hasValidRows;
         AggregatorBuffer<int32_t> indexMap(this->allocator, rowCount, false);
-        getIdsWithOffFromBooleanDictFunction(maskVector, indexMap.data, rowOffset,rowCount);
+        getIdsWithOffFromBooleanDictFunction(maskVector, indexMap.data, rowOffset, rowCount);
         uint8_t *maskPtr = reinterpret_cast<uint8_t *>(getBooleanValuesFromDictFunction(maskVector));
 
         if (maskNullMap == nullptr) {
