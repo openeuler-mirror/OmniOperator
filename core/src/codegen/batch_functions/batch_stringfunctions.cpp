@@ -14,18 +14,6 @@
 #endif
 
 namespace omniruntime::codegen::function {
-namespace {
-const int THOUSANDS = 1000;
-const int HUNDREDS = 100;
-const int TENS = 10;
-const double SECOND_OF_DAY = 86400.0;
-const int BASE_YEAR = 1900;
-
-const int THOU = 0;
-const int HUN = 1;
-const int TEN = 2;
-const int ONE = 3;
-}
 
 extern "C" DLLEXPORT void BatchStrCompare(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, int32_t *res,
     int32_t rowCnt)
@@ -283,14 +271,12 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToString(int64_t contextPtr, int64_t
 extern "C" DLLEXPORT void BatchCastDecimal128ToString(int64_t contextPtr, Decimal128 *x, int32_t precision,
     int32_t scale, bool *isAnyNull, uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    Decimal128Wrapper inputDecimal;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             outLen[i] = 0;
             output[i] = nullptr;
             continue;
         }
-        inputDecimal = x[i];
         std::string stringDecimal = Decimal128Wrapper(x[i]).SetScale(scale).ToString();
         outLen[i] = static_cast<int32_t>(stringDecimal.length());
         if (outLen[i] <= 0) {
