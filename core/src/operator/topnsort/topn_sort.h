@@ -12,6 +12,8 @@
 #include "operator/aggregation/vector_marshaller.h"
 
 namespace omniruntime::op {
+using GetValueFunc = void *(*)(vec::BaseVector *inputVec, int32_t inputPos, int32_t &length);
+using CompareOptimizeFunc = int32_t (*)(void *valuePtr, int32_t length, vec::BaseVector *right, int32_t rightPosition);
 using CompareFunc = int32_t (*)(vec::BaseVector *left, int32_t leftPosition, vec::BaseVector *right,
     int32_t rightPosition);
 using EqualFunc = bool (*)(vec::BaseVector *left, int32_t leftPosition, vec::BaseVector *right, int32_t rightPosition);
@@ -66,15 +68,45 @@ public:
 private:
     void Prepare(vec::BaseVector **inputVectors, int32_t inputColNum);
 
+    void InsertNewValueOptimize(PartitionValue &value, vec::VectorBatch *inputVecBatch, vec::BaseVector **sortVectors,
+        int32_t inputRowIdx);
+
     void InsertNewPartition(StringRef &key, vec::VectorBatch *inputVecBatch, int32_t inputRowIdx);
 
     void InsertNewValue(PartitionValue &value, vec::VectorBatch *inputVecBatch, vec::BaseVector **sortVectors,
         int32_t inputRowIdx);
 
+    void UpdatePartitionValueOptimize(PartitionValue &value, vec::VectorBatch *inputVecBatch,
+        vec::BaseVector **sortVectors, int32_t inputRowIdx);
+
     void UpdatePartitionValue(PartitionValue &value, vec::VectorBatch *inputVecBatch, vec::BaseVector **sortVectors,
         int32_t inputRowIdx);
 
-    // insert sort vector is flat vector or dictionary vector
+    int32_t CompareForSortColsOptimize(void *valuePtr, int32_t length, VectorBatch *vecBatch, int32_t rowIndex)
+    {
+        auto rightVec = vecBatch->Get(sortCols[0]);
+        auto leftNull = valuePtr == nullptr;
+        auto rightNull = rightVec->IsNull(rowIndex);
+        auto sortNullFirst = sortNullFirsts[0];
+
+        if (leftNull && rightNull) {
+            // both left and right are null
+            return 0;
+        } else if (leftNull) {
+            // left is null, but right is not null
+            auto result = sortNullFirst ? -1 : 1;
+            return result;
+        } else if (rightNull) {
+            // left is not null, but right is null
+            auto result = sortNullFirst ? 1 : -1;
+            return result;
+        } else {
+            // both left and right are not null
+            auto result = sortCompareOptimizeFuncs[0](valuePtr, length, rightVec, rowIndex);
+            return sortAscendings[0] ? result : -result;
+        }
+    }
+
     int32_t CompareForSortCols(vec::BaseVector **insertSortVectors, int32_t insertRowIdx, VectorBatch *vecBatch,
         int32_t rowIndex)
     {
@@ -127,6 +159,9 @@ private:
     StringRef GeneratePartitionKey(BaseVector **partitionVectors, int32_t partitionColNum, int32_t rowIdx,
         mem::SimpleArenaAllocator &arenaAllocator);
 
+    int32_t FindInsertPositionOptimize(void *ptr, int32_t length, vec::VectorBatch **vecBatches, int32_t *rowIndexes,
+        int32_t position);
+
     int32_t FindInsertPosition(BaseVector **insertSortVectors, int32_t insertRowIdx, VectorBatch **vecBatches,
         int32_t *rowIndexes, int32_t position);
 
@@ -139,6 +174,8 @@ private:
     std::vector<int32_t> sortAscendings;
     std::vector<int32_t> sortNullFirsts;
     std::vector<int32_t> sortColTypes;
+    std::vector<GetValueFunc> sortGetValueFuncs;
+    std::vector<CompareOptimizeFunc> sortCompareOptimizeFuncs;
     std::vector<CompareFunc> sortCompareFuncs;
     int32_t sortColNum;
     std::unique_ptr<ExecutionContext> executionContext;
