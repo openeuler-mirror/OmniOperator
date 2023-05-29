@@ -43,8 +43,8 @@ protected:
     {}
 
     virtual ALWAYS_INLINE BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset,
-        const int32_t rowCount, uint8_t **nullMap, AggregatorBuffer<int32_t> &indexMap, const size_t channelIdx)
-        override
+        const int32_t rowCount, uint8_t **nullMap, AggregatorBuffer<int32_t> &indexMap,
+        const size_t channelIdx) override
     {
         if (CountColumnAggregator<IN_ID, OUT_ID>::inputRaw) {
             *nullMap = nullptr;

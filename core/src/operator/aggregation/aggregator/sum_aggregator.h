@@ -9,32 +9,48 @@
 
 namespace omniruntime {
 namespace op {
-template <typename IN, typename MID>
+template <typename IN, typename MID, bool CareOverFlow = true>
 SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64_t &cnt)
 {
     if constexpr (std::is_same_v<MID, Decimal128>) {
         if (flag >= 0) {
-            Decimal128Wrapper result;
+            int128_t result = 0;
+            bool isOverflow = false;
 
             if constexpr (std::is_same_v<IN, DecimalPartialResult>) {
-                result = Decimal128Wrapper(*res).Add(in.sum);
+                isOverflow = AddCheckedOverflow(res->ToInt128(), in.sum.ToInt128(), result);
                 flag += in.count;
+            } else if constexpr (std::is_same_v<IN, Decimal128>) {
+                isOverflow = AddCheckedOverflow(res->ToInt128(), in.ToInt128(), result);
+                flag += cnt;
             } else {
-                result = Decimal128Wrapper(*res).Add(in);
+                isOverflow = AddCheckedOverflow(res->ToInt128(), Decimal128(in).ToInt128(), result);
                 flag += cnt;
             }
 
-            *res = result.ToDecimal128();
-            if (result.IsOverflow() != OpStatus::SUCCESS) {
+            *res = Decimal128(result);
+            if (isOverflow) {
                 flag = -1;
             }
         }
     } else if constexpr (std::is_same_v<IN, int64_t>) {
         if (flag >= 0) {
-            if (__builtin_add_overflow(*res, in, res)) {
-                flag = -1;
+            if constexpr(std::is_same_v<MID, double> || std::is_same_v<MID, float>) {
+                // output is double
+                 *res += in;
+                 flag += cnt;
             } else {
-                flag += cnt;
+                if constexpr(CareOverFlow) {
+                    if (__builtin_add_overflow(*res, in, res)) {
+                        flag = -1;
+                    } else {
+                        flag += cnt;
+                    }
+                } else {
+                    *res += in;
+                    flag += cnt;
+                }
+
             }
         }
     } else {
@@ -44,13 +60,13 @@ SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64
     }
 }
 
-template <typename IN, typename MID, bool addIf>
+template <typename IN, typename MID, bool addIf, bool CareOverFlow = true>
 SIMD_ALWAYS_INLINE void SumConditionalOp(MID *res, int64_t &flag, const IN &in, const int64_t &cnt,
     const uint8_t &condition)
 {
     if constexpr (std::is_same_v<MID, Decimal128> || std::is_same_v<IN, int64_t> || std::is_floating_point_v<IN>) {
         if (condition == addIf) {
-            SumOp<IN, MID>(res, flag, in, cnt);
+            SumOp<IN, MID, CareOverFlow>(res, flag, in, cnt);
         }
     } else {
         const IN mask = (!condition == addIf) - 1;
@@ -209,15 +225,8 @@ protected:
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
-        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
-
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
-
-    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
-        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-        const int32_t *indexMap) override;
 
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,
         const DataTypeId inId, const DataTypeId outId)

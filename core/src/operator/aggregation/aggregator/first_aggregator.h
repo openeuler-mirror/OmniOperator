@@ -24,8 +24,7 @@ static constexpr int32_t PARTIAL_FIRST_OUTPUT_LENGTH = sizeof(FirstState);
 // input: InputType
 // intermediate: InputType + bool(wrap with ContainerDataType and ContainerVector)
 // final: InputType
-template <bool INPUT_RAW, bool OUT_PARTIAL, typename InputType>
-class FirstAggregator : public Aggregator {
+template <bool INPUT_RAW, bool OUT_PARTIAL, typename InputType> class FirstAggregator : public Aggregator {
 public:
     FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out,
         std::vector<int32_t> &channels)
@@ -90,7 +89,8 @@ public:
             }
             bool IntermediateState;
             if (valueSetVector->GetEncoding() == OMNI_DICTIONARY) {
-                IntermediateState = static_cast<Vector<DictionaryContainer<bool>>*>(valueSetVector)->GetValue(rowIndex);
+                IntermediateState =
+                    static_cast<Vector<DictionaryContainer<bool>> *>(valueSetVector)->GetValue(rowIndex);
             } else {
                 IntermediateState = reinterpret_cast<Vector<bool> *>(valueSetVector)->GetValue(rowIndex);
             }

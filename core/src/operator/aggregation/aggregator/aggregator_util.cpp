@@ -19,7 +19,7 @@ std::vector<DataTypes> AggregatorUtil::WrapWithVector(const DataTypes &value)
     std::vector<DataTypes> retVector;
     retVector.reserve(value.GetSize());
     for (int i = 0; i < value.GetSize(); ++i) {
-        std::vector<DataTypePtr> vector { value.GetType(i) };
+        std::vector<DataTypePtr> vector{ value.GetType(i) };
         retVector.emplace_back(DataTypes(vector));
     }
     return retVector;

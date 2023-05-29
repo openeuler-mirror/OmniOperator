@@ -122,9 +122,10 @@ public:
     }
 
     void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
-        const int32_t rowCount) override
+        const int32_t filterIndex) override
     {
         AggregatorBuffer<uint8_t> nullMap;
+        int32_t rowCount = vectorBatch->GetRowCount();
         GenerateNullMap(nullMap, vectorBatch, rowOffset, rowCount);
         if (nullMap.data == nullptr) {
             return;
@@ -141,8 +142,32 @@ public:
             }
         }
 
+        Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
+
+        bool needFilterJude = false;
+        for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
+            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
+                needFilterJude = true;
+                break;
+            }
+        }
+
+        auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
+        filterPtr += rowOffset;
+        if (needFilterJude) {
+            // nullmapPtr can filter row which no need to aggregate
+            // the nullMap.data: true means null
+            // booleanVector: false means one row has been filtered
+            auto *nullmapPtr = nullMap.data;
+
+            for (int i = 0; i < rowCount; ++i) {
+                nullmapPtr[i] |= not filterPtr[i];
+            }
+        }
+
         realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
     }
+
     void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t rowOffset) override
     {
@@ -196,12 +221,21 @@ public:
                 break;
             }
         }
+
+        auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
+        filterPtr += rowOffset;
         if (needFilterJude) {
-            realAggregator->ProcessGroupInternalFilter(rowStates, aggIdx, vector, booleanVector, rowOffset,
-                nullMap.data, indexMap.data);
-        } else {
-            realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
+            // nullMap.data can filter row which no need to aggregate
+            // the nullMap.data: true means need filter
+            // booleanVector: false means one row has been filtered
+            auto *nullmapPtr = nullMap.data;
+
+            for (int i = 0; i < rowCount; ++i) {
+                nullmapPtr[i] |= not filterPtr[i];
+            }
         }
+
+        realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
     }
 
     void InitState(AggregateState &state) override
@@ -273,20 +307,9 @@ protected:
         const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
     {}
 
-    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
-        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
-    {}
-
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {}
-    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
-    {}
-
-    GetValuesFunction getBooleanValuesFunction;
-    GetValuesFunction getBooleanValuesFromDictFunction;
-    GetIdsWithOffFunction getIdsWithOffFromBooleanDictFunction;
 
 private:
     void GenerateNullMap(AggregatorBuffer<uint8_t> &nullMap, VectorBatch *vectorBatch, const int32_t rowOffset,
@@ -387,6 +410,11 @@ private:
 
     int32_t maskColumnId;
     std::unique_ptr<TypedAggregator> realAggregator;
+
+protected:
+    GetValuesFunction getBooleanValuesFunction;
+    GetValuesFunction getBooleanValuesFromDictFunction;
+    GetIdsWithOffFunction getIdsWithOffFromBooleanDictFunction;
 };
 }
 }

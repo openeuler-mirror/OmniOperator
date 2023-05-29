@@ -71,6 +71,23 @@ std::unique_ptr<Aggregator> CreateAggregatorHelper(const DataTypes &inputTypes, 
     }
 }
 
+template<template<DataTypeId,DataTypeId> class DecimalType, DataTypeId InId>
+std::unique_ptr<Aggregator> CreateDecimalHelper(const DataTypes &inputTypes,
+                                                const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+                                                bool isOverflowAsNull){
+    auto outTypeId = outputTypes.GetIds()[0];
+    if(outTypeId == DataTypeId::OMNI_DECIMAL128) {
+        return std::make_unique<DecimalType<InId,OMNI_DECIMAL128>>(inputTypes, outputTypes, channels, inputRaw,
+                                                                  outputPartial, isOverflowAsNull);
+    }else if (outTypeId == DataTypeId::OMNI_DECIMAL128) {
+        return std::make_unique<DecimalType<InId,OMNI_DECIMAL64>>(inputTypes, outputTypes, channels, inputRaw,
+                                                                 outputPartial, isOverflowAsNull);
+    } else {
+        LogError("Unsupported input type %d for spark average decimal aggregate, output id is ", outTypeId);
+        return nullptr;
+    }
+}
+
 std::unique_ptr<Aggregator> SumSparkAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
     const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
     bool isOverflowAsNull)
@@ -78,25 +95,34 @@ std::unique_ptr<Aggregator> SumSparkAggregatorFactory::CreateAggregator(const Da
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
         case OMNI_SHORT: {
-            return CreateAggregatorHelper<SumFlatIMAggregator, int16_t, int64_t>(inputTypes,
-                outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<SumFlatIMAggregator<OMNI_SHORT, OMNI_LONG>>(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
         }
         case OMNI_INT: {
-            return CreateAggregatorHelper<SumFlatIMAggregator, int32_t, int64_t>(inputTypes, outputTypes,
-                channels, inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<SumFlatIMAggregator<OMNI_INT, OMNI_LONG>>(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
         }
         case OMNI_LONG: {
-            return CreateAggregatorHelper<SumFlatIMAggregator, int64_t, int64_t>(inputTypes, outputTypes,
-                channels, inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<SumFlatIMAggregator<OMNI_LONG, OMNI_LONG>>(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
         }
         case OMNI_DOUBLE: {
-            return CreateAggregatorHelper<SumFlatIMAggregator, double, double>(inputTypes,
-                outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<SumFlatIMAggregator<OMNI_DOUBLE, OMNI_DOUBLE>>(inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
         }
-        case OMNI_DECIMAL64:
+        case OMNI_DECIMAL64: {
+            auto outputTypeId = outputTypes.GetIds()[0];
+            if(outputTypeId == OMNI_DECIMAL64) {
+                return std::make_unique<SumSparkDecimalAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>>(inputTypes, outputTypes, channels,
+                                                                                                       inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<SumSparkDecimalAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>>(inputTypes, outputTypes, channels,
+                                                                                                        inputRaw, outputPartial, isOverflowAsNull);
+            }
+        }
         case OMNI_DECIMAL128: {
-            return CreateAggregatorHelper<SumSparkDecimalAggregator>(inputTypes, outputTypes, channels, inputRaw,
-                outputPartial, isOverflowAsNull);
+            return std::make_unique<SumSparkDecimalAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>>(inputTypes, outputTypes, channels,
+                                                                                         inputRaw, outputPartial, isOverflowAsNull);
         }
         default: {
             LogError("Unsupported input type %d for spark sum aggregate", inputTypeId);
@@ -106,8 +132,8 @@ std::unique_ptr<Aggregator> SumSparkAggregatorFactory::CreateAggregator(const Da
 }
 
 std::unique_ptr<Aggregator> AverageSparkAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
-    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
-    bool isOverflowAsNull)
+                                                                            const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+                                                                            bool isOverflowAsNull)
 {
     // fetch first inputTypes id as aggregator input type and map to type
     // spark rule for average function input type:
@@ -116,25 +142,35 @@ std::unique_ptr<Aggregator> AverageSparkAggregatorFactory::CreateAggregator(cons
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
         case OMNI_SHORT: {
-            return CreateAggregatorHelper<AverageFlatIMAggregator, int16_t>(inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<AverageFlatIMAggregator<OMNI_SHORT>>(inputTypes, outputTypes, channels, inputRaw,
+                                                                         outputPartial, isOverflowAsNull);
         }
         case OMNI_INT: {
-            return CreateAggregatorHelper<AverageFlatIMAggregator, int32_t>(inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<AverageFlatIMAggregator<OMNI_INT>>(inputTypes, outputTypes, channels, inputRaw,
+                                                                       outputPartial, isOverflowAsNull);
         }
         case OMNI_LONG: {
-            return CreateAggregatorHelper<AverageFlatIMAggregator, int64_t>(inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<AverageFlatIMAggregator<OMNI_LONG>>(inputTypes, outputTypes, channels, inputRaw,
+                                                                        outputPartial, isOverflowAsNull);
         }
         case OMNI_DOUBLE: {
-            return CreateAggregatorHelper<AverageFlatIMAggregator, double>(inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<AverageFlatIMAggregator<OMNI_DOUBLE>>(inputTypes, outputTypes, channels, inputRaw,
+                                                                          outputPartial, isOverflowAsNull);
         }
-        case OMNI_DECIMAL64:
+        case OMNI_DECIMAL64: {
+            auto outputTypeId = outputTypes.GetIds()[0];
+            if(outputTypeId == OMNI_DECIMAL64) {
+                return std::make_unique<AverageSparkDecimalAggregator<OMNI_DECIMAL64, OMNI_DECIMAL64>>(inputTypes, outputTypes, channels,
+                                                                                                       inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<AverageSparkDecimalAggregator<OMNI_DECIMAL64, OMNI_DECIMAL128>>(inputTypes, outputTypes, channels,
+                                                                                                       inputRaw, outputPartial, isOverflowAsNull);
+            }
+
+        }
         case OMNI_DECIMAL128: {
-            return CreateAggregatorHelper<AverageSparkDecimalAggregator>(inputTypes, outputTypes, channels, inputRaw,
-                outputPartial, isOverflowAsNull);
+            return std::make_unique<AverageSparkDecimalAggregator<OMNI_DECIMAL128, OMNI_DECIMAL128>>(inputTypes, outputTypes, channels,
+                                                                                         inputRaw, outputPartial, isOverflowAsNull);
         }
         default: {
             LogError("Unsupported input type %d for spark average aggregate", inputTypeId);
@@ -151,19 +187,19 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateFirstAggregatorHelper(
 {
     if (inputRaw) {
         if (outputPartial) {
-            return std::make_unique<FirstAggregator<true, true, InputType>>(aggregateType, inputTypes,
-                outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<FirstAggregator<true, true, InputType>>(aggregateType, inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         } else {
-            return std::make_unique<FirstAggregator<true, false, InputType>>(aggregateType, inputTypes,
-                outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<FirstAggregator<true, false, InputType>>(aggregateType, inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         }
     } else {
         if (outputPartial) {
-            return std::make_unique<FirstAggregator<false, true, InputType>>(aggregateType, inputTypes,
-                outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<FirstAggregator<false, true, InputType>>(aggregateType, inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         } else {
-            return std::make_unique<FirstAggregator<false, false, InputType>>(aggregateType, inputTypes,
-                outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            return std::make_unique<FirstAggregator<false, false, InputType>>(aggregateType, inputTypes, outputTypes,
+                channels, inputRaw, outputPartial, isOverflowAsNull);
         }
     }
 }
@@ -178,30 +214,30 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
         case OMNI_BOOLEAN: {
-            return CreateFirstAggregatorHelper<bool>(aggregateType, inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return CreateFirstAggregatorHelper<bool>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
         }
         case OMNI_SHORT: {
-            return CreateFirstAggregatorHelper<int16_t>(aggregateType, inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return CreateFirstAggregatorHelper<int16_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
         }
         case OMNI_INT:
         case OMNI_DATE32: {
-            return CreateFirstAggregatorHelper<int32_t>(aggregateType, inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return CreateFirstAggregatorHelper<int32_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
         }
         case OMNI_LONG:
         case OMNI_DECIMAL64: {
-            return CreateFirstAggregatorHelper<int64_t>(aggregateType, inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return CreateFirstAggregatorHelper<int64_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
         }
         case OMNI_DOUBLE: {
-            return CreateFirstAggregatorHelper<double>(aggregateType, inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
+            return CreateFirstAggregatorHelper<double>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
         }
         case OMNI_DECIMAL128: {
-            return CreateFirstAggregatorHelper<Decimal128>(aggregateType, inputTypes, outputTypes,
-                channels, inputRaw, outputPartial, isOverflowAsNull);
+            return CreateFirstAggregatorHelper<Decimal128>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
         }
         default: {
             LogError("Unsupported input type %d for first aggregate", inputTypeId);

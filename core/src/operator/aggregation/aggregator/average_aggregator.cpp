@@ -31,8 +31,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &stat
         if constexpr (IN_ID == OMNI_LONG) {
             LogDebug("HMPP-Agg-avg");
             double sumVal = 0;
-            result =
-                HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)), rowCount,
+            result = HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)), rowCount,
                 static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal, &count);
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "avg failed for hmpp error");
@@ -50,10 +49,9 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &stat
         } else {
             // IN_ID == OMNI_DECIMAL128
             LogDebug("HMPP-Agg-avg");
-            HmppDecimal128 sumVal {};
-            result = HMPPS_Mean_decimal128(
-                static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)), rowCount,
-                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal, &count);
+            HmppDecimal128 sumVal{};
+            result = HMPPS_Mean_decimal128(static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)),
+                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal, &count);
             if (result != HMPP_STS_NO_ERR) {
                 throw OmniException("HMPP ERROR", "avg failed for hmpp error");
             }
@@ -62,10 +60,9 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &stat
                 state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
                 *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
             } else {
-                Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
-                preSumVal = preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
-                *reinterpret_cast<Decimal128 *>(state.val) = preSumVal.ToDecimal128();
-                overflow |= (preSumVal.IsOverflow() != OpStatus::SUCCESS);
+                int128_t preSumVal = (*(reinterpret_cast<Decimal128 *>(state.val))).ToInt128();
+                overflow = AddCheckedOverflow(preSumVal, Decimal128(sumVal.high, sumVal.low).ToInt128(), preSumVal);
+                *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(preSumVal);
             }
             if (overflow) {
                 state.count = -1;
@@ -103,7 +100,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
         if constexpr (OUT_ID == OMNI_VARCHAR) {
             SumAggregator<IN_ID, OUT_ID>::ExtractValues(state, vectors, rowIndex);
         } else if constexpr (OUT_ID == OMNI_CONTAINER) {
-            OutType result {};
+            OutType result{};
             auto *vector = static_cast<ContainerVector *>(vectors[0]);
             auto *doubleVector = reinterpret_cast<OutVector *>(vector->GetValue(0));
             auto *longVector = reinterpret_cast<Vector<int64_t> *>(vector->GetValue(1));
@@ -130,7 +127,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
         if (state.count > 0 && state.val != nullptr) {
             if constexpr (std::is_same_v<ResultType, Decimal128>) {
                 Decimal128Wrapper result128 = Decimal128Wrapper(*reinterpret_cast<Decimal128 *>(state.val))
-                                                  .Divide(Decimal128Wrapper(state.count), 0);
+                        .Divide(Decimal128Wrapper(state.count), 0);
                 result = this->template CastWithOverflow<Decimal128, OutType>(result128.ToDecimal128(), overflow);
             } else {
                 // Result type is either double or int64, which for both cases we generate double avgResult;

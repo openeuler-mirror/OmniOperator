@@ -1,5 +1,6 @@
 aux_source_directory(${CMAKE_CURRENT_LIST_DIR} TEST_ROOT_SRCS)
 include_directories(/usr/lib/llvm-15/include)
+find_package(benchmark REQUIRED)
 if (DEFINED ENABLE_DT AND ENABLE_DT STREQUAL "ON")
     add_subdirectory(util)
     add_subdirectory(dt)
@@ -44,7 +45,8 @@ else ()
             pthread
             stdc++
             dl
-            LLVM-15)
+            LLVM-15
+            benchmark::benchmark)
     target_compile_options(${OM_TEST_TARGET} PUBLIC -g -O2 -fPIC)
 
     # dependent include
