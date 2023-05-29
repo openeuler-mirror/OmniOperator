@@ -515,37 +515,19 @@ type::StringRef TopNSortOperator::GeneratePartitionKey(BaseVector **partitionVec
     return key;
 }
 
-int32_t TopNSortOperator::FindInsertPositionWhenNotFull(BaseVector **insertSortVectors, int32_t insertRowIdx,
-    VectorBatch **vecBatches, int32_t position)
+int32_t TopNSortOperator::FindInsertPosition(BaseVector **insertSortVectors, int32_t insertRowIdx,
+    VectorBatch **vecBatches, int32_t *rowIndexes, int32_t position)
 {
     while (position >= 0) {
         auto left = vecBatches[position];
+        auto leftRowIdx = rowIndexes[position];
+
         // the value to bo inserted is less than the current position value, then go on
-        int32_t result = CompareForSortCols(insertSortVectors, insertRowIdx, left);
+        int32_t result = CompareForSortCols(insertSortVectors, insertRowIdx, left, leftRowIdx);
         if (result >= 0) {
             break;
         }
         position--;
-    }
-    return position + 1;
-}
-
-int32_t TopNSortOperator::FindInsertPositionWhenFull(BaseVector **insertSortVectors, int32_t insertRowIdx,
-    VectorBatch **vecBatches, int32_t position, bool &needAppend)
-{
-    while (position >= 0) {
-        auto left = vecBatches[position];
-        // the value to bo inserted is less than the current position value, then go on
-        int32_t result = CompareForSortCols(insertSortVectors, insertRowIdx, left);
-        if (result == 0) {
-            needAppend = true;
-            break;
-        } else if (result > 0) {
-            needAppend = false;
-            break;
-        } else {
-            position--;
-        }
     }
     return position + 1;
 }
@@ -575,97 +557,73 @@ void TopNSortOperator::Prepare(BaseVector **inputVectors, int32_t inputColNum)
             equalFuncs[i] = equalFromFlatFuncs[curTypeId];
         }
     }
-
-    for (int32_t i = 0; i < inputColNum; i++) {
-        auto curTypeId = sourceTypeIds[i];
-        if (inputVectors[i]->GetEncoding() == OMNI_DICTIONARY) {
-            createVectorFuncs[i] = createVectorFromDictionaryFuncs[curTypeId];
-            updatePartitionValueFuncs[i] = updateValueFromDictionaryFuncs[curTypeId];
-        } else {
-            createVectorFuncs[i] = createVectorFromFlatFuncs[curTypeId];
-            updatePartitionValueFuncs[i] = updateValueFromFlatFuncs[curTypeId];
-        }
-    }
 }
 
-void TopNSortOperator::InsertNewPartition(StringRef &key, BaseVector **inputVectors, int32_t inputColNum,
-    int32_t rowIdx)
+void TopNSortOperator::InsertNewPartition(StringRef &key, VectorBatch *inputVecBatch, int32_t inputRowIdx)
 {
-    // construct vector batch which has only one row
-    auto singleRow = new VectorBatch(1);
-    for (int32_t i = 0; i < inputColNum; i++) {
-        auto vector = createVectorFuncs[i](inputVectors[i], rowIdx);
-        singleRow->Append(vector);
-    }
-    auto value = new PartitionValue(sortColNum, n);
-    value->vecBatches[0] = singleRow;
+    auto value = new PartitionValue(n);
+    value->vecBatches[0] = inputVecBatch;
+    value->rowIndexes[0] = inputRowIdx;
     value->nextIndex = 1;
     partitionedMap[key] = value;
 }
 
-void TopNSortOperator::InsertNewValue(PartitionValue &value, BaseVector **inputVectors, int32_t inputColNum,
-    BaseVector **sortVectors, int32_t rowIdx)
+void TopNSortOperator::InsertNewValue(PartitionValue &value, VectorBatch *inputVecBatch, BaseVector **sortVectors,
+    int32_t inputRowIdx)
 {
     auto vecBatches = value.vecBatches;
+    auto rowIndexes = value.rowIndexes;
     auto vecBatchSize = value.nextIndex;
     auto lastPosition = vecBatchSize - 1;
 
     // find insert position
-    auto insertPos = FindInsertPositionWhenNotFull(sortVectors, rowIdx, vecBatches, lastPosition);
+    auto insertPos = FindInsertPosition(sortVectors, inputRowIdx, vecBatches, rowIndexes, lastPosition);
     for (int32_t pos = vecBatchSize; pos > insertPos; pos--) {
         vecBatches[pos] = vecBatches[pos - 1];
+        rowIndexes[pos] = rowIndexes[pos - 1];
     }
 
-    // construct vector batch which has only one row
-    auto singleRow = new VectorBatch(1);
-    for (int32_t i = 0; i < inputColNum; i++) {
-        auto vector = createVectorFuncs[i](inputVectors[i], rowIdx);
-        singleRow->Append(vector);
-    }
-    vecBatches[insertPos] = singleRow;
+    vecBatches[insertPos] = inputVecBatch;
+    rowIndexes[insertPos] = inputRowIdx;
     value.nextIndex++;
 }
 
-void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, BaseVector **inputVectors, int32_t inputColNum,
-    BaseVector **sortVectors, int32_t rowIdx)
+void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *inputVecBatch, BaseVector **sortVectors,
+    int32_t inputRowIdx)
 {
     auto vecBatches = value.vecBatches;
+    auto rowIndexes = value.rowIndexes;
+    auto lastPosition = n - 1;
 
     // compare the last value
-    int32_t result = CompareForSortCols(sortVectors, rowIdx, vecBatches[n - 1]);
+    int32_t result = CompareForSortCols(sortVectors, inputRowIdx, vecBatches[lastPosition], rowIndexes[lastPosition]);
     if (result > 0) {
         // if the value to be inserted is greater or equals to the last, then skip
         return;
     }
     if (result == 0) {
-        // for rank function, if the value is same, we should append
-        auto singleRow = new VectorBatch(1);
-        for (int32_t i = 0; i < inputColNum; i++) {
-            auto vector = createVectorFuncs[i](inputVectors[i], rowIdx);
-            singleRow->Append(vector);
-        }
-        vecBatches[value.nextIndex] = singleRow;
+        vecBatches[value.nextIndex] = inputVecBatch;
+        rowIndexes[value.nextIndex] = inputRowIdx;
         value.nextIndex++;
     } else {
-        auto singleRow = new VectorBatch(1);
-        for (int32_t i = 0; i < inputColNum; i++) {
-            auto vector = createVectorFuncs[i](inputVectors[i], rowIdx);
-            singleRow->Append(vector);
-        }
-
-        auto insertPos = FindInsertPositionWhenNotFull(sortVectors, rowIdx, vecBatches, n - 2);
+        auto insertPos = FindInsertPosition(sortVectors, inputRowIdx, vecBatches, rowIndexes, lastPosition - 1);
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
             vecBatches[pos] = vecBatches[pos - 1];
+            rowIndexes[pos] = rowIndexes[pos - 1];
         }
-        vecBatches[insertPos] = singleRow;
-        value.nextIndex++;
-        if (insertPos == (n - 1)) {
+        vecBatches[insertPos] = inputVecBatch;
+        rowIndexes[insertPos] = inputRowIdx;
+
+        if (insertPos == lastPosition) {
             value.nextIndex = n;
         } else {
             // check the nth and (n-1)th values are equal
-            auto isDistinct = CheckDistinctForLast(vecBatches[n - 1], vecBatches[n]);
+            auto isDistinct =
+                CheckDistinctForLast(vecBatches[lastPosition], rowIndexes[lastPosition], vecBatches[n], rowIndexes[n]);
             if (isDistinct) {
                 value.nextIndex = n;
+            } else {
+                value.nextIndex++;
             }
         }
     }
@@ -673,6 +631,8 @@ void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, BaseVector **
 
 int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
 {
+    inputs.emplace_back(inputVecBatch);
+
     auto inputVectors = inputVecBatch->GetVectors();
     auto inputColNum = sourceTypes.GetSize();
     Prepare(inputVectors, inputColNum);
@@ -696,7 +656,7 @@ int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
         auto keyPos = partitionedMap.find(key);
         if (keyPos == partitionedMap.end()) {
             // this is a new partition
-            InsertNewPartition(key, inputVectors, inputColNum, rowIdx);
+            InsertNewPartition(key, inputVecBatch, rowIdx);
         } else {
             arenaAllocator.RollBackContinualMem();
 
@@ -704,16 +664,15 @@ int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
             auto value = keyPos->second;
             if (value->nextIndex < n) {
                 // case 1, the vecBatches is not full
-                InsertNewValue(*value, inputVectors, inputColNum, sortVectors, rowIdx);
+                InsertNewValue(*value, inputVecBatch, sortVectors, rowIdx);
             } else {
                 // case 2, the vecBatches is full
-                UpdatePartitionValue(*value, inputVectors, inputColNum, sortVectors, rowIdx);
+                UpdatePartitionValue(*value, inputVecBatch, sortVectors, rowIdx);
             }
         }
     }
     currentIter = partitionedMap.begin();
 
-    VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;
 }
 
@@ -746,14 +705,17 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
     auto result = new VectorBatch(outputRowCount);
     int32_t resultRowIdx = 0;
     VectorHelper::AppendVectors(result, sourceTypes, outputRowCount);
+    auto resultVectors = result->GetVectors();
     for (auto iter = currentIter; iter != end; ++iter) {
         auto mapValue = iter->second;
         auto vecBatches = mapValue->vecBatches;
+        auto rowIndexes = mapValue->rowIndexes;
         auto vecBatchSize = mapValue->nextIndex;
         for (int32_t i = 0; i < vecBatchSize; i++) {
             auto vecBatch = vecBatches[i];
+            auto rowIndex = rowIndexes[i];
             for (int32_t j = 0; j < outputColNum; j++) {
-                setOutputValueFuncs[j](vecBatch->Get(j), 0, result->Get(j), resultRowIdx);
+                setOutputValueFuncs[j](vecBatch->Get(j), rowIndex, resultVectors[j], resultRowIdx);
             }
             resultRowIdx++;
         }
@@ -770,5 +732,6 @@ OmniStatus TopNSortOperator::Close()
         auto mapValue = iter->second;
         delete mapValue;
     }
+    VectorHelper::FreeVecBatches(inputs);
     return OMNI_STATUS_NORMAL;
 }

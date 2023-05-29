@@ -23,19 +23,20 @@ using SetValueFunc = void (*)(vec::BaseVector *inputVec, int32_t inputPos, vec::
 
 class PartitionValue {
 public:
-    PartitionValue(int32_t sortColNum, int32_t vecBatchCount)
-        : vecBatches(new vec::VectorBatch *[vecBatchCount * 2]()), nextIndex(0)
+    PartitionValue(int32_t vecBatchCount)
+        : vecBatches(new vec::VectorBatch *[vecBatchCount * 2]()),
+          rowIndexes(new int32_t[vecBatchCount * 2]()),
+          nextIndex(0)
     {}
 
     ~PartitionValue()
     {
-        for (int32_t i = 0; i < nextIndex; i++) {
-            vec::VectorHelper::FreeVecBatch(vecBatches[i]);
-        }
         delete[] vecBatches;
+        delete[] rowIndexes;
     }
 
     vec::VectorBatch **vecBatches; // the row count of vecBatch is n
+    int32_t *rowIndexes;
     int32_t nextIndex;
 };
 
@@ -65,23 +66,24 @@ public:
 private:
     void Prepare(vec::BaseVector **inputVectors, int32_t inputColNum);
 
-    void InsertNewPartition(StringRef &key, vec::BaseVector **inputVectors, int32_t inputColNum, int32_t rowIdx);
+    void InsertNewPartition(StringRef &key, vec::VectorBatch *inputVecBatch, int32_t inputRowIdx);
 
-    void InsertNewValue(PartitionValue &value, vec::BaseVector **inputVectors, int32_t inputColNum,
-        vec::BaseVector **sortVectors, int32_t rowIdx);
+    void InsertNewValue(PartitionValue &value, vec::VectorBatch *inputVecBatch, vec::BaseVector **sortVectors,
+        int32_t inputRowIdx);
 
-    void UpdatePartitionValue(PartitionValue &value, vec::BaseVector **inputVectors, int32_t inputColNum,
-        vec::BaseVector **sortVectors, int32_t rowIdx);
+    void UpdatePartitionValue(PartitionValue &value, vec::VectorBatch *inputVecBatch, vec::BaseVector **sortVectors,
+        int32_t inputRowIdx);
 
     // insert sort vector is flat vector or dictionary vector
-    int32_t CompareForSortCols(vec::BaseVector **insertSortVectors, int32_t insertRowIdx, VectorBatch *vecBatch)
+    int32_t CompareForSortCols(vec::BaseVector **insertSortVectors, int32_t insertRowIdx, VectorBatch *vecBatch,
+        int32_t rowIndex)
     {
         int32_t result;
         for (int32_t sortColIdx = 0; sortColIdx < sortColNum; sortColIdx++) {
             auto leftVec = insertSortVectors[sortColIdx];
             auto rightVec = vecBatch->Get(sortCols[sortColIdx]);
             auto leftNull = leftVec->IsNull(insertRowIdx);
-            auto rightNull = rightVec->IsNull(0);
+            auto rightNull = rightVec->IsNull(rowIndex);
             auto sortNullFirst = sortNullFirsts[sortColIdx];
 
             if (leftNull && rightNull) {
@@ -97,7 +99,7 @@ private:
                 break;
             } else {
                 // both left and right are not null
-                result = sortCompareFuncs[sortColIdx](leftVec, insertRowIdx, rightVec, 0);
+                result = sortCompareFuncs[sortColIdx](leftVec, insertRowIdx, rightVec, rowIndex);
                 if (result != 0) {
                     result = sortAscendings[sortColIdx] ? result : -result;
                     break;
@@ -107,12 +109,14 @@ private:
         return result;
     }
 
-    bool CheckDistinctForLast(vec::VectorBatch *lastVecBatch, vec::VectorBatch *frontOfLastVecBatch)
+    bool CheckDistinctForLast(vec::VectorBatch *lastVecBatch, int32_t lastRowIndex,
+        vec::VectorBatch *frontOfLastVecBatch, int32_t frontOfLastRowIdx)
     {
         for (int32_t i = 0; i < sortColNum; i++) {
-            auto lastSortVec = lastVecBatch->Get(sortCols[i]);
-            auto frontOfLastSortVec = frontOfLastVecBatch->Get(sortCols[i]);
-            auto result = equalFuncs[i](lastSortVec, 0, frontOfLastSortVec, 0);
+            auto sortCol = sortCols[i];
+            auto lastSortVec = lastVecBatch->Get(sortCol);
+            auto frontOfLastSortVec = frontOfLastVecBatch->Get(sortCol);
+            auto result = equalFuncs[i](lastSortVec, lastRowIndex, frontOfLastSortVec, frontOfLastRowIdx);
             if (!result) {
                 return true;
             }
@@ -123,10 +127,8 @@ private:
     StringRef GeneratePartitionKey(BaseVector **partitionVectors, int32_t partitionColNum, int32_t rowIdx,
         mem::SimpleArenaAllocator &arenaAllocator);
 
-    int32_t FindInsertPositionWhenFull(BaseVector **insertSortVectors, int32_t insertRowIdx, VectorBatch **vecBatches,
-        int32_t position, bool &needAppend);
-    int32_t FindInsertPositionWhenNotFull(BaseVector **insertSortVectors, int32_t insertRowIdx,
-        VectorBatch **vecBatches, int32_t position);
+    int32_t FindInsertPosition(BaseVector **insertSortVectors, int32_t insertRowIdx, VectorBatch **vecBatches,
+        int32_t *rowIndexes, int32_t position);
 
     type::DataTypes sourceTypes;
     int32_t n;
@@ -148,6 +150,7 @@ private:
     std::vector<SetValueFunc> setOutputValueFuncs;          // this is for construct output from partitionMap
     int32_t maxRowCount = 0;
     std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator currentIter;
+    std::vector<vec::VectorBatch *> inputs;
 };
 
 class TopNSortOperatorFactory : public OperatorFactory {
