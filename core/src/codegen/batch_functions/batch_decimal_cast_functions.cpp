@@ -12,8 +12,6 @@
 namespace omniruntime::codegen::function {
 using namespace omniruntime::type;
 
-static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
-
 // Round towards "nearest neighbor" unless both neighbors are equidistant, in which case round up.
 extern "C" DLLEXPORT void BatchCastDecimal64ToIntHalfUp(int64_t contextPtr, int64_t *x, int32_t precision,
     int32_t scale, const bool *isAnyNull, int32_t *output, int32_t rowCnt)

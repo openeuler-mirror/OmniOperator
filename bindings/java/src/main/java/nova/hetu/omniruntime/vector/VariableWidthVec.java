@@ -4,7 +4,6 @@
 
 package nova.hetu.omniruntime.vector;
 
-import static nova.hetu.omniruntime.type.DataType.DataTypeId.OMNI_VARCHAR;
 import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_VEC_ENCODING_FLAT;
 
 import nova.hetu.omniruntime.type.DataType;

@@ -92,7 +92,6 @@ public:
         return newInputVecBatch;
     }
 
-
     static void AddFilterColumn(VectorBatch *inputVecBatch, VectorBatch *newInputVecBatch,
         std::vector<int32_t> &projectCols, std::vector<SimpleFilter *> &aggSimpleFilters, ExecutionContext *context,
         DataTypes &originTypes)

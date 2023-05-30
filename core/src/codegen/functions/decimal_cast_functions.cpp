@@ -6,7 +6,6 @@
 #include "decimal_cast_functions.h"
 
 namespace omniruntime::codegen::function {
-static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
 
 // Cast Function
 extern "C" DLLEXPORT int64_t CastDecimal64To64(int64_t contextPtr, int64_t x, int32_t precision, int32_t scale,

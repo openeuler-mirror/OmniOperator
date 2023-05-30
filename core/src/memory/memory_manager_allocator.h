@@ -75,11 +75,6 @@ public:
     {
         new (p)T(value);
     }
-
-    void destroy(pointer p)
-    {
-        p->~T();
-    }
 };
 }
 

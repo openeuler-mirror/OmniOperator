@@ -13,7 +13,6 @@ using namespace omniruntime::type;
 namespace omniruntime::codegen::function {
 const std::string DECIMAL_OVERFLOW { "Decimal overflow" };
 const std::string DIVIDE_ZERO { "Division by zero" };
-static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
 
 extern "C" DLLEXPORT void BatchDecimal128Compare(Decimal128 *x, int32_t xPrecision, int32_t xScale, Decimal128 *y,
     int32_t yPrecision, int32_t yScale, int32_t *output, int32_t rowCnt)

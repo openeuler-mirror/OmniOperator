@@ -59,12 +59,4 @@ extern DLLEXPORT void GetDecimalFromDictionaryVector(int64_t dictionaryVectorAdd
     *outLowPtr = value.LowBits();
     *outHighPtr = value.HighBits();
 }
-
-extern "C" DLLEXPORT uint8_t *GetStringViewValueAndLength(int64_t stringValueAddr, int32_t index, int32_t *length)
-{
-    auto stringValue = reinterpret_cast<std::string_view *>(stringValueAddr);
-    std::string_view &stringView = stringValue[index];
-    *length = stringView.length();
-    return reinterpret_cast<uint8_t *>(const_cast<char *>(stringView.data()));
-}
 }

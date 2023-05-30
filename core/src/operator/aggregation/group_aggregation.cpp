@@ -10,7 +10,6 @@
 #include "util/type_util.h"
 #include "util/debug.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
-#include "agg_util.h"
 
 #if defined(DEBUG_OPERATOR) && defined(TRACE)
 #include <sstream>

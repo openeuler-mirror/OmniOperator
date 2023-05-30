@@ -21,12 +21,6 @@ static inline bool AddCheckedOverflow(T left, T right, T &result)
 }
 
 template<typename T>
-static inline bool SubCheckedOverflow(T left, T right, T &result)
-{
-    return __builtin_sub_overflow(left, right, &result);
-}
-
-template<typename T>
 static inline bool MulCheckedOverflow(T left, T right, T &result)
 {
     bool isOverflow = __builtin_mul_overflow(left, right, &result);

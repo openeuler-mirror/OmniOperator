@@ -5,18 +5,6 @@
 #include "stringfunctions.h"
 
 namespace omniruntime::codegen::function {
-namespace {
-const int THOUSANDS = 1000;
-const int HUNDREDS = 100;
-const int TENS = 10;
-const double SECOND_OF_DAY = 86400.0;
-const int BASE_YEAR = 1900;
-
-const int THOU = 0;
-const int HUN = 1;
-const int TEN = 2;
-const int ONE = 3;
-}
 
 extern "C" DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
 {
@@ -691,7 +679,6 @@ extern "C" DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPt
 {
     Decimal128Wrapper inputDecimal(high, low);
     std::string stringDecimal = inputDecimal.SetScale(scale).ToString();
-    ;
     *outLen = static_cast<int32_t>(stringDecimal.length());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     errno_t res = memcpy_s(ret, *outLen, stringDecimal.c_str(), *outLen);
