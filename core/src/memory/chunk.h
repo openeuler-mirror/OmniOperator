@@ -25,7 +25,7 @@ public:
         if (data != nullptr) {
             return new Chunk(globalAllocator, data, sizeInByte);
         }
-        return nullptr;
+        throw OmniException("MEMORY_CHUNK_ERROR", "NewChunk return nullptr error");
     }
 
 protected:
