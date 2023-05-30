@@ -28,10 +28,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
     BaseVector *vector = nullptr;
     JNI_METHOD_START
     vector = VectorHelper::CreateVector(jVectorEncodingId, jVectorTypeId, jValueCount, jCapacityInBytes).release();
-    if (vector == nullptr) {
+    if (UNLIKELY(vector == nullptr)) {
         throw omniruntime::exception::OmniException("CREATE_FLAT_VECTOR_FAILED",
             "return a null pointer when creating flat vector");
-        }
+    }
     JNI_METHOD_END(0)
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
@@ -46,7 +46,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVecto
     BaseVector *vector = nullptr;
     JNI_METHOD_START
     vector = VectorHelper::CreateDictionaryVector(ids, size, dictionaryVector, dataTypeId).release();
-    if (vector == nullptr) {
+    if (UNLIKELY(vector == nullptr)) {
         throw omniruntime::exception::OmniException("CREATE_DICTIONARY_VECTOR_FAILED",
             "return a null pointer when creating dictionary vector");
     }
@@ -176,7 +176,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
     auto offsetsAddr = VectorHelper::UnsafeGetOffsetsAddr(nativeVector, omniruntime::type::DataTypeId::OMNI_VARCHAR);
-    if (offsetsAddr == nullptr) {
+    if (UNLIKELY(offsetsAddr == nullptr)) {
         throw omniruntime::exception::OmniException("GET_OFFSETS_FAILED",
             "return a null pointer when getting offsets address");
     }
@@ -228,10 +228,10 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDicti
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
     auto dictionaryAddr = VectorHelper::UnsafeGetDictionary(nativeVector, dataTypeId);
-    if (dictionaryAddr == nullptr) {
+    if (UNLIKELY(dictionaryAddr == nullptr)) {
         throw omniruntime::exception::OmniException("GET_DICTIONARY_NATIVE_FAILED",
             "return a null pointer when getting dictionary address");
-        }
+    }
     return reinterpret_cast<uintptr_t>(dictionaryAddr);
 }
 
