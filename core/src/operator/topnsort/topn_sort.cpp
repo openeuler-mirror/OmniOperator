@@ -46,42 +46,6 @@ template <type::DataTypeId typeId> void *GetValueFromDictionary(BaseVector *inpu
     }
 }
 
-template <type::DataTypeId typeId> int64_t HashValueFromFlat(vec::BaseVector *vec, int32_t rowIdx)
-{
-    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-        auto value = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vec)->GetValue(rowIdx);
-        return HashUtil::HashValue((int8_t *)value.data(), value.length());
-    } else if constexpr (typeId == OMNI_DECIMAL128) {
-        auto value = static_cast<Vector<Decimal128> *>(vec)->GetValue(rowIdx);
-        return HashUtil::HashValue(value.LowBits(), value.HighBits());
-    } else if constexpr (typeId == OMNI_DECIMAL64) {
-        auto value = static_cast<Vector<int64_t> *>(vec)->GetValue(rowIdx);
-        return HashUtil::HashDecimal64Value(value);
-    } else {
-        using RawDataType = typename NativeAndVectorType<typeId>::type;
-        auto value = static_cast<Vector<RawDataType> *>(vec)->GetValue(rowIdx);
-        return HashUtil::HashValue(value);
-    }
-}
-
-template <type::DataTypeId typeId> int64_t HashValueFromDictionary(vec::BaseVector *vec, int32_t rowIdx)
-{
-    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-        auto value = static_cast<Vector<DictionaryContainer<std::string_view>> *>(vec)->GetValue(rowIdx);
-        return HashUtil::HashValue((int8_t *)value.data(), value.length());
-    } else if constexpr (typeId == OMNI_DECIMAL128) {
-        auto value = static_cast<Vector<DictionaryContainer<Decimal128>> *>(vec)->GetValue(rowIdx);
-        return HashUtil::HashValue(value.LowBits(), value.HighBits());
-    } else if constexpr (typeId == OMNI_DECIMAL64) {
-        auto value = static_cast<Vector<DictionaryContainer<int64_t>> *>(vec)->GetValue(rowIdx);
-        return HashUtil::HashDecimal64Value(value);
-    } else {
-        using RawDataType = typename NativeAndVectorType<typeId>::type;
-        auto value = static_cast<Vector<DictionaryContainer<RawDataType>> *>(vec)->GetValue(rowIdx);
-        return HashUtil::HashValue(value);
-    }
-}
-
 template <type::DataTypeId typeId>
 bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightVec, int32_t rightPos)
 {
@@ -137,61 +101,6 @@ bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightV
             }
         } else {
             return leftValue == rightValue;
-        }
-    }
-}
-
-template <type::DataTypeId typeId>
-void UpdateValueFromFlat(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec, int32_t outputPos)
-{
-    auto inputNull = inputVec->IsNull(inputPos);
-    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-        using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
-        auto outputVarcharVec = static_cast<VarcharVector *>(outputVec);
-        auto inputVarcharVec = static_cast<VarcharVector *>(inputVec);
-        if (inputNull) {
-            outputVarcharVec->SetNull(outputPos);
-        } else {
-            outputVarcharVec->SetNotNull(outputPos);
-            auto value = inputVarcharVec->GetValue(inputPos);
-            outputVarcharVec->SetValue(outputPos, value);
-        }
-    } else {
-        using RawDataType = typename NativeAndVectorType<typeId>::type;
-        if (inputNull) {
-            static_cast<Vector<RawDataType> *>(outputVec)->SetNull(outputPos);
-        } else {
-            static_cast<Vector<RawDataType> *>(outputVec)->SetNotNull(outputPos);
-            auto value = static_cast<Vector<RawDataType> *>(inputVec)->GetValue(inputPos);
-            static_cast<Vector<RawDataType> *>(outputVec)->SetValue(outputPos, value);
-        }
-    }
-}
-
-template <type::DataTypeId typeId>
-void UpdateValueFromDictionary(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
-    int32_t outputPos)
-{
-    auto inputNull = inputVec->IsNull(inputPos);
-    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-        using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
-        auto outputVarcharVec = static_cast<VarcharVector *>(outputVec);
-        auto inputVarcharVec = static_cast<Vector<DictionaryContainer<std::string_view>> *>(inputVec);
-        if (inputNull) {
-            outputVarcharVec->SetNull(outputPos);
-        } else {
-            outputVarcharVec->SetNotNull(outputPos);
-            auto value = inputVarcharVec->GetValue(inputPos);
-            outputVarcharVec->SetValue(outputPos, value);
-        }
-    } else {
-        using RawDataType = typename NativeAndVectorType<typeId>::type;
-        if (inputNull) {
-            static_cast<Vector<RawDataType> *>(outputVec)->SetNull(outputPos);
-        } else {
-            static_cast<Vector<RawDataType> *>(outputVec)->SetNotNull(outputPos);
-            auto value = static_cast<Vector<DictionaryContainer<RawDataType>> *>(inputVec)->GetValue(inputPos);
-            static_cast<Vector<RawDataType> *>(outputVec)->SetValue(outputPos, value);
         }
     }
 }
@@ -550,48 +459,6 @@ static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
     nullptr                                      // OMNI_CONTAINER,
 };
 
-static std::vector<UpdateValueFunc> updateValueFromFlatFuncs = {
-    nullptr,                              // OMNI_NONE,
-    UpdateValueFromFlat<OMNI_INT>,        // OMNI_INT
-    UpdateValueFromFlat<OMNI_LONG>,       // OMNI_LONG
-    UpdateValueFromFlat<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    UpdateValueFromFlat<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    UpdateValueFromFlat<OMNI_SHORT>,      // OMNI_SHORT
-    UpdateValueFromFlat<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    UpdateValueFromFlat<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    UpdateValueFromFlat<OMNI_DATE32>,     // OMNI_DATE32
-    UpdateValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
-    UpdateValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
-    UpdateValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                              // OMNI_TIMESTAMP
-    nullptr,                              // OMNI_INTERVAL_MONTHS
-    nullptr,                              // OMNI_INTERVAL_DAY_TIME
-    UpdateValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    UpdateValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr                               // OMNI_CONTAINER,
-};
-
-static std::vector<UpdateValueFunc> updateValueFromDictionaryFuncs = {
-    nullptr,                                    // OMNI_NONE,
-    UpdateValueFromDictionary<OMNI_INT>,        // OMNI_INT
-    UpdateValueFromDictionary<OMNI_LONG>,       // OMNI_LONG
-    UpdateValueFromDictionary<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    UpdateValueFromDictionary<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    UpdateValueFromDictionary<OMNI_SHORT>,      // OMNI_SHORT
-    UpdateValueFromDictionary<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    UpdateValueFromDictionary<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    UpdateValueFromDictionary<OMNI_DATE32>,     // OMNI_DATE32
-    UpdateValueFromDictionary<OMNI_DATE64>,     // OMNI_DATE64
-    UpdateValueFromDictionary<OMNI_TIME32>,     // OMNI_TIME32
-    UpdateValueFromDictionary<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                                    // OMNI_TIMESTAMP
-    nullptr,                                    // OMNI_INTERVAL_MONTHS
-    nullptr,                                    // OMNI_INTERVAL_DAY_TIME
-    UpdateValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    UpdateValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr                                     // OMNI_CONTAINER,
-};
-
 static std::vector<SetValueFunc> setValueFromFlatFuncs = {
     nullptr,                           // OMNI_NONE,
     SetValueFromFlat<OMNI_INT>,        // OMNI_INT
@@ -664,7 +531,6 @@ TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n
     auto inputColNum = sourceTypes.GetSize();
     equalFuncs.resize(inputColNum);
     createVectorFuncs.resize(inputColNum);
-    updatePartitionValueFuncs.resize(inputColNum);
     setOutputValueFuncs.resize(inputColNum);
     for (int32_t i = 0; i < inputColNum; i++) {
         setOutputValueFuncs[i] = setValueFromFlatFuncs[sourceTypeIds[i]];
@@ -754,11 +620,9 @@ void TopNSortOperator::Prepare(BaseVector **inputVectors, int32_t inputColNum)
         auto sortCol = sortCols[i];
         auto curTypeId = sourceTypeIds[sortCol];
         if (inputVectors[sortCol]->GetEncoding() == OMNI_DICTIONARY) {
-            sortGetValueFuncs[i] = getValueFromDictionaryFuncs[curTypeId];
             sortCompareFuncs[i] = compareFromDictionaryFuncs[curTypeId];
             equalFuncs[i] = equalFromFlatFuncs[curTypeId];
         } else {
-            sortGetValueFuncs[i] = getValueFromFlatFuncs[curTypeId];
             sortCompareFuncs[i] = compareFromFlatFuncs[curTypeId];
             equalFuncs[i] = equalFromFlatFuncs[curTypeId];
         }

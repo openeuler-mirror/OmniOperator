@@ -13,10 +13,15 @@ import nova.hetu.omniruntime.type.DataTypeSerializer;
 import java.util.Arrays;
 import java.util.Objects;
 
+/**
+ * The type omni top n sort with expression operator factory.
+ *
+ * @since 2023-5-26
+ */
 public class OmniTopNSortWithExprOperatorFactory
         extends OmniOperatorFactory<OmniTopNSortWithExprOperatorFactory.FactoryContext> {
     /**
-     * Instantiates a new Omni top n with expression operator factory.
+     * Instantiates a new omni top n sort with expression operator factory.
      *
      * @param sourceTypes the source types
      * @param limitN the limit n
@@ -35,7 +40,7 @@ public class OmniTopNSortWithExprOperatorFactory
     }
 
     /**
-     * Instantiates a new Omni top n with expression operator factory with default
+     * Instantiates a new omni top n sort with expression operator factory with default
      * operator config.
      *
      * @param sourceTypes the source types
@@ -66,7 +71,7 @@ public class OmniTopNSortWithExprOperatorFactory
     /**
      * The type Context.
      *
-     * @since 2021-10-26
+     * @since 2023-5-26
      */
     public static class FactoryContext extends OmniOperatorFactoryContext {
         private final DataType[] sourceTypes;
@@ -124,7 +129,7 @@ public class OmniTopNSortWithExprOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            OmniTopNSortWithExprOperatorFactory.FactoryContext context = (OmniTopNSortWithExprOperatorFactory.FactoryContext) obj;
+            FactoryContext context = (FactoryContext) obj;
             return limitN == context.limitN && Arrays.equals(sourceTypes, context.sourceTypes)
                     && isStrictTopN == context.isStrictTopN && Arrays.equals(partitionKeys, context.partitionKeys)
                     && Arrays.equals(sortKeys, context.sortKeys)

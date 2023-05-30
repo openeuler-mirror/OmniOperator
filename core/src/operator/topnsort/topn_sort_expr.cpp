@@ -6,8 +6,8 @@
 #include "operator/util/operator_util.h"
 
 namespace omniruntime::op {
-TopNSortWithExprOperatorFactory::TopNSortWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n, bool isStrictTopN,
-    const std::vector<omniruntime::expressions::Expr *> &partitionKeys,
+TopNSortWithExprOperatorFactory::TopNSortWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
+    bool isStrictTopN, const std::vector<omniruntime::expressions::Expr *> &partitionKeys,
     const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
     std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig)
 {
@@ -21,8 +21,8 @@ TopNSortWithExprOperatorFactory::TopNSortWithExprOperatorFactory(const type::Dat
         this->projections, this->sortCols, this->projectFuncs, overflowConfig);
 
     this->sourceTypes = std::make_unique<DataTypes>(sourceTypesForSort);
-    this->topNSortOperatorFactory = std::make_unique<TopNSortOperatorFactory>(*sourceTypes, n, isStrictTopN, this->partitionCols,
-        this->sortCols, sortAscendings, sortNullFirsts);
+    this->topNSortOperatorFactory = std::make_unique<TopNSortOperatorFactory>(*sourceTypes, n, isStrictTopN,
+        this->partitionCols, this->sortCols, sortAscendings, sortNullFirsts);
 }
 
 TopNSortWithExprOperatorFactory::~TopNSortWithExprOperatorFactory() = default;

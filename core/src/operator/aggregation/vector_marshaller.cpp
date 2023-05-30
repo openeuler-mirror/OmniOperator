@@ -164,7 +164,8 @@ void SerializeDictionaryValueIntoArena(BaseVector *baseVector, int32_t rowIdx,
     }
 }
 
-template <type::DataTypeId id> const char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin)
+template <type::DataTypeId id>
+const char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
     // the analysis of const expr  will be in compile stage

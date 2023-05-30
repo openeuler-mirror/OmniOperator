@@ -18,14 +18,12 @@ using CompareFunc = int32_t (*)(vec::BaseVector *left, int32_t leftPosition, vec
     int32_t rightPosition);
 using EqualFunc = bool (*)(vec::BaseVector *left, int32_t leftPosition, vec::BaseVector *right, int32_t rightPosition);
 using CreateVectorFunc = BaseVector *(*)(BaseVector *inputVec, int32_t inputPos);
-using UpdateValueFunc = void (*)(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
-    int32_t outputPos);
 using SetValueFunc = void (*)(vec::BaseVector *inputVec, int32_t inputPos, vec::BaseVector *outputVec,
     int32_t outputPos);
 
 class PartitionValue {
 public:
-    PartitionValue(int32_t vecBatchCount)
+    explicit PartitionValue(int32_t vecBatchCount)
         : vecBatches(new vec::VectorBatch *[vecBatchCount * 2]()),
           rowIndexes(new int32_t[vecBatchCount * 2]()),
           nextIndex(0)
@@ -183,7 +181,6 @@ private:
     std::vector<VectorSerializer> serializers;
     std::vector<EqualFunc> equalFuncs;
     std::vector<CreateVectorFunc> createVectorFuncs;
-    std::vector<UpdateValueFunc> updatePartitionValueFuncs; // this is for update value in partitionMap
     std::vector<SetValueFunc> setOutputValueFuncs;          // this is for construct output from partitionMap
     int32_t maxRowCount = 0;
     std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator currentIter;
