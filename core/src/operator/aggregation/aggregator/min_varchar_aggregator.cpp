@@ -17,8 +17,7 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &s
 {
     auto vector = vectorBatch->Get(this->channels[0]);
 
-    auto offsets =
-        static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, IN_ID)));
+    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, IN_ID)));
     auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
     int32_t minLen = 3 * width;
     uint8_t *minVal = this->executionContext->GetArena()->Allocate(3 * width);
@@ -193,6 +192,31 @@ ALWAYS_INLINE void MinVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState
 // since, compiler needs to generate each individual template instance wherever aggregator header is include
 // to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
 // and used explicit template instantiation to generate template instances
+
+void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std::string_view>> *rawVector,
+    const char *&res, int32_t &idx)
+{
+    if (state.val == nullptr || state.count == 0) {
+        auto strView = rawVector->GetValue(idx);
+        res = strView.data();
+        state.count = strView.size();
+        state.count |= UPDATE_FLAG;
+    }
+}
+
+const char *InitialVarcharDictState(AggregateState &state, Vector<DictionaryContainer<std::string_view>> *rawVector,
+    int32_t idx)
+{
+    const char *res;
+    if (state.val == nullptr || state.count == 0) {
+        auto strView = rawVector->GetValue(idx);
+        res = strView.data();
+        state.count = strView.size();
+        state.count |= UPDATE_FLAG;
+    }
+    return res;
+}
+
 template class MinVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
 template class MinVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;
