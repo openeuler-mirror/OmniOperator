@@ -227,8 +227,8 @@ Expr *JSONParser::ParseJSONSwitch(const Json &jsonExpr)
     }
     if (TypeUtil::IsStringType(elseExpr->GetReturnTypeId()) && elseExpr->GetType() == ExprType::LITERAL_E &&
         static_cast<LiteralExpr *>(elseExpr)->stringVal->compare("null") == 0) {
-        auto literalExpr = ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId());
         delete elseExpr;
+        auto literalExpr = ParserHelper::GetDefaultValueForType(elseExpr->GetReturnTypeId());
         if (literalExpr == nullptr) {
             DeleteWhenClause(whenClause);
             return nullptr;

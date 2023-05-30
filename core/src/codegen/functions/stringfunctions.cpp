@@ -120,7 +120,7 @@ extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t cont
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int32_t result;
     std::string s(str, strLen);
     StringUtil::TrimString(s);
     if (!regex_match(s, g_dateRegex)) {
@@ -143,7 +143,7 @@ extern "C" DLLEXPORT int32_t CastStringToDateAllowReducePrecison(int64_t context
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int32_t result;
     std::string s(str, strLen);
     StringUtil::TrimString(s);
     if (Date32::StringToDate32(str, strLen, result) == -1) {
@@ -575,7 +575,7 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullNotAllowReducePrecison(bool 
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int32_t result;
     std::string s(str, strLen);
     StringUtil::TrimString(s);
     if (!regex_match(s, g_dateRegex)) {
@@ -594,7 +594,7 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullAllowReducePrecison(bool *is
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int32_t result;
     std::string s(str, strLen);
     StringUtil::TrimString(s);
     if (Date32::StringToDate32(str, strLen, result) == -1) {
