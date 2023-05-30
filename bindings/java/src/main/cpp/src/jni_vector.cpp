@@ -25,9 +25,13 @@ static BaseVector *TransformVector(long vectorAddr)
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *env, jclass jcls,
     jint jValueCount, jint jVectorEncodingId, jint jVectorTypeId, jint jCapacityInBytes)
 {
-    BaseVector *vector;
+    BaseVector *vector = nullptr;
     JNI_METHOD_START
     vector = VectorHelper::CreateVector(jVectorEncodingId, jVectorTypeId, jValueCount, jCapacityInBytes).release();
+    if (UNLIKELY(vector == nullptr)) {
+        throw omniruntime::exception::OmniException("CREATE_FLAT_VECTOR_FAILED",
+            "return a null pointer when creating flat vector");
+    }
     JNI_METHOD_END(0)
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
@@ -39,9 +43,13 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVecto
     jint idsArray[size];
     env->GetIntArrayRegion(jIds, 0, size, idsArray);
     jint *ids = idsArray;
-    BaseVector *vector;
+    BaseVector *vector = nullptr;
     JNI_METHOD_START
     vector = VectorHelper::CreateDictionaryVector(ids, size, dictionaryVector, dataTypeId).release();
+    if (UNLIKELY(vector == nullptr)) {
+        throw omniruntime::exception::OmniException("CREATE_DICTIONARY_VECTOR_FAILED",
+            "return a null pointer when creating dictionary vector");
+    }
     JNI_METHOD_END(0)
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
@@ -50,7 +58,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(
     jlong jNativeVector, jint dataTypeId, jint jStartIndex, jint jLength)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    BaseVector *sliceVector;
+    BaseVector *sliceVector = nullptr;
     JNI_METHOD_START
     sliceVector = VectorHelper::SliceVector(nativeVector, dataTypeId, jStartIndex, jLength).release();
     JNI_METHOD_END(0)
@@ -64,7 +72,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
     jint positionArray[jLength];
     env->GetIntArrayRegion(jPositions, jOffset, jLength, positionArray);
     jint *positions = positionArray;
-    BaseVector *copyVector;
+    BaseVector *copyVector = nullptr;
     JNI_METHOD_START
     copyVector =
         VectorHelper::CopyPositionsVector(nativeVector, reinterpret_cast<int *>(positions), 0, jLength, dataTypeId)
@@ -167,8 +175,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
     jclass jcls, jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(
-        VectorHelper::UnsafeGetOffsetsAddr(nativeVector, omniruntime::type::DataTypeId::OMNI_VARCHAR));
+    auto offsetsAddr = VectorHelper::UnsafeGetOffsetsAddr(nativeVector, omniruntime::type::DataTypeId::OMNI_VARCHAR);
+    if (UNLIKELY(offsetsAddr == nullptr)) {
+        throw omniruntime::exception::OmniException("GET_OFFSETS_FAILED",
+            "return a null pointer when getting offsets address");
+    }
+    return reinterpret_cast<uintptr_t>(offsetsAddr);
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_setGlobalMemoryLimitNative(JNIEnv *env,
@@ -215,7 +227,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDicti
     jlong jNativeVector, jint dataTypeId)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetDictionary(nativeVector, dataTypeId));
+    auto dictionaryAddr = VectorHelper::UnsafeGetDictionary(nativeVector, dataTypeId);
+    if (UNLIKELY(dictionaryAddr == nullptr)) {
+        throw omniruntime::exception::OmniException("GET_DICTIONARY_NATIVE_FAILED",
+            "return a null pointer when getting dictionary address");
+    }
+    return reinterpret_cast<uintptr_t>(dictionaryAddr);
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getVecEncodingNative(JNIEnv *env, jclass jcls,
