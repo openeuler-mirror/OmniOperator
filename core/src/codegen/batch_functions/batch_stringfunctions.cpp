@@ -106,7 +106,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateNotAllowReducePrecison(int64_t co
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result;
+    int32_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 0;
@@ -134,7 +134,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateAllowReducePrecison(int64_t conte
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result;
+    int32_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 0;
@@ -448,7 +448,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNullNotAllowReducePrecison(boo
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result;
+    int32_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
         StringUtil::TrimString(s);
@@ -473,7 +473,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNullAllowReducePrecison(bool *
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result;
+    int32_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
         StringUtil::TrimString(s);
@@ -650,7 +650,7 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8
 extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
     int32_t rowCnt)
 {
-    int32_t result;
+    int32_t result = 0;
     std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
@@ -668,7 +668,7 @@ extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **st
 extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int64_t *output,
     int32_t rowCnt)
 {
-    int64_t result;
+    int64_t result = 0;
     std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
@@ -686,7 +686,7 @@ extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **s
 extern "C" DLLEXPORT void BatchCastStringToDoubleRetNull(bool *isNull, uint8_t **str, int32_t *strLen, double *output,
     int32_t rowCnt)
 {
-    double result;
+    double result = 0.0;
     std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
