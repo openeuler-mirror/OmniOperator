@@ -123,8 +123,9 @@ TEST(SimpleArenaAllocator, testAllocateZeroSize)
     int64_t allocatedSize = 1024;
     uint8_t *noZeroAddr = arena->Allocate(allocatedSize);
     EXPECT_NE(noZeroAddr, nullptr);
-    uint8_t *ZeroAddr = arena->Allocate(0);
-    EXPECT_EQ(ZeroAddr, nullptr);
+    uint8_t *zeroAddr = arena->Allocate(0);
+    EXPECT_NE(zeroAddr, nullptr);
+    EXPECT_EQ(sizeof(zeroAddr), 8); // 8 bytes
     delete arena;
 }
 }

@@ -26,8 +26,9 @@ public:
     uint8_t *Allocate(int64_t sizeInBytes)
     {
         if (sizeInBytes == 0) {
-            LogError("allocate size is zero");
-            return nullptr;
+            // a non-null pointer is returned if allocated size is 0.
+            static int64_t zeroAddress[1];
+            return reinterpret_cast<uint8_t *>(&zeroAddress);
         }
         if (availBytes < sizeInBytes) {
             AllocateChunk(std::max(sizeInBytes, minChunkSize));
