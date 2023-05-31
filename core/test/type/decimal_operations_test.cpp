@@ -11,26 +11,6 @@
 using namespace omniruntime::type;
 
 namespace DecimalOperationsTest {
-TEST(DecimalOperations, sum_encode_and_decode_decimal)
-{
-    using namespace omniruntime::op;
-    AggregateState state;
-    ExecutionContext executionContext;
-    state.val = executionContext.GetArena()->Allocate(24);
-
-    // encode phase
-    int128 oldDec = CreateInt128(1, 2);
-    int64_t oldOverflow = 1;
-    DecimalOperations::EncodeSumDecimal(static_cast<DecimalSumState *>(state.val), oldDec, oldOverflow);
-    // decode phase
-    int128 newDec = 0;
-    int64_t newOverflow = 1;
-    DecimalOperations::DecodeSumDecimal(static_cast<DecimalSumState *>(state.val), newDec, newOverflow);
-
-    EXPECT_EQ(newOverflow, oldOverflow);
-    EXPECT_EQ(newDec, oldDec);
-}
-
 TEST(DecimalOperations, add_with_overflow)
 {
     Decimal128Wrapper left = 3;
@@ -117,13 +97,13 @@ TEST(DecimalOperations, decode_avg_decimal)
     int128 oldDec = CreateInt128(2, 3);
     int64_t oldOther = 1;
     int64_t oldOverflow = 1;
-    DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), oldDec, oldOverflow, oldOther);
+    EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), oldDec, oldOverflow, oldOther);
 
     // decode phase
     int128 newDec = 0;
     int64_t newOverflow = 0;
     int64_t newOther = 0;
-    DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), newDec, newOverflow, newOther);
+    DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), newDec, newOverflow, newOther);
     EXPECT_EQ(newOverflow, oldOverflow);
     EXPECT_EQ(newOverflow, oldOverflow);
 }

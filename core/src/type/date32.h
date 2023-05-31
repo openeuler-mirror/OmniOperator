@@ -50,6 +50,8 @@ public:
 
     static int StringToDate32(const char *s, int32_t strLen, int32_t &result);
 
+    void ToString(char *res, int32_t len) const;
+
     static constexpr double SECOND_OF_DAY = 86400.0;
 
     int32_t Value() const

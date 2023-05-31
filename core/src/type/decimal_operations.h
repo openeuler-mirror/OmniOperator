@@ -18,7 +18,6 @@
 #include "util/omni_exception.h"
 #include "decimal_base.h"
 #include "decimal128.h"
-#include "operator/aggregation/aggregator/aggregator.h"
 
 namespace omniruntime {
 namespace type {
@@ -1331,37 +1330,6 @@ public:
     DecimalOperations() = delete;
 
     ~DecimalOperations() = delete;
-
-    // decimal and overflow is encoded and decoded in continuous memory
-    static inline void DecodeSumDecimal(op::DecimalSumState *statePtr, int128 &val, int64_t &overflow)
-    {
-        overflow = statePtr->overflow;
-        val = statePtr->val;
-    }
-
-    static inline void EncodeSumDecimal(op::DecimalSumState *statePtr, const int128 &val,
-        const int64_t &overflow)
-    {
-        statePtr->overflow = overflow;
-        statePtr->val = val;
-    }
-
-    // decimal and overflow is encoded in continuous memory
-    static inline void DecodeAvgDecimal(op::DecimalAverageState *statePtr, int128 &val, int64_t &overflow,
-        int64_t &count)
-    {
-        count = statePtr->count;
-        overflow = statePtr->overflow;
-        val = statePtr->val;
-    }
-
-    static inline void EncodeAvgDecimal(op::DecimalAverageState *statePtr, const int128 &val,
-        const int64_t &overflow, const int64_t &count)
-    {
-        statePtr->count = count;
-        statePtr->overflow = overflow;
-        statePtr->val = val;
-    }
 
     // todo:
     template<typename Decimal>
