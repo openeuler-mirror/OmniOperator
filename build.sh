@@ -25,17 +25,16 @@ echo "-- Enter" $(dirname $(readlink -f $0))
 
 # save working directory
 CWD=$(pwd)
-
 # check for $1 param
 case "$1" in
-  release)
+  package)
     setup_dependencies
 
-    echo "-- Only build"
-    cd ${CWD} && build release:java --enable-hmpp
+    echo "-- Package without test"
+    cd ${CWD} && build release:java --exclude-test --enable-hmpp
 
-    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME
-    cd $CWD/core/src/udf/java && mvn clean install
+    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
+    cd $CWD/core/src/udf/java && mvn clean install -DskipTests
 
     cd $CWD
     # clean environment
@@ -49,6 +48,15 @@ case "$1" in
     tar --owner root --group root -zcvf $TARGZ_NAME.tar.gz $TARGZ_NAME
     zip $ZIP_NAME.zip $TARGZ_NAME.tar.gz
     ;;
+  release)
+    setup_dependencies
+
+    echo "-- Only build"
+    cd ${CWD} && build release:java --exclude-test --enable-hmpp
+
+    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
+    cd $CWD/core/src/udf/java && mvn clean install -DskipTests
+    ;;
   test)
     setup_dependencies
 
@@ -56,13 +64,12 @@ case "$1" in
     cd ${CWD} && build release:java --enable-hmpp
     $CWD/build/core/test/omtest --gtest_output=xml:test_detail.xml
 
-    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
+    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME
     cd $CWD/core/src/udf/java && mvn clean install
     ;;
   coverage-java)
     echo "-- Enable coverage for java"
     cd ${CWD} && build release:java --enable-hmpp
-
     $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
 
     cd $CWD/bindings/java && mvn clean install devtestcov:atest -Domni.home=$OMNI_HOME -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true
@@ -70,8 +77,7 @@ case "$1" in
     ;;
   coverage-c++)
     echo "-- Enable coverage for c++"
-    cd ${CWD} && build coverage:java --enable-hmpp
-
+    cd ${CWD} && build coverage:java --disable-cpuchecker
     $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
 
     lcov --d $CWD/build --c --output-file test.info --rc lcov_branch_coverage=1
