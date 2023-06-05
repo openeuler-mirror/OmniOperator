@@ -12,6 +12,7 @@ print_usage() {
 
   Types:
     [default]                          = Enable Default Options (equivalent to Release)
+    package                            = Enable Package
     release                            = Enable Release
     test                               = Enable Build and Test
     coverage-java                      = Enable Enable coverage for Java
@@ -70,8 +71,10 @@ setup_dependencies() {
   cp -r ${workspace}/../jemalloc ${open_source_dir}
   cp -r ${workspace}/../json ${open_source_dir}
   cp -r ${workspace}/../llvm-project ${open_source_dir}
-  cp -r ${workspace}/../benchmark ${open_source_dir}
-  cp -r ${workspace}/../googletest ${open_source_dir}/benchmark
+  if [ "$1" != "package" ] && [ "$1" != "release" ]; then
+    cp -r ${workspace}/../benchmark ${open_source_dir}
+    cp -r ${workspace}/../googletest ${open_source_dir}/benchmark
+  fi
   cp -r ${workspace}/../boost ${open_source_dir}
 
   echo "Start build open source code for huawei_secure_c, jemalloc, json, llvm, gtest and boost"
@@ -87,10 +90,12 @@ setup_dependencies() {
   mkdir ${workspace}/${open_source_dir}/json/build
   cd ${workspace}/${open_source_dir}/json/build && sudo cmake ../ && sudo make -j16 && sudo make install
 
-  cd ${workspace}/${open_source_dir}/benchmark
-  cmake -E make_directory "build"
-  cmake -E chdir "build" cmake -DCMAKE_BUILD_TYPE=Release ../
-  sudo cmake --build "build" --config Release --target install
+  if [ "$1" != "package" ] && [ "$1" != "release" ]; then
+    cd ${workspace}/${open_source_dir}/benchmark
+    cmake -E make_directory "build"
+    cmake -E chdir "build" cmake -DCMAKE_BUILD_TYPE=Release ../
+    sudo cmake --build "build" --config Release --target install
+  fi
 
   cd ${workspace}/${open_source_dir}/boost
   sudo chmod -R 755 ./tools && dos2unix ./bootstrap.sh && dos2unix ./tools/build/src/engine/build.sh

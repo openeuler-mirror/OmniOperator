@@ -28,7 +28,7 @@ CWD=$(pwd)
 # check for $1 param
 case "$1" in
   package)
-    setup_dependencies
+    setup_dependencies package
 
     echo "-- Package without test"
     cd ${CWD} && build release:java --exclude-test --enable-hmpp
@@ -49,7 +49,7 @@ case "$1" in
     zip $ZIP_NAME.zip $TARGZ_NAME.tar.gz
     ;;
   release)
-    setup_dependencies
+    setup_dependencies release
 
     echo "-- Only build"
     cd ${CWD} && build release:java --exclude-test --enable-hmpp
@@ -77,7 +77,7 @@ case "$1" in
     ;;
   coverage-c++)
     echo "-- Enable coverage for c++"
-    cd ${CWD} && build coverage:java --disable-cpuchecker
+    cd ${CWD} && build coverage:java --enable-hmpp
     $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
 
     lcov --d $CWD/build --c --output-file test.info --rc lcov_branch_coverage=1
