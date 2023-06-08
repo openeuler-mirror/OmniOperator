@@ -19,12 +19,12 @@ OperatorFactory *CreateAggregationFactory(omniruntime::type::DataTypes &sourceTy
 OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sourceTypes);
 
 std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataTypes &sourceTypes,
-    OverflowConfig *overflowConfig);
+    OverflowConfig *overflowConfig, std::string filterExpr, int32_t operatorCount);
 
 OperatorFactory *CreateDistinctLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount);
 
-OperatorFactory *CreateProjectFactory(omniruntime::type::DataTypes &sourceTypes,
-    std::vector<Expr *> exprs, OverflowConfig *overflowConfig);
+OperatorFactory *CreateProjectFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<Expr *> exprs,
+    OverflowConfig *overflowConfig);
 
 OperatorFactory *CreateUnionFactory(omniruntime::type::DataTypes &sourceTypes);
 

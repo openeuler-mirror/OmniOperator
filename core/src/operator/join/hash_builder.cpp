@@ -14,6 +14,9 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(const DataTypes &buildTyp
     int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount)
     : buildTypes(buildTypes), hashTableCount(operatorCount), operatorIndex(0)
 {
+    if (operatorCount <= 0 || operatorCount > 10000) {
+        throw OmniException("OPERATOR_RUNTIME_ERROR", "operatorCount is not in the acceptable range [1, 10000].");
+    }
     this->buildHashCols.insert(this->buildHashCols.end(), buildHashCols, buildHashCols + buildHashColsCount);
     this->hashTables = new JoinHashTables(operatorCount);
     this->hashTables->SetBuildTypes(&(this->buildTypes));

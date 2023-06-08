@@ -5,7 +5,6 @@
 
 #include "util/test_util.h"
 #include "util/dt_fuzz_factory_create_util.h"
-
 using namespace omniruntime::type;
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
@@ -69,7 +68,7 @@ TEST(DtFuzzFactoryCreateTest, testHashJoinFactoryCreate)
 {
     DataTypes sourceTypes(supportedTypes);
     auto overflowConfig = new OverflowConfig();
-    auto operatorFactories = CreateHashJoinFactory(sourceTypes, overflowConfig);
+    auto operatorFactories = CreateHashJoinFactory(sourceTypes, overflowConfig, "", 1);
 
     ASSERT_FALSE(operatorFactories[0] == nullptr);
     ASSERT_FALSE(operatorFactories[1] == nullptr);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
  * Description: Fuzz test file
  */
 
@@ -33,7 +33,7 @@ using namespace DtFuzzFactoryCreateUtil;
 
 const int32_t SHORT_DECIMAL_SIZE = 18;
 const int32_t LONG_DECIMAL_SIZE = 38;
-int32_t CHAR_SIZE = 10;
+uint16_t CHAR_SIZE = 10;
 std::vector<DataTypePtr> allSupportedBaseTypes = { ShortType(),
                                                    IntType(),
                                                    LongType(),
@@ -45,13 +45,13 @@ std::vector<DataTypePtr> allSupportedBaseTypes = { ShortType(),
                                                    VarcharType(CHAR_SIZE),
                                                    CharType(CHAR_SIZE) };
 
-VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize, int32_t loopCount,
+VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, int32_t dataSize, uint16_t loopCount,
     bool isDictionary, bool hasNull)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     std::vector<DataTypePtr> sourceTypesVec = sourceTypes.Get();
     int32_t *sourceTypeIds = const_cast<int32_t *>(sourceTypes.GetIds());
-    int32_t totalDataSize = dataSize * loopCount;
+    int32_t totalDataSize = dataSize * loopCount + dataSize;
     const int32_t modValue = 4;
 
     BaseVector *sourceVectors[sourceTypesSize];
@@ -100,7 +100,7 @@ void DeleteOperatorFactory(omniruntime::op::OperatorFactory *operatorFactory)
     delete operatorFactory;
 }
 
-void TestFilter(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestFilter(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "Filter Fuzz" << std::endl;
     auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -128,7 +128,7 @@ void TestFilter(void **testData, omniruntime::type::DataTypes &sourceTypes, int3
     delete overflowConfig;
 }
 
-void TestSort(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestSort(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "Sort Fuzz" << std::endl;
     auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -146,7 +146,7 @@ void TestSort(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_
     DeleteOperatorFactory(operatorFactory);
 }
 
-void TestAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "Aggregation Fuzz" << std::endl;
     auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -167,7 +167,7 @@ void TestAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes,
 }
 
 void TestHashAggregation(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize,
-    int32_t loopCount)
+    uint16_t loopCount)
 {
     std::cout << "HashAggregation Fuzz" << std::endl;
     auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -187,13 +187,15 @@ void TestHashAggregation(void **testData, omniruntime::type::DataTypes &sourceTy
     DeleteOperatorFactory(nativeOperatorFactory);
 }
 
-void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount,
+    std::string filterExpr, int32_t optCount)
 {
     std::cout << "HashJoin Fuzz" << std::endl;
+    loopCount = loopCount <= 100 ? loopCount : 100;
     auto vecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, (loopCount / 10) + 1, true, true);
 
     auto overflowConfig = new OverflowConfig();
-    auto operatorFactories = CreateHashJoinFactory(sourceTypes, overflowConfig);
+    auto operatorFactories = CreateHashJoinFactory(sourceTypes, overflowConfig, filterExpr, optCount);
     auto hashBuilderFactory = dynamic_cast<HashBuilderOperatorFactory *>(operatorFactories[0]);
     auto hashBuilderOperator = hashBuilderFactory->CreateOperator();
     hashBuilderOperator->AddInput(vecBatch);
@@ -205,11 +207,13 @@ void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     auto lookupJoinFactory = dynamic_cast<LookupJoinOperatorFactory *>(operatorFactories[1]);
     auto lookupJoinOperator = lookupJoinFactory->CreateOperator();
     lookupJoinOperator->AddInput(probeVecBatch);
-    VectorBatch *outputVecBatch = nullptr;
-    lookupJoinOperator->GetOutput(&outputVecBatch);
+    while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        VectorBatch *outputVecBatch = nullptr;
+        lookupJoinOperator->GetOutput(&outputVecBatch);
 
-    if (outputVecBatch) {
-        VectorHelper::FreeVecBatch(outputVecBatch);
+        if (outputVecBatch) {
+            VectorHelper::FreeVecBatch(outputVecBatch);
+        }
     }
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
@@ -219,7 +223,7 @@ void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     delete overflowConfig;
 }
 
-void TestDistinctLimit(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestDistinctLimit(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "DistinctLimit Fuzz" << std::endl;
     VectorBatch *vecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -238,7 +242,7 @@ void TestDistinctLimit(void **testData, omniruntime::type::DataTypes &sourceType
     DeleteOperatorFactory(operatorFactory);
 }
 
-void TestProject(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestProject(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "Project Fuzz" << std::endl;
     VectorBatch *vecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -265,7 +269,7 @@ void TestProject(void **testData, omniruntime::type::DataTypes &sourceTypes, int
     delete overflowConfig;
 }
 
-void TestUnion(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestUnion(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "Union Fuzz" << std::endl;
     VectorBatch *vecBatch1 = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -287,9 +291,10 @@ void TestUnion(void **testData, omniruntime::type::DataTypes &sourceTypes, int32
     DeleteOperatorFactory(operatorFactory);
 }
 
-void TestSortMergeJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestSortMergeJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "SortMergeJoin Fuzz" << std::endl;
+    loopCount = loopCount <= 100 ? loopCount : 100;
     auto overflowConfig = new OverflowConfig();
     auto smjOp = dynamic_cast<SortMergeJoinOperator *>(CreateSortMergeJoinOperator(sourceTypes, overflowConfig));
 
@@ -347,7 +352,7 @@ void TestSortMergeJoin(void **testData, omniruntime::type::DataTypes &sourceType
     delete overflowConfig;
 }
 
-void TestTopN(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestTopN(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "TopN Fuzz" << std::endl;
     auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -365,7 +370,7 @@ void TestTopN(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_
     DeleteOperatorFactory(topNOperatorFactory);
 }
 
-void TestWindow(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, int32_t loopCount)
+void TestWindow(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "Window Fuzz" << std::endl;
     auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
@@ -387,29 +392,75 @@ void TestWindow(void **testData, omniruntime::type::DataTypes &sourceTypes, int3
     DeleteOperatorFactory(operatorFactory);
 }
 
-int GlobalFuzz(int16_t shortValue, int32_t intValue, int64_t longValue, bool boolValue, double doubleValue,
-    int64_t highBits, uint64_t lowBits, std::string stringValue, int32_t loopCount, int32_t charSize)
+int GlobalFuzz(struct FuzzData fzd, uint16_t loopCount, std::string filterExpr, int32_t opCnt, uint16_t chooseFunc)
 {
-    Decimal128 decimal128(highBits, lowBits);
+    std::cout << "chooseFunc is [" << chooseFunc << "]" << std::endl;
+    std::cout << "input paras: shortValue = " << fzd.shortValue << ", intValue = " << fzd.intValue <<
+        ", longValue = " << fzd.longValue << ", boolValue = " << fzd.boolValue << ", doubleValue = " <<
+        fzd.doubleValue << ", highBits = " << fzd.highBits << ", lowBits = " << fzd.lowBits << ", strValue = " <<
+        fzd.strValue << ", loopCount = " << loopCount << std::endl;
+
+    Decimal128 decimal128(fzd.highBits, fzd.lowBits);
     const int32_t dataSize = 10;
-    CHAR_SIZE = charSize;
+    CHAR_SIZE = fzd.strValue.size() == 0 ? 10 : fzd.strValue.size();
 
     // all types: short, int, long, boolean, double, date32, decimal, decimal128, varchar, char
-    void *inputDatas[dataSize] = {&shortValue, &intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue,
-                                  &decimal128, &stringValue, &stringValue};
+    void *inputDatas[dataSize] = { &(fzd.shortValue), &(fzd.intValue), &(fzd.longValue), &(fzd.boolValue),
+                                   &(fzd.doubleValue), &(fzd.intValue), &(fzd.longValue), &decimal128, &(fzd.strValue),
+                                   &(fzd.strValue) };
     DataTypes sourceTypes(allSupportedBaseTypes);
 
-    TestAggregation(inputDatas, sourceTypes, dataSize, loopCount);
-    TestFilter(inputDatas, sourceTypes, dataSize, loopCount);
-    TestHashAggregation(inputDatas, sourceTypes, dataSize, loopCount);
-    TestHashJoin(inputDatas, sourceTypes, dataSize, loopCount);
-    TestDistinctLimit(inputDatas, sourceTypes, dataSize, loopCount);
-    TestProject(inputDatas, sourceTypes, dataSize, loopCount);
-    TestSort(inputDatas, sourceTypes, dataSize, loopCount);
-    TestSortMergeJoin(inputDatas, sourceTypes, dataSize, loopCount);
-    TestTopN(inputDatas, sourceTypes, dataSize, loopCount);
-    TestUnion(inputDatas, sourceTypes, dataSize, loopCount);
-    TestWindow(inputDatas, sourceTypes, dataSize, loopCount);
-
+    switch (chooseFunc) {
+        case 1:
+            TestAggregation(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 2:
+            TestFilter(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 3:
+            TestHashAggregation(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 4: {
+            std::cout << "filterExpr = " << filterExpr << ", operatorCount = " << opCnt << std::endl;
+            TestHashJoin(inputDatas, sourceTypes, dataSize, loopCount, filterExpr, opCnt);
+            break;
+        }
+        case 5:
+            TestDistinctLimit(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 6:
+            TestProject(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 7:
+            TestSort(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 8:
+            TestSortMergeJoin(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 9:
+            TestTopN(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 10:
+            TestUnion(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        case 11:
+            TestWindow(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        default: {
+            TestAggregation(inputDatas, sourceTypes, dataSize, loopCount);
+            TestFilter(inputDatas, sourceTypes, dataSize, loopCount);
+            TestHashAggregation(inputDatas, sourceTypes, dataSize, loopCount);
+            std::cout << "filterExpr = " << filterExpr << ", operatorCount = " << opCnt << std::endl;
+            TestHashJoin(inputDatas, sourceTypes, dataSize, loopCount, filterExpr, opCnt);
+            TestDistinctLimit(inputDatas, sourceTypes, dataSize, loopCount);
+            TestProject(inputDatas, sourceTypes, dataSize, loopCount);
+            TestSort(inputDatas, sourceTypes, dataSize, loopCount);
+            TestSortMergeJoin(inputDatas, sourceTypes, dataSize, loopCount);
+            TestTopN(inputDatas, sourceTypes, dataSize, loopCount);
+            TestUnion(inputDatas, sourceTypes, dataSize, loopCount);
+            TestWindow(inputDatas, sourceTypes, dataSize, loopCount);
+            break;
+        }
+    }
     return 0;
 }
