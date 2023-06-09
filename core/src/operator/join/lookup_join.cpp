@@ -1084,20 +1084,18 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
 
 void LookupJoinOutputBuilder::BuildOutput(BaseVector **probeOutputColumns, VectorBatch **outputVecBatch)
 {
-    if (probeRowCount > 0) {
-        auto output = new VectorBatch(probeRowCount);
-        if (probeOutputColsCount > 0) {
-            ConstructProbeColumns(output, probeOutputColumns);
-        }
-        if (buildOutputColsCount > 0) {
-            ConstructBuildColumns(output);
-        }
-
-        *outputVecBatch = output;
-        probeIndex.clear();
-        buildIndex.clear();
-        probeRowCount = 0;
+    auto output = new VectorBatch(probeRowCount);
+    if (probeOutputColsCount > 0) {
+        ConstructProbeColumns(output, probeOutputColumns);
     }
+    if (buildOutputColsCount > 0) {
+        ConstructBuildColumns(output);
+    }
+
+    *outputVecBatch = output;
+    probeIndex.clear();
+    buildIndex.clear();
+    probeRowCount = 0;
 }
 } // end of op
 } // end of omniruntime
