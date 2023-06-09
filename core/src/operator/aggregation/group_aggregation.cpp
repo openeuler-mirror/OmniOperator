@@ -123,14 +123,15 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
 
         // for COUNT_ALL aggregator no input(key and columnar index)
         // use aggCountAllSkipCnt to align with aggsInputCols and aggregatorFactories index not same
-        if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
+        if (aggregateType == OMNI_AGGREGATION_TYPE_COUNT_ALL && inputRaws[i]) {
             inputDataTypesPtr.push_back(NoneType());
             aggInputColIdxVec.push_back(-1);
             aggCountAllSkipCnt++;
         } else {
-            for (uint32_t j = 0; j < this->aggsInputCols[i - aggCountAllSkipCnt].size(); j++) {
-                inputDataTypesPtr.push_back(aggInputTypes[i - aggCountAllSkipCnt].GetType(j));
-                aggInputColIdxVec.push_back(aggsInputCols[i - aggCountAllSkipCnt][j]);
+            auto aggInputIdx = i - aggCountAllSkipCnt;
+            for (uint32_t j = 0; j < this->aggsInputCols[aggInputIdx].size(); j++) {
+                inputDataTypesPtr.push_back(aggInputTypes[aggInputIdx].GetType(j));
+                aggInputColIdxVec.push_back(aggsInputCols[aggInputIdx][j]);
                 aggInputColsSize++;
             }
         }
