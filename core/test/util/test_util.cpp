@@ -128,7 +128,7 @@ template <DataTypeId typeId>
 static bool ValueEqualsValueIgnoreNulls(BaseVector *leftVector, BaseVector *rightVector, int32_t rowIndex)
 {
     using T = typename NativeType<typeId>::type;
-    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+    if constexpr (std::is_same_v<T, std::string_view>) {
         return VarcharValueEqualsValueIgnoreNulls(leftVector, rightVector, rowIndex);
     } else if constexpr (std::is_same_v<T, double>) {
         return DoubleValueEqualsValueIgnoreNulls(leftVector, rightVector, rowIndex);

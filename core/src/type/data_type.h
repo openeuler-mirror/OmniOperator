@@ -92,11 +92,11 @@ template <> struct NativeType<DataTypeId::OMNI_TIME64> {
     using type = int64_t;
 };
 template <> struct NativeType<DataTypeId::OMNI_VARCHAR> {
-    using type = uint8_t;
+    using type = std::string_view;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CHAR> {
-    using type = uint8_t;
+    using type = std::string_view;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {

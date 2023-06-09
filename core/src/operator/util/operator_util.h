@@ -337,7 +337,7 @@ public:
     template <DataTypeId typeId> static int64_t GetRawAddr(BaseVector *vector)
     {
         using T = typename NativeType<typeId>::type;
-        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        if constexpr (std::is_same_v<T, std::string_view>) {
             return reinterpret_cast<int64_t>(unsafe::UnsafeStringVector::GetValues(
                 reinterpret_cast<vec::Vector<LargeStringContainer<std::string_view>> *>(vector)));
         } else {
@@ -437,7 +437,7 @@ public:
         using T = typename NativeType<typeId>::type;
         using DictionaryVarcharVector = vec::Vector<vec::DictionaryContainer<std::string_view, LargeStringContainer>>;
         using DictionaryFlatVector = vec::Vector<vec::DictionaryContainer<T>>;
-        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        if constexpr (std::is_same_v<T, std::string_view>) {
             std::string_view value = reinterpret_cast<DictionaryVarcharVector *>(vector)->GetValue(rowIndex);
             *length = static_cast<int32_t>(value.length());
             return reinterpret_cast<int64_t>(value.data());
@@ -456,7 +456,7 @@ public:
     {
         using T = typename NativeType<typeId>::type;
         using FlatVector = vec::Vector<T>;
-        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        if constexpr (std::is_same_v<T, std::string_view>) {
             std::string_view value = reinterpret_cast<VarcharVector *>(vector)->GetValue(rowIndex);
             *length = static_cast<int32_t>(value.length());
             return reinterpret_cast<int64_t>(value.data());

@@ -49,7 +49,7 @@ std::unique_ptr<vec::BaseVector> CreateFlatVector(int32_t length, va_list &args)
     using namespace omniruntime::type;
     using T = typename NativeType<typeId>::type;
     using VarcharVector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
-    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+    if constexpr (std::is_same_v<T, std::string_view>) {
         std::unique_ptr<VarcharVector> vector = std::make_unique<VarcharVector>(length);
         std::string *str = va_arg(args, std::string *);
         for (int32_t i = 0; i < length; i++) {
@@ -73,7 +73,7 @@ template <type::DataTypeId typeId>
 std::unique_ptr<vec::BaseVector> DictionaryVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
 {
     using T = typename type::NativeType<typeId>::type;
-    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+    if constexpr (std::is_same_v<T, std::string_view>) {
         return reinterpret_cast<vec::Vector<vec::DictionaryContainer<std::string_view>> *>(vector)->Slice(offset,
             length);
     } else {
@@ -85,7 +85,7 @@ template <type::DataTypeId typeId>
 std::unique_ptr<vec::BaseVector> FlatVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
 {
     using T = typename type::NativeType<typeId>::type;
-    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+    if constexpr (std::is_same_v<T, std::string_view>) {
         return reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vector)->Slice(offset,
             length);
     } else {
@@ -118,11 +118,12 @@ template <type::DataTypeId typeId>
 std::unique_ptr<vec::BaseVector> CreateDictionary(vec::BaseVector *vector, int32_t *ids, int32_t size)
 {
     using T = typename type::NativeType<typeId>::type;
-    if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+    if constexpr (std::is_same_v<T, std::string_view>) {
         return vec::VectorHelper::CreateStringDictionary(ids, size,
             reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vector));
+    } else {
+        return vec::VectorHelper::CreateDictionary(ids, size, reinterpret_cast<vec::Vector<T> *>(vector));
     }
-    return vec::VectorHelper::CreateDictionary(ids, size, reinterpret_cast<vec::Vector<T> *>(vector));
 }
 
 template <typename T, typename E> void AssertVectorEquals(T *vector, E *expectedValues)

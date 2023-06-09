@@ -79,7 +79,7 @@ public:
     static std::unique_ptr<BaseVector> CreateFlatVector(int32_t size, int32_t capacityInBytes = INITIAL_STRING_SIZE)
     {
         using T = typename type::NativeType<typeId>::type;
-        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        if constexpr (std::is_same_v<T, std::string_view>) {
             return std::make_unique<Vector<LargeStringContainer<std::string_view>>>(size, capacityInBytes);
         }
         return std::make_unique<Vector<T>>(size, typeId);
@@ -89,7 +89,7 @@ public:
     {
         using T = typename type::NativeType<typeId>::type;
         if (value == nullptr) {
-            if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+            if constexpr (std::is_same_v<T, std::string_view>) {
                 static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(index);
             } else {
                 vector->SetNull(index);
@@ -97,7 +97,7 @@ public:
             return;
         }
 
-        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        if constexpr (std::is_same_v<T, std::string_view>) {
             std::string_view data = std::string_view(static_cast<std::string *>(value)->data(),
                 static_cast<std::string *>(value)->length());
             static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetValue(index, data);
@@ -131,7 +131,7 @@ public:
         using namespace omniruntime::type;
         using T = typename NativeType<typeId>::type;
         using DictionaryVarchar = Vector<DictionaryContainer<std::string_view, LargeStringContainer>>;
-        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        if constexpr (std::is_same_v<T, std::string_view>) {
             std::cout << std::dec << static_cast<DictionaryVarchar *>(vector)->GetValue(rowIndex) << "\t";
         } else {
             std::cout << std::dec << static_cast<Vector<DictionaryContainer<T>> *>(vector)->GetValue(rowIndex) << "\t";
@@ -142,7 +142,7 @@ public:
     {
         using namespace omniruntime::type;
         using T = typename NativeType<typeId>::type;
-        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, uint8_t>) {
+        if constexpr (std::is_same_v<T, std::string_view>) {
             std::cout << std::dec << static_cast<Vector<LargeStringContainer<T>> *>(vector)->GetValue(rowIndex) << "\t";
         } else {
             std::cout << std::dec << static_cast<Vector<T> *>(vector)->GetValue(rowIndex) << "\t";
