@@ -36,18 +36,22 @@ OperatorFactory *CreateSortFactory(omniruntime::type::DataTypes &sourceTypes)
 {
     int32_t sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[sourceTypesSize];
-    int32_t sortCols[sourceTypesSize];
-    int32_t ascendings[sourceTypesSize];
-    int32_t nullFirsts[sourceTypesSize];
-    for (int32_t i = 0; i < sourceTypesSize; i++) {
+    int32_t sortColCount = sourceTypesSize / 5;
+    int32_t sortCols[sortColCount];
+    int32_t ascendings[sortColCount];
+    int32_t nullFirsts[sortColCount];
+    for (int32_t i = 0, j = 0; i < sourceTypesSize; i++) {
         outputCols[i] = i;
-        sortCols[i] = i;
-        ascendings[i] = 1;
-        nullFirsts[i] = 0;
+        if (i % 5 == 0 && j < sortColCount) {
+            sortCols[j] = i;
+            ascendings[j] = 1;
+            nullFirsts[j] = 0;
+            j++;
+        }
     }
 
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
-        sortCols, ascendings, nullFirsts, sourceTypesSize);
+        sortCols, ascendings, nullFirsts, sortColCount);
     return operatorFactory;
 }
 
@@ -104,14 +108,13 @@ OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sour
 
 
 std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataTypes &sourceTypes,
-    OverflowConfig *overflowConfig)
+    OverflowConfig *overflowConfig, std::string filterExpr, int32_t operatorCount)
 {
     int32_t buildJoinCols[1] = {1};
     int32_t joinColsCount = 1;
-    std::string filterExpression = "";
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(sourceTypes, buildJoinCols,
-        joinColsCount, filterExpression, 1);
+        joinColsCount, filterExpr, operatorCount);
 
     int32_t probeOutputCols[1] = {2};
     int32_t probeOutputColsCount = 1;
@@ -126,13 +129,13 @@ std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataType
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(sourceTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount,
         buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, overflowConfig);
-    std::vector<OperatorFactory *> operatorfactories = { hashBuilderFactory, lookupJoinFactory };
-    return operatorfactories;
+    std::vector<OperatorFactory *> operatorFactories = { hashBuilderFactory, lookupJoinFactory };
+    return operatorFactories;
 }
 
 OperatorFactory *CreateDistinctLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount)
 {
-    const int64_t limitCount = loopCount - 1;
+    const int64_t limitCount = loopCount / 100;
     int32_t distinctCols[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
     auto operatorFactory =
