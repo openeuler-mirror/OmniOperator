@@ -80,6 +80,7 @@ template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t
 VECTORIZE_LOOP inline void AddCharFilter(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
     const int32_t rowCount, const int8_t *__restrict boolPtr)
 {
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
     auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
     if (rowCount > 0) {
         const char *res = reinterpret_cast<char *>(state.val);
@@ -135,6 +136,7 @@ VECTORIZE_LOOP inline void AddDictCharFilter(AggregateState &state, BaseVector *
     const int32_t rowCount, const int8_t *__restrict boolPtr)
 {
     if (rowCount > 0) {
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
         auto rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
 
         const char *res = reinterpret_cast<char *>(state.val);
@@ -166,6 +168,7 @@ VECTORIZE_LOOP inline void AddConditionalChar(AggregateState &state, BaseVector 
         if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[AddConditionalChar]: ConditionMap pointer NOT aligned");
         }
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         auto rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
 
         const char *res = reinterpret_cast<char *>(state.val);
@@ -210,6 +213,8 @@ VECTORIZE_LOOP inline void AddConditionalCharFilter(AggregateState &state, BaseV
     if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
         LogWarn("[AddConditionalChar]: ConditionMap pointer NOT aligned");
     }
+    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
     auto rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
 
     const char *res = reinterpret_cast<char *>(state.val);
@@ -252,7 +257,7 @@ VECTORIZE_LOOP inline void AddDictConditionalChar(AggregateState &state, BaseVec
             LogWarn("[addDictConditionalChar]: ConditionMap pointer NOT aligned");
         }
 #endif
-
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         auto *rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
         const char *res = reinterpret_cast<char *>(state.val);
         int32_t idx = rowOffset;
@@ -295,6 +300,8 @@ VECTORIZE_LOOP inline void AddDictConditionalCharFilter(AggregateState &state, B
         LogWarn("[addDictConditionalChar]: ConditionMap pointer NOT aligned");
     }
 #endif
+    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
     auto *rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
     const char *res = reinterpret_cast<char *>(state.val);
@@ -356,6 +363,7 @@ VECTORIZE_LOOP inline void AddUseRowIndexCharFilter(std::vector<AggregateState *
     if (rowCount <= 0) {
         return;
     }
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
     auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
     int32_t rowIdx = rowOffset;
     for (size_t i = 0; i < rowCount; ++i) {
@@ -407,7 +415,7 @@ VECTORIZE_LOOP inline void AddDictUseRowIndexCharFilter(std::vector<AggregateSta
     if (rowCount <= 0) {
         return;
     }
-
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
     auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
     int32_t rowIdx = rowOffset;
     for (size_t i = 0; i < rowCount; ++i) {
@@ -439,6 +447,7 @@ VECTORIZE_LOOP inline void AddConditionalUseRowIndexChar(std::vector<AggregateSt
             LogWarn("[addConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
         }
 #endif
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
         int32_t rowIdx = rowOffset;
         for (size_t i = 0; i < rowCount; ++i) {
@@ -476,6 +485,8 @@ VECTORIZE_LOOP inline void AddConditionalUseRowIndexCharFilter(std::vector<Aggre
         LogWarn("[addConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
     }
 #endif
+    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
     auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
 
     int32_t rowIdx = rowOffset;
@@ -508,6 +519,7 @@ VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<Aggrega
             LogWarn("[addDictConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
         }
 #endif
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         auto rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
         int32_t rowIdx = rowOffset;
         for (size_t i = 0; i < rowCount; ++i) {
@@ -543,6 +555,8 @@ VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexCharFilter(std::vector<A
         LogWarn("[addDictConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
     }
 #endif
+    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
     auto rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
     int32_t rowIdx = rowOffset;
 

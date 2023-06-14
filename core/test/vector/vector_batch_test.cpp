@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "vector/vector_batch.h"
-#include "test.h"
+#include "vector_test_util.h"
 #include "vector/dictionary_container.h"
 
 namespace omniruntime::vec::test {
@@ -25,13 +25,14 @@ TEST(vector2, vec_batch)
         values[i] = i % dictSize;
     }
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<int32_t>::DICTIONARY_TYPE;
-    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictSize);
+    auto dictionary = CreateDictionary<DICTIONARY_DATA_TYPE>(dictSize);
     auto container = std::make_shared<DictionaryContainer<int32_t>>(values, rowCnt, dictionary, dictSize, 0);
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[rowCnt]);
+    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(rowCnt);
+    bool *nulls = nullsBuffer->GetBuffer();
     for (int i = 0; i < rowCnt; i++) {
         nulls[i] = false;
     }
-    auto intDictVec = std::make_unique<Vector<DictionaryContainer<int32_t>>>(rowCnt, container, nulls);
+    auto intDictVec = std::make_unique<Vector<DictionaryContainer<int32_t>>>(rowCnt, container, nullsBuffer);
 
     VectorBatch vectorBatch(rowCnt);
     vectorBatch.Append(intVec.release());

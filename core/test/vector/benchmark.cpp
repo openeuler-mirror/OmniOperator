@@ -5,10 +5,9 @@
 
 #include "gtest/gtest.h"
 #include "vector/vector.h"
-#include "vector/dictionary_container.h"
 #include "boost/multiprecision/number.hpp"
 #include "benchmark/benchmark.h"
-#include "test.h"
+#include "vector_test_util.h"
 
 class Vector;
 
@@ -133,6 +132,7 @@ template <> void bm_slice_vector_getvalue<std::string>(benchmark::State &state)
         }
     }
     std::cerr << "total: " << total << std::endl;
+    delete vector;
 }
 
 template <> void bm_vector_setvalue<std::string>(benchmark::State &state)
@@ -179,82 +179,49 @@ template <typename T> static void bm_dictvector_setvalue(benchmark::State &state
 {
     int dictionary_size = 100;
     int value_size = 10000;
-    int *values = new int[value_size];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[value_size]);
-    for (int i = 0; i < value_size; i++) {
-        values[i] = i % dictionary_size;
-        nulls[i] = false;
-    }
-
-    auto dictionary = createDictionary<T>(dictionary_size);
-    auto container = std::make_shared<DictionaryContainer<T>>(values, value_size, dictionary, dictionary_size, 0);
-    Vector<DictionaryContainer<T>> vector{ value_size, container, nulls };
+    auto vector = CreateDictionaryVector<T>(dictionary_size, value_size);
 
     for (auto _ : state) {
         for (int i = 0; i < 1'000'000; i++) {
-            vector.SetValue(1, 1);
+            vector->SetValue(1, 1);
         }
     }
-
-    delete[] values;
 }
 
 template <typename T> static void bm_dictvector_getvalue(benchmark::State &state)
 {
     int dictionary_size = 100;
     int value_size = 10000;
-    int *values = new int[value_size];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[value_size]);
-    for (int i = 0; i < value_size; i++) {
-        values[i] = i % dictionary_size;
-        nulls[i] = false;
-    }
-
-    auto dictionary = createDictionary<T>(dictionary_size);
-    auto container = std::make_shared<DictionaryContainer<T>>(values, value_size, dictionary, dictionary_size, 0);
-    Vector<DictionaryContainer<T>> vector{ value_size, container, nulls };
+    auto vector = CreateDictionaryVector<T>(dictionary_size, value_size);
     long total = 0;
     for (auto _ : state) {
         for (int i = 0; i < 1'000'000; i++) {
             // the following is required otherwise implicit conversion is not invoked
             if constexpr (std::is_same_v<std::string, T>) {
-                total += vector.GetValue(i % value_size).length();
+                total += vector->GetValue(i % value_size).length();
             } else {
-                total += vector.GetValue(i % value_size);
+                total += vector->GetValue(i % value_size);
             }
         }
     }
 
     std::cerr << "total: " << total << std::endl;
-
-    delete[] values;
 }
 
 static void bm_dictvector_getvalue_string(benchmark::State &state)
 {
     int dictionary_size = 100;
     int value_size = 10000;
-    int *values = new int[value_size];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[value_size]);
-    for (int i = 0; i < value_size; i++) {
-        values[i] = i % dictionary_size;
-        nulls[i] = false;
-    }
-
-    auto dictionary = createStringDictionary<std::string_view, LargeStringContainer>(dictionary_size);
-    auto container = std::make_shared<DictionaryContainer<std::string_view, LargeStringContainer>>(values, value_size,
-        dictionary, dictionary_size, 0);
-    Vector<DictionaryContainer<std::string_view, LargeStringContainer>> vector{ value_size, container, nulls };
+    auto vector = CreateStringDictionaryVector<std::string_view>(dictionary_size, value_size);
     long total = 0;
     for (auto _ : state) {
         for (int i = 0; i < 1'000'000; i++) {
             // the following is required otherwise implicit conversion is not invoked
-            total += vector.GetValue(i % value_size).length();
+            total += vector->GetValue(i % value_size).length();
         }
     }
 
     std::cerr << "total: " << total << std::endl;
-    delete[] values;
 }
 
 template <typename T> void bm_vector_copypositions(benchmark::State &state)
@@ -273,8 +240,10 @@ template <typename T> void bm_vector_copypositions(benchmark::State &state)
         vector.SetValue(i, value);
     }
 
+    Vector<T> *copyVector = nullptr;
     for (auto _ : state) {
-        auto copyVector = vector.CopyPositions(positions, 56, copySize);
+        copyVector = vector.CopyPositions(positions, 56, copySize);
+        delete copyVector;
     }
 }
 
@@ -294,8 +263,10 @@ template <> void bm_vector_copypositions<std::string>(benchmark::State &state)
         vector.SetValue(i, value);
     }
 
+    Vector<std::string> *copyVector = nullptr;
     for (auto _ : state) {
-        auto copyVector = vector.CopyPositions(positions, 56, copySize);
+        copyVector = vector.CopyPositions(positions, 56, copySize);
+        delete copyVector;
     }
 }
 

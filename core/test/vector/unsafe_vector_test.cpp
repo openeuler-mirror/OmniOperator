@@ -4,65 +4,11 @@
 
 #include "gtest/gtest.h"
 #include "vector/unsafe_vector.h"
-#include "test.h"
-#include "vector/vector_helper.h"
+#include "vector_test_util.h"
 
 namespace omniruntime::vec::test {
 using namespace omniruntime::vec::unsafe;
 using namespace omniruntime::type;
-
-template <typename T> std::shared_ptr<Vector<T>> CreateVectorAndSetValue(int32_t size)
-{
-    auto vector = std::make_shared<Vector<T>>(size);
-    for (int32_t i = 0; i < size; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
-        vector->SetValue(i, value);
-    }
-    return vector;
-}
-
-template <typename T> std::shared_ptr<Vector<DictionaryContainer<T>>> CreateDictionaryVector()
-{
-    int dictionarySize = 10;
-    int valueSize = 100;
-    int *values = new int[valueSize];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[valueSize]);
-    for (int i = 0; i < valueSize; i++) {
-        nulls[i] = false;
-        values[i] = i % dictionarySize;
-    }
-
-    using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<T>::DICTIONARY_TYPE;
-    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionarySize);
-
-    auto container = std::make_shared<DictionaryContainer<T>>(values, valueSize, dictionary, dictionarySize, 0);
-    auto vector = std::make_shared<Vector<DictionaryContainer<T>>>(valueSize, container, nulls);
-    delete[] values;
-    return vector;
-}
-
-template <typename CONTAINER> BaseVector *CreateStringTestVector()
-{
-    int valueSize = 1000;
-
-    std::string valuePrefix;
-    valuePrefix = "hello_world__";
-
-    auto baseVector = VectorHelper::CreateStringVector(valueSize);
-    auto *vector = (Vector<CONTAINER> *)baseVector;
-
-    for (int i = 0; i < valueSize; i++) {
-        std::string value = valuePrefix + std::to_string(i);
-        std::string_view input(value.data(), value.size());
-        vector->SetValue(i, input);
-    }
-    return baseVector;
-}
 
 void VectorSetNull(BaseVector *vector)
 {
@@ -121,7 +67,7 @@ template <typename DATA_TYPE> void DictionaryVectorGetValuesAndNulls()
 {
     int size = 100;
 
-    auto vector = CreateDictionaryVector<DATA_TYPE>();
+    auto vector = CreateDictionaryVector<DATA_TYPE>(10, 100);
     VectorSetNull(vector.get());
 
     bool *vectorNulls = UnsafeBaseVector::GetNulls(vector.get());
@@ -184,7 +130,7 @@ template <typename DATA_TYPE> void DictionaryVectorSliceGetValuesAndNulls()
     int offSet = 50;
     int sliceLength = 50;
 
-    auto vector = CreateDictionaryVector<DATA_TYPE>();
+    auto vector = CreateDictionaryVector<DATA_TYPE>(10, 100);
     VectorSetNull(vector.get());
 
     auto vector2 = vector->Slice(offSet, sliceLength);
@@ -207,7 +153,7 @@ template <typename CONTAINER> void StringVectorGetValuesAndNulls()
 {
     int size = 100;
 
-    auto baseVector = CreateStringTestVector<CONTAINER>();
+    auto baseVector = CreateStringTestVector<CONTAINER>(1000);
     VectorSetNull(baseVector);
 
     bool *vectorNulls = UnsafeBaseVector::GetNulls(baseVector);
@@ -229,7 +175,7 @@ template <typename CONTAINER> void StringVectorSliceGetValuesAndNulls()
     int offSet = 50;
     int sliceLength = 50;
 
-    auto baseVector = CreateStringTestVector<CONTAINER>();
+    auto baseVector = CreateStringTestVector<CONTAINER>(1000);
     VectorSetNull(baseVector);
 
     auto *vector = (Vector<CONTAINER> *)baseVector;
@@ -251,7 +197,7 @@ template <typename CONTAINER> void StringVectorSliceGetValuesAndNulls()
 
 template <typename CONTAINER> void StringVectorGetStringBuffer()
 {
-    auto baseVector = CreateStringTestVector<CONTAINER>();
+    auto baseVector = CreateStringTestVector<CONTAINER>(1000);
     auto *vector = (Vector<CONTAINER> *)baseVector;
     auto vectorCapacityInBytes =
         UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());
@@ -272,7 +218,7 @@ template <typename CONTAINER> void StringVectorGetStringBuffer()
 template <typename CONTAINER> void StringVectorGetStringExpandBuffer()
 {
     int requestSize = INITIAL_STRING_SIZE + 10;
-    auto baseVector = CreateStringTestVector<CONTAINER>();
+    auto baseVector = CreateStringTestVector<CONTAINER>(1000);
     auto *vector = (Vector<CONTAINER> *)baseVector;
     auto vectorCapacityInBytes =
         UnsafeStringContainer::GetCapacityInBytes(unsafe::UnsafeStringVector::GetContainer(vector).get());

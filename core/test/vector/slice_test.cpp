@@ -4,7 +4,7 @@
  */
 #include "gtest/gtest.h"
 #include "vector/vector.h"
-#include "test.h"
+#include "vector_test_util.h"
 #include "vector/dictionary_container.h"
 
 namespace omniruntime::vec::test {
@@ -75,7 +75,8 @@ template <typename T> void v2_slice_container()
     int dictionary_size = 10;
     int value_size = 100;
     int *values = new int[value_size];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[value_size]);
+    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(value_size);
+    bool *nulls = nullsBuffer->GetBuffer();
     for (int i = 0; i < value_size; i++) {
         values[i] = i % dictionary_size;
         nulls[i] = false;
@@ -83,9 +84,9 @@ template <typename T> void v2_slice_container()
 
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<T>::DICTIONARY_TYPE;
 
-    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionary_size);
+    auto dictionary = CreateDictionary<DICTIONARY_DATA_TYPE>(dictionary_size);
     auto container = std::make_shared<DictionaryContainer<T>>(values, value_size, dictionary, dictionary_size, 0);
-    auto parent = new Vector<DictionaryContainer<T>>(value_size, container, nulls, TYPE_ID<T>);
+    auto parent = new Vector<DictionaryContainer<T>>(value_size, container, nullsBuffer, TYPE_ID<T>);
 
     auto vector = parent->Slice(g_offset, g_len);
     delete parent; // purposely deleting parent;
@@ -93,7 +94,7 @@ template <typename T> void v2_slice_container()
     T value;
     for (int i = 0; i < g_len; i++) {
         value = vector->GetValue(i);
-        EXPECT_EQ(dictionary[i % dictionary_size], value);
+        EXPECT_EQ(dictionary->GetValue(i % dictionary_size), value);
     }
 
     delete[] values;

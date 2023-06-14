@@ -21,11 +21,10 @@ public:
 
     ALWAYS_INLINE void *Alloc(int64_t size, bool zeroFill = false)
     {
+        // memory usage statistics. If the memory_cap_exceed exception is thrown, the memory is not allocated.
+        ThreadMemoryManager::ReportMemory(size);
         uint8_t *data = nullptr;
         pool->Allocate(size, &data, zeroFill);
-
-        // memory usage statistics
-        ThreadMemoryManager::ReportMemory(size);
 #ifdef TRACE
         MemoryTrace::AddArenaMemory(reinterpret_cast<uintptr_t>(data), size);
 #endif
@@ -39,15 +38,14 @@ public:
 #ifdef TRACE
         MemoryTrace::SubArenaMemory(reinterpret_cast<uintptr_t>(reinterpret_cast<uint8_t *>(data)), size);
 #endif
-
         pool->Release(reinterpret_cast<uint8_t *>(data));
     }
 
 private:
     Allocator(){};
     ~Allocator(){};
-    mem::MemoryPool *pool = mem::GetMemoryPool();
+    MemoryPool *pool = GetMemoryPool();
 };
-} // omniruntime::vector
+} // omniruntime::mem
 
 #endif // OMNI_RUNTIME_ALLOCATOR_H

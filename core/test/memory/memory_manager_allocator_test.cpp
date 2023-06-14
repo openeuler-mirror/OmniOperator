@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 #include "memory/memory_manager_allocator.h"
 
-namespace omniruntime::vec {
+namespace omniruntime::mem::test {
 TEST(MemoryManagerAllocator, testUseSTLContainer)
 {
     // test std::map

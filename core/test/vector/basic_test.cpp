@@ -4,7 +4,7 @@
  */
 #include "gtest/gtest.h"
 #include "vector/vector.h"
-#include "test.h"
+#include "vector_test_util.h"
 #include "boost/multiprecision/number.hpp"
 #include "vector/dictionary_container.h"
 #include "vector/vector_helper.h"

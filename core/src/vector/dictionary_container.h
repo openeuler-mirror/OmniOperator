@@ -6,15 +6,17 @@
 #define OMNI_RUNTIME_DICTIONARY_CONTAINER_H
 #include <memory>
 #include "large_string_container.h"
+#include "memory/aligned_buffer.h"
 
 namespace omniruntime::vec::unsafe {
 class UnsafeDictionaryContainer;
 }
 
 namespace omniruntime::vec {
+using namespace mem;
 template <typename RAW_DATA_TYPE, template <typename> typename CONTAINER = LargeStringContainer>
 class DictionaryContainer {
-    using DictType = std::conditional_t<is_container_v<RAW_DATA_TYPE>, CONTAINER<RAW_DATA_TYPE>, RAW_DATA_TYPE[]>;
+    using DictType = std::conditional_t<is_container_v<RAW_DATA_TYPE>, CONTAINER<RAW_DATA_TYPE>, AlignedBuffer<RAW_DATA_TYPE>>;
 
 public:
     DictionaryContainer(const int32_t *values, int32_t valueSize, std::shared_ptr<DictType> dictionary,
@@ -59,7 +61,7 @@ public:
         if constexpr (is_container_v<RAW_DATA_TYPE>) {
             return dictionary->GetValue(values[index] + dictOffset);
         } else {
-            return dictionary[values[index] + dictOffset];
+            return dictionary->GetValue(values[index] + dictOffset);
         }
     }
 
@@ -70,7 +72,7 @@ public:
             if constexpr (is_container_v<RAW_DATA_TYPE>) {
                 dicValue = dictionary->GetValue(i + dictOffset);
             } else {
-                dicValue = dictionary[i + dictOffset];
+                dicValue = dictionary->GetValue(i + dictOffset);
             }
             if (dicValue == value) {
                 values[index] = i;

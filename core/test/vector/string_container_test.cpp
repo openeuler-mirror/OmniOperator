@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 #include "vector/vector.h"
 #include "vector/dictionary_container.h"
-#include "test.h"
 #include "vector/vector_helper.h"
 
 namespace omniruntime::vec::test {

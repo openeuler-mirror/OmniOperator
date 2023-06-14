@@ -17,7 +17,7 @@ public:
     template <typename DATA_TYPE>
     static ALWAYS_INLINE DATA_TYPE *GetDictionary(DictionaryContainer<DATA_TYPE> *container)
     {
-        return container->dictionary.get() + container->dictOffset;
+        return container->dictionary->GetBuffer() + container->dictOffset;
     }
 
     static ALWAYS_INLINE char *GetVarCharDictionary(
