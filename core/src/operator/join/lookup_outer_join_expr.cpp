@@ -52,9 +52,7 @@ Operator *LookupOuterJoinWithExprOperatorFactory::CreateOperator()
 
 LookupOuterJoinWithExprOperator::LookupOuterJoinWithExprOperator(LookupOuterJoinOperator *lookupJoinOperator)
     : lookupOuterJoinOperator(lookupJoinOperator)
-{
-    this->outputTypes = lookupJoinOperator->GetOutputType();
-}
+{}
 
 LookupOuterJoinWithExprOperator::~LookupOuterJoinWithExprOperator()
 {

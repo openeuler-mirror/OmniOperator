@@ -214,7 +214,7 @@ template <typename CONTAINER> void StringVectorGetValuesAndNulls()
     bool *vectorNulls = UnsafeBaseVector::GetNulls(baseVector);
     auto *vector = (Vector<CONTAINER> *)baseVector;
     char *vectorValues = UnsafeStringVector::GetValues(vector);
-    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, OMNI_VARCHAR));
+    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
     for (int i = 0; i < size; i++) {
         if (i % 2) {
             EXPECT_TRUE(vectorNulls[i]);
@@ -238,7 +238,7 @@ template <typename CONTAINER> void StringVectorSliceGetValuesAndNulls()
 
     bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2);
     char *vectorValues = UnsafeStringVector::GetValues(vector2);
-    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector2, OMNI_VARCHAR));
+    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector2));
     for (int i = 0; i < sliceLength; i++) {
         if (i % 2) {
             EXPECT_TRUE(vectorNulls[i]);

@@ -53,8 +53,8 @@ TEST(NativeOmniUnionOperator, TestUnionByThreeColumn)
     VectorBatch *expVecBatch2 = CreateVectorBatch(sourceTypes, dataSize, expData4, expData5, expData6);
 
     EXPECT_EQ(outputVecBatches.size(), 2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1, types));
-    EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[0], expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatches[1], expVecBatch2));
 
     delete vecBatch1;
     delete vecBatch2;

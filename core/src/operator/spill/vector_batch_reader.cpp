@@ -80,7 +80,7 @@ BaseVector *VectorBatchReader::ReadVarcharVector(int32_t rowCount)
 
     // read offsets
     auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
-    auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, OMNI_VARCHAR));
+    auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
     if (read(fd, offsets, offsetSize) < offsetSize) {
         LogError("Read value offsets failed.");
         return nullptr;

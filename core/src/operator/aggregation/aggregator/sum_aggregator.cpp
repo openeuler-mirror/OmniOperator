@@ -19,7 +19,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
     } else {
         auto vector = vectorBatch->Get(this->channels[0]);
 
-        auto vectorValues = VectorHelper::UnsafeGetValues(vector, IN_ID);
+        auto vectorValues = VectorHelper::UnsafeGetValues(vector);
         auto rowCount = vector->GetSize();
         auto nullAddr = reinterpret_cast<void *>(unsafe::UnsafeBaseVector::GetNulls(vector));
         bool overflow = false;

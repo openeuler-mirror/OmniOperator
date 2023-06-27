@@ -23,12 +23,12 @@
 namespace omniruntime::TestUtil {
 using namespace omniruntime::expressions;
 
-bool VecBatchMatch(vec::VectorBatch *outputPages, vec::VectorBatch *expectPage, std::vector<type::DataTypePtr> types);
+bool VecBatchMatch(vec::VectorBatch *outputPages, vec::VectorBatch *expectPage);
 
 bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &resultBatches,
-    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches, std::vector<DataTypePtr> &expectedTypes);
+    std::vector<omniruntime::vec::VectorBatch *> &expectedBatches);
 
-bool ColumnMatch(vec::BaseVector *actualColumn, vec::BaseVector *expectColumn, int32_t typeId);
+bool ColumnMatch(vec::BaseVector *actualColumn, vec::BaseVector *expectColumn);
 
 vec::VectorBatch *CreateVectorBatch(const type::DataTypes &types, int32_t rowCount, ...);
 
@@ -67,7 +67,7 @@ vec::BaseVector *CreateFlatVector(int32_t length, va_list &args)
     }
 }
 
-void SetValue(vec::BaseVector *vector, int32_t index, void *value, int32_t typeId);
+void SetValue(vec::BaseVector *vector, int32_t index, void *value);
 
 template <type::DataTypeId typeId>
 vec::BaseVector *DictionaryVectorSlice(vec::BaseVector *vector, int32_t offset, int32_t length)
@@ -93,21 +93,19 @@ vec::BaseVector *FlatVectorSlice(vec::BaseVector *vector, int32_t offset, int32_
     }
 }
 
-vec::BaseVector *SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length, int32_t typeId);
+vec::BaseVector *SliceVector(vec::BaseVector *vector, int32_t offset, int32_t length);
 
 omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory);
 
-bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, type::DataTypeId omniId);
+bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector);
 
-bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch,
-    std::vector<type::DataTypePtr> &typeVector);
-omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatch *input,
-    std::vector<type::DataTypePtr> &allTypes);
+bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch);
+omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatch *input);
 
 void FreeVecBatches(vec::VectorBatch **vecBatches, int32_t vecBatchCount);
 
 void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
-    std::vector<type::DataTypePtr> allTypes, int32_t expectedRowCount, ...);
+    int32_t expectedRowCount, ...);
 void AssertDoubleVectorEquals(omniruntime::vec::BaseVector *vector, double *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::BaseVector *vector, std::string *expectedValues);
 
@@ -149,7 +147,7 @@ template <typename T> void AssertVectorEquals(vec::BaseVector *vector, T *expect
     }
 }
 
-vec::BaseVector *CreateVarcharVector(type::DataType &type, std::string *values, int32_t length);
+vec::BaseVector *CreateVarcharVector(std::string *values, int32_t length);
 
 omniruntime::expressions::FuncExpr *GetFuncExpr(const std::string &funcName,
     std::vector<omniruntime::expressions::Expr *> args, omniruntime::expressions::DataTypePtr returnType);
@@ -185,11 +183,9 @@ int32_t DecodeFetchFlag(int32_t resultCode);
 template <typename D, typename V>
 bool CompareUnorderedRows(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, const double error);
 
-bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, DataTypeId omniId,
-    const double error);
+bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, const double error);
 
-bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch,
-    std::vector<DataTypePtr> &types, const double error);
+bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch, const double error);
 
 class Timer {
 public:

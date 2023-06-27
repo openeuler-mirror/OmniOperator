@@ -111,7 +111,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
             {2, 4},
             {11, 33}};
     std::vector<DataTypePtr> expectedTypes { LongType(), LongType(), LongType(), LongType() };
-    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedTypes,
+    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount,
         expectedDataSize, expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     Expr::DeleteExprs(buildHashKeys);
@@ -182,7 +182,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
             {2, 4},
             {11, 33}};
     std::vector<DataTypePtr> expectedTypes { LongType(), LongType(), LongType(), LongType() };
-    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedTypes,
+    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount,
         expectedDataSize, expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     Expr::DeleteExprs(buildHashKeys);
@@ -254,7 +254,7 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
         {2, 0, 4, 0},
         {11, 0, 33, 0}};
     std::vector<DataTypePtr> expectedTypes { LongType(), LongType(), LongType(), LongType() };
-    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedTypes,
+    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount,
         expectedDataSize, expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorBatch *appendOutput;
@@ -278,7 +278,7 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
     vectorBatch->Get(1)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
@@ -355,7 +355,7 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
         {2, 0, 4, 0},
         {11, 0, 33, 0}};
     std::vector<DataTypePtr> expectedTypes { LongType(), LongType(), LongType(), LongType() };
-    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedTypes,
+    AssertVecBatchEquals(lookupJoinOutputVecBatch, probeTypes.GetSize() + buildOutputColsCount,
         expectedDataSize, expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorBatch *appendOutput;
@@ -379,7 +379,7 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
     vectorBatch->Get(1)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
@@ -464,7 +464,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
     std::string expectedData05[] = {"world", "hello"};
     std::vector<DataTypePtr> expectedTypes { LongType(), LongType(), VarcharType(500000),
         LongType(), LongType(), VarcharType(500000) };
-    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedTypes,
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount,
         expectedDataSize, expectedData00, expectedData01, expectedData02, expectedData03, expectedData04,
         expectedData05);
 
@@ -474,7 +474,7 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
     int64_t expectedData13[] = {4, 3};
     int64_t expectedData14[] = {33, 44};
     std::string expectedData15[] = {"bye", "bye"};
-    AssertVecBatchEquals(lookupJoinOutput[1], probeTypes.GetSize() + buildOutputColsCount, expectedTypes,
+    AssertVecBatchEquals(lookupJoinOutput[1], probeTypes.GetSize() + buildOutputColsCount,
         expectedDataSize, expectedData10, expectedData11, expectedData12, expectedData13, expectedData14,
         expectedData15);
 
@@ -559,7 +559,7 @@ TEST(JoinWithExprTest, TestBothJoinKeyAndFilterWithExpr)
     int64_t expectedData0[] = {111, 111, 112};
     int64_t expectedData1[] = {112, 111, 112};
     std::vector<DataTypePtr> expectedTypes { LongType(), LongType() };
-    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount, expectedTypes,
+    AssertVecBatchEquals(lookupJoinOutput[0], probeTypes.GetSize() + buildOutputColsCount,
         expectedDataSize, expectedData0, expectedData1);
 
     delete filterExpr;

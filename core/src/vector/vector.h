@@ -158,7 +158,7 @@ public:
         return offset;
     }
 
-    DataTypeId ALWAYS_INLINE GetDataTypeId()
+    DataTypeId ALWAYS_INLINE GetTypeId()
     {
         return dataTypeId;
     }

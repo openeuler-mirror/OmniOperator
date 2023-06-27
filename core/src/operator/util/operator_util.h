@@ -356,13 +356,13 @@ public:
         auto outputVec = new Vector(rowCount);
         ExecutionContext context;
         bool *outNull = unsafe::UnsafeBaseVector::GetNulls(outputVec);
-        int32_t *outOffset = reinterpret_cast<int32_t *>(vec::VectorHelper::UnsafeGetOffsetsAddr(outputVec, typeId));
+        int32_t *outOffset = reinterpret_cast<int32_t *>(vec::VectorHelper::UnsafeGetOffsetsAddr(outputVec));
 
         if constexpr (std::is_same_v<Type, std::string_view>) {
             func(valuesAddresses, rowCount, reinterpret_cast<int64_t>(outputVec), nullptr, rowCount, valueNulls,
                 valueOffsets, outNull, outOffset, reinterpret_cast<int64_t>(&context), dictVectorAddrs);
         } else {
-            auto outData = reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(outputVec, typeId));
+            auto outData = reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(outputVec));
             func(valuesAddresses, rowCount, outData, nullptr, rowCount, valueNulls, valueOffsets, outNull, outOffset,
                 reinterpret_cast<int64_t>(&context), dictVectorAddrs);
         }
@@ -408,13 +408,12 @@ public:
         int64_t valueNulls[vecCount];
         int64_t valueOffsets[vecCount];
         int64_t dictVectorAddrs[vecCount];
-        auto inputTypeIds = inputTypes.GetIds();
         for (int32_t i = 0; i < vecCount; i++) {
             auto inputVector = inputVecBatch->Get(i);
-            auto newInputVec = vec::VectorHelper::SliceVector(inputVector, inputTypeIds[i], 0, rowCount);
+            auto newInputVec = vec::VectorHelper::SliceVector(inputVector, 0, rowCount);
             if (newInputVec->GetEncoding() != vec::OMNI_DICTIONARY) {
                 valueAddresses[i] =
-                    reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(newInputVec, inputTypeIds[i]));
+                    reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(newInputVec));
                 dictVectorAddrs[i] = 0;
             } else {
                 valueAddresses[i] = 0;
@@ -422,7 +421,7 @@ public:
             }
             valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(newInputVec));
             valueOffsets[i] =
-                reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetOffsetsAddr(newInputVec, inputTypes.GetIds()[i]));
+                reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetOffsetsAddr(newInputVec));
             newInputVecBatch->Append(newInputVec);
         }
 

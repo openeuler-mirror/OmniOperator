@@ -44,7 +44,7 @@ template <typename... Ts> struct Arguments {
 
         bitmap = new bool *[colCount];
         for (int i = 0; i < colCount; i++) {
-            bitmap[i] = new bool[rowCount]{ false };
+            bitmap[i] = new bool[rowCount] { false };
         }
 
         offsets = new int32_t *[colCount];
@@ -158,7 +158,7 @@ TEST(ExpressionTest, q1LongType)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
         VectorBatch *outputVecBatch = nullptr;
 
         timer.Reset();
@@ -250,7 +250,7 @@ TEST(ExpressionTest, q1DoubleType)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
         VectorBatch *outputVecBatch = nullptr;
 
         timer.Reset();
@@ -327,7 +327,7 @@ TEST(ExpressionTest, q1DoubleFilter)
     BinaryExpr *ltExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, mulExpr2, minValue, BooleanType());
 
     const string defaultTestFunctionName = "double-comparison-function";
-    Arguments<double, double, double> args{ numRows, numRows, col1, col2, col3 };
+    Arguments<double, double, double> args { numRows, numRows, col1, col2, col3 };
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType() }));
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
@@ -428,7 +428,7 @@ TEST(ExpressionTest, q1Decimal64Type)
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(std::move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     timer.CalculateElapse();
@@ -439,7 +439,7 @@ TEST(ExpressionTest, q1Decimal64Type)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
         VectorBatch *vectorBatch = nullptr;
 
         timer.Reset();
@@ -529,7 +529,7 @@ TEST(ExpressionTest, q1Decimal128Type)
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
-    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    auto *factory = new ProjectionOperatorFactory(std::move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     timer.CalculateElapse();
@@ -540,7 +540,7 @@ TEST(ExpressionTest, q1Decimal128Type)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
         VectorBatch *vectorBatch = nullptr;
 
         timer.Reset();
@@ -631,7 +631,7 @@ TEST(ExpressionTest, q1Decimal64Cast)
     double cpuTime[rounds];
     for (int i = 0; i < rounds; i++) {
         // evaluate
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
         VectorBatch *vectorBatch = nullptr;
 
         timer.Reset();
@@ -709,7 +709,7 @@ TEST(ExpressionTest, q1DateType)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
@@ -800,7 +800,7 @@ TEST(ExpressionTest, q1Case1)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
@@ -1008,7 +1008,7 @@ TEST(ExpressionTest, q1SwitchCase)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
@@ -1187,7 +1187,7 @@ TEST(ExpressionTest, q1If)
     for (int i = 0; i < rounds; i++) {
         // evaluate
         VectorBatch *vectorBatch = nullptr;
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
 
         timer.Reset();
         op->AddInput(copy);
@@ -1274,7 +1274,7 @@ template <typename T, int Size> static void bm_codegen_between()
     }
 
     BetweenExpr *expr = new BetweenExpr(valueExpr, lowerExpr, upperExpr);
-    Arguments<T, T, T> args{ Size, 5, col0, col1, col2 };
+    Arguments<T, T, T> args { Size, 5, col0, col1, col2 };
     DataTypes inputTypes(dataTypePtr);
     VectorBatch *t = CreateVectorBatch(inputTypes, 5, col0, col1, col2);
 
@@ -1334,7 +1334,7 @@ TEST(ExpressionTest, bm_codegen_between2)
     int col1[] = {1001, 1245, 1245, 3, 4};
     int col2[] = {1001, -1256, 12365, 4, 6};
 
-    Arguments<int, int, int> args{ 1000, 5, col0, col1, col2 };
+    Arguments<int, int, int> args { 1000, 5, col0, col1, col2 };
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
     VectorBatch *t = CreateVectorBatch(inputTypes, 5, col0, col1, col2);
 

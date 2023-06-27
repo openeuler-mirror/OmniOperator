@@ -161,7 +161,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -218,7 +218,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumber)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -276,7 +276,7 @@ TEST(NativeOmniWindowOperatorTest, testRankPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -334,7 +334,7 @@ TEST(NativeOmniWindowOperatorTest, testRank)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -395,7 +395,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartition)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -460,7 +460,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNull)
     expectVecBatch->Get(0)->SetNull(4);
     expectVecBatch->Get(0)->SetNull(5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -525,7 +525,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberAndRankPartitionWithNullWithoutS
     expectVecBatch->Get(0)->SetNull(4);
     expectVecBatch->Get(0)->SetNull(5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -604,7 +604,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNull)
     expectVecBatch->Get(0)->SetNull(5);
     expectVecBatch->Get(1)->SetNull(1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -683,7 +683,7 @@ TEST(NativeOmniWindowOperatorTest, testAggregationPartitionWithNullWithoutSort)
     expectVecBatch->Get(0)->SetNull(5);
     expectVecBatch->Get(1)->SetNull(1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -835,7 +835,7 @@ TEST(NativeOmniWindowOperatorTest, testRankWithAllDataTypes)
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18,
         expectData19, expectData20, expectData21);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -988,7 +988,7 @@ TEST(NativeOmniWindowOperatorTest, testRowNumberkWithAllDataTypes)
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18,
         expectData19, expectData20, expectData21);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -1097,7 +1097,7 @@ TEST(NativeOmniWindowOperatorTest, testSumWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -1203,7 +1203,7 @@ TEST(NativeOmniWindowOperatorTest, testAvgWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17, expectData18);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -1346,7 +1346,7 @@ TEST(NativeOmniWindowOperatorTest, testMaxWithAllDataTypes)
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19, expectData20);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -1489,7 +1489,7 @@ TEST(NativeOmniWindowOperatorTest, testMinWithAllDataTypes)
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19, expectData20);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -1632,7 +1632,7 @@ TEST(NativeOmniWindowOperatorTest, testCountWithAllDataTypes)
         expectData5, expectData6, expectData7, expectData8, expectData9, expectData10, expectData11, expectData12,
         expectData13, expectData14, expectData15, expectData16, expectData17, expectData18, expectData19, expectData20);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -1751,7 +1751,7 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithSort)
     expectVecBatch->Get(5)->SetNull(1);
     expectVecBatch->Get(5)->SetNull(2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -1861,7 +1861,7 @@ TEST(NativeOmniWindowOperatorTest, testCountRowsWithNullWithoutSort)
     expectVecBatch->Get(4)->SetNull(1);
     expectVecBatch->Get(4)->SetNull(5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -1966,7 +1966,7 @@ TEST(NativeOmniWindowOperatorTest, testDictionaryVector)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -2222,7 +2222,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowComparePerf)
 
     EXPECT_EQ(resultWithJit.size(), resultWithoutJit.size());
     for (uint32_t i = 0; i < resultWithJit.size(); ++i) {
-        EXPECT_TRUE(VecBatchMatch(resultWithJit[i], resultWithoutJit[i], allTypes.Get()));
+        EXPECT_TRUE(VecBatchMatch(resultWithJit[i], resultWithoutJit[i]));
     }
 
     delete[] input1;
@@ -2287,7 +2287,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameBound)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -2358,7 +2358,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameBoundedN)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;
@@ -2422,7 +2422,7 @@ TEST(NativeOmniWindowOperatorTest, testFrameUnBounded)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     delete operatorFactory;

@@ -168,8 +168,7 @@ public class VarcharVec extends VariableWidthVec {
         // check expand
         if (newCapacityInBytes != capacityInBytes) {
             capacityInBytes = newCapacityInBytes;
-            valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector, VarcharDataType.VARCHAR.getId().toValue()),
-                    capacityInBytes);
+            valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector), capacityInBytes);
         }
     }
 

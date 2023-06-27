@@ -53,6 +53,7 @@ public:
     ContainerVector(int32_t capacityInBytes, int32_t positionCount)
         : Vector<int64_t>(positionCount, OMNI_ENCODING_CONTAINER)
     {
+        dataTypeId = OMNI_CONTAINER;
         using T = typename type::NativeType<type::OMNI_CONTAINER>::type;
         int32_t vectorCount = capacityInBytes / sizeof(T);
         values = std::shared_ptr<int64_t[]>(new int64_t[vectorCount]);

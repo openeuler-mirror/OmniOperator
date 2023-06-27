@@ -55,13 +55,13 @@ jobject transform(JNIEnv *env, VectorBatch &result)
     for (int i = 0; i < vecCount; ++i) {
         BaseVector *vector = result.Get(i);
         vecAddresses[i] = reinterpret_cast<uintptr_t>(vector);
-        dataTypeIds[i] = vector->GetDataTypeId();
+        dataTypeIds[i] = vector->GetTypeId();
         encodings[i] = vector->GetEncoding();
         // By default, all 3 buf arrays will have a value,
         // if not, it will be 0, which means a null pointer.
-        valueBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(vector, dataTypeIds[i]));
+        valueBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(vector));
         nullBufAddrs[i] = reinterpret_cast<uintptr_t>(omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(vector));
-        offsetsBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetOffsetsAddr(vector, dataTypeIds[i]));
+        offsetsBufAddrs[i] = reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetOffsetsAddr(vector));
     }
 
     // set vector addresses parameter to vector batch construct.

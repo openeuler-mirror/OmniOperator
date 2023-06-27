@@ -63,7 +63,7 @@ void GetDataFromVecBatch(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t 
         dictionaries[i] = dictVecAddress;
         valueAddrs[i] = valuesAddress;
         nullAddrs[i] = reinterpret_cast<intptr_t>(unsafe::UnsafeBaseVector::GetNulls(colVec));
-        offsetAddrs[i] = reinterpret_cast<intptr_t>(VectorHelper::UnsafeGetOffsetsAddr(colVec, types.GetIds()[i]));
+        offsetAddrs[i] = reinterpret_cast<intptr_t>(VectorHelper::UnsafeGetOffsetsAddr(colVec));
     }
 }
 

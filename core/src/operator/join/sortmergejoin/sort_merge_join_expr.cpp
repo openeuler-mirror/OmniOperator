@@ -56,9 +56,7 @@ StreamedTableWithExprOperator::StreamedTableWithExprOperator(const type::DataTyp
       streamedTypes(streamedTypes),
       streamedKeyCols(streamedKeyCols),
       projectFuncs(projectFuncs)
-{
-    this->outputTypes = smjOperator->GetOutputType();
-}
+{}
 
 StreamedTableWithExprOperator::~StreamedTableWithExprOperator() = default;
 
@@ -136,9 +134,7 @@ BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTyp
       bufferedTypes(bufferedTypes),
       bufferedKeyCols(bufferedKeyCols),
       projectFuncs(projectFuncs)
-{
-    this->outputTypes = smjOperator->GetOutputType();
-}
+{}
 
 BufferedTableWithExprOperator::~BufferedTableWithExprOperator() = default;
 

@@ -57,7 +57,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithAllExpr)
     VectorBatch *expectVectorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4, expData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
@@ -108,7 +108,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithPartialExpr)
     VectorBatch *expectVectorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(sortKeys);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);
@@ -155,7 +155,7 @@ TEST(NativeOmniTopNWithExprOperatorTest, TestTopNWithNoExpr)
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(sortExprs);
     omniruntime::op::Operator::DeleteOperator(topNWithExprOperator);

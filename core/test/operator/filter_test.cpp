@@ -2032,7 +2032,7 @@ TEST(FilterTest, TestFilterDictionaryVec)
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes2, overflowConfig);
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
-    VectorBatch *copiedBatch = DuplicateVectorBatch(t, vecOfTypes);
+    VectorBatch *copiedBatch = DuplicateVectorBatch(t);
     op->AddInput(copiedBatch);
     VectorBatch *outputVecBatch = nullptr;
     int32_t numReturned = op->GetOutput(&outputVecBatch);
@@ -2084,7 +2084,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
-    auto *copiedBatch = DuplicateVectorBatch(t, vecOfTypes);
+    auto *copiedBatch = DuplicateVectorBatch(t);
     op->AddInput(copiedBatch);
     VectorBatch *outputVecBatch = nullptr;
     int32_t numReturned = op->GetOutput(&outputVecBatch);
@@ -2598,7 +2598,7 @@ void OperatorAddInput(struct MultiThreadArgs *multiThreadArgs)
     for (int i = 0; i < multiThreadArgs->rounds; ++i) {
         for (const auto &vb : vvb) {
             VectorBatch *outputVecBatch = nullptr;
-            VectorBatch *copiedBatch = DuplicateVectorBatch(vb, *(multiThreadArgs->types));
+            VectorBatch *copiedBatch = DuplicateVectorBatch(vb);
             Timer timer;
             timer.SetStart();
             op->AddInput(copiedBatch);

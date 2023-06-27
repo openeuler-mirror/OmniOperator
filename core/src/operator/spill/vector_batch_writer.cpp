@@ -144,7 +144,7 @@ ErrorCode VectorBatchWriter::WriteVarcharVector(omniruntime::vec::BaseVector *ve
     }
 
     // write offsets
-    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, OMNI_VARCHAR));
+    auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
     auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
     if (write(fd, valueOffsets, offsetSize) < offsetSize) {
         LogError("Write value offsets failed.");
@@ -244,7 +244,7 @@ uint64_t VectorBatchWriter::GetVecBatchSize(VectorBatch *vectorBatch)
             case type::OMNI_VARCHAR: {
                 auto vector = vectorBatch->Get(i);
                 auto valueOffsets =
-                    reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, OMNI_VARCHAR));
+                    reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
                 size += (rowCount + 1) * sizeof(int32_t); // for offsets
                 size += (valueOffsets[rowCount] - valueOffsets[0]);
                 break;

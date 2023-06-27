@@ -54,7 +54,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     }
     std::vector<DataTypePtr> types = { IntType() };
     inputVecBatch1->Append(column0);
-    VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1, types);
+    VectorBatch *inputVecBatch2 = DuplicateVectorBatch(inputVecBatch1);
 
 
     DataTypes sourceTypes(types);
@@ -95,7 +95,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
     expectVectorBatch->Append(expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     TopNOperatorFactory *topNOperatorFactory2 =
         new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
@@ -120,7 +120,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     auto e2 = clock();
     cout << "topn without OmniJit performance takes: " << (double)(e2 - s2) / CLOCKS_PER_SEC << endl;
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch2, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch2, expectVectorBatch));
 
     delete perfUtil;
     delete[] data0;
@@ -268,7 +268,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
     expectVectorBatch->Append(expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -315,7 +315,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     VectorBatch *expectVectorBatch = new VectorBatch(5);
     expectVectorBatch->Append(expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -366,7 +366,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
     expectVectorBatch->Append(expectCol1Base);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
@@ -418,7 +418,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
     expectVectorBatch->Append(expectCol1Base);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
@@ -466,7 +466,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
     expectVectorBatch->Append(expectCol1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -517,7 +517,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
     expectVectorBatch->Append(expectCol1Base);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -566,7 +566,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
     expectVectorBatch->Append(expectCol1Base);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -638,7 +638,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     expectVectorBatch->Append(expectCol3);
     expectVectorBatch->Append(expectCol4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -710,7 +710,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
     expectVectorBatch->Append(expectCol2Base);
     expectVectorBatch->Append(expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -783,7 +783,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     expectVectorBatch->Append(expectCol2Base);
     expectVectorBatch->Append(expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -856,7 +856,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
     expectVectorBatch->Append(expectCol3);
     expectVectorBatch->Append(expectCol4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -926,7 +926,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
     expectVectorBatch->Append(expectCol2Base);
     expectVectorBatch->Append(expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -998,7 +998,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
     expectVectorBatch->Append(expectCol2Base);
     expectVectorBatch->Append(expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -1077,7 +1077,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     expectVectorBatch->Append(expectCol2Base);
     expectVectorBatch->Append(expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(0));
     EXPECT_TRUE(!outputVectorBatch->Get(0)->IsNull(2));
 
@@ -1158,7 +1158,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     expectVectorBatch->Append(expectCol2Base);
     expectVectorBatch->Append(expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(0));
     EXPECT_TRUE(!outputVectorBatch->Get(0)->IsNull(2));
 
@@ -1227,7 +1227,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     expectVectorBatch->Append(expectCol2);
     expectVectorBatch->Append(expectCol3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     omniruntime::op::Operator::DeleteOperator(topNOperator);
     DeleteTopNOperatorFactory(topNOperatorFactory);
@@ -1307,7 +1307,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     expectVectorBatch->Append(expectCol3);
     expectVectorBatch->Append(expectCol4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(0));
     EXPECT_TRUE(!outputVectorBatch->Get(0)->IsNull(2));
 
@@ -1386,7 +1386,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     expectVectorBatch->Append(expectCol3);
     expectVectorBatch->Append(expectCol4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(0));
     EXPECT_TRUE(!outputVectorBatch->Get(0)->IsNull(2));
 
@@ -1469,7 +1469,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     expectVectorBatch->Append(expectCol3);
     expectVectorBatch->Append(expectCol4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
     EXPECT_TRUE(outputVectorBatch->Get(0)->IsNull(3));
     EXPECT_TRUE(!outputVectorBatch->Get(0)->IsNull(2));
 
@@ -1515,7 +1515,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -1559,7 +1559,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -1603,7 +1603,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNShortColumn)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(sourceTypes, expectedDataSize, expectData0, expectData1, expectData2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -1646,7 +1646,7 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     DataTypes expectedTypes(std::vector<DataTypePtr>({ VarcharType(1), LongType(), VarcharType(3) }));
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -1690,7 +1690,7 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     DataTypes expectedTypes(std::vector<DataTypePtr>({ VarcharType(1), LongType(), BooleanType() }));
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectedTypes, expectedDataSize, expectData0, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);

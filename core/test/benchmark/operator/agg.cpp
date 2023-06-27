@@ -275,7 +275,7 @@ private:
                     charBuffer[i] = rand() % 95 + 32;
                 }
                 auto val = std::string(reinterpret_cast<char *>(&charBuffer), valLen);
-                VectorHelper::SetValue(vector, r, &val, OMNI_VARCHAR);
+                VectorHelper::SetValue(vector, r, &val);
             }
             return vector;
         } else {
@@ -286,7 +286,7 @@ private:
                     charBuffer[i] = rand() % 95 + 32;
                 }
                 auto val = std::string(reinterpret_cast<char *>(&charBuffer), valLen);
-                VectorHelper::SetValue(vector, k, &val, OMNI_VARCHAR);
+                VectorHelper::SetValue(vector, k, &val);
             }
             std::vector<int32_t> ids(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {

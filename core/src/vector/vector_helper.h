@@ -107,20 +107,20 @@ public:
         return;
     }
 
-    static void SetValue(vec::BaseVector *vector, int32_t index, void *value, int32_t typeId)
+    static void SetValue(vec::BaseVector *vector, int32_t index, void *value)
     {
         using namespace omniruntime::type;
-        return DYNAMIC_TYPE_DISPATCH(VectorSetValue, typeId, vector, index, value);
+        return DYNAMIC_TYPE_DISPATCH(VectorSetValue, vector->GetTypeId(), vector, index, value);
     }
 
-    static void PrintVecBatch(VectorBatch *vecBatch, const std::vector<type::DataTypePtr> &types)
+    static void PrintVecBatch(VectorBatch *vecBatch)
     {
         int32_t vectorCount = vecBatch->GetVectorCount();
         int32_t rowCount = vecBatch->GetRowCount();
         for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
             for (int32_t colIdx = 0; colIdx < vectorCount; ++colIdx) {
                 auto vector = vecBatch->Get(colIdx);
-                PrintVectorValue(vector, rowIdx, types[colIdx]->GetId());
+                PrintVectorValue(vector, rowIdx);
             }
             std::cout << std::endl;
         }
@@ -149,7 +149,7 @@ public:
         }
     }
 
-    static void PrintVectorValue(BaseVector *vector, int32_t rowIndex, int32_t typeId)
+    static void PrintVectorValue(BaseVector *vector, int32_t rowIndex)
     {
         using namespace omniruntime::type;
         if (vector->IsNull(rowIndex)) {
@@ -159,9 +159,9 @@ public:
         }
 
         if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
-            DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, typeId, vector, rowIndex);
+            DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, vector->GetTypeId(), vector, rowIndex);
         } else {
-            DYNAMIC_TYPE_DISPATCH(PrintDictionaryVectorValue, typeId, vector, rowIndex);
+            DYNAMIC_TYPE_DISPATCH(PrintDictionaryVectorValue, vector->GetTypeId(), vector, rowIndex);
         }
     }
 
@@ -201,9 +201,9 @@ public:
         }
     }
 
-    static void *UnsafeGetValuesDictionary(BaseVector *vector, int32_t dataTypeId)
+    static void *UnsafeGetValuesDictionary(BaseVector *vector)
     {
-        switch (dataTypeId) {
+        switch (vector->GetTypeId()) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
@@ -242,17 +242,18 @@ public:
                     reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector)));
             }
             default: {
-                LogError("No such data type %d", dataTypeId);
+                LogError("No such data type %d", vector->GetTypeId());
                 break;
             }
         }
     }
 
-    static void *UnsafeGetValues(BaseVector *vector, int32_t dataTypeId)
+    static void *UnsafeGetValues(BaseVector *vector)
     {
         if (vector->GetEncoding() == OMNI_DICTIONARY) {
-            return UnsafeGetValuesDictionary(vector, dataTypeId);
+            return UnsafeGetValuesDictionary(vector);
         }
+        DataTypeId dataTypeId = vector->GetTypeId();
         switch (dataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {
@@ -296,8 +297,9 @@ public:
         }
     }
 
-    static void *UnsafeGetOffsetsAddr(BaseVector *vector, int32_t dataTypeId)
+    static void *UnsafeGetOffsetsAddr(BaseVector *vector)
     {
+        DataTypeId dataTypeId = vector->GetTypeId();
         if (dataTypeId == type::OMNI_VARCHAR || dataTypeId == type::OMNI_CHAR) {
             if (vector->GetEncoding() == OMNI_DICTIONARY) {
                 auto dictVarCharVec = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
@@ -310,10 +312,10 @@ public:
         return nullptr;
     }
 
-    static BaseVector *SliceDictionaryVector(BaseVector *vector, int32_t dataTypeId, int positionOffset,
+    static BaseVector *SliceDictionaryVector(BaseVector *vector, int positionOffset,
         int length)
     {
-        switch (dataTypeId) {
+        switch (vector->GetTypeId()) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {
                 return reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vector)->Slice(positionOffset, length);
@@ -345,17 +347,17 @@ public:
                     length);
             }
             default: {
-                LogError("No such data type %d", dataTypeId);
+                LogError("No such data type %d", vector->GetTypeId());
                 return nullptr;
             }
         }
     }
-    static BaseVector *SliceVector(BaseVector *vector, int32_t dataTypeId, int positionOffset,
-        int length)
+    static BaseVector *SliceVector(BaseVector *vector, int positionOffset, int length)
     {
         if (vector->GetEncoding() == OMNI_DICTIONARY) {
-            return SliceDictionaryVector(vector, dataTypeId, positionOffset, length);
+            return SliceDictionaryVector(vector, positionOffset, length);
         }
+        DataTypeId dataTypeId = vector->GetTypeId();
         switch (dataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {
@@ -393,8 +395,9 @@ public:
     }
 
     static BaseVector *CopyPositionsDictionaryVector(BaseVector *vector, int *positions, int offset,
-        int length, int dataTypeId)
+        int length)
     {
+        DataTypeId dataTypeId = vector->GetTypeId();
         switch (dataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {
@@ -435,12 +438,12 @@ public:
         }
     }
 
-    static BaseVector *CopyPositionsVector(BaseVector *vector, int *positions, int offset, int length,
-        int dataTypeId)
+    static BaseVector *CopyPositionsVector(BaseVector *vector, int *positions, int offset, int length)
     {
         if (vector->GetEncoding() == OMNI_DICTIONARY) {
-            return CopyPositionsDictionaryVector(vector, positions, offset, length, dataTypeId);
+            return CopyPositionsDictionaryVector(vector, positions, offset, length);
         }
+        DataTypeId dataTypeId = vector->GetTypeId();
         switch (dataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {
@@ -477,8 +480,9 @@ public:
         }
     }
 
-    static void *UnsafeGetDictionary(BaseVector *vector, int32_t dataTypeId)
+    static void *UnsafeGetDictionary(BaseVector *vector)
     {
+        DataTypeId dataTypeId = vector->GetTypeId();
         switch (dataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {
@@ -520,9 +524,9 @@ public:
         }
     }
 
-    static void AppendVector(BaseVector *destVector, int32_t offset, BaseVector *srcVector, int32_t length,
-        int32_t dataTypeId)
+    static void AppendVector(BaseVector *destVector, int32_t offset, BaseVector *srcVector, int32_t length)
     {
+        DataTypeId dataTypeId = destVector->GetTypeId();
         switch (dataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {

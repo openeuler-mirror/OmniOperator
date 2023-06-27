@@ -26,7 +26,7 @@ template <typename T> void v2_slice_get_set_value()
     }
 
     auto vector = parent->Slice(g_offset, g_len, false);
-    EXPECT_EQ(vector->GetDataTypeId(), parent->GetDataTypeId());
+    EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
     delete parent;
 
     for (int i = 0; i < g_len; i++) {

@@ -49,7 +49,7 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     for (int32_t i = 0; i < vectorCount; ++i) {
         BaseVector *inputVector = vecBatch->Get(i);
         outputVecBatch->Append(
-            VectorHelper::SliceVector(inputVector, inputVector->GetDataTypeId(), 0, remainingLimit));
+            VectorHelper::SliceVector(inputVector, 0, remainingLimit));
     }
     remainingLimit = 0;
     VectorHelper::FreeVecBatch(vecBatch);

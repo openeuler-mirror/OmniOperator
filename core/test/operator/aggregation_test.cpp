@@ -402,7 +402,7 @@ void PerfTestOriginal(int64_t moduleAddr, VectorBatch **input, std::vector<DataT
 
     // execution
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
-        auto copiedBatch = DuplicateVectorBatch(input[i], allTypes);
+        auto copiedBatch = DuplicateVectorBatch(input[i]);
         groupBy->AddInput(copiedBatch);
     }
     VectorBatch *outputVecBatch = nullptr;
@@ -424,7 +424,7 @@ void PerfTest(int64_t moduleAddr, VectorBatch **input, int32_t vecBatchNum, int3
 
     // execution
     for (int pageIndex = 0; pageIndex < vecBatchNum; ++pageIndex) {
-        auto copiedBatch = DuplicateVectorBatch(input[pageIndex], allTypes);
+        auto copiedBatch = DuplicateVectorBatch(input[pageIndex]);
         auto errNo = groupBy->AddInput(copiedBatch);
         EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
     }
@@ -451,7 +451,7 @@ void PerfTestNonGroup(int64_t moduleAddr, bool codegenMode, VectorBatch **input,
 
     // execution
     for (int pageIndex = 0; pageIndex < vecBatchNum; ++pageIndex) {
-        auto copiedBatch = DuplicateVectorBatch(input[pageIndex], allTypes);
+        auto copiedBatch = DuplicateVectorBatch(input[pageIndex]);
         auto errNo = aggregation->AddInput(copiedBatch);
         EXPECT_EQ(errNo, OMNI_STATUS_NORMAL);
     }
@@ -623,7 +623,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, cardinality, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6, expectData7);
 
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch3, expectVecBatch, expectFieldTypes));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch3, expectVecBatch));
     EXPECT_EQ(outputVecBatch3->GetVectorCount(), 7);
 
     delete[] input1;
@@ -674,7 +674,7 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch, expectedFieldTypes));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -724,7 +724,7 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectedTypes, 3, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch, expectedFieldTypes));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -785,7 +785,7 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, 1, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectedFieldTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     delete[] input;
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -816,7 +816,7 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
     std::vector<DataTypePtr> expectedTypes { LongType(),   LongType(), IntType(), ShortType(),
         DoubleType(), LongType(), LongType() };
     VectorBatch *expected = ConstructSimpleBuildData();
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expected, expectedTypes));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expected));
 
     op::Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -899,7 +899,7 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
     VectorBatch *expVecBatch1 =
         CreateVectorBatch(resultTypes, resultDataSize, expHashData, expData0, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch1, expVecBatch1, resultTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch1, expVecBatch1));
 
     omniruntime::op::Operator::DeleteOperator(aggregatePartial);
     omniruntime::op::Operator::DeleteOperator(aggregateFinal);
@@ -1203,7 +1203,7 @@ TEST(AggregationOperatorTest, hmpp_sum_avg)
     DataTypes resultTypes(resultType);
     VectorBatch *expVecBatch = CreateVectorBatch(resultTypes, resultDataSize, expData0, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(finalOutputVecBatch, expVecBatch, resultTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(finalOutputVecBatch, expVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(aggFinal);
     omniruntime::op::Operator::DeleteOperator(aggPartial);
@@ -1287,7 +1287,7 @@ TEST(AggregationOperatorTest, hmpp_decimal128)
     VectorBatch *expVecBatch = CreateVectorBatch(resultTypes, resultDataSize, expData0, expData1, expData2, expData3,
         expData4, expData5, expData6, expData7);
 
-    EXPECT_TRUE(VecBatchMatch(finalOutputVecBatch, expVecBatch, resultTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(finalOutputVecBatch, expVecBatch));
 
     omniruntime::op::Operator::DeleteOperator(aggFinal);
     omniruntime::op::Operator::DeleteOperator(aggPartial);
@@ -1321,7 +1321,7 @@ TEST(HashAggregationOperatorTest, hmpp_group_by_agg_same_cols)
     std::vector<DataTypePtr> expectedTypes { LongType(),   LongType(), IntType(), ShortType(),
         DoubleType(), LongType(), LongType() };
     VectorBatch *expected = ConstructSimpleBuildData();
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expected, expectedTypes));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expected));
     op::Operator::DeleteOperator(groupBy);
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expected);
@@ -1370,7 +1370,7 @@ TEST(HashAggregationOperatorTest, hmpp_varchar_vector_correctness)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, cardinality, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch, expectFieldTypes));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     delete[] input;
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -1502,7 +1502,7 @@ TEST(AggregationOperatorTest, verify_agg_distinct)
     VectorBatch *expVecBatch1 =
         CreateVectorBatch(resultTypes, resultDataSize, expData0, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(finalOutputVecBatch, expVecBatch1, resultTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(finalOutputVecBatch, expVecBatch1));
 
     omniruntime::op::Operator::DeleteOperator(aggPartial);
     omniruntime::op::Operator::DeleteOperator(aggFinal);
@@ -1808,8 +1808,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     delete nativeOperatorFactory;
     delete nativeOperatorFactory2;
 
-    std::vector<DataTypePtr> expectedTypes { LongType(), LongType(), LongType(), LongType() };
-    EXPECT_TRUE(VecBatchMatch(jittedResult, outputVecBatch, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(jittedResult, outputVecBatch));
     VectorHelper::FreeVecBatch(jittedResult);
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
@@ -1909,7 +1908,7 @@ TEST(HashAggregationOperatorTest, multi_stage)
     int64_t expectData6[CARDINALITY] = {1, 1, 1, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, CARDINALITY, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFromFinal, expectVecBatch, expectFieldTypes));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFromFinal, expectVecBatch));
 
     delete[] input1;
     delete[] input2;
@@ -1991,7 +1990,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
 
     for (int32_t i = 0; i < VEC_BATCH_NUM; ++i) {
         // create a copy of input
-        VectorBatch *copied = DuplicateVectorBatch(vectorBatch, sourceFieldTypes);
+        VectorBatch *copied = DuplicateVectorBatch(vectorBatch);
         groupBy->AddInput(copied);
     }
 
@@ -2166,12 +2165,11 @@ TEST(AggregatorTest, min_test)
 
     auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(Decimal128Type(38, 0), rowPerVecBatch);
-    VarcharDataType varcharDataType(1);
     std::string stringVals[rowPerVecBatch];
     for (int32_t i = 0; i < rowPerVecBatch; ++i) {
         stringVals[i] = "1";
     }
-    auto varcharInputVec = CreateVarcharVector(varcharDataType, stringVals, rowPerVecBatch);
+    auto varcharInputVec = CreateVarcharVector(stringVals, rowPerVecBatch);
     LongDataType longDataType;
     int32_t ids[rowPerVecBatch];
     int64_t dict[rowPerVecBatch];
@@ -2280,12 +2278,11 @@ TEST(AggregatorTest, max_test)
 
     auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(Decimal128Type(38, 0), rowPerVecBatch);
-    VarcharDataType varcharDataType(1);
     std::string stringVals[rowPerVecBatch];
     for (int32_t i = 0; i < rowPerVecBatch; ++i) {
         stringVals[i] = "1";
     }
-    auto varcharInputVec = CreateVarcharVector(varcharDataType, stringVals, rowPerVecBatch);
+    auto varcharInputVec = CreateVarcharVector(stringVals, rowPerVecBatch);
     LongDataType longDataType;
     int32_t ids[rowPerVecBatch];
     int64_t dict[rowPerVecBatch];

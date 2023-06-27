@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <huawei_secure_c/include/securec.h>
 #include "util/compiler_util.h"
+#include "type/data_utils.h"
 
 namespace omniruntime {
 namespace op {
@@ -263,6 +264,58 @@ public:
     static ALWAYS_INLINE int64_t UnpackUnsignedLong(int64_t value)
     {
         return static_cast<uint64_t>(value) & static_cast<uint64_t>(~omniruntime::op::SIGN_LONG_MASK);
+    }
+
+    static ALWAYS_INLINE int8_t *Decimal128ToBytes(int64_t highBits, uint64_t lowBits, int32_t &byteLen)
+    {
+        bool isNegative = highBits < 0;
+        highBits = isNegative ? omniruntime::op::HashUtil::UnpackUnsignedLong(highBits) : highBits;
+        int32_t tmpArray[] = { static_cast<int32_t>(highBits >> 32), static_cast<int32_t>(highBits),
+                               static_cast<int32_t>(lowBits >> 32), static_cast<int32_t>(lowBits) };
+        auto tmpLen = sizeof(tmpArray) / sizeof(tmpArray[0]);
+        int32_t int32Array[tmpLen];
+
+        int32_t len = 0;
+        uint32_t idx1 = 0;
+        int32_t idx2 = 0;
+        while (idx1 < tmpLen) {
+            auto val = tmpArray[idx1];
+            if (val != 0) {
+                len = tmpLen - idx1;
+                while (idx1 < tmpLen) {
+                    int32Array[idx2++] = tmpArray[idx1];
+                    idx1++;
+                }
+            } else {
+                idx1++;
+            }
+        }
+
+        auto bitLength = omniruntime::type::DataUtils::BitLength(int32Array, len, isNegative);
+
+        byteLen = bitLength / 8 + 1;
+        auto bytes = new int8_t[byteLen];
+        int32_t firstNonZeroReverseIndex = 0;
+        for (auto idx = len - 1; idx >= 0; idx--) {
+            if (int32Array[idx] != 0) {
+                firstNonZeroReverseIndex = len - 1 - idx;
+                break;
+            }
+        }
+
+        for (int32_t i = byteLen - 1, bytesCopyied = 4, nextInt = 0, intIndex = len - 1; i >= 0; i--) {
+            if (bytesCopyied == 4 && intIndex >= 0) {
+                nextInt = (!isNegative) ? int32Array[intIndex--] :
+                          ((len - 1 - intIndex) <= firstNonZeroReverseIndex ? -int32Array[intIndex--] :
+                           ~int32Array[intIndex--]);
+                bytesCopyied = 1;
+            } else {
+                nextInt = static_cast<uint32_t>(nextInt) >> 8;
+                bytesCopyied++;
+            }
+            bytes[i] = static_cast<int8_t>(nextInt);
+        }
+        return bytes;
     }
 
     static ALWAYS_INLINE int64_t Reverse(uint64_t i)

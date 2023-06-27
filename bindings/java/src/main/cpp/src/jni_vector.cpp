@@ -73,12 +73,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVecto
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(JNIEnv *env, jclass jcls,
-    jlong jNativeVector, jint dataTypeId, jint jStartIndex, jint jLength)
+    jlong jNativeVector, jint jStartIndex, jint jLength)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
     BaseVector *sliceVector = nullptr;
     JNI_METHOD_START
-    sliceVector = VectorHelper::SliceVector(nativeVector, dataTypeId, jStartIndex, jLength);
+    sliceVector = VectorHelper::SliceVector(nativeVector, jStartIndex, jLength);
     JNI_METHOD_END(0)
 #ifdef TRACE
     RecordStack(sliceVector, env);
@@ -87,7 +87,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_sliceVectorNative(
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNative(JNIEnv *env, jclass jcls,
-    jlong jNativeVector, jintArray jPositions, jint jOffset, jint jLength, jint dataTypeId)
+    jlong jNativeVector, jintArray jPositions, jint jOffset, jint jLength)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
     jint positionArray[jLength];
@@ -96,7 +96,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
     BaseVector *copyVector = nullptr;
     JNI_METHOD_START
     copyVector =
-        VectorHelper::CopyPositionsVector(nativeVector, reinterpret_cast<int *>(positions), 0, jLength, dataTypeId);
+        VectorHelper::CopyPositionsVector(nativeVector, reinterpret_cast<int *>(positions), 0, jLength);
     JNI_METHOD_END(0)
 #ifdef TRACE
     RecordStack(copyVector, env);
@@ -146,10 +146,10 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_setSizeNative(JNIEn
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValuesNative(JNIEnv *env, jclass jlcls,
-    jlong jNativeVector, jint dataTypeId)
+    jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector, dataTypeId));
+    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector));
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNative(JNIEnv *env, jclass jcls,
@@ -185,12 +185,12 @@ JNIEXPORT jstring JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getData
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_appendVectorNative(JNIEnv *env, jclass jcls,
-    jlong jNativeVectorDest, jint jOffSet, jlong jNativeVectorSrc, jint jLength, jint dataTypeId)
+    jlong jNativeVectorDest, jint jOffSet, jlong jNativeVectorSrc, jint jLength)
 {
     BaseVector *nativeVectorSrc = TransformVector(jNativeVectorSrc);
     BaseVector *nativeVectorDest = TransformVector(jNativeVectorDest);
     JNI_METHOD_START
-    VectorHelper::AppendVector(nativeVectorDest, (int32_t)jOffSet, nativeVectorSrc, (int32_t)jLength, dataTypeId);
+    VectorHelper::AppendVector(nativeVectorDest, (int32_t)jOffSet, nativeVectorSrc, (int32_t)jLength);
     JNI_METHOD_END()
 }
 
@@ -198,7 +198,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
     jclass jcls, jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    auto offsetsAddr = VectorHelper::UnsafeGetOffsetsAddr(nativeVector, omniruntime::type::DataTypeId::OMNI_VARCHAR);
+    auto offsetsAddr = VectorHelper::UnsafeGetOffsetsAddr(nativeVector);
     if (UNLIKELY(offsetsAddr == nullptr)) {
         throw omniruntime::exception::OmniException("GET_OFFSETS_FAILED",
             "return a null pointer when getting offsets address");
@@ -247,10 +247,10 @@ void Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative(JNIEnv *en
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_DictionaryVec_getDictionaryNative(JNIEnv *env, jclass jcls,
-    jlong jNativeVector, jint dataTypeId)
+    jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    auto dictionaryAddr = VectorHelper::UnsafeGetDictionary(nativeVector, dataTypeId);
+    auto dictionaryAddr = VectorHelper::UnsafeGetDictionary(nativeVector);
     if (UNLIKELY(dictionaryAddr == nullptr)) {
         throw omniruntime::exception::OmniException("GET_DICTIONARY_NATIVE_FAILED",
             "return a null pointer when getting dictionary address");

@@ -41,7 +41,6 @@ TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::v
 {
     int32_t eachRowSize = OperatorUtil::GetRowSize(sourceTypes.Get());
     maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
-    outputTypes.insert(outputTypes.end(), this->sourceTypes.Get().begin(), this->sourceTypes.Get().end());
 }
 
 TopNOperator::~TopNOperator()

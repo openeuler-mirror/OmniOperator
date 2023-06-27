@@ -813,7 +813,7 @@ TEST(NativeSortMergeJoinTest, TestDateTypes)
     auto *streamedVecBatch = new VectorBatch(dataSize);
     streamedVecBatch->Append(CreateVector<int64_t>(dataSize, streamData0));
     streamedVecBatch->Append(CreateVector<double>(dataSize, streamData1));
-    streamedVecBatch->Append(CreateVarcharVector(*VarcharType(5), streamData2, dataSize));
+    streamedVecBatch->Append(CreateVarcharVector(streamData2, dataSize));
     streamedVecBatch->Append(CreateVector<bool>(dataSize, streamData3));
     streamedPageIndex->AddVecBatch(streamedVecBatch);
 
@@ -822,7 +822,7 @@ TEST(NativeSortMergeJoinTest, TestDateTypes)
     bool bufferData2[] = {false, false, false, true};
     auto *bufferedVecBatch = new VectorBatch(dataSize);
     bufferedVecBatch->Append(CreateVector<double>(dataSize, bufferData0));
-    bufferedVecBatch->Append(CreateVarcharVector(*VarcharType(5), bufferData1, dataSize));
+    bufferedVecBatch->Append(CreateVarcharVector(bufferData1, dataSize));
     bufferedVecBatch->Append(CreateVector<bool>(dataSize, bufferData2));
     bufferedPageIndex->AddVecBatch(bufferedVecBatch);
     auto *scan = new SortMergeJoinScanner(streamedTypes, streamedCols, streamedKeysTypes.GetSize(), streamedPageIndex,
@@ -1318,8 +1318,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilder)
     double expectedData3[6] = {5.5, 3.3, 1.1, 11.1, 9.9, 7.7};
     string expectedData4[6] = {"555", "33", "1", "111", "99", "7"};
 
-    std::vector<DataTypePtr> outputTypes = { IntType(), DoubleType(), DoubleType(), VarcharType(3) };
-    AssertVecBatchEquals(outputVecBatch, 4, outputTypes, 6, expectedData1, expectedData2, expectedData3, expectedData4);
+    AssertVecBatchEquals(outputVecBatch, 4, 6, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();
@@ -1394,8 +1393,7 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     double expectedData3[2] = {3.3, 1.1};
     string expectedData4[2] = {"33", "1"};
 
-    std::vector<DataTypePtr> outputTypes = { IntType(), DoubleType(), DoubleType(), VarcharType(3) };
-    AssertVecBatchEquals(outputVecBatch, 4, outputTypes, 2, expectedData1, expectedData2, expectedData3, expectedData4);
+    AssertVecBatchEquals(outputVecBatch, 4, 2, expectedData1, expectedData2, expectedData3, expectedData4);
 
     leftPagesIndex->FreeAllRemainingVecBatch();
     rightPagesIndex->FreeAllRemainingVecBatch();

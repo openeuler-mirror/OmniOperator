@@ -494,8 +494,7 @@ VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, std::vector<DataT
     auto *sliceBatch = new VectorBatch(rowCount);
     for (int32_t columnIdx = 0; columnIdx < outputColCount; columnIdx++) {
         auto *vector = vectorBatch->Get(columnIdx);
-        auto dataType = dataTypes[columnIdx]->GetId();
-        sliceBatch->Append(vec::VectorHelper::SliceVector(vector, dataType, 0, rowCount));
+        sliceBatch->Append(vec::VectorHelper::SliceVector(vector, 0, rowCount));
     }
     return sliceBatch;
 }

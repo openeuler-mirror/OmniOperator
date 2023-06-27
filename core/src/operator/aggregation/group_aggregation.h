@@ -264,6 +264,7 @@ private:
     uint32_t aggInputColsSize;
     std::vector<DataTypes> aggInputTypes;
     std::vector<DataTypes> aggOutputTypes;
+    std::vector<type::DataTypePtr> outputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
     GroupByFieldHandleType groupByColumnsHandleType = GroupByFieldHandleType::serialize;
     std::unique_ptr<GroupbyColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;

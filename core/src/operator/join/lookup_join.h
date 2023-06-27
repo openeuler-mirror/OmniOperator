@@ -47,7 +47,7 @@ private:
             // we want to keep only one level dictionary vector here
             // if the data is non-dictionary, we build dictionary to avoid data copy
             if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
-                probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, probeRowCount, type);
+                probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, probeRowCount);
             } else {
                 probeColumn = VectorHelper::CreateDictionaryVector(probePositions, probeRowCount, column, type);
             }
@@ -59,7 +59,7 @@ private:
     {
         for (int32_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
-            auto resultColumn = VectorHelper::SliceVector(column, probeOutputTypes[j], 0, column->GetSize());
+            auto resultColumn = VectorHelper::SliceVector(column, 0, column->GetSize());
             vectorBatch->Append(resultColumn);
         }
     }
@@ -68,7 +68,7 @@ private:
     {
         for (int32_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
-            auto resultColumn = VectorHelper::SliceVector(column, probeOutputTypes[j], probeIndex[0], probeRowCount);
+            auto resultColumn = VectorHelper::SliceVector(column, probeIndex[0], probeRowCount);
             vectorBatch->Append(resultColumn);
         }
     }

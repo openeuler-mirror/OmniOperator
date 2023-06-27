@@ -154,7 +154,7 @@ private:
             for (int k = 0; k < groupsPerPage; k++) {
                 std::string groupKey = prefix + std::to_string(pageId * groupsPerPage + k);
                 for (int i = 0; i < RowsPerGroup(state); ++i) {
-                    VectorHelper::SetValue(varcharVector, vecIndex++, &groupKey, OMNI_VARCHAR);
+                    VectorHelper::SetValue(varcharVector, vecIndex++, &groupKey);
                 }
             }
             return varcharVector;
@@ -164,7 +164,7 @@ private:
 
             for (int k = 0; k < groupsPerPage; k++) {
                 std::string groupKey = prefix + std::to_string(pageId * groupsPerPage + k);
-                VectorHelper::SetValue(varcharVector, k, &groupKey, OMNI_VARCHAR);
+                VectorHelper::SetValue(varcharVector, k, &groupKey);
             }
             std::vector<int> ids(rowsPerPage);
             for (int k = 0; k < rowsPerPage; k++) {

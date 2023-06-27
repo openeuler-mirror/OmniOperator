@@ -67,7 +67,7 @@ TEST(NativeOmniLimitOperator, TestLimitBasic)
     VectorBatch *expVecBatch1 = CreateVectorBatch(sourceTypes, resultDataSize, expData1, expData2, expData3, expData4,
         expData5, expData6, expData7, expData8, expData9, expData10);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -113,8 +113,8 @@ TEST(NativeOmniLimitOperator, TestLimitMultiInput)
     double expData12[dataSize] = {3.3, 2.2, 1.1};
     VectorBatch *expVecBatch2 = CreateVectorBatch(sourceTypes, (dataSize), expData11, expData12);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch1, expVecBatch1, types));
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch2, expVecBatch2, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch1, expVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch2, expVecBatch2));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(expVecBatch2);
@@ -164,7 +164,7 @@ TEST(NativeOmniLimitOperator, TestLimitWithNull)
     colVector01->SetNull(3);
     colVector01->SetNull(4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1, types));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expVecBatch1));
 
     VectorHelper::FreeVecBatch(expVecBatch1);
     VectorHelper::FreeVecBatch(outputVecBatch);

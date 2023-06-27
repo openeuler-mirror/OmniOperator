@@ -302,7 +302,7 @@ void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
             partition = make_unique<WindowPartition>(sourceTypes, pagesIndex.get(), partitionStart, partitionEnd,
                 outputCols.data(), outputColsCount, windowFunctions, peerGroupHashStrategy.get());
         }
-        partition->ProcessNextRow(inputVecBatchForAgg, outputVecBatch, j, outputColsCount, outputTypes);
+        partition->ProcessNextRow(inputVecBatchForAgg, outputVecBatch, j);
     }
 }
 

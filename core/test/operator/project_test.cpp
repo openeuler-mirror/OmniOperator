@@ -724,7 +724,7 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
     std::cout << "[BenchmarkMultipleColumns Project without varchar]\n\n";
     for (int i = 0; i < 10; i++) {
         auto start = std::chrono::system_clock::now();
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
         op->AddInput(copy);
         VectorBatch *outputVecBatch = nullptr;
         op->GetOutput(&outputVecBatch);
@@ -761,7 +761,7 @@ TEST(ProjectionTest, BenchmarkMultipleColumns)
 
     for (int i = 0; i < 10; i++) {
         auto start = std::chrono::system_clock::now();
-        auto copy = DuplicateVectorBatch(t, vecOfTypes);
+        auto copy = DuplicateVectorBatch(t);
         op->AddInput(copy);
         VectorBatch *outputVecBatch = nullptr;
         op->GetOutput(&outputVecBatch);
@@ -904,7 +904,7 @@ TEST(ProjectionTest, DictionaryVecTest)
         dictionary->SetValue(i, (i % 21) - 3);
     }
     auto dicVec = VectorHelper::CreateDictionary(ids, numRows, dictionary.get());
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     std::vector<DataTypePtr> vecOfTypes({ IntType(), IntType(), IntType() });
     DataTypes inputTypes2(vecOfTypes);
@@ -927,7 +927,7 @@ TEST(ProjectionTest, DictionaryVecTest)
     auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
-    auto copy = DuplicateVectorBatch(t, vecOfTypes);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
@@ -1011,7 +1011,7 @@ TEST(ProjectionTest, Decimal128Arithmetic2)
     omniruntime::op::Operator *op = factory->CreateOperator();
 
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0, col1);
-    auto copy = DuplicateVectorBatch(t, vecOfTypes);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
@@ -1075,7 +1075,7 @@ TEST(ProjectionTest, Decimal128Arithmetic3)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0, col1);
 
-    auto copy = DuplicateVectorBatch(t, vecOfTypes);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
@@ -1313,7 +1313,7 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
     }
 
     int32_t ids[] = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
-    auto *dicVec = VectorHelper::CreateDictionary(ids, numRows, dictionary).release();
+    auto *dicVec = VectorHelper::CreateDictionary(ids, numRows, dictionary);
 
     auto slicedCol1 = vector1->Slice(5, 5);
     auto slicedCol2 = vector2->Slice(5, 5);
@@ -1323,9 +1323,9 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
 
     auto inputVec = std::vector<DataTypePtr>({ IntType(), IntType(), IntType() });
     DataTypes inputTypes1(inputVec);
-    vecBatch->Append(slicedCol1.release());
-    vecBatch->Append(slicedCol2.release());
-    vecBatch->Append(slicedCol3.release());
+    vecBatch->Append(slicedCol1);
+    vecBatch->Append(slicedCol2);
+    vecBatch->Append(slicedCol3);
 
     FieldExpr *addLeft1 = new FieldExpr(0, IntType());
     LiteralExpr *addRight1 = new LiteralExpr(1, IntType());
@@ -1345,7 +1345,7 @@ TEST(ProjectionTest, SlicedDictionaryVecTest)
     auto *factory = new ProjectionOperatorFactory(std::move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
-    auto copy = DuplicateVectorBatch(vecBatch, inputVec);
+    auto copy = DuplicateVectorBatch(vecBatch);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     int numReturned = op->GetOutput(&outputVecBatch);
@@ -1385,8 +1385,8 @@ TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
     }
 
     int32_t ids[] = {3, 4, 5, 6, 7, 8, 9, 9, 9, 9};
-    auto *dicVector = VectorHelper::CreateDictionary(ids, numRows, col1.get()).release();
-    auto *slicedCol1 = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(dicVector)->Slice(5, 5).release();
+    auto *dicVector = VectorHelper::CreateDictionary(ids, numRows, col1.get());
+    auto *slicedCol1 = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(dicVector)->Slice(5, 5);
 
     VectorBatch *t = new VectorBatch(slicedCol1->GetSize());
     t->Append(slicedCol1);
@@ -1402,7 +1402,7 @@ TEST(ProjectionTest, SlicedDictionaryVecWithNullTest)
     auto *factory = new ProjectionOperatorFactory(std::move(exprEvaluator));
     omniruntime::op::Operator *op = factory->CreateOperator();
 
-    auto copy = DuplicateVectorBatch(t, inputVec);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     int numReturned = op->GetOutput(&outputVecBatch);
@@ -1594,7 +1594,7 @@ TEST(ProjectionTest, Round)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0, col1, col2, col3, col4, col5);
 
-    auto copy = DuplicateVectorBatch(t, vecOfTypes);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
@@ -2447,7 +2447,7 @@ TEST(ProjectionTest, ConcatStrCharTest)
         "RebeccaJohn", "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     std::vector<DataTypePtr> outTypes = { CharType(100) };
     auto expect = CreateExpectVecBatchForConcat(DataTypes { outTypes }, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, outTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2485,7 +2485,7 @@ TEST(ProjectionTest, ConcatCharStrTest)
         "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     std::vector<DataTypePtr> outTypes = { CharType(100) };
     auto expect = CreateExpectVecBatchForConcat(DataTypes { outTypes }, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, outTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2520,7 +2520,7 @@ TEST(ProjectionTest, ConcatStrStrTest)
 
     std::vector<DataTypePtr> outTypes = { VarcharType(100) };
     auto expect = CreateExpectVecBatchForConcat(DataTypes { outTypes }, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, outTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2558,7 +2558,7 @@ TEST(ProjectionTest, ConcatCharCharTest)
         "Rebecca-Rebecca-Rebecca-Rebeca-John-John-John-John" };
     std::vector<DataTypePtr> outTypes = { CharType(51) };
     auto expect = CreateExpectVecBatchForConcat(DataTypes { outTypes }, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, outTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2605,7 +2605,7 @@ TEST(ProjectionTest, ReplaceStrWithRep)
     string expectedDatas[] = { "varopera00", "var*#00", "varVARCHAR00" };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2639,7 +2639,7 @@ TEST(ProjectionTest, ReplaceStrWithoutRep)
     string expectedDatas[] = { "var00", "var00", "var00" };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2672,7 +2672,7 @@ TEST(ProjectionTest, LowerStr)
     string expectedDatas[] = { "varchar100", "char200", "var**var" };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2705,7 +2705,7 @@ TEST(ProjectionTest, LowerChar)
     string expectedDatas[] = { "varchar100", "char200", "var**var" };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2738,7 +2738,7 @@ TEST(ProjectionTest, LengthChar)
     int64_t expectedDatas[] = { 20, 20, 20 };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2772,7 +2772,7 @@ TEST(ProjectionTest, LengthStr)
     int64_t expectedDatas[] = { 10, 7, 8 };
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2791,7 +2791,7 @@ TEST(ProjectionTest, MightContain)
     int32_t numWords = 1048576; // 1MBytes
 
     int64_t byteLength = numWords * sizeof(int64_t) + sizeof(versionJava) + sizeof(hashFuncNum) + sizeof(numWords);
-    auto *in = new int8_t[byteLength]{ 0 };
+    auto *in = new int8_t[byteLength] { 0 };
     (reinterpret_cast<int32_t *>(in))[0] = 1;
     (reinterpret_cast<int32_t *>(in))[1] = hashFuncNum;
     (reinterpret_cast<int32_t *>(in))[2] = numWords;
@@ -2827,7 +2827,7 @@ TEST(ProjectionTest, MightContain)
     bool expectedDatas[] = { true, false, true};
 
     auto expect = CreateVectorBatch(DataTypes(expectedTypes), 3, expectedDatas);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect, expectedTypes));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expect));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expect);
@@ -2892,7 +2892,7 @@ TEST(ProjectionTest, ProjectCastIntToString)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
 
-    auto copy = DuplicateVectorBatch(t, vecOfTypes);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
@@ -2931,7 +2931,7 @@ TEST(ProjectionTest, ProjectCastDecimal128ToString)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
 
-    auto copy = DuplicateVectorBatch(t, vecOfTypes);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
@@ -2971,7 +2971,7 @@ TEST(ProjectionTest, ProjectCastDoubleToString)
 
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
 
-    auto copy = DuplicateVectorBatch(t, vecOfTypes);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
@@ -3080,7 +3080,7 @@ TEST(ProjectionTest, ProjectCastStrStrZh)
     DataTypes outputTypes({ VarcharType(1024), VarcharType(7) });
     VectorBatch *expectedRet = CreateVectorBatch(outputTypes, numRows, expected1, expected2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedRet, outputTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedRet));
 
     delete[] col0;
     delete[] expected1;
@@ -3137,7 +3137,7 @@ TEST(ProjectionTest, ProjectCastStrStrWithOverflowConfig)
     DataTypes outputTypes({ VarcharType(1024), VarcharType(7) });
     VectorBatch *expectedRet = CreateVectorBatch(outputTypes, numRows, expected1, expected2);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedRet, outputTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedRet));
 
     delete[] col0;
     delete[] expected1;
@@ -3209,7 +3209,7 @@ TEST(ProjectionTest, ProjectCastIntToDecimal64)
     omniruntime::op::Operator *op = factory->CreateOperator();
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col);
 
-    auto copy = DuplicateVectorBatch(t, vecOfTypes);
+    auto copy = DuplicateVectorBatch(t);
     op->AddInput(copy);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);

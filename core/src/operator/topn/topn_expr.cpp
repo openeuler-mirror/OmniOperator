@@ -31,9 +31,7 @@ Operator *TopNWithExprOperatorFactory::CreateOperator()
 TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<ProjFunc> &projectFuncs, TopNOperator *topNOperator)
     : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
-{
-    outputTypes = topNOperator->GetOutputType();
-}
+{}
 
 TopNWithExprOperator::~TopNWithExprOperator()
 {

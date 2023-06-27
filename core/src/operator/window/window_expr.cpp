@@ -130,7 +130,6 @@ int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
 int32_t WindowWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t status = windowOperator->GetOutput(outputVecBatch);
-    outputTypes = windowOperator->GetOutputType();
     SetStatus(windowOperator->GetStatus());
     return status;
 }

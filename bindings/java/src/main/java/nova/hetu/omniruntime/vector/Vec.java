@@ -100,7 +100,7 @@ public abstract class Vec implements Closeable {
      * @param capacityInBytes the number of capacityInBytes
      */
     protected Vec(Vec vec, int offset, int length, int capacityInBytes) {
-        this(sliceVectorNative(vec.nativeVector, vec.getType().getId().toValue(), offset, length), capacityInBytes,
+        this(sliceVectorNative(vec.nativeVector, offset, length), capacityInBytes,
                 length, vec.dataType, false);
     }
 
@@ -114,7 +114,7 @@ public abstract class Vec implements Closeable {
      * @param capacityInBytes the number of capacityInBytes
      */
     protected Vec(Vec vec, int[] positions, int offset, int length, int capacityInBytes) {
-        this(copyPositionsNative(vec.nativeVector, positions, offset, length, vec.dataType.getId().toValue()),
+        this(copyPositionsNative(vec.nativeVector, positions, offset, length),
                 capacityInBytes, length, vec.dataType, true);
     }
 
@@ -167,7 +167,7 @@ public abstract class Vec implements Closeable {
     }
 
     private Vec(long nativeVector, int capacityInBytes, int size, DataType dataType, boolean isWritable) {
-        this(nativeVector, getValuesNative(nativeVector, dataType.getId().toValue()), getValueNullsNative(nativeVector),
+        this(nativeVector, getValuesNative(nativeVector), getValueNullsNative(nativeVector),
                 capacityInBytes, size, dataType, isWritable);
     }
 
@@ -178,10 +178,9 @@ public abstract class Vec implements Closeable {
 
     private static native void freeVectorNative(long nativeVector);
 
-    private static native long sliceVectorNative(long nativeVector, int dataTypeId, int offset, int length);
+    private static native long sliceVectorNative(long nativeVector, int offset, int length);
 
-    private static native long copyPositionsNative(long nativeVector, int[] positions, int offset, int length,
-            int dataTypeId);
+    private static native long copyPositionsNative(long nativeVector, int[] positions, int offset, int length);
 
     /**
      * get capacity in Bytes from native vector
@@ -199,10 +198,9 @@ public abstract class Vec implements Closeable {
      * get value address from native vector.
      *
      * @param nativeVector native vector address
-     * @param dataTypeId the number of dataTypeId
      * @return value address of native vector
      */
-    protected static native long getValuesNative(long nativeVector, int dataTypeId);
+    protected static native long getValuesNative(long nativeVector);
 
     /**
      * get encoding of native vector.
@@ -221,10 +219,9 @@ public abstract class Vec implements Closeable {
      * @param positionOffset position offset
      * @param srcNativeVector source native vector
      * @param length the number of element
-     * @param dataTypeId the number of dataTypeId
      */
     protected static native void appendVectorNative(long destNativeVector, int positionOffset, long srcNativeVector,
-            int length, int dataTypeId);
+            int length);
 
     private static native void setNullFlagNative(long nativeVector, boolean hasNull);
 
@@ -478,7 +475,7 @@ public abstract class Vec implements Closeable {
      * @param length Number of Positions in the Source Vector
      */
     public void append(Vec other, int offset, int length) {
-        appendVectorNative(this.nativeVector, offset, other.nativeVector, length, dataType.getId().toValue());
+        appendVectorNative(this.nativeVector, offset, other.nativeVector, length);
     }
 
     @Override

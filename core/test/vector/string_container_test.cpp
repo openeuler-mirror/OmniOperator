@@ -206,7 +206,7 @@ template <typename CONTAINER> void string_vector_slice()
     }
 
     auto vector = parent->Slice(offset, len);
-    EXPECT_EQ(vector->GetDataTypeId(), parent->GetDataTypeId());
+    EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
 
     // WARNING:
     // setting value on encoded vector not supported
