@@ -16,56 +16,16 @@ namespace omniruntime {
 using namespace type;
 using namespace vec;
 namespace op {
-
-template <type::DataTypeId id>
-type::StringRef NullVariableTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, const char *&begin);
-
-template <type::DataTypeId id>
-type::StringRef NullFixedLenTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, const char *&begin);
-
-template <type::DataTypeId id>
-type::StringRef FixedLenTypeSerializer(void *inValuePtr, mem::SimpleArenaAllocator &arenaAllocator,
-                                       const char *&begin);
-
-template <type::DataTypeId id>
-const char *FixedLenTypeDeserializer(BaseVector *baseVector, size_t rowId, const char *pos);
-
-template <type::DataTypeId id>
-type::StringRef VariableTypeSerializer(void *inValuePtr, mem::SimpleArenaAllocator &arenaAllocator,
-                                       const char *&begin);
-
-template <type::DataTypeId id>
-const char *VariableTypeDeserializer(BaseVector *baseVector, size_t rowId, const char *pos);
-
-
-template <type::DataTypeId id>
-omniruntime::type::StringRef SerializeValueIntoExecutionContext(std::shared_ptr<BaseVector> baseVector,
-    int rowId, mem::SimpleArenaAllocator &arenaAllocator, const char *&begin);
-/**
- * only serialize null value
- */
-using VectorNullSerializer =
-    std::function<type::StringRef(mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)>;
-
-/**
- * serialize not null value
- */
-using VectorValuedSerializer = std::function<type::StringRef(void *value,
-    mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)>;
-
 /**
  * deserialize not null value
  */
-using VectorDeSerializer =
-    std::function<const char *(BaseVector* baseVector, int rowId, const char *&begin)>;
+using VectorDeSerializer = const char *(*)(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 
-
-using VectorSerializer = std::function<type::StringRef(BaseVector* baseVector, int rowId,
-    mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)>;
-
+using VectorSerializer = void (*)(BaseVector *baseVector, int32_t rowIdx, mem::SimpleArenaAllocator &arenaAllocator,
+    type::StringRef &result);
 
 template <type::DataTypeId id>
-const char *DeserializeFromPointer(BaseVector* baseVector, int rowId, const char *&begin);
+char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 
 extern std::vector<VectorSerializer> vectorSerializerCenter;
 extern std::vector<VectorSerializer> dicVectorSerializerCenter;

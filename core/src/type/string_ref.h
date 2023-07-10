@@ -15,42 +15,48 @@ struct StringRef {
     StringRef() = default;
 
     template <typename T, typename = std::enable_if_t<sizeof(T) == 1>>
-    StringRef(const T *d, size_t s) : data(reinterpret_cast<const char *>(d)), size(s)
+    StringRef(const T *d, size_t s) : data(reinterpret_cast<char *>(d)), size(s)
     {}
 
-    StringRef(const std::string &s) : data(s.data()), size(s.size()) {}
+    StringRef(const std::string &s) : data(const_cast<char *>(s.data())), size(s.size()) {}
 
-    explicit StringRef(const char *data_) : data(data_), size(strlen(data_)) {}
+    explicit StringRef(char *data_) : data(data_), size(strlen(data_)) {}
 
-    bool operator == (StringRef rhs) const
+    friend bool operator == (const StringRef &lhs, const StringRef &rhs)
     {
-        if (size != rhs.size) {
+        auto leftSize = lhs.size;
+        auto rightSize = rhs.size;
+        if (leftSize != rightSize) {
             return false;
         }
-        if (size == 0) {
+        if (leftSize == 0) {
             return true;
         }
-        return (0 == memcmp(data, rhs.data, size));
+        return (0 == memcmp(lhs.data, rhs.data, leftSize));
     }
 
-    bool operator != (StringRef rhs) const
+    friend bool operator != (const StringRef &lhs, const StringRef &rhs)
     {
-        return !(this->operator == (rhs));
+        return !(lhs == rhs);
     }
 
-    bool operator < (StringRef rhs) const
+    friend bool operator < (const StringRef &lhs, const StringRef &rhs)
     {
-        int cmp = memcmp(data, rhs.data, std::min(size, rhs.size));
-        return cmp < 0 || (cmp == 0 && size < rhs.size);
+        auto leftSize = lhs.size;
+        auto rightSize = rhs.size;
+        int cmp = memcmp(lhs.data, rhs.data, std::min(leftSize, rightSize));
+        return cmp < 0 || (cmp == 0 && leftSize < rightSize);
     }
 
-    bool operator > (StringRef rhs) const
+    friend bool operator > (const StringRef &lhs, const StringRef &rhs)
     {
-        int cmp = memcmp(data, rhs.data, std::min(size, rhs.size));
-        return cmp > 0 || (cmp == 0 && size > rhs.size);
+        auto leftSize = lhs.size;
+        auto rightSize = rhs.size;
+        int cmp = memcmp(lhs.data, rhs.data, std::min(leftSize, rightSize));
+        return cmp > 0 || (cmp == 0 && leftSize > rightSize);
     }
 
-    std::string toString() const
+    std::string ToString() const
     {
         return std::string(data, size);
     }

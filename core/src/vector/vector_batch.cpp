@@ -30,14 +30,6 @@ void VectorBatch::Append(BaseVector *vector)
     vectors.emplace_back(vector);
 }
 
-/**
- * @param index
- */
-BaseVector *VectorBatch::Get(int32_t index)
-{
-    return vectors[index];
-}
-
 BaseVector **VectorBatch::GetVectors()
 {
     return vectors.data();

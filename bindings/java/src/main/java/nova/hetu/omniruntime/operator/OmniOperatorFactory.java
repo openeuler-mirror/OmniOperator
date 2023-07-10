@@ -13,6 +13,7 @@ import nova.hetu.omniruntime.utils.NativeLog;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The type Omni operator factory.
@@ -22,7 +23,7 @@ import java.util.concurrent.ExecutionException;
  */
 public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> {
     private static final Cache<OmniOperatorFactoryContext, Long> FACTORY_CACHE = CacheBuilder.newBuilder()
-            .expireAfterAccess(java.time.Duration.ofHours(24)).maximumSize(100000).build();
+            .expireAfterAccess(24, TimeUnit.HOURS).maximumSize(100000).build();
 
     static {
         OmniLibs.load();

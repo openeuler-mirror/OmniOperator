@@ -28,8 +28,7 @@ using HashFuncVect = void (*)(BaseVector *vector, const uint32_t s, const uint32
 using DuplicateKeyValue = void (*)(AggregateState &state, BaseVector *vector, const uint32_t offset,
     ExecutionContext *context);
 using IsSameNodeFunc = void (*)(BaseVector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame);
-using SetVector = void (*)(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, mem::Allocator *vecAllocator,
-    int32_t rowCount);
+using SetVector = void (*)(VectorBatch *vecBatch, int32_t rowCount);
 using FillValue = void (*)(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
 
 using FunctionByDataType = struct FunctionByDataType {
@@ -41,8 +40,6 @@ using FunctionByDataType = struct FunctionByDataType {
     SetVector setVector;
     FillValue fillValue;
 };
-
-using HashAggModule = HashAggregationOperator *(*)(HashAggregationOperatorFactory *);
 
 template <typename V, typename D>
 void HashFuncImpl(BaseVector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
@@ -75,7 +72,7 @@ void HashDecimalFunc(BaseVector *vector, const uint32_t rowCount, const int32_t 
         int32_t idx = rowIndexes[i];
         Decimal128 val = static_cast<V *>(vector)->GetValue(idx);
         auto hash = HashUtil::CombineHash(combinedHash[i],
-                                          !vector->IsNull(idx) * HashUtil::HashValue(val.LowBits(), val.HighBits()));
+            !vector->IsNull(idx) * HashUtil::HashValue(val.LowBits(), val.HighBits()));
         combinedHash[i] = static_cast<uint64_t>(hash);
     }
 }
@@ -112,7 +109,7 @@ void HashDecimalVectFunc(BaseVector *vector, const uint32_t start, const uint32_
         auto idx = i + start;
         Decimal128 val = static_cast<V *>(vector)->GetValue(idx);
         auto hash = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]),
-                                          !vector->IsNull(idx) * HashUtil::HashValue(val.LowBits(), val.HighBits()));
+            !vector->IsNull(idx) * HashUtil::HashValue(val.LowBits(), val.HighBits()));
         combinedHash[i] = static_cast<uint64_t>(hash);
     }
 }
@@ -197,24 +194,20 @@ void DuplicateVarcharKeyValue(AggregateState &state, BaseVector *vector, const u
 
     std::string_view str = static_cast<V *>(vector)->GetValue(offset);
     int32_t valLen = str.size();
-    uint8_t *tmp = reinterpret_cast<uint8_t *>(const_cast<char*>(str.data()));
+    uint8_t *tmp = reinterpret_cast<uint8_t *>(const_cast<char *>(str.data()));
     uint8_t *data = context->GetArena()->Allocate(valLen);
     memcpy_s(data, valLen, tmp, static_cast<size_t>(valLen));
     state.val = data;
     state.count = valLen;
 }
 
-template <typename V>
-void SetVectorImpl(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, mem::Allocator *vecAllocator,
-    int32_t rowCount)
+template <typename V> void SetVectorImpl(VectorBatch *vecBatch, int32_t rowCount)
 {
     vecBatch->Append(new V(rowCount));
 }
 
-void SetVarcharVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, mem::Allocator *vecAllocator,
-    int32_t rowCount);
-void SetContainerVector(VectorBatch *vecBatch, DataType &type, int32_t columnIndex, mem::Allocator *vecAllocator,
-    int32_t rowCount);
+void SetVarcharVector(VectorBatch *vecBatch, int32_t rowCount);
+void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount);
 
 template <typename V, typename D> void FillValueImpl(BaseVector *v, int32_t rowIndex, const AggregateState &state)
 {
@@ -240,7 +233,7 @@ public:
           aggOutputTypes(aggOutputTypes)
     {}
 
-    ~HashAggregationOperator() override {}
+    ~HashAggregationOperator() override = default;
 
     int32_t AddInput(VectorBatch *data) override;
 
@@ -250,13 +243,13 @@ public:
 
     OmniStatus Close() override;
 
-    template <typename Serialize> void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, VectorBatch &groupVectors);
+    template <typename Serialize>
+    void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, BaseVector **groupVectors, int32_t groupColNum);
 
 private:
     int32_t InitMaxRowCountAndOutputTypes();
 
-    void SetVectors(mem::Allocator *vecAllocator, VectorBatch *vectorBatch, const std::vector<DataTypePtr> &types,
-        int32_t rowCount);
+    void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
     void SetGroupByColumnsHandleType(GroupByFieldHandleType t);
@@ -278,15 +271,8 @@ private:
 
     OutputState outputState;
 
-    void FillOutputResultVectors(const int32_t totalRowCount, std::vector<VectorBatch *> &result);
-
     template <typename Deserialize>
-    void TraverseHashmapToGetResults(Deserialize &deserializeHashmap, const int32_t groupByColSize,
-        std::vector<VectorBatch *> &result);
-
-    template <typename Deserialize>
-    void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, const int32_t groupByColSize,
-        VectorBatch *result);
+    void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, VectorBatch *output);
 
     int32_t rowsPerBatch;
 };

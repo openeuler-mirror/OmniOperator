@@ -24,6 +24,7 @@
 #include "operator/join/sortmergejoin/sort_merge_join_expr.h"
 #include "operator/topn/topn.h"
 #include "operator/topn/topn_expr.h"
+#include "operator/topnsort/topn_sort_expr.h"
 #include "operator/union/union.h"
 #include "operator/window/window_expr.h"
 #include "operator/limit/distinct_limit.h"
@@ -1399,4 +1400,55 @@ Java_nova_hetu_omniruntime_operator_filter_OmniBloomFilterOperatorFactory_create
     JNI_METHOD_END(0L)
 
     return reinterpret_cast<intptr_t>(static_cast<void *>(factory));
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory_createTopNSortWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jInputTypes, jint jLimitN, jboolean jIsStrict, jobjectArray jPartitionKeys,
+    jobjectArray jSortKeys, jintArray jSortAsc, jintArray jSortNullFirsts, jstring jOperatorConfig)
+{
+    auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
+    auto inputTypes = Deserialize(inputTypesCharPtr);
+    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
+
+    jint partitionKeyCount = env->GetArrayLength(jPartitionKeys);
+    std::string partitionKeysArr[partitionKeyCount];
+    GetExpressions(env, jPartitionKeys, partitionKeysArr, partitionKeyCount);
+
+    jint sortKeyCount = env->GetArrayLength(jSortKeys);
+    std::string sortKeysArr[sortKeyCount];
+    GetExpressions(env, jSortKeys, sortKeysArr, sortKeyCount);
+
+    std::vector<omniruntime::expressions::Expr *> partitionKeys;
+    JNI_METHOD_START
+    // parse the expressions
+    GetExprsFromJson(partitionKeysArr, partitionKeyCount, partitionKeys);
+    JNI_METHOD_END(0L)
+    std::vector<omniruntime::expressions::Expr *> sortKeys;
+    JNI_METHOD_START
+    // parse the expressions
+    GetExprsFromJson(sortKeysArr, sortKeyCount, sortKeys);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, partitionKeys)
+
+    jint *sortAscPtr = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
+    jint *sortNullFirstsPtr = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
+    std::vector<int32_t> sortAscendings(sortAscPtr, sortAscPtr + sortKeyCount);
+    std::vector<int32_t> sortNullFirsts(sortNullFirstsPtr, sortNullFirstsPtr + sortKeyCount);
+    env->ReleaseIntArrayElements(jSortAsc, sortAscPtr, 0);
+    env->ReleaseIntArrayElements(jSortNullFirsts, sortNullFirstsPtr, 0);
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
+    auto overflowConfig = operatorConfig.GetOverflowConfig();
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
+    TopNSortWithExprOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = new TopNSortWithExprOperatorFactory(inputTypes, jLimitN, jIsStrict, partitionKeys, sortKeys,
+        sortAscendings, sortNullFirsts, overflowConfig);
+    JNI_METHOD_END_WITH_MULTI_EXPRS(0L, partitionKeys, sortKeys)
+
+    Expr::DeleteExprs(partitionKeys);
+    Expr::DeleteExprs(sortKeys);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }

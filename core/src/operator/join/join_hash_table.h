@@ -24,15 +24,13 @@ constexpr uint32_t INVALID_POSITION = UINT32_MAX;
  */
 class ArrayPositionLinks {
 public:
-    explicit ArrayPositionLinks(uint32_t capacity)
+    explicit ArrayPositionLinks(uint32_t capacity) : capacity(capacity), size(0), positionLinks(new uint32_t[capacity])
     {
-        this->capacity = capacity;
-        this->size = 0;
-        this->positionLinks = new uint32_t[capacity];
         for (uint32_t i = 0; i < capacity; i++) {
             positionLinks[i] = INVALID_POSITION;
         }
     }
+
     ~ArrayPositionLinks()
     {
         delete[] positionLinks;

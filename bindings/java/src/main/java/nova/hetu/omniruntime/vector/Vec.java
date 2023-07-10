@@ -4,8 +4,6 @@
 
 package nova.hetu.omniruntime.vector;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
@@ -14,14 +12,11 @@ import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.annotation.concurrent.NotThreadSafe;
-
 /**
  * base class of vec.
  *
  * @since 2021-07-17
  */
-@NotThreadSafe
 public abstract class Vec implements Closeable {
     /**
      * indicates a null value in a nulls buffer.
@@ -543,7 +538,6 @@ public abstract class Vec implements Closeable {
         return 0;
     }
 
-    @VisibleForTesting
     void setDataType(DataType dataType) {
         this.dataType = dataType;
     }

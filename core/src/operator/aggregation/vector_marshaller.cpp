@@ -8,167 +8,171 @@
 
 namespace omniruntime {
 namespace op {
-template <type::DataTypeId id>
-type::StringRef NullVariableTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)
-{
-    static_assert(id == type::OMNI_CHAR || id == type::OMNI_VARCHAR);
-    StringRef res{};
-    std::string_view::size_type stringLen = std::string_view::npos;
-    res.size = sizeof(stringLen);
-    auto *pos = arenaAllocator.AllocateContinue(res.size, (const uint8_t *&)begin);
-    std::copy(reinterpret_cast<uint8_t *>(&stringLen), reinterpret_cast<uint8_t *>(&stringLen) + sizeof(stringLen),
-        pos);
-    return res;
-}
-
-
-template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVector, size_t rowId, const char *pos)
+template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
 {
     using RealVector = typename NativeAndVectorType<id>::vector;
     auto realVector = reinterpret_cast<RealVector *>(baseVector);
-    std::string_view::size_type stringSize = 0;
-    std::copy(pos, pos + sizeof(std::string_view::size_type), reinterpret_cast<uint8_t *>(&stringSize));
-    pos += sizeof(stringSize);
+    auto stringSize = *reinterpret_cast<const int32_t *>(pos);
+    pos += sizeof(int32_t);
 
-    if (stringSize == std::string_view::npos) {
+    if (stringSize < 0) {
         // string_size < 0 means null pointer
-        realVector->SetNull(static_cast<int>(rowId));
+        realVector->SetNull(static_cast<int32_t>(rowIdx));
         return pos;
-    } else if (stringSize >= 0) {
-        auto *copyPointer = static_cast<const char *>(pos);
-        std::string_view strView(copyPointer, stringSize);
-        realVector->SetValue(rowId, strView);
+    } else {
+        std::string_view strView(pos, stringSize);
+        realVector->SetValue(rowIdx, strView);
         return pos + stringSize;
     }
 }
 
-template <type::DataTypeId id>
-type::StringRef VariableTypeSerializer(void *inValuePtr, mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)
+void VariableTypeSerializer(std::string_view &inValue, mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
-    static_assert(id == type::OMNI_CHAR || id == type::OMNI_VARCHAR);
-    StringRef res{};
-    std::string_view::size_type stringLen;
-    std::string_view strView = *(reinterpret_cast<std::string_view *>(inValuePtr));
-
-    stringLen = strView.size();
-    res.size = sizeof(stringLen) + stringLen;
-
-    auto *pos = arenaAllocator.AllocateContinue(res.size, (const uint8_t *&)begin);
-    std::copy(reinterpret_cast<uint8_t *>(&stringLen), reinterpret_cast<uint8_t *>(&stringLen) + sizeof(stringLen),
-        pos);
-    std::copy(strView.data(), strView.data() + stringLen, pos + sizeof(stringLen));
-    res.data = reinterpret_cast<const char *>(pos);
-    return res;
+    auto stringLen = static_cast<int32_t>(inValue.size());
+    auto resLen = sizeof(int32_t) + stringLen;
+    auto pos = arenaAllocator.AllocateContinue(resLen, (const uint8_t *&)(result.data));
+    *reinterpret_cast<int32_t *>(pos) = stringLen;
+    std::copy(inValue.data(), inValue.data() + stringLen, pos + sizeof(int32_t));
+    result.size += resLen;
 }
 
-template <DataTypeId id> const char *FixedLenTypeDeserializer(BaseVector *baseVector, size_t rowId, const char *pos)
+void NullVariableTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
+{
+    auto *pos = arenaAllocator.AllocateContinue(sizeof(int32_t), (const uint8_t *&)(result.data));
+    *reinterpret_cast<int32_t *>(pos) = -1;
+    result.size += sizeof(int32_t);
+}
+
+template <DataTypeId id> const char *FixedLenTypeDeserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
     using RealVector = typename NativeAndVectorType<id>::vector;
     static constexpr uint8_t RawDataSize = sizeof(RawDataType);
     auto realVector = reinterpret_cast<RealVector *>(baseVector);
     bool isNull = *(reinterpret_cast<const bool *>(pos));
-    auto *copyPointer = reinterpret_cast<const RawDataType *>(pos + 1);
     if (not isNull) {
         // must copy value
+        auto *copyPointer = reinterpret_cast<const RawDataType *>(pos + 1);
         auto value = *copyPointer;
-        realVector->SetValue(rowId, value);
+        realVector->SetValue(rowIdx, value);
     } else {
-        realVector->SetNull(rowId);
+        realVector->SetNull(rowIdx);
     }
     return pos + RawDataSize + sizeof(bool);
 }
 
-template <DataTypeId typeId>
-type::StringRef FixedLenTypeSerializer(void *inValuePtr, mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)
+void Decimal128Serializer(Decimal128 &value, mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
-    using RawDataType = typename NativeAndVectorType<typeId>::type;
-    static constexpr uint8_t RawDataSize = sizeof(RawDataType);
-    StringRef res;
-    res.size = sizeof(bool) + RawDataSize;
-    auto *pos = arenaAllocator.AllocateContinue(res.size, (const uint8_t *&)begin);
+    static constexpr uint8_t RawDataSize = sizeof(Decimal128);
+    auto resSize = sizeof(bool) + RawDataSize;
+    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(result.data));
     (*pos) = false;
-    auto *valuePtr = reinterpret_cast<RawDataType *>((pos + sizeof(bool)));
-    *valuePtr = *(reinterpret_cast<RawDataType *>(inValuePtr));
-    res.data = reinterpret_cast<const char *>(pos);
-    return res;
+    *reinterpret_cast<Decimal128 *>((pos + sizeof(bool))) = value;
+    result.size += resSize;
 }
 
-template <DataTypeId typeId>
-type::StringRef NullFixedLenTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)
+template <typename RawDataType>
+void FixedLenTypeSerializer(RawDataType value, mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
-    using RawDataType = typename NativeAndVectorType<typeId>::type;
     static constexpr uint8_t RawDataSize = sizeof(RawDataType);
-    StringRef res;
-    res.size = sizeof(bool) + RawDataSize;
-    auto *pos = arenaAllocator.AllocateContinue(res.size, (const uint8_t *&)begin);
+    auto resSize = sizeof(bool) + RawDataSize;
+    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(result.data));
+    (*pos) = false;
+    *reinterpret_cast<RawDataType *>(pos + sizeof(bool)) = value;
+    result.size += resSize;
+}
+
+void NullDecimal128Serializer(mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
+{
+    static constexpr uint8_t RawDataSize = sizeof(Decimal128);
+    auto resSize = sizeof(bool) + RawDataSize;
+    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(result.data));
     (*pos) = true;
     memset_sp(pos + sizeof(bool), RawDataSize, 0, RawDataSize);
-    res.data = reinterpret_cast<const char *>(pos);
-    ;
-    return res;
+    result.size += resSize;
+}
+
+template <typename RawDataType>
+void NullFixedLenTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
+{
+    static constexpr uint8_t RawDataSize = sizeof(RawDataType);
+    auto resSize = sizeof(bool) + RawDataSize;
+    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(result.data));
+    (*pos) = true;
+    *reinterpret_cast<RawDataType *>(pos + sizeof(bool)) = 0;
+    result.size += resSize;
 }
 
 template <type::DataTypeId id>
-omniruntime::type::StringRef SerializeValueIntoArena(BaseVector *baseVector, int rowId,
-    mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)
+void SerializeValueIntoArena(BaseVector *baseVector, int32_t rowIdx, mem::SimpleArenaAllocator &arenaAllocator,
+    StringRef &result)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
 
-    if (!baseVector->IsNull(rowId)) {
+    if (!baseVector->IsNull(rowIdx)) {
         using RawVectorType = typename NativeAndVectorType<id>::vector;
 
         // not dictionary,just use cast to RawVector
         auto rawVector = reinterpret_cast<RawVectorType *>(baseVector);
-        auto value = rawVector->GetValue(rowId);
+        auto value = rawVector->GetValue(rowIdx);
 
         // the analysis of const expr  will be in compile stage
         if constexpr (std::is_same_v<RawDataType, std::string_view>) {
-            return VariableTypeSerializer<id>(static_cast<void *>(&value), arenaAllocator, begin);
+            VariableTypeSerializer(value, arenaAllocator, result);
+        } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+            Decimal128Serializer(value, arenaAllocator, result);
         } else {
-            return FixedLenTypeSerializer<id>(static_cast<void *>(&value), arenaAllocator, begin);
+            FixedLenTypeSerializer<RawDataType>(value, arenaAllocator, result);
         }
     } else {
         if constexpr (std::is_same_v<RawDataType, std::string_view>) {
-            return NullVariableTypeSerializer<id>(arenaAllocator, begin);
+            NullVariableTypeSerializer(arenaAllocator, result);
+        } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+            NullDecimal128Serializer(arenaAllocator, result);
         } else {
-            return NullFixedLenTypeSerializer<id>(arenaAllocator, begin);
+            NullFixedLenTypeSerializer<RawDataType>(arenaAllocator, result);
         }
     }
 }
 
 template <type::DataTypeId id>
-omniruntime::type::StringRef SerializeDictionaryValueIntoArena(BaseVector *baseVector, int rowId,
-    mem::SimpleArenaAllocator &arenaAllocator, const char *&begin)
+void SerializeDictionaryValueIntoArena(BaseVector *baseVector, int32_t rowIdx,
+    mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
-    if (!baseVector->IsNull(rowId)) {
+    if (!baseVector->IsNull(rowIdx)) {
         auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
 
-        auto value = dictionaryVector->GetValue(rowId);
+        auto value = dictionaryVector->GetValue(rowIdx);
         // the analysis of const expr  will be in compile stage
         if constexpr (std::is_same_v<RawDataType, std::string_view>) {
-            return VariableTypeSerializer<id>(static_cast<void *>(&value), arenaAllocator, begin);
+            VariableTypeSerializer(value, arenaAllocator, result);
+        } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+            Decimal128Serializer(value, arenaAllocator, result);
         } else {
-            return FixedLenTypeSerializer<id>(static_cast<void *>(&value), arenaAllocator, begin);
+            FixedLenTypeSerializer<RawDataType>(value, arenaAllocator, result);
         }
+        return;
     }
 
     if constexpr (std::is_same_v<RawDataType, std::string_view>) {
-        return NullVariableTypeSerializer<id>(arenaAllocator, begin);
+        NullVariableTypeSerializer(arenaAllocator, result);
+    } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+        NullDecimal128Serializer(arenaAllocator, result);
     } else {
-        return NullFixedLenTypeSerializer<id>(arenaAllocator, begin);
+        NullFixedLenTypeSerializer<RawDataType>(arenaAllocator, result);
     }
 }
 
-template <type::DataTypeId id> const char *DeserializeFromPointer(BaseVector *baseVector, int rowId, const char *&begin)
+template <type::DataTypeId id>
+const char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
     // the analysis of const expr  will be in compile stage
     if constexpr (std::is_same_v<RawDataType, std::string_view>) {
-        return VariableTypeDeserializer<id>(baseVector, rowId, begin);
+        return VariableTypeDeserializer<id>(baseVector, rowIdx, begin);
     } else {
-        return FixedLenTypeDeserializer<id>(baseVector, rowId, begin);
+        return FixedLenTypeDeserializer<id>(baseVector, rowIdx, begin);
     }
 }
 
