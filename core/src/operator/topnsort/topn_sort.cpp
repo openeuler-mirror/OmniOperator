@@ -539,7 +539,6 @@ TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n
 
     int32_t eachRowSize = OperatorUtil::GetRowSize(sourceTypes.Get());
     maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
-    outputTypes = sourceTypes.Get();
 }
 
 type::StringRef TopNSortOperator::GeneratePartitionKey(BaseVector **partitionVectors, int32_t partitionColNum,

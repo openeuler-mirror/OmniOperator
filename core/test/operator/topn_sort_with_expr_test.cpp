@@ -36,7 +36,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortDescNullLast)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 8;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye", "bye", "hi", "hi", "hi"};
@@ -45,7 +45,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortDescNullLast)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -78,7 +78,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscNullLast)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 8;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye", "bye", "hi", "hi", "hi"};
@@ -87,7 +87,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscNullLast)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -120,7 +120,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase1)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 4;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye"};
@@ -129,7 +129,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase1)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -162,7 +162,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase2)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 4;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye"};
@@ -171,7 +171,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase2)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -204,7 +204,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase3)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 3;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye"};
@@ -213,7 +213,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase3)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -246,7 +246,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase4)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 5;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye", "bye"};
@@ -255,7 +255,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase4)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -288,7 +288,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase5)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 3;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye"};
@@ -297,7 +297,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase5)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -330,7 +330,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase6)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 5;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye", "bye"};
@@ -339,7 +339,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase6)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -372,7 +372,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase7)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 4;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye"};
@@ -381,7 +381,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase7)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -414,7 +414,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase8)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch, sourceTypes.Get());
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 4;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye"};
@@ -423,7 +423,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase8)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
