@@ -64,6 +64,9 @@ public:
     OmniStatus Close() override;
 
 private:
+    bool isVecCapacityExceedLimit(const PartitionValue &value);
+    bool isVecCapacityExceedLimit(const int32_t index);
+
     void Prepare(vec::BaseVector **inputVectors, int32_t inputColNum);
 
     void InsertNewValueOptimize(PartitionValue &value, vec::VectorBatch *inputVecBatch, vec::BaseVector **sortVectors,
