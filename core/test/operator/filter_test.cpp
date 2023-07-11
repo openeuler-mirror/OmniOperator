@@ -1258,7 +1258,7 @@ TEST(FilterTest, testStringIn1)
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(10) }));
 
     auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1.get();
+    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
         if (i % 3 == 0) {
@@ -1270,7 +1270,7 @@ TEST(FilterTest, testStringIn1)
         vector->SetValue(i, input);
     }
     auto *t = new VectorBatch(numRows);
-    t->Append(col1.release());
+    t->Append(col1);
 
     // filter
     std::vector<Expr *> args;
@@ -1304,7 +1304,7 @@ TEST(FilterTest, testStringIn2)
     const int32_t numRows = 10;
     DataTypes inputTypes(std::vector<DataTypePtr>({ CharType(10) }));
     auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1.get();
+    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
         if (i % 2 == 0) {
@@ -1316,7 +1316,7 @@ TEST(FilterTest, testStringIn2)
         vector->SetValue(i, input);
     }
     auto *t = new VectorBatch(numRows);
-    t->Append(col1.release());
+    t->Append(col1);
 
     // filter
     std::vector<Expr *> args;
@@ -1597,7 +1597,7 @@ TEST(FilterTest, FilterString1)
     const int32_t numRows = 1000;
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
     auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1.get();
+    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
         if (i % 40 == 0) {
@@ -1609,7 +1609,7 @@ TEST(FilterTest, FilterString1)
         vector->SetValue(i, input);
     }
     auto *t = new VectorBatch(numRows);
-    t->Append(col1.release());
+    t->Append(col1);
 
     auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::EQ, new FieldExpr(0, VarcharType()),
         new LiteralExpr(new std::string("hello"), VarcharType()), BooleanType());
@@ -1684,7 +1684,7 @@ TEST(FilterTest, Coalesce2)
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
     auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1.get();
+    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
@@ -1695,7 +1695,7 @@ TEST(FilterTest, Coalesce2)
         vector->SetValue(i, input);
     }
     auto *t = new VectorBatch(numRows);
-    t->Append(col1.release());
+    t->Append(col1);
 
     auto *coalesceExpr =
         new CoalesceExpr(new FieldExpr(0, VarcharType()), new LiteralExpr(new std::string("bye"), VarcharType()));
@@ -1776,7 +1776,7 @@ TEST(FilterTest, Coalesce4)
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ CharType(5) }));
     auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1.get();
+    auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
         if (i % 2 != 0) {
@@ -1787,7 +1787,7 @@ TEST(FilterTest, Coalesce4)
         vector->SetValue(i, input);
     }
     auto *t = new VectorBatch(numRows);
-    t->Append(col1.release());
+    t->Append(col1);
 
     auto *coalesceExpr =
         new CoalesceExpr(new FieldExpr(0, CharType()), new LiteralExpr(new std::string("world"), CharType()));
@@ -2019,7 +2019,7 @@ TEST(FilterTest, TestFilterDictionaryVec)
         dictionary->SetValue(i, (i % 21) - 3);
     }
     auto dicVec = VectorHelper::CreateDictionary(ids, numRows, dictionary.get());
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     std::vector<DataTypePtr> vecOfTypes({ IntType(), IntType(), IntType() });
     DataTypes inputTypes2(vecOfTypes);
@@ -2075,7 +2075,7 @@ TEST(FilterTest, TestFilterDictionaryVarchar)
         dictionary->SetValue(i, strView);
     }
     auto dicVec = VectorHelper::CreateStringDictionary(ids, numRows, dictionary.get());
-    t->Append(dicVec.release());
+    t->Append(dicVec);
 
     auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
         new LiteralExpr(6, IntType()), BooleanType());
@@ -2401,8 +2401,8 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(5), VarcharType(5) }));
     auto vec0 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
     auto vec1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto *vector0 = (Vector<LargeStringContainer<std::string_view>> *)vec0.get();
-    auto *vector1 = (Vector<LargeStringContainer<std::string_view>> *)vec1.get();
+    auto *vector0 = (Vector<LargeStringContainer<std::string_view>> *)vec0;
+    auto *vector1 = (Vector<LargeStringContainer<std::string_view>> *)vec1;
 
     for (int i = 0; i < numRows; i++) {
         if (data0[i].compare("") == 0) {
@@ -2413,8 +2413,8 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
         vector1->SetValue(i, data1[i]);
     }
     auto *t = new VectorBatch(numRows);
-    t->Append(vec0.release());
-    t->Append(vec1.release());
+    t->Append(vec0);
+    t->Append(vec1);
 
     // filter expression object
     std::string funcStr = "substr";
@@ -2474,33 +2474,33 @@ VectorBatch *CreateSequenceVectorBatch(const std::vector<DataTypePtr> &types, in
             switch (types[i]->GetId()) {
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    static_cast<Vector<int32_t> *>(vector.get())->SetValue(index, index);
+                    static_cast<Vector<int32_t> *>(vector)->SetValue(index, index);
                     break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
-                    static_cast<Vector<int64_t> *>(vector.get())->SetValue(index, index);
+                    static_cast<Vector<int64_t> *>(vector)->SetValue(index, index);
                     break;
                 case OMNI_DOUBLE:
-                    static_cast<Vector<double> *>(vector.get())->SetValue(index, index);
+                    static_cast<Vector<double> *>(vector)->SetValue(index, index);
                     break;
                 case OMNI_BOOLEAN:
-                    static_cast<Vector<bool> *>(vector.get())->SetValue(index, index);
+                    static_cast<Vector<bool> *>(vector)->SetValue(index, index);
                     break;
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
                     std::string_view input(std::to_string(index));
-                    static_cast<Vector<LargeStringContainer<string_view>> *>(vector.get())->SetValue(index, input);
+                    static_cast<Vector<LargeStringContainer<string_view>> *>(vector)->SetValue(index, input);
                     break;
                 }
                 case OMNI_DECIMAL128:
-                    static_cast<Vector<Decimal128> *>(vector.get())->SetValue(index, Decimal128(0, index));
+                    static_cast<Vector<Decimal128> *>(vector)->SetValue(index, Decimal128(0, index));
                     break;
                 default:
                     LogError("No such data type %d", types[i]->GetId());
                     break;
             }
         }
-        vectorBatch->Append(vector.release());
+        vectorBatch->Append(vector);
     }
     return vectorBatch;
 }
@@ -2515,24 +2515,24 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
             switch (types[i]->GetId()) {
                 case OMNI_INT:
                 case OMNI_DATE32:
-                    static_cast<Vector<int32_t> *>(inner.get())->SetValue(index, index);
+                    static_cast<Vector<int32_t> *>(inner)->SetValue(index, index);
                     break;
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
-                    static_cast<Vector<int64_t> *>(inner.get())->SetValue(index, index);
+                    static_cast<Vector<int64_t> *>(inner)->SetValue(index, index);
                     break;
                 case OMNI_DOUBLE:
-                    static_cast<Vector<double> *>(inner.get())->SetValue(index, index);
+                    static_cast<Vector<double> *>(inner)->SetValue(index, index);
                     break;
                 case OMNI_BOOLEAN:
-                    static_cast<Vector<bool> *>(inner.get())->SetValue(index, index);
+                    static_cast<Vector<bool> *>(inner)->SetValue(index, index);
                     break;
                 case OMNI_VARCHAR:
                 case OMNI_CHAR:
-                    static_cast<Vector<string_view> *>(inner.get())->SetValue(index, std::to_string(index).c_str());
+                    static_cast<Vector<string_view> *>(inner)->SetValue(index, std::to_string(index).c_str());
                     break;
                 case OMNI_DECIMAL128:
-                    static_cast<Vector<Decimal128> *>(inner.get())->SetValue(index, Decimal128(0, index));
+                    static_cast<Vector<Decimal128> *>(inner)->SetValue(index, Decimal128(0, index));
                     break;
                 default:
                     LogError("No such data type %d", types[i]->GetId());
@@ -2543,8 +2543,9 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
         for (int k = 0; k < length; ++k) {
             ids[k] = (k % ratio);
         }
-        auto vector = VectorHelper::CreateDictionaryVector(ids.data(), ids.size(), inner.get(), types[i]->GetId());
-        vectorBatch->Append(vector.release());
+        auto vector = VectorHelper::CreateDictionaryVector(ids.data(), ids.size(), inner, types[i]->GetId());
+        delete inner;
+        vectorBatch->Append(vector);
     }
     return vectorBatch;
 }
