@@ -737,7 +737,7 @@ void TopNSortOperator::UpdatePartitionValueOptimize(PartitionValue &value, Vecto
         value.nextIndex++;
     } else {
         auto insertPos = FindInsertPositionOptimize(valuePtr, length, vecBatches, rowIndexes, lastPosition - 1);
-        if (IsVecCapacityExceedLimit(value) || IsVecCapacityExceedLimit(insertPos)) {
+        if (IsVecCapacityExceedLimit(value)) {
             return;
         }
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
@@ -784,7 +784,7 @@ void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *
         value.nextIndex++;
     } else {
         auto insertPos = FindInsertPosition(sortVectors, inputRowIdx, vecBatches, rowIndexes, lastPosition - 1);
-        if (IsVecCapacityExceedLimit(value) || IsVecCapacityExceedLimit(insertPos)) {
+        if (IsVecCapacityExceedLimit(value)) {
             return;
         }
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
