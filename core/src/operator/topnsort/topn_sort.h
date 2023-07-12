@@ -188,7 +188,7 @@ private:
     int32_t maxRowCount = 0;
     std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator currentIter;
     std::vector<vec::VectorBatch *> inputs;
-    constexpr int32_t vectorLengthMutiple = 2;
+    const int32_t vectorLengthMutiple = 2;
 };
 
 class TopNSortOperatorFactory : public OperatorFactory {
