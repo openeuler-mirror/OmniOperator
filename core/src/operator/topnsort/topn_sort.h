@@ -64,8 +64,8 @@ public:
     OmniStatus Close() override;
 
 private:
-    bool isVecCapacityExceedLimit(const PartitionValue &value);
-    bool isVecCapacityExceedLimit(const int32_t index);
+    bool IsVecCapacityExceedLimit(const PartitionValue &value);
+    bool IsVecCapacityExceedLimit(const int32_t index);
 
     void Prepare(vec::BaseVector **inputVectors, int32_t inputColNum);
 
@@ -188,6 +188,7 @@ private:
     int32_t maxRowCount = 0;
     std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator currentIter;
     std::vector<vec::VectorBatch *> inputs;
+    constexpr int32_t vectorLengthMutiple = 2;
 };
 
 class TopNSortOperatorFactory : public OperatorFactory {
