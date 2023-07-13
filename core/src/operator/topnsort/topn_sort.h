@@ -64,6 +64,8 @@ public:
     OmniStatus Close() override;
 
 private:
+    void CheckVecCapacityLimit(const int32_t index);
+
     void Prepare(vec::BaseVector **inputVectors, int32_t inputColNum);
 
     void InsertNewValueOptimize(PartitionValue &value, vec::VectorBatch *inputVecBatch, vec::BaseVector **sortVectors,
@@ -185,6 +187,7 @@ private:
     int32_t maxRowCount = 0;
     std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator currentIter;
     std::vector<vec::VectorBatch *> inputs;
+    int32_t maxCapacityPerPartition = 0;
 };
 
 class TopNSortOperatorFactory : public OperatorFactory {
