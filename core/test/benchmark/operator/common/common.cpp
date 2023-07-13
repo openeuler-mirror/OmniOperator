@@ -61,13 +61,13 @@ void BaseOmniFixture::SetUp(State &state)
 void BaseOperatorFixture::SetUp(benchmark::State &state)
 {
     BaseOmniFixture::SetUp(state);
-    operatorFactory = MessageWhenSkip(state).empty()? createOperatorFactory(state): nullptr;
+    operatorFactory = MessageWhenSkip(state).empty() ? createOperatorFactory(state) : nullptr;
     state.counters["addInput/ms"] = Counter(0, benchmark::Counter::kAvgIterations);
     state.counters["getOutput/ms"] = Counter(0, benchmark::Counter::kAvgIterations);
-    state.counters["addInput InstCount"] = Counter(0,benchmark::Counter::kAvgIterations);
-    state.counters["addInput CacheMisses"] = Counter(0,benchmark::Counter::kAvgIterations);
-    state.counters["getOutput InstCount"] = Counter(0,benchmark::Counter::kAvgIterations);
-    state.counters["getOutput CacheMisses"] = Counter(0,benchmark::Counter::kAvgIterations);
+    state.counters["addInput InstCount"] = Counter(0, benchmark::Counter::kAvgIterations);
+    state.counters["addInput CacheMisses"] = Counter(0, benchmark::Counter::kAvgIterations);
+    state.counters["getOutput InstCount"] = Counter(0, benchmark::Counter::kAvgIterations);
+    state.counters["getOutput CacheMisses"] = Counter(0, benchmark::Counter::kAvgIterations);
     state.counters["elapsed/ms"] = Counter(0, benchmark::Counter::kAvgIterations);
 }
 
@@ -88,8 +88,7 @@ void BaseOperatorFixture::RunDefaultBenchmark(benchmark::State &state)
         return;
     }
     for (__attribute__((unused)) auto _ : state) {
-
-        std::vector<VectorBatchSupplier > vvb = createVecBatch(state);
+        std::vector<VectorBatchSupplier> vvb = createVecBatch(state);
         Operator *op = operatorFactory->CreateOperator();
         VectorBatch *outputVecBatch = nullptr;
         std::chrono::duration<double> addInputDuration(0);
@@ -117,21 +116,20 @@ void BaseOperatorFixture::RunDefaultBenchmark(benchmark::State &state)
                 auto outputStart = std::chrono::high_resolution_clock::now();
                 while (op->GetStatus() != OMNI_STATUS_FINISHED) {
                     op->GetOutput(&outputVecBatch);
-                    if(outputVecBatch != nullptr){
+                    if (outputVecBatch != nullptr) {
                         VectorHelper::FreeVecBatch(outputVecBatch);
                         outputVecBatch = nullptr;
-                    }else{
+                    } else {
                         break;
                     }
                 }
                 getOutputDuration += std::chrono::duration_cast<std::chrono::duration<double>>(
                     std::chrono::high_resolution_clock::now() - outputStart);
-                
+
                 perfUtil->Stop();
                 auto dataMap2 = perfUtil->GetData();
                 state.counters["getOutput InstCount"] += dataMap2["Instructions"];
                 state.counters["getOutput CacheMisses"] += dataMap2["CacheMisses"];
-
             }
         }
 
@@ -143,10 +141,10 @@ void BaseOperatorFixture::RunDefaultBenchmark(benchmark::State &state)
 
             while (op->GetStatus() != OMNI_STATUS_FINISHED) {
                 op->GetOutput(&outputVecBatch);
-                if(outputVecBatch != nullptr){
+                if (outputVecBatch != nullptr) {
                     VectorHelper::FreeVecBatch(outputVecBatch);
                     outputVecBatch = nullptr;
-                }else{
+                } else {
                     break;
                 }
             }
@@ -158,7 +156,6 @@ void BaseOperatorFixture::RunDefaultBenchmark(benchmark::State &state)
             auto dataMap = perfUtil->GetData();
             state.counters["getOutput InstCount"] += dataMap["Instructions"];
             state.counters["getOutput CacheMisses"] += dataMap["CacheMisses"];
-
         }
 
         delete perfUtil;

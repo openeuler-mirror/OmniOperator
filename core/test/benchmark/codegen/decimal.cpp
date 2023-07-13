@@ -2,9 +2,9 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  */
 #include <array>
+#include "gtest/gtest.h"
 #include "benchmark/benchmark.h"
 #include "codegen/functions/decimal_arithmetic_functions.h"
-#include "gtest/gtest.h"
 #include "operator/execution_context.h"
 
 using namespace std;
@@ -12,7 +12,6 @@ using namespace omniruntime::op;
 using namespace omniruntime::codegen;
 using namespace omniruntime::codegen::function;
 namespace om_benchmark {
-
 
 const static int ROW_SIZE = 8;
 const static array<int64_t, ROW_SIZE> HIGH_BITS = { 0, 27, 0, 998, 0, 1L << 63, 0, 0 };
@@ -50,7 +49,6 @@ static void Decimal128Operation(benchmark::State &state)
             lowResult[i] = low;
         }
     }
-
 
     for (int i = 0; i < ROW_SIZE - 1; i++) {
         EXPECT_EQ(highResult[i], HIGH_BITS_RESULT[i]);

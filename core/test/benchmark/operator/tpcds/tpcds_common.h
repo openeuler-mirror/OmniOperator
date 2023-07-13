@@ -14,19 +14,16 @@
 
 namespace om_benchmark {
 // tool functions
-namespace tpc_ds_data_loader{
-
+namespace tpc_ds_data_loader {
 nlohmann::json LoadBenchmarkMetaFromPath(const std::string &path);
 
 std::string LoadDependentDataPathFromPath(const std::string &path);
 
-std::vector<VectorBatchSupplier> LoadVectorBatchFromPath(
-        const std::string &path,
-        const std::vector<omniruntime::type::DataTypePtr> &dataTypes);
+std::vector<VectorBatchSupplier> LoadVectorBatchFromPath(const std::string &path,
+    const std::vector<omniruntime::type::DataTypePtr> &dataTypes);
 
-std::vector<omniruntime::type::DataTypePtr> LoadDataTypesFromJson(
-        const nlohmann::json &metaJson,
-        const std::string &filedName);
+std::vector<omniruntime::type::DataTypePtr> LoadDataTypesFromJson(const nlohmann::json &metaJson,
+    const std::string &filedName);
 
 std::vector<omniruntime::expressions::Expr *> GetExprsFromJson(const std::vector<std::string>& exprs);
 }

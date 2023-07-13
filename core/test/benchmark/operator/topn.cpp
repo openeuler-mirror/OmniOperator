@@ -4,8 +4,8 @@
 
 
 #include "common/common.h"
-#include "operator/topn/topn.h"
 #include "common/vector_util.h"
+#include "operator/topn/topn.h"
 
 using namespace benchmark;
 using namespace omniruntime::op;
@@ -34,8 +34,8 @@ protected:
 
         for (int i = 0; i < totalPages; ++i) {
             if (DictionaryBlocks(state)) {
-                vvb[i] = CreateSequenceVectorBatchWithDictionaryVector(INPUT_TYPES[TestGroup(state)],
-                    RowsPerPage(state));
+                vvb[i] =
+                    CreateSequenceVectorBatchWithDictionaryVector(INPUT_TYPES[TestGroup(state)], RowsPerPage(state));
             } else {
                 vvb[i] = CreateSequenceVectorBatch(INPUT_TYPES[TestGroup(state)], RowsPerPage(state));
             }
@@ -46,18 +46,20 @@ protected:
 
 private:
     int totalPages = 1000;
-    std::map<std::string, std::vector<DataTypePtr>> INPUT_TYPES = { { "group1", { VarcharType(16) } },
-                                                                    { "group2", { IntType(), IntType() } },
-                                                                    { "group3", { IntType(), IntType(), IntType() } },
-                                                                    { "group4", { LongType() } },
-                                                                    { "group5", { DoubleType() } },
-                                                                    { "group6", { IntType(), DoubleType(), LongType() } },
-                                                                    { "group7", { VarcharType(20), VarcharType(30), VarcharType(50) } },
-                                                                    { "group8", { Decimal128Type(38, 0) } },
-                                                                    { "group9", { IntType(), VarcharType(60), VarcharType(20), VarcharType(30) } },
-                                                                    { "group10", { IntType(), VarcharType(50), IntType(), DoubleType(), VarcharType(50) } },
-                                                                    { "group11", { LongType(), DoubleType() } },
-                                                                    { "group12", { LongType(), Decimal128Type(38, 0) } } };
+    std::map<std::string, std::vector<DataTypePtr>> INPUT_TYPES = {
+        { "group1", { VarcharType(16) } },
+        { "group2", { IntType(), IntType() } },
+        { "group3", { IntType(), IntType(), IntType() } },
+        { "group4", { LongType() } },
+        { "group5", { DoubleType() } },
+        { "group6", { IntType(), DoubleType(), LongType() } },
+        { "group7", { VarcharType(20), VarcharType(30), VarcharType(50) } },
+        { "group8", { Decimal128Type(38, 0) } },
+        { "group9", { IntType(), VarcharType(60), VarcharType(20), VarcharType(30) } },
+        { "group10", { IntType(), VarcharType(50), IntType(), DoubleType(), VarcharType(50) } },
+        { "group11", { LongType(), DoubleType() } },
+        { "group12", { LongType(), Decimal128Type(38, 0) } }
+    };
 
     std::map<std::string, std::vector<int32_t>> SORT_CHANNELS = {
         { "group1", { 0 } },          { "group2", { 0, 1 } },

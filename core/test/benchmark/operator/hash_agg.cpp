@@ -41,7 +41,6 @@ protected:
 
     std::vector<VectorBatchSupplier> createVecBatch(const State &state) override
     {
-
         std::vector<VectorBatch *> vvb(totalPages);
 
         auto types = allTypes[SqlId(state)];
@@ -51,10 +50,10 @@ protected:
         for (int i = 0; i < totalPages; i++) {
             auto *vectorBatch = new VectorBatch(groupsPerPage);
 
-            for (auto & type : types) {
+            for (auto &type : types) {
                 switch (type->GetId()) {
                     case OMNI_VARCHAR:
-                        vectorBatch->Append(createVarcharVector(state,  i, groupsPerPage));
+                        vectorBatch->Append(createVarcharVector(state, i, groupsPerPage));
                         break;
                     case OMNI_LONG:
                         vectorBatch->Append(createBigIntVector(state, i, groupsPerPage));
@@ -73,14 +72,15 @@ protected:
     }
 
 private:
-    std::map<std::string, std::vector<DataTypePtr>> allTypes = { { "sql2",
-                                                                   { VarcharType(200), VarcharType(200), VarcharType(200), VarcharType(200), IntType(), IntType(), LongType() } },
-                                                                 { "sql4", { VarcharType(200), IntType(), IntType(), IntType(), LongType() } },
-                                                                 { "sql6", { IntType(), IntType(), LongType() } },
-                                                                 { "sql7",
-                                                                   { VarcharType(200), VarcharType(200), VarcharType(200), LongType(), LongType(), LongType(), LongType(),
-                                                                     LongType() } },
-                                                                 { "sql9", { LongType(), LongType(), LongType(), VarcharType(200), LongType(), LongType() } } };
+    std::map<std::string, std::vector<DataTypePtr>> allTypes = {
+        { "sql2", { VarcharType(200), VarcharType(200), VarcharType(200), VarcharType(200), IntType(), IntType(),
+            LongType() } },
+        { "sql4", { VarcharType(200), IntType(), IntType(), IntType(), LongType() } },
+        { "sql6", { IntType(), IntType(), LongType() } },
+        { "sql7", { VarcharType(200), VarcharType(200), VarcharType(200), LongType(), LongType(), LongType(),
+            LongType(), LongType() } },
+        { "sql9", { LongType(), LongType(), LongType(), VarcharType(200), LongType(), LongType() } }
+    };
 
     std::map<std::string, std::vector<uint32_t>> hashChannels = { { "sql2", { 0, 1, 2, 3, 4, 5 } },
                                                                   { "sql4", { 0, 1, 2, 3 } },
@@ -100,23 +100,30 @@ private:
                                                                  { "sql6", { 2 } },
                                                                  { "sql7", { 3, 4, 5, 6, 7 } },
                                                                  { "sql9", { 4, 5 } } };
-    std::map<std::string, std::vector<DataTypePtr>> aggInputTypes = { { "sql2", { LongType() } },
-                                                                      { "sql4", { LongType() } },
-                                                                      { "sql6", { LongType() } },
-                                                                      { "sql7", { LongType(), LongType(), LongType(), LongType(), LongType() } },
-                                                                      { "sql9", { LongType(), LongType() } } };
-    std::map<std::string, std::vector<DataTypePtr>> aggOutputTypes = { { "sql2", { LongType() } },
-                                                                       { "sql4", { LongType() } },
-                                                                       { "sql6", { LongType() } },
-                                                                       { "sql7", { LongType(), LongType(), LongType(), LongType(), LongType() } },
-                                                                       { "sql9", { DoubleType(), LongType() } } };
+    std::map<std::string, std::vector<DataTypePtr>> aggInputTypes = {
+        { "sql2", { LongType() } },
+        { "sql4", { LongType() } },
+        { "sql6", { LongType() } },
+        { "sql7", { LongType(), LongType(), LongType(), LongType(), LongType() } },
+        { "sql9", { LongType(), LongType() } }
+    };
+    std::map<std::string, std::vector<DataTypePtr>> aggOutputTypes = {
+        { "sql2", { LongType() } },
+        { "sql4", { LongType() } },
+        { "sql6", { LongType() } },
+        { "sql7", { LongType(), LongType(), LongType(), LongType(), LongType() } },
+        { "sql9", { DoubleType(), LongType() } }
+    };
     std::map<std::string, std::vector<uint32_t>> aggFuncTypes = { { "sql2", { OMNI_AGGREGATION_TYPE_SUM } },
                                                                   { "sql4", { OMNI_AGGREGATION_TYPE_MAX } },
                                                                   { "sql6", { OMNI_AGGREGATION_TYPE_COUNT_COLUMN } },
-                                                                  { "sql7",
-                                                                    { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
-                                                                      OMNI_AGGREGATION_TYPE_SUM } },
-                                                                  { "sql9", { OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MIN } } };
+                                                                  { "sql7", { OMNI_AGGREGATION_TYPE_SUM,
+                                                                             OMNI_AGGREGATION_TYPE_SUM,
+                                                                             OMNI_AGGREGATION_TYPE_SUM,
+                                                                             OMNI_AGGREGATION_TYPE_SUM,
+                                                                             OMNI_AGGREGATION_TYPE_SUM } },
+                                                                  { "sql9", { OMNI_AGGREGATION_TYPE_AVG,
+                                                                              OMNI_AGGREGATION_TYPE_MIN } } };
 
     int totalPages = 140;
     int rowsPerPage = 10000;
@@ -141,7 +148,8 @@ private:
     {
         std::string prefix = GenVarcharPrefix(state);
         if (!IsDictionary(state)) {
-            auto *varcharVector =  VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,200 * rowsPerPage).release();
+            auto *varcharVector =
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, 200 * rowsPerPage).release();
             int vecIndex = 0;
             for (int k = 0; k < groupsPerPage; k++) {
                 std::string groupKey = prefix + std::to_string(pageId * groupsPerPage + k);
@@ -151,7 +159,8 @@ private:
             }
             return varcharVector;
         } else {
-            auto *varcharVector =  VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, groupsPerPage,200 * rowsPerPage).release();
+            auto *varcharVector =
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, groupsPerPage, 200 * rowsPerPage).release();
 
             for (int k = 0; k < groupsPerPage; k++) {
                 std::string groupKey = prefix + std::to_string(pageId * groupsPerPage + k);
@@ -161,7 +170,9 @@ private:
             for (int k = 0; k < rowsPerPage; k++) {
                 ids[k] = k % groupsPerPage;
             }
-            auto vec = VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(),varcharVector,OMNI_VARCHAR).release();
+            auto vec =
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), varcharVector, OMNI_VARCHAR)
+                    .release();
             delete varcharVector;
             return vec;
         }
@@ -189,13 +200,13 @@ private:
             for (int k = 0; k < rowsPerPage; k++) {
                 ids[k] = k % groupsPerPage;
             }
-            auto vec = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(),longVector).release();
+            auto vec = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), longVector).release();
             delete longVector;
             return vec;
         }
     }
 
-    BaseVector *createIntegerVector(const State &state,  int pageId, int groupsPerPage)
+    BaseVector *createIntegerVector(const State &state, int pageId, int groupsPerPage)
     {
         if (!IsDictionary(state)) {
             auto *intVector = new Vector<int32_t>(rowsPerPage);
@@ -217,7 +228,7 @@ private:
             for (int k = 0; k < rowsPerPage; k++) {
                 ids[k] = k % groupsPerPage;
             }
-            auto vec = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(),intVector).release();
+            auto vec = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), intVector).release();
             delete intVector;
             return vec;
         }

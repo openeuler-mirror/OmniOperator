@@ -3,8 +3,8 @@
  */
 
 #include "common/common.h"
-#include "operator/window/window.h"
 #include "common/vector_util.h"
+#include "operator/window/window.h"
 
 using namespace benchmark;
 using namespace omniruntime::op;
@@ -83,7 +83,8 @@ private:
         { "group5", { LongType(), IntType() } },
         { "group6", { LongType(), IntType() } },
         { "group7",
-          { VarcharType(50), VarcharType(50), VarcharType(50), VarcharType(50), VarcharType(50), IntType(), LongType() } }
+          { VarcharType(50), VarcharType(50), VarcharType(50), VarcharType(50), VarcharType(50), IntType(),
+            LongType() } }
     };
     std::map<std::string, std::vector<omniruntime::op::FunctionType>> WINDOW_FUNCTION = {
         { "group1", { OMNI_WINDOW_TYPE_ROW_NUMBER } }, { "group2", { OMNI_AGGREGATION_TYPE_COUNT_COLUMN } },
@@ -122,7 +123,6 @@ private:
         std::vector<int32_t> windowFrameStartChannelsField(functions.size());
         std::vector<int32_t> windowFrameEndTypesField(functions.size());
         std::vector<int32_t> windowFrameEndChannelsField(functions.size());
-
 
         for (unsigned int i = 0; i < functions.size(); ++i) {
             windowFunctions[i] = functions[i];

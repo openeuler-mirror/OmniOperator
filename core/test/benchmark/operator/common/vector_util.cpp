@@ -8,7 +8,6 @@
 using namespace omniruntime::op;
 
 namespace om_benchmark {
-
 VectorBatch *CreateSequenceVectorBatch(const std::vector<DataTypePtr> &types, int length)
 {
     auto *vectorBatch = new VectorBatch(length);
@@ -23,16 +22,19 @@ VectorBatch *CreateSequenceVectorBatch(const std::vector<DataTypePtr> &types, in
                 case OMNI_DECIMAL64: {
                     auto val = index;
                     VectorHelper::SetValue(vector, index, &val, type->GetId());
-                } break;
+                    break;
+                }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
                     auto val = std::to_string(index);
                     VectorHelper::SetValue(vector, index, &val, type->GetId());
-                } break;
+                    break;
+                }
                 case OMNI_DECIMAL128: {
                     Decimal128 val = Decimal128(0, index);
                     VectorHelper::SetValue(vector, index, &val, type->GetId());
-                } break;
+                    break;
+                }
                 default:
                     LogError("No such data type %d", type->GetId());
                     break;
@@ -58,16 +60,19 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
                 case OMNI_DECIMAL64: {
                     auto val = index;
                     VectorHelper::SetValue(inner, index, &val, type->GetId());
-                } break;
+                    break;
+                }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
                     auto val = std::to_string(index);
                     VectorHelper::SetValue(inner, index, &val, type->GetId());
-                } break;
+                    break;
+                }
                 case OMNI_DECIMAL128: {
                     Decimal128 val = Decimal128(0, index);
                     VectorHelper::SetValue(inner, index, &val, type->GetId());
-                } break;
+                    break;
+                }
                 default:
                     LogError("No such data type %d", type->GetId());
                     break;
@@ -85,7 +90,7 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
 }
 
 VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr> &types, std::string &prefix,
-    const std::vector<std::vector<int32_t>> &values,int rowCount)
+    const std::vector<std::vector<int32_t>> &values, int rowCount)
 {
     auto *vectorBatch = new VectorBatch(rowCount);
     for (int i = 0; i < (int32_t)types.size(); ++i) {
@@ -100,16 +105,19 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
                 case OMNI_BOOLEAN: {
                     auto val = values[i][index];
                     VectorHelper::SetValue(vector, index, &val, types[i]->GetId());
-                } break;
+                    break;
+                }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
                     auto val = prefix + std::to_string(values[i][index]);
                     VectorHelper::SetValue(vector, index, &val, types[i]->GetId());
-                } break;
+                    break;
+                }
                 case OMNI_DECIMAL128: {
                     auto val = Decimal128(0, values[i][index]);
                     VectorHelper::SetValue(vector, index, &val, types[i]->GetId());
-                } break;
+                    break;
+                }
                 default:
                     LogError("No such data type %d", types[i]->GetId());
                     break;
@@ -122,7 +130,7 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
             }
             vectorBatch->Append(
                 VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, types[i]->GetId())
-                                       .release());
+                    .release());
             delete vector;
             continue;
         }
@@ -132,17 +140,19 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
     return vectorBatch;
 }
 
-std::vector<VectorBatchSupplier> VectorBatchToVectorBatchSupplier(std::vector<VectorBatch*> vectorBatches){
+std::vector<VectorBatchSupplier> VectorBatchToVectorBatchSupplier(std::vector<VectorBatch *> vectorBatches)
+{
     auto suppliers = std::vector<VectorBatchSupplier>(vectorBatches.size());
 
     for (int i = 0; i < (int32_t)suppliers.size(); ++i) {
         auto vectorBatch = vectorBatches[i];
-        suppliers[i] = [vectorBatch](){ return vectorBatch;};
+        suppliers[i] = [vectorBatch]() { return vectorBatch; };
     }
     return suppliers;
 }
 
-void SetVectorBatchRow(VectorBatch *vb, std::vector<DataTypeId> dataTypes, int index,std::vector<std::string> value){
+void SetVectorBatchRow(VectorBatch *vb, std::vector<DataTypeId> dataTypes, int index, std::vector<std::string> value)
+{
     for (int i = 0; i < vb->GetVectorCount(); ++i) {
         std::string val = value[i];
         if (std::strcmp("NULL", val.c_str()) == 0) {
@@ -154,30 +164,36 @@ void SetVectorBatchRow(VectorBatch *vb, std::vector<DataTypeId> dataTypes, int i
             case OMNI_DATE32: {
                 auto item = std::stoi(val);
                 VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
-            } break;
+                break;
+            }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
                 auto item = std::stol(val);
                 VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
-            } break;
+                break;
+            }
             case OMNI_DOUBLE: {
                 auto item = std::stod(val);
                 VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
-            } break;
+                break;
+            }
             case OMNI_BOOLEAN: {
                 auto item = std::strcmp("true", val.c_str()) == 0;
                 VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
-            } break;
+                break;
+            }
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
                 auto item = val;
                 VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
-            } break;
+                break;
+            }
             case OMNI_DECIMAL128: {
                 auto item = Decimal128(val);
 
                 VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
-            } break;
+                break;
+            }
             default:
                 LogError("No such data type %d", dataTypes[i]);
                 break;

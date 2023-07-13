@@ -85,7 +85,7 @@ std::vector<VectorBatchSupplier> LoadVectorBatchFromPath(const std::string &path
                 while (getline(f, s, sep)) {
                     value_array.emplace_back(s);
                 }
-                SetVectorBatchRow(vectorBatch, dataTypeIds,rowIndex++, value_array);
+                SetVectorBatchRow(vectorBatch, dataTypeIds, rowIndex++, value_array);
             }
             return vectorBatch;
         });
@@ -110,7 +110,7 @@ std::vector<Expr *> GetExprsFromJson(const std::vector<std::string> &exprs)
 {
     auto expressions = std::vector<omniruntime::expressions::Expr *>();
     for (const auto &item : exprs) {
-        if (item.empty()){
+        if (item.empty()) {
             expressions.push_back(nullptr);
             continue;
         }
@@ -153,7 +153,8 @@ omniruntime::op::OperatorFactory *TpcDsOperatorFixture::createOperatorFactory(co
         return nullptr;
     }
 
-    return createOperatorFactory(tpc_ds_data_loader::LoadBenchmarkMetaFromPath(GetRealDataPath(dataPathList[state.range(0)])));
+    return createOperatorFactory(
+        tpc_ds_data_loader::LoadBenchmarkMetaFromPath(GetRealDataPath(dataPathList[state.range(0)])));
 }
 
 std::vector<VectorBatchSupplier> TpcDsOperatorFixture::createVecBatch(const benchmark::State &state)

@@ -14,36 +14,30 @@ using namespace omniruntime::vec;
 using namespace omniruntime::type;
 
 namespace om_benchmark {
-
 class HashBuilder : public BaseOperatorFixture {
 protected:
     int32_t rowsPerPage = 10240;
     int32_t buildRowsNumber = 8000000;
     std::string prefix;
     std::string filterExpression;
-    std::map<std::string, std::vector<DataTypePtr>> BUILD_TYPES = { { "group1", { LongType(), VarcharType(20) } },
-                                                                    { "group2",
-                                                                      { LongType(), IntType(), VarcharType(50), IntType(), IntType(), VarcharType(50), VarcharType(10) } },
-                                                                    { "group3", { LongType(), VarcharType(10) } },
-                                                                    { "group4", { LongType(), VarcharType(50), VarcharType(50) } },
-                                                                    { "group5",
-                                                                      { LongType(), IntType(), VarcharType(50), IntType(), IntType(), VarcharType(50), VarcharType(10) } },
-                                                                    { "group6", { LongType(), LongType(), LongType(), LongType(), IntType(), IntType() } },
-                                                                    { "group7", { LongType() } },
-                                                                    { "group8", { LongType(), IntType(), IntType() } },
-                                                                    { "group9", { LongType() } },
-                                                                    { "group10", { LongType() } },
-                                                                    { "group11", { LongType(), LongType(), LongType(), LongType(), LongType(), IntType(), IntType() } },
-                                                                    { "group12", { VarcharType(50), VarcharType(50), LongType(), VarcharType(50), VarcharType(50), LongType() } },
-                                                                    { "group13", { VarcharType(50), IntType(), LongType() } },
-                                                                    { "group14",
-                                                                      {
-                                                                          Decimal64Type(12, 2),
-                                                                          LongType(),
-                                                                          VarcharType(50),
-                                                                          LongType(),
-                                                                  } } };
-
+    std::map<std::string, std::vector<DataTypePtr>> BUILD_TYPES = {
+        { "group1", { LongType(), VarcharType(20) } },
+        { "group2",
+          { LongType(), IntType(), VarcharType(50), IntType(), IntType(), VarcharType(50), VarcharType(10) } },
+        { "group3", { LongType(), VarcharType(10) } },
+        { "group4", { LongType(), VarcharType(50), VarcharType(50) } },
+        { "group5",
+          { LongType(), IntType(), VarcharType(50), IntType(), IntType(), VarcharType(50), VarcharType(10) } },
+        { "group6", { LongType(), LongType(), LongType(), LongType(), IntType(), IntType() } },
+        { "group7", { LongType() } },
+        { "group8", { LongType(), IntType(), IntType() } },
+        { "group9", { LongType() } },
+        { "group10", { LongType() } },
+        { "group11", { LongType(), LongType(), LongType(), LongType(), LongType(), IntType(), IntType() } },
+        { "group12", { VarcharType(50), VarcharType(50), LongType(), VarcharType(50), VarcharType(50), LongType() } },
+        { "group13", { VarcharType(50), IntType(), LongType() } },
+        { "group14", { Decimal64Type(12, 2), LongType(), VarcharType(50), LongType() } }
+    };
 
     std::map<std::string, std::vector<int32_t>> BUILD_OUTPUT_COLS = { { "group1", { 1 } },
                                                                       { "group2", { 1, 2, 3, 4, 5 } },
@@ -59,6 +53,7 @@ protected:
                                                                       { "group12", { 2 } },
                                                                       { "group13", { 0, 1 } },
                                                                       { "group14", { 0, 2, 3 } } };
+
     std::map<std::string, std::vector<int32_t>> BUILD_HASH_COLS = {
         { "group1", { 0 } },  { "group2", { 0 } },  { "group3", { 0 } },  { "group4", { 0 } },
         { "group5", { 0 } },  { "group6", { 2 } },  { "group7", { 0 } },  { "group8", { 0 } },
@@ -71,12 +66,11 @@ protected:
     OMNI_BENCHMARK_PARAM(int32_t, BuildRowsRepetition, 1, 5);
 
 protected:
-
     OperatorFactory *createOperatorFactory(const State &state) override
     {
         return new HashBuilderOperatorFactory(DataTypes(BUILD_TYPES[TestGroup(state)]),
-              BUILD_HASH_COLS[TestGroup(state)].data(),(int32_t)BUILD_HASH_COLS[TestGroup(state)].size(),
-              filterExpression, 1);
+            BUILD_HASH_COLS[TestGroup(state)].data(), (int32_t)BUILD_HASH_COLS[TestGroup(state)].size(),
+            filterExpression, 1);
     }
 
     std::vector<VectorBatchSupplier> createVecBatch(const State &state) override
@@ -106,9 +100,9 @@ protected:
             }
 
             if (IsDictionaryBlocks(state)) {
-                vvb.push_back(CreateVectorBatch(OMNI_DICTIONARY, buildTypes, prefix, columnValues,newRows));
+                vvb.push_back(CreateVectorBatch(OMNI_DICTIONARY, buildTypes, prefix, columnValues, newRows));
             } else {
-                vvb.push_back(CreateVectorBatch(OMNI_FLAT, buildTypes, prefix, columnValues,newRows));
+                vvb.push_back(CreateVectorBatch(OMNI_FLAT, buildTypes, prefix, columnValues, newRows));
             }
 
             rows += newRows;
@@ -145,9 +139,9 @@ protected:
         return new LookupJoinOperatorFactory(DataTypes(PROBE_TYPES[TestGroup(state)]),
             PROBE_OUTPUT_COLS[TestGroup(state)].data(), (int32_t)PROBE_OUTPUT_COLS[TestGroup(state)].size(),
             PROBE_HASH_COLS[TestGroup(state)].data(), (int32_t)PROBE_HASH_COLS[TestGroup(state)].size(),
-            BUILD_OUTPUT_COLS[TestGroup(state)].data(),  (int32_t)BUILD_OUTPUT_COLS[TestGroup(state)].size(),
-            DataTypes(buildOutputTypes), JoinType::OMNI_JOIN_TYPE_INNER,
-            hashBuilderOperatorFactory->GetHashTables(), new OverflowConfig());
+            BUILD_OUTPUT_COLS[TestGroup(state)].data(), (int32_t)BUILD_OUTPUT_COLS[TestGroup(state)].size(),
+            DataTypes(buildOutputTypes), JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderOperatorFactory->GetHashTables(),
+            new OverflowConfig());
     }
 
     void TearDown(State &state) override
@@ -161,7 +155,6 @@ protected:
     {
         std::vector<DataTypePtr> probeTypes = PROBE_TYPES[TestGroup(state)];
 
-
         std::vector<VectorBatch *> vvb;
         fillVectorBatches(probeTypes, state, vvb);
 
@@ -173,8 +166,8 @@ protected:
         return AFTER_EACH_INPUT_FINISHED;
     }
 
-    void fillVectorBatches(const std::vector<DataTypePtr> &probeTypes,
-        const State &state, std::vector<VectorBatch *> &vvb)
+    void fillVectorBatches(const std::vector<DataTypePtr> &probeTypes, const State &state,
+        std::vector<VectorBatch *> &vvb)
     {
         std::vector<std::vector<int32_t>> columnValues(probeTypes.size());
         for (unsigned int i = 0; i < probeTypes.size(); i++) {
@@ -220,7 +213,7 @@ protected:
             for (int i = 0; i < rowsCount; i++) {
                 if (rowsInPage >= rowsPerPage) {
                     vvb.push_back(IsDictionaryBlocks(state) ?
-                        CreateVectorBatch(OMNI_DICTIONARY, probeTypes, prefix,columnValues, rowsInPage) :
+                        CreateVectorBatch(OMNI_DICTIONARY, probeTypes, prefix, columnValues, rowsInPage) :
                         CreateVectorBatch(OMNI_FLAT, probeTypes, prefix, columnValues, rowsInPage));
                     rowsInPage = 0;
 
@@ -241,24 +234,27 @@ protected:
 
 private:
     int32_t probeRowsNumber = 1400000;
-    std::map<std::string, std::vector<DataTypePtr>> PROBE_TYPES = { { "group1",
-                                                                      { LongType(), LongType(), LongType(), VarcharType(30), VarcharType(50) } },
-                                                                    { "group2", { LongType(), VarcharType(10) } },
-                                                                    { "group3", { LongType(), LongType(), IntType(), VarcharType(50), IntType(), IntType(), VarcharType(50) } },
-                                                                    { "group4", { LongType(), LongType(), IntType(), IntType(), IntType() } },
-                                                                    { "group5", { LongType(), IntType() } },
-                                                                    { "group6", { VarcharType(60), LongType() } },
-                                                                    { "group7",
-                                                                      { LongType(), LongType(), LongType(), IntType(), VarcharType(50), IntType(), IntType(), VarcharType(50) } },
-                                                                    { "group8", { LongType(), LongType(), LongType(), IntType() } },
-                                                                    { "group9", { LongType(), LongType() } },
-                                                                    { "group10", { LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), IntType(), IntType() } },
-                                                                    { "group11", { LongType() } },
-                                                                    { "group12",
-                                                                      { VarcharType(50), DoubleType(), VarcharType(50), LongType(), VarcharType(50), LongType(), VarcharType(50),
-                                                                        LongType(), VarcharType(50), IntType(), IntType(), LongType() } },
-                                                                    { "group13", { Decimal64Type(12, 2), LongType(), LongType() } },
-                                                                    { "group14", { IntType(), IntType(), LongType() } } };
+    std::map<std::string, std::vector<DataTypePtr>> PROBE_TYPES = {
+        { "group1",
+          { LongType(), LongType(), LongType(), VarcharType(30), VarcharType(50) } },
+        { "group2", { LongType(), VarcharType(10) } },
+        { "group3", { LongType(), LongType(), IntType(), VarcharType(50), IntType(), IntType(), VarcharType(50) } },
+        { "group4", { LongType(), LongType(), IntType(), IntType(), IntType() } },
+        { "group5", { LongType(), IntType() } },
+        { "group6", { VarcharType(60), LongType() } },
+        { "group7",
+          { LongType(), LongType(), LongType(), IntType(), VarcharType(50), IntType(), IntType(), VarcharType(50) } },
+        { "group8", { LongType(), LongType(), LongType(), IntType() } },
+        { "group9", { LongType(), LongType() } },
+        { "group10", { LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), IntType(), IntType() } },
+        { "group11", { LongType() } },
+        { "group12",
+          { VarcharType(50), DoubleType(), VarcharType(50), LongType(), VarcharType(50), LongType(), VarcharType(50),
+            LongType(), VarcharType(50), IntType(), IntType(), LongType() } },
+        { "group13", { Decimal64Type(12, 2), LongType(), LongType() } },
+        { "group14", { IntType(), IntType(), LongType() } }
+    };
+
     std::map<std::string, std::vector<int32_t>> PROBE_OUTPUT_COLS = { { "group1", { 0, 2, 3, 4 } },
                                                                       { "group2", {} },
                                                                       { "group3", { 0, 2, 3, 4, 5, 6 } },

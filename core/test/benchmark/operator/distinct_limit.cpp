@@ -27,8 +27,8 @@ protected:
 
         for (int i = 0; i < totalPages; ++i) {
             if (DictionaryBlocks(state)) {
-                vvb[i] = CreateSequenceVectorBatchWithDictionaryVector(INPUT_TYPES[TestGroup(state)],
-                    RowsPerPage(state));
+                vvb[i] =
+                    CreateSequenceVectorBatchWithDictionaryVector(INPUT_TYPES[TestGroup(state)], RowsPerPage(state));
             } else {
                 vvb[i] = CreateSequenceVectorBatch(INPUT_TYPES[TestGroup(state)], RowsPerPage(state));
             }
@@ -38,14 +38,17 @@ protected:
 
 private:
     int64_t totalPages = 1000;
-    std::map<std::string, std::vector<DataTypePtr>> INPUT_TYPES = { { "group1", { IntType() } },
-                                                                    { "group2", { VarcharType(16) } },
-                                                                    { "group3", { DoubleType() } },
-                                                                    { "group4", { Decimal128Type(38, 0) } },
-                                                                    { "group5", { IntType(), VarcharType(16) } },
-                                                                    { "group6", { IntType(), LongType(), Decimal128Type(38, 0), DoubleType() } },
-                                                                    { "group7", { VarcharType(20), VarcharType(30), VarcharType(50) } },
-                                                                    { "group8", { IntType(), VarcharType(30), LongType(), Decimal128Type(38, 0), VarcharType(50) } } };
+    std::map<std::string, std::vector<DataTypePtr>> INPUT_TYPES = {
+        { "group1", { IntType() } },
+        { "group2", { VarcharType(16) } },
+        { "group3", { DoubleType() } },
+        { "group4", { Decimal128Type(38, 0) } },
+        { "group5", { IntType(), VarcharType(16) } },
+        { "group6", { IntType(), LongType(), Decimal128Type(38, 0), DoubleType() } },
+        { "group7", { VarcharType(20), VarcharType(30), VarcharType(50) } },
+        { "group8", { IntType(), VarcharType(30), LongType(), Decimal128Type(38, 0), VarcharType(50) } }
+    };
+
     std::map<std::string, std::vector<int32_t>> DISTINCT_CHANNELS = {
         { "group1", { 0 } },    { "group2", { 0 } },          { "group3", { 0 } },       { "group4", { 0 } },
         { "group5", { 0, 1 } }, { "group6", { 0, 1, 2, 3 } }, { "group7", { 0, 1, 2 } }, { "group8", { 0, 1, 2, 3, 4 } }

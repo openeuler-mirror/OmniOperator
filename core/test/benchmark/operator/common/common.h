@@ -27,7 +27,7 @@ namespace om_benchmark {
         {                                                            \
             this->SetName(#BaseClass "/" #Method);                   \
             auto argProducts = this->ArgProducts();                  \
-            if (!argProducts.empty()){                               \
+            if (!argProducts.empty()) {                              \
                 this->ArgsProduct(argProducts);                      \
             }                                                        \
             this->Initialize();                                      \
@@ -36,31 +36,31 @@ namespace om_benchmark {
                                                                      \
     protected:                                                       \
         void BenchmarkCase(::benchmark::State &) BENCHMARK_OVERRIDE; \
-    };
+    }
 
 #define OMNI_BENCHMARK_DECLARE(BaseClass, Method)                         \
-    OMNI_BENCHMARK_PRIVATE_DECLARE_F(BaseClass, Method)                   \
+    OMNI_BENCHMARK_PRIVATE_DECLARE_F(BaseClass, Method);                  \
     BENCHMARK_REGISTER_F(BaseClass, Method); /* NOLINT(cert-err58-cpp) */ \
     void BENCHMARK_PRIVATE_CONCAT_NAME(BaseClass, Method)::BenchmarkCase
 
 #define OMNI_BENCHMARK_DECLARE_F(BaseClass, Method)      \
-    OMNI_BENCHMARK_PRIVATE_DECLARE_F(BaseClass, Method)  \
+    OMNI_BENCHMARK_PRIVATE_DECLARE_F(BaseClass, Method); \
     void BENCHMARK_PRIVATE_CONCAT_NAME(BaseClass, Method)::BenchmarkCase
 
-#define OMNI_BENCHMARK_DECLARE_R(BaseClass, Method) \
-    BENCHMARK_REGISTER_F(BaseClass, Method) /* NOLINT(cert-err58-cpp) */
+#define OMNI_BENCHMARK_DECLARE_R(BaseClass, Method)                   \
+    BENCHMARK_REGISTER_F(BaseClass, Method) /* NOLINT(cert-err58-cpp) \
+                                             */
 
-#define OMNI_BENCHMARK_DECLARE_SIMPLE(BaseClass, Method)                   \
-    class BaseClass : public om_benchmark::BaseOmniFixture{};              \
-    OMNI_BENCHMARK_PRIVATE_DECLARE_F(BaseClass, Method)                    \
-    BENCHMARK_REGISTER_F(BaseClass, Method); /* NOLINT(cert-err58-cpp) */  \
+#define OMNI_BENCHMARK_DECLARE_SIMPLE(BaseClass, Method)                  \
+    class BaseClass : public om_benchmark::BaseOmniFixture {};            \
+    OMNI_BENCHMARK_PRIVATE_DECLARE_F(BaseClass, Method);                  \
+    BENCHMARK_REGISTER_F(BaseClass, Method); /* NOLINT(cert-err58-cpp) */ \
     void BENCHMARK_PRIVATE_CONCAT_NAME(BaseClass, Method)::BenchmarkCase
 
-#define OMNI_BENCHMARK_DECLARE_SIMPLE_F(BaseClass, Method)                  \
-    class BaseClass : public om_benchmark::BaseOmniFixture{};               \
-    OMNI_BENCHMARK_PRIVATE_DECLARE_F(BaseClass, Method)                     \
+#define OMNI_BENCHMARK_DECLARE_SIMPLE_F(BaseClass, Method)     \
+    class BaseClass : public om_benchmark::BaseOmniFixture {}; \
+    OMNI_BENCHMARK_PRIVATE_DECLARE_F(BaseClass, Method);       \
     void BENCHMARK_PRIVATE_CONCAT_NAME(BaseClass, Method)::BenchmarkCase
-
 
 std::string ArgToS(bool arg);
 
@@ -71,8 +71,6 @@ std::string ArgToS(int64_t arg);
 std::string ArgToS(double_t arg);
 
 std::string ArgToS(std::string arg);
-
-class BaseOmniFixture;
 
 class BasicArg {
 public:
@@ -121,18 +119,17 @@ protected:
 
     std::vector<BasicArg *> argList;
     std::vector<std::vector<int64_t>> ArgProducts();
-    virtual void Initialize(){}
+    virtual void Initialize() {}
     void SetUp(benchmark::State &state) override;
 };
 
-#define OMNI_BENCHMARK_DECLARE_OPERATOR_DEFAULT(BaseClass)                                     \
-    OMNI_BENCHMARK_DECLARE_F(BaseClass, DefaultBenchmark)(benchmark::State & state)            \
-    {                                                                                          \
-        RunDefaultBenchmark(state);                                                            \
-    }                                                                                          \
-    /** NOLINT(readability-container-size-empty) **/                                           \
-    OMNI_BENCHMARK_DECLARE_R(BaseClass, DefaultBenchmark)                                      \
-    ->UseManualTime()->Unit(benchmark::kMillisecond)->Iterations(1)
+#define OMNI_BENCHMARK_DECLARE_OPERATOR_DEFAULT(BaseClass)                          \
+    OMNI_BENCHMARK_DECLARE_F(BaseClass, DefaultBenchmark)(benchmark::State & state) \
+    {                                                                               \
+        RunDefaultBenchmark(state);                                                 \
+    }                                                                               \
+    /* * NOLINT(readability-container-size-empty) * */                              \
+    OMNI_BENCHMARK_DECLARE_R(BaseClass, DefaultBenchmark)->UseManualTime()->Unit(benchmark::kMillisecond)->Iterations(1)
 
 enum BaseFixtureGetOutputStrategy {
     AFTER_ALL_INPUT_FINISHED = 0,

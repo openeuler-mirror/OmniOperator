@@ -49,8 +49,8 @@ static int32_t CompareVarchar(BaseVector *leftColumn, int32_t leftColumnPosition
 int64_t ReverseBytes(int64_t var0)
 {
     auto result = static_cast<uint64_t>(var0);
-    result = (result & 71777214294589695L) << 8 | (result >> 8 & 71777214294589695L);
-    return result << 48 | (result & 4294901760L) << 16 | (result >> 16 & 4294901760L) | result >> 48;
+    result = ((result & 71777214294589695L) << 8) | ((result >> 8) & 71777214294589695L);
+    return (result << 48) | ((result & 4294901760L) << 16) | ((result >> 16) & 4294901760L) | (result >> 48);
 }
 
 int64_t LongBytesToLong(int64_t bytes)

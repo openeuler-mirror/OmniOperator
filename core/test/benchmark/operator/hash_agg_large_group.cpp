@@ -19,7 +19,7 @@ using namespace omniruntime::vec;
 using namespace omniruntime::type;
 class HashAggLargeGroupBenchmark : public BaseOperatorFixture {
 protected:
-    virtual BaseFixtureGetOutputStrategy GetOutputStrategy() override
+    BaseFixtureGetOutputStrategy GetOutputStrategy() override
     {
         return AFTER_ALL_INPUT_FINISHED;
     }
@@ -33,9 +33,10 @@ protected:
                 DoubleType(), IntType(), DoubleType(), LongType(), DoubleType(), LongType(), LongType()}));
         auto aggOutputTypes = AggregatorUtil::WrapWithVector(DataTypes(std::vector<DataTypePtr>{
                 DoubleType(), DoubleType(), DoubleType(), LongType(), DoubleType(), LongType(), LongType()}));
-        std::vector<uint32_t> maskCols(7, uint32_t(-1));
-        std::vector<bool> inputsRaw(7, true);
-        std::vector<bool> outputsPartial(7, false);
+        int32_t valueNum = 7;
+        std::vector<uint32_t> maskCols(valueNum, uint32_t(-1));
+        std::vector<bool> inputsRaw(valueNum, true);
+        std::vector<bool> outputsPartial(valueNum, false);
          
         std::vector<uint32_t> aggFuncTypes {
             OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG,
@@ -61,9 +62,7 @@ protected:
         std::vector<VectorBatch *> results(nPages);
         for (int32_t p = 0; p < nPages; ++p) {
             auto *input = new VectorBatch(rowsPerPage);
-
             offset = p * aggSplit;
-
             auto *aggCol = new  Vector<int64_t>(rowsPerPage);
             auto *col1 = new Vector<double>(rowsPerPage);
             auto *col2 = new Vector<int32_t>(rowsPerPage);
@@ -96,7 +95,6 @@ protected:
         }
         return VectorBatchToVectorBatchSupplier(results);
     }
-
 
 private:
     OMNI_BENCHMARK_PARAM(int32_t, LabNumPages, 1000, 3000);

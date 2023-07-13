@@ -50,8 +50,8 @@ protected:
 
         auto source = DataTypes(sourceTypes);
 
-        auto factory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByKeys.size(), aggsKeys,aggFilters, source,
-            aggOutputTypes, aggFuncTypes, maskChannels, isInputRaws, isOutputPartials, new OverflowConfig());
+        auto factory = new HashAggregationWithExprOperatorFactory(groupByKeys, groupByKeys.size(), aggsKeys, aggFilters,
+            source, aggOutputTypes, aggFuncTypes, maskChannels, isInputRaws, isOutputPartials, new OverflowConfig());
 
         Expr::DeleteExprs(groupByKeys);
         Expr::DeleteExprs(aggsKeys);

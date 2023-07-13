@@ -23,11 +23,11 @@ protected:
     OperatorFactory *createOperatorFactory(const State &state) override
     {
         std::vector<uint32_t> maskChannels(1);
-        maskChannels[0] = UseMask(state)?1:static_cast<uint32_t>(-1);
+        maskChannels[0] = UseMask(state) ? 1 : static_cast<uint32_t>(-1);
 
         auto aggFuncType = aggFuncTypes[AggType(state)];
 
-        std::vector<uint32_t> aggColVector{0};
+        std::vector<uint32_t> aggColVector{ 0 };
         if (aggFuncType[0] == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
             aggColVector.clear();
         }
@@ -46,7 +46,6 @@ protected:
 
     std::vector<VectorBatchSupplier> createVecBatch(const State &state) override
     {
-
         std::vector<VectorBatch *> vvb(totalPages);
         auto vectorType = inputOutputTypes[GetKey(state)][0][0];
         bool useMask = UseMask(state);
@@ -55,9 +54,9 @@ protected:
         for (int32_t i = 0; i < totalPages; ++i) {
             auto *vectorBatch = new VectorBatch(rowsPerPage);
 
-            if ((aggType == OMNI_AGGREGATION_TYPE_COUNT_COLUMN || aggType == OMNI_AGGREGATION_TYPE_COUNT_ALL)
-                && !InputRaw(state)) {
-                    vectorBatch->Append(createPartialCounterVector(state));
+            if ((aggType == OMNI_AGGREGATION_TYPE_COUNT_COLUMN || aggType == OMNI_AGGREGATION_TYPE_COUNT_ALL) &&
+                !InputRaw(state)) {
+                vectorBatch->Append(createPartialCounterVector(state));
             } else {
                 switch (vectorType->GetId()) {
                     case OMNI_VARCHAR: {
@@ -87,12 +86,12 @@ protected:
                         vectorBatch->Append(createPartialAverageVector(state));
                         break;
                     default:
-                        throw std::runtime_error("Unsupported vector type"
-                            + TypeUtil::TypeToStringLog(vectorType->GetId()));
+                        throw std::runtime_error("Unsupported vector type" +
+                            TypeUtil::TypeToStringLog(vectorType->GetId()));
                 }
             }
 
-            if(useMask) {
+            if (useMask) {
                 vectorBatch->Append(createMaskVector(state));
             }
 
@@ -117,8 +116,8 @@ protected:
             return "!InputRaw + OutputPartial not supported";
         }
 
-        if (VectorType(state).compare("char") == 0
-            && (AggType(state).compare("sum") == 0|| AggType(state).compare("avg") == 0)) {
+        if (VectorType(state).compare("char") == 0 &&
+            (AggType(state).compare("sum") == 0 || AggType(state).compare("avg") == 0)) {
             return VectorType(state) + " " + AggType(state) + " not supported";
         }
 
@@ -138,12 +137,12 @@ protected:
     }
 
 private:
-    std::vector<DataTypePtr> containerFieldTypes {DoubleType(), LongType()};
+    std::vector<DataTypePtr> containerFieldTypes{ DoubleType(), LongType() };
     const int32_t totalPages = 1000;
     const int32_t rowsPerPage = 3000;
     const int32_t varcharLength = 128;
-    const int32_t maskValidRatio = 50;   // percentage of valid rows in mask
-    const int32_t nullRatio = 25;        // percentage of null rows
+    const int32_t maskValidRatio = 50; // percentage of valid rows in mask
+    const int32_t nullRatio = 25;      // percentage of null rows
     std::map<std::string, std::vector<std::vector<DataTypePtr>>> inputOutputTypes = {
         { "sum_true_true_int", { { IntType() }, { IntType() } } },
         { "sum_true_true_long", { { LongType() }, { LongType() } } },
@@ -162,7 +161,8 @@ private:
         { "sum_false_false_decimal128", { { VarcharType(sizeof(DecimalPartialResult)) }, { Decimal128Type()} } },
         { "avg_true_true_int", { { IntType() }, { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) } } },
         { "avg_true_true_long", { { LongType() }, { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) } } },
-        { "avg_true_true_double", { { DoubleType() }, { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) } } },
+        { "avg_true_true_double", { { DoubleType() },
+                                    { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) } } },
         { "avg_true_true_decimal64", { { Decimal64Type() }, { VarcharType(sizeof(DecimalPartialResult))} } },
         { "avg_true_true_decimal128", { { Decimal128Type() }, { VarcharType(sizeof(DecimalPartialResult))} } },
         { "avg_true_false_int", { { IntType() }, { DoubleType() } } },
@@ -170,9 +170,12 @@ private:
         { "avg_true_false_double", { { DoubleType() }, { DoubleType() } } },
         { "avg_true_false_decimal64", { { Decimal64Type() }, { Decimal64Type()} } },
         { "avg_true_false_decimal128", { { Decimal128Type() }, { Decimal128Type()} } },
-        { "avg_false_false_int", { { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) }, { DoubleType() } } },
-        { "avg_false_false_long", { { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) }, { DoubleType() } } },
-        { "avg_false_false_double", { { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) }, { DoubleType() } } },
+        { "avg_false_false_int", { { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) },
+                                   { DoubleType() } } },
+        { "avg_false_false_long", { { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) },
+                                    { DoubleType() } } },
+        { "avg_false_false_double", { { ContainerType(std::vector<DataTypePtr>(containerFieldTypes)) },
+                                      { DoubleType() } } },
         { "avg_false_false_decimal64", { { VarcharType(sizeof(DecimalPartialResult)) }, { Decimal64Type()} } },
         { "avg_false_false_decimal128", { { VarcharType(sizeof(DecimalPartialResult)) }, { Decimal128Type()} } },
         { "minMax_true_true_int", { { IntType() }, { IntType() } } },
@@ -217,7 +220,8 @@ private:
                                                                   { "min", { OMNI_AGGREGATION_TYPE_MIN } },
                                                                   { "max", { OMNI_AGGREGATION_TYPE_MAX } },
                                                                   { "count", { OMNI_AGGREGATION_TYPE_COUNT_COLUMN } },
-                                                                  { "count_all", { OMNI_AGGREGATION_TYPE_COUNT_ALL } } };
+                                                                  { "count_all",
+                                                                    { OMNI_AGGREGATION_TYPE_COUNT_ALL } } };
 
     OMNI_BENCHMARK_PARAM(bool, HasNull, false, true);
     OMNI_BENCHMARK_PARAM(bool, IsDictionary, false, true);
@@ -239,8 +243,8 @@ private:
         std::string key;
         if (aggFuncType[0] == OMNI_AGGREGATION_TYPE_MIN || aggFuncType[0] == OMNI_AGGREGATION_TYPE_MAX) {
             key = "minMax_";
-        } else if (aggFuncType[0] == OMNI_AGGREGATION_TYPE_COUNT_ALL
-            || aggFuncType[0] == OMNI_AGGREGATION_TYPE_COUNT_COLUMN) {
+        } else if (aggFuncType[0] == OMNI_AGGREGATION_TYPE_COUNT_ALL ||
+            aggFuncType[0] == OMNI_AGGREGATION_TYPE_COUNT_COLUMN) {
             key = "count_";
         } else {
             key = AggType(state) + "_";
@@ -253,31 +257,33 @@ private:
     {
         uint8_t charBuffer[varcharLength];
         if (!IsDictionary(state)) {
-            auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,varcharLength * rowsPerPage).release();
+            auto *vector =
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, varcharLength * rowsPerPage).release();
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 const auto valLen = (rand() % (varcharLength - 1)) + 1;
                 for (int32_t i = 0; i < valLen; ++i) {
                     charBuffer[i] = rand() % 95 + 32;
                 }
-                auto val = std::string(reinterpret_cast<char *>(&charBuffer),valLen);
-                VectorHelper::SetValue(vector,r,&val,OMNI_VARCHAR);
+                auto val = std::string(reinterpret_cast<char *>(&charBuffer), valLen);
+                VectorHelper::SetValue(vector, r, &val, OMNI_VARCHAR);
             }
             return vector;
         } else {
-            auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, 256,varcharLength * 256).release();
+            auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, 256, varcharLength * 256).release();
             for (int32_t k = 0; k < 256; ++k) {
                 const auto valLen = (rand() % (varcharLength - 1)) + 1;
                 for (int32_t i = 0; i < valLen; ++i) {
                     charBuffer[i] = rand() % 95 + 32;
                 }
-                auto val = std::string(reinterpret_cast<char *>(&charBuffer),valLen);
-                VectorHelper::SetValue(vector,k,&val,OMNI_VARCHAR);
+                auto val = std::string(reinterpret_cast<char *>(&charBuffer), valLen);
+                VectorHelper::SetValue(vector, k, &val, OMNI_VARCHAR);
             }
             std::vector<int32_t> ids(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(),vector,OMNI_VARCHAR).release();
+            auto dictVector =
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR).release();
             delete vector;
             return dictVector;
         }
@@ -300,7 +306,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(),vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
             delete vector;
             return dictVector;
         }
@@ -323,7 +329,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(),vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
             delete vector;
             return dictVector;
         }
@@ -332,13 +338,13 @@ private:
     BaseVector *createDoubleVector(const State &state)
     {
         if (!IsDictionary(state)) {
-            auto *vector = new Vector<double> (rowsPerPage);
+            auto *vector = new Vector<double>(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 vector->SetValue(r, rand() % 256 - 128 + ((rand() % 100) / 100.0));
             }
             return vector;
         } else {
-            auto *vector = new Vector<double> (256);
+            auto *vector = new Vector<double>(256);
             for (int32_t k = 0; k < 256; ++k) {
                 vector->SetValue(k, k - 128 + ((rand() % 100) / 100.0));
             }
@@ -346,7 +352,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(),vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
             delete vector;
             return dictVector;
         }
@@ -369,7 +375,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(),vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
             delete vector;
             return dictVector;
         }
@@ -379,27 +385,32 @@ private:
     {
         DecimalPartialResult v;
         if (!IsDictionary(state)) {
-            auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,sizeof(DecimalPartialResult) * rowsPerPage).release();
+            auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,
+                sizeof(DecimalPartialResult) * rowsPerPage)
+                               .release();
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 v.sum = Decimal128(static_cast<int64_t>(rand() % 256 - 128));
                 v.count = rand() % 1024 + 1;
                 std::string_view value(reinterpret_cast<char *>(&v), sizeof(DecimalPartialResult));
-                static_cast<Vector<LargeStringContainer<std::string_view>>*>(vector)->SetValue(r, value);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetValue(r, value);
             }
             return vector;
         } else {
-            auto *vector =  VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,sizeof(DecimalPartialResult) * 256).release();
+            auto *vector =
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, sizeof(DecimalPartialResult) * 256)
+                    .release();
             for (int32_t k = 0; k < 256; ++k) {
                 v.sum = Decimal128(static_cast<int64_t>(rand() % 256 - 128));
                 v.count = rand() % 1024 + 1;
                 std::string_view value(reinterpret_cast<char *>(&v), sizeof(DecimalPartialResult));
-                static_cast<Vector<LargeStringContainer<std::string_view>>*>(vector)->SetValue(k, value);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetValue(k, value);
             }
             std::vector<int32_t> ids(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(),vector,OMNI_VARCHAR).release();
+            auto dictVector =
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR).release();
             delete vector;
             return dictVector;
         }
@@ -409,27 +420,32 @@ private:
     {
         DecimalPartialResult v;
         if (!IsDictionary(state)) {
-            auto *vector =VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,sizeof(DecimalPartialResult) * rowsPerPage).release();
+            auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,
+                sizeof(DecimalPartialResult) * rowsPerPage)
+                               .release();
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 v.sum = Decimal128(static_cast<int64_t>(rand() % 256 - 128));
                 v.count = 1;
                 std::string_view value(reinterpret_cast<char *>(&v), sizeof(DecimalPartialResult));
-                static_cast<Vector<LargeStringContainer<std::string_view>>*>(vector)->SetValue(r, value);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetValue(r, value);
             }
             return vector;
         } else {
-            auto *vector =VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,sizeof(DecimalPartialResult) * 256).release();
+            auto *vector =
+                VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage, sizeof(DecimalPartialResult) * 256)
+                    .release();
             for (int32_t k = 0; k < 256; ++k) {
                 v.sum = Decimal128(static_cast<int64_t>(rand() % 256 - 128));
                 v.count = 1;
                 std::string_view value(reinterpret_cast<char *>(&v), sizeof(DecimalPartialResult));
-                static_cast<Vector<LargeStringContainer<std::string_view>>*>(vector)->SetValue(k, value);
+                static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetValue(k, value);
             }
             std::vector<int32_t> ids(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 256;
             }
-            auto dictVector = VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(),vector,OMNI_VARCHAR).release();
+            auto dictVector =
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, OMNI_VARCHAR).release();
             delete vector;
             return dictVector;
         }
@@ -446,20 +462,20 @@ private:
         std::vector<int64_t> vectorAddresses(2);
         vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
         vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
-        std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
+        std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
         return new ContainerVector(rowsPerPage, vectorAddresses, dataTypes);
     }
 
     BaseVector *createPartialCounterVector(const State &state)
     {
         if (!IsDictionary(state)) {
-            auto *vector = new Vector<int64_t> (rowsPerPage);
+            auto *vector = new Vector<int64_t>(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 vector->SetValue(r, rand() % 1024);
             }
             return vector;
         } else {
-            auto *vector = new Vector<int64_t> (256);
+            auto *vector = new Vector<int64_t>(256);
             for (int32_t k = 0; k < 256; ++k) {
                 vector->SetValue(k, k - 128);
             }
@@ -467,7 +483,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = rand() % 1024;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(),vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
             delete vector;
             return dictVector;
         }
@@ -489,7 +505,7 @@ private:
             for (int32_t r = 0; r < rowsPerPage; ++r) {
                 ids[r] = ((rand() % 100) < maskValidRatio) ? 1 : 0;
             }
-            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(),vector).release();
+            auto dictVector = VectorHelper::CreateDictionary(ids.data(), (int32_t)ids.size(), vector).release();
             delete vector;
             return dictVector;
         }

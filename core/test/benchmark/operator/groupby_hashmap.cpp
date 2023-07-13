@@ -17,129 +17,129 @@ namespace om_benchmark {
  * NotPodClass will be emplaced into hashmap,
  * and hashmap will release NotPodClass resource correctly
  */
-    class NotPodSharedClass {
-    public:
-        explicit NotPodSharedClass(size_t i = 0, double j = 0, float k = false) : d(i, j, k) {}
+class NotPodSharedClass {
+public:
+    explicit NotPodSharedClass(size_t i = 0, double j = 0, float k = false) : d(i, j, k) {}
 
-        NotPodSharedClass(const NotPodSharedClass &data)
-        {
+    NotPodSharedClass(const NotPodSharedClass &data)
+    {
+        copyCounter = data.copyCounter;
+        ++(*copyCounter);
+        this->d = data.d;
+    }
+
+    void SetResource()
+    {
+        copyCounter = new int(1);
+    }
+
+    NotPodSharedClass &operator = (const NotPodSharedClass &data)
+    {
+        if (this != &data) {
             copyCounter = data.copyCounter;
             ++(*copyCounter);
             this->d = data.d;
         }
+        return *this;
+    }
 
-        void SetResource()
-        {
-            copyCounter = new int(1);
+    NotPodSharedClass(NotPodSharedClass &&data) noexcept
+    {
+        if (this != &data) {
+            copyCounter = data.copyCounter;
+            this->d = data.d;
+            data.copyCounter = nullptr;
         }
-
-        NotPodSharedClass &operator = (const NotPodSharedClass &data)
-        {
-            if (this != &data) {
-                copyCounter = data.copyCounter;
-                ++(*copyCounter);
-                this->d = data.d;
-            }
-            return *this;
-        }
-
-        NotPodSharedClass(NotPodSharedClass &&data) noexcept
-        {
-            if (this != &data) {
-                copyCounter = data.copyCounter;
-                this->d = data.d;
-                data.copyCounter = nullptr;
-            }
-        };
-
-        NotPodSharedClass &operator = (NotPodSharedClass &&data) noexcept
-        {
-            if (this != &data) {
-                copyCounter = data.copyCounter;
-                this->d = data.d;
-                data.copyCounter = nullptr;
-            }
-            return *this;
-        }
-
-        ~NotPodSharedClass()
-        {
-            if (copyCounter != nullptr) {
-                --(*copyCounter);
-                if (*copyCounter == 0) {
-                    delete copyCounter;
-                }
-            }
-        }
-
-        size_t get0() const
-        {
-            return std::get<0>(d);
-        }
-
-        double get1() const
-        {
-            return std::get<1>(d);
-        }
-
-        bool get2() const
-        {
-            return std::get<2>(d);
-        }
-
-        bool operator == (const NotPodSharedClass &o) const
-        {
-            return get0() == o.get0() && get1() - o.get1() < 0.0000001f && get2() == o.get2();
-        }
-
-    private:
-        static constexpr uint8_t ResourceUsedBytes = sizeof(int);
-        int *copyCounter = nullptr;
-        std::tuple<size_t, double, bool> d;
     };
+
+    NotPodSharedClass &operator = (NotPodSharedClass &&data) noexcept
+    {
+        if (this != &data) {
+            copyCounter = data.copyCounter;
+            this->d = data.d;
+            data.copyCounter = nullptr;
+        }
+        return *this;
+    }
+
+    ~NotPodSharedClass()
+    {
+        if (copyCounter != nullptr) {
+            --(*copyCounter);
+            if (*copyCounter == 0) {
+                delete copyCounter;
+            }
+        }
+    }
+
+    size_t Get0() const
+    {
+        return std::get<0>(d);
+    }
+
+    double Get1() const
+    {
+        return std::get<1>(d);
+    }
+
+    bool Get2() const
+    {
+        return std::get<2>(d);
+    }
+
+    bool operator == (const NotPodSharedClass &o) const
+    {
+        return Get0() == o.Get0() && Get1() - o.Get1() < 0.0000001f && Get2() == o.Get2();
+    }
+
+private:
+    static constexpr uint8_t RESOURCE_USED_BYTES = sizeof(int);
+    int *copyCounter = nullptr;
+    std::tuple<size_t, double, bool> d;
+};
 }
 namespace std {
-    template <> struct hash<om_benchmark::NotPodSharedClass> {
-        size_t operator () (const om_benchmark::NotPodSharedClass &data) const
-        {
-            auto value = std::hash<int>()(data.get0());
-            value = omniruntime::op::HashUtil::CombineHash(value, std::hash<double>()(data.get1()));
-            value = omniruntime::op::HashUtil::CombineHash(value, std::hash<bool>()(data.get2()));
-            return value;
-        }
-    };
+template <> struct hash<om_benchmark::NotPodSharedClass> {
+    size_t operator () (const om_benchmark::NotPodSharedClass &data) const
+    {
+        auto value = std::hash<int>()(data.Get0());
+        value = omniruntime::op::HashUtil::CombineHash(value, std::hash<double>()(data.Get1()));
+        value = omniruntime::op::HashUtil::CombineHash(value, std::hash<bool>()(data.Get2()));
+        return value;
+    }
+};
 }
 namespace omniruntime {
-    namespace op {
-        template <> struct GroupbyHashCalculator<omniruntime::type::Decimal128> {
-            size_t operator () (const omniruntime::type::Decimal128 &val) const
-            {
-                return omniruntime::op::HashUtil::HashValue(val.LowBits(), val.HighBits());
-            }
-        };
-        //compare city hash
-        template<class T>
-        struct GroupbyCityHashCalculator {
-            size_t operator()(const T &data) const {
-                return std::hash<T>()(data);
-            }
-        };
-
-        template<>
-        struct GroupbyCityHashCalculator<type::Decimal128> {
-            size_t operator()(const type::Decimal128 &data) const {
-                const uint64_t kMul = 0x9ddfea08eb382d69ULL;
-                auto high = data.HighBits();
-                auto low = data.LowBits();
-                uint64_t a = (low ^ high) * kMul;
-                a ^= (a >> 47);
-                uint64_t b = (high ^ a) * kMul;
-                b ^= (b >> 47);
-                b *= kMul;
-                return b;
-            }
-        };
+namespace op {
+template <> struct GroupbyHashCalculator<omniruntime::type::Decimal128> {
+    size_t operator () (const omniruntime::type::Decimal128 &val) const
+    {
+        return omniruntime::op::HashUtil::HashValue(val.LowBits(), val.HighBits());
     }
+};
+// compare city hash
+template <class T> struct GroupbyCityHashCalculator {
+    size_t operator () (const T &data) const
+    {
+        return std::hash<T>()(data);
+    }
+};
+
+template <> struct GroupbyCityHashCalculator<type::Decimal128> {
+    size_t operator () (const type::Decimal128 &data) const
+    {
+        const uint64_t kMul = 0x9ddfea08eb382d69ULL;
+        auto high = data.HighBits();
+        auto low = data.LowBits();
+        uint64_t a = (low ^ high) * kMul;
+        a ^= (a >> 47);
+        uint64_t b = (high ^ a) * kMul;
+        b ^= (b >> 47);
+        b *= kMul;
+        return b;
+    }
+};
+}
 }
 namespace om_benchmark {
 /**
@@ -147,91 +147,74 @@ namespace om_benchmark {
  * use type_traits to implement this function
  * @tparam T
  */
-    template<typename T>
-    struct TypeRandomDistributor {
-        using type = std::uniform_int_distribution<>;
-    };
+template <typename T> struct TypeRandomDistributor {
+    using type = std::uniform_int_distribution<>;
+};
 
-    template<>
-    struct TypeRandomDistributor<double> {
-        using type = std::uniform_real_distribution<>;
-    };
+template <> struct TypeRandomDistributor<double> {
+    using type = std::uniform_real_distribution<>;
+};
 
-    template<>
-    struct TypeRandomDistributor<float> {
-        using type = std::uniform_real_distribution<>;
-    };
+template <> struct TypeRandomDistributor<float> {
+    using type = std::uniform_real_distribution<>;
+};
 
-    template<typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
-    void GenerateTypeData(size_t size, size_t range, std::vector<T> &data) {
-        data.resize(size);
-        std::default_random_engine re(std::chrono::steady_clock::now().time_since_epoch().count());
-        typename TypeRandomDistributor<T>::type randomDis(0, range);
-        for (size_t i = 0; i < size; i++) {
-            data[i] = randomDis(re);
-        }
+template <typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
+void GenerateTypeData(size_t size, size_t range, std::vector<T> &data)
+{
+    data.resize(size);
+    std::default_random_engine re(std::chrono::steady_clock::now().time_since_epoch().count());
+    typename TypeRandomDistributor<T>::type randomDis(0, range);
+    for (size_t i = 0; i < size; i++) {
+        data[i] = randomDis(re);
     }
+}
 
-    template<typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
-    static void InsertTypeToUnorderedMap(benchmark::State &state) {
-        std::vector<T> data;
-        auto dataSize = state.range(0);
-        auto dataRange = state.range(1);
-        GenerateTypeData(dataSize, dataRange, data);
-        for (auto _: state) {
-            std::unordered_map<T, T> m;
-            for (size_t i = 0; i < data.size(); i++) {
-                auto value = data[i];
-                m.emplace(value, value);
-            }
-        }
-    }
-
-    template<typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
-    static void ForEachTypeToUnorderedMap(benchmark::State &state) {
-        std::vector<T> data;
-        auto dataSize = state.range(0);
-        auto dataRange = state.range(1);
-        GenerateTypeData(dataSize, dataRange, data);
+template <typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
+static void InsertTypeToUnorderedMap(benchmark::State &state)
+{
+    std::vector<T> data;
+    auto dataSize = state.range(0);
+    auto dataRange = state.range(1);
+    GenerateTypeData(dataSize, dataRange, data);
+    for (auto _ : state) {
         std::unordered_map<T, T> m;
         for (size_t i = 0; i < data.size(); i++) {
             auto value = data[i];
             m.emplace(value, value);
         }
-        int i = 0;
-        for (auto _: state) {
-            for ([[maybe_unused]] auto &pair: m) {
-                ++i;
-            }
-        }
-        std::cout << "UnorderedMap i:" << i << std::endl;
     }
+}
 
-    template<typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
-    static void InsertTypeToHashMap(benchmark::State &state) {
-        std::vector<T> data;
-        auto dataSize = state.range(0);
-        auto dataRange = state.range(1);
-        GenerateTypeData(dataSize, dataRange, data);
-        for (auto _: state) {
-            omniruntime::op::DefaultHashMap<T, T> m;
-            for (size_t i = 0; i < data.size(); i++) {
-                auto value = data[i];
-                auto ret = m.Emplace(value);
-                if (ret.IsInsert()) {
-                    ret.SetValue(value);
-                }
-            }
+template <typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
+static void ForEachTypeToUnorderedMap(benchmark::State &state)
+{
+    std::vector<T> data;
+    auto dataSize = state.range(0);
+    auto dataRange = state.range(1);
+    GenerateTypeData(dataSize, dataRange, data);
+    std::unordered_map<T, T> m;
+    for (size_t i = 0; i < data.size(); i++) {
+        auto value = data[i];
+        m.emplace(value, value);
+    }
+    int i = 0;
+    for (auto _ : state) {
+        for ([[maybe_unused]] auto &pair : m) {
+            ++i;
         }
     }
+    std::cout << "UnorderedMap i:" << i << std::endl;
+}
 
-    template<typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
-    static void ForEachTypeInHashmap(benchmark::State &state) {
-        // Code inside this loop is measured repeatedly
-        std::vector<T> data;
-        auto dataSize = state.range(0);
-        auto dataRange = state.range(1);
-        GenerateTypeData(dataSize, dataRange, data);
+template <typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
+static void InsertTypeToHashMap(benchmark::State &state)
+{
+    std::vector<T> data;
+    auto dataSize = state.range(0);
+    auto dataRange = state.range(1);
+    GenerateTypeData(dataSize, dataRange, data);
+    for (auto _ : state) {
         omniruntime::op::DefaultHashMap<T, T> m;
         for (size_t i = 0; i < data.size(); i++) {
             auto value = data[i];
@@ -240,234 +223,265 @@ namespace om_benchmark {
                 ret.SetValue(value);
             }
         }
-        int i = 0;
-        for (auto _: state) {
-            m.ForEachKV([&i]([[maybe_unused]] const auto &key, const auto &value) { ++i; });
-        }
-        std::cout << "Hashmap i:" << i << std::endl;
     }
+}
 
-    static const uint32_t LowElements = 4096 * 100;
-    static const uint32_t MiddleElements = 4096 * 1000;
-    static const uint32_t HighElements = 4096 * 2000;
+template <typename T, std::enable_if_t<std::is_pod_v<T>> * = nullptr>
+static void ForEachTypeInHashmap(benchmark::State &state)
+{
+    // Code inside this loop is measured repeatedly
+    std::vector<T> data;
+    auto dataSize = state.range(0);
+    auto dataRange = state.range(1);
+    GenerateTypeData(dataSize, dataRange, data);
+    omniruntime::op::DefaultHashMap<T, T> m;
+    for (size_t i = 0; i < data.size(); i++) {
+        auto value = data[i];
+        auto ret = m.Emplace(value);
+        if (ret.IsInsert()) {
+            ret.SetValue(value);
+        }
+    }
+    int i = 0;
+    for (auto _ : state) {
+        m.ForEachKV([&i]([[maybe_unused]] const auto &key, const auto &value) { ++i; });
+    }
+    std::cout << "Hashmap i:" << i << std::endl;
+}
 
-    static const uint32_t LowCardinality = 1024 * 10;
-    static const uint32_t MiddleCardinality = 1024 * 100;
-    static const uint32_t HighCardinality = 1024 * 200;
+static const uint32_t LOW_ELEMENTS = 4096 * 100;
+static const uint32_t MIDDLE_ELEMENTS = 4096 * 1000;
+static const uint32_t HIGH_ELEMENTS = 4096 * 2000;
 
-    static const uint32_t LowCardinalityPerOne = 50;  // 50 * 50 * 2
-    static const uint32_t MiddleCardinalityPerOne = 100; // 100 * 100 * 2
-    static const uint32_t HighCardinalityPerOne = 500; // 500 * 500 * 2
+static const uint32_t LOW_CARDINALITY = 1024 * 10;
+static const uint32_t MIDDLE_CARDINALITY = 1024 * 100;
+static const uint32_t HIGH_CARDINALITY = 1024 * 200;
+
+static const uint32_t LOW_CARDINALITY_PER_ONE = 50;     // 50 * 50 * 2
+static const uint32_t MIDDLE_CARDINALITY_PER_ONE = 100; // 100 * 100 * 2
+static const uint32_t HIGH_CARDINALITY_PER_ONE = 500;   // 500 * 500 * 2
 
 /**
  * this class is only movable
  */
-    class MaxState {
-    public:
-        MaxState() = default;
+class MaxState {
+public:
+    MaxState() = default;
 
-        MaxState(const MaxState &) = delete;
+    MaxState(const MaxState &) = delete;
 
-        MaxState &operator=(const MaxState &) = delete;
+    MaxState &operator = (const MaxState &) = delete;
 
-        MaxState(MaxState &&o) noexcept {
-            maxState = o.maxState;
-            o.maxState = nullptr;
+    MaxState(MaxState &&o) noexcept
+    {
+        maxState = o.maxState;
+        o.maxState = nullptr;
+    }
+
+    MaxState &operator = (MaxState &&o) noexcept
+    {
+        maxState = o.maxState;
+        o.maxState = nullptr;
+        return *this;
+    }
+
+    void InputProcess(uint32_t in)
+    {
+        if (in > *maxState) {
+            *maxState = in;
         }
+    }
 
-        MaxState &operator=(MaxState &&o) noexcept {
-            maxState = o.maxState;
-            o.maxState = nullptr;
-            return *this;
+    void InitState()
+    {
+        if (maxState == nullptr) {
+            maxState = reinterpret_cast<uint32_t *>(malloc(stateResourceUsedBytes));
+            *maxState = std::numeric_limits<uint32_t>::min();
         }
+    }
 
-        void InputProcess(uint32_t in) {
-            if (in > *maxState) {
-                *maxState = in;
-            }
+    uint32_t GetResult() const
+    {
+        return *maxState;
+    }
+
+    ~MaxState()
+    {
+        if (maxState != nullptr) {
+            free(maxState);
         }
-
-        void InitState() {
-            if (maxState == nullptr) {
-                maxState = reinterpret_cast<uint32_t *>(malloc(StateResourceUsedBytes));
-                *maxState = std::numeric_limits<uint32_t>::min();
-            }
-        }
-
-        uint32_t GetResult() const {
-            return *maxState;
-        }
-
-        ~MaxState() {
-            if (maxState != nullptr) {
-                free(maxState);
-            }
-        };
-
-    private:
-        static constexpr uint8_t StateResourceUsedBytes = sizeof(uint32_t);
-        uint32_t *maxState = nullptr;
     };
+
+private:
+    static constexpr uint8_t stateResourceUsedBytes = sizeof(uint32_t);
+    uint32_t *maxState = nullptr;
+};
 
 /**
  * non pod class inserted
  * @param state
  */
-    static void InsertNonPodToUnorderedMap(benchmark::State &state) {
-        auto dataSize = state.range(0);
-        for (auto _: state) {
-            std::unordered_map<NotPodSharedClass, MaxState> m;
-            // generate group by three column i(int),j(float),k(bool)
-            for (int64_t i = 0; i < dataSize; ++i) {
-                for (int64_t j = 0; j < dataSize; ++j) {
-                    for (int64_t k = 0; k < 2; ++k) {
-                        NotPodSharedClass data(i, static_cast<double>(j), k % 2 == 0);
-                        data.SetResource();
-                        // the data is referenced by hashmap ,and will release by hashmap's DeconstructAllSlot func
-                        auto s = MaxState();
-                        s.InitState();
-                        m.emplace(data, std::move(s));
-                    }
+static void InsertNonPodToUnorderedMap(benchmark::State &state)
+{
+    auto dataSize = state.range(0);
+    for (auto _ : state) {
+        std::unordered_map<NotPodSharedClass, MaxState> m;
+        // generate group by three column i(int),j(float),k(bool)
+        for (int64_t i = 0; i < dataSize; ++i) {
+            for (int64_t j = 0; j < dataSize; ++j) {
+                for (int64_t k = 0; k < 2; ++k) {
+                    NotPodSharedClass data(i, static_cast<double>(j), k % 2 == 0);
+                    data.SetResource();
+                    // the data is referenced by hashmap ,and will release by hashmap's DeconstructAllSlot func
+                    auto s = MaxState();
+                    s.InitState();
+                    m.emplace(data, std::move(s));
                 }
-            } // for i end
-        }     // state end
-    }
+            }
+        } // for i end
+    }     // state end
+}
 
-    static void InsertNonPodToHashMap(benchmark::State &state) {
-        auto dataSize = state.range(0);
-        for (auto _: state) {
-            omniruntime::op::DefaultHashMap<NotPodSharedClass, MaxState> hashMap;
-            // generate group by three column i(int),j(float),k(bool)
-            for (int64_t i = 0; i < dataSize; ++i) {
-                for (int64_t j = 0; j < dataSize; ++j) {
-                    for (int64_t k = 0; k < 2; ++k) {
-                        NotPodSharedClass data(i, static_cast<double>(j), k % 2 == 0);
-                        data.SetResource();
-                        // the data is referenced by hashmap ,and will release by hashmap's DeconstructAllSlot func
-                        auto ret = hashMap.Emplace(data);
-                        auto s = MaxState();
-                        s.InitState();
-                        ret.SetValue(std::move(s));
-                    }
+static void InsertNonPodToHashMap(benchmark::State &state)
+{
+    auto dataSize = state.range(0);
+    for (auto _ : state) {
+        omniruntime::op::DefaultHashMap<NotPodSharedClass, MaxState> hashMap;
+        // generate group by three column i(int),j(float),k(bool)
+        for (int64_t i = 0; i < dataSize; ++i) {
+            for (int64_t j = 0; j < dataSize; ++j) {
+                for (int64_t k = 0; k < 2; ++k) {
+                    NotPodSharedClass data(i, static_cast<double>(j), k % 2 == 0);
+                    data.SetResource();
+                    // the data is referenced by hashmap ,and will release by hashmap's DeconstructAllSlot func
+                    auto ret = hashMap.Emplace(data);
+                    auto s = MaxState();
+                    s.InitState();
+                    ret.SetValue(std::move(s));
                 }
             }
         }
     }
-
-    template<template<typename>class HashAlgo>
-    static void Calculate128ByHash(benchmark::State &state) {
-        auto dataSize = state.range(0);
-        for (auto _: state) {
-            omniruntime::op::GroupByHashMap<omniruntime::type::Decimal128, omniruntime::type::Decimal128,
-                    HashAlgo<omniruntime::type::Decimal128>,
-                    omniruntime::op::Grower, omniruntime::op::OmniHashmapAllocator> mUseCityHash;
-            omniruntime::op::DefaultHashMap<omniruntime::type::Decimal128, omniruntime::type::Decimal128> mDefault;
-
-            // generate group by three column i(int),j(float),k(bool)
-            for (int64_t i = 0; i < dataSize; ++i) {
-                omniruntime::type::Decimal128 data(i, i + 2);
-                auto ret = mUseCityHash.Emplace(data);
-                ret.SetValue(std::move(data));
-            } // for i end
-        }     // state end
-    }
 }
 
-//test different hash algorithm
-BENCHMARK(om_benchmark::Calculate128ByHash<omniruntime::op::GroupbyCityHashCalculator>)->
-Args({ om_benchmark::LowCardinality })->Iterations(3);
-BENCHMARK(om_benchmark::Calculate128ByHash<omniruntime::op::GroupbyHashCalculator>)->
-        Args({ om_benchmark::LowCardinality})->Iterations(3);
+template <template <typename> class HashAlgo> static void Calculate128ByHash(benchmark::State &state)
+{
+    auto dataSize = state.range(0);
+    for (auto _ : state) {
+        omniruntime::op::GroupByHashMap<omniruntime::type::Decimal128, omniruntime::type::Decimal128,
+            HashAlgo<omniruntime::type::Decimal128>, omniruntime::op::Grower, omniruntime::op::OmniHashmapAllocator>
+            mUseCityHash;
+        omniruntime::op::DefaultHashMap<omniruntime::type::Decimal128, omniruntime::type::Decimal128> mDefault;
 
-BENCHMARK(om_benchmark::Calculate128ByHash<omniruntime::op::GroupbyCityHashCalculator>)->
-        Args({ om_benchmark::HighCardinality })->Iterations(3);
-BENCHMARK(om_benchmark::Calculate128ByHash<omniruntime::op::GroupbyHashCalculator>)->
-        Args({ om_benchmark::HighCardinality})->Iterations(3);
+        // generate group by three column i(int),j(float),k(bool)
+        for (int64_t i = 0; i < dataSize; ++i) {
+            omniruntime::type::Decimal128 data(i, i + 2);
+            auto ret = mUseCityHash.Emplace(data);
+            ret.SetValue(std::move(data));
+        } // for i end
+    }     // state end
+}
+}
+
+// test different hash algorithm
+BENCHMARK(om_benchmark::Calculate128ByHash<omniruntime::op::GroupbyCityHashCalculator>)
+    ->Args({ om_benchmark::LOW_CARDINALITY })
+    ->Iterations(3);
+BENCHMARK(om_benchmark::Calculate128ByHash<omniruntime::op::GroupbyHashCalculator>)
+    ->Args({ om_benchmark::LOW_CARDINALITY })
+    ->Iterations(3);
+
+BENCHMARK(om_benchmark::Calculate128ByHash<omniruntime::op::GroupbyCityHashCalculator>)
+    ->Args({ om_benchmark::HIGH_CARDINALITY })
+    ->Iterations(3);
+BENCHMARK(om_benchmark::Calculate128ByHash<omniruntime::op::GroupbyHashCalculator>)
+    ->Args({ om_benchmark::HIGH_CARDINALITY })
+    ->Iterations(3);
 
 
 // test insert no pod
-BENCHMARK(om_benchmark::InsertNonPodToUnorderedMap)->Args({ om_benchmark::LowCardinalityPerOne })->Iterations(3);
+BENCHMARK(om_benchmark::InsertNonPodToUnorderedMap)->Args({ om_benchmark::LOW_CARDINALITY_PER_ONE })->Iterations(3);
 
-BENCHMARK(om_benchmark::InsertNonPodToHashMap)->Args({ om_benchmark::LowCardinalityPerOne })->Iterations(3);
+BENCHMARK(om_benchmark::InsertNonPodToHashMap)->Args({ om_benchmark::LOW_CARDINALITY_PER_ONE })->Iterations(3);
 
-BENCHMARK(om_benchmark::InsertNonPodToUnorderedMap)->Args({ om_benchmark::MiddleCardinalityPerOne })->Iterations(3);
+BENCHMARK(om_benchmark::InsertNonPodToUnorderedMap)->Args({ om_benchmark::MIDDLE_CARDINALITY_PER_ONE })->Iterations(3);
 
-BENCHMARK(om_benchmark::InsertNonPodToHashMap)->Args({ om_benchmark::MiddleCardinalityPerOne })->Iterations(3);
+BENCHMARK(om_benchmark::InsertNonPodToHashMap)->Args({ om_benchmark::MIDDLE_CARDINALITY_PER_ONE })->Iterations(3);
 
-BENCHMARK(om_benchmark::InsertNonPodToUnorderedMap)->Args({ om_benchmark::HighCardinalityPerOne })->Iterations(3);
+BENCHMARK(om_benchmark::InsertNonPodToUnorderedMap)->Args({ om_benchmark::HIGH_CARDINALITY_PER_ONE })->Iterations(3);
 
-BENCHMARK(om_benchmark::InsertNonPodToHashMap)->Args({ om_benchmark::HighCardinalityPerOne })->Iterations(3);
+BENCHMARK(om_benchmark::InsertNonPodToHashMap)->Args({ om_benchmark::HIGH_CARDINALITY_PER_ONE })->Iterations(3);
 
 
 // test insert MinElement times, and MinCardinality
 BENCHMARK(om_benchmark::InsertTypeToUnorderedMap<double>)
-    ->Args({ om_benchmark::LowElements, om_benchmark::LowCardinality })
+    ->Args({om_benchmark::LOW_ELEMENTS, om_benchmark::LOW_CARDINALITY })
     ->Iterations(20);
 BENCHMARK(om_benchmark::InsertTypeToHashMap<double>)
-    ->Args({ om_benchmark::LowElements, om_benchmark::LowCardinality })
+    ->Args({om_benchmark::LOW_ELEMENTS, om_benchmark::LOW_CARDINALITY })
     ->Iterations(20);
 
 BENCHMARK(om_benchmark::InsertTypeToUnorderedMap<int32_t>)
-    ->Args({ om_benchmark::MiddleElements, om_benchmark::LowCardinality })
+    ->Args({om_benchmark::MIDDLE_ELEMENTS, om_benchmark::LOW_CARDINALITY })
     ->Iterations(10);
 BENCHMARK(om_benchmark::InsertTypeToHashMap<int32_t>)
-    ->Args({ om_benchmark::MiddleElements, om_benchmark::LowCardinality })
+    ->Args({om_benchmark::MIDDLE_ELEMENTS, om_benchmark::LOW_CARDINALITY })
     ->Iterations(10);
 
 BENCHMARK(om_benchmark::InsertTypeToUnorderedMap<double>)
-    ->Args({ om_benchmark::MiddleElements, om_benchmark::MiddleCardinality })
+    ->Args({om_benchmark::MIDDLE_ELEMENTS, om_benchmark::MIDDLE_CARDINALITY })
     ->Iterations(10);
 BENCHMARK(om_benchmark::InsertTypeToHashMap<double>)
-    ->Args({ om_benchmark::MiddleElements, om_benchmark::MiddleCardinality })
+    ->Args({om_benchmark::MIDDLE_ELEMENTS, om_benchmark::MIDDLE_CARDINALITY })
     ->Iterations(10);
 
 BENCHMARK(om_benchmark::InsertTypeToUnorderedMap<double>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::LowCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::LOW_CARDINALITY })
     ->Iterations(3);
 BENCHMARK(om_benchmark::InsertTypeToHashMap<double>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::LowCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::LOW_CARDINALITY })
     ->Iterations(3);
 
 BENCHMARK(om_benchmark::InsertTypeToUnorderedMap<double>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::MiddleCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::MIDDLE_CARDINALITY })
     ->Iterations(3);
 BENCHMARK(om_benchmark::InsertTypeToHashMap<double>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::MiddleCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::MIDDLE_CARDINALITY })
     ->Iterations(3);
 
 BENCHMARK(om_benchmark::InsertTypeToUnorderedMap<double>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::HighCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::HIGH_CARDINALITY })
     ->Iterations(3);
 BENCHMARK(om_benchmark::InsertTypeToHashMap<double>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::HighCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::HIGH_CARDINALITY })
     ->Iterations(3);
 
 BENCHMARK(om_benchmark::ForEachTypeToUnorderedMap<int64_t>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::LowCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::LOW_CARDINALITY })
     ->Iterations(3);
 BENCHMARK(om_benchmark::ForEachTypeInHashmap<int64_t>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::LowCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::LOW_CARDINALITY })
     ->Iterations(3);
 
 BENCHMARK(om_benchmark::ForEachTypeToUnorderedMap<float>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::MiddleCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::MIDDLE_CARDINALITY })
     ->Iterations(3);
 BENCHMARK(om_benchmark::ForEachTypeInHashmap<float>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::MiddleCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::MIDDLE_CARDINALITY })
     ->Iterations(3);
 
 BENCHMARK(om_benchmark::ForEachTypeToUnorderedMap<int64_t>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::HighCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::HIGH_CARDINALITY })
     ->Iterations(3);
 BENCHMARK(om_benchmark::ForEachTypeInHashmap<int64_t>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::HighCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::HIGH_CARDINALITY })
     ->Iterations(3);
 
 BENCHMARK(om_benchmark::ForEachTypeToUnorderedMap<double>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::HighCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::HIGH_CARDINALITY })
     ->Iterations(3);
 BENCHMARK(om_benchmark::ForEachTypeInHashmap<double>)
-    ->Args({ om_benchmark::HighElements, om_benchmark::HighCardinality })
+    ->Args({om_benchmark::HIGH_ELEMENTS, om_benchmark::HIGH_CARDINALITY })
     ->Iterations(3);
 
 
