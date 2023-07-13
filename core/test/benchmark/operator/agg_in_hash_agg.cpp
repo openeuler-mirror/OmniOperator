@@ -51,6 +51,53 @@ protected:
         return factory;
     }
 
+    void AppendVector(VectorBatch *vectorBatch, const DataTypePtr &vectorType, uint32_t aggType, const State &state)
+    {
+        switch (vectorType->GetId()) {
+            case OMNI_VARCHAR: {
+                if (aggType == OMNI_AGGREGATION_TYPE_AVG) {
+                    vectorBatch->Append(createDecimalPartialAverageVector(state));
+                } else if (aggType == OMNI_AGGREGATION_TYPE_SUM) {
+                    vectorBatch->Append(createDecimalPartialSumVector(state));
+                } else {
+                    vectorBatch->Append(createVarcharVector(state));
+                }
+                break;
+            }
+            case OMNI_DECIMAL64:
+            case OMNI_LONG:
+                vectorBatch->Append(createLongVector(state));
+                break;
+            case OMNI_INT:
+                vectorBatch->Append(createIntVector(state));
+                break;
+            case OMNI_DOUBLE:
+                vectorBatch->Append(createDoubleVector(state));
+                break;
+            case OMNI_DECIMAL128:
+                vectorBatch->Append(createDecimal128Vector(state));
+                break;
+            case OMNI_CONTAINER:
+                vectorBatch->Append(createPartialAverageVector(state));
+                break;
+            default:
+                throw std::runtime_error("Unsupported vector type" + TypeUtil::TypeToStringLog(vectorType->GetId()));
+        }
+    }
+
+    void VectorSetNull(VectorBatch *vectorBatch, const State &state)
+    {
+        srand(time(0));
+        for (int32_t c = 0; c < vectorBatch->GetVectorCount(); ++c) {
+            auto vector = vectorBatch->Get(c);
+            for (int32_t r = 0; r < rowsPerPage; ++r) {
+                if (rand() % 100 < nullRatio) {
+                    vector->SetNull(r);
+                }
+            }
+        }
+    }
+
     std::vector<VectorBatchSupplier> createVecBatch(const State &state) override
     {
         std::vector<VectorBatch *> vvb(totalPages);
@@ -66,37 +113,7 @@ protected:
                 !InputRaw(state)) {
                 vectorBatch->Append(createPartialCounterVector(state));
             } else {
-                switch (vectorType->GetId()) {
-                    case OMNI_VARCHAR: {
-                        if (aggType == OMNI_AGGREGATION_TYPE_AVG) {
-                            vectorBatch->Append(createDecimalPartialAverageVector(state));
-                        } else if (aggType == OMNI_AGGREGATION_TYPE_SUM) {
-                            vectorBatch->Append(createDecimalPartialSumVector(state));
-                        } else {
-                            vectorBatch->Append(createVarcharVector(state));
-                        }
-                        break;
-                    }
-                    case OMNI_DECIMAL64:
-                    case OMNI_LONG:
-                        vectorBatch->Append(createLongVector(state));
-                        break;
-                    case OMNI_INT:
-                        vectorBatch->Append(createIntVector(state));
-                        break;
-                    case OMNI_DOUBLE:
-                        vectorBatch->Append(createDoubleVector(state));
-                        break;
-                    case OMNI_DECIMAL128:
-                        vectorBatch->Append(createDecimal128Vector(state));
-                        break;
-                    case OMNI_CONTAINER:
-                        vectorBatch->Append(createPartialAverageVector(state));
-                        break;
-                    default:
-                        throw std::runtime_error("Unsupported vector type" +
-                            TypeUtil::TypeToStringLog(vectorType->GetId()));
-                }
+                AppendVector(vectorBatch, vectorType, aggType, state);
             }
 
             if (useMask) {
@@ -104,14 +121,7 @@ protected:
             }
 
             if (HasNull(state)) {
-                for (int32_t c = 0; c < vectorBatch->GetVectorCount(); ++c) {
-                    auto vector = vectorBatch->Get(c);
-                    for (int32_t r = 0; r < rowsPerPage; ++r) {
-                        if (rand() % 100 < nullRatio) {
-                            vector->SetNull(r);
-                        }
-                    }
-                }
+                VectorSetNull(vectorBatch, state);
             }
             vvb[i] = vectorBatch;
         }
@@ -264,6 +274,7 @@ private:
 
     BaseVector *createVarcharVector(const State &state)
     {
+        srand(time(0));
         uint8_t charBuffer[varcharLength];
         if (!IsDictionary(state)) {
             auto *vector =
@@ -300,6 +311,7 @@ private:
 
     BaseVector *createLongVector(const State &state)
     {
+        srand(time(0));
         if (!IsDictionary(state)) {
             auto *vector = new Vector<int64_t>(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
@@ -323,6 +335,7 @@ private:
 
     BaseVector *createIntVector(const State &state)
     {
+        srand(time(0));
         if (!IsDictionary(state)) {
             auto *vector = new Vector<int32_t>(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
@@ -346,6 +359,7 @@ private:
 
     BaseVector *createDoubleVector(const State &state)
     {
+        srand(time(0));
         if (!IsDictionary(state)) {
             auto *vector = new Vector<double>(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
@@ -369,6 +383,7 @@ private:
 
     BaseVector *createDecimal128Vector(const State &state)
     {
+        srand(time(0));
         if (!IsDictionary(state)) {
             auto *vector = new Vector<Decimal128>(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
@@ -392,6 +407,7 @@ private:
 
     BaseVector *createDecimalPartialAverageVector(const State &state)
     {
+        srand(time(0));
         DecimalPartialResult v;
         if (!IsDictionary(state)) {
             auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,
@@ -427,6 +443,7 @@ private:
 
     BaseVector *createDecimalPartialSumVector(const State &state)
     {
+        srand(time(0));
         DecimalPartialResult v;
         if (!IsDictionary(state)) {
             auto *vector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_VARCHAR, rowsPerPage,
@@ -462,6 +479,7 @@ private:
 
     BaseVector *createPartialAverageVector(const State &state)
     {
+        srand(time(0));
         auto doubleVector = new Vector<double>(rowsPerPage);
         auto longVector = new Vector<int64_t>(rowsPerPage);
         for (int32_t r = 0; r < rowsPerPage; ++r) {
@@ -477,6 +495,7 @@ private:
 
     BaseVector *createGroupbyColumn(const State &state)
     {
+        srand(time(0));
         int32_t nGroups = NumGroups(state);
         if (!IsDictionary(state)) {
             auto *vector = new Vector<int32_t>(rowsPerPage);
@@ -501,6 +520,7 @@ private:
 
     BaseVector *createPartialCounterVector(const State &state)
     {
+        srand(time(0));
         if (!IsDictionary(state)) {
             auto *vector = new Vector<int64_t>(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {
@@ -524,6 +544,7 @@ private:
 
     BaseVector *createMaskVector(const State &state)
     {
+        srand(time(0));
         if (!IsDictionary(state)) {
             auto *vector = new Vector<bool>(rowsPerPage);
             for (int32_t r = 0; r < rowsPerPage; ++r) {

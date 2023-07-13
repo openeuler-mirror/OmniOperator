@@ -44,6 +44,25 @@ static bool hashagg_equal(BaseVector *vector1, uint32_t offset1, BaseVector *vec
     return true;
 }
 
+static void PrintResultByHashAggEqual(BaseVector *vector1, BaseVector *vector2, Timer &timer, double sum, bool isEqual)
+{
+    for (int j = 0; j < ROUNDS; j++) {
+        timer.Reset();
+
+        for (int i = 0; i < ROW_SIZE; i++) {
+            isEqual = hashagg_equal(vector1, i, vector2, i);
+        }
+
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
+        std::cout << "round: " << (j + 1) << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
+    }
+    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
+    std::cout << "isEqual: " << isEqual << std::endl;
+}
+
 static bool join_equal(VarcharVector *leftVector, int32_t leftIndex, VarcharVector *rightVector, int32_t rightIndex)
 {
     auto leftValue = leftVector->GetValue(leftIndex);
@@ -56,6 +75,26 @@ static bool join_equal(VarcharVector *leftVector, int32_t leftIndex, VarcharVect
     } else {
         return false;
     }
+}
+
+static void PrintResultByJoinEqual(VarcharVector *vector1, VarcharVector *vector2, Timer &timer, double sum,
+    bool isEqual)
+{
+    for (int j = 0; j < ROUNDS; j++) {
+        timer.Reset();
+
+        for (int i = 0; i < ROW_SIZE; i++) {
+            isEqual = join_equal(vector1, i, vector2, i);
+        }
+
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
+        std::cout << "round: " << (j + 1) << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
+    }
+    std::cout << "isEqual: " << isEqual << std::endl;
+    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
 }
 
 TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
@@ -79,21 +118,7 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
     bool isEqual;
-    for (int j = 0; j < ROUNDS; j++) {
-        timer.Reset();
-
-        for (int i = 0; i < ROW_SIZE; i++) {
-            isEqual = join_equal(vector1, i, vector2, i);
-        }
-
-        timer.CalculateElapse();
-        double wallElapsed = timer.GetWallElapse() * 1000;
-        double cpuElapsed = timer.GetCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-        sum += wallElapsed;
-    }
-    std::cout << "isEqual: " << isEqual << std::endl;
-    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
+    PrintResultByJoinEqual(vector1, vector2, timer, sum, isEqual);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
@@ -104,21 +129,7 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
 
     std::cout << "Compare different varchar: " << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++) {
-        timer.Reset();
-
-        for (int i = 0; i < ROW_SIZE; i++) {
-            isEqual = join_equal(vector1, i, vector3, i);
-        }
-
-        timer.CalculateElapse();
-        double wallElapsed = timer.GetWallElapse() * 1000;
-        double cpuElapsed = timer.GetCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-        sum += wallElapsed;
-    }
-    std::cout << "isEqual: " << isEqual << std::endl;
-    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
+    PrintResultByJoinEqual(vector1, vector3, timer, sum, isEqual);
 
     delete vector1;
     delete vector2;
@@ -149,21 +160,7 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
     bool isEqual;
-    for (int j = 0; j < ROUNDS; j++) {
-        timer.Reset();
-
-        for (int i = 0; i < ROW_SIZE; i++) {
-            isEqual = hashagg_equal(vector1, i, vector2, i);
-        }
-
-        timer.CalculateElapse();
-        double wallElapsed = timer.GetWallElapse() * 1000;
-        double cpuElapsed = timer.GetCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-        sum += wallElapsed;
-    }
-    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
-    std::cout << "isEqual: " << isEqual << std::endl;
+    PrintResultByHashAggEqual(vector1, vector2, timer, sum, isEqual);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
@@ -175,21 +172,7 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
 
     std::cout << "Compare different varchar: " << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++) {
-        timer.Reset();
-
-        for (int i = 0; i < ROW_SIZE; i++) {
-            isEqual = hashagg_equal(vector1, i, vector3, i);
-        }
-
-        timer.CalculateElapse();
-        double wallElapsed = timer.GetWallElapse() * 1000;
-        double cpuElapsed = timer.GetCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-        sum += wallElapsed;
-    }
-    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
-    std::cout << "isEqual: " << isEqual << std::endl;
+    PrintResultByHashAggEqual(vector1, vector3, timer, sum, isEqual);
 
     delete vector1;
     delete vector2;

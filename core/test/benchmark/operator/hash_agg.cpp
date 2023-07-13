@@ -118,10 +118,10 @@ private:
                                                                   { "sql4", { OMNI_AGGREGATION_TYPE_MAX } },
                                                                   { "sql6", { OMNI_AGGREGATION_TYPE_COUNT_COLUMN } },
                                                                   { "sql7", { OMNI_AGGREGATION_TYPE_SUM,
-                                                                             OMNI_AGGREGATION_TYPE_SUM,
-                                                                             OMNI_AGGREGATION_TYPE_SUM,
-                                                                             OMNI_AGGREGATION_TYPE_SUM,
-                                                                             OMNI_AGGREGATION_TYPE_SUM } },
+                                                                              OMNI_AGGREGATION_TYPE_SUM,
+                                                                              OMNI_AGGREGATION_TYPE_SUM,
+                                                                              OMNI_AGGREGATION_TYPE_SUM,
+                                                                              OMNI_AGGREGATION_TYPE_SUM } },
                                                                   { "sql9", { OMNI_AGGREGATION_TYPE_AVG,
                                                                               OMNI_AGGREGATION_TYPE_MIN } } };
 

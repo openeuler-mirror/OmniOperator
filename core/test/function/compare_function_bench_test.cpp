@@ -18,7 +18,7 @@ const int32_t ROUNDS = 10;
 
 const std::string STRING = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 static const int32_t SIZE_OF_LONG = 8;
-static string GetString(int32_t index, int32_t offset, int32_t width)
+string GetString(int32_t index, int32_t offset, int32_t width)
 {
     std::string str;
     for (int j = 0; j < width; j++) {
@@ -28,7 +28,7 @@ static string GetString(int32_t index, int32_t offset, int32_t width)
     return str;
 }
 
-static int32_t CompareVarchar(BaseVector *leftColumn, int32_t leftColumnPosition, BaseVector *rightColumn,
+int32_t CompareVarchar(BaseVector *leftColumn, int32_t leftColumnPosition, BaseVector *rightColumn,
     int32_t rightColumnPosition)
 {
     auto leftVarCharColumn = static_cast<VarcharVector *>(leftColumn);
@@ -44,6 +44,25 @@ static int32_t CompareVarchar(BaseVector *leftColumn, int32_t leftColumnPosition
     } else {
         return (leftValue.size() > rightValue.size()) ? 1 : -1;
     }
+}
+
+void PrintCompareVarcharResult(BaseVector *vector1, BaseVector *vector2, Timer &timer, double sum, int comp)
+{
+    for (int j = 0; j < ROUNDS; j++) {
+        timer.Reset();
+
+        for (int i = 0; i < ROW_SIZE; i++) {
+            comp = CompareVarchar(vector1, i, vector2, i);
+        }
+
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
+        std::cout << "round: " << (j + 1) << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
+    }
+    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
+    std::cout << "comp: " << comp << std::endl;
 }
 
 int64_t ReverseBytes(int64_t var0)
@@ -105,6 +124,25 @@ int32_t CompareVarcharByLong(BaseVector *leftColumn, int32_t leftColumnPosition,
     }
 }
 
+void PrintCompareVarcharResultByLong(BaseVector *vector1, BaseVector *vector2, Timer &timer, double sum, int comp)
+{
+    for (int j = 0; j < ROUNDS; j++) {
+        timer.Reset();
+
+        for (int i = 0; i < ROW_SIZE; i++) {
+            comp = CompareVarcharByLong(vector1, i, vector2, i);
+        }
+
+        timer.CalculateElapse();
+        double wallElapsed = timer.GetWallElapse() * 1000;
+        double cpuElapsed = timer.GetCpuElapse() * 1000;
+        std::cout << "round: " << (j + 1) << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
+        sum += wallElapsed;
+    }
+    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
+    std::cout << "comp: " << comp << std::endl;
+}
+
 TEST(varcharType, CompareVarcharPerf)
 {
     VarcharVector *vector1 = new VarcharVector(ROW_SIZE);
@@ -126,21 +164,7 @@ TEST(varcharType, CompareVarcharPerf)
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
     int comp;
-    for (int j = 0; j < ROUNDS; j++) {
-        timer.Reset();
-
-        for (int i = 0; i < ROW_SIZE; i++) {
-            comp = CompareVarchar(vector1, i, vector2, i);
-        }
-
-        timer.CalculateElapse();
-        double wallElapsed = timer.GetWallElapse() * 1000;
-        double cpuElapsed = timer.GetCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-        sum += wallElapsed;
-    }
-    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
-    std::cout << "comp: " << comp << std::endl;
+    PrintCompareVarcharResult(vector1, vector2, timer, sum, comp);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
@@ -151,21 +175,7 @@ TEST(varcharType, CompareVarcharPerf)
 
     std::cout << "Compare different varchar:" << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++) {
-        timer.Reset();
-
-        for (int i = 0; i < ROW_SIZE; i++) {
-            comp = CompareVarchar(vector1, i, vector3, i);
-        }
-
-        timer.CalculateElapse();
-        double wallElapsed = timer.GetWallElapse() * 1000;
-        double cpuElapsed = timer.GetCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-        sum += wallElapsed;
-    }
-    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
-    std::cout << "comp: " << comp << std::endl;
+    PrintCompareVarcharResult(vector1, vector3, timer, sum, comp);
 
     delete vector1;
     delete vector2;
@@ -194,21 +204,7 @@ TEST(varcharType, CompareVarcharByLongPerf)
     std::cout << "Compare equal varchar" << std::endl;
     double sum = 0;
     int comp;
-    for (int j = 0; j < ROUNDS; j++) {
-        timer.Reset();
-
-        for (int i = 0; i < ROW_SIZE; i++) {
-            comp = CompareVarcharByLong(vector1, i, vector2, i);
-        }
-
-        timer.CalculateElapse();
-        double wallElapsed = timer.GetWallElapse() * 1000;
-        double cpuElapsed = timer.GetCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-        sum += wallElapsed;
-    }
-    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
-    std::cout << "comp: " << comp << std::endl;
+    PrintCompareVarcharResultByLong(vector1, vector2, timer, sum, comp);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
@@ -219,21 +215,7 @@ TEST(varcharType, CompareVarcharByLongPerf)
 
     std::cout << "Compare not equal varchar" << std::endl;
     sum = 0;
-    for (int j = 0; j < ROUNDS; j++) {
-        timer.Reset();
-
-        for (int i = 0; i < ROW_SIZE; i++) {
-            comp = CompareVarcharByLong(vector1, i, vector3, i);
-        }
-
-        timer.CalculateElapse();
-        double wallElapsed = timer.GetWallElapse() * 1000;
-        double cpuElapsed = timer.GetCpuElapse() * 1000;
-        std::cout << "round: " << j + 1 << " wall " << wallElapsed << " cpu " << cpuElapsed << std::endl;
-        sum += wallElapsed;
-    }
-    std::cout << "avg: " << sum / ROUNDS << " ms" << std::endl;
-    std::cout << "comp: " << comp << std::endl;
+    PrintCompareVarcharResultByLong(vector1, vector3, timer, sum, comp);
 
     delete vector1;
     delete vector2;

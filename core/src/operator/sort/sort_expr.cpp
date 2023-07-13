@@ -36,12 +36,12 @@ SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &
 }
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
-        const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
-        const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
-        int32_t sortKeysCount)
+    const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
+    const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
+    int32_t sortKeysCount)
 {
     auto pOperatorFactory = new SortWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, sortKeys,
-                                                            sortAscendings, sortNullFirsts, sortKeysCount, OperatorConfig());
+        sortAscendings, sortNullFirsts, sortKeysCount, OperatorConfig());
     return pOperatorFactory;
 }
 
@@ -71,8 +71,7 @@ SortWithExprOperator::~SortWithExprOperator()
 
 int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
     if (newInputVecBatch != nullptr) {
         sortOperator->AddInput(newInputVecBatch);
         VectorHelper::FreeVecBatch(inputVecBatch);
