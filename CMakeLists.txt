@@ -9,7 +9,7 @@ message(STATUS "Now processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 find_package(Boost 1.79 REQUIRED)
 
 # omniruntime version
-set(OMNI_RUNTIME_VERSION 1.2.0)
+set(OMNI_RUNTIME_VERSION 1.3.0)
 set(OS_ARCHITECTURES aarch64)
 set(OMNI_CODEGEN_SO boostkit-omniop-codegen-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
 set(OMNI_OPERATOR_SO boostkit-omniop-operator-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
