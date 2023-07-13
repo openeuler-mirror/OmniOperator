@@ -513,7 +513,7 @@ TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n
       sortAscendings(sortAscendings),
       sortNullFirsts(sortNullFirsts),
       sortColNum(static_cast<int32_t>(sortCols.size())),
-      maxCapacityPerPartition(vectorLengthMutiple * n)
+      maxCapacityPerPartition(2 * n)
 {
     auto sourceTypeIds = sourceTypes.GetIds();
     for (int32_t i = 0; i < sortColNum; i++) {
@@ -639,7 +639,7 @@ void TopNSortOperator::InsertNewPartition(StringRef &key, VectorBatch *inputVecB
     partitionedMap[key] = value;
 }
 
-void TopNSortOperator::IsVecCapacityExceedLimit(const int32_t index)
+void TopNSortOperator::CheckVecCapacityLimit(const int32_t index)
 {
     if (index >= maxCapacityPerPartition) {
         std::string exceptionInfo = "topn sort vecBatches capacity is not enough, index is: " + std::to_string(index) +
@@ -709,13 +709,13 @@ void TopNSortOperator::UpdatePartitionValueOptimize(PartitionValue &value, Vecto
         return;
     }
     if (result == 0) {
-        IsVecCapacityExceedLimit(value.nextIndex);
+        CheckVecCapacityLimit(value.nextIndex);
         vecBatches[value.nextIndex] = inputVecBatch;
         rowIndexes[value.nextIndex] = inputRowIdx;
         value.nextIndex++;
     } else {
         auto insertPos = FindInsertPositionOptimize(valuePtr, length, vecBatches, rowIndexes, lastPosition - 1);
-        IsVecCapacityExceedLimit(value.nextIndex);
+        CheckVecCapacityLimit(value.nextIndex);
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
             vecBatches[pos] = vecBatches[pos - 1];
             rowIndexes[pos] = rowIndexes[pos - 1];
@@ -752,13 +752,13 @@ void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *
         return;
     }
     if (result == 0) {
-        IsVecCapacityExceedLimit(value.nextIndex);
+        CheckVecCapacityLimit(value.nextIndex);
         vecBatches[value.nextIndex] = inputVecBatch;
         rowIndexes[value.nextIndex] = inputRowIdx;
         value.nextIndex++;
     } else {
         auto insertPos = FindInsertPosition(sortVectors, inputRowIdx, vecBatches, rowIndexes, lastPosition - 1);
-        IsVecCapacityExceedLimit(value.nextIndex);
+        CheckVecCapacityLimit(value.nextIndex);
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
             vecBatches[pos] = vecBatches[pos - 1];
             rowIndexes[pos] = rowIndexes[pos - 1];
