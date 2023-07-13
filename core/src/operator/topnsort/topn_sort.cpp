@@ -512,7 +512,8 @@ TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n
       sortCols(sortCols),
       sortAscendings(sortAscendings),
       sortNullFirsts(sortNullFirsts),
-      sortColNum(static_cast<int32_t>(sortCols.size()))
+      sortColNum(static_cast<int32_t>(sortCols.size())),
+      maxCapacityPerPartition(vectorLengthMutiple * n)
 {
     auto sourceTypeIds = sourceTypes.GetIds();
     for (int32_t i = 0; i < sortColNum; i++) {
@@ -638,34 +639,13 @@ void TopNSortOperator::InsertNewPartition(StringRef &key, VectorBatch *inputVecB
     partitionedMap[key] = value;
 }
 
-bool TopNSortOperator::IsVecCapacityExceedLimit(const PartitionValue &value)
+void TopNSortOperator::IsVecCapacityExceedLimit(const int32_t index)
 {
-    try {
-        // Check whether the vector is out of range.
-        if (value.nextIndex >= n * vectorLengthMutiple) {
-            std::string exceptionInfo = "vecBatches capacity is not enough.";
-            throw(exceptionInfo);
-        }
-    } catch (std::string &e) {
-        std::cout << e << std::endl;
-        return true;
+    if (index >= maxCapacityPerPartition) {
+        std::string exceptionInfo = "topn sort vecBatches capacity is not enough, index is: " + std::to_string(index) +
+            " MaxVectorLen is: " + std::to_string(maxCapacityPerPartition);
+        throw OmniException("OPERATOR_RUNTIME_ERROR", exceptionInfo);
     }
-    return false;
-}
-
-bool TopNSortOperator::IsVecCapacityExceedLimit(const int32_t index)
-{
-    try {
-        // Check whether the vector is out of range.
-        if (index >= n * vectorLengthMutiple) {
-            std::string exceptionInfo = "vecBatches capacity is not enough.";
-            throw(exceptionInfo);
-        }
-    } catch (std::string &e) {
-        std::cout << e << std::endl;
-        return true;
-    }
-    return false;
 }
 
 void TopNSortOperator::InsertNewValueOptimize(PartitionValue &value, vec::VectorBatch *inputVecBatch,
@@ -729,17 +709,13 @@ void TopNSortOperator::UpdatePartitionValueOptimize(PartitionValue &value, Vecto
         return;
     }
     if (result == 0) {
-        if (IsVecCapacityExceedLimit(value)) {
-            return;
-        }
+        IsVecCapacityExceedLimit(value.nextIndex);
         vecBatches[value.nextIndex] = inputVecBatch;
         rowIndexes[value.nextIndex] = inputRowIdx;
         value.nextIndex++;
     } else {
         auto insertPos = FindInsertPositionOptimize(valuePtr, length, vecBatches, rowIndexes, lastPosition - 1);
-        if (IsVecCapacityExceedLimit(value)) {
-            return;
-        }
+        IsVecCapacityExceedLimit(value.nextIndex);
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
             vecBatches[pos] = vecBatches[pos - 1];
             rowIndexes[pos] = rowIndexes[pos - 1];
@@ -776,17 +752,13 @@ void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *
         return;
     }
     if (result == 0) {
-        if (IsVecCapacityExceedLimit(value)) {
-            return;
-        }
+        IsVecCapacityExceedLimit(value.nextIndex);
         vecBatches[value.nextIndex] = inputVecBatch;
         rowIndexes[value.nextIndex] = inputRowIdx;
         value.nextIndex++;
     } else {
         auto insertPos = FindInsertPosition(sortVectors, inputRowIdx, vecBatches, rowIndexes, lastPosition - 1);
-        if (IsVecCapacityExceedLimit(value)) {
-            return;
-        }
+        IsVecCapacityExceedLimit(value.nextIndex);
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
             vecBatches[pos] = vecBatches[pos - 1];
             rowIndexes[pos] = rowIndexes[pos - 1];
