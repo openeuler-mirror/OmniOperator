@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <string>
 #include <nlohmann/json.hpp>
+#include "memory/memory_manager.h"
 #include "operator/memory_builder.h"
 
 namespace omniruntime {
@@ -92,13 +93,22 @@ public:
 
 class SparkSpillConfig : public SpillConfig {
 public:
-    SparkSpillConfig(bool enabled, const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold)
+    SparkSpillConfig(bool enabled, const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold,
+        int32_t memUsagePctThreshold)
         : SpillConfig(SPILL_CONFIG_SPARK, enabled, spillPath, maxSpillBytes),
           numElementsForSpillThreshold(numElementsThreshold)
-    {}
+    {
+        auto limit = mem::MemoryManager::GetGlobalMemoryLimit();
+        if (limit == mem::MemoryManager::UNLIMIT) {
+            memUsageForSpillThreshold = INT64_MAX;
+        } else {
+            memUsageForSpillThreshold = limit * memUsagePctThreshold / 100;
+        }
+    }
 
-    SparkSpillConfig(const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold)
-        : SparkSpillConfig(true, spillPath, maxSpillBytes, numElementsThreshold)
+    SparkSpillConfig(const std::string &spillPath, uint64_t maxSpillBytes, int32_t numElementsThreshold,
+        int32_t memUsageThreshold = 90)
+        : SparkSpillConfig(true, spillPath, maxSpillBytes, numElementsThreshold, memUsageThreshold)
     {}
 
     SparkSpillConfig(const std::string &spillPath, int32_t numElementsThreshold)
@@ -107,20 +117,27 @@ public:
 
     SparkSpillConfig(const SparkSpillConfig &spillConfig)
         : SpillConfig((SpillConfig &)spillConfig),
-          numElementsForSpillThreshold(spillConfig.numElementsForSpillThreshold)
+          numElementsForSpillThreshold(spillConfig.numElementsForSpillThreshold),
+          memUsageForSpillThreshold(spillConfig.memUsageForSpillThreshold)
     {}
 
     ~SparkSpillConfig() override = default;
 
     bool NeedSpill(MemoryBuilder *memoryBuilder) override;
 
-    int32_t GetSpillThreshold() const
+    int32_t GetSpillRowThreshold() const
     {
         return numElementsForSpillThreshold;
     }
 
+    int64_t GetSpillMemThreshold() const
+    {
+        return memUsageForSpillThreshold;
+    }
+
 private:
     int32_t numElementsForSpillThreshold;
+    int64_t memUsageForSpillThreshold;
 };
 
 

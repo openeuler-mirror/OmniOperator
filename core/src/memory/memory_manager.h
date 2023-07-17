@@ -23,7 +23,7 @@ using namespace exception;
 
 /**
  * it is responsible for memory usage statistics of each thread and the global memory usage.
- *         */
+ **/
 class MemoryManager {
 public:
     // unlimited memory usage
@@ -47,6 +47,12 @@ public:
         return globalMemoryManager->GetMemoryAmount();
     }
 
+    static ALWAYS_INLINE int64_t GetGlobalMemoryLimit()
+    {
+        MemoryManager *globalMemoryManager = GetGlobalMemoryManager();
+        return globalMemoryManager->GetMemoryLimit();
+    }
+
     // constructor for globalMemoryManager
     MemoryManager();
 
@@ -60,7 +66,7 @@ public:
      * Account() interface is called when the untrackedMemory exceeds the threshold range [-THRESHOLD, THRESHOLD].
      * Note that untrackedMemory could be less than -THRESHOLD. That is, the memory is continuously allocated,
      * and then be continuously freed.
-     *         */
+    *  */
     void Account(int64_t size)
     {
         int64_t newMemoryAmount = memoryAmount.fetch_add(size, std::memory_order_relaxed) + size;
@@ -68,12 +74,12 @@ public:
         if (limit == UNLIMIT || newMemoryAmount < limit) {
             isBlocked.store(false, std::memory_order_relaxed);
         } else {
-            /*
+            /* *
              * A thread cannot throw multiple exceptions in the case of multiple threads.
              * The If statement is used to avoid the following case: When the thread exceeds the limit,
              * the destructor of the thread is called and the Account interface is executed again,
              * which may cause the OmniException to be thrown again.
-             *         */
+            *  */
             if (!isBlocked.load(std::memory_order_relaxed)) {
                 isBlocked.store(true, std::memory_order_relaxed);
 #ifdef TRACE
