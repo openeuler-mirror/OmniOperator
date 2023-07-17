@@ -8,6 +8,7 @@ else ()
     add_subdirectory(operator)
     add_subdirectory(util)
     add_subdirectory(vector)
+    add_subdirectory(function)
     add_subdirectory(memory)
     add_subdirectory(benchmark)
     add_subdirectory(parser)
@@ -20,7 +21,7 @@ else ()
             testutil
             vectest
             memtest
-            benchtest
+            functest
             parsertest
             typetest
             codegentest

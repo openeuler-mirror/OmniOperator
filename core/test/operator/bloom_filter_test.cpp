@@ -3,7 +3,7 @@
  * Description: ...
  */
 #include "gtest/gtest.h"
-#include "operator/filter/bloom_filter.h"
+#include "codegen/bloom_filter.h"
 #include "util/test_util.h"
 
 using namespace omniruntime::op;

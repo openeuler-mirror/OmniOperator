@@ -4,6 +4,7 @@
 
 #ifndef OMNI_RUNTIME_TYPE_UTILS_H
 #define OMNI_RUNTIME_TYPE_UTILS_H
+#include <string_view>
 namespace omniruntime::vec {
 
     /**

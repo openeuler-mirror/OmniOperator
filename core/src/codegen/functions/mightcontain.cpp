@@ -3,7 +3,7 @@
  * Description: registry  function  implementation
  */
 #include "mightcontain.h"
-#include "operator/filter/bloom_filter.h"
+#include "codegen/bloom_filter.h"
 
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT bool MightContain(int64_t bloomFilterAddr, int64_t hashValue, bool isNull)
