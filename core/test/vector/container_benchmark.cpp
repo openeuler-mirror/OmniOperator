@@ -15,13 +15,12 @@ namespace omniruntime::vec::test {
 template <typename CONTAINER> void bm_vector_setvalue_string(benchmark::State &state)
 {
     int vecSize = 10000;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     std::string valuePrefix;
     valuePrefix = "hello hello hello hello hello: ";
 
     for (auto _ : state) {
-        auto baseVector = VectorHelper::CreateStringVector(vecSize, stringWidth);
+        auto baseVector = VectorHelper::CreateStringVector(vecSize);
         auto *vector = (Vector<CONTAINER> *)baseVector;
 
         for (int i = 0; i < 1'000'000; i++) {
@@ -37,12 +36,11 @@ template <typename CONTAINER> void bm_vector_setvalue_string(benchmark::State &s
 template <typename CONTAINER> void bm_vector_getvalue_string(benchmark::State &state)
 {
     int vecSize = 10000;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     std::string valuePrefix;
     valuePrefix = "hello hello hello hello hello: ";
 
-    BaseVector *baseVector = VectorHelper::CreateStringVector(vecSize, stringWidth);
+    BaseVector *baseVector = VectorHelper::CreateStringVector(vecSize);
     auto *vector = (Vector<CONTAINER> *)baseVector;
 
     for (int i = 0; i < vecSize; i++) {
@@ -64,12 +62,10 @@ template <typename CONTAINER> void bm_vector_getvalue_string(benchmark::State &s
 template <typename CONTAINER> void bm_vector_create(benchmark::State &state)
 {
     int vecSize = 10000;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     for (auto _ : state) {
-        auto baseVector = VectorHelper::CreateStringVector(vecSize, stringWidth);
+        auto baseVector = VectorHelper::CreateStringVector(vecSize);
         auto *vector = (Vector<CONTAINER> *)baseVector;
-        vector->GetStringEncoding();
         delete vector;
     }
 }

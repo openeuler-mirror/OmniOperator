@@ -13,9 +13,8 @@ namespace omniruntime::vec::test {
 template <typename CONTAINER> void string_vector_get_set_value()
 {
     int vectorSize = 1000;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
-    auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto baseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *vector = (Vector<CONTAINER> *)baseVector;
 
     std::string valuePrefix;
@@ -39,9 +38,8 @@ template <typename CONTAINER> void string_vector_get_set_value()
 template <typename CONTAINER> void string_vector_get_set_empty_value()
 {
     int vectorSize = 1000;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
-    auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto baseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *vector = (Vector<CONTAINER> *)baseVector;
 
     std::string empty = "";
@@ -85,9 +83,8 @@ void CompareResult(Vector<CONTAINER> *appended, std::vector<std::string> expecte
 template <typename CONTAINER> void string_vector_append_value()
 {
     int vectorSize = 5;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
-    auto v1BaseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto v1BaseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *v1 = (Vector<CONTAINER> *)v1BaseVector;
 
     std::string valuePrefix;
@@ -102,11 +99,11 @@ template <typename CONTAINER> void string_vector_append_value()
     }
 
     int32_t appendedVecSize = 15;
-    auto appendedBaseVector = VectorHelper::CreateStringVector(appendedVecSize, stringWidth);
+    auto appendedBaseVector = VectorHelper::CreateStringVector(appendedVecSize);
     auto *appended = (Vector<CONTAINER> *)appendedBaseVector;
     appended->Append(v1, 0, vectorSize);
 
-    auto v2BaseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto v2BaseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *v2WithNull = (Vector<CONTAINER> *)v2BaseVector;
     for (int32_t i = 0; i < vectorSize; i++) {
         if (i % 2 == 0) {
@@ -118,11 +115,11 @@ template <typename CONTAINER> void string_vector_append_value()
     }
     appended->Append(v2WithNull, 5, 5);
 
-    auto v3BaseVector = VectorHelper::CreateStringVector(0, stringWidth);
+    auto v3BaseVector = VectorHelper::CreateStringVector(0);
     auto *v3Emtpy = (Vector<CONTAINER> *)v3BaseVector;
     appended->Append(v3Emtpy, 10, 0);
 
-    auto v4BaseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto v4BaseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *v4OverBounds = (Vector<CONTAINER> *)v4BaseVector;
     for (int32_t i = 0; i < vectorSize; i++) {
         std::string_view input(expected[i].data(), expected[i].size());
@@ -143,12 +140,11 @@ template <typename CONTAINER> void string_vector_append_value()
 template <typename CONTAINER> void string_vector_copy_positions()
 {
     int vectorSize = 10;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
     std::string valuePrefix;
 
     valuePrefix = "hello_world__";
 
-    auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto baseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *vector = (Vector<CONTAINER> *)baseVector;
 
     for (int i = 0; i < vectorSize; i++) {
@@ -199,9 +195,8 @@ template <typename CONTAINER> void string_vector_slice()
     int vectorSize = 1000;
     int offset = 50;
     int len = 10;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
-    auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto baseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *parent = (Vector<CONTAINER> *)baseVector;
 
     std::string valuePrefix;
@@ -229,26 +224,24 @@ template <typename CONTAINER> void string_vector_slice()
     delete parent;
 }
 
-template <typename CONTAINER> void string_vector_get_encoding()
+template <typename CONTAINER> void string_vector_get_datatype()
 {
     int vectorSize = 1000;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
-    StringEncoding expect = OMNI_LARGE_STRING;
+    DataTypeId expect = type::OMNI_CHAR;
 
-    auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto baseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *vector = (Vector<CONTAINER> *)baseVector;
 
-    EXPECT_EQ(vector->GetStringEncoding(), expect);
-    EXPECT_EQ(baseVector->GetStringEncoding(), expect);
+    EXPECT_EQ(vector->GetTypeId(), expect);
+    EXPECT_EQ(baseVector->GetTypeId(), expect);
     delete vector;
 }
 
 template <typename CONTAINER> void string_vector_get_used_bytes()
 {
     int vectorSize = 100000;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
-    auto baseVector = VectorHelper::CreateStringVector(vectorSize, stringWidth);
+    auto baseVector = VectorHelper::CreateStringVector(vectorSize);
     auto *vector = (Vector<CONTAINER> *)baseVector;
 
     std::string valuePrefix;
@@ -322,9 +315,9 @@ TEST(vector2, slice_container_large_string)
 }
 
 
-TEST(vector2, string_vector_get_large_encoding)
+TEST(vector2, string_vector_get_datatype)
 {
-    string_vector_get_encoding<LargeStringContainer<std::string_view>>();
+    string_vector_get_datatype<LargeStringContainer<std::string_view>>();
 }
 
 TEST(vector2, string_vector_get_large_size)

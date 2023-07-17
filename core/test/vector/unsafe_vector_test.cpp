@@ -49,12 +49,11 @@ template <typename T> std::shared_ptr<Vector<DictionaryContainer<T>>> CreateDict
 template <typename CONTAINER> BaseVector *CreateStringTestVector()
 {
     int valueSize = 1000;
-    uint32_t stringWidth = OMNI_LARGE_WIDTH;
 
     std::string valuePrefix;
     valuePrefix = "hello_world__";
 
-    auto baseVector = VectorHelper::CreateStringVector(valueSize, stringWidth);
+    auto baseVector = VectorHelper::CreateStringVector(valueSize);
     auto *vector = (Vector<CONTAINER> *)baseVector;
 
     for (int i = 0; i < valueSize; i++) {
@@ -322,11 +321,12 @@ void GetVarcharDictionaryWithEmptyStrings()
     }
 
     auto vectorPtr = VectorHelper::CreateStringDictionary(values, valueSize, stringVector);
-    auto *dictAddr = VectorHelper::UnsafeGetDictionary(vectorPtr.get(), OMNI_VARCHAR);
+    auto *dictAddr = VectorHelper::UnsafeGetDictionary(vectorPtr);
     EXPECT_TRUE(dictAddr != nullptr);
 
     delete[] values;
     delete stringVector;
+    delete vectorPtr;
 }
 
 TEST(unsafe_vector, int_get_values_and_nulls)

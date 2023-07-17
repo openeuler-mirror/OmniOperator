@@ -95,8 +95,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
     jint *positions = positionArray;
     BaseVector *copyVector = nullptr;
     JNI_METHOD_START
-    copyVector =
-        VectorHelper::CopyPositionsVector(nativeVector, reinterpret_cast<int *>(positions), 0, jLength);
+    copyVector = VectorHelper::CopyPositionsVector(nativeVector, reinterpret_cast<int *>(positions), 0, jLength);
     JNI_METHOD_END(0)
 #ifdef TRACE
     RecordStack(copyVector, env);
@@ -118,11 +117,12 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_Vec_getCapacityInBytesN
     jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    if (nativeVector->GetStringEncoding() != OMNI_LARGE_STRING) {
-        // TODO: return the real capacity for fixed width vector
-        return 0;
+    DataTypeId typeId = nativeVector->GetTypeId();
+    if (typeId != omniruntime::type::OMNI_VARCHAR && typeId != omniruntime::type::OMNI_CHAR) {
+        throw omniruntime::exception::OmniException("vector type is no supported",
+            "the interface only supports varchar/char vector.");
     }
-    auto *varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(jNativeVector);
+    auto *varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(nativeVector);
     return omniruntime::vec::unsafe::UnsafeStringVector::GetContainer(varCharVector)->GetCapacityInBytes();
 }
 

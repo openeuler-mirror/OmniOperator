@@ -38,20 +38,14 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     }
 
     int32_t rowCount = vecBatch->GetRowCount();
-    if (remainingLimit >= rowCount) {
-        outputVecBatch = vecBatch;
-        remainingLimit -= rowCount;
-        return 0;
-    }
-
     int32_t vectorCount = vecBatch->GetVectorCount();
-    outputVecBatch = new VectorBatch(remainingLimit);
+    int64_t limitSize = remainingLimit > rowCount ? rowCount : remainingLimit;
+    outputVecBatch = new VectorBatch(limitSize);
     for (int32_t i = 0; i < vectorCount; ++i) {
         BaseVector *inputVector = vecBatch->Get(i);
-        outputVecBatch->Append(
-            VectorHelper::SliceVector(inputVector, 0, remainingLimit));
+        outputVecBatch->Append(VectorHelper::SliceVector(inputVector, 0, limitSize));
     }
-    remainingLimit = 0;
+    remainingLimit -= limitSize;
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }

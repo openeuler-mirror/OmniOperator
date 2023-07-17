@@ -31,10 +31,9 @@ namespace omniruntime::vec {
 using namespace type;
 enum Encoding {
     OMNI_FLAT = 0,       // ordinary vector, storing primitive data types, such as int, long, boolean
-    OMNI_DICTIONARY = 1, // if dictionary needs to be combined with varchar, get encoding by enum 'StringEncoding'
+    OMNI_DICTIONARY = 1, // dictionary vector, dictionary can be combined with varchar
     OMNI_ENCODING_CONTAINER = 2, // the temporarily added code is mainly used for the agg avg partial, and the vector
-                                 // implementation
-                                 // is also placed in the hash agg module
+                                 // implementation is also placed in the hash agg module
     OMNI_ENCODING_INVALID
 };
 
@@ -101,11 +100,6 @@ public:
     Encoding ALWAYS_INLINE GetEncoding()
     {
         return encoding;
-    }
-
-    StringEncoding ALWAYS_INLINE GetStringEncoding()
-    {
-        return stringEncoding;
     }
 
     int ALWAYS_INLINE GetSize()
@@ -176,7 +170,6 @@ protected:
     friend class unsafe::UnsafeBaseVector;
     int32_t size;
     Encoding encoding;             // vector encoding, such as flat, dictionary
-    StringEncoding stringEncoding; // varchar encoding, such as large string encoding, small string encoding
     int32_t offset;
     std::shared_ptr<bool[]> nulls; // whether the element is null
     bool hasNull;
@@ -511,7 +504,6 @@ public:
         : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */)
     {
         this->dataTypeId = OMNI_CHAR;
-        this->stringEncoding = OMNI_LARGE_STRING;
         // default string_view vector use large string encoding
         this->container = std::make_shared<LargeStringContainer<std::string_view>>(size, capacityInBytes);
         // vector class capacity, nulls total capacity and values total capacity
@@ -529,7 +521,6 @@ public:
         : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */, nulls), container(container)
     {
         this->dataTypeId = dataTypeId;
-        this->stringEncoding = OMNI_LARGE_STRING;
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);

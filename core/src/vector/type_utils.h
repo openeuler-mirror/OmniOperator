@@ -1,6 +1,7 @@
-//
-// Created by ken on 2022-09-18.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Description: Type Verification
+ */
 
 #ifndef OMNI_RUNTIME_TYPE_UTILS_H
 #define OMNI_RUNTIME_TYPE_UTILS_H

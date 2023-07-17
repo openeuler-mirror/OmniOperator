@@ -45,11 +45,9 @@ public:
 
     /* *
      * string vector creation helper
-     * @param stringWidth: large string encoding by default, use OMNI_SMALL_WIDTH to specified small string encoding
      * @param vectorSize
      */
-    static ALWAYS_INLINE BaseVector *CreateStringVector(uint32_t vectorSize,
-        uint32_t stringWidth = OMNI_LARGE_WIDTH)
+    static ALWAYS_INLINE BaseVector *CreateStringVector(uint32_t vectorSize)
     {
         return new Vector<LargeStringContainer<std::string_view>>(vectorSize);
     }
@@ -233,11 +231,6 @@ public:
             }
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
-                if (vector->GetStringEncoding() == OMNI_LARGE_STRING) {
-                    return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
-                        reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(
-                        vector)));
-                }
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
                     reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector)));
             }
@@ -339,10 +332,6 @@ public:
             }
             case type::OMNI_VARCHAR:
             case type::OMNI_CHAR: {
-                if (vector->GetStringEncoding() == OMNI_LARGE_STRING) {
-                    return reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector)->Slice(
-                        positionOffset, length);
-                }
                 return reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector)->Slice(positionOffset,
                     length);
             }

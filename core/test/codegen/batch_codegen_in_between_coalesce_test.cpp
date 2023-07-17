@@ -195,7 +195,7 @@ TEST(BatchCodeGenTest, StringIn)
     const int32_t numRows = 10;
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(10) }));
-    auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
+    auto col1 = VectorHelper::CreateStringVector(numRows);
     auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
@@ -629,7 +629,7 @@ TEST(BatchCodeGenTest, StringCoalesce)
 
     DataType dataType(OMNI_VARCHAR);
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
-    auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
+    auto col1 = VectorHelper::CreateStringVector(numRows);
     auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {

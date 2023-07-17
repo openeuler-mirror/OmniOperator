@@ -1257,7 +1257,7 @@ TEST(FilterTest, testStringIn1)
     const int32_t numRows = 10;
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(10) }));
 
-    auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
+    auto col1 = VectorHelper::CreateStringVector(numRows);
     auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
@@ -1303,7 +1303,7 @@ TEST(FilterTest, testStringIn2)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 10;
     DataTypes inputTypes(std::vector<DataTypePtr>({ CharType(10) }));
-    auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
+    auto col1 = VectorHelper::CreateStringVector(numRows);
     auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
@@ -1596,7 +1596,7 @@ TEST(FilterTest, FilterString1)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 1000;
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
-    auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
+    auto col1 = VectorHelper::CreateStringVector(numRows);
     auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
@@ -1683,7 +1683,7 @@ TEST(FilterTest, Coalesce2)
     const int32_t numRows = 1000;
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(30) }));
-    auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
+    auto col1 = VectorHelper::CreateStringVector(numRows);
     auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
@@ -1775,7 +1775,7 @@ TEST(FilterTest, Coalesce4)
     const int32_t numRows = 1000;
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ CharType(5) }));
-    auto col1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
+    auto col1 = VectorHelper::CreateStringVector(numRows);
     auto *vector = (Vector<LargeStringContainer<std::string_view>> *)col1;
     std::string value;
     for (int i = 0; i < numRows; i++) {
@@ -2399,8 +2399,8 @@ TEST(FilterTest, SimpleFilterCharWithNulls)
     std::string_view data1[numRows] = {"31904", "35709", "31904", "31904", "31904", "35709", "35709", "31904", "35709"};
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(5), VarcharType(5) }));
-    auto vec0 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
-    auto vec1 = VectorHelper::CreateStringVector(numRows, OMNI_LARGE_WIDTH);
+    auto vec0 = VectorHelper::CreateStringVector(numRows);
+    auto vec1 = VectorHelper::CreateStringVector(numRows);
     auto *vector0 = (Vector<LargeStringContainer<std::string_view>> *)vec0;
     auto *vector1 = (Vector<LargeStringContainer<std::string_view>> *)vec1;
 
