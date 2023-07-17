@@ -184,7 +184,7 @@ const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions {
 };
 
 static ALWAYS_INLINE void GetDecimalValue(BaseVector *vector, const int32_t &dataTypeId, const int32_t &rowIndex,
-    int128 &decimalValue)
+    int128_t &decimalValue)
 {
     if (vector->GetEncoding() == OMNI_DICTIONARY) {
         if (dataTypeId == OMNI_DECIMAL64) {

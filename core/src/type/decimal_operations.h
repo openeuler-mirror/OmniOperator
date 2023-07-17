@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: DecimalOperations
  */
 
@@ -13,7 +13,7 @@
 #include <climits>
 #include <cmath>
 #include <huawei_secure_c/include/securec.h>
-#include <boost/multiprecision/cpp_int.hpp>
+#include "integer256.h"
 #include "util/debug.h"
 #include "util/omni_exception.h"
 #include "decimal_base.h"
@@ -22,7 +22,9 @@
 namespace omniruntime {
 namespace type {
 using namespace exception;
-using namespace boost::multiprecision;
+using uint128_t = __uint128_t;
+using int128_t = __int128_t;
+using int256_t = Integer256;
 
 enum class Op {
     ADD,
@@ -282,9 +284,6 @@ public:
         }
     }
 
-    Decimal128Wrapper(const __uint128_t &value) : Decimal128Wrapper(uint128_t(value))
-    {}
-
     Decimal128Wrapper(const int128_t &value)
     {
         if (value == 0) {
@@ -294,10 +293,10 @@ public:
         }
         if (value > 0) {
             signum = 1;
-            val = value.convert_to<uint128_t>();
+            val = static_cast<uint128_t>(value);
         } else {
             signum = -1;
-            val = (-value).convert_to<uint128_t>();
+            val = static_cast<uint128_t>(-value);
         }
     }
 
@@ -315,10 +314,10 @@ public:
         }
         if (result > 0) {
             signum = 1;
-            val = result.convert_to<uint128_t>();
+            val = static_cast<uint128_t>(result);
         } else {
             signum = -1;
-            val = (-result).convert_to<uint128_t>();
+            val = static_cast<uint128_t>(-result);
         }
         scale = inputScale;
     }
@@ -336,12 +335,12 @@ public:
             signum = 1;
         } else {
             int128_t tmp = value;
-            val = (-tmp).convert_to<uint128_t>();
+            val = static_cast<uint128_t>(-tmp);
             signum = -1;
         }
     }
 
-    explicit Decimal128Wrapper(double value) : Decimal128Wrapper(boost::lexical_cast<std::string>(value).c_str())
+    explicit Decimal128Wrapper(double value) : Decimal128Wrapper(omniruntime::type::ToString(value).c_str())
     {}
 
     Decimal128Wrapper &operator=(const Decimal128Wrapper &rhs) = default;
@@ -441,19 +440,14 @@ public:
         }
         Decimal128Wrapper result;
         if (signum == right.signum) {
-            checked_uint128_t x = val;
-            checked_uint128_t y = right.val;
-            checked_uint128_t r;
-            try {
-                add(r, x, y);
-                if (r > DECIMAL128_MAX_VALUE) {
-                    throw std::overflow_error("Add Decimal128 overflow");
-                }
-            } catch (std::overflow_error &e) {
+            uint128_t x = val;
+            uint128_t y = right.val;
+            uint128_t r;
+            bool isOverflow = __builtin_add_overflow(x, y, &r);
+            if (isOverflow || r > DECIMAL128_MAX_VALUE) {
                 result.overflow = OpStatus::OP_OVERFLOW;
                 return result;
             }
-
             result.val = r;
             result.signum = right.signum;
             return result;
@@ -493,12 +487,11 @@ public:
         if (signum == 0 || right.signum == 0) {
             return result;
         }
-        checked_uint128_t x = val;
-        checked_uint128_t y = right.val;
-        checked_uint128_t r;
-        try {
-            multiply(r, x, y);
-        } catch (std::overflow_error &e) {
+        uint128_t x = val;
+        uint128_t y = right.val;
+        uint128_t r;
+        bool isOverflow = __builtin_mul_overflow(x, y, &r);
+        if (isOverflow || r > DECIMAL128_MAX_VALUE) {
             result.overflow = OpStatus::OP_OVERFLOW;
             return result;
         }
@@ -521,19 +514,19 @@ public:
             return result;
         }
         uint128_t tenOfScale = TenOfScaleMultipliers[rescaleFactor];
-        uint256_t x = val;
-        uint256_t y = right.val;
-        uint256_t r = x * y;
-        uint256_t q = r % tenOfScale;
-        r /= tenOfScale;
+        int256_t x = val;
+        int256_t y = right.val;
+        int256_t r = x * y;
+        int256_t q = r % tenOfScale;
+        r = r / tenOfScale;
         if (r > TenOfScaleMultipliers[38] - 1) {
             result.overflow = OpStatus::OP_OVERFLOW;
             return result;
         }
         if (q >= (tenOfScale / 2) && tenOfScale != 1) {
-            r += 1;
+            r = r + 1;
         }
-        result.val = r.convert_to<uint128_t>();
+        result.val = r.ConvertTo<uint128_t>();
         if (signum == right.signum) {
             result.signum = 1;
         } else {
@@ -548,10 +541,10 @@ public:
             return *this;
         }
         Decimal128Wrapper result;
-        uint256_t dividend256 = ReScaleTo256Bits(rescaleFactor + scale);
-        uint256_t divisor256 = right.val;
-        uint256_t quotient256;
-        uint256_t remainder256;
+        int256_t dividend256 = ReScaleTo256Bits(rescaleFactor + scale);
+        int256_t divisor256 = right.val;
+        int256_t quotient256;
+        int256_t remainder256;
         if (divisor256 == 0) {
             result.overflow = OpStatus::DIVIDE_BY_ZERO;
             return result;
@@ -561,15 +554,15 @@ public:
             result.val = 0;
             return result;
         }
-        divide_qr(dividend256, divisor256, quotient256, remainder256);
+        Integer256::Divide(dividend256, divisor256, quotient256, remainder256);
         if (remainder256 * 2 >= divisor256) {
-            quotient256 += 1;
+            quotient256 = quotient256 + 1;
         }
         if (quotient256 > DECIMAL128_MAX_VALUE) {
             result.overflow = OpStatus::OP_OVERFLOW;
             return result;
         }
-        result.val = quotient256.convert_to<uint128_t>();
+        result.val = quotient256.ConvertTo<uint128_t>();
         result.signum = (signum != right.signum) ? -1 : 1;
         return result;
     }
@@ -578,9 +571,9 @@ public:
     {
         Decimal128Wrapper result;
         int32_t ScaleFactor = GetResultScale(scale, right.scale, Op::MOD);
-        uint256_t dividend256 = ReScaleTo256Bits(ScaleFactor);
-        uint256_t divisor256 = right.ReScaleTo256Bits(ScaleFactor);
-        uint256_t remainder256;
+        int256_t dividend256 = ReScaleTo256Bits(ScaleFactor);
+        int256_t divisor256 = right.ReScaleTo256Bits(ScaleFactor);
+        int256_t remainder256;
         if (divisor256 == 0) {
             result.overflow = OpStatus::DIVIDE_BY_ZERO;
             return result;
@@ -592,7 +585,7 @@ public:
             return result;
         }
         remainder256 = dividend256 % divisor256;
-        result.val = remainder256.convert_to<uint128_t>();
+        result.val = remainder256.ConvertTo<uint128_t>();
         result.signum = signum;
         result.SetScale(ScaleFactor);
         return result;
@@ -639,15 +632,15 @@ public:
             if (result > INT32_MAX) {
                 return OpStatus::OP_OVERFLOW;
             }
-            res = result.val.convert_to<int32_t>();
+            res = static_cast<int32_t>(result.val);
         } else {
             // '1L + INT32_MAX', which is positive, is implicitly converted to Decimal128Wrapper with signum_=1,
             // comparing it with result, which is negative, can never detect overflow
-            // that is why here, we should comapre '1L + INT32_MAX' with result.val_ not result itself
+            // that is why here, we should compare '1L + INT32_MAX' with result.val_ not result itself
             if (result.val > 1L + INT32_MAX) {
                 return OpStatus::OP_OVERFLOW;
             }
-            res = -result.val.convert_to<int32_t>();
+            res = static_cast<int32_t>(-result.val);
         }
         return OpStatus::SUCCESS;
     }
@@ -663,15 +656,15 @@ public:
             if (result > INT64_MAX) {
                 return OpStatus::OP_OVERFLOW;
             }
-            res = result.val.convert_to<int64_t>();
+            res = static_cast<int64_t>(result.val);
         } else {
             // 'UNSIGNED_INT64_MIN', which is positive, is implicitly converted to Decimal128Wrapper with signum_=1,
             // comparing it with result, which is negative, can never detect overflow
-            // that is why here, we should comapre 'UNSIGNED_INT64_MIN' with result.val_ not result itself
+            // that is why here, we should compare 'UNSIGNED_INT64_MIN' with result.val_ not result itself
             if (result.val > UNSIGNED_INT64_MIN) {
                 return OpStatus::OP_OVERFLOW;
             }
-            res = static_cast<int64_t>((-result.val.convert_to<int128_t>()));
+            res = static_cast<int64_t>(-result.val);
         }
         return OpStatus::SUCCESS;
     }
@@ -699,24 +692,6 @@ public:
     explicit operator double() const
     {
         return std::stod(ToString());
-    }
-
-    explicit operator uint64_t() const
-    {
-        if (signum == 0) {
-            return 0;
-        }
-        if (signum > 0) {
-            if (val > INT64_MAX) {
-                throw std::overflow_error("Overflow when decimal128 cast to unsigned long");
-            }
-            return val.convert_to<uint64_t>();
-        } else {
-            if (val > UNSIGNED_INT64_MIN) {
-                throw std::overflow_error("Overflow when decimal128 cast to unsigned long");
-            }
-            return -val.convert_to<uint64_t>();
-        }
     }
 
     Decimal128Wrapper &ReScale(int32_t newScale, RoundingMode mode = RoundingMode::ROUND_UP)
@@ -756,7 +731,7 @@ public:
 
     int64_t HighBits() const
     {
-        __uint128_t t = val.convert_to<__uint128_t>();
+        __uint128_t t = static_cast<__uint128_t>(val);
         if (signum == -1) {
             return static_cast<int64_t>(t >> 64) ^ SIGN_LONG_MASK;
         }
@@ -765,7 +740,7 @@ public:
 
     uint64_t LowBits() const
     {
-        return val.convert_to<uint64_t>();
+        return static_cast<uint64_t>(val);
     }
 
     void SetValue(int64_t highBitsField, uint64_t lowBitsField)
@@ -855,9 +830,9 @@ public:
             return 0;
         }
         if (signum > 0) {
-            return val.convert_to<int128_t>();
+            return static_cast<int128_t>(val);
         } else {
-            return -val.convert_to<int128_t>();
+            return static_cast<int128_t>(-val);
         }
     }
 
@@ -869,7 +844,7 @@ public:
 
     std::string ToStringUnscale() const
     {
-        std::string s = val.str();
+        std::string s = Uint128ToStr(val);
         if (signum == -1) {
             s.insert(0, "-");
         }
@@ -923,17 +898,17 @@ public:
     static constexpr uint128_t DECIMAL128_MAX_VALUE = (__int128_t(0X4b3b4ca85a86c47a) << 64) + 0x098a223fffffffff;
 
 private:
-    uint256_t ReScaleTo256Bits(int32_t newScale) const
+    int256_t ReScaleTo256Bits(int32_t newScale) const
     {
-        uint256_t result = val;
+        int256_t result = val;
         if (scale == newScale) {
             return result;
         }
         if (scale > newScale) {
             result = (val + TenOfScaleMultipliers[scale - newScale] / 2) /
-                TenOfScaleMultipliers[scale - newScale];
+                     TenOfScaleMultipliers[scale - newScale];
         } else {
-            result *= TenOfScaleMultipliers[newScale - scale];
+            result = result * TenOfScaleMultipliers[newScale - scale];
         }
         return result;
     }
@@ -991,7 +966,8 @@ public:
     Decimal64(double inputVal)
     {
         std::stringstream os;
-        os << std::setprecision(DOUBLE_MAX_PRECISION) << inputVal;
+        os.precision(DOUBLE_MAX_PRECISION);
+        os << inputVal;
         std::string s = os.str();
         new(this)Decimal64(s);
     }
@@ -1008,7 +984,7 @@ public:
             overflow = OpStatus::OP_OVERFLOW;
         }
         scale = inputScale;
-        val = result.convert_to<int64_t>();
+        val = static_cast<int64_t>(result);
     }
 
     Decimal64(const uint128_t &input)
@@ -1018,6 +994,7 @@ public:
 
     Decimal64(const Decimal128Wrapper &decimal128)
     {
+        val = 0;
         if (decimal128.IsOverflow() != OpStatus::SUCCESS) {
             overflow = OpStatus::OP_OVERFLOW;
             return;
@@ -1025,13 +1002,13 @@ public:
         if (decimal128.GetSignum() == 0) {
             val = 0;
         } else if (decimal128.GetSignum() > 0) {
-            if (decimal128 > INT64_MAX) {
+            if (decimal128.GetValue() > DECIMAL64_MAX_VALUE) {
                 overflow = OpStatus::OP_OVERFLOW;
                 return;
             }
             val = static_cast<int64_t>(decimal128.GetValue());
         } else {
-            if (decimal128 < INT64_MIN) {
+            if (decimal128.GetValue() > DECIMAL64_MAX_VALUE) {
                 overflow = OpStatus::OP_OVERFLOW;
                 return;
             }
@@ -1125,7 +1102,8 @@ public:
             result.overflow = OpStatus::DIVIDE_BY_ZERO;
             return result;
         }
-        divide_qr(dividend128, divisor128, quotient128, remainder128);
+        quotient128 = dividend128 / divisor128;
+        remainder128 = dividend128 % divisor128;
         if (remainder128 * 2 >= divisor128) {
             quotient128 += 1;
         }
@@ -1133,7 +1111,7 @@ public:
             result.overflow = OpStatus::OP_OVERFLOW;
             return result;
         }
-        result.val = isNeg ? (-quotient128).convert_to<int64_t>() : quotient128.convert_to<int64_t>();
+        result.val = isNeg ? static_cast<int64_t>(-quotient128) : static_cast<int64_t>(quotient128);
         return result;
     }
 
@@ -1154,7 +1132,7 @@ public:
             return result;
         }
         remainder256 = dividend128 % divisor128;
-        result.val = remainder256.convert_to<int64_t>();
+        result.val = static_cast<int64_t>(remainder256);
         result.SetScale(ScaleFactor);
         return result;
     }
@@ -1200,7 +1178,7 @@ public:
         }
         if (scale > newScale) {
             result = (val + TenOfScaleMultipliers[scale - newScale] / 2) /
-                TenOfScaleMultipliers[scale - newScale];
+                     TenOfScaleMultipliers[scale - newScale];
         } else {
             result *= TenOfScaleMultipliers[newScale - scale];
         }
@@ -1225,7 +1203,7 @@ public:
 
     OpStatus ToInt(int32_t &res) const
     {
-        auto tenOfScale = TenOfScaleMultipliers[scale].convert_to<int64_t>();
+        auto tenOfScale = static_cast<int64_t>(TenOfScaleMultipliers[scale]);
         Decimal64 result = this->Divide(Decimal64(tenOfScale), 0);
         if (result.val > INT32_MAX || result.val < INT32_MIN) {
             return OpStatus::OP_OVERFLOW;
@@ -1237,7 +1215,7 @@ public:
 
     OpStatus ToLong(int64_t &res) const
     {
-        auto tenOfScale = TenOfScaleMultipliers[scale].convert_to<int64_t>();
+        auto tenOfScale = static_cast<int64_t>(TenOfScaleMultipliers[scale]);
         Decimal64 result = this->Divide(Decimal64(tenOfScale), 0);
         res = static_cast<int64_t>(result.val);
         return OpStatus::SUCCESS;
@@ -1271,6 +1249,7 @@ public:
     static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;
     static constexpr uint128_t UNSIGNED_INT64_MIN = __uint128_t(INT64_MAX) + 1;
     static constexpr uint128_t DECIMAL128_MAX_VALUE = (__int128_t(0X4b3b4ca85a86c47a) << 64) + 0x098a223fffffffff;
+    static constexpr uint128_t DECIMAL64_MAX_VALUE = 999999999999999999LL;
 private:
     Decimal64 &ReScaleRoundUp(int32_t newScale)
     {

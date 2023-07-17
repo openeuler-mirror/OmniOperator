@@ -31,8 +31,8 @@ template <typename T> T GetMax()
         return std::numeric_limits<float>::max();
     } else if constexpr (std::is_same_v<T, double>) {
         return std::numeric_limits<double>::max();
-    } else if constexpr (std::is_same_v<T, int128>) {
-        return std::numeric_limits<int128>::max();
+    } else if constexpr (std::is_same_v<T, int128_t>) {
+        return std::numeric_limits<int128_t>::max();
     } else if constexpr (std::is_same_v<T, omniruntime::type::Decimal128>) {
         return Decimal128(type::DECIMAL128_MAX_VALUE);
     } else {

@@ -5,7 +5,6 @@
 
 #include "gtest/gtest.h"
 #include "vector/vector.h"
-#include "boost/multiprecision/number.hpp"
 #include "benchmark/benchmark.h"
 #include "vector_test_util.h"
 
@@ -278,10 +277,7 @@ BENCHMARK_TEMPLATE(bm_vector_setvalue, int32_t);
 BENCHMARK_TEMPLATE(bm_vector_setvalue, int64_t);
 BENCHMARK_TEMPLATE(bm_vector_setvalue, float);
 BENCHMARK_TEMPLATE(bm_vector_setvalue, double);
-
-BENCHMARK_TEMPLATE(bm_vector_setvalue, boost_dec32);
-BENCHMARK_TEMPLATE(bm_vector_setvalue, boost_dec64);
-BENCHMARK_TEMPLATE(bm_vector_setvalue, boost_dec128);
+BENCHMARK_TEMPLATE(bm_vector_setvalue, int128_t);
 
 BENCHMARK_TEMPLATE(bm_dictvector_setvalue, int16_t);
 
@@ -307,9 +303,7 @@ BENCHMARK_TEMPLATE(bm_slice_vector_getvalue, int32_t);
 BENCHMARK_TEMPLATE(bm_slice_vector_getvalue, int64_t);
 BENCHMARK_TEMPLATE(bm_slice_vector_getvalue, std::string);
 BENCHMARK_TEMPLATE(bm_slice_vector_getvalue, double);
-BENCHMARK_TEMPLATE(bm_slice_vector_getvalue, boost_dec32);
-BENCHMARK_TEMPLATE(bm_slice_vector_getvalue, boost_dec64);
-BENCHMARK_TEMPLATE(bm_slice_vector_getvalue, boost_dec128);
+BENCHMARK_TEMPLATE(bm_slice_vector_getvalue, int128_t);
 
 BENCHMARK_TEMPLATE(bm_vector_getvalue, std::string)->Arg(0)->ArgName("small");
 BENCHMARK_TEMPLATE(bm_vector_getvalue, std::string)->Arg(1)->ArgName("large");

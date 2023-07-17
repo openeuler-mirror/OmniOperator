@@ -5,7 +5,6 @@
 #include "gtest/gtest.h"
 #include "vector/vector.h"
 #include "vector_test_util.h"
-#include "boost/multiprecision/number.hpp"
 #include "vector/dictionary_container.h"
 #include "vector/vector_helper.h"
 
@@ -462,9 +461,9 @@ TEST(vector, vector_get_set_value_bool)
     vector_get_set_value<bool>();
 }
 
-TEST(vector, vector_get_set_value_boost_dec128)
+TEST(vector, vector_get_set_value_dec128)
 {
-    vector_get_set_value<boost_dec128>();
+    vector_get_set_value<int128_t>();
 }
 
 TEST(vector, vector_has_null_int32)
@@ -492,9 +491,9 @@ TEST(vector, vector_has_null_bool)
     vector_has_null<bool>();
 }
 
-TEST(vector, vector_has_null_boost_dec128)
+TEST(vector, vector_has_nulldec128)
 {
-    vector_has_null<boost_dec128>();
+    vector_has_null<int128_t>();
 }
 
 TEST(vector, vector_has_null_string)
@@ -554,9 +553,9 @@ TEST(vector, append_bool)
     vector_append_value<bool>();
 }
 
-TEST(vector, append_boost_boost_dec128)
+TEST(vector, append_boost_dec128)
 {
-    vector_append_value<boost_dec128>();
+    vector_append_value<int128_t>();
 }
 
 TEST(vector, copy_positions_int32)
@@ -584,9 +583,9 @@ TEST(vector, copy_positions_bool)
     vector_copy_positions_value<bool>();
 }
 
-TEST(vector, copy_positions_boost_dec128)
+TEST(vector, copy_positions_dec128)
 {
-    vector_copy_positions_value<boost_dec128>();
+    vector_copy_positions_value<int128_t>();
 }
 
 TEST(vector, dict_get_value_with_null_int32)
@@ -614,9 +613,9 @@ TEST(vector, dict_get_value_with_null_bool)
     dict_vector_get_value_with_null<bool>();
 }
 
-TEST(vector, dict_get_value_with_null_boost_dec128)
+TEST(vector, dict_get_value_with_null_dec128)
 {
-    dict_vector_get_value_with_null<boost_dec128>();
+    dict_vector_get_value_with_null<int128_t>();
 }
 
 TEST(vector, dict_get_value_with_null_string)
@@ -649,9 +648,9 @@ TEST(vector, dict_copy_position_with_null_bool)
     dict_copy_positions_value<bool>();
 }
 
-TEST(vector, dict_copy_position_with_boost_dec128)
+TEST(vector, dict_copy_position_with_dec128)
 {
-    dict_copy_positions_value<boost_dec128>();
+    dict_copy_positions_value<int128_t>();
 }
 
 TEST(vector, dict_copy_position_with_null_string)
@@ -679,9 +678,9 @@ TEST(vector, vec_set_values_double)
     vec_set_values<double>();
 }
 
-TEST(vector, vec_set_values_boost_dec128)
+TEST(vector, vec_set_values_dec128)
 {
-    vec_set_values<boost_dec128>();
+    vec_set_values<int128_t>();
 }
 
 TEST(vector, vec_set_values_int32_out_of_range)

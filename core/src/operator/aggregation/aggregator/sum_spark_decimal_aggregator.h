@@ -14,7 +14,7 @@ namespace omniruntime {
 namespace op {
 // decimal sum state, sum's initial val is 0.
 using SparkDecimalSumState = struct SparkDecimalSumState {
-    int128 val;
+    int128_t val;
     bool isOverflow; // isOverflow is true when it has had an overflow
     bool isEmpty;    // isEmpty is true when all row in a vector are NULL
     bool isUnprocessed;
@@ -55,11 +55,11 @@ public:
         int32_t inputType = inputTypes.GetIds()[0];
         if constexpr (INPUT_RAW) {
             // 1. get a new value
-            int128 curVal;
+            int128_t curVal;
             GetDecimalValue(vector, inputType, rowIndex, curVal);
 
             // 2. decode current state
-            int128 decodedDec = stateVal->val;
+            int128_t decodedDec = stateVal->val;
             bool isOverflow = stateVal->isOverflow;
 
             // 3. if overflowed, no need to do calculation
@@ -72,13 +72,13 @@ public:
             EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), decodedDec, isOverflow, false);
         } else {
             // 1. get partial sum and isEmptyInVec
-            int128 curVal;
+            int128_t curVal;
             GetDecimalValue(vector, inputType, rowIndex, curVal);
             BaseVector *emptyVector = vectorBatch->Get(channels[1]);
             bool isEmptyInVec = reinterpret_cast<Vector<bool> *>(emptyVector)->GetValue(rowIndex);
 
             // 2. decode current state and intermediate state
-            int128 decodedDec = stateVal->val;
+            int128_t decodedDec = stateVal->val;
             bool isOverflow = stateVal->isOverflow;
             bool isEmptyInState = stateVal->isEmpty || stateVal->isUnprocessed;
 
@@ -102,11 +102,11 @@ public:
         BaseVector *vector = vectors[0];
         SparkDecimalSumState *stateVal = static_cast<SparkDecimalSumState *>(state.val);
 
-        int128 decodedDec = stateVal->val;
+        int128_t decodedDec = stateVal->val;
         bool isOverflow = stateVal->isOverflow;
         bool isEmpty = stateVal->isEmpty || stateVal->isUnprocessed;
 
-        int128 resultDec;
+        int128_t resultDec;
         // only support output scale >= input scale
         // for spark, input type is always decimal. for olk, input type is varbinary and the precision
         // and scale are zero.
@@ -157,7 +157,7 @@ private:
         vector->SetNull(index);
     }
 
-    void EncodeSumState(SparkDecimalSumState *statePtr, const int128 &val, const bool isOverflow, const bool isEmpty,
+    void EncodeSumState(SparkDecimalSumState *statePtr, const int128_t &val, const bool isOverflow, const bool isEmpty,
         const bool isUnprocessed = false)
     {
         statePtr->val = val;
@@ -167,7 +167,7 @@ private:
     }
 
     // Set decimal val to output vector in Extract function. The outputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128.
-    void SetValToVector(BaseVector *vector, int32_t rowIndex, int32_t outputType, int128 &deciVal)
+    void SetValToVector(BaseVector *vector, int32_t rowIndex, int32_t outputType, int128_t &deciVal)
     {
         if (outputType == OMNI_DECIMAL64) {
             int64_t longVal = static_cast<int64_t>(deciVal);

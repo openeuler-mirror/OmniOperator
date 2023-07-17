@@ -59,8 +59,6 @@ TEST(Allocator, testCreateAndFreeVector)
     createVector<int32_t>(vecSize);
     createVector<int64_t>(vecSize);
     createVector<double>(vecSize);
-    createVector<test::boost_dec64>(vecSize);
-    createVector<test::boost_dec128>(vecSize);
     createVector<std::string_view>(vecSize);
 }
 
@@ -70,8 +68,6 @@ TEST(Allocator, testCreateZeroVector)
     createVector<int32_t>(vecSize);
     createVector<int64_t>(vecSize);
     createVector<double>(vecSize);
-    createVector<test::boost_dec64>(vecSize);
-    createVector<test::boost_dec128>(vecSize);
     createVector<std::string_view>(vecSize);
 }
 

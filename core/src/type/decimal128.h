@@ -9,13 +9,11 @@
 #include <iostream>
 #include <array>
 #include <cstring>
-#include <boost/multiprecision/cpp_int.hpp>
 #include "decimal_base.h"
 #include "width_integer.h"
 
 namespace omniruntime {
 namespace type {
-using namespace boost::multiprecision;
 
 // The highest bit of Decimal128 is sign flag.
 class Decimal128 : public BasicDecimal {

@@ -114,7 +114,7 @@ std::string CastErrorMessage(type::DataTypeId from, type::DataTypeId to, T value
     } else {
         errorMessage << "Cannot cast " << GetDataString(from, 1) << " '";
         if constexpr (std::is_same_v<T, __int128_t>) {
-            errorMessage << boost::multiprecision::int128_t(value);
+            errorMessage << omniruntime::type::ToString(value);
         } else {
             errorMessage << value;
         }

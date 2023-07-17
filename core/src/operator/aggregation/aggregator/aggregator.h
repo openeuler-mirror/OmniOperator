@@ -48,12 +48,12 @@ using AggregateState = struct AggregateState {
 using DecimalAverageState = struct DecimalAverageState {
     int64_t count;
     int64_t overflow;
-    type::int128 val;
+    type::int128_t val;
 };
 
 using DecimalSumState = struct DecimalSumState {
     int64_t overflow;
-    type::int128 val;
+    type::int128_t val;
 };
 
 using FirstState = struct FirstState {
@@ -63,7 +63,7 @@ using FirstState = struct FirstState {
 };
 
 // Avg decimal and overflow is decode/encode in continuous memory
-static inline void DecodeAvgDecimal(op::DecimalAverageState *statePtr, type::int128 &val, int64_t &overflow,
+static inline void DecodeAvgDecimal(op::DecimalAverageState *statePtr, type::int128_t &val, int64_t &overflow,
     int64_t &count)
 {
     count = statePtr->count;
@@ -71,7 +71,7 @@ static inline void DecodeAvgDecimal(op::DecimalAverageState *statePtr, type::int
     val = statePtr->val;
 }
 
-static inline void EncodeAvgDecimal(op::DecimalAverageState *statePtr, const type::int128 &val,
+static inline void EncodeAvgDecimal(op::DecimalAverageState *statePtr, const type::int128_t &val,
     const int64_t &overflow, const int64_t &count)
 {
     statePtr->count = count;
