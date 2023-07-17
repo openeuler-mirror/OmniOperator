@@ -63,6 +63,25 @@ template <typename CONTAINER> void string_vector_size_invalid()
     EXPECT_ANY_THROW(auto container = std::make_shared<CONTAINER>(vectorSize));
 }
 
+template <typename CONTAINER>
+void CompareResult(Vector<CONTAINER> *appended, std::vector<std::string> expected, std::vector<bool> expectedNull,
+    int32_t appendedVecSize)
+{
+    for (int32_t i = 0; i < appendedVecSize; i++) {
+        // append empty vector or beyond the bound
+        if (i >= 10) {
+            EXPECT_FALSE(appended->IsNull(i));
+            continue;
+        }
+        // append success for value check
+        if (appended->IsNull(i)) {
+            EXPECT_EQ(expectedNull[i], appended->IsNull(i));
+            continue;
+        }
+        EXPECT_EQ(expected[i % 5], appended->GetValue(i));
+    }
+}
+
 template <typename CONTAINER> void string_vector_append_value()
 {
     int vectorSize = 5;
@@ -112,19 +131,8 @@ template <typename CONTAINER> void string_vector_append_value()
     appended->Append(v4OverBounds, 10, vectorSize + 1);
 
     std::vector<bool> expectedNull{ false, false, false, false, false, true, false, true, false, true };
-    for (int32_t i = 0; i < appendedVecSize; i++) {
-        // append empty vector or beyond the bound
-        if (i >= 10) {
-            EXPECT_FALSE(appended->IsNull(i));
-            continue;
-        }
-        // append success for value check
-        if (appended->IsNull(i)) {
-            EXPECT_EQ(expectedNull[i], appended->IsNull(i));
-            continue;
-        }
-        EXPECT_EQ(expected[i % 5], appended->GetValue(i));
-    }
+    CompareResult(appended, expected, expectedNull, appendedVecSize);
+
     delete appended;
     delete v4OverBounds;
     delete v3Emtpy;

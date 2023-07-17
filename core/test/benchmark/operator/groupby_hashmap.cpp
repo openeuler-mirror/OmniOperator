@@ -295,7 +295,7 @@ public:
     void InitState()
     {
         if (maxState == nullptr) {
-            maxState = reinterpret_cast<uint32_t *>(malloc(stateResourceUsedBytes));
+            maxState = reinterpret_cast<uint32_t *>(malloc(STATE_RESOURCE_USED_BYTES));
             *maxState = std::numeric_limits<uint32_t>::min();
         }
     }
@@ -313,7 +313,7 @@ public:
     };
 
 private:
-    static constexpr uint8_t stateResourceUsedBytes = sizeof(uint32_t);
+    static constexpr uint8_t STATE_RESOURCE_USED_BYTES = sizeof(uint32_t);
     uint32_t *maxState = nullptr;
 };
 

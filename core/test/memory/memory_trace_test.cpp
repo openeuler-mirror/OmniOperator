@@ -7,8 +7,6 @@
 #include "vector/vector.h"
 #include "vector/vector_helper.h"
 #include "allocator.h"
-#include <iostream>
-#include <fstream>
 
 namespace omniruntime::mem {
 using namespace omniruntime::vec;

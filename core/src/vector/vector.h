@@ -196,7 +196,7 @@ public:
      * @param vSize: size of array in variables nulls and values
      * @param dataTypeId: the dataTypeId of vector
      */
-    // TODO: the dataTypeId will be used in operator in the future.
+    // the dataTypeId will be used in operator in the future.
     Vector(int vSize, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
         : BaseVector(vSize), values(std::shared_ptr<RAW_DATA_TYPE[]>(new RAW_DATA_TYPE[vSize]))
     {

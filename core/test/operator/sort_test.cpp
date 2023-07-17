@@ -291,7 +291,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     double expectData2[dataSize] = {1.1, 4.4, 2.2, 5.5, 3.3, 6.6};
-    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), DoubleType() });
+    DataTypes expectedTypes(std::vector<DataTypePtr>{ LongType(), DoubleType() });
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
@@ -328,7 +328,7 @@ TEST(NativeOmniSortTest, TestSortShortColumn)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int16_t expectData2[dataSize] = {1, 4, 2, 5, 3, 6};
-    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), ShortType() });
+    DataTypes expectedTypes(std::vector<DataTypePtr>{ LongType(), ShortType() });
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
 
@@ -347,7 +347,7 @@ TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
     BuildSortTestData(vecBatches, COLUMN_COUNT_2);
     std::cout << "finish build sort data" << endl;
 
-    DataTypes sourceTypes(std::vector<DataTypePtr> { LongType(), LongType() });
+    DataTypes sourceTypes(std::vector<DataTypePtr>{ LongType(), LongType() });
     int32_t outputCols[] = {0, 1};
     int32_t sortCols[] = {0, 1};
     int32_t ascendings[] = {1, 1};
@@ -395,7 +395,7 @@ void SetSortThreadArgs(struct SortThreadArgs *sortThreadArgs, SortOperatorFactor
 
 SortOperatorFactory *PrepareOrderBy(bool isOriginal)
 {
-    DataTypes sourceTypes(std::vector<DataTypePtr> { LongType(), LongType(), LongType(), LongType() });
+    DataTypes sourceTypes(std::vector<DataTypePtr>{ LongType(), LongType(), LongType(), LongType() });
     int32_t outputCols[] = {0, 1};
     int32_t outputColsCount = 2;
     int32_t sortCols[] = {2, 3};
@@ -410,7 +410,7 @@ SortOperatorFactory *PrepareOrderBy(bool isOriginal)
 
 void TestOrderBy(struct SortThreadArgs *threadArgs)
 {
-    std::vector<DataTypePtr> allTypes { LongType(), LongType(), LongType(), LongType() };
+    std::vector<DataTypePtr> allTypes{ LongType(), LongType(), LongType(), LongType() };
     // create operator
     SortOperatorFactory *operatorFactory = threadArgs->operatorFactory;
     SortOperator *sortOperator;
@@ -432,7 +432,7 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
 
 TEST(NativeOmniSortTest, TestSortOriginalMultiThreads)
 {
-    std::vector<DataTypePtr> allTypes { LongType(), LongType(), LongType(), LongType() };
+    std::vector<DataTypePtr> allTypes{ LongType(), LongType(), LongType(), LongType() };
     VectorBatch **vecBatches = new VectorBatch *[VEC_BATCH_COUNT];
 
     BuildSortTestData(vecBatches, COLUMN_COUNT_4);
@@ -757,7 +757,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
 
     int64_t expectData1[dataSize] = {5, 2, 4, 1, 3, 0};
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
-    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), LongType() });
+    DataTypes expectedTypes(std::vector<DataTypePtr>{ LongType(), LongType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
 
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
@@ -1365,9 +1365,9 @@ TEST(NativeOmniSortTest, TestVarcharSortPerformance)
         dataCombo[i].first = data1[i];
         dataCombo[i].second = data2[i];
     }
-    std::sort(dataCombo.begin(), dataCombo.end(), [](const auto& a, const auto& b){ return a.first>b.first || (a.first==b.first && a.second<b.second);});
-    DataTypes sourceTypes(
-        std::vector<DataTypePtr>({ VarcharType(10), VarcharType(10)}));
+    std::sort(dataCombo.begin(), dataCombo.end(),
+        [](const auto &a, const auto &b) { return a.first > b.first || (a.first == b.first && a.second < b.second); });
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ VarcharType(10), VarcharType(10) }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
     int32_t outputCols[vecSize] = {0, 1};
@@ -1383,7 +1383,7 @@ TEST(NativeOmniSortTest, TestVarcharSortPerformance)
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
-    
+
     std::cout << "sort and get output elapsed end time: " << static_cast<double>(std::clock() - start) / 1000 <<
         " ms" << std::endl;
 
@@ -1415,16 +1415,17 @@ TEST(NativeOmniSortTest, TestAllColumnsCanCastToInt64)
 
     std::vector<std::tuple<bool, int32_t, int64_t>> dataCombo;
     for (int32_t i = 0; i < dataSize; ++i) {
-        data1[i] = (i%3 == 0);
-        data2[i] = i%nKeys;
-        data3[i] = i/nKeys;
-        dataCombo.push_back({data1[i], data2[i], data3[i]});
+        data1[i] = (i % 3 == 0);
+        data2[i] = i % nKeys;
+        data3[i] = i / nKeys;
+        dataCombo.push_back({ data1[i], data2[i], data3[i] });
     }
-    std::sort(dataCombo.begin(), dataCombo.end(), [](const auto& a, const auto& b){
-        return std::get<0>(a)>std::get<0>(b) || (std::get<0>(a)==std::get<0>(b) && std::get<1>(a)<std::get<1>(b))
-            || (std::get<0>(a)==std::get<0>(b) && std::get<1>(a)==std::get<1>(b) && std::get<2>(a)<std::get<2>(b)) ;});
-    DataTypes sourceTypes(
-        std::vector<DataTypePtr>({BooleanType(), IntType(), LongType()}));
+    std::sort(dataCombo.begin(), dataCombo.end(), [](const auto &a, const auto &b) {
+        return std::get<0>(a) > std::get<0>(b) ||
+            (std::get<0>(a) == std::get<0>(b) && std::get<1>(a) < std::get<1>(b)) ||
+            (std::get<0>(a) == std::get<0>(b) && std::get<1>(a) == std::get<1>(b) && std::get<2>(a) < std::get<2>(b));
+    });
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ BooleanType(), IntType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
 
     int32_t outputCols[vecSize] = {0, 1, 2};
@@ -1448,7 +1449,6 @@ TEST(NativeOmniSortTest, TestAllColumnsCanCastToInt64)
         data1[i] = std::get<0>(dataCombo[i]);
         data2[i] = std::get<1>(dataCombo[i]);
         data3[i] = std::get<2>(dataCombo[i]);
-
     }
     VectorBatch *expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
@@ -1463,5 +1463,4 @@ TEST(NativeOmniSortTest, TestAllColumnsCanCastToInt64)
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
 }
-
 }
