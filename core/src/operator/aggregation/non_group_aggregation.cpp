@@ -88,6 +88,9 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 #ifdef ENABLE_HMPP
         if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
             aggregator->ProcessGroupWithHMPP(state, vecBatch);
+        } else if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
+            aggregator->ProcessGroupFilter(state, vecBatch, 0, filterIndex);
+            filterIndex++;
         } else {
             aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
         }

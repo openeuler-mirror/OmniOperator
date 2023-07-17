@@ -44,12 +44,10 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         LogDebug("HMPP-Agg-max");
         result = HMPPS_Max_64f(static_cast<double *>(static_cast<double *>(vectorValues)), rowCount,
             reinterpret_cast<double *>(maxVal));
-    } else if constexpr (IN_ID == OMNI_DECIMAL128) {
+    } else {
         LogDebug("HMPP-Agg-max");
         result = HMPPS_Max_decimal(static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)), rowCount,
             reinterpret_cast<HmppDecimal128 *>(maxVal));
-    } else {
-        throw OmniException("NOT SUPPORT", "Unsupported input type for max aggregate");
     }
 
     if (result != HMPP_STS_NO_ERR) {

@@ -194,7 +194,7 @@ ALWAYS_INLINE void MinVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState
 // and used explicit template instantiation to generate template instances
 
 void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std::string_view>> *rawVector,
-    const char *&res, int32_t &idx)
+    const char *res, int32_t idx)
 {
     if (state.val == nullptr || state.count == 0) {
         auto strView = rawVector->GetValue(idx);
@@ -204,17 +204,15 @@ void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std:
     }
 }
 
-const char *InitialVarcharDictState(AggregateState &state, Vector<DictionaryContainer<std::string_view>> *rawVector,
-    int32_t idx)
+void InitialVarcharDictState(AggregateState &state, Vector<DictionaryContainer<std::string_view>> *rawVector,
+    const char *res, int32_t idx)
 {
-    const char *res;
     if (state.val == nullptr || state.count == 0) {
         auto strView = rawVector->GetValue(idx);
         res = strView.data();
         state.count = strView.size();
         state.count |= UPDATE_FLAG;
     }
-    return res;
 }
 
 template class MinVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
