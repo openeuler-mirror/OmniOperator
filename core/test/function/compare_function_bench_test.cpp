@@ -46,7 +46,7 @@ int32_t CompareVarchar(BaseVector *leftColumn, int32_t leftColumnPosition, BaseV
     }
 }
 
-void PrintCompareVarcharResult(BaseVector *vector1, BaseVector *vector2, Timer &timer, double sum, int comp)
+void PrintCompareVarcharResult(BaseVector *vector1, BaseVector *vector2, Timer &timer, double &sum, int &comp)
 {
     for (int j = 0; j < ROUNDS; j++) {
         timer.Reset();
@@ -124,7 +124,7 @@ int32_t CompareVarcharByLong(BaseVector *leftColumn, int32_t leftColumnPosition,
     }
 }
 
-void PrintCompareVarcharResultByLong(BaseVector *vector1, BaseVector *vector2, Timer &timer, double sum, int comp)
+void PrintCompareVarcharResultByLong(BaseVector *vector1, BaseVector *vector2, Timer &timer, double &sum, int &comp)
 {
     for (int j = 0; j < ROUNDS; j++) {
         timer.Reset();
@@ -163,7 +163,7 @@ TEST(varcharType, CompareVarcharPerf)
 
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
-    int comp;
+    int comp = 0;
     PrintCompareVarcharResult(vector1, vector2, timer, sum, comp);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
@@ -203,7 +203,7 @@ TEST(varcharType, CompareVarcharByLongPerf)
 
     std::cout << "Compare equal varchar" << std::endl;
     double sum = 0;
-    int comp;
+    int comp = 0;
     PrintCompareVarcharResultByLong(vector1, vector2, timer, sum, comp);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);

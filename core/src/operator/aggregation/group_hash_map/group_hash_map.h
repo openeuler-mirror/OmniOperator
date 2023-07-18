@@ -266,7 +266,7 @@ public:
 private:
     void CalculateThreshHold()
     {
-        threshHold = static_cast<uint64_t>(std::ceil((1ULL << (degree - 1))));
+        threshHold = static_cast<uint64_t>(std::ceil(static_cast<double>(1ULL << degree) * 0.75));
     }
     uint64_t threshHold = 0;
     uint8_t degree;
@@ -582,7 +582,7 @@ private:
     HashType hasher;
     uint64_t totalSize;
     uint64_t capacity;
-    static constexpr uint8_t defaultDegreeSize = 8;
+    static constexpr uint8_t defaultDegreeSize = 16;
     GrowStrategy grower;
 };
 

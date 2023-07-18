@@ -44,7 +44,8 @@ static bool hashagg_equal(BaseVector *vector1, uint32_t offset1, BaseVector *vec
     return true;
 }
 
-static void PrintResultByHashAggEqual(BaseVector *vector1, BaseVector *vector2, Timer &timer, double sum, bool isEqual)
+static void PrintResultByHashAggEqual(BaseVector *vector1, BaseVector *vector2, Timer &timer, double &sum,
+    bool &isEqual)
 {
     for (int j = 0; j < ROUNDS; j++) {
         timer.Reset();
@@ -77,8 +78,8 @@ static bool join_equal(VarcharVector *leftVector, int32_t leftIndex, VarcharVect
     }
 }
 
-static void PrintResultByJoinEqual(VarcharVector *vector1, VarcharVector *vector2, Timer &timer, double sum,
-    bool isEqual)
+static void PrintResultByJoinEqual(VarcharVector *vector1, VarcharVector *vector2, Timer &timer, double &sum,
+    bool &isEqual)
 {
     for (int j = 0; j < ROUNDS; j++) {
         timer.Reset();
@@ -117,7 +118,7 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
 
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
-    bool isEqual;
+    bool isEqual = false;
     PrintResultByJoinEqual(vector1, vector2, timer, sum, isEqual);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
@@ -159,7 +160,7 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
 
     std::cout << "Compare same varchar: " << std::endl;
     double sum = 0;
-    bool isEqual;
+    bool isEqual = false;
     PrintResultByHashAggEqual(vector1, vector2, timer, sum, isEqual);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
