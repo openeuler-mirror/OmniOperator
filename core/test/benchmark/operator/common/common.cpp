@@ -3,7 +3,10 @@
  */
 
 #include "common.h"
+
 #include <iostream>
+
+#include "vector_util.h"
 #include "util/perf_util.h"
 
 using namespace benchmark;
@@ -159,6 +162,86 @@ void BaseOperatorFixture::RunDefaultBenchmark(benchmark::State &state)
         }
 
         delete perfUtil;
+        Operator::DeleteOperator(op);
+        state.SetIterationTime(addInputDuration.count() + getOutputDuration.count());
+        int timeRatio = 1000;
+        state.counters["addInput/ms"] += addInputDuration.count() * timeRatio;
+        state.counters["getOutput/ms"] += getOutputDuration.count() * timeRatio;
+        state.counters["elapsed/ms"] += (addInputDuration.count() + getOutputDuration.count()) * timeRatio;
+    }
+}
+
+void BaseOperatorLargeFixture::SetUp(benchmark::State &state)
+{
+    BaseOmniFixture::SetUp(state);
+    operatorFactory = MessageWhenSkip(state).empty() ? createOperatorFactory(state) : nullptr;
+    state.counters["addInput/ms"] = Counter(0, benchmark::Counter::kAvgIterations);
+    state.counters["getOutput/ms"] = Counter(0, benchmark::Counter::kAvgIterations);
+    state.counters["elapsed/ms"] = Counter(0, benchmark::Counter::kAvgIterations);
+}
+
+void BaseOperatorLargeFixture::TearDown(benchmark::State &state)
+{
+    if (operatorFactory != nullptr) {
+        delete operatorFactory;
+        operatorFactory = nullptr;
+    }
+}
+
+void BaseOperatorLargeFixture::RunDefaultBenchmark(benchmark::State &state)
+{
+    auto skipMessage = MessageWhenSkip(state);
+    if (!skipMessage.empty() || operatorFactory == nullptr) {
+        state.SetIterationTime(std::numeric_limits<double>::infinity());
+        state.SetLabel(skipMessage);
+        return;
+    }
+    for (__attribute__((unused)) auto _ : state) {
+        Operator *op = operatorFactory->CreateOperator();
+        VectorBatch *outputVecBatch = nullptr;
+        std::chrono::duration<double> addInputDuration(0);
+        std::chrono::duration<double> getOutputDuration(0);
+
+        VectorBatch *vb = createSingleVecBatch(state);
+        while (vb != nullptr) {
+            auto start = std::chrono::high_resolution_clock::now();
+            op->AddInput(vb);
+            addInputDuration += std::chrono::duration_cast<std::chrono::duration<double>>(
+                std::chrono::high_resolution_clock::now() - start);
+
+            if (GetOutputStrategy() == AFTER_EACH_INPUT_FINISHED) {
+                auto outputStart = std::chrono::high_resolution_clock::now();
+                while (op->GetStatus() != OMNI_STATUS_FINISHED) {
+                    op->GetOutput(&outputVecBatch);
+                    if (outputVecBatch != nullptr) {
+                        VectorHelper::FreeVecBatch(outputVecBatch);
+                        outputVecBatch = nullptr;
+                    } else {
+                        break;
+                    }
+                }
+                getOutputDuration += std::chrono::duration_cast<std::chrono::duration<double>>(
+                    std::chrono::high_resolution_clock::now() - outputStart);
+            }
+            // next VectorBatch
+            vb = createSingleVecBatch(state);
+        }
+
+        if (GetOutputStrategy() == AFTER_ALL_INPUT_FINISHED) {
+            auto outputStart = std::chrono::high_resolution_clock::now();
+            while (op->GetStatus() != OMNI_STATUS_FINISHED) {
+                op->GetOutput(&outputVecBatch);
+                if (outputVecBatch != nullptr) {
+                    VectorHelper::FreeVecBatch(outputVecBatch);
+                    outputVecBatch = nullptr;
+                } else {
+                    break;
+                }
+            }
+            getOutputDuration += std::chrono::duration_cast<std::chrono::duration<double>>(
+                std::chrono::high_resolution_clock::now() - outputStart);
+        }
+
         Operator::DeleteOperator(op);
         state.SetIterationTime(addInputDuration.count() + getOutputDuration.count());
         int timeRatio = 1000;

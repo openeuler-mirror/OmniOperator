@@ -155,7 +155,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void AverageAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
     if constexpr (IN_ID == OMNI_CONTAINER) {
         if (state.val == nullptr) {
@@ -169,7 +169,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &sta
 
         auto *cntVector = reinterpret_cast<Vector<int64_t> *>(v->GetValue(1));
 
-        if (indexMap == nullptr) {
+        if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
             auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(cntVector));
             ptr += rowOffset;
@@ -187,6 +187,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &sta
         } else {
             auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(cntVector));
+            auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
             if (nullMap == nullptr) {
                 AddDictAvg<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, cntPtr, rowCount,
                     indexMap);
@@ -196,13 +197,13 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &sta
             }
         }
     } else {
-        SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap, indexMap);
+        SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
 {
     if constexpr (IN_ID == OMNI_CONTAINER) {
         // when input is not raw, vector is container with <double, long> columns for <sum, count>
@@ -211,7 +212,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
 
         auto *cntVector = reinterpret_cast<Vector<int64_t> *>(v->GetValue(1));
 
-        if (indexMap == nullptr) {
+        if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
             auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(cntVector));
             ptr += rowOffset;
@@ -226,6 +227,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
         } else {
             auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(cntVector));
+            auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
             if (nullMap == nullptr) {
                 AddDictUseRowIndexAvg<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, cntPtr,
                     indexMap);
@@ -235,7 +237,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
             }
         }
     } else {
-        SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap);
+        SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
     }
 }
 

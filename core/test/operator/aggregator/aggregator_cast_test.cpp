@@ -33,11 +33,11 @@ public:
     {}
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override
+        const int32_t rowCount, const uint8_t *nullMap) override
     {}
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override
+        const int32_t rowOffset, const uint8_t *nullMap) override
     {}
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) override

@@ -75,7 +75,7 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
@@ -96,7 +96,7 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {

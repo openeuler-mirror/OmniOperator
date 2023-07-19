@@ -158,5 +158,38 @@ protected:
 private:
     omniruntime::op::OperatorFactory *operatorFactory;
 };
+
+// This is used for benchmarks that generate too many rows
+// It does not create all VectorBatches at once to reduce memory usage
+// VectorBatch is created per iteration.
+// PerUtil does not work when number of iterations is > 1, so we have to define new Fixure which does not use PerfUtil
+class BaseOperatorLargeFixture : public BaseOmniFixture {
+protected:
+    virtual omniruntime::op::OperatorFactory *createOperatorFactory(const benchmark::State &state) = 0;
+
+    virtual omniruntime::vec::VectorBatch *createSingleVecBatch(const benchmark::State &state) = 0;
+
+    virtual BaseFixtureGetOutputStrategy GetOutputStrategy()
+    {
+        return AFTER_ALL_INPUT_FINISHED;
+    }
+
+    void SetUp(benchmark::State &state) override;
+
+    void TearDown(benchmark::State &state) override;
+
+    void RunDefaultBenchmark(benchmark::State &state);
+
+protected:
+    omniruntime::op::OperatorFactory *operatorFactory;
+};
+
+#define OMNI_BENCHMARK_DECLARE_OPERATOR_LARGE(BaseClass)                            \
+    OMNI_BENCHMARK_DECLARE_F(BaseClass, DefaultBenchmark)(benchmark::State & state) \
+    {                                                                               \
+        RunDefaultBenchmark(state);                                                 \
+    }                                                                               \
+    /* * NOLINT(readability-container-size-empty) * */                              \
+    OMNI_BENCHMARK_DECLARE_R(BaseClass, DefaultBenchmark)->UseManualTime()->Unit(benchmark::kMillisecond)
 }
 #endif

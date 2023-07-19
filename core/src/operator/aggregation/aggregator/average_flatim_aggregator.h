@@ -28,11 +28,10 @@ public:
     ~AverageFlatIMAggregator() override {}
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowCount, const uint8_t *nullMap)
     {
         if (AverageFlatIMAggregator<IN_ID, OUT_ID>::inputRaw) {
-            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap,
-                indexMap);
+            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
         } else {
             using InType = double;
             auto *res = reinterpret_cast<ResultType *>(state.val);
@@ -61,11 +60,10 @@ public:
     }
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowOffset, const uint8_t *nullMap)
     {
         if (AverageFlatIMAggregator<IN_ID, OUT_ID>::inputRaw) {
-            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap,
-                indexMap);
+            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
         } else {
             using InType = double;
             // when input is not raw, vector is <doubleVector, longVector> columns for <sum, count>

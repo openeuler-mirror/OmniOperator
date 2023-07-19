@@ -101,45 +101,33 @@ public:
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount) override
     {
-        AggregatorBuffer<uint8_t> nullMap;
-        GenerateNullMap(nullMap, vectorBatch, rowOffset, rowCount);
-        if (nullMap.data == nullptr) {
+        const uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
+        if (nullMap == nullptr) {
             return;
         }
 
-        AggregatorBuffer<int32_t> indexMap;
         BaseVector *vector = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
             vector = vectorBatch->Get(aggChannels[0]);
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                indexMap.Create(this->allocator, rowCount, false);
-                TypedAggregator::getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
-            }
         }
 
-        realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
+        realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
     }
 
     void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t filterIndex) override
     {
-        AggregatorBuffer<uint8_t> nullMap;
         int32_t rowCount = vectorBatch->GetRowCount();
-        GenerateNullMap(nullMap, vectorBatch, rowOffset, rowCount);
-        if (nullMap.data == nullptr) {
+        uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
+        if (nullMap == nullptr) {
             return;
         }
 
-        AggregatorBuffer<int32_t> indexMap;
         BaseVector *vector = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
             vector = vectorBatch->Get(aggChannels[0]);
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                indexMap.Create(this->allocator, rowCount, false);
-                TypedAggregator::getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
-            }
         }
 
         Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
@@ -156,61 +144,49 @@ public:
         filterPtr += rowOffset;
         if (needFilterJude) {
             // nullmapPtr can filter row which no need to aggregate
-            // the nullMap.data: true means null
+            // the nullMap: true means null
             // booleanVector: false means one row has been filtered
-            auto *nullmapPtr = nullMap.data;
+            auto *nullmapPtr = nullMap;
 
             for (int i = 0; i < rowCount; ++i) {
                 nullmapPtr[i] |= not filterPtr[i];
             }
         }
 
-        realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap.data, indexMap.data);
+        realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
     }
 
     void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t rowOffset) override
     {
         const size_t rowCount = rowStates.size();
-        AggregatorBuffer<uint8_t> nullMap;
-        GenerateNullMap(nullMap, vectorBatch, rowOffset, rowCount);
-        if (nullMap.data == nullptr) {
+        const uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
+        if (nullMap == nullptr) {
             return;
         }
 
-        AggregatorBuffer<int32_t> indexMap;
         BaseVector *vector = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
             vector = vectorBatch->Get(aggChannels[0]);
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                indexMap.Create(this->allocator, rowCount, false);
-                TypedAggregator::getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
-            }
         }
 
-        realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
+        realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
     }
 
     void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t filterStart, const int32_t rowOffset) override
     {
         const size_t rowCount = rowStates.size();
-        AggregatorBuffer<uint8_t> nullMap;
-        GenerateNullMap(nullMap, vectorBatch, rowOffset, rowCount);
-        if (nullMap.data == nullptr) {
+        uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
+        if (nullMap == nullptr) {
             return;
         }
 
-        AggregatorBuffer<int32_t> indexMap;
         BaseVector *vector = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0 && aggChannels[0] >= 0) {
             vector = vectorBatch->Get(aggChannels[0]);
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                indexMap.Create(this->allocator, rowCount, false);
-                TypedAggregator::getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
-            }
         }
         auto booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
 
@@ -225,17 +201,17 @@ public:
         auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
         filterPtr += rowOffset;
         if (needFilterJude) {
-            // nullMap.data can filter row which no need to aggregate
-            // the nullMap.data: true means need filter
+            // nullMap can filter row which no need to aggregate
+            // the nullMap: true means need filter
             // booleanVector: false means one row has been filtered
-            auto *nullmapPtr = nullMap.data;
+            auto *nullmapPtr = nullMap;
 
             for (int i = 0; i < rowCount; ++i) {
                 nullmapPtr[i] |= not filterPtr[i];
             }
         }
 
-        realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap.data, indexMap.data);
+        realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
     }
 
     void InitState(AggregateState &state) override
@@ -298,22 +274,18 @@ protected:
     {
         this->realAggregator =
             std::unique_ptr<TypedAggregator>(static_cast<TypedAggregator *>(realAggregator.release()));
-        getBooleanValuesFunction = getValuesFromVectorFunctions.at(OMNI_BOOLEAN);
-        getBooleanValuesFromDictFunction = getValuesFromDictFunctions.at(OMNI_BOOLEAN);
-        getIdsWithOffFromBooleanDictFunction = getIdsWithOffsetFunctions.at(OMNI_BOOLEAN);
     }
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowCount, const uint8_t *nullMap)
     {}
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowOffset, const uint8_t *nullMap)
     {}
 
 private:
-    void GenerateNullMap(AggregatorBuffer<uint8_t> &nullMap, VectorBatch *vectorBatch, const int32_t rowOffset,
-        const size_t rowCount)
+    uint8_t *GenerateNullMap(VectorBatch *vectorBatch, const int32_t rowOffset, const size_t rowCount)
     {
         if (maskColumnId < 0 || maskColumnId >= vectorBatch->GetVectorCount()) {
             throw OmniException("Illegal Arguement", "Aggregator maskColumnId " + std::to_string(maskColumnId) +
@@ -345,8 +317,7 @@ private:
             }
         }
 
-        nullMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-
+        uint8_t *nullMap = nullMapBuffer.AllocateReuse(rowCount, false);
         bool hasValidRows;
         if (maskVector->GetEncoding() == OMNI_DICTIONARY) {
             hasValidRows = GenerateNullMapDict(nullMap, rowOffset, rowCount, maskVector, maskNullMap, aggNullMap);
@@ -354,54 +325,51 @@ private:
             hasValidRows = GenerateNullMapFlat(nullMap, rowOffset, rowCount, maskVector, maskNullMap, aggNullMap);
         }
 
-        if (!hasValidRows) {
-            nullMap.Release();
-        }
+        return hasValidRows ? nullMap : nullptr;
     }
 
-    bool GenerateNullMapDict(AggregatorBuffer<uint8_t> &nullMap, const int32_t rowOffset, const size_t rowCount,
-        BaseVector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
+    bool GenerateNullMapDict(uint8_t *nullMap, const int32_t rowOffset, const size_t rowCount, BaseVector *maskVector,
+        const uint8_t *maskNullMap, const uint8_t *aggNullMap)
     {
         uint8_t hasValidRows;
-        AggregatorBuffer<int32_t> indexMap(this->allocator, rowCount, false);
-        getIdsWithOffFromBooleanDictFunction(maskVector, indexMap.data, rowOffset, rowCount);
-        uint8_t *maskPtr = reinterpret_cast<uint8_t *>(getBooleanValuesFromDictFunction(maskVector));
+        const int32_t *indexMap = GetIdsFromDict<OMNI_BOOLEAN>(maskVector) + rowOffset;
+        uint8_t *maskPtr = reinterpret_cast<uint8_t *>(GetValuesFromDict<OMNI_BOOLEAN>(maskVector));
 
         if (maskNullMap == nullptr) {
             if (aggNullMap == nullptr) {
-                hasValidRows = AddDictMask(nullMap.data, rowCount, maskPtr, indexMap.data);
+                hasValidRows = AddDictMask(nullMap, rowCount, maskPtr, indexMap);
             } else {
-                hasValidRows = AddDictMask(nullMap.data, rowCount, maskPtr, aggNullMap, indexMap.data);
+                hasValidRows = AddDictMask(nullMap, rowCount, maskPtr, aggNullMap, indexMap);
             }
         } else {
             if (aggNullMap == nullptr) {
-                hasValidRows = AddDictMask(nullMap.data, rowCount, maskPtr, maskNullMap, indexMap.data);
+                hasValidRows = AddDictMask(nullMap, rowCount, maskPtr, maskNullMap, indexMap);
             } else {
-                hasValidRows = AddDictMask(nullMap.data, rowCount, maskPtr, maskNullMap, aggNullMap, indexMap.data);
+                hasValidRows = AddDictMask(nullMap, rowCount, maskPtr, maskNullMap, aggNullMap, indexMap);
             }
         }
 
         return hasValidRows != 0;
     }
 
-    bool GenerateNullMapFlat(AggregatorBuffer<uint8_t> &nullMap, const int32_t rowOffset, const size_t rowCount,
-        BaseVector *maskVector, const uint8_t *maskNullMap, const uint8_t *aggNullMap)
+    bool GenerateNullMapFlat(uint8_t *nullMap, const int32_t rowOffset, const size_t rowCount, BaseVector *maskVector,
+        const uint8_t *maskNullMap, const uint8_t *aggNullMap)
     {
         uint8_t hasValidRows;
-        uint8_t *maskPtr = reinterpret_cast<uint8_t *>(getBooleanValuesFunction(maskVector));
+        uint8_t *maskPtr = reinterpret_cast<uint8_t *>(GetValuesFromVector<OMNI_BOOLEAN>(maskVector));
         maskPtr += rowOffset;
 
         if (maskNullMap == nullptr) {
             if (aggNullMap == nullptr) {
-                hasValidRows = AddMask(nullMap.data, rowCount, maskPtr);
+                hasValidRows = AddMask(nullMap, rowCount, maskPtr);
             } else {
-                hasValidRows = AddMask(nullMap.data, rowCount, maskPtr, aggNullMap);
+                hasValidRows = AddMask(nullMap, rowCount, maskPtr, aggNullMap);
             }
         } else {
             if (aggNullMap == nullptr) {
-                hasValidRows = AddMask(nullMap.data, rowCount, maskPtr, maskNullMap);
+                hasValidRows = AddMask(nullMap, rowCount, maskPtr, maskNullMap);
             } else {
-                hasValidRows = AddMask(nullMap.data, rowCount, maskPtr, maskNullMap, aggNullMap);
+                hasValidRows = AddMask(nullMap, rowCount, maskPtr, maskNullMap, aggNullMap);
             }
         }
 
@@ -410,11 +378,8 @@ private:
 
     int32_t maskColumnId;
     std::unique_ptr<TypedAggregator> realAggregator;
-
-protected:
-    GetValuesFunction getBooleanValuesFunction;
-    GetValuesFunction getBooleanValuesFromDictFunction;
-    GetIdsWithOffFunction getIdsWithOffFromBooleanDictFunction;
+    // define nullmap buffer as member variable tor reduce number of memory allocaitons
+    AlignedBuffer<uint8_t> nullMapBuffer;
 };
 }
 }
