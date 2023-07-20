@@ -31,8 +31,9 @@ class LargeStringBuffer {
 public:
     LargeStringBuffer(size_t size)
     {
-        capacity = size;
-        data.reserve(size);
+        // Empty strings also need to allocate 1 byte of memory to deal with the null pointer exception.
+        capacity = size == 0 ? 1 : size;
+        data.reserve(capacity);
         int64_t bufferCapacity = sizeof(LargeStringBuffer) + capacity;
         omniruntime::mem::ThreadMemoryManager::ReportMemory(bufferCapacity);
 #ifdef TRACE

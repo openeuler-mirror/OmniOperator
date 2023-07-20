@@ -6,6 +6,8 @@ package nova.hetu.omniruntime.vector;
 
 import static nova.hetu.omniruntime.vector.VariableWidthVec.getValueOffsetsNative;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import nova.hetu.omniruntime.type.DataType;
 import sun.misc.Unsafe;
 
@@ -72,6 +74,16 @@ public class DictionaryVec extends FixedWidthVec {
 
     public Vec getDictionary() {
         return dictionary;
+    }
+
+    /**
+     * for the UT of getDictionaryNative with empty strings.
+     *
+     * @return the address of dictionary container
+     */
+    @VisibleForTesting
+    public long getDataAddress() {
+        return dataAddress;
     }
 
     /**

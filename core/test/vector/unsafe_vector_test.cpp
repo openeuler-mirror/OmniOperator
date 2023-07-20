@@ -75,7 +75,7 @@ void VectorSetNull(BaseVector *vector)
     }
 }
 
-template <typename DATA_TYPE> void vector_get_values_and_nulls()
+template <typename DATA_TYPE> void VectorGetValuesAndNulls()
 {
     int size = 100;
     auto vector = CreateVectorAndSetValue<DATA_TYPE>(size);
@@ -94,7 +94,7 @@ template <typename DATA_TYPE> void vector_get_values_and_nulls()
     }
 }
 
-template <typename DATA_TYPE> void vector_slice_get_values_and_nulls()
+template <typename DATA_TYPE> void VectorSliceGetValuesAndNulls()
 {
     int size = 100;
     int offSet = 50;
@@ -117,7 +117,7 @@ template <typename DATA_TYPE> void vector_slice_get_values_and_nulls()
     }
 }
 
-template <typename DATA_TYPE> void dictionary_vector_get_values_and_nulls()
+template <typename DATA_TYPE> void DictionaryVectorGetValuesAndNulls()
 {
     int size = 100;
 
@@ -137,7 +137,7 @@ template <typename DATA_TYPE> void dictionary_vector_get_values_and_nulls()
     }
 }
 
-void dictionary_string_vector_get_values_and_nulls()
+void DictionaryStringVectorGetValuesAndNulls()
 {
     int dictionarySize = 10;
     auto vector = VectorHelper::CreateStringVector(dictionarySize);
@@ -177,7 +177,7 @@ void dictionary_string_vector_get_values_and_nulls()
     delete[] values;
 }
 
-template <typename DATA_TYPE> void dictionary_vector_slice_get_values_and_nulls()
+template <typename DATA_TYPE> void DictionaryVectorSliceGetValuesAndNulls()
 {
     int offSet = 50;
     int sliceLength = 50;
@@ -200,7 +200,7 @@ template <typename DATA_TYPE> void dictionary_vector_slice_get_values_and_nulls(
     }
 }
 
-template <typename CONTAINER> void string_vector_get_values_and_nulls()
+template <typename CONTAINER> void StringVectorGetValuesAndNulls()
 {
     int size = 100;
 
@@ -220,7 +220,7 @@ template <typename CONTAINER> void string_vector_get_values_and_nulls()
     }
 }
 
-template <typename CONTAINER> void string_vector_slice_get_values_and_nulls()
+template <typename CONTAINER> void StringVectorSliceGetValuesAndNulls()
 {
     int offSet = 50;
     int sliceLength = 50;
@@ -243,7 +243,7 @@ template <typename CONTAINER> void string_vector_slice_get_values_and_nulls()
     }
 }
 
-template <typename CONTAINER> void string_vector_get_string_buffer()
+template <typename CONTAINER> void StringVectorGetStringBuffer()
 {
     auto baseVector = CreateStringTestVector<CONTAINER>();
     auto *vector = (Vector<CONTAINER> *)baseVector.get();
@@ -262,7 +262,7 @@ template <typename CONTAINER> void string_vector_get_string_buffer()
     EXPECT_EQ(vectorCapacityInBytes, newCapacityInBytes);
 }
 
-template <typename CONTAINER> void string_vector_get_string_expand_buffer()
+template <typename CONTAINER> void StringVectorGetStringExpandBuffer()
 {
     int requestSize = INITIAL_STRING_SIZE + 10;
     auto baseVector = CreateStringTestVector<CONTAINER>();
@@ -281,7 +281,7 @@ template <typename CONTAINER> void string_vector_get_string_expand_buffer()
     EXPECT_GE(newCapacityInBytes, vectorCapacityInBytes + requestSize);
 }
 
-template <typename CONTAINER> void string_vector_get_string_first_buffer()
+template <typename CONTAINER> void StringVectorGetStringFirstBuffer()
 {
     int valueSize = 1000;
 
@@ -300,63 +300,87 @@ template <typename CONTAINER> void string_vector_get_string_first_buffer()
     EXPECT_EQ(newCapacityInBytes, INITIAL_STRING_SIZE);
 }
 
+void GetVarcharDictionaryWithEmptyStrings()
+{
+    int dictSize = 10;
+    auto *stringVector = new Vector<LargeStringContainer<std::string_view>>(dictSize, 0);
+
+    int valueSize = 100;
+    int *values = new int[valueSize];
+    for (int i = 0; i < valueSize; i++) {
+        values[i] = i % dictSize;
+    }
+
+    auto vectorPtr = VectorHelper::CreateStringDictionary(values, valueSize, stringVector);
+    auto *dictAddr = VectorHelper::UnsafeGetDictionary(vectorPtr.get(), OMNI_VARCHAR);
+    EXPECT_TRUE(dictAddr != nullptr);
+
+    delete[] values;
+    delete stringVector;
+}
+
 TEST(unsafe_vector, int_get_values_and_nulls)
 {
-    vector_get_values_and_nulls<int32_t>();
+    VectorGetValuesAndNulls<int32_t>();
 }
 
 TEST(unsafe_vector, int_slice_get_values_and_nulls)
 {
-    vector_slice_get_values_and_nulls<int32_t>();
+    VectorSliceGetValuesAndNulls<int32_t>();
 }
 
 TEST(unsafe_vector, string_get_values_and_nulls)
 {
-    vector_get_values_and_nulls<std::string>();
+    VectorGetValuesAndNulls<std::string>();
 }
 
 TEST(unsafe_vector, string_slice_get_values_and_nulls)
 {
-    vector_slice_get_values_and_nulls<std::string>();
+    VectorSliceGetValuesAndNulls<std::string>();
 }
 
 TEST(unsafe_vector, int_dictionary_get_values_and_nulls)
 {
-    dictionary_vector_get_values_and_nulls<int32_t>();
+    DictionaryVectorGetValuesAndNulls<int32_t>();
 }
 
 TEST(unsafe_vector, string_dictionary_get_values_and_nulls)
 {
-    dictionary_string_vector_get_values_and_nulls();
+    DictionaryStringVectorGetValuesAndNulls();
 }
 
 TEST(unsafe_vector, int_dictionary_slice_get_values_and_nulls)
 {
-    dictionary_vector_slice_get_values_and_nulls<int32_t>();
+    DictionaryVectorSliceGetValuesAndNulls<int32_t>();
 }
 
 TEST(unsafe_vector, large_string_get_values_and_nulls)
 {
-    string_vector_get_values_and_nulls<LargeStringContainer<std::string_view>>();
+    StringVectorGetValuesAndNulls<LargeStringContainer<std::string_view>>();
 }
 
 TEST(unsafe_vector, large_string_slice_get_values_and_nulls)
 {
-    string_vector_slice_get_values_and_nulls<LargeStringContainer<std::string_view>>();
+    StringVectorSliceGetValuesAndNulls<LargeStringContainer<std::string_view>>();
 }
 
 TEST(unsafe_vector, string_vector_get_string_buffer)
 {
-    string_vector_get_string_buffer<LargeStringContainer<std::string_view>>();
+    StringVectorGetStringBuffer<LargeStringContainer<std::string_view>>();
 }
 
 TEST(unsafe_vector, string_vector_get_string_expand_buffer)
 {
-    string_vector_get_string_expand_buffer<LargeStringContainer<std::string_view>>();
+    StringVectorGetStringExpandBuffer<LargeStringContainer<std::string_view>>();
 }
 
 TEST(unsafe_vector, string_vector_get_string_first_buffer)
 {
-    string_vector_get_string_first_buffer<LargeStringContainer<std::string_view>>();
+    StringVectorGetStringFirstBuffer<LargeStringContainer<std::string_view>>();
+}
+
+TEST(unsafe_vector, get_varchar_dictionary_with_empty_strings)
+{
+    GetVarcharDictionaryWithEmptyStrings();
 }
 }
