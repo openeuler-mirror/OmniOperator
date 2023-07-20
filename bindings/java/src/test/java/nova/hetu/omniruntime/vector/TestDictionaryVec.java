@@ -5,6 +5,7 @@
 package nova.hetu.omniruntime.vector;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.assertFalse;
 
@@ -240,6 +241,19 @@ public class TestDictionaryVec {
         assertTrue(copyPosition.hasNull());
         copyPosition.close();
 
+        dictionaryVec.close();
+    }
+
+    @Test
+    public void testGetDictionaryOfEmptyStrings() {
+        VarcharVec originalVec = new VarcharVec(0, 10);
+        int[] ids = {6, 8, 9};
+        DictionaryVec dictionaryVec = new DictionaryVec(originalVec, ids);
+
+        long dictAddr = dictionaryVec.getDataAddress();
+        assertNotEquals(dictAddr, 0);
+
+        originalVec.close();
         dictionaryVec.close();
     }
 }
