@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <huawei_secure_c/include/securec.h>
 #include "util/compiler_util.h"
+#include "type/data_utils.h"
 
 namespace omniruntime {
 namespace op {

@@ -39,8 +39,7 @@ WindowPartition::WindowPartition(const type::DataTypes &sourceTypes, PagesIndex 
 
 WindowPartition::~WindowPartition() = default;
 
-void WindowPartition::ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBatch *outputVecBatch, int32_t index,
-    int32_t outputColsCount, std::vector<type::DataTypePtr> &types)
+void WindowPartition::ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBatch *outputVecBatch, int32_t index)
 {
     int32_t channel = outputChannelsCount;
 

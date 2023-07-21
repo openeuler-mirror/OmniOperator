@@ -120,7 +120,7 @@ int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
         throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "vecBatch col should be 1 for bloom filter");
     }
     BaseVector *colVec = inputVecBatch->Get(0);
-    auto valuesAddress = reinterpret_cast<int64_t>(VectorHelper::UnsafeGetValues(colVec, OMNI_INT));
+    auto valuesAddress = reinterpret_cast<int64_t>(VectorHelper::UnsafeGetValues(colVec));
 
     // init BloomFilter
     bloomFilterAddress = new BloomFilter(reinterpret_cast<int8_t *>((uintptr_t)valuesAddress), version);
@@ -134,7 +134,6 @@ int32_t BloomFilterOperator::GetOutput(VectorBatch **blOutPut)
     col->SetValue(0, reinterpret_cast<int64_t>(bloomFilterAddress));
     outPut->Append(col);
     *blOutPut = outPut;
-    this->outputTypes = { LongType() };
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }

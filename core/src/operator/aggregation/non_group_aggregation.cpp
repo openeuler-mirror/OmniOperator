@@ -126,7 +126,6 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
             aggsOutputDataTypePtrs.push_back(aggOutputTypes.GetType(i));
         }
     }
-    this->outputTypes.insert(this->outputTypes.end(), aggsOutputDataTypePtrs.begin(), aggsOutputDataTypePtrs.end());
     auto output = new VectorBatch(1);
     GenerateAggVector(output, aggsOutputDataTypePtrs, 1);
 

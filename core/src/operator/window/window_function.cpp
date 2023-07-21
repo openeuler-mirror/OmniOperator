@@ -71,14 +71,14 @@ void RankFunction::RankingProcessRow(BaseVector *column, int32_t index, bool new
     } else {
         count++;
     }
-    VectorHelper::SetValue(column, index, &rank, outputType->GetId());
+    VectorHelper::SetValue(column, index, &rank);
 }
 
 void RowNumberFunction::RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
     int32_t currentPositionIndex)
 {
     int64_t value = currentPositionIndex + 1;
-    VectorHelper::SetValue(column, index, &value, outputType->GetId());
+    VectorHelper::SetValue(column, index, &value);
 }
 
 AggregateWindowFunction::~AggregateWindowFunction() = default;

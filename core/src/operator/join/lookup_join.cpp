@@ -123,12 +123,6 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
     this->probeHashColumns = new BaseVector *[probeHashCols.size()]();
     this->probeOutputColumns = new BaseVector *[probeOutputCols.size()]();
 
-    // probe output types
-    this->outputTypes.insert(this->outputTypes.end(), tmpProbeOutputTypesVec.begin(), tmpProbeOutputTypesVec.end());
-    // build output types
-    this->outputTypes.insert(this->outputTypes.end(), this->buildOutputTypes.Get().begin(),
-        this->buildOutputTypes.Get().end());
-
     this->simpleFilter = hashTables->GetSimpleFilter();
     if (this->simpleFilter != nullptr) {
         auto originalProbeColsCount = hashTables->GetOriginalProbeColsCount();
@@ -591,7 +585,7 @@ void CalculateColDec64HashesHMPP(BaseVector *vector, int32_t rowCount, int64_t *
     if (vector->GetEncoding() != OMNI_DICTIONARY) {
         LogDebug("HMPP-Join-hashDec64");
         const auto *decimalAddr =
-            reinterpret_cast<const int64_t *>(VectorHelper::UnsafeGetValues(vector, OMNI_DECIMAL64));
+            reinterpret_cast<const int64_t *>(VectorHelper::UnsafeGetValues(vector));
         auto *resultHash = new int64_t[rowCount]();
         int8_t *nullAddr = nullptr;
         if (vector->HasNull()) {
@@ -635,7 +629,7 @@ void CalculateColDec128HashesHMPP(BaseVector *vector, int32_t rowCount, int64_t 
         LogDebug("HMPP-Join-hashDec128");
         auto *resultHash = new int64_t[rowCount]();
         int8_t *nullAddr = nullptr;
-        auto *decimalAddr = reinterpret_cast<HmppDecimal128 *>(VectorHelper::UnsafeGetValues(vector, OMNI_DECIMAL128));
+        auto *decimalAddr = reinterpret_cast<HmppDecimal128 *>(VectorHelper::UnsafeGetValues(vector));
         if (vector->HasNull()) {
             nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
             for (int32_t i = 0; i < rowCount; ++i) {
@@ -679,8 +673,8 @@ void CalculateColVarcharHashesHMPP(BaseVector *vector, int32_t rowCount, int64_t
         LogDebug("HMPP-Join-hashVarchar");
         int8_t *nullAddr = nullptr;
         auto *resultHash = new int64_t[rowCount]();
-        auto *varcharVectorAddr = reinterpret_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector, OMNI_VARCHAR));
-        auto *offset = static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, OMNI_VARCHAR));
+        auto *varcharVectorAddr = reinterpret_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector));
+        auto *offset = static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
         if (vector->HasNull()) {
             nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
             for (int32_t i = 0; i < rowCount; ++i) {

@@ -27,6 +27,7 @@
 #include "operator/topnsort/topn_sort_expr.h"
 #include "operator/union/union.h"
 #include "operator/window/window_expr.h"
+#include "operator/limit/limit.h"
 #include "operator/limit/distinct_limit.h"
 #include "operator/fusion/fusion_operator.h"
 #include "operator/config/operator_config.h"
@@ -1170,6 +1171,16 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_c
     if (nativeOperatorFactory != nullptr) {
         delete nativeOperatorFactory;
     }
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory_createLimitOperatorFactory(
+    JNIEnv *env, jclass jObj, jlong jLimit)
+{
+    LimitOperatorFactory *limitOperatorFactory = nullptr;
+    JNI_METHOD_START
+    limitOperatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(jLimit);
+    JNI_METHOD_END(0L)
+    return reinterpret_cast<intptr_t>(static_cast<void *>(limitOperatorFactory));
 }
 
 JNIEXPORT jlong JNICALL

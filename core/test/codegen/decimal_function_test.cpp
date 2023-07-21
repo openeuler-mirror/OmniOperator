@@ -33,11 +33,10 @@ TEST(FunctionTest, GetDecimalFromDictionaryVector)
     }
     int32_t ids[] = { 0, 2, 4, 6, 8 };
     auto dictionary = VectorHelper::CreateDictionary(ids, size, decimalVec);
-    auto dictionaryPtr = dictionary.release();
     int64_t outHigh = 0;
     uint64_t outLow = 0;
     int64_t dictptr =
-        reinterpret_cast<int64_t>(reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictionaryPtr));
+        reinterpret_cast<int64_t>(reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(dictionary));
     for (int i = 0; i < size; i++) {
         GetDecimalFromDictionaryVector(dictptr, i, 38, 0, &outHigh, &outLow);
         Decimal128 expected = decimalVec->GetValue(ids[i]);
@@ -45,7 +44,7 @@ TEST(FunctionTest, GetDecimalFromDictionaryVector)
         EXPECT_EQ(expected.LowBits(), outLow);
     }
     delete decimalVec;
-    delete dictionaryPtr;
+    delete dictionary;
 }
 
 /*

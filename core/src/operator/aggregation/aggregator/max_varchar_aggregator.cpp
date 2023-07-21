@@ -18,13 +18,13 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &s
 {
     auto vector = vectorBatch->Get(this->channels[0]);
 
-    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, IN_ID)));
+    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector)));
     auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
     int32_t maxLen = 0;
     uint8_t *maxVal = this->executionContext->GetArena()->Allocate(3 * width);
 
     LogDebug("HMPP-Agg-max");
-    auto result = HMPPS_Max_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector, IN_ID)), offsets,
+    auto result = HMPPS_Max_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector)), offsets,
         vector->GetSize(), maxVal, &maxLen);
     if (result != HMPP_STS_NO_ERR) {
         throw OmniException("HMPP ERROR", "max failed for hmpp error");

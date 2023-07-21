@@ -79,7 +79,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -158,7 +158,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -225,7 +225,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -306,7 +306,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4, expData5, expData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -379,7 +379,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_final_flat_input_expr)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -448,7 +448,7 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_expr)
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -507,7 +507,7 @@ TEST(AggregationWithExprOperatorTest, test_agg_first_expr)
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -661,7 +661,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_by_proces_row)
     VectorBatch *expectVecorBatch =
         CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -720,7 +720,7 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_exprFilter)
     int64_t expData1[] = {180};
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData1);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -807,7 +807,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_filter)
         VectorBatch *expectVecorBatch =
                 CreateVectorBatch(expectTypes, expectDataSize, expData1, expData2, expData3, expData4);
 
-        EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch, expectTypes.Get()));
+        EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
 
         Expr::DeleteExprs(groupByKeys);
         Expr::DeleteExprs(aggAllKeys);

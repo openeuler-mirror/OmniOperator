@@ -52,19 +52,11 @@ public:
             ++state.count;
         } else {
             double avgVal;
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                avgVal = static_cast<Vector<DictionaryContainer<double>> *>(vector)->GetValue(rowIndex);
-            } else {
-                avgVal = static_cast<Vector<double> *>(vector)->GetValue(rowIndex);
-            }
-
+            avgVal = static_cast<Vector<double> *>(vector)->GetValue(rowIndex);
             auto avgCountVector = vectorBatch->Get(channels[1]);
+
             int64_t avgCnt;
-            if (avgCountVector->GetEncoding() == OMNI_DICTIONARY) {
-                avgCnt = static_cast<Vector<DictionaryContainer<int64_t>> *>(avgCountVector)->GetValue(rowIndex);
-            } else {
-                avgCnt = static_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
-            }
+            avgCnt = static_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
 
             auto currentVal = static_cast<ResultType *>(state.val);
             state.count += avgCnt;

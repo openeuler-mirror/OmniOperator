@@ -45,7 +45,7 @@ inline BaseVector *CreateIntVectorGroupby(const int32_t nRows, const int32_t nul
         }
         auto dictVector = VectorHelper::CreateDictionary(ids, nRows, vector);
         delete vector;
-        return dictVector.release();
+        return dictVector;
     } else {
         V *vector = new V(nRows);
         for (int32_t i = 0; i < nRows; ++i) {
@@ -477,8 +477,8 @@ private:
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
                 expectedResult->Append(new Vector<double>(nGroups));
             } else {
-                std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, nGroups);
-                expectedResult->Append(v.release());
+                BaseVector *v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, nGroups);
+                expectedResult->Append(v);
             }
         }
         expectedResult->Append(new Vector<int64_t>(nGroups));
@@ -513,8 +513,8 @@ private:
         }
 
         expectedResult->Append(groupCol);
-        std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, nGroups);
-        expectedResult->Append(v.release());
+        BaseVector *v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, nGroups);
+        expectedResult->Append(v);
         expectedResult->Append(new Vector<int64_t>(nGroups));
 
         return expectedResult;

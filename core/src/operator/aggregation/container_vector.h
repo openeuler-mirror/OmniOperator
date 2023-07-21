@@ -24,6 +24,7 @@ public:
         std::vector<omniruntime::type::DataTypePtr> &dataTypes)
         : Vector<int64_t>(positionCount, OMNI_ENCODING_CONTAINER), dataTypes(dataTypes)
     {
+        dataTypeId = OMNI_CONTAINER;
         values = std::shared_ptr<int64_t[]>(new int64_t[dataTypes.size()]);
         // init nulls
         for (int32_t rowIndex = 0; rowIndex < positionCount; rowIndex++) {
@@ -52,6 +53,7 @@ public:
     ContainerVector(int32_t capacityInBytes, int32_t positionCount)
         : Vector<int64_t>(positionCount, OMNI_ENCODING_CONTAINER)
     {
+        dataTypeId = OMNI_CONTAINER;
         using T = typename type::NativeType<type::OMNI_CONTAINER>::type;
         int32_t vectorCount = capacityInBytes / sizeof(T);
         values = std::shared_ptr<int64_t[]>(new int64_t[vectorCount]);
@@ -151,7 +153,7 @@ public:
      * @param offset
      * @param length
      */
-    std::unique_ptr<Vector<int64_t>> CopyPositions(const int *positions, int positionOffset, int length)
+    Vector<int64_t> *CopyPositions(const int *positions, int positionOffset, int length)
     {
         throw exception::OmniException(omniruntime::op::GetErrorCode(omniruntime::op::ErrorCode::UNSUPPORTED),
             "container vector not support CopyPositions");
@@ -163,7 +165,7 @@ public:
      * @param length
      * @param isCopy reserved parameters
      */
-    std::unique_ptr<ContainerVector> Slice(int positionOffset, int length, bool isCopy = false)
+    ContainerVector *Slice(int positionOffset, int length, bool isCopy = false)
     {
         throw exception::OmniException(omniruntime::op::GetErrorCode(omniruntime::op::ErrorCode::UNSUPPORTED),
             "container vector not support CopyPositions");

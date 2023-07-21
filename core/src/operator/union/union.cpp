@@ -58,7 +58,6 @@ int32_t UnionOperator::GetOutput(VectorBatch **outputVecBatch)
         return 0;
     }
 
-    this->outputTypes = sourceTypes.Get();
     *outputVecBatch = inputVecBatches[vecBatchIndex];
     vecBatchIndex++;
     if (vecBatchIndex == vecBatchCount) {

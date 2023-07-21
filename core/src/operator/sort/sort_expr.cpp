@@ -60,9 +60,7 @@ Operator *SortWithExprOperatorFactory::CreateOperator()
 SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
     std::vector<ProjFunc> &projectFuncs, SortOperator *sortOperator)
     : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), sortOperator(sortOperator)
-{
-    outputTypes = sortOperator->GetOutputType();
-}
+{}
 
 SortWithExprOperator::~SortWithExprOperator()
 {

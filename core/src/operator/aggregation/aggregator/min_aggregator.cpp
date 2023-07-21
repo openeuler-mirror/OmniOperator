@@ -17,7 +17,7 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
 {
     auto vector = vectorBatch->Get(this->channels[0]);
 
-    auto vectorValues = VectorHelper::UnsafeGetValues(vector, IN_ID);
+    auto vectorValues = VectorHelper::UnsafeGetValues(vector);
     auto rowCount = vector->GetSize();
     auto outputTypeId = this->outputTypes.GetType(0)->GetId();
 

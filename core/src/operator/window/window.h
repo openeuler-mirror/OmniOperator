@@ -216,6 +216,7 @@ public:
 
 private:
     type::DataTypes sourceTypes;
+    std::vector<type::DataTypePtr> outputTypes;
     int32_t typesCount;
     std::vector<int32_t> outputCols;
     int32_t outputColsCount;

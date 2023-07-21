@@ -31,6 +31,8 @@ TEST(Decimal128Vector, SliceVector)
     for (int32_t i = 0; i < slice2->GetSize(); i++) {
         EXPECT_TRUE(slice2->GetValue(i) == originalVector->GetValue(i + offset + 1));
     }
+    delete slice1;
+    delete slice2;
 }
 
 // Test set/get
@@ -85,6 +87,7 @@ TEST(Decimal128Vector, CopyPositions)
     }
 
     delete[] possions;
+    delete copyPostionVector;
 }
 
 class Decimal128VectorTest {

@@ -63,7 +63,7 @@ void GetDataFromVecBatch(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t 
         dictionaries[i] = dictVecAddress;
         valueAddrs[i] = valuesAddress;
         nullAddrs[i] = reinterpret_cast<intptr_t>(unsafe::UnsafeBaseVector::GetNulls(colVec));
-        offsetAddrs[i] = reinterpret_cast<intptr_t>(VectorHelper::UnsafeGetOffsetsAddr(colVec, types.GetIds()[i]));
+        offsetAddrs[i] = reinterpret_cast<intptr_t>(VectorHelper::UnsafeGetOffsetsAddr(colVec));
     }
 }
 
@@ -97,7 +97,7 @@ VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::codegen::Filter> &fil
 
     auto ret = (!projections.empty()) ? new VectorBatch(numSelectedRows) : nullptr;
     for (uint32_t i = 0; i < projections.size(); i++) {
-        std::unique_ptr<BaseVector> col =
+        BaseVector *col =
             projections[i]->Project(vecBatch, (filter != nullptr) ? selectedRows : nullptr, numSelectedRows, valueAddrs,
             nullAddrs, offsetAddrs, context, dictionaries, types.GetIds());
         if (context->HasError()) {
@@ -109,7 +109,7 @@ VectorBatch *FilterAndProject(std::unique_ptr<omniruntime::codegen::Filter> &fil
             std::string errorMessage = context->GetError();
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
         }
-        ret->Append(col.release());
+        ret->Append(col);
     }
     context->GetArena()->Reset();
     delete[] selectedRows;

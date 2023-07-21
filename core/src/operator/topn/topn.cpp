@@ -41,7 +41,6 @@ TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::v
 {
     int32_t eachRowSize = OperatorUtil::GetRowSize(sourceTypes.Get());
     maxRowCount = OperatorUtil::GetMaxRowCount(eachRowSize);
-    outputTypes.insert(outputTypes.end(), this->sourceTypes.Get().begin(), this->sourceTypes.Get().end());
 }
 
 TopNOperator::~TopNOperator()
@@ -204,7 +203,7 @@ static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(omniruntime::vec::Vector
 
     auto flatVector = VectorHelper::CreateFlatVector<typeId>(1);
     if (vector->IsNull(position)) {
-        (static_cast<Vector *>(flatVector.get()))->SetNull(0);
+        (static_cast<Vector *>(flatVector))->SetNull(0);
     } else {
         Type value;
         if (vector->GetEncoding() == OMNI_DICTIONARY) {
@@ -212,9 +211,9 @@ static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(omniruntime::vec::Vector
         } else {
             value = (static_cast<Vector *>(vector))->GetValue(position);
         }
-        (static_cast<Vector *>(flatVector.get()))->SetValue(0, value);
+        (static_cast<Vector *>(flatVector))->SetValue(0, value);
     }
-    singleRowVecBatch->Append(flatVector.release());
+    singleRowVecBatch->Append(flatVector);
 }
 
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const

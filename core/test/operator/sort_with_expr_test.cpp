@@ -45,7 +45,7 @@ TEST(SortWithExprTest, TestSortZeroExprColumns)
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
     int16_t expectData3[dataSize] = {4, 3, 2, 1, 0};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2, expectData3);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -82,7 +82,7 @@ TEST(SortWithExprTest, TestSortOneExprColumns)
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -121,7 +121,7 @@ TEST(SortWithExprTest, TestSortTwoExprColumns)
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -143,7 +143,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
     auto *vecBatch = new VectorBatch(dataSize);
     for (int32_t i = 0; i < 3; i++) {
-        vecBatch->Append(CreateDictionaryVector(*sourceTypes.GetType(i), dataSize, ids, dataSize, datas[i]).release());
+        vecBatch->Append(CreateDictionaryVector(*sourceTypes.GetType(i), dataSize, ids, dataSize, datas[i]));
     }
 
     int32_t outputCols[2] = {1, 2};
@@ -168,7 +168,7 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryColumns)
     int64_t expectData2[dataSize] = {11, 44, 22, 55, 33, 66};
     DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), LongType() });
     auto expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -183,9 +183,9 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     const int32_t dataSize = 4;
     const int32_t vecCount = 1;
     std::string values[dataSize] = {"hello", "world", "omni", "runtime"};
-    auto vector = CreateVarcharVector(*type, values, dataSize);
+    auto vector = CreateVarcharVector(values, dataSize);
     auto *vecBatch = new VectorBatch(dataSize);
-    vecBatch->Append(vector.release());
+    vecBatch->Append(vector);
 
     DataTypes sourceTypes(std::vector<DataTypePtr>({ type }));
     int32_t outputCols[vecCount] = {0};
@@ -208,10 +208,10 @@ TEST(SortWithExprTest, TestSortOneVarcharExprColumn)
     sortOperator->GetOutput(&outputVecBatch);
 
     std::string expectValues[dataSize] = {"hello", "omni", "runtime", "world"};
-    auto expectVector = CreateVarcharVector(*type, expectValues, dataSize);
+    auto expectVector = CreateVarcharVector(expectValues, dataSize);
     auto expectVecBatch = new VectorBatch(dataSize);
-    expectVecBatch->Append(expectVector.release());
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
+    expectVecBatch->Append(expectVector);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -241,16 +241,16 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     }
 
     int32_t ids[] = {0, 1, 2, 3, 4, 5};
-    auto dictVec0 = DYNAMIC_TYPE_DISPATCH(CreateDictionary, sourceTypes.GetType(0)->GetId(), vec0.get(), ids, 6);
-    auto dictVec2 = DYNAMIC_TYPE_DISPATCH(CreateDictionary, sourceTypes.GetType(2)->GetId(), vec2.get(), ids, 6);
-    auto slicedVec0 = static_cast<Vector<DictionaryContainer<int32_t>> *>(dictVec0.get())->Slice(1, 5);
-    auto slicedVec1 = static_cast<Vector<int64_t> *>(vec1.get())->Slice(1, 5);
-    auto slicedVec2 = static_cast<Vector<DictionaryContainer<int64_t>> *>(dictVec2.get())->Slice(1, 5);
+    auto dictVec0 = DYNAMIC_TYPE_DISPATCH(CreateDictionary, sourceTypes.GetType(0)->GetId(), vec0, ids, 6);
+    auto dictVec2 = DYNAMIC_TYPE_DISPATCH(CreateDictionary, sourceTypes.GetType(2)->GetId(), vec2, ids, 6);
+    auto slicedVec0 = static_cast<Vector<DictionaryContainer<int32_t>> *>(dictVec0)->Slice(1, 5);
+    auto slicedVec1 = static_cast<Vector<int64_t> *>(vec1)->Slice(1, 5);
+    auto slicedVec2 = static_cast<Vector<DictionaryContainer<int64_t>> *>(dictVec2)->Slice(1, 5);
 
     auto vecBatch = new VectorBatch(5);
-    vecBatch->Append(slicedVec0.release());
-    vecBatch->Append(slicedVec1.release());
-    vecBatch->Append(slicedVec2.release());
+    vecBatch->Append(slicedVec0);
+    vecBatch->Append(slicedVec1);
+    vecBatch->Append(slicedVec2);
 
     int32_t outputCols[2] = {1, 2};
     auto add1Col = new FieldExpr(0, IntType());
@@ -279,7 +279,13 @@ TEST(SortWithExprTest, TestSortTwoExprDictionaryWithNull)
     expectVecBatch->Get(0)->SetNull(1);
     expectVecBatch->Get(1)->SetNull(0);
     expectVecBatch->Get(1)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, expectedTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    delete vec0;
+    delete vec1;
+    delete vec2;
+    delete dictVec0;
+    delete dictVec2;
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -325,7 +331,7 @@ TEST(SortWithExprTest, TestSortSpillWithMultiRecords)
     auto totalDataSize = dataSize1 + dataSize2 + dataSize3;
     int32_t expectData[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -369,7 +375,7 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
     auto totalDataSize = dataSize * 3;
     int32_t expectData[] = {3, 6, 8};
     auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch, sourceTypes.Get()));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
     VectorHelper::FreeVecBatch(outputVecBatch);

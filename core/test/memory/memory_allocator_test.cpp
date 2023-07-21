@@ -114,7 +114,7 @@ TEST(Allocator, testSlicedVectorSize)
     }
     int64_t accountedMemory  = threadMemoryManager->GetUntrackedMemory();
 
-    auto sliceVector = vector->Slice(0, vecSize).release();
+    auto sliceVector = vector->Slice(0, vecSize);
     int64_t accountedMemory2  = threadMemoryManager->GetUntrackedMemory();
     EXPECT_EQ(accountedMemory2, accountedMemory + 64);
 
@@ -124,5 +124,6 @@ TEST(Allocator, testSlicedVectorSize)
 
     delete sliceVector;
     EXPECT_EQ(threadMemoryManager->GetUntrackedMemory(), 0);
+    threadMemoryManager->Clear();
 }
 }

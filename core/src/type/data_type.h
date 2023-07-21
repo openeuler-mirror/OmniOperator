@@ -92,11 +92,11 @@ template <> struct NativeType<DataTypeId::OMNI_TIME64> {
     using type = int64_t;
 };
 template <> struct NativeType<DataTypeId::OMNI_VARCHAR> {
-    using type = uint8_t;
+    using type = std::string_view;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CHAR> {
-    using type = uint8_t;
+    using type = std::string_view;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
@@ -143,6 +143,16 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
                 LogError("Can not handle this type %d", typeId);                            \
         }                                                                                   \
     }()
+
+template<typename T> constexpr DataTypeId TYPE_ID = DataTypeId::OMNI_INVALID;
+template <> inline constexpr DataTypeId TYPE_ID<int16_t> = DataTypeId::OMNI_SHORT;
+template <> inline constexpr DataTypeId TYPE_ID<int32_t> = DataTypeId::OMNI_INT;
+template <> inline constexpr DataTypeId TYPE_ID<int64_t> = DataTypeId::OMNI_LONG;
+template <> inline constexpr DataTypeId TYPE_ID<double> = DataTypeId::OMNI_DOUBLE;
+template <> inline constexpr DataTypeId TYPE_ID<bool> = DataTypeId::OMNI_BOOLEAN;
+template <> inline constexpr DataTypeId TYPE_ID<Decimal128> = DataTypeId::OMNI_DECIMAL128;
+template <> inline constexpr DataTypeId TYPE_ID<std::string_view> = DataTypeId::OMNI_CHAR;
+
 
 enum DateUnit {
     DAY = 0,

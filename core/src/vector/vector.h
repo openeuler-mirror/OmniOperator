@@ -18,6 +18,7 @@
 #include "util/compiler_util.h"
 #include "large_string_container.h"
 #include "memory/memory_trace.h"
+#include "type/data_type.h"
 
 namespace omniruntime::vec::unsafe {
 class UnsafeBaseVector;
@@ -27,12 +28,12 @@ class UnsafeStringVector;
 }
 
 namespace omniruntime::vec {
+using namespace type;
 enum Encoding {
     OMNI_FLAT = 0,       // ordinary vector, storing primitive data types, such as int, long, boolean
-    OMNI_DICTIONARY = 1, // if dictionary needs to be combined with varchar, get encoding by enum 'StringEncoding'
+    OMNI_DICTIONARY = 1, // dictionary vector, dictionary can be combined with varchar
     OMNI_ENCODING_CONTAINER = 2, // the temporarily added code is mainly used for the agg avg partial, and the vector
-                                 // implementation
-                                 // is also placed in the hash agg module
+                                 // implementation is also placed in the hash agg module
     OMNI_ENCODING_INVALID
 };
 
@@ -101,11 +102,6 @@ public:
         return encoding;
     }
 
-    StringEncoding ALWAYS_INLINE GetStringEncoding()
-    {
-        return stringEncoding;
-    }
-
     int ALWAYS_INLINE GetSize()
     {
         return size;
@@ -156,6 +152,11 @@ public:
         return offset;
     }
 
+    DataTypeId ALWAYS_INLINE GetTypeId()
+    {
+        return dataTypeId;
+    }
+
 protected:
     int64_t ALWAYS_INLINE GetNullsCapacity(bool *nulls)
     {
@@ -169,11 +170,11 @@ protected:
     friend class unsafe::UnsafeBaseVector;
     int32_t size;
     Encoding encoding;             // vector encoding, such as flat, dictionary
-    StringEncoding stringEncoding; // varchar encoding, such as large string encoding, small string encoding
     int32_t offset;
     std::shared_ptr<bool[]> nulls; // whether the element is null
     bool hasNull;
     bool isSliced;
+    DataTypeId dataTypeId;
 };
 
 /**
@@ -186,9 +187,13 @@ public:
      * Constructor for data types of arithematic types without encoding
      * fixme: Initialization of values should replace new with make_shared, when the C++ version is upgraded to 20.
      * @param vSize: size of array in variables nulls and values
+     * @param dataTypeId: the dataTypeId of vector
      */
-    explicit Vector(int vSize) : BaseVector(vSize), values(std::shared_ptr<RAW_DATA_TYPE[]>(new RAW_DATA_TYPE[vSize]))
+    // the dataTypeId will be used in operator in the future.
+    Vector(int vSize, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
+        : BaseVector(vSize), values(std::shared_ptr<RAW_DATA_TYPE[]>(new RAW_DATA_TYPE[vSize]))
     {
+        this->dataTypeId = dataTypeId;
         // vector class, values total capacity and nulls total capacity
         int64_t vectorCapacity =
             sizeof(Vector<RAW_DATA_TYPE>) + GetValuesCapacity(values.get()) + BaseVector::GetNullsCapacity(nulls.get());
@@ -218,9 +223,11 @@ public:
     {}
 
     // used for vector slice, sliced vector use same values as parent vector
-    Vector(int vSize, Encoding encoding, std::shared_ptr<bool[]> nulls, std::shared_ptr<RAW_DATA_TYPE[]> values)
+    Vector(int vSize, Encoding encoding, std::shared_ptr<bool[]> nulls, std::shared_ptr<RAW_DATA_TYPE[]> values,
+        DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
         : BaseVector(vSize, encoding, nulls)
     {
+        this->dataTypeId = dataTypeId;
         this->values = values; // copy the data field shared_ptr
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>);
@@ -306,13 +313,13 @@ public:
      * @param offset
      * @param length
      */
-    std::unique_ptr<Vector<RAW_DATA_TYPE>> CopyPositions(const int *positions, int positionOffset, int length)
+    Vector<RAW_DATA_TYPE> *CopyPositions(const int *positions, int positionOffset, int length)
     {
         if ((positions == nullptr) || (length < 0)) {
             LogError("positions is null or the input length is incorrect: %d.", length);
             return nullptr;
         }
-        auto vector = std::make_unique<Vector<RAW_DATA_TYPE>>(length);
+        auto vector = new Vector<RAW_DATA_TYPE>(length);
         auto startPositions = positions + positionOffset;
         for (int32_t i = 0; i < length; i++) {
             int position = startPositions[i];
@@ -331,16 +338,16 @@ public:
      * @param length
      * @param isCopy reserved parameters
      */
-    std::unique_ptr<Vector<RAW_DATA_TYPE>> Slice(int positionOffset, int length, bool isCopy = false)
+    Vector<RAW_DATA_TYPE> *Slice(int positionOffset, int length, bool isCopy = false)
     {
         if (positionOffset + length > this->size) {
             LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
             return nullptr;
         }
-        auto sliced = std::make_unique<Vector<RAW_DATA_TYPE>>(length, this->encoding, nulls, values);
+        auto sliced = new Vector<RAW_DATA_TYPE>(length, this->encoding, nulls, values);
         sliced->offset = offset + positionOffset; // update offset
         sliced->isSliced = true;
-        return std::move(sliced);
+        return sliced;
     }
 
 protected:
@@ -365,9 +372,10 @@ template <typename RAW_DATA_TYPE, template <typename> typename CONTAINER>
 class Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> final : public Vector<RAW_DATA_TYPE> {
 public:
     Vector(int size, std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> container,
-        std::shared_ptr<bool[]> nulls)
+        std::shared_ptr<bool[]> nulls, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
         : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
     {
+        this->dataTypeId = dataTypeId;
         // vector class capacity, nulls total capacity and container total capacity.
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>) +
             BaseVector::GetNullsCapacity(nulls.get()) + container->GetContainerCapacity();
@@ -379,9 +387,10 @@ public:
 
     // used for vector slice, sliced vector use same container as parent vector
     Vector(int size, std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> container,
-        std::shared_ptr<bool[]> nulls, bool isSliced)
+        std::shared_ptr<bool[]> nulls, bool isSliced, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
         : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
     {
+        this->dataTypeId = dataTypeId;
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
@@ -429,7 +438,7 @@ public:
      * @param offset
      * @param length
      */
-    std::unique_ptr<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>> CopyPositions(const int *positions,
+    Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *CopyPositions(const int *positions,
         int positionOffset, int length)
     {
         if ((positions == nullptr) || (length < 0)) {
@@ -452,7 +461,8 @@ public:
         // new container
         std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> newContainer =
             container->CopyPositions(newPositions.data(), length);
-        return std::make_unique<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>>(length, newContainer, newNulls);
+        return new Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(length, newContainer, newNulls,
+            this->dataTypeId);
     }
 
     /* *
@@ -464,19 +474,18 @@ public:
      * @param length
      * @param isCopy
      */
-    std::unique_ptr<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>> Slice(int positionOffset, int length,
-        bool isCopy = false)
+    Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *Slice(int positionOffset, int length, bool isCopy = false)
     {
         if (positionOffset + length > this->size) {
             LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
             return nullptr;
         }
         // copy the data field shared_ptr
-        auto sliced = std::make_unique<Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>>(length, this->container,
-            this->nulls, true);
+        auto sliced = new Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(length, this->container,
+            this->nulls, true, this->dataTypeId);
         sliced->offset = this->offset + positionOffset; // update offset
         sliced->isSliced = true;
-        return std::move(sliced);
+        return sliced;
     }
 
 private:
@@ -494,7 +503,7 @@ public:
     explicit Vector(int size, int capacityInBytes = INITIAL_STRING_SIZE)
         : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */)
     {
-        this->stringEncoding = OMNI_LARGE_STRING;
+        this->dataTypeId = OMNI_CHAR;
         // default string_view vector use large string encoding
         this->container = std::make_shared<LargeStringContainer<std::string_view>>(size, capacityInBytes);
         // vector class capacity, nulls total capacity and values total capacity
@@ -508,10 +517,10 @@ public:
 
     // used for vector slice, sliced vector use same container as parent vector
     explicit Vector(int size, std::shared_ptr<LargeStringContainer<std::string_view>> container,
-        std::shared_ptr<bool[]> nulls)
+        std::shared_ptr<bool[]> nulls, DataTypeId dataTypeId = OMNI_CHAR)
         : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */, nulls), container(container)
     {
-        this->stringEncoding = OMNI_LARGE_STRING;
+        this->dataTypeId = dataTypeId;
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
@@ -610,15 +619,14 @@ public:
      * @param offset
      * @param length
      */
-    std::unique_ptr<Vector<LargeStringContainer<std::string_view>>> CopyPositions(const int *positions, int offset,
-        int length)
+    Vector<LargeStringContainer<std::string_view>> *CopyPositions(const int *positions, int offset, int length)
     {
         if ((positions == nullptr) || (length < 0)) {
             LogError("positions is null or the input length is incorrect: %d.", length);
             return nullptr;
         }
 
-        auto vector = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(length);
+        auto vector = new Vector<LargeStringContainer<std::string_view>>(length);
         auto startPositions = positions + offset;
         for (int32_t i = 0; i < length; i++) {
             auto position = startPositions[i];
@@ -640,15 +648,14 @@ public:
      * @param positionOffset
      * @param length
      */
-    std::unique_ptr<Vector<LargeStringContainer<std::string_view>>> Slice(int positionOffset, int length,
-        bool isCopy = false)
+    Vector<LargeStringContainer<std::string_view>> *Slice(int positionOffset, int length, bool isCopy = false)
     {
         if (positionOffset + length > this->size) {
             LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
             return nullptr;
         }
         // copy the data field shared_ptr
-        auto sliced = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(length, container, this->nulls);
+        auto sliced = new Vector<LargeStringContainer<std::string_view>>(length, container, this->nulls);
         sliced->offset = this->offset + positionOffset; // update offset
         sliced->isSliced = true;
         return std::move(sliced);

@@ -3,6 +3,7 @@
  */
 
 #include "memory_trace.h"
+#include "allocator.h"
 #include "vector/vector.h"
 
 namespace omniruntime::mem {
@@ -54,7 +55,21 @@ int64_t MemoryTrace::GetArenaAllocated()
     return curArenaAllocated.load(std::memory_order_relaxed);
 }
 
-void MemoryTrace::AddVectorPtrAllocated(uintptr_t ptr, std::pair<int64_t, std::string> pair)
+/**
+ * stack will be replaced if vector is created by jni
+ *   */
+void MemoryTrace::ReplaceVectorPtrAllocated(uintptr_t ptr, const std::string &stack)
+{
+    std::lock_guard<std::mutex> lock(vectorLock);
+    PtrMap::iterator iter;
+    if ((iter = curVectorPtrAllocated.find(ptr)) != curVectorPtrAllocated.end()) {
+        iter->second.second = stack;
+    } else {
+        throw OmniException("Memory Trace Error", "vector create failed!");
+    }
+}
+
+void MemoryTrace::AddVectorPtrAllocated(uintptr_t ptr, const std::pair<int64_t, std::string> &pair)
 {
     std::lock_guard<std::mutex> lock(vectorLock);
     curVectorPtrAllocated.emplace(ptr, pair);
@@ -66,14 +81,22 @@ void MemoryTrace::SubVectorPtrAllocated(uintptr_t ptr, int64_t size)
     PtrMap::iterator iter;
     if ((iter = curVectorPtrAllocated.find(ptr)) != curVectorPtrAllocated.end()) {
         if (iter->second.first != size) {
-            std::cout << "wrong vector size, alloc: " << iter->second.first << ", free: " << size << ", stack is: " <<
-                iter->second.second << std::endl;
+            auto message =
+                "wrong vector size, alloc: " + std::to_string(iter->second.first) + ", free: " + std::to_string(size);
+            throw OmniException("Memory Trace Error", message);
         }
         curVectorPtrAllocated.erase(ptr);
+    } else {
+        throw OmniException("Memory Trace Error", "vector ptr is wrong!");
     }
 }
 
-void MemoryTrace::AddArenaPtrAllocated(uintptr_t ptr, std::pair<int64_t, std::string> pair)
+PtrMap MemoryTrace::GetVectorPtrAllocated()
+{
+    return curVectorPtrAllocated;
+}
+
+void MemoryTrace::AddArenaPtrAllocated(uintptr_t ptr, const std::pair<int64_t, std::string> &pair)
 {
     std::lock_guard<std::mutex> lock(arenaLock);
     curArenaPtrAllocated.emplace(ptr, pair);
@@ -85,13 +108,24 @@ void MemoryTrace::SubArenaPtrAllocated(uintptr_t ptr, int64_t size)
     PtrMap::iterator iter;
     if ((iter = curArenaPtrAllocated.find(ptr)) != curArenaPtrAllocated.end()) {
         if (iter->second.first != size) {
-            std::cout << "wrong arena size, alloc: " << iter->second.first << ", free: " << size << ", stack is: " <<
-                iter->second.second << std::endl;
+            auto message =
+                "wrong arena size, alloc: " + std::to_string(iter->second.first) + ", free: " + std::to_string(size);
+            throw OmniException("Memory Trace Error", message);
         }
+        curArenaPtrAllocated.erase(ptr);
+    } else {
+        throw OmniException("Memory Trace Error", "arena ptr is wrong!");
     }
-    curArenaPtrAllocated.erase(ptr);
 }
 
+PtrMap MemoryTrace::GetArenaPtrAllocated()
+{
+    return curArenaPtrAllocated;
+}
+
+/**
+ * check and print stack if memory leak.
+ *   */
 bool MemoryTrace::HasMemoryLeak()
 {
     int64_t vectorMemory = curVectorAllocated.load(std::memory_order_relaxed);
@@ -124,13 +158,23 @@ void MemoryTrace::FreeLeakedMemory()
 #ifdef TRACE
     PtrMap::iterator iter;
     for (iter = curVectorPtrAllocated.begin(); iter != curVectorPtrAllocated.end(); ++iter) {
-        // free vector
+        // free vector and buffer if vector type is varchar.
         delete reinterpret_cast<vec::BaseVector *>(iter->first);
     }
+    Allocator *allocator = Allocator::GetAllocator();
     for (iter = curArenaPtrAllocated.begin(); iter != curArenaPtrAllocated.end(); ++iter) {
         // free arena ptr
-        delete reinterpret_cast<uint8_t *>(iter->first);
+        allocator->Free(reinterpret_cast<uint8_t *>(iter->first), iter->second.first);
     }
+    Clear();
 #endif
+}
+
+void MemoryTrace::Clear()
+{
+    curVectorAllocated.store(0, std::memory_order_relaxed);
+    curArenaAllocated.store(0, std::memory_order_relaxed);
+    curVectorPtrAllocated.clear();
+    curArenaPtrAllocated.clear();
 }
 }

@@ -12,7 +12,7 @@ VectorBatch *CreateSequenceVectorBatch(const std::vector<DataTypePtr> &types, in
 {
     auto *vectorBatch = new VectorBatch(length);
     for (const auto &type : types) {
-        auto *vector = VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), length).release();
+        auto *vector = VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), length);
         for (int index = 0; index < length; ++index) {
             switch (type->GetId()) {
                 case OMNI_INT:
@@ -21,18 +21,18 @@ VectorBatch *CreateSequenceVectorBatch(const std::vector<DataTypePtr> &types, in
                 case OMNI_DOUBLE:
                 case OMNI_DECIMAL64: {
                     auto val = index;
-                    VectorHelper::SetValue(vector, index, &val, type->GetId());
+                    VectorHelper::SetValue(vector, index, &val);
                     break;
                 }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
                     auto val = std::to_string(index);
-                    VectorHelper::SetValue(vector, index, &val, type->GetId());
+                    VectorHelper::SetValue(vector, index, &val);
                     break;
                 }
                 case OMNI_DECIMAL128: {
                     Decimal128 val = Decimal128(0, index);
-                    VectorHelper::SetValue(vector, index, &val, type->GetId());
+                    VectorHelper::SetValue(vector, index, &val);
                     break;
                 }
                 default:
@@ -50,7 +50,7 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
     auto *vectorBatch = new VectorBatch(length);
     int ratio = 5;
     for (const auto &type : types) {
-        auto *inner = VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), length / ratio).release();
+        auto *inner = VectorHelper::CreateVector(OMNI_FLAT, type->GetId(), length / ratio);
         for (int index = 0; index < length / ratio; ++index) {
             switch (type->GetId()) {
                 case OMNI_INT:
@@ -59,18 +59,18 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
                 case OMNI_DOUBLE:
                 case OMNI_DECIMAL64: {
                     auto val = index;
-                    VectorHelper::SetValue(inner, index, &val, type->GetId());
+                    VectorHelper::SetValue(inner, index, &val);
                     break;
                 }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
                     auto val = std::to_string(index);
-                    VectorHelper::SetValue(inner, index, &val, type->GetId());
+                    VectorHelper::SetValue(inner, index, &val);
                     break;
                 }
                 case OMNI_DECIMAL128: {
                     Decimal128 val = Decimal128(0, index);
-                    VectorHelper::SetValue(inner, index, &val, type->GetId());
+                    VectorHelper::SetValue(inner, index, &val);
                     break;
                 }
                 default:
@@ -84,7 +84,7 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
         }
         auto vector = VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), inner, type->GetId());
         delete inner;
-        vectorBatch->Append(vector.release());
+        vectorBatch->Append(vector);
     }
     return vectorBatch;
 }
@@ -94,7 +94,7 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
 {
     auto *vectorBatch = new VectorBatch(rowCount);
     for (int i = 0; i < (int32_t)types.size(); ++i) {
-        auto *vector = VectorHelper::CreateVector(OMNI_FLAT, types[i]->GetId(), (int32_t)values[i].size()).release();
+        auto *vector = VectorHelper::CreateVector(OMNI_FLAT, types[i]->GetId(), (int32_t)values[i].size());
         for (int index = 0; index < (int32_t)values[i].size(); ++index) {
             switch (types[i]->GetId()) {
                 case OMNI_INT:
@@ -104,18 +104,18 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
                 case OMNI_DOUBLE:
                 case OMNI_BOOLEAN: {
                     auto val = values[i][index];
-                    VectorHelper::SetValue(vector, index, &val, types[i]->GetId());
+                    VectorHelper::SetValue(vector, index, &val);
                     break;
                 }
                 case OMNI_VARCHAR:
                 case OMNI_CHAR: {
                     auto val = prefix + std::to_string(values[i][index]);
-                    VectorHelper::SetValue(vector, index, &val, types[i]->GetId());
+                    VectorHelper::SetValue(vector, index, &val);
                     break;
                 }
                 case OMNI_DECIMAL128: {
                     auto val = Decimal128(0, values[i][index]);
-                    VectorHelper::SetValue(vector, index, &val, types[i]->GetId());
+                    VectorHelper::SetValue(vector, index, &val);
                     break;
                 }
                 default:
@@ -129,8 +129,7 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
                 ids[j] = j;
             }
             vectorBatch->Append(
-                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, types[i]->GetId())
-                    .release());
+                VectorHelper::CreateDictionaryVector(ids.data(), (int32_t)ids.size(), vector, types[i]->GetId()));
             delete vector;
             continue;
         }
@@ -163,35 +162,35 @@ void SetVectorBatchRow(VectorBatch *vb, std::vector<DataTypeId> dataTypes, int i
             case OMNI_INT:
             case OMNI_DATE32: {
                 auto item = std::stoi(val);
-                VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
+                VectorHelper::SetValue(vb->Get(i), index, &item);
                 break;
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
                 auto item = std::stol(val);
-                VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
+                VectorHelper::SetValue(vb->Get(i), index, &item);
                 break;
             }
             case OMNI_DOUBLE: {
                 auto item = std::stod(val);
-                VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
+                VectorHelper::SetValue(vb->Get(i), index, &item);
                 break;
             }
             case OMNI_BOOLEAN: {
                 auto item = std::strcmp("true", val.c_str()) == 0;
-                VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
+                VectorHelper::SetValue(vb->Get(i), index, &item);
                 break;
             }
             case OMNI_CHAR:
             case OMNI_VARCHAR: {
                 auto item = val;
-                VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
+                VectorHelper::SetValue(vb->Get(i), index, &item);
                 break;
             }
             case OMNI_DECIMAL128: {
                 auto item = Decimal128(val);
 
-                VectorHelper::SetValue(vb->Get(i), index, &item, dataTypes[i]);
+                VectorHelper::SetValue(vb->Get(i), index, &item);
                 break;
             }
             default:

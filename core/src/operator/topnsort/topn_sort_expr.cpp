@@ -43,9 +43,7 @@ TopNSortWithExprOperator::TopNSortWithExprOperator(const type::DataTypes &source
       sortCols(sortCols),
       projectFuncs(projectFuncs),
       topNSortOperator(topNSortOperator)
-{
-    outputTypes = topNSortOperator->GetOutputType();
-}
+{}
 
 TopNSortWithExprOperator::~TopNSortWithExprOperator()
 {

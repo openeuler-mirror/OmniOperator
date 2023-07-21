@@ -26,7 +26,6 @@ public:
         : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
     {
         this->context = context;
-        this->outputTypes = exprEvaluator->GetOutputDataTypes();
     }
 
     ~ProjectionOperator() override

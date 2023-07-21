@@ -29,7 +29,7 @@ template <type::DataTypeId OmniId> void *GetValuesFromVector(BaseVector *vector)
 {
     void *ptr = nullptr;
     using T = typename NativeType<OmniId>::type;
-    if constexpr (std::is_same_v<std::string_view, T> || std::is_same_v<T, uint8_t>) {
+    if constexpr (std::is_same_v<std::string_view, T>) {
         // TODO: need offsets for varChar, only return values
         auto largeStringVector =
             reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
@@ -44,7 +44,7 @@ template <type::DataTypeId OmniId> void *GetValuesFromVector(BaseVector *vector)
 template <type::DataTypeId OmniId> void *GetValuesFromDict(BaseVector *vector)
 {
     using T = typename NativeType<OmniId>::type;
-    if constexpr (std::is_same_v<std::string_view, T> || std::is_same_v<T, uint8_t>) {
+    if constexpr (std::is_same_v<std::string_view, T>) {
         // TODO: need offsets for varChar, only return values
         auto *stringDictVector =
             reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
@@ -60,7 +60,7 @@ using NewUniqueVectorFunction = std::function<void(VectorBatch *, int)>;
 template <type::DataTypeId OmniId> ALWAYS_INLINE static void NewUniqueVector(VectorBatch *vectorBatch, int size)
 {
     auto vector = VectorHelper::CreateVector(OMNI_FLAT, OmniId, size);
-    vectorBatch->Append(vector.release());
+    vectorBatch->Append(vector);
 }
 
 template <>

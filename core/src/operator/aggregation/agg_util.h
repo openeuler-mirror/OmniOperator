@@ -71,7 +71,7 @@ public:
             }
             valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(inputVector));
             valueOffsets[i] = reinterpret_cast<int64_t>(
-                VectorHelper::UnsafeGetOffsetsAddr(inputVector, originTypes.GetType(i)->GetId()));
+                VectorHelper::UnsafeGetOffsetsAddr(inputVector));
         }
 
         for (int32_t i = 0, projectFuncsIndex = 0; i < vecCount; i++) {
@@ -79,9 +79,9 @@ public:
             if (sourceColId >= 0) {
                 // source col append project colmun
                 auto inputVector = inputVecBatch->Get(sourceColId);
-                std::unique_ptr<BaseVector> newInputVec =
-                    VectorHelper::SliceVector(inputVector, inputTypes.GetIds()[i], 0, rowCount);
-                newInputVecBatch->Append(newInputVec.release());
+                BaseVector *newInputVec =
+                    VectorHelper::SliceVector(inputVector, 0, rowCount);
+                newInputVecBatch->Append(newInputVec);
             } else if (sourceColId == -1 && projectFuncsCount > 0) {
                 // append withexpr colmun
                 newInputVecBatch->Append(DYNAMIC_TYPE_DISPATCH(OperatorUtil::ProjectVector,

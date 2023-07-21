@@ -36,9 +36,9 @@ public:
     }
 
 private:
-    std::unique_ptr<omniruntime::vec::BaseVector> ReadVarcharVector(int32_t rowCount);
+    omniruntime::vec::BaseVector *ReadVarcharVector(int32_t rowCount);
 
-    template <typename T> std::unique_ptr<omniruntime::vec::BaseVector> ReadVector(int32_t rowCount);
+    template <typename T> omniruntime::vec::BaseVector *ReadVector(int32_t rowCount);
 
     omniruntime::vec::VectorBatch *ReadVecBatch();
 

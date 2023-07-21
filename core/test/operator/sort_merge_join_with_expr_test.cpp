@@ -1362,7 +1362,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjFullOuterJoinWithNullFirst)
             }
         }
     }
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, resultTypesVec));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -2844,7 +2844,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinStreamedWithNullJoinKe
     expectVecBatch->Get(1)->SetNull(2);
     expectVecBatch->Get(1)->SetNull(4);
     expectVecBatch->Get(1)->SetNull(6);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, resultTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -2939,7 +2939,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftJoinStreamedRowLastUnJoine
     expectVecBatch->Get(1)->SetNull(3);
     expectVecBatch->Get(1)->SetNull(6);
     expectVecBatch->Get(1)->SetNull(7);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, resultTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3024,7 +3024,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinWithFilterEmpty)
     int32_t expCol1[] =  {0, 1, 2, 2, 4, 5};
     long expCol2[] =  {6600, 5500, 4400, 3300, 2200, 1100};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 6, expCol1, expCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3114,7 +3114,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinStreamedWithRepeat
     int32_t expCol1[] =  {2, 2, 4, 5};
     long expCol2[] =  {4400, 3300, 2200, 1100};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, expCol1, expCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3204,7 +3204,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinBufferedWithRepeat
     int32_t expCol1[] =  {0, 1, 2};
     long expCol2[] =  {6600, 5500, 4400};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 3, expCol1, expCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3298,7 +3298,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinBothNullFirst)
     int32_t expCol1[] =  {2, 3, 4};
     long expCol2[] =  {4400, 3300, 2200};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 3, expCol1, expCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3391,7 +3391,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinFilterDeduplicate)
     int32_t expCol1[] =  {1, 1, 2, 4};
     long expCol2[] =  {5500, 4400, 3300, 1100};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, expCol1, expCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3484,7 +3484,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftSemiJoinBufferedWithDuplic
     int32_t expCol1[] =  {1, 1, 2, 4};
     long expCol2[] =  {5500, 4400, 3300, 1100};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, expCol1, expCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3564,7 +3564,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinStreamedWithEmptyF
     int resultCol1[] =  {1,  1,  2};
     long resultCol2[] =  {40,  25,  35};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 3, resultCol1, resultCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3648,7 +3648,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinEqualCondition)
     int resultCol1[] =  {1,  1,  2,  3};
     long resultCol2[] =  {40,  25,  35,  30};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, resultCol1, resultCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3732,7 +3732,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinBufferDoubleJoinRo
     int resultCol1[] =  {1,  1,  2,  3};
     long resultCol2[] =  {40,  25,  35,  30};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, resultCol1, resultCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3818,7 +3818,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinWithStreamedNullFi
     long resultCol2[] =  {40,  25,  35,  30};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, resultCol1, resultCol2);
     expectVecBatch->Get(0)->SetNull(0);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3904,7 +3904,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinWithBufferedNullFi
     int resultCol1[] =  {1,  1,  2,  3};
     long resultCol2[] =  {40,  25,  35,  30};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, resultCol1, resultCol2);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -3992,7 +3992,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinWithBothSideNullFi
     long resultCol2[] =  {40,  25,  35,  30};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, resultCol1, resultCol2);
     expectVecBatch->Get(0)->SetNull(0);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -4079,7 +4079,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjLeftAntiJoinWithMutilRowAndFil
     long resultCol2[] =  {40,  25,  35};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 3, resultCol1, resultCol2);
     expectVecBatch->Get(0)->SetNull(0);
-    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch, streamTypeVector));
+    ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
     VectorHelper::FreeVecBatch(expectVecBatch);
 
@@ -4283,7 +4283,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, TestBothJoinKeyAndFilterWithExpr)
     int64_t expectedData0[] = {111, 111, 112};
     int64_t expectedData1[] = {111, 112, 112};
     std::vector<DataTypePtr> outputTypes = { LongType(), LongType() };
-    AssertVecBatchEquals(result, 2, outputTypes, expectedDataSize, expectedData0, expectedData1);
+    AssertVecBatchEquals(result, 2, expectedDataSize, expectedData0, expectedData1);
     VectorHelper::FreeVecBatch(result);
 
     Expr::DeleteExprs(streamedEqualKeyExprs);
@@ -4490,7 +4490,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInner1)
     int32_t expectedData0[] = {8001, 8001, 1003, 1003, 8001, 8001, 1003, 1003};
     int32_t expectedData1[] = {8001, 8001, 1003, 1003, 8001, 8001, 1003, 1003};
     std::vector<DataTypePtr> outputTypes = { IntType(), IntType() };
-    AssertVecBatchEquals(result, 2, outputTypes, expectedDataSize, expectedData0, expectedData1);
+    AssertVecBatchEquals(result, 2, expectedDataSize, expectedData0, expectedData1);
     VectorHelper::FreeVecBatch(result);
 
     Expr::DeleteExprs(streamedEqualKeyExprs);
@@ -4558,7 +4558,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInner2)
     int32_t expectData0[] = {8001};
     int32_t expectData1[] = {8001};
     std::vector<DataTypePtr> outputTypes = { IntType(), IntType() };
-    AssertVecBatchEquals(result, 2, outputTypes, 1, expectData0, expectData1);
+    AssertVecBatchEquals(result, 2, 1, expectData0, expectData1);
     VectorHelper::FreeVecBatch(result);
     result = nullptr;
 
@@ -4570,7 +4570,7 @@ TEST(SMJ_JOIN_OPERATOR_WITH_EXPR_TESTCASE, testSmjInner2)
     VectorBatch *streamedVecBatchEof = CreateEmptyVectorBatch(streamedTblTypes);
     streamedTblWithExprOperator->AddInput(streamedVecBatchEof);
     bufferedTblWithExprOperator->GetOutput(&result);
-    AssertVecBatchEquals(result, 2, outputTypes, 1, expectData0, expectData1);
+    AssertVecBatchEquals(result, 2, 1, expectData0, expectData1);
     VectorHelper::FreeVecBatch(result);
     result = nullptr;
 

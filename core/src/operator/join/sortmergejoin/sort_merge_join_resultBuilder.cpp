@@ -84,7 +84,7 @@ VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
     auto *vectorBatch = new VectorBatch(maxRowCount);
 
     for (auto &type : allTypes) {
-        vectorBatch->Append(VectorHelper::CreateFlatVector(type->GetId(), maxRowCount).release());
+        vectorBatch->Append(VectorHelper::CreateFlatVector(type->GetId(), maxRowCount));
     }
     return vectorBatch;
 }
@@ -494,8 +494,7 @@ VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, std::vector<DataT
     auto *sliceBatch = new VectorBatch(rowCount);
     for (int32_t columnIdx = 0; columnIdx < outputColCount; columnIdx++) {
         auto *vector = vectorBatch->Get(columnIdx);
-        auto dataType = dataTypes[columnIdx]->GetId();
-        sliceBatch->Append(vec::VectorHelper::SliceVector(vector, dataType, 0, rowCount).release());
+        sliceBatch->Append(vec::VectorHelper::SliceVector(vector, 0, rowCount));
     }
     return sliceBatch;
 }

@@ -17,13 +17,13 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &s
 {
     auto vector = vectorBatch->Get(this->channels[0]);
 
-    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector, IN_ID)));
+    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector)));
     auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
     int32_t minLen = 3 * width;
     uint8_t *minVal = this->executionContext->GetArena()->Allocate(3 * width);
 
     LogDebug("HMPP-Agg-min");
-    auto result = HMPPS_Min_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector, IN_ID)), offsets,
+    auto result = HMPPS_Min_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector)), offsets,
         vector->GetSize(), minVal, &minLen);
     if (result != HMPP_STS_NO_ERR) {
         throw OmniException("HMPP ERROR", "min failed for hmpp error");

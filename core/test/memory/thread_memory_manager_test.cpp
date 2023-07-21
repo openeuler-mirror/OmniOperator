@@ -56,5 +56,6 @@ TEST(ThreadMemoryManager, testReclaimMemoryUsageReachThreshold)
     threadMemoryManager->ReclaimMemoryUsage(size);
     int64_t threadAccount = threadMemoryManager->GetThreadAccountedMemory();
     EXPECT_EQ(threadAccount, -size);
+    threadMemoryManager->Clear();
 }
 }

@@ -127,7 +127,6 @@ int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 int32_t AggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     aggOperator->GetOutput(outputVecBatch);
-    this->outputTypes = aggOperator->GetOutputType();
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }

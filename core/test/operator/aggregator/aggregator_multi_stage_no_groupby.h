@@ -125,7 +125,7 @@ BaseVector *CreateFixedSizeVector(const int32_t nRows, const int32_t nullPercent
         }
         auto dictVector = VectorHelper::CreateDictionary(ids, nRows, vector);
         delete vector;
-        return dictVector.release();
+        return dictVector;
     } else {
         V *vector = new V(nRows);
         for (int32_t i = 0; i < nRows; ++i) {
@@ -180,7 +180,7 @@ inline BaseVector *CreateVarcharVector(const int32_t nRows, const int32_t nullPe
         }
         auto dictVector = VectorHelper::CreateStringDictionary(ids, nRows, vector);
         delete vector;
-        return dictVector.release();
+        return dictVector;
     } else {
         Vector<LargeStringContainer<std::string_view>> *vector =
             new Vector<LargeStringContainer<std::string_view>>(nRows);
@@ -700,8 +700,8 @@ public:
     bool GenerateFinalExpectedResult(VectorBatch **expectedResult, std::vector<VectorBatch *> &vvb) override
     {
         *expectedResult = new VectorBatch(1);
-        std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
-        (*expectedResult)->Append(v.release());
+        BaseVector *v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
+        (*expectedResult)->Append(v);
         (*expectedResult)->Append(new Vector<int64_t>(1));
 
         int64_t count = 0;
@@ -991,8 +991,8 @@ private:
             } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
                 expectedResult->Append(new Vector<double>(1));
             } else {
-                std::unique_ptr<BaseVector> v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
-                expectedResult->Append(v.release());
+                BaseVector *v = DYNAMIC_TYPE_DISPATCH(VectorHelper::CreateFlatVector, OUT_ID, 1);
+                expectedResult->Append(v);
             }
         }
         expectedResult->Append(new Vector<int64_t>(1));

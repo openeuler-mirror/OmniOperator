@@ -62,9 +62,7 @@ LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &pr
       probeHashCols(probeHashCols),
       projectFuncs(projectFuncs),
       lookupJoinOperator(lookupJoinOperator)
-{
-    this->outputTypes = lookupJoinOperator->GetOutputType();
-}
+{}
 
 LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 {

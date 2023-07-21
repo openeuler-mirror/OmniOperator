@@ -167,7 +167,6 @@ void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t 
 int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t status = hashAggOperator->GetOutput(outputVecBatch);
-    this->outputTypes = hashAggOperator->GetOutputType();
     SetStatus(hashAggOperator->GetStatus());
     return status;
 }

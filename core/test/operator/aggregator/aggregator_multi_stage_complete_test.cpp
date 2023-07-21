@@ -251,7 +251,7 @@ static void RunAggregatorTest(std::unique_ptr<AggregatorTester> tester, const bo
         EXPECT_TRUE(ValidateOverflow("Final", valueColIdx, expectedResultFinal, finalOutputVecBatch));
     }
 
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(finalOutputVecBatch, expectedResultFinal, expectTypes, error));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(finalOutputVecBatch, expectedResultFinal, error));
 
     op::Operator::DeleteOperator(aggFinal);
     VectorHelper::FreeVecBatch(expectedResultFinal);

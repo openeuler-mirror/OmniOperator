@@ -55,14 +55,8 @@ public:
         return OMNI_STATUS_NORMAL;
     }
 
-    std::vector<type::DataTypePtr> &GetOutputType()
-    {
-        return outputTypes;
-    }
-
 protected:
     int32_t *sourceTypes;
-    std::vector<type::DataTypePtr> outputTypes;
     ExecutionContext *context;
 
 private:

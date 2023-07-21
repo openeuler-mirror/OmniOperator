@@ -52,8 +52,7 @@ public:
         return currentPosition < partitionEnd;
     }
 
-    void ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBatch *outputVecBatch, int32_t index,
-        int32_t outputColsCount, std::vector<type::DataTypePtr> &types);
+    void ProcessNextRow(VectorBatch *inputVecBatchForAgg, VectorBatch *outputVecBatch, int32_t index);
 
     void UpdatePeerGroup();
 
