@@ -2743,6 +2743,43 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
     delete avgFactory;
 }
 
+TEST(AggregatorTest, spark_avg_decimal128_result_decimal64)
+{
+    auto avgFactory = new AverageSparkAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0, 1 };
+    auto avgDeciAggPartial =
+            avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(19, 8)).get()),
+                                         *(AggregatorUtil::WrapWithDataTypes(Decimal64Type(18, 8)).get()), channal0, false, false);
+    int32_t totalRow = 1;
+    auto *deci19_8Vec = new Vector<Decimal128>(totalRow);
+
+    Decimal128Wrapper deci("9999999999.99999999");
+    Decimal128 decimal128 = deci.ToDecimal128();
+    deci19_8Vec->SetValue(0,decimal128);
+    auto *avgCountVec = new Vector<int64_t>(1);
+    avgCountVec->SetValue(0, 10);
+
+    auto *resultVec = new Vector<int64_t>(1);
+    std::vector<BaseVector *> extractVec = { resultVec };
+
+    auto *vecBatch = new VectorBatch(2);
+    vecBatch->Append(deci19_8Vec);
+    vecBatch->Append(avgCountVec);
+
+    AggregateState state { nullptr };
+    avgDeciAggPartial->InitState(state);
+    avgDeciAggPartial->ProcessGroup(state, vecBatch, 0 , 1);
+    avgDeciAggPartial->ExtractValues(state, extractVec, 0);
+
+    // 9999999999.99999999 + 10 =
+    int64_t expect = 100000000000000000ll;
+    EXPECT_EQ(expect,resultVec->GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete resultVec;
+    delete avgFactory;
+}
+
 TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverflowAsNull_is_false)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
@@ -3093,6 +3130,51 @@ TEST(AggregatorTest, spark_sum_long_overflow)
 
     state.val = nullptr;
     VectorHelper::FreeVecBatch(vecBatch);
+    delete resultVec;
+    delete sumFactory;
+}
+
+TEST(AggregatorTest, spark_sum_long_final_stage)
+{
+    // 851451 + 9223372036854775807 = -9223372036853924358
+    // -9223372036854775808 + -256 = 9223372036854775552
+    // overflow  but same with vanilla spark
+    auto sumFactory = new SumSparkAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0, 1 };
+
+    auto *longVec1 = new Vector<int64_t>(2);
+    longVec1->SetValue(0, 851451);
+    longVec1->SetValue(1, 9223372036854775807ll);
+
+
+    auto *resultVec = new Vector<int64_t>(1);
+    std::vector<BaseVector *> extractVec = { resultVec };
+
+    auto *vecBatch1 = new VectorBatch(1);
+    vecBatch1->Append(longVec1);
+
+    AggregateState state { nullptr };
+
+    auto sumLongAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+                                                        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
+    sumLongAggFinal->InitState(state);
+    sumLongAggFinal->ProcessGroup(state, vecBatch1, 0, 2);
+    sumLongAggFinal->ExtractValues(state,extractVec,0);
+    EXPECT_EQ(-9223372036853924358, resultVec->GetValue(0));
+
+    auto *longVec2 = new Vector<int64_t>(2);
+    longVec2->SetValue(0, -9223372036854775808ll);
+    longVec2->SetValue(1, -256);
+
+    auto *vecBatch2 = new VectorBatch(1);
+    vecBatch2->Append(longVec2);
+    sumLongAggFinal->InitState(state);
+    sumLongAggFinal->ProcessGroup(state, vecBatch2, 0, 2);
+    sumLongAggFinal->ExtractValues(state,extractVec,0);
+    EXPECT_EQ(9223372036854775552, resultVec->GetValue(0));
+
+    VectorHelper::FreeVecBatch(vecBatch1);
+    VectorHelper::FreeVecBatch(vecBatch2);
     delete resultVec;
     delete sumFactory;
 }

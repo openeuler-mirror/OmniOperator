@@ -120,12 +120,12 @@ public:
         auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            Add<ResultType, ResultType, SumOp<ResultType, ResultType>>(res, state.count, ptr, rowCount);
+            Add<ResultType, ResultType, SumOp<ResultType, ResultType, false>>(res, state.count, ptr, rowCount);
         } else {
             if constexpr (std::is_floating_point_v<ResultType>) {
                 SumConditionalFloat<ResultType, ResultType, false>(res, state.count, ptr, rowCount, nullMap);
             } else {
-                AddConditional<ResultType, ResultType, SumConditionalOp<ResultType, ResultType, false>>(res,
+                AddConditional<ResultType, ResultType, SumConditionalOp<ResultType, ResultType, false, false>>(res,
                     state.count, ptr, rowCount, nullMap);
             }
         }
