@@ -16,22 +16,12 @@ template <typename T> void vector_get_set_value()
     auto vector = std::make_unique<Vector<T>>(vecSize);
     EXPECT_EQ(vector->GetTypeId(), TYPE_ID<T>);
     for (int i = 0; i < vecSize; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
+        T value = static_cast<T>(i) * 2 / 3;
         vector->SetValue(i, value);
     }
 
     for (int i = 0; i < vecSize; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
+        T value = static_cast<T>(i) * 2 / 3;
         EXPECT_EQ(value, vector->GetValue(i));
     }
 }
@@ -41,12 +31,7 @@ template <typename T> void vector_has_null()
     int vecSize = 100;
     auto vector = std::make_unique<Vector<T>>(vecSize);
     for (int i = 0; i < vecSize; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
+        T value = static_cast<T>(i) * 2 / 3;
         vector->SetValue(i, value);
     }
 
@@ -63,12 +48,46 @@ template <typename T> void vector_has_null()
             continue;
         }
 
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
+        T value = static_cast<T>(i) * 2 / 3;
+        vector->SetValue(i, value);
+    }
+
+    hasNull = vector->HasNull();
+    EXPECT_EQ(hasNull, true);
+
+    for (int i = 0; i < vecSize; i++) {
+        vector->SetNull(i);
+    }
+
+    hasNull = vector->HasNull();
+    EXPECT_EQ(hasNull, true);
+}
+
+template <> void vector_has_null<std::string_view>()
+{
+    int vecSize = 100;
+    auto vector = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(vecSize);
+    for (int i = 0; i < vecSize; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        vector->SetValue(i, value);
+    }
+
+    bool hasNull = vector->HasNull();
+    EXPECT_EQ(hasNull, false);
+
+    vector->SetNull(vecSize - 1);
+    hasNull = vector->HasNull();
+    EXPECT_EQ(hasNull, true);
+
+    for (int i = 0; i < vecSize; i++) {
+        if (i % 2 == 0) {
+            vector->SetNull(i);
+            continue;
         }
+
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
         vector->SetValue(i, value);
     }
 
@@ -92,42 +111,74 @@ template <typename T> void dict_vector_get_value_with_null()
         values[i] = i % dicSize;
     }
 
-    std::shared_ptr<Vector<T>> dictionary = std::make_shared<Vector<T>>(dicSize);
+    auto *dictionary = new Vector<T>(dicSize);
     for (int i = 0; i < dicSize; i++) {
         if (i % 2 == 0) {
-            dictionary.get()->SetNull(i);
+            dictionary->SetNull(i);
             continue;
         }
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string" + std::to_string(i);
-        } else {
-            value = static_cast<T>(i * 2 / 3);
-        }
+        T value = static_cast<T>(i * 2 / 3);
         dictionary->SetValue(i, value);
     }
 
-    BaseVector *vectorPtr = VectorHelper::CreateDictionary(values, valueSize, dictionary.get());
+    BaseVector *vectorPtr = VectorHelper::CreateDictionary(values, valueSize, dictionary);
     auto *vector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vectorPtr);
 
-    T value;
     for (int i = 0; i < valueSize; i++) {
         if (values[i] % 2 == 0) {
-            EXPECT_EQ(dictionary.get()->IsNull(values[i]), vector->IsNull(i));
+            EXPECT_EQ(dictionary->IsNull(values[i]), vector->IsNull(i));
             continue;
         }
-        value = vector->GetValue(i);
+        T value = vector->GetValue(i);
         EXPECT_EQ(dictionary->GetValue(i % dicSize), value);
     }
     delete[] values;
     delete vector;
+    delete dictionary;
+}
+
+template <> void dict_vector_get_value_with_null<std::string_view>()
+{
+    int dicSize = 10;
+    int valueSize = 100;
+    int *values = new int[valueSize];
+    for (int i = 0; i < valueSize; i++) {
+        values[i] = i % dicSize;
+    }
+
+    auto *dictionary = new Vector<LargeStringContainer<std::string_view>>(dicSize);
+    for (int i = 0; i < dicSize; i++) {
+        if (i % 2 == 0) {
+            dictionary->SetNull(i);
+            continue;
+        }
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        dictionary->SetValue(i, value);
+    }
+
+    BaseVector *vectorPtr = VectorHelper::CreateStringDictionary(values, valueSize, dictionary);
+    auto *vector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vectorPtr);
+
+    for (int i = 0; i < valueSize; i++) {
+        if (values[i] % 2 == 0) {
+            EXPECT_EQ(dictionary->IsNull(values[i]), vector->IsNull(i));
+            continue;
+        }
+        std::string_view value = vector->GetValue(i);
+        EXPECT_EQ(dictionary->GetValue(i % dicSize), value);
+    }
+    delete[] values;
+    delete vector;
+    delete dictionary;
 }
 
 template <typename T> T GetTestValue(int32_t index)
 {
     T value;
-    if constexpr (std::is_same_v<std::string, T> || std::is_same_v<std::string_view, T>) {
-        value = "string " + std::to_string(index);
+    if constexpr (std::is_same_v<std::string_view, T>) {
+        std::string str = "string " + std::to_string(index);
+        value = std::string_view(str.data(), str.size());
     } else {
         value = static_cast<T>(index) * 2 / 3;
     }
@@ -160,13 +211,13 @@ template <typename T> void vector_append_value()
     appended.Append(&v2WithNull, 5, 5);
 
     Vector<T> v3Emtpy{ 0 };
-    appended.Append(&v3Emtpy, 10, 0);
+    EXPECT_ANY_THROW(appended.Append(&v3Emtpy, 10, 0));
 
     Vector<T> v4OverBounds{ vecSize };
     for (int32_t i = 0; i < vecSize; i++) {
         v4OverBounds.SetValue(i, expected[i]);
     }
-    appended.Append(&v4OverBounds, 10, vecSize + 1);
+    EXPECT_ANY_THROW(appended.Append(&v4OverBounds, 10, vecSize + 1));
 
     std::vector<bool> expectedNull{ false, false, false, false, false, true, false, true, false, true };
     for (int32_t i = 0; i < appendedVecSize; i++) {
@@ -174,7 +225,7 @@ template <typename T> void vector_append_value()
         if (i >= 10) {
             EXPECT_FALSE(appended.IsNull(i));
             // for number it is random value
-            if constexpr (std::is_same_v<std::string, T>) {
+            if constexpr (std::is_same_v<std::string_view, T>) {
                 EXPECT_EQ("", appended.GetValue(i));
             }
             continue;
@@ -222,35 +273,28 @@ template <typename T> void vector_copy_positions_value()
 
     auto v3Empty = vector.CopyPositions(index, offset2, 0);
     EXPECT_EQ(v3Empty->GetSize(), 0);
-    auto v4OverBounds = vector.CopyPositions(index, offset1, -1);
-    EXPECT_EQ(v4OverBounds, nullptr);
+    EXPECT_ANY_THROW(vector.CopyPositions(index, offset1, -1));
     delete v1OffsetZero;
     delete v2OffsetNotZero;
     delete v3Empty;
-    delete v4OverBounds;
 }
 
 template <typename T> void dict_copy_positions_value()
 {
     int dicSize = 10;
     int valueSize = 7;
-    std::shared_ptr<Vector<T>> dictionary = std::make_shared<Vector<T>>(dicSize);
-    T value;
+    auto *dictionary = new Vector<T>(dicSize);
     for (int i = 0; i < dicSize; i++) {
         if (i % 2 == 0) {
             dictionary->SetNull(i);
             continue;
         }
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = std::to_string(i);
-        } else {
-            value = static_cast<T>(i);
-        }
+        T value = static_cast<T>(i);
         dictionary->SetValue(i, value);
     }
 
     int32_t values[] = {2, 3, 4, 5, 6, 8, 9};
-    BaseVector *vectorPtr = VectorHelper::CreateDictionary(values, valueSize, dictionary.get());
+    BaseVector *vectorPtr = VectorHelper::CreateDictionary(values, valueSize, dictionary);
     auto vector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vectorPtr);
 
     int32_t positions[] = {1, 3, 5, 6};
@@ -258,24 +302,65 @@ template <typename T> void dict_copy_positions_value()
     int32_t newValueSize = 3;
     auto copyPositions = vector->CopyPositions(positions, offset, newValueSize);
 
-    T expectValue;
     for (int i = 0; i < newValueSize; i++) {
         if (values[positions[i + offset]] % 2 == 0) {
             EXPECT_EQ(dictionary->IsNull(values[positions[i + offset]]), copyPositions->IsNull(i));
             continue;
         }
-        expectValue = copyPositions->GetValue(i);
+        T expectValue = copyPositions->GetValue(i);
         EXPECT_EQ(dictionary->GetValue(values[positions[i + offset]]), expectValue);
     }
 
     auto v3Empty = vector->CopyPositions(positions, offset, 0);
     EXPECT_EQ(v3Empty->GetSize(), 0);
-    auto v4OverBounds = vector->CopyPositions(positions, offset, -1);
-    EXPECT_EQ(v4OverBounds, nullptr);
+    EXPECT_ANY_THROW(vector->CopyPositions(positions, offset, -1));
     delete copyPositions;
     delete v3Empty;
-    delete v4OverBounds;
     delete vector;
+    delete dictionary;
+}
+
+template <> void dict_copy_positions_value<std::string_view>()
+{
+    int dicSize = 10;
+    int valueSize = 7;
+    auto *dictionary = new Vector<LargeStringContainer<std::string_view>>(dicSize);
+
+    for (int i = 0; i < dicSize; i++) {
+        if (i % 2 == 0) {
+            dictionary->SetNull(i);
+            continue;
+        }
+        std::string str = std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        dictionary->SetValue(i, value);
+    }
+
+    int32_t values[] = {2, 3, 4, 5, 6, 8, 9};
+    BaseVector *vectorPtr = VectorHelper::CreateStringDictionary(values, valueSize, dictionary);
+    auto vector = reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vectorPtr);
+
+    int32_t positions[] = {1, 3, 5, 6};
+    int32_t offset = 1;
+    int32_t newValueSize = 3;
+    auto copyPositions = vector->CopyPositions(positions, offset, newValueSize);
+
+    for (int i = 0; i < newValueSize; i++) {
+        if (values[positions[i + offset]] % 2 == 0) {
+            EXPECT_EQ(dictionary->IsNull(values[positions[i + offset]]), copyPositions->IsNull(i));
+            continue;
+        }
+        std::string_view expectValue = copyPositions->GetValue(i);
+        EXPECT_EQ(dictionary->GetValue(values[positions[i + offset]]), expectValue);
+    }
+
+    auto v3Empty = vector->CopyPositions(positions, offset, 0);
+    EXPECT_EQ(v3Empty->GetSize(), 0);
+    EXPECT_ANY_THROW(vector->CopyPositions(positions, offset, -1));
+    delete copyPositions;
+    delete v3Empty;
+    delete vector;
+    delete dictionary;
 }
 
 template <typename T> void vec_set_values(int32_t valueSize = 100)
@@ -292,7 +377,11 @@ template <typename T> void vec_set_values(int32_t valueSize = 100)
     for (int i = 0; i < valueSize; i++) {
         data[i] = static_cast<T>(i) * 2 / 3;
     }
-    vector->SetValues(0, data, valueSize);
+    if (valueSize > 100) {
+        EXPECT_ANY_THROW(vector->SetValues(0, data, valueSize));
+    } else {
+        vector->SetValues(0, data, valueSize);
+    }
 
     if (vecSize >= valueSize) {
         for (int i = 0; i < vecSize; i++) {
@@ -329,7 +418,11 @@ template <typename T> void vec_set_nulls(int32_t nullSize = 100)
             nulls[i] = false;
         }
     }
-    vector->SetNulls(0, nulls, nullSize);
+    if (nullSize > 100) {
+        EXPECT_ANY_THROW(vector->SetNulls(0, nulls, nullSize));
+    } else {
+        vector->SetNulls(0, nulls, nullSize);
+    }
 
     if (vecSize >= nullSize) {
         for (int i = 0; i < nullSize; i++) {
@@ -374,11 +467,6 @@ TEST(vector, vector_get_set_value_boost_dec128)
     vector_get_set_value<boost_dec128>();
 }
 
-TEST(vector, vector_get_set_value_string)
-{
-    vector_get_set_value<std::string>();
-}
-
 TEST(vector, vector_has_null_int32)
 {
     vector_has_null<int32_t>();
@@ -411,7 +499,7 @@ TEST(vector, vector_has_null_boost_dec128)
 
 TEST(vector, vector_has_null_string)
 {
-    vector_has_null<std::string>();
+    vector_has_null<std::string_view>();
 }
 
 TEST(vector, odd_vector_has_null)
@@ -427,9 +515,10 @@ TEST(vector, odd_vector_has_null)
 TEST(vector, string_vec_any_size)
 {
     for (int i = 1; i < 100; i++) {
-        auto vec = std::make_shared<Vector<std::string>>(i);
+        auto vec = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(i);
         int idx = rand() % i;
-        std::string value = "hello";
+        std::string str = "hello";
+        std::string_view value(str.data(), str.size());
         vec->SetValue(idx, value);
         EXPECT_EQ(value, vec->GetValue(idx));
     }
@@ -437,7 +526,7 @@ TEST(vector, string_vec_any_size)
 
 TEST(vector, string_vec_size_0)
 {
-    auto vec = std::make_shared<Vector<std::string>>(0);
+    auto vec = std::make_shared<Vector<LargeStringContainer<std::string_view>>>(0);
 }
 
 TEST(vector, append_int32)
@@ -500,11 +589,6 @@ TEST(vector, copy_positions_boost_dec128)
     vector_copy_positions_value<boost_dec128>();
 }
 
-TEST(vector, copy_positions_string)
-{
-    vector_copy_positions_value<std::string>();
-}
-
 TEST(vector, dict_get_value_with_null_int32)
 {
     dict_vector_get_value_with_null<int32_t>();
@@ -537,7 +621,7 @@ TEST(vector, dict_get_value_with_null_boost_dec128)
 
 TEST(vector, dict_get_value_with_null_string)
 {
-    dict_vector_get_value_with_null<std::string>();
+    dict_vector_get_value_with_null<std::string_view>();
 }
 
 TEST(vector, dict_copy_position_with_null_int32)
@@ -572,7 +656,7 @@ TEST(vector, dict_copy_position_with_boost_dec128)
 
 TEST(vector, dict_copy_position_with_null_string)
 {
-    dict_copy_positions_value<std::string>();
+    dict_copy_positions_value<std::string_view>();
 }
 
 TEST(vector, vec_set_values_int16)

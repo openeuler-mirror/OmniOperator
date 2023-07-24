@@ -285,16 +285,6 @@ TEST(unsafe_vector, int_slice_get_values_and_nulls)
     VectorSliceGetValuesAndNulls<int32_t>();
 }
 
-TEST(unsafe_vector, string_get_values_and_nulls)
-{
-    VectorGetValuesAndNulls<std::string>();
-}
-
-TEST(unsafe_vector, string_slice_get_values_and_nulls)
-{
-    VectorSliceGetValuesAndNulls<std::string>();
-}
-
 TEST(unsafe_vector, int_dictionary_get_values_and_nulls)
 {
     DictionaryVectorGetValuesAndNulls<int32_t>();

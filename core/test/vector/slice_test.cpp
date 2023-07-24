@@ -16,12 +16,7 @@ template <typename T> void v2_slice_get_set_value()
 {
     auto parent = new Vector<T>(g_vecSize);
     for (int i = 0; i < g_vecSize; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = T(i * 2 / 3);
-        }
+        T value = T(i * 2 / 3);
         parent->SetValue(i, value);
     }
 
@@ -30,12 +25,28 @@ template <typename T> void v2_slice_get_set_value()
     delete parent;
 
     for (int i = 0; i < g_len; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i + g_offset);
-        } else {
-            value = T((i + g_offset) * 2 / 3);
-        }
+        T value = T((i + g_offset) * 2 / 3);
+        EXPECT_EQ(value, vector->GetValue(i));
+    }
+    delete vector;
+}
+
+template <> void v2_slice_get_set_value<std::string_view>()
+{
+    auto parent = new Vector<LargeStringContainer<std::string_view>>(g_vecSize);
+    for (int i = 0; i < g_vecSize; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        parent->SetValue(i, value);
+    }
+
+    auto vector = parent->Slice(g_offset, g_len, false);
+    EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
+    delete parent;
+
+    for (int i = 0; i < g_len; i++) {
+        std::string str = "string " + std::to_string(i + g_offset);
+        std::string_view value(str.data(), str.size());
         EXPECT_EQ(value, vector->GetValue(i));
     }
     delete vector;
@@ -55,7 +66,7 @@ TEST(vector2, v2_slice_get_set_value_double)
 }
 TEST(vector2, v2_slice_get_set_value_string)
 {
-    v2_slice_get_set_value<std::string>();
+    v2_slice_get_set_value<std::string_view>();
 }
 TEST(vector2, v2_slice_get_set_value_dec32)
 {

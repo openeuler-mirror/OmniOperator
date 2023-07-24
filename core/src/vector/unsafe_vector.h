@@ -39,7 +39,8 @@ public:
     }
 
     // used by dictionary container
-    template <typename DATA_TYPE> static ALWAYS_INLINE std::shared_ptr<AlignedBuffer<DATA_TYPE>> GetValues(Vector<DATA_TYPE> *vector)
+    template <typename DATA_TYPE>
+    static ALWAYS_INLINE std::shared_ptr<AlignedBuffer<DATA_TYPE>> GetValues(Vector<DATA_TYPE> *vector)
     {
         return vector->valuesBuffer;
     }

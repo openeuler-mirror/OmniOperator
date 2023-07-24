@@ -15,19 +15,6 @@ public:
         capacity = size * sizeof(RAW_DATA_TYPE);
         allocator = Allocator::GetAllocator();
         buffer = allocator->Alloc(capacity, zerofill);
-
-        /* *
-         * std::string object needs to be initialized, the reason is follow:
-         * _M_dataplus variable in std::string is NULL if RAW_DATA_TYPE is std::string, when values variable is
-         * allocated memory by mallocx. e.g. std::string object only allocate memory but call constructor. It causes
-         * move constructor failed.
-         */
-        if constexpr (std::is_same_v<std::string, RAW_DATA_TYPE>) {
-            for (int index = 0; index < size; ++index) {
-                RAW_DATA_TYPE *valuesPtr = reinterpret_cast<RAW_DATA_TYPE *>(buffer);
-                new (&valuesPtr[index]) std::string;
-            }
-        }
     }
 
     ~AlignedBuffer()

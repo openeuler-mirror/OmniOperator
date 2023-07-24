@@ -51,11 +51,6 @@ TEST(vector2, dict_container_get_set_value_double)
     dict_container_get_set_value<double>();
 }
 
-TEST(vector2, dict_container_get_set_value_string)
-{
-    dict_container_get_set_value<std::string>();
-}
-
 TEST(vector2, dict_container_get_set_value_boost_dec128)
 {
     dict_container_get_set_value<boost_dec128>();

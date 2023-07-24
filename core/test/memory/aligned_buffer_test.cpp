@@ -25,7 +25,7 @@ TEST(AlignedBuffer, testCreateAlignedBuffer)
     EXPECT_TRUE(values != nullptr);
 
     int64_t untrackedMemory = threadMemoryManager->GetUntrackedMemory();
-    // memory 900 = nullsBuffer(100) + valuesBuffer(800);
+    // mem(900) is equal to the sum of nullsBuffer and valuesBuffer, i.e., nullsBuffer(100) + valuesBuffer(800);
     EXPECT_EQ(untrackedMemory, 900);
 
     nullsBuffer.reset();

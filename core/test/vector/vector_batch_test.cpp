@@ -12,10 +12,11 @@ TEST(vector2, vec_batch)
 {
     int32_t rowCnt = 32;
     auto intVec = std::make_unique<Vector<int32_t>>(rowCnt);
-    auto stringVec = std::make_unique<Vector<std::string>>(rowCnt);
+    auto stringVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(rowCnt);
     for (int32_t i = 0; i < rowCnt; i++) {
         intVec->SetValue(i, i * 2);
-        std::string value("hello" + std::to_string(i));
+        std::string str("hello" + std::to_string(i));
+        std::string_view value(str.data(), str.size());
         stringVec->SetValue(i, value);
     }
 
@@ -40,7 +41,7 @@ TEST(vector2, vec_batch)
     vectorBatch.Append(intDictVec.release());
 
     auto intCol0 = reinterpret_cast<Vector<int32_t> *>(vectorBatch.Get(0));
-    auto stringCol1 = reinterpret_cast<Vector<std::string> *>(vectorBatch.Get(1));
+    auto stringCol1 = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorBatch.Get(1));
     auto intDictCol2 = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vectorBatch.Get(2));
     for (int32_t i = 0; i < rowCnt; i++) {
         EXPECT_EQ(intCol0->GetValue(i), i * 2);

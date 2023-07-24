@@ -26,11 +26,7 @@ std::shared_ptr<AlignedBuffer<DICTIONARY_DATA_TYPE>> CreateDictionary(int size)
         new AlignedBuffer<DICTIONARY_DATA_TYPE>(size));
     auto dictionary = dictionaryBuffer->GetBuffer();
     for (int i = 0; i < size; i++) {
-        if constexpr (std::is_same_v<std::string, RAW_DATA_TYPE>) {
-            dictionary[i] = "hello world " + std::to_string(i);
-        } else {
-            dictionary[i] = static_cast<RAW_DATA_TYPE>(i) * 2 / 3;
-        }
+        dictionary[i] = static_cast<RAW_DATA_TYPE>(i) * 2 / 3;
     }
     return dictionaryBuffer;
 }
@@ -53,12 +49,7 @@ template <typename T> std::unique_ptr<Vector<T>> CreateVectorAndSetValue(int32_t
 {
     auto vector = std::make_unique<Vector<T>>(size);
     for (int32_t i = 0; i < size; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
+        T value = static_cast<T>(i) * 2 / 3;
         vector->SetValue(i, value);
     }
     return vector;

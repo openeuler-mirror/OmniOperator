@@ -16,7 +16,8 @@ namespace omniruntime::vec {
 using namespace mem;
 template <typename RAW_DATA_TYPE, template <typename> typename CONTAINER = LargeStringContainer>
 class DictionaryContainer {
-    using DictType = std::conditional_t<is_container_v<RAW_DATA_TYPE>, CONTAINER<RAW_DATA_TYPE>, AlignedBuffer<RAW_DATA_TYPE>>;
+    using DictType =
+        std::conditional_t<is_container_v<RAW_DATA_TYPE>, CONTAINER<RAW_DATA_TYPE>, AlignedBuffer<RAW_DATA_TYPE>>;
 
 public:
     DictionaryContainer(const int32_t *values, int32_t valueSize, std::shared_ptr<DictType> dictionary,
@@ -58,28 +59,19 @@ public:
 
     ALWAYS_INLINE typename PARAM_TYPE<RAW_DATA_TYPE>::type GetValue(int32_t index)
     {
-        if constexpr (is_container_v<RAW_DATA_TYPE>) {
-            return dictionary->GetValue(values[index] + dictOffset);
-        } else {
-            return dictionary->GetValue(values[index] + dictOffset);
-        }
+        return dictionary->GetValue(values[index] + dictOffset);
     }
 
     ALWAYS_INLINE void SetValue(int32_t index, RAW_DATA_TYPE &value)
     {
         for (int32_t i = 0; i < dictSize; i++) {
-            RAW_DATA_TYPE dicValue;
-            if constexpr (is_container_v<RAW_DATA_TYPE>) {
-                dicValue = dictionary->GetValue(i + dictOffset);
-            } else {
-                dicValue = dictionary->GetValue(i + dictOffset);
-            }
+            RAW_DATA_TYPE dicValue = dictionary->GetValue(i + dictOffset);
             if (dicValue == value) {
                 values[index] = i;
-                break;
+                return;
             }
         }
-        // fixme: we should probably throw exception if setting to a value doesn't exist in the dictionary
+        throw OmniException("OPERATOR_RUNTIME_ERROR", "setting to a value doesn't exist in the dictionary");
     }
 
     ALWAYS_INLINE int64_t GetContainerCapacity()

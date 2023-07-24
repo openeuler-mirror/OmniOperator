@@ -14,7 +14,7 @@ namespace omniruntime {
 namespace mem {
 class SimpleAllocator {
 public:
-    static int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
+    static void Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
     {
         // background: If size is 0, then malloc() returns either NULL, or a unique pointer value that can later be
         // successfully passed to free().
@@ -32,20 +32,18 @@ public:
         if (UNLIKELY(*buffer == nullptr)) {
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate fails.");
         }
-        return 0;
     }
 
-    static int Release(uint8_t *buffer)
+    static void Release(uint8_t *buffer)
     {
         // free the memory
         free(static_cast<void *>(buffer));
-        return 0;
     }
 };
 
 class JemallocAllocator {
 public:
-    static int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
+    static void Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
     {
         if (size < 0) {
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is negative.");
@@ -62,30 +60,26 @@ public:
         if (UNLIKELY(*buffer == nullptr)) {
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate fails.");
         }
-        return 0;
     }
 
-    static int Release(uint8_t *buffer)
+    static void Release(uint8_t *buffer)
     {
         // jemalloc free
         dallocx(static_cast<void *>(buffer), MALLOCX_ALIGN(alignment));
-        return 0;
     }
     const static size_t alignment = 64;
 };
 
 template <typename Allocator> class BaseMemoryPoolImpl : public MemoryPool {
 public:
-    int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false) override
+    void Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false) override
     {
         Allocator::Allocate(size, buffer, zeroFill);
-        return 0;
     }
 
-    int Release(uint8_t *buffer) override
+    void Release(uint8_t *buffer) override
     {
         Allocator::Release(buffer);
-        return 0;
     }
 
     ~BaseMemoryPoolImpl() override = default;

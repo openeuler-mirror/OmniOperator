@@ -14,22 +14,28 @@ template <typename T> void createVector(int vec_size)
 {
     auto vector = std::make_unique<Vector<T>>(vec_size);
     for (int i = 0; i < vec_size; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
+        T value = static_cast<T>(i) * 2 / 3;
         vector->SetValue(i, value);
     }
 
     for (int i = 0; i < vec_size; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
+        T value = static_cast<T>(i) * 2 / 3;
+        EXPECT_EQ(value, vector->GetValue(i));
+    }
+}
+
+template <> void createVector<std::string_view>(int vec_size)
+{
+    auto vector = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(vec_size);
+    for (int i = 0; i < vec_size; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        vector->SetValue(i, value);
+    }
+
+    for (int i = 0; i < vec_size; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
         EXPECT_EQ(value, vector->GetValue(i));
     }
 }
@@ -55,7 +61,7 @@ TEST(Allocator, testCreateAndFreeVector)
     createVector<double>(vecSize);
     createVector<test::boost_dec64>(vecSize);
     createVector<test::boost_dec128>(vecSize);
-    createVector<std::string>(vecSize);
+    createVector<std::string_view>(vecSize);
 }
 
 TEST(Allocator, testCreateZeroVector)
@@ -66,7 +72,7 @@ TEST(Allocator, testCreateZeroVector)
     createVector<double>(vecSize);
     createVector<test::boost_dec64>(vecSize);
     createVector<test::boost_dec128>(vecSize);
-    createVector<std::string>(vecSize);
+    createVector<std::string_view>(vecSize);
 }
 
 // test: the alloc method works properly.

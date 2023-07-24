@@ -31,8 +31,8 @@ namespace omniruntime::vec {
 using namespace type;
 using namespace mem;
 enum Encoding {
-    OMNI_FLAT = 0,       // ordinary vector, storing primitive data types, such as int, long, boolean
-    OMNI_DICTIONARY = 1, // dictionary vector, dictionary can be combined with varchar
+    OMNI_FLAT = 0,               // ordinary vector, storing primitive data types, such as int, long, boolean
+    OMNI_DICTIONARY = 1,         // dictionary vector, dictionary can be combined with varchar
     OMNI_ENCODING_CONTAINER = 2, // the temporarily added code is mainly used for the agg avg partial, and the vector
                                  // implementation is also placed in the hash agg module
     OMNI_ENCODING_INVALID
@@ -58,7 +58,7 @@ public:
      * set the element at the index position to null
      * Attention: String vector has its own SetNull, need call corresponding SetNull when string vector
      * @param index
-     *                */
+     */
     void ALWAYS_INLINE SetNull(int32_t index)
     {
         nulls[index] = true;
@@ -72,16 +72,18 @@ public:
 
     void SetNulls(int startIndex, bool *nullsPtr, int length)
     {
-        if (startIndex + length > size) {
-            LogError("vector is out of range(needed size:%d, real size:%d).", startIndex + length, size);
-            return;
+        if (UNLIKELY(startIndex + length > size)) {
+            std::string message("vector is out of range(needed size:%d, real size:%d).", startIndex + length, size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         bool *startAddr = reinterpret_cast<bool *>(nulls);
         errno_t ret = memcpy_s(startAddr + startIndex, length * sizeof(bool), nullsPtr, length * sizeof(bool));
-        if (ret != EOK) {
-            LogError("memory copy failed %d, vec size %d, length %d, startIndex %d startAddr %x.", ret, size,
-                length, startIndex, startAddr);
+        if (UNLIKELY(ret != EOK)) {
+            std::string message = "memory copy failed " + std::to_string(ret) + ",vec size " + std::to_string(size) +
+                ", length " + std::to_string(length) + ", startIndex " + std::to_string(startIndex) + ", startAddr " +
+                std::to_string(reinterpret_cast<std::uintptr_t>(startAddr));
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
     }
 
@@ -157,7 +159,7 @@ public:
 protected:
     friend class unsafe::UnsafeBaseVector;
     int32_t size;
-    Encoding encoding;             // vector encoding, such as flat, dictionary
+    Encoding encoding; // vector encoding, such as flat, dictionary
     int32_t offset;
     std::shared_ptr<AlignedBuffer<bool>> nullsBuffer; // manage nulls memory and it's metadata
     bool *nulls;                                      // nullsBuffer->GetBuffer(), caches raw data pointer
@@ -174,11 +176,9 @@ template <typename RAW_DATA_TYPE> class Vector : public BaseVector {
 public:
     /* *
      * Constructor for data types of arithematic types without encoding
-     * fixme: Initialization of values should replace new with make_shared, when the C++ version is upgraded to 20.
      * @param vSize: size of array in variables nulls and values
      * @param dataTypeId: the dataTypeId of vector
      */
-    // the dataTypeId will be used in operator in the future.
     Vector(int vSize, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>) : BaseVector(vSize)
     {
         this->dataTypeId = dataTypeId;
@@ -247,17 +247,19 @@ public:
      */
     void ALWAYS_INLINE SetValues(int startIndex, const void *values, int length)
     {
-        if (startIndex + length > size) {
-            LogError("vector is out of range(needed size:%d, real size:%d).", startIndex + length, size);
-            return;
+        if (UNLIKELY(startIndex + length > size)) {
+            std::string message("vector is out of range(needed size:%d, real size:%d).", startIndex + length, size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         RAW_DATA_TYPE *startAddr = reinterpret_cast<RAW_DATA_TYPE *>(this->values);
         errno_t ret =
             memcpy_s(startAddr + startIndex, length * sizeof(RAW_DATA_TYPE), values, length * sizeof(RAW_DATA_TYPE));
-        if (ret != EOK) {
-            LogError("memory copy failed %d, vec size %d, length %d, startIndex %d startAddr %x.", ret, size,
-                length, startIndex, startAddr);
+        if (UNLIKELY(ret != EOK)) {
+            std::string message = "memory copy failed " + std::to_string(ret) + ",vec size " + std::to_string(size) +
+                ", length " + std::to_string(length) + ", startIndex " + std::to_string(startIndex) + ", startAddr " +
+                std::to_string(reinterpret_cast<std::uintptr_t>(startAddr));
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
     }
 
@@ -280,9 +282,10 @@ public:
      */
     void Append(BaseVector *other, int positionOffset, int length)
     {
-        if (positionOffset + length > size) {
-            LogError("append vector out of range(needed size:%d, real size:%d).", positionOffset + length, size);
-            return;
+        if (UNLIKELY(positionOffset + length > size)) {
+            std::string message("append vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         if (other->GetEncoding() == OMNI_FLAT) {
@@ -307,9 +310,9 @@ public:
      */
     Vector<RAW_DATA_TYPE> *CopyPositions(const int *positions, int positionOffset, int length)
     {
-        if ((positions == nullptr) || (length < 0)) {
-            LogError("positions is null or the input length is incorrect: %d.", length);
-            return nullptr;
+        if (UNLIKELY((positions == nullptr) || (length < 0))) {
+            std::string message("positions is null or the input length is incorrect: %d.", length);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
         auto vector = new Vector<RAW_DATA_TYPE>(length);
         auto startPositions = positions + positionOffset;
@@ -332,9 +335,10 @@ public:
      */
     Vector<RAW_DATA_TYPE> *Slice(int positionOffset, int length, bool isCopy = false)
     {
-        if (positionOffset + length > size) {
-            LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, size);
-            return nullptr;
+        if (UNLIKELY(positionOffset + length > size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
         auto sliced = new Vector<RAW_DATA_TYPE>(length, encoding, nullsBuffer, valuesBuffer);
         sliced->offset = offset + positionOffset; // update offset
@@ -427,9 +431,9 @@ public:
     Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *CopyPositions(const int *positions, int positionOffset,
         int length)
     {
-        if ((positions == nullptr) || (length < 0)) {
-            LogError("positions is null or the input length is incorrect: %d.", length);
-            return nullptr;
+        if (UNLIKELY((positions == nullptr) || (length < 0))) {
+            std::string message("positions is null or the input length is incorrect: %d.", length);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         // new nulls
@@ -461,9 +465,10 @@ public:
      */
     Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *Slice(int positionOffset, int length, bool isCopy = false)
     {
-        if (positionOffset + length > this->size) {
-            LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return nullptr;
+        if (UNLIKELY(positionOffset + length > this->size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                this->size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
         // copy the data field shared_ptr
         auto sliced = new Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(length, this->container,
@@ -530,7 +535,7 @@ public:
     /* *
      * set the element at the index position to null
      * @param index
-     *             */
+     */
     void ALWAYS_INLINE SetNull(int32_t index)
     {
         BaseVector::SetNull(index);
@@ -566,9 +571,10 @@ public:
      */
     void Append(BaseVector *other, int positionOffset, int length)
     {
-        if (positionOffset + length > this->size) {
-            LogError("append vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return;
+        if (UNLIKELY(positionOffset + length > this->size)) {
+            std::string message("append vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                this->size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         if (other->GetEncoding() == OMNI_FLAT) {
@@ -606,9 +612,9 @@ public:
      */
     Vector<LargeStringContainer<std::string_view>> *CopyPositions(const int *positions, int offset, int length)
     {
-        if ((positions == nullptr) || (length < 0)) {
-            LogError("positions is null or the input length is incorrect: %d.", length);
-            return nullptr;
+        if (UNLIKELY((positions == nullptr) || (length < 0))) {
+            std::string message("positions is null or the input length is incorrect: %d.", length);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         auto vector = new Vector<LargeStringContainer<std::string_view>>(length);
@@ -635,9 +641,10 @@ public:
      */
     Vector<LargeStringContainer<std::string_view>> *Slice(int positionOffset, int length, bool isCopy = false)
     {
-        if (positionOffset + length > this->size) {
-            LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return nullptr;
+        if (UNLIKELY(positionOffset + length > this->size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                this->size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
         // copy the data field shared_ptr
         auto sliced = new Vector<LargeStringContainer<std::string_view>>(length, container, this->nullsBuffer);
