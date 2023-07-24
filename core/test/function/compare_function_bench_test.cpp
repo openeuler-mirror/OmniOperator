@@ -46,8 +46,10 @@ int32_t CompareVarchar(BaseVector *leftColumn, int32_t leftColumnPosition, BaseV
     }
 }
 
-void PrintCompareVarcharResult(BaseVector *vector1, BaseVector *vector2, Timer &timer, double &sum, int &comp)
+void PrintCompareVarcharResult(BaseVector *vector1, BaseVector *vector2, Timer &timer)
 {
+    double sum = 0.0f;
+    int comp = 0;
     for (int j = 0; j < ROUNDS; j++) {
         timer.Reset();
 
@@ -124,8 +126,10 @@ int32_t CompareVarcharByLong(BaseVector *leftColumn, int32_t leftColumnPosition,
     }
 }
 
-void PrintCompareVarcharResultByLong(BaseVector *vector1, BaseVector *vector2, Timer &timer, double &sum, int &comp)
+void PrintCompareVarcharResultByLong(BaseVector *vector1, BaseVector *vector2, Timer &timer)
 {
+    double sum = 0.0f;
+    int comp;
     for (int j = 0; j < ROUNDS; j++) {
         timer.Reset();
 
@@ -162,9 +166,8 @@ TEST(varcharType, CompareVarcharPerf)
     timer.SetStart();
 
     std::cout << "Compare same varchar: " << std::endl;
-    double sum = 0;
-    int comp = 0;
-    PrintCompareVarcharResult(vector1, vector2, timer, sum, comp);
+
+    PrintCompareVarcharResult(vector1, vector2, timer);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
@@ -172,10 +175,9 @@ TEST(varcharType, CompareVarcharPerf)
         std::string_view value(str);
         vector3->SetValue(i, value);
     }
-
     std::cout << "Compare different varchar:" << std::endl;
-    sum = 0;
-    PrintCompareVarcharResult(vector1, vector3, timer, sum, comp);
+
+    PrintCompareVarcharResult(vector1, vector3, timer);
 
     delete vector1;
     delete vector2;
@@ -202,9 +204,8 @@ TEST(varcharType, CompareVarcharByLongPerf)
     timer.SetStart();
 
     std::cout << "Compare equal varchar" << std::endl;
-    double sum = 0;
-    int comp = 0;
-    PrintCompareVarcharResultByLong(vector1, vector2, timer, sum, comp);
+
+    PrintCompareVarcharResultByLong(vector1, vector2, timer);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
@@ -214,8 +215,8 @@ TEST(varcharType, CompareVarcharByLongPerf)
     }
 
     std::cout << "Compare not equal varchar" << std::endl;
-    sum = 0;
-    PrintCompareVarcharResultByLong(vector1, vector3, timer, sum, comp);
+
+    PrintCompareVarcharResultByLong(vector1, vector3, timer);
 
     delete vector1;
     delete vector2;

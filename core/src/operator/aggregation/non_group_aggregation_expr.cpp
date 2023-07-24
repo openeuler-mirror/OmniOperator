@@ -93,7 +93,7 @@ Operator *AggregationWithExprOperatorFactory::CreateOperator()
 {
     auto aggOperator = static_cast<AggregationOperator *>(aggOperatorFactory->CreateOperator());
     return new AggregationWithExprOperator(*originSourceTypes, *sourceTypes, projectCols, projectFuncs,
-                                           aggSimpleFilters, aggOperator);
+        aggSimpleFilters, aggOperator);
 }
 
 AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &originSourceTypes,
@@ -114,8 +114,8 @@ AggregationWithExprOperator::~AggregationWithExprOperator()
 
 int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch = AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes,
-        projectFuncs, projectCols);
+    VectorBatch *newInputVecBatch =
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projectFuncs, projectCols);
     // do filter and update newInputVecBatch
     // if is true not filter
     AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, aggSimpleFilters, context, originTypes);

@@ -31,8 +31,7 @@ template <type::DataTypeId OmniId> void *GetValuesFromVector(BaseVector *vector)
     using T = typename NativeType<OmniId>::type;
     if constexpr (std::is_same_v<std::string_view, T>) {
         // TODO: need offsets for varChar, only return values
-        auto largeStringVector =
-            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
+        auto largeStringVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
         ptr = unsafe::UnsafeStringVector::GetValues(largeStringVector);
     } else {
         auto rawVector = reinterpret_cast<Vector<T> *>(vector);
@@ -46,8 +45,7 @@ template <type::DataTypeId OmniId> void *GetValuesFromDict(BaseVector *vector)
     using T = typename NativeType<OmniId>::type;
     if constexpr (std::is_same_v<std::string_view, T>) {
         // TODO: need offsets for varChar, only return values
-        auto *stringDictVector =
-            reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
+        auto *stringDictVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
         return unsafe::UnsafeDictionaryVector::GetVarCharDictionary(stringDictVector);
     } else {
         auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
@@ -63,8 +61,7 @@ template <type::DataTypeId OmniId> ALWAYS_INLINE static void NewUniqueVector(Vec
     vectorBatch->Append(vector);
 }
 
-template <>
-ALWAYS_INLINE void NewUniqueVector<type::DataTypeId::OMNI_CONTAINER>(VectorBatch *vectorBatch, int size)
+template <> ALWAYS_INLINE void NewUniqueVector<type::DataTypeId::OMNI_CONTAINER>(VectorBatch *vectorBatch, int size)
 {
     auto doubleVector = new Vector<double>(size);
     auto longVector = new Vector<int64_t>(size);
@@ -72,7 +69,7 @@ ALWAYS_INLINE void NewUniqueVector<type::DataTypeId::OMNI_CONTAINER>(VectorBatch
     std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
-    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
+    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
     auto containerVector = std::make_unique<ContainerVector>(size, vectorAddresses, dataTypes);
     vectorBatch->Append(containerVector.release());
 }
@@ -89,8 +86,8 @@ template <> int32_t *GetIdsWithOffset<void>(BaseVector *vector, int32_t *idsWith
     return nullptr;
 }
 
-template <> int32_t *GetIdsWithOffset<std::string_view>(BaseVector *vector, int32_t *idsWithOffset, int offset,
-    int rowCount)
+template <>
+int32_t *GetIdsWithOffset<std::string_view>(BaseVector *vector, int32_t *idsWithOffset, int offset, int rowCount)
 {
     // We use the API in Vector<DictionaryContainer<T>> to obtain the value in the dictionary of string_view type,
     // instead of getting the value after obtaining valueAddress and expanding the dictionary ids.
@@ -99,7 +96,7 @@ template <> int32_t *GetIdsWithOffset<std::string_view>(BaseVector *vector, int3
     return nullptr;
 }
 
-const std::vector<GetIdsWithOffFunction> getIdsWithOffsetFunctions {
+const std::vector<GetIdsWithOffFunction> getIdsWithOffsetFunctions{
     GetIdsWithOffset<void>,             // OMNI_NONE
     GetIdsWithOffset<int32_t>,          // OMNI_INT
     GetIdsWithOffset<int64_t>,          // OMNI_LONG
@@ -120,7 +117,7 @@ const std::vector<GetIdsWithOffFunction> getIdsWithOffsetFunctions {
     nullptr                             // OMNI_CONTAINER
 };
 
-const std::vector<GetValuesFunction> getValuesFromDictFunctions {
+const std::vector<GetValuesFunction> getValuesFromDictFunctions{
     nullptr,                            // OMNI_NONE
     GetValuesFromDict<OMNI_INT>,        // OMNI_INT
     GetValuesFromDict<OMNI_LONG>,       // OMNI_LONG
@@ -132,15 +129,15 @@ const std::vector<GetValuesFunction> getValuesFromDictFunctions {
     GetValuesFromDict<OMNI_DATE32>,     // OMNI_DATE32
     GetValuesFromDict<OMNI_DATE64>,     // OMNI_DATE64
     GetValuesFromDict<OMNI_INT>,        // OMNI_TIME32
-    GetValuesFromDict<OMNI_TIME64>,      // OMNI_TIME64
-    nullptr,                             // OMNI_TIMESTAMP
-    nullptr,                             // OMNI_INTERVAL_MONTHS
-    nullptr,                             // OMNI_INTERVAL_DAY_TIME
-    nullptr,                             // OMNI_VARCHAR
-    nullptr,                             // OMNI_CHAR
-    nullptr                              // OMNI_CONTAINER
+    GetValuesFromDict<OMNI_TIME64>,     // OMNI_TIME64
+    nullptr,                            // OMNI_TIMESTAMP
+    nullptr,                            // OMNI_INTERVAL_MONTHS
+    nullptr,                            // OMNI_INTERVAL_DAY_TIME
+    nullptr,                            // OMNI_VARCHAR
+    nullptr,                            // OMNI_CHAR
+    nullptr                             // OMNI_CONTAINER
 };
-const std::vector<GetValuesFunction> getValuesFromVectorFunctions {
+const std::vector<GetValuesFunction> getValuesFromVectorFunctions{
     nullptr,                              // OMNI_NONE
     GetValuesFromVector<OMNI_INT>,        // OMNI_INT
     GetValuesFromVector<OMNI_LONG>,       // OMNI_LONG
@@ -153,16 +150,16 @@ const std::vector<GetValuesFunction> getValuesFromVectorFunctions {
     GetValuesFromVector<OMNI_DATE64>,     // OMNI_DATE64
     GetValuesFromVector<OMNI_INT>,        // OMNI_TIME32
     GetValuesFromVector<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                               // OMNI_TIMESTAMP
-    nullptr,                               // OMNI_INTERVAL_MONTHS
-    nullptr,                               // OMNI_INTERVAL_DAY_TIME
-    nullptr,                               // OMNI_VARCHAR
-    nullptr,                               // OMNI_CHAR
-    nullptr                                // OMNI_CONTAINER
+    nullptr,                              // OMNI_TIMESTAMP
+    nullptr,                              // OMNI_INTERVAL_MONTHS
+    nullptr,                              // OMNI_INTERVAL_DAY_TIME
+    nullptr,                              // OMNI_VARCHAR
+    nullptr,                              // OMNI_CHAR
+    nullptr                               // OMNI_CONTAINER
 };
 
 
-const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions {
+const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions{
     nullptr,                          // OMNI_NONE
     NewUniqueVector<OMNI_INT>,        // OMNI_INT
     NewUniqueVector<OMNI_LONG>,       // OMNI_LONG
@@ -190,8 +187,8 @@ static ALWAYS_INLINE void GetDecimalValue(BaseVector *vector, const int32_t &dat
         if (dataTypeId == OMNI_DECIMAL64) {
             decimalValue = reinterpret_cast<Vector<DictionaryContainer<long>> *>(vector)->GetValue(rowIndex);
         } else if (dataTypeId == OMNI_DECIMAL128) {
-            decimalValue = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(vector)->GetValue(rowIndex)
-                .ToInt128();
+            decimalValue =
+                reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(vector)->GetValue(rowIndex).ToInt128();
         }
     } else {
         if (dataTypeId == OMNI_DECIMAL64) {
@@ -201,7 +198,6 @@ static ALWAYS_INLINE void GetDecimalValue(BaseVector *vector, const int32_t &dat
         }
     }
 }
-
 }
 }
 #endif // OMNI_RUNTIME_VECTOR_GETTER_H

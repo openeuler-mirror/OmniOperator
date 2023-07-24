@@ -70,8 +70,7 @@ public:
                 dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(inputVector));
             }
             valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(inputVector));
-            valueOffsets[i] = reinterpret_cast<int64_t>(
-                VectorHelper::UnsafeGetOffsetsAddr(inputVector));
+            valueOffsets[i] = reinterpret_cast<int64_t>(VectorHelper::UnsafeGetOffsetsAddr(inputVector));
         }
 
         for (int32_t i = 0, projectFuncsIndex = 0; i < vecCount; i++) {
@@ -79,8 +78,7 @@ public:
             if (sourceColId >= 0) {
                 // source col append project colmun
                 auto inputVector = inputVecBatch->Get(sourceColId);
-                BaseVector *newInputVec =
-                    VectorHelper::SliceVector(inputVector, 0, rowCount);
+                BaseVector *newInputVec = VectorHelper::SliceVector(inputVector, 0, rowCount);
                 newInputVecBatch->Append(newInputVec);
             } else if (sourceColId == -1 && projectFuncsCount > 0) {
                 // append withexpr colmun

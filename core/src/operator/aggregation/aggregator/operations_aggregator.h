@@ -122,6 +122,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddAvg(OUT *res_, int64_t &flag_, const 
         }
 #endif
         ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        // cntPtr represent every count of every partial result
         cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
@@ -197,7 +198,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditionalAvg(OUT *res_, int64_t &fl
         for (size_t i = 0; i < rowCount; ++i) {
             if (cntPtr[i] > 0) {
                 OP(&res, flag, ptr[i], cntPtr[i], condition[i]);
-            } else if(cntPtr[i] < 0){
+            } else if (cntPtr[i] < 0) {
                 // overflow in last stage
                 flag = -1;
                 break;

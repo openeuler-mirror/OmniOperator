@@ -154,17 +154,6 @@ void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std:
     }
 }
 
-void InitialVarcharDictState(AggregateState &state, Vector<DictionaryContainer<std::string_view>> *rawVector,
-    const char *res, int32_t idx)
-{
-    if (state.val == nullptr || state.count == 0) {
-        auto strView = rawVector->GetValue(idx);
-        res = strView.data();
-        state.count = strView.size();
-        state.count |= UPDATE_FLAG;
-    }
-}
-
 template class MinVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
 
 template class MinVarcharAggregator<OMNI_CHAR, OMNI_VARCHAR>;

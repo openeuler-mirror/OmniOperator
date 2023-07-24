@@ -35,12 +35,12 @@ SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64
         }
     } else if constexpr (std::is_same_v<IN, int64_t>) {
         if (flag >= 0) {
-            if constexpr(std::is_same_v<MID, double> || std::is_same_v<MID, float>) {
+            if constexpr (std::is_same_v<MID, double> || std::is_same_v<MID, float>) {
                 // output is double
-                 *res += in;
-                 flag += cnt;
+                *res += in;
+                flag += cnt;
             } else {
-                if constexpr(CareOverFlow) {
+                if constexpr (CareOverFlow) {
                     if (__builtin_add_overflow(*res, in, res)) {
                         flag = -1;
                     } else {
@@ -50,7 +50,6 @@ SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64
                     *res += in;
                     flag += cnt;
                 }
-
             }
         }
     } else {

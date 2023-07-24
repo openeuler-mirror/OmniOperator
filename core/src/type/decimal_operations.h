@@ -1278,7 +1278,7 @@ private:
     }
 
     int32_t scale = 0;
-    int64_t val;
+    int64_t val = 0;
     OpStatus overflow = OpStatus::SUCCESS;
 };
 

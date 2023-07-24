@@ -121,13 +121,13 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
             throw OmniException("Unreachable code", "Reached unreachable code in average aggregator extract partial");
         }
     } else {
-        OutType result {};
+        OutType result{};
         auto v = static_cast<OutVector *>(vectors[0]);
         bool overflow = state.count < 0;
         if (state.count > 0 && state.val != nullptr) {
             if constexpr (std::is_same_v<ResultType, Decimal128>) {
                 Decimal128Wrapper result128 = Decimal128Wrapper(*reinterpret_cast<Decimal128 *>(state.val))
-                        .Divide(Decimal128Wrapper(state.count), 0);
+                                                  .Divide(Decimal128Wrapper(state.count), 0);
                 result = this->template CastWithOverflow<Decimal128, OutType>(result128.ToDecimal128(), overflow);
             } else {
                 // Result type is either double or int64, which for both cases we generate double avgResult;

@@ -12,63 +12,18 @@ namespace op {
 template <DataTypeId IN_ID, DataTypeId OUT_ID> class SumFlatIMAggregator : public TypedAggregator {
     using InType = typename AggNativeAndVectorType<IN_ID>::type;
     using ResultType = typename AggNativeAndVectorType<OUT_ID>::type;
-    using FixedVector = typename AggNativeAndVectorType<IN_ID>::vector;
-    using DictVector = Vector<DictionaryContainer<InType>>;
 
 public:
-    static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
-                                              std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
-    {
-        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
-            LogError("Error in sum flatim aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
-            return nullptr;
-        } else if constexpr (!(IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG || IN_ID == OMNI_DOUBLE ||
-                               IN_ID == OMNI_DECIMAL64 || IN_ID == OMNI_BOOLEAN)) {
-            LogError("Error in sum flatim aggregator: Unsupported input type %s", TypeUtil::TypeToStringLog(IN_ID).c_str());
-            return nullptr;
-        } else if constexpr (!(OUT_ID == OMNI_SHORT || OUT_ID == OMNI_INT || OUT_ID == OMNI_LONG ||
-                               OUT_ID == OMNI_DOUBLE || OUT_ID == OMNI_BOOLEAN)) {
-            LogError("Error in sum flatim aggregator: Unsupported output type %s", TypeUtil::TypeToStringLog(OUT_ID).c_str());
-            return nullptr;
-        } else {
-            return std::unique_ptr<Aggregator>(new SumFlatIMAggregator<IN_ID, OUT_ID>(inputTypes,
-                                               outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
-        }
-    }
-
     SumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
         : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial,
         isOverflowAsNull)
     {}
-    SumFlatIMAggregator(const FunctionType aggFunc, const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
-                        bool inputRaw, bool outputPartial, bool isOverflowAsNull)
-            : TypedAggregator(aggFunc, inputTypes, outputTypes, channels, inputRaw, outputPartial,
-                              isOverflowAsNull)
+    SumFlatIMAggregator(const FunctionType aggFunc, const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
+        : TypedAggregator(aggFunc, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull)
     {}
     ~SumFlatIMAggregator() override {}
-
-    // todo: will delete
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
-    {
-        BaseVector *vector = vectorBatch->Get(channels[0]);
-        if (vector->IsNull(rowIndex)) {
-            return;
-        }
-        if (state.val == nullptr) {
-            InitiateGroup(state, vectorBatch, rowIndex);
-            return;
-        }
-        if (inputRaw) {
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                *(static_cast<ResultType *>(state.val)) += (static_cast<DictVector *>(vector))->GetValue(rowIndex);
-            } else {
-                *(static_cast<ResultType *>(state.val)) += (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
-            }
-        } else {
-            *(static_cast<ResultType *>(state.val)) += (static_cast<Vector<ResultType> *>(vector))->GetValue(rowIndex);
-        }
-    }
 
     void ProcessGroupInternalFinal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap)
@@ -79,7 +34,6 @@ public:
         if (nullMap == nullptr) {
             AddUseRowIndex<ResultType, ResultType, SumOp<ResultType, ResultType>>(rowStates, aggIdx, ptr);
         } else {
-            // Reza: can we use customize float operation similar to sumConditionalFloat
             AddConditionalUseRowIndex<ResultType, ResultType, SumConditionalOp<ResultType, ResultType, false>>(
                 rowStates, aggIdx, ptr, nullMap);
         }
@@ -101,10 +55,11 @@ public:
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
                 if (nullMap == nullptr) {
-                    AddDictUseRowIndex<InType, ResultType, SumOp<InType, ResultType, false>>(rowStates, aggIdx, ptr, indexMap);
+                    AddDictUseRowIndex<InType, ResultType, SumOp<InType, ResultType, false>>(rowStates, aggIdx, ptr,
+                        indexMap);
                 } else {
-                    AddDictConditionalUseRowIndex<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
-                        rowStates, aggIdx, ptr, nullMap, indexMap);
+                    AddDictConditionalUseRowIndex<InType, ResultType,
+                        SumConditionalOp<InType, ResultType, false, false>>(rowStates, aggIdx, ptr, nullMap, indexMap);
                 }
             }
         } else {
@@ -152,7 +107,8 @@ public:
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
                 if (nullMap == nullptr) {
-                    AddDict<InType, ResultType, SumOp<InType, ResultType, false>>(res, state.count, ptr, rowCount, indexMap);
+                    AddDict<InType, ResultType, SumOp<InType, ResultType, false>>(res, state.count, ptr, rowCount,
+                        indexMap);
                 } else {
                     AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(res,
                         state.count, ptr, rowCount, nullMap, indexMap);
@@ -160,37 +116,6 @@ public:
             }
         } else {
             ProcessSingleInternalFinal(state, vector, rowOffset, rowCount, nullMap);
-        }
-    }
-
-    // todo: will delete
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
-    {
-        BaseVector *vector = vectorBatch->Get(channels[0]);
-        if (vector->IsNull(rowIndex)) {
-            return;
-        }
-        if (inputRaw) {
-            auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                auto curVal = (static_cast<DictVector *>(vector))->GetValue(rowIndex);
-                *reinterpret_cast<ResultType *>(ptr) = curVal;
-                state.val = ptr;
-            } else {
-                auto curVal = (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
-                *reinterpret_cast<ResultType *>(ptr) = curVal;
-                state.val = ptr;
-            }
-        } else {
-            auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
-            ResultType curVal;
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                curVal = (static_cast<Vector<DictionaryContainer<ResultType>> *>(vector))->GetValue(rowIndex);
-            } else {
-                curVal = (static_cast<Vector<ResultType> *>(vector))->GetValue(rowIndex);
-            }
-            *reinterpret_cast<ResultType *>(ptr) = curVal;
-            state.val = ptr;
         }
     }
 

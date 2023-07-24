@@ -24,7 +24,7 @@ public:
           isOverflowAsNull(isOverflowAsNull)
     {}
 
-    ~AggregationCommonOperator() override {};
+    ~AggregationCommonOperator() override{};
 
 protected:
     std::vector<std::unique_ptr<Aggregator>> aggregators;

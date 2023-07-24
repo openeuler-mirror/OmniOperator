@@ -12,21 +12,14 @@
 
 namespace omniruntime {
 namespace op {
-// decimal sum state, sum's initial val is 0.
-using SparkDecimalSumState = struct SparkDecimalSumState {
-    int128_t val;
-    bool isOverflow; // isOverflow is true when it has had an overflow
-    bool isEmpty;    // isEmpty is true when all row in a vector are NULL
-    bool isUnprocessed;
-};
-
-template<typename InDecimalType, typename OutDecimalType, bool HasNullFlag>
+template <typename InDecimalType, typename OutDecimalType, bool HasNullFlag>
 VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-                                             const InDecimalType *__restrict dataPtr, const bool *__restrict emptyPtr,
-                                                   const uint8_t *__restrict nullMap = nullptr){
+    const InDecimalType *__restrict dataPtr, const bool *__restrict emptyPtr,
+    const uint8_t *__restrict nullMap = nullptr)
+{
     bool isOverflow = false;
     auto rowCount = rowStates.size();
-    using ResultIntType = std::conditional_t<std::is_same_v<OutDecimalType,Decimal128>,int128_t ,int64_t>;
+    using ResultIntType = std::conditional_t<std::is_same_v<OutDecimalType, Decimal128>, int128_t, int64_t>;
 
     for (size_t i = 0; i < rowCount; ++i) {
         AggregateState &state = rowStates[i][aggIdx];
@@ -34,9 +27,9 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
             // cur state overflow, so no need to aggregate
             continue;
         }
-        auto res = reinterpret_cast<OutDecimalType*>(state.val);
+        auto res = reinterpret_cast<OutDecimalType *>(state.val);
         ResultIntType tmpResult = 0;
-        if constexpr(HasNullFlag) {
+        if constexpr (HasNullFlag) {
             if (nullMap[i]) {
                 // partial stage overflow , so no need to do aggregation in final
                 state.count = -1;
@@ -45,9 +38,9 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
         }
 
         if (not emptyPtr[i]) {
-            if constexpr (std::is_same_v<OutDecimalType,Decimal128>) {
+            if constexpr (std::is_same_v<OutDecimalType, Decimal128>) {
                 tmpResult = res->ToInt128();
-                if constexpr(std::is_same_v<InDecimalType,Decimal128>) {
+                if constexpr (std::is_same_v<InDecimalType, Decimal128>) {
                     // decimal128 + decimal128 = decimal128
                     isOverflow = AddCheckedOverflow(tmpResult, dataPtr[i].ToInt128(), tmpResult);
                 } else {
@@ -69,97 +62,36 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
     }
 }
 
-static constexpr int32_t SPARK_DECIMAL_SUM_STATE_LENGTH = sizeof(SparkDecimalSumState);
-
 /**
  * SUM agg data type
  * input: decimal
  * middle: decimal+boolean(isEmpty)
  * final: decimal
  */
-template <DataTypeId InDecimalId, DataTypeId OutDecimalId>
-class SumSparkDecimalAggregator : public TypedAggregator {
+template <DataTypeId InDecimalId, DataTypeId OutDecimalId> class SumSparkDecimalAggregator : public TypedAggregator {
 public:
     using ResultType = typename AggNativeAndVectorType<OutDecimalId>::type;
-    using ResultIntType = std::conditional_t<std::is_same_v<ResultType,Decimal128>,int128_t,int64_t>;
-    using ResultVectorType = typename AggNativeAndVectorType<OutDecimalId>::vector;
+    using ResultIntType = std::conditional_t<std::is_same_v<ResultType, Decimal128>, int128_t, int64_t>;
     using InRawType = typename AggNativeAndVectorType<InDecimalId>::type;
-    using InVectorType = typename AggNativeAndVectorType<InDecimalId>::vector;
     SumSparkDecimalAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
         : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial,
         isOverflowAsNull)
     {}
 
-    SumSparkDecimalAggregator(FunctionType aggregateType, const DataTypes &inputTypes,
-                                                const DataTypes &outputTypes, std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial,
-                                                const bool isOverflowAsNull)
-            : TypedAggregator(aggregateType, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull)
+    SumSparkDecimalAggregator(FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
+        : TypedAggregator(aggregateType, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull)
     {}
 
     ~SumSparkDecimalAggregator() override = default;
-
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
-    {
-        BaseVector *vector = vectorBatch->Get(channels[0]);
-        SparkDecimalSumState *stateVal = static_cast<SparkDecimalSumState *>(state.val);
-        if (vector->IsNull(rowIndex)) {
-            static_cast<SparkDecimalSumState *>(state.val)->isUnprocessed = false;
-            return;
-        }
-
-        // The inputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128
-        int32_t inputType = inputTypes.GetIds()[0];
-        if (inputRaw) {
-            // 1. get a new value
-            int128_t curVal;
-            GetDecimalValue(vector, inputType, rowIndex, curVal);
-
-            // 2. decode current state
-            int128_t decodedDec = stateVal->val;
-            bool isOverflow = stateVal->isOverflow;
-
-            // 3. if overflowed, no need to do calculation
-            if (isOverflow) {
-                return;
-            }
-            // 4. do calculation
-            isOverflow = AddCheckedOverflow(decodedDec, curVal, decodedDec);
-            // 5. encode to state, the isEmpty is always false because the row is not NULL
-            EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), decodedDec, isOverflow, false);
-        } else {
-            // 1. get partial sum and isEmptyInVec
-            int128_t curVal;
-            GetDecimalValue(vector, inputType, rowIndex, curVal);
-            BaseVector *emptyVector = vectorBatch->Get(channels[1]);
-            bool isEmptyInVec = reinterpret_cast<Vector<bool> *>(emptyVector)->GetValue(rowIndex);
-
-            // 2. decode current state and intermediate state
-            int128_t decodedDec = stateVal->val;
-            bool isOverflow = stateVal->isOverflow;
-            bool isEmptyInState = stateVal->isEmpty || stateVal->isUnprocessed;
-
-            // 3. if overflowed, no need to do calculation
-            if (isOverflow) {
-                return;
-            }
-
-            // 4. do calculation
-            isOverflow = AddCheckedOverflow(decodedDec, curVal, decodedDec);
-            // 5. encode to state.
-            // isEmptyInVec will Set to false if either one of the left or right is set to false.
-            // This means we have seen at least a value that was not null.
-            EncodeSumState(static_cast<SparkDecimalSumState *>(state.val), decodedDec, isOverflow,
-                isEmptyInState && isEmptyInVec);
-        }
-    }
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         BaseVector *vector = vectors[0];
 
         int128_t decodedDec = 0;
-        if constexpr(std::is_same_v<ResultType,Decimal128>) {
+        if constexpr (std::is_same_v<ResultType, Decimal128>) {
             decodedDec = static_cast<Decimal128 *>(state.val)->ToInt128();
         } else {
             decodedDec = *(static_cast<int64_t *>(state.val));
@@ -204,12 +136,12 @@ public:
 
     void InitState(AggregateState &state) override
     {
-        if constexpr(std::is_same_v<ResultType,Decimal128>) {
+        if constexpr (std::is_same_v<ResultType, Decimal128>) {
             state.val = executionContext->GetArena()->Allocate(sizeof(Decimal128));
-            new (state.val) Decimal128(0,0);
+            new (state.val) Decimal128(0, 0);
         } else {
             state.val = executionContext->GetArena()->Allocate(sizeof(int64_t));
-            *((int64_t*)(state.val)) = 0;
+            *((int64_t *)(state.val)) = 0;
         }
         state.count = 0;
     }
@@ -247,10 +179,11 @@ public:
             } else {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
                 if (nullMap == nullptr) {
-                    AddDictUseRowIndex<InRawType, ResultType, SumOp<InRawType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
+                    AddDictUseRowIndex<InRawType, ResultType, SumOp<InRawType, ResultType>>(rowStates, aggIdx, ptr,
+                        indexMap);
                 } else {
-                    AddDictConditionalUseRowIndex<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
-                        rowStates, aggIdx, ptr, nullMap, indexMap);
+                    AddDictConditionalUseRowIndex<InRawType, ResultType,
+                        SumConditionalOp<InRawType, ResultType, false>>(rowStates, aggIdx, ptr, nullMap, indexMap);
                 }
             }
         } else {
@@ -270,7 +203,7 @@ public:
         emptyPtr += rowOffset;
 
         if (conditionMap == nullptr) {
-            for (size_t i = 0; i < rowCount; ++i) {
+            for (int32_t i = 0; i < rowCount; ++i) {
                 if (state.count < 0) {
                     // means overflow in final stage, no need to calculate remaining data
                     break;
@@ -281,7 +214,7 @@ public:
                 }
             }
         } else {
-            for (size_t i = 0; i < rowCount; ++i) {
+            for (int32_t i = 0; i < rowCount; ++i) {
                 if (state.count < 0) {
                     // means overflow in final stage, no need to calculate remaining data
                     break;
@@ -311,13 +244,14 @@ public:
                 if (nullMap == nullptr) {
                     Add<InRawType, ResultType, SumOp<InRawType, ResultType>>(res, state.count, ptr, rowCount);
                 } else {
-                    AddConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(res, state.count,
-                        ptr, rowCount, nullMap);
+                    AddConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(res,
+                        state.count, ptr, rowCount, nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
                 if (nullMap == nullptr) {
-                    AddDict<InRawType, ResultType, SumOp<InRawType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
+                    AddDict<InRawType, ResultType, SumOp<InRawType, ResultType>>(res, state.count, ptr, rowCount,
+                        indexMap);
                 } else {
                     AddDictConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(res,
                         state.count, ptr, rowCount, nullMap, indexMap);
@@ -338,19 +272,10 @@ private:
         vector->SetNull(index);
     }
 
-    void EncodeSumState(SparkDecimalSumState *statePtr, const int128_t &val, const bool isOverflow, const bool isEmpty,
-        const bool isUnprocessed = false)
-    {
-        statePtr->val = val;
-        statePtr->isOverflow = isOverflow;
-        statePtr->isEmpty = isEmpty;
-        statePtr->isUnprocessed = isUnprocessed;
-    }
-
     // Set decimal val to output vector in Extract function. The outputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128.
     void SetValToVector(BaseVector *vector, int32_t rowIndex, int32_t outputType, int128_t &deciVal)
     {
-        if constexpr(std::is_same_v<ResultType ,Decimal128>) {
+        if constexpr (std::is_same_v<ResultType, Decimal128>) {
             Decimal128 decimal128Val(deciVal);
             static_cast<Vector<Decimal128> *>(vector)->SetValue(rowIndex, decimal128Val);
         } else {

@@ -73,37 +73,6 @@ VECTORIZE_LOOP inline void AddChar(AggregateState &state, BaseVector *vector, co
     }
 }
 
-void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std::string_view>> *rawVector,
-    const char *res, int32_t idx);
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddCharFilter(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const int8_t *__restrict boolPtr)
-{
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-    auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
-    if (rowCount > 0) {
-        const char *res = reinterpret_cast<char *>(state.val);
-        int32_t idx = rowOffset;
-        const auto end = rowOffset + rowCount;
-
-        for (; idx < end; ++idx) {
-            if (boolPtr[idx]) {
-                InitialVarcharState(state, rawVector, res, idx);
-                break;
-            }
-        }
-
-        while (idx < end) {
-            if (boolPtr[idx]) {
-                res = OP(res, state.count, vector, idx);
-            }
-            idx++;
-        }
-        state.val = const_cast<char *>(res);
-    }
-}
-
 template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddDictChar(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
     const int32_t rowCount)

@@ -174,7 +174,8 @@ public:
             // notSatisfiedArray can filter row which no need to aggregate
             // the nullMap: true means null
             // booleanVector: false means one row has been filtered
-            uint8_t notSatisfiedArray[rowCount];
+            std::vector<uint8_t> notSatisfiedArray;
+            notSatisfiedArray.resize(rowCount);
             if (nullMap == nullptr) {
                 for (int i = 0; i < rowCount; ++i) {
                     notSatisfiedArray[i] = not filterPtr[i];
@@ -186,7 +187,7 @@ public:
                     notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
-            ProcessSingleInternal(state, vector, rowOffset, rowCount, notSatisfiedArray, indexMap.data);
+            ProcessSingleInternal(state, vector, rowOffset, rowCount, notSatisfiedArray.data(), indexMap.data);
         } else {
             // true/false meaning in nullmap is same with notSatisfiedArray
             // true means one row no need to aggregate
@@ -233,7 +234,8 @@ public:
             // notSatisfiedArray can filter row which no need to aggregate
             // the nullMap: true means null
             // booleanVector: false means one row has been filtered
-            uint8_t notSatisfiedArray[rowCount];
+            std::vector<uint8_t> notSatisfiedArray;
+            notSatisfiedArray.resize(rowCount);
             if (nullMap == nullptr) {
                 for (int i = 0; i < rowCount; ++i) {
                     notSatisfiedArray[i] = not filterPtr[i];
@@ -245,7 +247,7 @@ public:
                     notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
-            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, notSatisfiedArray, indexMap.data);
+            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, notSatisfiedArray.data(), indexMap.data);
         } else {
             // true/false meaning in nullmap is same with notSatisfiedArray
             // true means one row no need to aggregate
@@ -395,7 +397,7 @@ private:
         if ((inputType->GetId() == OMNI_DECIMAL128) &&
             (outputType->GetId() == OMNI_DECIMAL64 || outputType->GetId() == OMNI_DECIMAL128)) {
             int32_t scale = static_cast<DecimalDataType *>(outputType.get())->GetScale() -
-                            static_cast<DecimalDataType *>(inputType.get())->GetScale();
+                static_cast<DecimalDataType *>(inputType.get())->GetScale();
             if (scale != 0) {
                 result.ReScale(scale).SetScale(0);
                 overflow = (result.IsOverflow() != OpStatus::SUCCESS);
@@ -417,7 +419,7 @@ private:
             // not varchare (which has no scale)
             if (inputType->GetId() == OMNI_DECIMAL128 || inputType->GetId() == OMNI_DECIMAL64) {
                 scale = static_cast<DecimalDataType *>(outputType.get())->GetScale() -
-                        static_cast<DecimalDataType *>(inputType.get())->GetScale();
+                    static_cast<DecimalDataType *>(inputType.get())->GetScale();
             }
         } else {
             // regular long output. so we shoud remove decimal part if input is acutally decimal not varchar
@@ -448,7 +450,7 @@ private:
         // so we shoud add decimal part separately if input is acutally decimal not varchar
         auto &inputType = inputTypes.GetType(0);
         int32_t scale =
-                (inputType->GetId() == OMNI_DECIMAL128) ? static_cast<DecimalDataType *>(inputType.get())->GetScale() : 0;
+            (inputType->GetId() == OMNI_DECIMAL128) ? static_cast<DecimalDataType *>(inputType.get())->GetScale() : 0;
         // higher performance if we convert directly rather than going through string
         std::string doubleString = ToStringWithScale(val.ToString(), scale);
         return static_cast<OutType>(stod(doubleString));
@@ -465,7 +467,7 @@ private:
             // not varchare (which has no scale)
             if (outputType->GetId() == OMNI_DECIMAL128 || outputType->GetId() == OMNI_DECIMAL64) {
                 scale = static_cast<DecimalDataType *>(outputType.get())->GetScale() -
-                        static_cast<DecimalDataType *>(inputType.get())->GetScale();
+                    static_cast<DecimalDataType *>(inputType.get())->GetScale();
             }
         } else {
             // regular long output. so we shoud remove decimal part if input is acutally decimal not varchar
