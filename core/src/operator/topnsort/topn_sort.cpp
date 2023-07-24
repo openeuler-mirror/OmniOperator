@@ -512,8 +512,7 @@ TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n
       sortCols(sortCols),
       sortAscendings(sortAscendings),
       sortNullFirsts(sortNullFirsts),
-      sortColNum(static_cast<int32_t>(sortCols.size())),
-      maxCapacityPerPartition(2 * n)
+      sortColNum(static_cast<int32_t>(sortCols.size()))
 {
     auto sourceTypeIds = sourceTypes.GetIds();
     for (int32_t i = 0; i < sortColNum; i++) {
@@ -553,8 +552,8 @@ type::StringRef TopNSortOperator::GeneratePartitionKey(BaseVector **partitionVec
     return key;
 }
 
-int32_t TopNSortOperator::FindInsertPositionOptimize(void *ptr, int32_t length, VectorBatch **vecBatches,
-    int32_t *rowIndexes, int32_t position)
+int32_t TopNSortOperator::FindInsertPositionOptimize(void *ptr, int32_t length, std::vector<VectorBatch *> &vecBatches,
+    std::vector<int32_t> &rowIndexes, int32_t position)
 {
     while (position >= 0) {
         auto left = vecBatches[position];
@@ -571,7 +570,7 @@ int32_t TopNSortOperator::FindInsertPositionOptimize(void *ptr, int32_t length, 
 }
 
 int32_t TopNSortOperator::FindInsertPosition(BaseVector **insertSortVectors, int32_t insertRowIdx,
-    VectorBatch **vecBatches, int32_t *rowIndexes, int32_t position)
+    std::vector<VectorBatch *> &vecBatches, std::vector<int32_t> &rowIndexes, int32_t position)
 {
     while (position >= 0) {
         auto left = vecBatches[position];
@@ -638,15 +637,6 @@ void TopNSortOperator::InsertNewPartition(StringRef &key, VectorBatch *inputVecB
     partitionedMap[key] = value;
 }
 
-void TopNSortOperator::CheckVecCapacityLimit(const int32_t index)
-{
-    if (index >= maxCapacityPerPartition) {
-        std::string exceptionInfo = "topn sort vecBatches capacity is not enough, index is: " + std::to_string(index) +
-            " MaxVectorLen is: " + std::to_string(maxCapacityPerPartition);
-        throw OmniException("OPERATOR_RUNTIME_ERROR", exceptionInfo);
-    }
-}
-
 void TopNSortOperator::InsertNewValueOptimize(PartitionValue &value, vec::VectorBatch *inputVecBatch,
     vec::BaseVector **sortVectors, int32_t inputRowIdx)
 {
@@ -654,8 +644,8 @@ void TopNSortOperator::InsertNewValueOptimize(PartitionValue &value, vec::Vector
     int32_t length;
     auto valuePtr = sortGetValueFuncs[0](sortVector, inputRowIdx, length);
 
-    auto vecBatches = value.vecBatches;
-    auto rowIndexes = value.rowIndexes;
+    auto& vecBatches = value.vecBatches;
+    auto& rowIndexes = value.rowIndexes;
     auto vecBatchSize = value.nextIndex;
     auto lastPosition = vecBatchSize - 1;
 
@@ -673,8 +663,8 @@ void TopNSortOperator::InsertNewValueOptimize(PartitionValue &value, vec::Vector
 void TopNSortOperator::InsertNewValue(PartitionValue &value, VectorBatch *inputVecBatch, BaseVector **sortVectors,
     int32_t inputRowIdx)
 {
-    auto vecBatches = value.vecBatches;
-    auto rowIndexes = value.rowIndexes;
+    auto& vecBatches = value.vecBatches;
+    auto& rowIndexes = value.rowIndexes;
     auto vecBatchSize = value.nextIndex;
     auto lastPosition = vecBatchSize - 1;
 
@@ -697,8 +687,8 @@ void TopNSortOperator::UpdatePartitionValueOptimize(PartitionValue &value, Vecto
     int32_t length;
     auto valuePtr = sortGetValueFuncs[0](sortVector, inputRowIdx, length);
 
-    auto vecBatches = value.vecBatches;
-    auto rowIndexes = value.rowIndexes;
+    auto& vecBatches = value.vecBatches;
+    auto& rowIndexes = value.rowIndexes;
     auto lastPosition = n - 1;
 
     // compare the last value
@@ -708,13 +698,13 @@ void TopNSortOperator::UpdatePartitionValueOptimize(PartitionValue &value, Vecto
         return;
     }
     if (result == 0) {
-        CheckVecCapacityLimit(value.nextIndex);
+        value.Enlarge();
         vecBatches[value.nextIndex] = inputVecBatch;
         rowIndexes[value.nextIndex] = inputRowIdx;
         value.nextIndex++;
     } else {
         auto insertPos = FindInsertPositionOptimize(valuePtr, length, vecBatches, rowIndexes, lastPosition - 1);
-        CheckVecCapacityLimit(value.nextIndex);
+        value.Enlarge();
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
             vecBatches[pos] = vecBatches[pos - 1];
             rowIndexes[pos] = rowIndexes[pos - 1];
@@ -740,8 +730,8 @@ void TopNSortOperator::UpdatePartitionValueOptimize(PartitionValue &value, Vecto
 void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *inputVecBatch, BaseVector **sortVectors,
     int32_t inputRowIdx)
 {
-    auto vecBatches = value.vecBatches;
-    auto rowIndexes = value.rowIndexes;
+    auto& vecBatches = value.vecBatches;
+    auto& rowIndexes = value.rowIndexes;
     auto lastPosition = n - 1;
 
     // compare the last value
@@ -751,13 +741,13 @@ void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *
         return;
     }
     if (result == 0) {
-        CheckVecCapacityLimit(value.nextIndex);
+        value.Enlarge();
         vecBatches[value.nextIndex] = inputVecBatch;
         rowIndexes[value.nextIndex] = inputRowIdx;
         value.nextIndex++;
     } else {
         auto insertPos = FindInsertPosition(sortVectors, inputRowIdx, vecBatches, rowIndexes, lastPosition - 1);
-        CheckVecCapacityLimit(value.nextIndex);
+        value.Enlarge();
         for (int32_t pos = value.nextIndex; pos > insertPos; pos--) {
             vecBatches[pos] = vecBatches[pos - 1];
             rowIndexes[pos] = rowIndexes[pos - 1];

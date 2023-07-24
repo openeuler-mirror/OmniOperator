@@ -23,21 +23,24 @@ using SetValueFunc = void (*)(vec::BaseVector *inputVec, int32_t inputPos, vec::
 
 class PartitionValue {
 public:
-    explicit PartitionValue(int32_t vecBatchCount)
-        : vecBatches(new vec::VectorBatch *[vecBatchCount * 2]()),
-          rowIndexes(new int32_t[vecBatchCount * 2]()),
-          nextIndex(0)
-    {}
-
-    ~PartitionValue()
+    explicit PartitionValue(int32_t vecBatchCount) : nextIndex(0), maxCapacity(2 * vecBatchCount)
     {
-        delete[] vecBatches;
-        delete[] rowIndexes;
+        vecBatches.resize(maxCapacity);
+        rowIndexes.resize(maxCapacity);
     }
-
-    vec::VectorBatch **vecBatches; // the row count of vecBatch is n
-    int32_t *rowIndexes;
+    void Enlarge()
+    {
+        if (nextIndex >= maxCapacity) {
+            maxCapacity += maxCapacity;
+            vecBatches.resize(maxCapacity);
+            rowIndexes.resize(maxCapacity);
+        }
+    }
+    ~PartitionValue() = default;
+    int32_t maxCapacity;
     int32_t nextIndex;
+    std::vector<VectorBatch *> vecBatches;
+    std::vector<int32_t> rowIndexes;
 };
 
 class PartitionHash {
@@ -64,7 +67,6 @@ public:
     OmniStatus Close() override;
 
 private:
-    void CheckVecCapacityLimit(const int32_t index);
 
     void Prepare(vec::BaseVector **inputVectors, int32_t inputColNum);
 
@@ -159,11 +161,11 @@ private:
     StringRef GeneratePartitionKey(BaseVector **partitionVectors, int32_t partitionColNum, int32_t rowIdx,
         mem::SimpleArenaAllocator &arenaAllocator);
 
-    int32_t FindInsertPositionOptimize(void *ptr, int32_t length, vec::VectorBatch **vecBatches, int32_t *rowIndexes,
-        int32_t position);
+    int32_t FindInsertPositionOptimize(void *ptr, int32_t length, std::vector<VectorBatch *> &vecBatches,
+        std::vector<int32_t> &rowIndexes, int32_t position);
 
-    int32_t FindInsertPosition(BaseVector **insertSortVectors, int32_t insertRowIdx, VectorBatch **vecBatches,
-        int32_t *rowIndexes, int32_t position);
+    int32_t FindInsertPosition(BaseVector **insertSortVectors, int32_t insertRowIdx,
+        std::vector<VectorBatch *> &vecBatches, std::vector<int32_t> &rowIndexes, int32_t position);
 
     type::DataTypes sourceTypes;
     int32_t n;
@@ -187,7 +189,6 @@ private:
     int32_t maxRowCount = 0;
     std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator currentIter;
     std::vector<vec::VectorBatch *> inputs;
-    int32_t maxCapacityPerPartition = 0;
 };
 
 class TopNSortOperatorFactory : public OperatorFactory {
