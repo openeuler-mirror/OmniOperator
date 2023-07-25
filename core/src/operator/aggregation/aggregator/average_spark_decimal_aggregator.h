@@ -53,21 +53,18 @@ public:
             int128 leftVal;
             int64_t oldOverflow = 0;
             int64_t oldCount = 0;
-            DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-                oldCount);
+            DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow, oldCount);
             // 3. if overflowed, no need to do calculation
             if (oldOverflow > 0) {
                 oldCount += avgCnt;
-                DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-                    oldCount);
+                EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow, oldCount);
                 return;
             }
             // 4. do calculation
             oldCount += avgCnt;
             oldOverflow += static_cast<int64_t>(AddCheckedOverflow(leftVal, curVal, leftVal));
 
-            DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-                oldCount);
+            EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow, oldCount);
         }
     }
 
@@ -82,7 +79,7 @@ public:
             GetDecimalValue(vector, inputTypes.GetIds()[0], rowIndex, initState);
 
             state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
-            DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), initState, 0, 1);
+            EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), initState, 0, 1);
         } else {
             // get value from containerVector
             int128 curVal;
@@ -97,14 +94,14 @@ public:
             }
 
             state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
-            DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), curVal, 0, avgCnt);
+            EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), curVal, 0, avgCnt);
         }
     }
 
     void InitState(AggregateState &state) override
     {
         state.val = executionContext->GetArena()->Allocate(PARTIAL_AVG_OUTPUT_LENGTH);
-        DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), 0, 0, 0);
+        EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), 0, 0, 0);
     }
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
@@ -113,8 +110,7 @@ public:
         int64_t overflowAccumulator = 0;
         int64_t count = 0;
         int128 decodedDec;
-        DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), decodedDec,
-            overflowAccumulator, count);
+        DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), decodedDec, overflowAccumulator, count);
         int128 countDec = count;
 
         auto outputDecimalType = static_cast<DecimalDataType *>(outputTypes.GetType(0).get());
@@ -181,21 +177,18 @@ private:
 
         int128 leftVal;
         // 2. decode current state
-        DecimalOperations::DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-            oldCount);
+        DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow, oldCount);
         // 3. if overflowed, no need to do calculation
         if (oldOverflow > 0) {
             ++oldCount;
-            DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-                oldCount);
+            EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow, oldCount);
             return;
         }
         // 4. do calculation
         oldOverflow += static_cast<int64_t>(AddCheckedOverflow(leftVal, curVal, leftVal));
         ++oldCount;
         // 5. encode to state
-        DecimalOperations::EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow,
-            oldCount);
+        EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), leftVal, oldOverflow, oldCount);
     }
 
     // calculate avg=sum/count, and rescale to the result Decimal Type

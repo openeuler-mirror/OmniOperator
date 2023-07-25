@@ -62,6 +62,23 @@ using FirstState = struct FirstState {
     bool valueSet;
 };
 
+// Avg decimal and overflow is decode/encode in continuous memory
+static inline void DecodeAvgDecimal(op::DecimalAverageState *statePtr, type::int128 &val, int64_t &overflow,
+    int64_t &count)
+{
+    count = statePtr->count;
+    overflow = statePtr->overflow;
+    val = statePtr->val;
+}
+
+static inline void EncodeAvgDecimal(op::DecimalAverageState *statePtr, const type::int128 &val,
+    const int64_t &overflow, const int64_t &count)
+{
+    statePtr->count = count;
+    statePtr->overflow = overflow;
+    statePtr->val = val;
+}
+
 template <typename T> int32_t ALWAYS_INLINE Compare(const T &leftVal, const T &rightVal)
 {
     return (leftVal > rightVal ? 1 : (leftVal < rightVal ? -1 : 0));

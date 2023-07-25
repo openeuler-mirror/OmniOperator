@@ -3,6 +3,7 @@
  */
 
 #include "date32.h"
+#include <ctime>
 
 namespace omniruntime {
 namespace type {
@@ -142,6 +143,13 @@ int Date32::StringToDate32(const char *s, int32_t strLen, int32_t &result)
     time_t desiredTime = mktime(&r);
     result = static_cast<int32_t>(difftime(desiredTime, epochTime) / SECOND_OF_DAY);
     return 1;
+}
+
+void Date32::ToString(char *res, int32_t len) const
+{
+    std::time_t timeStamp = value * SECOND_OF_DAY;
+    std::tm *timeInfo = std::localtime(&timeStamp);
+    std::strftime(res, len, "%04Y-%m-%d", timeInfo);
 }
 
 Date32 operator + (const Date32 &left, const Date32 &right)

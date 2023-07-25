@@ -18,7 +18,6 @@
 
 namespace omniruntime {
 using namespace omniruntime::op;
-using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
 using namespace omniruntime::codegen::function;
 
