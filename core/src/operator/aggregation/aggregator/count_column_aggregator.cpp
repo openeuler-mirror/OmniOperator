@@ -17,6 +17,7 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalCountRaw(int64_t &res, const size_t 
             LogWarn("[addConditionalCountRaw]: ConditionMap pointer NOT aligned");
         }
 #endif
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             res += (condition[i] == addIf);
@@ -34,6 +35,7 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalCountRawFilter(int64_t &res, const s
             LogWarn("[addConditionalCountRaw]: ConditionMap pointer NOT aligned");
         }
 #endif
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             if (boolPtr[i]) {

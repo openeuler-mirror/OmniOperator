@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "vector/vector_batch.h"
-#include "test.h"
+#include "vector_test_util.h"
 #include "vector/dictionary_container.h"
 
 namespace omniruntime::vec::test {
@@ -12,10 +12,11 @@ TEST(vector2, vec_batch)
 {
     int32_t rowCnt = 32;
     auto intVec = std::make_unique<Vector<int32_t>>(rowCnt);
-    auto stringVec = std::make_unique<Vector<std::string>>(rowCnt);
+    auto stringVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(rowCnt);
     for (int32_t i = 0; i < rowCnt; i++) {
         intVec->SetValue(i, i * 2);
-        std::string value("hello" + std::to_string(i));
+        std::string str("hello" + std::to_string(i));
+        std::string_view value(str.data(), str.size());
         stringVec->SetValue(i, value);
     }
 
@@ -25,13 +26,14 @@ TEST(vector2, vec_batch)
         values[i] = i % dictSize;
     }
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<int32_t>::DICTIONARY_TYPE;
-    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictSize);
+    auto dictionary = CreateDictionary<DICTIONARY_DATA_TYPE>(dictSize);
     auto container = std::make_shared<DictionaryContainer<int32_t>>(values, rowCnt, dictionary, dictSize, 0);
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[rowCnt]);
+    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(rowCnt);
+    bool *nulls = nullsBuffer->GetBuffer();
     for (int i = 0; i < rowCnt; i++) {
         nulls[i] = false;
     }
-    auto intDictVec = std::make_unique<Vector<DictionaryContainer<int32_t>>>(rowCnt, container, nulls);
+    auto intDictVec = std::make_unique<Vector<DictionaryContainer<int32_t>>>(rowCnt, container, nullsBuffer);
 
     VectorBatch vectorBatch(rowCnt);
     vectorBatch.Append(intVec.release());
@@ -39,7 +41,7 @@ TEST(vector2, vec_batch)
     vectorBatch.Append(intDictVec.release());
 
     auto intCol0 = reinterpret_cast<Vector<int32_t> *>(vectorBatch.Get(0));
-    auto stringCol1 = reinterpret_cast<Vector<std::string> *>(vectorBatch.Get(1));
+    auto stringCol1 = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorBatch.Get(1));
     auto intDictCol2 = reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(vectorBatch.Get(2));
     for (int32_t i = 0; i < rowCnt; i++) {
         EXPECT_EQ(intCol0->GetValue(i), i * 2);

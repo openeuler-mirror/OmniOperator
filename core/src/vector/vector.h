@@ -17,7 +17,7 @@
 #include "util/bit_map.h"
 #include "util/compiler_util.h"
 #include "large_string_container.h"
-#include "memory/memory_trace.h"
+#include "memory/aligned_buffer.h"
 #include "type/data_type.h"
 
 namespace omniruntime::vec::unsafe {
@@ -29,9 +29,10 @@ class UnsafeStringVector;
 
 namespace omniruntime::vec {
 using namespace type;
+using namespace mem;
 enum Encoding {
-    OMNI_FLAT = 0,       // ordinary vector, storing primitive data types, such as int, long, boolean
-    OMNI_DICTIONARY = 1, // dictionary vector, dictionary can be combined with varchar
+    OMNI_FLAT = 0,               // ordinary vector, storing primitive data types, such as int, long, boolean
+    OMNI_DICTIONARY = 1,         // dictionary vector, dictionary can be combined with varchar
     OMNI_ENCODING_CONTAINER = 2, // the temporarily added code is mainly used for the agg avg partial, and the vector
                                  // implementation is also placed in the hash agg module
     OMNI_ENCODING_INVALID
@@ -42,16 +43,13 @@ public:
     BaseVector() = default;
     explicit BaseVector(int32_t size) : BaseVector(size, OMNI_FLAT /* * ordinary vector */) {}
 
-    BaseVector(int32_t size, Encoding encoding, std::shared_ptr<bool[]> nulls = nullptr)
-        : size(size), encoding(encoding), offset(0), nulls(nulls), hasNull(false), isSliced(false)
+    BaseVector(int32_t size, Encoding encoding, std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = nullptr)
+        : size(size), encoding(encoding), offset(0), nullsBuffer(nullsBuffer), hasNull(false), isSliced(false)
     {
-        const int constexpr sizeB = sizeof(bool);
-        if (this->nulls == nullptr) {
-            // fixme: Initialization of nulls should replace new with make_shared, when the C++ version is upgraded
-            // to 20.
-            this->nulls = std::shared_ptr<bool[]>(new bool[size]);
-            memset_sp(this->nulls.get(), sizeB * size, 0, sizeB * size);
+        if (this->nullsBuffer == nullptr) {
+            this->nullsBuffer = std::make_shared<AlignedBuffer<bool>>(size, true);
         }
+        nulls = this->nullsBuffer->GetBuffer();
     }
 
     virtual ~BaseVector() = default;
@@ -60,7 +58,7 @@ public:
      * set the element at the index position to null
      * Attention: String vector has its own SetNull, need call corresponding SetNull when string vector
      * @param index
-     *                */
+     */
     void ALWAYS_INLINE SetNull(int32_t index)
     {
         nulls[index] = true;
@@ -74,16 +72,18 @@ public:
 
     void SetNulls(int startIndex, bool *nullsPtr, int length)
     {
-        if (startIndex + length > this->size) {
-            LogError("vector is out of range(needed size:%d, real size:%d).", startIndex + length, this->size);
-            return;
+        if (UNLIKELY(startIndex + length > size)) {
+            std::string message("vector is out of range(needed size:%d, real size:%d).", startIndex + length, size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
-        bool *startAddr = reinterpret_cast<bool *>(this->nulls.get());
+        bool *startAddr = reinterpret_cast<bool *>(nulls);
         errno_t ret = memcpy_s(startAddr + startIndex, length * sizeof(bool), nullsPtr, length * sizeof(bool));
-        if (ret != EOK) {
-            LogError("memory copy failed %d, vec size %d, length %d, startIndex %d startAddr %x.", ret, this->size,
-                length, startIndex, startAddr);
+        if (UNLIKELY(ret != EOK)) {
+            std::string message = "memory copy failed " + std::to_string(ret) + ",vec size " + std::to_string(size) +
+                ", length " + std::to_string(length) + ", startIndex " + std::to_string(startIndex) + ", startAddr " +
+                std::to_string(reinterpret_cast<std::uintptr_t>(startAddr));
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
     }
 
@@ -118,7 +118,7 @@ public:
             return true;
         }
 
-        const bool *p = nulls.get() + offset;
+        const bool *p = nulls + offset;
         // Check if first bool differs from expected.
         if (*p) {
             hasNull = true;
@@ -143,8 +143,7 @@ public:
 
     int32_t GetNullCount() const
     {
-        bool *nullsPtr = nulls.get();
-        return hasNull ? BitMap::ComputeBitCount(reinterpret_cast<const uint8_t *>(nullsPtr), offset, size) : 0;
+        return hasNull ? BitMap::ComputeBitCount(reinterpret_cast<const uint8_t *>(nulls), offset, size) : 0;
     }
 
     int32_t ALWAYS_INLINE GetOffset()
@@ -158,20 +157,12 @@ public:
     }
 
 protected:
-    int64_t ALWAYS_INLINE GetNullsCapacity(bool *nulls)
-    {
-#ifdef COVERAGE
-        return size * sizeof(bool);
-#else
-        return malloc_usable_size(nulls);
-#endif
-    }
-
     friend class unsafe::UnsafeBaseVector;
     int32_t size;
-    Encoding encoding;             // vector encoding, such as flat, dictionary
+    Encoding encoding; // vector encoding, such as flat, dictionary
     int32_t offset;
-    std::shared_ptr<bool[]> nulls; // whether the element is null
+    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer; // manage nulls memory and it's metadata
+    bool *nulls;                                      // nullsBuffer->GetBuffer(), caches raw data pointer
     bool hasNull;
     bool isSliced;
     DataTypeId dataTypeId;
@@ -185,18 +176,17 @@ template <typename RAW_DATA_TYPE> class Vector : public BaseVector {
 public:
     /* *
      * Constructor for data types of arithematic types without encoding
-     * fixme: Initialization of values should replace new with make_shared, when the C++ version is upgraded to 20.
      * @param vSize: size of array in variables nulls and values
      * @param dataTypeId: the dataTypeId of vector
      */
-    // the dataTypeId will be used in operator in the future.
-    Vector(int vSize, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
-        : BaseVector(vSize), values(std::shared_ptr<RAW_DATA_TYPE[]>(new RAW_DATA_TYPE[vSize]))
+    Vector(int vSize, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>) : BaseVector(vSize)
     {
         this->dataTypeId = dataTypeId;
-        // vector class, values total capacity and nulls total capacity
+        valuesBuffer = std::make_shared<AlignedBuffer<RAW_DATA_TYPE>>(vSize);
+        values = valuesBuffer->GetBuffer();
+        // vector class capacity, valuesBuffer class capacity and nullsBuffer class capacity
         int64_t vectorCapacity =
-            sizeof(Vector<RAW_DATA_TYPE>) + GetValuesCapacity(values.get()) + BaseVector::GetNullsCapacity(nulls.get());
+            sizeof(Vector<RAW_DATA_TYPE>) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<RAW_DATA_TYPE>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
 #ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
@@ -205,11 +195,11 @@ public:
 
     virtual ~Vector() override
     {
-        if ((encoding == OMNI_FLAT) && (values != nullptr)) {
+        if ((encoding == OMNI_FLAT) && (valuesBuffer != nullptr)) {
             int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>);
             if (!isSliced) {
-                // vector class, nulls total capacity and values total capacity
-                vectorCapacity += BaseVector::GetNullsCapacity(nulls.get()) + GetValuesCapacity(values.get());
+                // vector class, nullsBuffer class and valuesBuffer class
+                vectorCapacity += sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<RAW_DATA_TYPE>);
             }
             omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
 #ifdef TRACE
@@ -219,16 +209,18 @@ public:
     }
 
     // used for container vector, dictionary vector and varchar vector.
-    Vector(int vSize, Encoding encoding, std::shared_ptr<bool[]> nulls = nullptr) : BaseVector(vSize, encoding, nulls)
+    Vector(int vSize, Encoding encoding, std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = nullptr)
+        : BaseVector(vSize, encoding, nullsBuffer)
     {}
 
     // used for vector slice, sliced vector use same values as parent vector
-    Vector(int vSize, Encoding encoding, std::shared_ptr<bool[]> nulls, std::shared_ptr<RAW_DATA_TYPE[]> values,
-        DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
-        : BaseVector(vSize, encoding, nulls)
+    Vector(int vSize, Encoding encoding, std::shared_ptr<AlignedBuffer<bool>> nullsBuffer,
+        std::shared_ptr<AlignedBuffer<RAW_DATA_TYPE>> valuesBuffer, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
+        : BaseVector(vSize, encoding, nullsBuffer)
     {
         this->dataTypeId = dataTypeId;
-        this->values = values; // copy the data field shared_ptr
+        this->valuesBuffer = valuesBuffer; // copy the data field shared_ptr
+        values = valuesBuffer->GetBuffer();
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
@@ -255,17 +247,19 @@ public:
      */
     void ALWAYS_INLINE SetValues(int startIndex, const void *values, int length)
     {
-        if (startIndex + length > this->size) {
-            LogError("vector is out of range(needed size:%d, real size:%d).", startIndex + length, this->size);
-            return;
+        if (UNLIKELY(startIndex + length > size)) {
+            std::string message("vector is out of range(needed size:%d, real size:%d).", startIndex + length, size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
-        RAW_DATA_TYPE *startAddr = reinterpret_cast<RAW_DATA_TYPE *>(this->values.get());
+        RAW_DATA_TYPE *startAddr = reinterpret_cast<RAW_DATA_TYPE *>(this->values);
         errno_t ret =
             memcpy_s(startAddr + startIndex, length * sizeof(RAW_DATA_TYPE), values, length * sizeof(RAW_DATA_TYPE));
-        if (ret != EOK) {
-            LogError("memory copy failed %d, vec size %d, length %d, startIndex %d startAddr %x.", ret, this->size,
-                length, startIndex, startAddr);
+        if (UNLIKELY(ret != EOK)) {
+            std::string message = "memory copy failed " + std::to_string(ret) + ",vec size " + std::to_string(size) +
+                ", length " + std::to_string(length) + ", startIndex " + std::to_string(startIndex) + ", startAddr " +
+                std::to_string(reinterpret_cast<std::uintptr_t>(startAddr));
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
     }
 
@@ -288,15 +282,16 @@ public:
      */
     void Append(BaseVector *other, int positionOffset, int length)
     {
-        if (positionOffset + length > size) {
-            LogError("append vector out of range(needed size:%d, real size:%d).", positionOffset + length, size);
-            return;
+        if (UNLIKELY(positionOffset + length > size)) {
+            std::string message("append vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         if (other->GetEncoding() == OMNI_FLAT) {
             auto src = reinterpret_cast<Vector<RAW_DATA_TYPE> *>(other);
-            SetNulls(positionOffset, src->nulls.get() + src->offset, length);
-            SetValues(positionOffset, src->values.get() + src->offset, length);
+            SetNulls(positionOffset, src->nulls + src->offset, length);
+            SetValues(positionOffset, src->values + src->offset, length);
         } else { // for dictionay
             auto src = reinterpret_cast<Vector<DictionaryContainer<RAW_DATA_TYPE>> *>(other);
             for (int32_t i = 0; i < length; i++) {
@@ -315,9 +310,9 @@ public:
      */
     Vector<RAW_DATA_TYPE> *CopyPositions(const int *positions, int positionOffset, int length)
     {
-        if ((positions == nullptr) || (length < 0)) {
-            LogError("positions is null or the input length is incorrect: %d.", length);
-            return nullptr;
+        if (UNLIKELY((positions == nullptr) || (length < 0))) {
+            std::string message("positions is null or the input length is incorrect: %d.", length);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
         auto vector = new Vector<RAW_DATA_TYPE>(length);
         auto startPositions = positions + positionOffset;
@@ -340,28 +335,21 @@ public:
      */
     Vector<RAW_DATA_TYPE> *Slice(int positionOffset, int length, bool isCopy = false)
     {
-        if (positionOffset + length > this->size) {
-            LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return nullptr;
+        if (UNLIKELY(positionOffset + length > size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
-        auto sliced = new Vector<RAW_DATA_TYPE>(length, this->encoding, nulls, values);
+        auto sliced = new Vector<RAW_DATA_TYPE>(length, encoding, nullsBuffer, valuesBuffer);
         sliced->offset = offset + positionOffset; // update offset
         sliced->isSliced = true;
         return sliced;
     }
 
 protected:
-    int64_t ALWAYS_INLINE GetValuesCapacity(RAW_DATA_TYPE *values)
-    {
-#ifdef COVERAGE
-        return size * sizeof(RAW_DATA_TYPE);
-#else
-        return malloc_usable_size(values);
-#endif
-    }
-
     friend class unsafe::UnsafeVector;
-    std::shared_ptr<RAW_DATA_TYPE[]> values; // for primitive types without encoding
+    std::shared_ptr<AlignedBuffer<RAW_DATA_TYPE>> valuesBuffer; // manage values memory and it's metadata
+    RAW_DATA_TYPE *values; // valuesBuffer->GetBuffer(), for primitive types without encoding
 };
 
 /**
@@ -372,13 +360,14 @@ template <typename RAW_DATA_TYPE, template <typename> typename CONTAINER>
 class Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> final : public Vector<RAW_DATA_TYPE> {
 public:
     Vector(int size, std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> container,
-        std::shared_ptr<bool[]> nulls, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
-        : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
+        std::shared_ptr<AlignedBuffer<bool>> nullsBuffer, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
+        : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nullsBuffer),
+          container(container)
     {
         this->dataTypeId = dataTypeId;
-        // vector class capacity, nulls total capacity and container total capacity.
+        // vector class capacity, nullsBuffer class capacity and container total capacity.
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>) +
-            BaseVector::GetNullsCapacity(nulls.get()) + container->GetContainerCapacity();
+            sizeof(AlignedBuffer<bool>) + container->GetContainerCapacity();
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
 #ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
@@ -387,8 +376,9 @@ public:
 
     // used for vector slice, sliced vector use same container as parent vector
     Vector(int size, std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> container,
-        std::shared_ptr<bool[]> nulls, bool isSliced, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
-        : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nulls), container(container)
+        std::shared_ptr<AlignedBuffer<bool>> nullsBuffer, bool isSliced, DataTypeId dataTypeId = TYPE_ID<RAW_DATA_TYPE>)
+        : Vector<RAW_DATA_TYPE>(size, OMNI_DICTIONARY /* * create enum for encodings */, nullsBuffer),
+          container(container)
     {
         this->dataTypeId = dataTypeId;
         // vector class capacity
@@ -404,7 +394,7 @@ public:
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>);
         if (!this->isSliced) {
-            vectorCapacity += BaseVector::GetNullsCapacity(this->nulls.get()) + container->GetContainerCapacity();
+            vectorCapacity += sizeof(AlignedBuffer<bool>) + container->GetContainerCapacity();
         }
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
 #ifdef TRACE
@@ -438,18 +428,17 @@ public:
      * @param offset
      * @param length
      */
-    Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *CopyPositions(const int *positions,
-        int positionOffset, int length)
+    Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *CopyPositions(const int *positions, int positionOffset,
+        int length)
     {
-        if ((positions == nullptr) || (length < 0)) {
-            LogError("positions is null or the input length is incorrect: %d.", length);
-            return nullptr;
+        if (UNLIKELY((positions == nullptr) || (length < 0))) {
+            std::string message("positions is null or the input length is incorrect: %d.", length);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         // new nulls
-        // fixme: Initialization of nulls should replace new with make_shared, when the C++ version is upgraded
-        // to 20.
-        std::shared_ptr<bool[]> newNulls = std::shared_ptr<bool[]>(new bool[length]);
+        std::shared_ptr<AlignedBuffer<bool>> newNullsBuffer = std::make_shared<AlignedBuffer<bool>>(length);
+        bool *newNulls = newNullsBuffer->GetBuffer();
         // new positions
         std::vector<int32_t> newPositions(length);
         auto startPositions = positions + positionOffset;
@@ -461,7 +450,7 @@ public:
         // new container
         std::shared_ptr<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> newContainer =
             container->CopyPositions(newPositions.data(), length);
-        return new Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(length, newContainer, newNulls,
+        return new Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(length, newContainer, newNullsBuffer,
             this->dataTypeId);
     }
 
@@ -476,13 +465,14 @@ public:
      */
     Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>> *Slice(int positionOffset, int length, bool isCopy = false)
     {
-        if (positionOffset + length > this->size) {
-            LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return nullptr;
+        if (UNLIKELY(positionOffset + length > this->size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                this->size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
         // copy the data field shared_ptr
         auto sliced = new Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>(length, this->container,
-            this->nulls, true, this->dataTypeId);
+            this->nullsBuffer, true, this->dataTypeId);
         sliced->offset = this->offset + positionOffset; // update offset
         sliced->isSliced = true;
         return sliced;
@@ -506,9 +496,9 @@ public:
         this->dataTypeId = OMNI_CHAR;
         // default string_view vector use large string encoding
         this->container = std::make_shared<LargeStringContainer<std::string_view>>(size, capacityInBytes);
-        // vector class capacity, nulls total capacity and values total capacity
-        int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>) +
-            BaseVector::GetNullsCapacity(this->nulls.get()) + container->GetContainerCapacity();
+        // vector class capacity, nullsBuffer class capacity and values total capacity
+        int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>) + sizeof(AlignedBuffer<bool>) +
+            container->GetContainerCapacity();
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
 #ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
@@ -517,8 +507,8 @@ public:
 
     // used for vector slice, sliced vector use same container as parent vector
     explicit Vector(int size, std::shared_ptr<LargeStringContainer<std::string_view>> container,
-        std::shared_ptr<bool[]> nulls, DataTypeId dataTypeId = OMNI_CHAR)
-        : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */, nulls), container(container)
+        std::shared_ptr<AlignedBuffer<bool>> nullsBuffer, DataTypeId dataTypeId = OMNI_CHAR)
+        : Vector<RAW_DATA_TYPE>(size, OMNI_FLAT /* * create enum for encodings */, nullsBuffer), container(container)
     {
         this->dataTypeId = dataTypeId;
         // vector class capacity
@@ -534,7 +524,7 @@ public:
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>);
         if (!this->isSliced) {
-            vectorCapacity += BaseVector::GetNullsCapacity(this->nulls.get()) + container->GetContainerCapacity();
+            vectorCapacity += sizeof(AlignedBuffer<bool>) + container->GetContainerCapacity();
         }
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
 #ifdef TRACE
@@ -545,7 +535,7 @@ public:
     /* *
      * set the element at the index position to null
      * @param index
-     *             */
+     */
     void ALWAYS_INLINE SetNull(int32_t index)
     {
         BaseVector::SetNull(index);
@@ -581,9 +571,10 @@ public:
      */
     void Append(BaseVector *other, int positionOffset, int length)
     {
-        if (positionOffset + length > this->size) {
-            LogError("append vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return;
+        if (UNLIKELY(positionOffset + length > this->size)) {
+            std::string message("append vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                this->size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         if (other->GetEncoding() == OMNI_FLAT) {
@@ -621,9 +612,9 @@ public:
      */
     Vector<LargeStringContainer<std::string_view>> *CopyPositions(const int *positions, int offset, int length)
     {
-        if ((positions == nullptr) || (length < 0)) {
-            LogError("positions is null or the input length is incorrect: %d.", length);
-            return nullptr;
+        if (UNLIKELY((positions == nullptr) || (length < 0))) {
+            std::string message("positions is null or the input length is incorrect: %d.", length);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
         auto vector = new Vector<LargeStringContainer<std::string_view>>(length);
@@ -650,12 +641,13 @@ public:
      */
     Vector<LargeStringContainer<std::string_view>> *Slice(int positionOffset, int length, bool isCopy = false)
     {
-        if (positionOffset + length > this->size) {
-            LogError("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length, this->size);
-            return nullptr;
+        if (UNLIKELY(positionOffset + length > this->size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                this->size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
         // copy the data field shared_ptr
-        auto sliced = new Vector<LargeStringContainer<std::string_view>>(length, container, this->nulls);
+        auto sliced = new Vector<LargeStringContainer<std::string_view>>(length, container, this->nullsBuffer);
         sliced->offset = this->offset + positionOffset; // update offset
         sliced->isSliced = true;
         return std::move(sliced);

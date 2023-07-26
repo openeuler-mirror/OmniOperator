@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "thread_memory_manager.h"
 
-namespace omniruntime::vec {
+namespace omniruntime::mem::test {
 const static int64_t THRESHOLD = 1 * 1024 * 1024;
 
 // test: report memory usage but not reach the untrackedMemoryThreshold.

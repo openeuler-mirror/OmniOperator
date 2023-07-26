@@ -7,7 +7,7 @@
 #include "benchmark/benchmark.h"
 #include "memory/thread_memory_manager.h"
 
-namespace omniruntime::vec::test {
+namespace omniruntime::mem::test {
 static int g_threadNum = 10000;
 static int64_t sizes[1'000'000];
 void Random()

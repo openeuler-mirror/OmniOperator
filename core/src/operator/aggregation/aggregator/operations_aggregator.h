@@ -16,6 +16,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void Add(OUT *res_, int64_t &flag_, const IN 
             LogWarn("[add]: Data pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         OUT res = *res_;
         int64_t flag = flag_;
         for (size_t i = 0; i < rowCount; ++i) {
@@ -36,6 +37,8 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddFilter(OUT *res_, int64_t &flag_, con
             LogWarn("[add]: Data pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
         OUT res = *res_;
         int64_t flag = flag_;
         for (size_t i = 0; i < rowCount; ++i) {
@@ -61,6 +64,8 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDict(OUT *res_, int64_t &flag_, const
             LogWarn("[addDict]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
         OUT res = *res_;
         int64_t flag = flag_;
         for (size_t i = 0; i < rowCount; ++i) {
@@ -84,6 +89,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictFilter(OUT *res_, int64_t &flag_,
             LogWarn("[addDict]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;
@@ -110,6 +118,8 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditional(OUT *res_, int64_t &flag_
             LogWarn("[addConditional]: ConditionMap pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;
@@ -134,6 +144,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditionalFilter(OUT *res_, int64_t 
             LogWarn("[addConditional]: ConditionMap pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;
@@ -163,6 +176,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditional(OUT *res_, int64_t &f
             LogWarn("[addDictConditional]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;
@@ -191,6 +207,10 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditionalFilter(OUT *res_, int6
             LogWarn("[addDictConditional]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;
@@ -217,6 +237,8 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddAvg(OUT *res_, int64_t &flag_, const 
             LogWarn("[addAvg]: Counter pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;
@@ -244,6 +266,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictAvg(OUT *res_, int64_t &flag_, co
             LogWarn("[addDictAvg]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;
@@ -272,6 +297,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditionalAvg(OUT *res_, int64_t &fl
             LogWarn("[addConditionalAvg]: ConditionMap pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;
@@ -303,6 +331,10 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditionalAvg(OUT *res_, int64_t
             LogWarn("[addDictConditionalAvg]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
         int64_t flag = flag_;

@@ -5,30 +5,50 @@
 #include "gtest/gtest.h"
 #include "vector/vector.h"
 #include "allocator.h"
-#include "../vector/test.h"
+#include "vector/vector_test_util.h"
 
-namespace omniruntime::vec {
+namespace omniruntime::mem::test {
+using namespace vec;
+using namespace vec::test;
 template <typename T> void createVector(int vec_size)
 {
     auto vector = std::make_unique<Vector<T>>(vec_size);
     for (int i = 0; i < vec_size; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
+        T value = static_cast<T>(i) * 2 / 3;
         vector->SetValue(i, value);
     }
 
     for (int i = 0; i < vec_size; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = static_cast<T>(i) * 2 / 3;
-        }
+        T value = static_cast<T>(i) * 2 / 3;
         EXPECT_EQ(value, vector->GetValue(i));
+    }
+}
+
+template <> void createVector<std::string_view>(int vec_size)
+{
+    auto vector = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(vec_size);
+    for (int i = 0; i < vec_size; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        vector->SetValue(i, value);
+    }
+
+    for (int i = 0; i < vec_size; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        EXPECT_EQ(value, vector->GetValue(i));
+    }
+}
+
+TEST(Allocator, testLoopAllocZeroSize)
+{
+    Allocator *allocator = Allocator::GetAllocator();
+    for (int i = 0; i < 1000; ++i) {
+        void *firstPtr = allocator->Alloc(0);
+        void *lastPtr = allocator->Alloc(0);
+        EXPECT_TRUE(firstPtr != lastPtr);
+        allocator->Free(firstPtr, 0);
+        allocator->Free(lastPtr, 0);
     }
 }
 
@@ -41,7 +61,7 @@ TEST(Allocator, testCreateAndFreeVector)
     createVector<double>(vecSize);
     createVector<test::boost_dec64>(vecSize);
     createVector<test::boost_dec128>(vecSize);
-    createVector<std::string>(vecSize);
+    createVector<std::string_view>(vecSize);
 }
 
 TEST(Allocator, testCreateZeroVector)
@@ -52,7 +72,7 @@ TEST(Allocator, testCreateZeroVector)
     createVector<double>(vecSize);
     createVector<test::boost_dec64>(vecSize);
     createVector<test::boost_dec128>(vecSize);
-    createVector<std::string>(vecSize);
+    createVector<std::string_view>(vecSize);
 }
 
 // test: the alloc method works properly.
@@ -62,7 +82,7 @@ TEST(Allocator, testAllocateRoundSize)
     auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
 
-    mem::Allocator *allocator = mem::Allocator::GetAllocator();
+    Allocator *allocator = Allocator::GetAllocator();
     for (int size = 1; size < 100000; ++size) {
         void *p = allocator->Alloc(static_cast<int64_t>(size));
         EXPECT_TRUE(p != nullptr);
@@ -81,8 +101,13 @@ TEST(Allocator, testAllocateZeroSize)
     threadMemoryManager->Clear();
 
     mem::Allocator *allocator = mem::Allocator::GetAllocator();
-    const int constexpr size = 0;
-    EXPECT_ANY_THROW(allocator->Alloc(static_cast<int64_t>(size)));
+    const int64_t constexpr size = 0;
+    void *p = nullptr;
+    ASSERT_NO_THROW(p = allocator->Alloc(size));
+    EXPECT_TRUE(p != nullptr);
+    int64_t untrackedMemory = threadMemoryManager->GetUntrackedMemory();
+    EXPECT_EQ(untrackedMemory, 0);
+    allocator->Free(p, size);
 }
 
 // test: allocator allocate alignment size.
@@ -112,15 +137,18 @@ TEST(Allocator, testSlicedVectorSize)
         int32_t value = static_cast<int32_t>(i);
         vector->SetValue(i, value);
     }
-    int64_t accountedMemory  = threadMemoryManager->GetUntrackedMemory();
+    int64_t accountedMemory = threadMemoryManager->GetUntrackedMemory();
+    // 628 = 128(vector, nullsBuffer, valuesBuffer class) + 100(nulls capacity) + 400(values capacity)
+    EXPECT_EQ(accountedMemory, 628);
 
     auto sliceVector = vector->Slice(0, vecSize);
     int64_t accountedMemory2  = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(accountedMemory2, accountedMemory + 64);
+    EXPECT_EQ(accountedMemory2, accountedMemory + 80);
 
     delete vector;
-    int64_t accountedMemory3  = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(accountedMemory3, 64);
+    int64_t accountedMemory3 = threadMemoryManager->GetUntrackedMemory();
+    // 580 = 80(vector class) + 100(nulls capacity) + 400(values capacity)
+    EXPECT_EQ(accountedMemory3, 580);
 
     delete sliceVector;
     EXPECT_EQ(threadMemoryManager->GetUntrackedMemory(), 0);

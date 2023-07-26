@@ -24,6 +24,7 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndex(std::vector<AggregateState *> &rowS
             LogWarn("[addUseRowIndex]: Data pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
@@ -43,6 +44,8 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndexFilter(std::vector<AggregateState *>
             LogWarn("[addUseRowIndex]: Data pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             if (boolPtr[i]) {
@@ -67,6 +70,8 @@ VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndex(std::vector<AggregateState *> &
             LogWarn("[addDictUseRowIndex]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
@@ -89,6 +94,9 @@ VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndexFilter(std::vector<AggregateStat
             LogWarn("[addDictUseRowIndex]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             if (boolPtr[i]) {
@@ -113,6 +121,8 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndex(std::vector<AggregateSta
             LogWarn("[addConditionalUseRowIndex]: ConditionMap Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
@@ -136,6 +146,9 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexFilter(std::vector<Aggreg
             LogWarn("[addConditionalUseRowIndex]: ConditionMap Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             if (boolPtr[i]) {
@@ -164,6 +177,9 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndex(std::vector<Aggregat
             LogWarn("[addDictConditionalUseRowIndex]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
@@ -190,6 +206,10 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexFilter(std::vector<Ag
             LogWarn("[addDictConditionalUseRowIndex]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             if (boolPtr[i]) {
@@ -214,6 +234,8 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndexAvg(std::vector<AggregateState *> &r
             LogWarn("[addUseRowIndexAvg]: Counter pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
@@ -239,6 +261,9 @@ VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndexAvg(std::vector<AggregateState *
             LogWarn("[addDictUseRowIndexAvg]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
@@ -266,6 +291,9 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexAvg(std::vector<Aggregate
             LogWarn("[addConditionalUseRowIndexAvg]: ConditionMap Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
@@ -295,6 +323,10 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexAvg(std::vector<Aggre
             LogWarn("[addDictConditionalUseRowIndexAvg]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
+        ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];

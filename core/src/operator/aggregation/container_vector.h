@@ -25,7 +25,8 @@ public:
         : Vector<int64_t>(positionCount, OMNI_ENCODING_CONTAINER), dataTypes(dataTypes)
     {
         dataTypeId = OMNI_CONTAINER;
-        values = std::shared_ptr<int64_t[]>(new int64_t[dataTypes.size()]);
+        valuesBuffer = std::make_shared<AlignedBuffer<int64_t>>(dataTypes.size());
+        values = valuesBuffer->GetBuffer();
         // init nulls
         for (int32_t rowIndex = 0; rowIndex < positionCount; rowIndex++) {
             bool isNull = true;
@@ -42,8 +43,7 @@ public:
         }
 
         // report memory usage
-        int64_t vectorCapacity = sizeof(ContainerVector) + BaseVector::GetNullsCapacity(nulls.get()) +
-            Vector<int64_t>::GetValuesCapacity(values.get());
+        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
 #ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
@@ -56,16 +56,15 @@ public:
         dataTypeId = OMNI_CONTAINER;
         using T = typename type::NativeType<type::OMNI_CONTAINER>::type;
         int32_t vectorCount = capacityInBytes / sizeof(T);
-        values = std::shared_ptr<int64_t[]>(new int64_t[vectorCount]);
-
+        valuesBuffer = std::make_shared<AlignedBuffer<int64_t>>(vectorCount);
+        values = valuesBuffer->GetBuffer();
         // init vec is null in container
         for (int i = 0; i < vectorCount; i++) {
             SetValue(i, 0);
         }
 
         // report memory usage
-        int64_t vectorCapacity = sizeof(ContainerVector) + BaseVector::GetNullsCapacity(nulls.get()) +
-            Vector<int64_t>::GetValuesCapacity(values.get());
+        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
 #ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
@@ -183,8 +182,7 @@ public:
             }
         }
 
-        int64_t vectorCapacity = sizeof(ContainerVector) + BaseVector::GetNullsCapacity(nulls.get()) +
-            Vector<int64_t>::GetValuesCapacity(values.get());
+        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
 #ifdef TRACE
         omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);

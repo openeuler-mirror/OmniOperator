@@ -6,20 +6,20 @@
 
 #include <iostream>
 #include <jemalloc/jemalloc.h>
-#include "util/debug.h"
 #include "util/omni_exception.h"
+#include "util/compiler_util.h"
 
 using namespace std;
 namespace omniruntime {
 namespace mem {
 class SimpleAllocator {
 public:
-    static int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
+    static void Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
     {
         // background: If size is 0, then malloc() returns either NULL, or a unique pointer value that can later be
         // successfully passed to free().
-        if (size <= 0) {
-            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is non-positive.");
+        if (size < 0) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is negative.");
         }
 
         if (zeroFill) {
@@ -29,23 +29,24 @@ public:
             // alloc based on the size
             *buffer = static_cast<uint8_t *>(malloc(static_cast<size_t>(size)));
         }
-        return 0;
+        if (UNLIKELY(*buffer == nullptr)) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate fails.");
+        }
     }
 
-    static int Release(uint8_t *buffer)
+    static void Release(uint8_t *buffer)
     {
         // free the memory
         free(static_cast<void *>(buffer));
-        return 0;
     }
 };
 
 class JemallocAllocator {
 public:
-    static int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
+    static void Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false)
     {
-        if (size <= 0) {
-            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is non-positive.");
+        if (size < 0) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate size is negative.");
         }
         // jemalloc alloc
         if (zeroFill) {
@@ -56,30 +57,29 @@ public:
         } else {
             *buffer = static_cast<uint8_t *>(mallocx(static_cast<size_t>(size), MALLOCX_ALIGN(alignment)));
         }
-        return 0;
+        if (UNLIKELY(*buffer == nullptr)) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "allocate fails.");
+        }
     }
 
-    static int Release(uint8_t *buffer)
+    static void Release(uint8_t *buffer)
     {
         // jemalloc free
         dallocx(static_cast<void *>(buffer), MALLOCX_ALIGN(alignment));
-        return 0;
     }
     const static size_t alignment = 64;
 };
 
 template <typename Allocator> class BaseMemoryPoolImpl : public MemoryPool {
 public:
-    int Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false) override
+    void Allocate(int64_t size, uint8_t **buffer, bool zeroFill = false) override
     {
         Allocator::Allocate(size, buffer, zeroFill);
-        return 0;
     }
 
-    int Release(uint8_t *buffer) override
+    void Release(uint8_t *buffer) override
     {
         Allocator::Release(buffer);
-        return 0;
     }
 
     ~BaseMemoryPoolImpl() override = default;

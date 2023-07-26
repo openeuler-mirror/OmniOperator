@@ -4,9 +4,8 @@
 
 #include "gtest/gtest.h"
 #include "memory/simple_arena_allocator.h"
-namespace omniruntime {
-using namespace omniruntime::mem;
 
+namespace omniruntime::mem::test {
 TEST(SimpleArenaAllocator, testAllocate)
 {
     int64_t chunkSize = 4096;

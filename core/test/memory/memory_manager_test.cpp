@@ -9,9 +9,11 @@
 #include "jemalloc/jemalloc.h"
 #include "boost/multiprecision/cpp_dec_float.hpp"
 #include "boost/multiprecision/number.hpp"
-#include "vector/vector_helper.h"
+#include "vector/vector_test_util.h"
 
-namespace omniruntime::vec {
+namespace omniruntime::mem::test {
+using namespace vec;
+using namespace vec::test;
 using boost_dec64 = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<64>>;
 
 
@@ -128,36 +130,32 @@ template <class T> auto CreateVector(int vecSize)
     return vector;
 }
 
-// In coverage mode, the memory allocation is taken over by the Asan, and the memory size is not aligned.
-// Conversely, The memory allocation is taken over by the jemalloc, and the memory size is aligned.
-#ifdef COVERAGE
-// test: accuracy of memory statistics
-TEST(MemoryManager, testAsanStatisticsFunction)
+TEST(MemoryManager, testStatisticsFunction)
 {
     // Avoid interference between UTs.
     auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
 
-    // actual mem 564 = vector size(64) + null size(100) + value size(400). Take null as an example,
-    // 100 indicates the overhead of new bool[100].
+    // mem 628 = vector, nullsBuffer, valuesBuffer size(128) + null size(100) + value size(400). Take null as
+    // an example, 100 indicates the overhead of new bool[100].
     auto int32Vector = CreateVector<int32_t>(100);
     int64_t threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 564);
+    EXPECT_EQ(threadUntracked, 628);
 
-    // actual mem  964 = vector size(64) + null size(100) + value size(800)
+    // mem 1028 = vector, nullsBuffer, valuesBuffer size(128) + null size(100) + value size(800)
     auto int64Vector = CreateVector<int64_t>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 1528); // int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 1656); // int64Vector + int32Vector
 
-    // actual mem 964 = vector size(64) + null size(100) + value size(800)
+    // mem 1028 = vector, nullsBuffer, valuesBuffer size(128) + null size(100) + value size(800)
     auto doubleVector = CreateVector<double>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 2492); // doubleVector + int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 2684); // doubleVector + int64Vector + int32Vector
 
-    // actual mem 6164 = vector size(64) + null size(100) + value size(6000)
+    // mem 6228 = vector, nullsBuffer, valuesBuffer size(128) + null size(100) + value size(6000)
     auto dec64Vector = CreateVector<boost_dec64>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 8656); // total size include vector above
+    EXPECT_EQ(threadUntracked, 8912); // total size include vector above
 
     int32Vector.reset();
     int64Vector.reset();
@@ -172,7 +170,7 @@ TEST(MemoryManager, testAsanStatisticsFunction)
 }
 
 // test: statistics function of Limit
-TEST(MemoryManager, testAsanStatisticsFunctionMemoryLimit)
+TEST(MemoryManager, testStatisticsFunctionMemoryLimit)
 {
     auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
@@ -183,77 +181,15 @@ TEST(MemoryManager, testAsanStatisticsFunctionMemoryLimit)
     globalMemoryManager->SetMemoryLimit(limit);
     auto vector1 = std::make_unique<Vector<int32_t>>(size);
     int64_t globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-    // 5242944 = vector size(64) + null size(1048576) + value size(4194304),
-    EXPECT_EQ(globalMemoryAmount, 5242944);
+    // 5242880 = null size(1048576) + value size(4194304), untracked memory(vector, nullsBuffer, valuesBuffer size(128))
+    EXPECT_EQ(globalMemoryAmount, 5242880);
     // it is equivalent to "auto vector = std::make_unique<Vector<int32_t>>(size)"
     auto currentMemoryManager = std::make_unique<mem::MemoryManager>(globalMemoryManager);
     EXPECT_ANY_THROW(currentMemoryManager->Account(globalMemoryAmount));
 
     globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-    EXPECT_EQ(globalMemoryAmount, 10485888);
+    EXPECT_EQ(globalMemoryAmount, 10485760);
 }
-#else
-TEST(MemoryManager, testJemallocStatisticsFunction)
-{
-    // Avoid interference between UTs.
-    auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
-    threadMemoryManager->Clear();
-
-    // alignment mem 688 = vector size(64) + null size(112) + value size(448). Take null as an example,
-    // 112 indicates the overhead of new bool[100].
-    auto int32Vector = CreateVector<int32_t>(100);
-    int64_t threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 624);
-
-    // alignment mem  1072 = vector size(64) + null size(112) + value size(896)
-    auto int64Vector = CreateVector<int64_t>(100);
-    threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 1696); // int64Vector + int32Vector
-
-    // alignment mem  1072 = vector size(64) + null size(112) + value size(896)
-    auto doubleVector = CreateVector<double>(100);
-    threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 2768); // doubleVector + int64Vector + int32Vector
-
-    // alignment mem 6320 = vector size(64) + null size(112) + value size(6144)
-    auto dec64Vector = CreateVector<boost_dec64>(100);
-    threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 9088); // total size include vector above
-
-    int32Vector.reset();
-    int64Vector.reset();
-    doubleVector.reset();
-    dec64Vector.reset();
-
-    int64_t finalSize = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(finalSize, 0);
-
-    auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
-    globalMemoryManager->Clear();
-}
-
-// test: statistics function of Limit
-TEST(MemoryManager, testjemallocStatisticsFunctionMemoryLimit)
-{
-    auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
-    threadMemoryManager->Clear();
-
-    auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
-    int size = 1024 * 1024;
-    int limit = 10 * 1024 * 1024;
-    globalMemoryManager->SetMemoryLimit(limit);
-    auto vector1 = std::make_unique<Vector<int32_t>>(size);
-    int64_t globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-    // 5242944 = vector size(64) + null size(1048576) + value size(4194304),
-    EXPECT_EQ(globalMemoryAmount, 5242944);
-    // it is equivalent to "auto vector = std::make_unique<Vector<int32_t>>(size)"
-    auto currentMemoryManager = std::make_unique<mem::MemoryManager>(globalMemoryManager);
-    EXPECT_ANY_THROW(currentMemoryManager->Account(globalMemoryAmount));
-
-    globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-    EXPECT_EQ(globalMemoryAmount, 10485888);
-}
-#endif
 
 TEST(MemoryManager, testFixedVectorStatisticsFunction)
 {
@@ -295,33 +231,10 @@ TEST(MemoryManager, testDictionaryVarcharVectorStatisticsFunction)
 
     int32_t dicSize = 1000;
     int32_t valueSize = 7;
-    auto originVec = std::make_unique<Vector<LargeStringContainer<std::string_view>>>(dicSize);
-    for (int32_t i = 0; i < dicSize; ++i) {
-        if (i % 2 == 0) {
-            originVec->SetNull(i);
-            continue;
-        }
-        auto str = "string " + std::to_string(i);
-        std::string_view value(str.data(), str.length());
-        originVec->SetValue(i, value);
-    }
-
-    int32_t values[] = {2, 3, 4, 5, 6, 8, 9};
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[valueSize]);
-    for (int i = 0; i < valueSize; i++) {
-        nulls[i] = originVec->IsNull(values[i]);
-    }
-
-    auto dictionary = std::make_shared<DictionaryContainer<std::string_view>>(values, valueSize,
-            unsafe::UnsafeStringVector::GetContainer(originVec.get()), originVec->GetSize(), originVec->GetOffset());
-    auto dictionaryVarcharVector = std::make_unique<Vector<DictionaryContainer<std::string_view>>>(valueSize,
-            dictionary, nulls);
+    auto dictionaryVarcharVector = CreateStringDictionaryVector<std::string_view>(dicSize, valueSize).release();
     auto slicedDictionaryVarcharVector = dictionaryVarcharVector->Slice(0, 6);
 
-    nulls.reset();
-    originVec.reset();
-    dictionary.reset();
-    dictionaryVarcharVector.reset();
+    delete dictionaryVarcharVector;
     delete slicedDictionaryVarcharVector;
 
     auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
@@ -337,19 +250,10 @@ TEST(MemoryManager, testDictionaryFixedVectorStatisticsFunction)
 
     int32_t dicSize = 1000;
     int32_t valueSize = 7;
-    auto originVec = std::make_unique<Vector<long>>(dicSize);
-
-    int32_t values[] = {2, 3, 4, 5, 6, 8, 9};
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[valueSize]);
-    auto dictionary = std::make_shared<DictionaryContainer<long>>(values, valueSize,
-               unsafe::UnsafeVector::GetValues<long>(originVec.get()), originVec->GetSize(), originVec->GetOffset());
-    auto dictionaryFixedVector = std::make_unique<Vector<DictionaryContainer<long>>>(valueSize, dictionary, nulls);
+    auto dictionaryFixedVector = CreateDictionaryVector<int64_t>(dicSize, valueSize).release();
     auto slicedDictionaryFixedVector = dictionaryFixedVector->Slice(0, 6);
 
-    nulls.reset();
-    originVec.reset();
-    dictionary.reset();
-    dictionaryFixedVector.reset();
+    delete dictionaryFixedVector;
     delete slicedDictionaryFixedVector;
 
     auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();

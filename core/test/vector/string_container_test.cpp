@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 #include "vector/vector.h"
 #include "vector/dictionary_container.h"
-#include "test.h"
 #include "vector/vector_helper.h"
 
 namespace omniruntime::vec::test {
@@ -125,7 +124,7 @@ template <typename CONTAINER> void string_vector_append_value()
         std::string_view input(expected[i].data(), expected[i].size());
         v4OverBounds->SetValue(i, input);
     }
-    appended->Append(v4OverBounds, 10, vectorSize + 1);
+    EXPECT_ANY_THROW(appended->Append(v4OverBounds, 10, vectorSize + 1));
 
     std::vector<bool> expectedNull{ false, false, false, false, false, true, false, true, false, true };
     CompareResult(appended, expected, expectedNull, appendedVecSize);
@@ -180,12 +179,10 @@ template <typename CONTAINER> void string_vector_copy_positions()
 
     auto vectorEmpty = vector->CopyPositions(index, offset2, 0);
     EXPECT_EQ(vectorEmpty->GetSize(), 0);
-    auto vectorNegtive = vector->CopyPositions(index, offset1, -1);
-    EXPECT_EQ(vectorNegtive, nullptr);
+    EXPECT_ANY_THROW(vector->CopyPositions(index, offset1, -1));
     delete vectorOffsetZero;
     delete vectorOffsetNotZero;
     delete vectorEmpty;
-    delete vectorNegtive;
     delete vector;
 }
 

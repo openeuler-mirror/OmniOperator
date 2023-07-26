@@ -17,7 +17,8 @@ public:
     static BaseVector *CreateStringDictionary(int32_t *values, int32_t valueSize,
         Vector<LargeStringContainer<std::string_view>> *vector)
     {
-        std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[valueSize]);
+        std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);
+        bool *nulls = nullsBuffer->GetBuffer();
         for (int i = 0; i < valueSize; i++) {
             nulls[i] = vector->IsNull(values[i]);
         }
@@ -27,20 +28,21 @@ public:
             unsafe::UnsafeStringVector::GetContainer(
             reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)),
             vector->GetSize(), vector->GetOffset());
-        return new Vector<DictionaryContainer<std::string_view>>(valueSize, dictionary, nulls, OMNI_CHAR);
+        return new Vector<DictionaryContainer<std::string_view>>(valueSize, dictionary, nullsBuffer, OMNI_CHAR);
     }
 
     template <typename T>
     static BaseVector *CreateDictionary(int32_t *values, int32_t valueSize, Vector<T> *vector)
     {
-        std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[valueSize]);
+        std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);
+        bool *nulls = nullsBuffer->GetBuffer();
         for (int i = 0; i < valueSize; i++) {
             nulls[i] = vector->IsNull(values[i]);
         }
 
         auto dictionary = std::make_shared<DictionaryContainer<T>>(values, valueSize,
             unsafe::UnsafeVector::GetValues<T>(vector), vector->GetSize(), vector->GetOffset());
-        return new Vector<DictionaryContainer<T>>(valueSize, dictionary, nulls, TYPE_ID<T>);
+        return new Vector<DictionaryContainer<T>>(valueSize, dictionary, nullsBuffer, TYPE_ID<T>);
     }
 
     /* *

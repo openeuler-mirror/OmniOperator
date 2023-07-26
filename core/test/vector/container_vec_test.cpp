@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 #include "vector/vector.h"
 #include "vector/dictionary_container.h"
-#include "test.h"
+#include "vector_test_util.h"
 
 namespace omniruntime::vec::test {
 template <typename T> void container_vector_get_set_value()
@@ -14,7 +14,8 @@ template <typename T> void container_vector_get_set_value()
     int dictionarySize = 10;
     int valueSize = 100;
     int *values = new int[valueSize];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[valueSize]);
+    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);
+    bool *nulls = nullsBuffer->GetBuffer();
     for (int i = 0; i < valueSize; i++) {
         values[i] = i % dictionarySize;
         nulls[i] = false;
@@ -22,17 +23,17 @@ template <typename T> void container_vector_get_set_value()
 
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<T>::DICTIONARY_TYPE;
 
-    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionarySize);
+    auto dictionary = CreateDictionary<DICTIONARY_DATA_TYPE>(dictionarySize);
     auto container = std::make_shared<DictionaryContainer<T>>(values, valueSize, dictionary, dictionarySize, 0);
-    Vector<DictionaryContainer<T>> vector(valueSize, container, nulls);
+    Vector<DictionaryContainer<T>> vector(valueSize, container, nullsBuffer);
     T value;
     for (int i = 0; i < valueSize; i++) {
         value = vector.GetValue(i);
-        EXPECT_EQ(dictionary[i % dictionarySize], value);
+        EXPECT_EQ(dictionary->GetValue(i % dictionarySize), value);
     }
 
     for (int i = 0; i < valueSize; i++) {
-        value = dictionary[(i + 1) % dictionarySize];
+        value = dictionary->GetValue((i + 1) % dictionarySize);
         vector.SetValue(i, value);
         EXPECT_EQ(value, vector.GetValue(i));
     }

@@ -8,7 +8,7 @@
 #include "vector/vector_helper.h"
 #include "allocator.h"
 
-namespace omniruntime::mem {
+namespace omniruntime::mem::test {
 using namespace omniruntime::vec;
 
 template <typename T> static BaseVector *CreateVector()

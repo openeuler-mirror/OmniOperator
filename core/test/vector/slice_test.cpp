@@ -4,7 +4,7 @@
  */
 #include "gtest/gtest.h"
 #include "vector/vector.h"
-#include "test.h"
+#include "vector_test_util.h"
 #include "vector/dictionary_container.h"
 
 namespace omniruntime::vec::test {
@@ -16,12 +16,7 @@ template <typename T> void v2_slice_get_set_value()
 {
     auto parent = new Vector<T>(g_vecSize);
     for (int i = 0; i < g_vecSize; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i);
-        } else {
-            value = T(i * 2 / 3);
-        }
+        T value = T(i * 2 / 3);
         parent->SetValue(i, value);
     }
 
@@ -30,12 +25,28 @@ template <typename T> void v2_slice_get_set_value()
     delete parent;
 
     for (int i = 0; i < g_len; i++) {
-        T value;
-        if constexpr (std::is_same_v<std::string, T>) {
-            value = "string " + std::to_string(i + g_offset);
-        } else {
-            value = T((i + g_offset) * 2 / 3);
-        }
+        T value = T((i + g_offset) * 2 / 3);
+        EXPECT_EQ(value, vector->GetValue(i));
+    }
+    delete vector;
+}
+
+template <> void v2_slice_get_set_value<std::string_view>()
+{
+    auto parent = new Vector<LargeStringContainer<std::string_view>>(g_vecSize);
+    for (int i = 0; i < g_vecSize; i++) {
+        std::string str = "string " + std::to_string(i);
+        std::string_view value(str.data(), str.size());
+        parent->SetValue(i, value);
+    }
+
+    auto vector = parent->Slice(g_offset, g_len, false);
+    EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
+    delete parent;
+
+    for (int i = 0; i < g_len; i++) {
+        std::string str = "string " + std::to_string(i + g_offset);
+        std::string_view value(str.data(), str.size());
         EXPECT_EQ(value, vector->GetValue(i));
     }
     delete vector;
@@ -55,7 +66,7 @@ TEST(vector2, v2_slice_get_set_value_double)
 }
 TEST(vector2, v2_slice_get_set_value_string)
 {
-    v2_slice_get_set_value<std::string>();
+    v2_slice_get_set_value<std::string_view>();
 }
 TEST(vector2, v2_slice_get_set_value_dec32)
 {
@@ -75,7 +86,8 @@ template <typename T> void v2_slice_container()
     int dictionary_size = 10;
     int value_size = 100;
     int *values = new int[value_size];
-    std::shared_ptr<bool[]> nulls = std::shared_ptr<bool[]>(new bool[value_size]);
+    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(value_size);
+    bool *nulls = nullsBuffer->GetBuffer();
     for (int i = 0; i < value_size; i++) {
         values[i] = i % dictionary_size;
         nulls[i] = false;
@@ -83,9 +95,9 @@ template <typename T> void v2_slice_container()
 
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<T>::DICTIONARY_TYPE;
 
-    auto dictionary = createDictionary<DICTIONARY_DATA_TYPE>(dictionary_size);
+    auto dictionary = CreateDictionary<DICTIONARY_DATA_TYPE>(dictionary_size);
     auto container = std::make_shared<DictionaryContainer<T>>(values, value_size, dictionary, dictionary_size, 0);
-    auto parent = new Vector<DictionaryContainer<T>>(value_size, container, nulls, TYPE_ID<T>);
+    auto parent = new Vector<DictionaryContainer<T>>(value_size, container, nullsBuffer, TYPE_ID<T>);
 
     auto vector = parent->Slice(g_offset, g_len);
     delete parent; // purposely deleting parent;
@@ -93,7 +105,7 @@ template <typename T> void v2_slice_container()
     T value;
     for (int i = 0; i < g_len; i++) {
         value = vector->GetValue(i);
-        EXPECT_EQ(dictionary[i % dictionary_size], value);
+        EXPECT_EQ(dictionary->GetValue(i % dictionary_size), value);
     }
 
     delete[] values;

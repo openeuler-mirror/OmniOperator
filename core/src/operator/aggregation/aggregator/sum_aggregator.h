@@ -73,6 +73,8 @@ FAST_MATH NO_INLINE void SumConditionalFloat(MID *res, int64_t &flag, const IN *
         LogWarn("[sumConditionalFloat] ConditionMap pointer NOT aligned");
     }
 #endif
+    ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
     const auto *endPtr = ptr + rowCount;
 
@@ -110,6 +112,9 @@ FAST_MATH NO_INLINE void SumConditionalFloatFilter(MID *res, int64_t &flag, cons
         LogWarn("[sumConditionalFloat] ConditionMap pointer NOT aligned");
     }
 #endif
+    ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
 
     const auto *endPtr = ptr + rowCount;
 

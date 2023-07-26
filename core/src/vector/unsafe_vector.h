@@ -18,7 +18,7 @@ class UnsafeBaseVector {
 public:
     static ALWAYS_INLINE bool *GetNulls(BaseVector *vector)
     {
-        return vector->nulls.get() + vector->offset;
+        return vector->nulls + vector->offset;
     }
 
     static ALWAYS_INLINE void SetSize(BaseVector *vector, int size)
@@ -35,12 +35,14 @@ class UnsafeVector {
 public:
     template <typename DATA_TYPE> static ALWAYS_INLINE DATA_TYPE *GetRawValues(Vector<DATA_TYPE> *vector)
     {
-        return vector->values.get() + vector->offset;
+        return vector->values + vector->offset;
     }
 
-    template <typename DATA_TYPE> static ALWAYS_INLINE std::shared_ptr<DATA_TYPE[]> GetValues(Vector<DATA_TYPE> *vector)
+    // used by dictionary container
+    template <typename DATA_TYPE>
+    static ALWAYS_INLINE std::shared_ptr<AlignedBuffer<DATA_TYPE>> GetValues(Vector<DATA_TYPE> *vector)
     {
-        return vector->values;
+        return vector->valuesBuffer;
     }
 };
 
