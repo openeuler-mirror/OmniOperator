@@ -8,6 +8,7 @@
 #include "util/error_code.h"
 #include "operator/spill/spill_tracker.h"
 #include "util/omni_exception.h"
+#include "memory/memory_manager.h"
 #include "operator_config.h"
 
 namespace omniruntime {
@@ -17,7 +18,11 @@ constexpr double DEFAULT_AVAILABLE_THRESHOLD = 0.9;
 
 bool SparkSpillConfig::NeedSpill(MemoryBuilder *memoryBuilder)
 {
-    if (IsSpillEnabled() && memoryBuilder->GetRowCount() >= GetSpillThreshold()) {
+    auto usedMemorySize = mem::MemoryManager::GetGlobalAccountedMemory();
+    if (IsSpillEnabled() &&
+        (memoryBuilder->GetRowCount() >= GetSpillRowThreshold() || usedMemorySize >= GetSpillMemThreshold())) {
+        LogDebug("spill get row count %d, row threshold %d, and get memory usage %lld, memory threshold %lld.",
+            memoryBuilder->GetRowCount(), GetSpillRowThreshold(), usedMemorySize, GetSpillMemThreshold());
         return true;
     } else {
         return false;
@@ -71,8 +76,10 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
             case SPILL_CONFIG_SPARK: {
                 auto numElementsForSpillThreshold =
                     result.at("spillConfig").at("numElementsForSpillThreshold").get<int32_t>();
-                resultSpillConfig =
-                    new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes, numElementsForSpillThreshold);
+                auto memUsagePctForSpillThreshold =
+                    result.at("spillConfig").at("memUsagePctForSpillThreshold").get<int32_t>();
+                resultSpillConfig = new SparkSpillConfig(spillEnabled, spillPath, maxSpillBytes,
+                    numElementsForSpillThreshold, memUsagePctForSpillThreshold);
                 break;
             }
         }
@@ -82,7 +89,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
         needSkipVerify = result.at("skipExpressionVerify").get<bool>();
     }
 
-    return OperatorConfig { resultSpillConfig, resultOverflowConfig, needSkipVerify };
+    return OperatorConfig{ resultSpillConfig, resultOverflowConfig, needSkipVerify };
 }
 
 void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)

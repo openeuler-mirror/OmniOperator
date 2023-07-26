@@ -13,6 +13,7 @@ import java.util.Objects;
  */
 public class SparkSpillConfig extends SpillConfig {
     private int numElementsForSpillThreshold;
+    private int memUsagePctForSpillThreshold;
 
     /**
      * Instantiates a new spark spill config.
@@ -30,6 +31,7 @@ public class SparkSpillConfig extends SpillConfig {
      */
     public SparkSpillConfig(String spillPath, int numElementsForSpillThreshold) {
         this(true, spillPath, DEFAULT_MAX_SPILL_BYTES, numElementsForSpillThreshold);
+        this.memUsagePctForSpillThreshold = 90; // default memory usage percentage for spill threshold
     }
 
     /**
@@ -44,6 +46,24 @@ public class SparkSpillConfig extends SpillConfig {
             int numElementsForSpillThreshold) {
         super(SpillConfigId.SPILL_CONFIG_SPARK, isSpillEnabled, spillPath, maxSpillBytes);
         this.numElementsForSpillThreshold = numElementsForSpillThreshold;
+        this.memUsagePctForSpillThreshold = 90; // default memory usage percentage for spill threshold
+    }
+
+    /**
+     * Instantiates a new spark spill config.
+     *
+     * @param isSpillEnabled the spill enabled
+     * @param spillPath the spill path
+     * @param maxSpillBytes the max spill bytes
+     * @param numElementsForSpillThreshold the num elements for spill threshold
+     * @param memUsagePctForSpillThreshold the memory usage percentage for spill
+     *            threshold
+     */
+    public SparkSpillConfig(boolean isSpillEnabled, String spillPath, long maxSpillBytes,
+            int numElementsForSpillThreshold, int memUsagePctForSpillThreshold) {
+        super(SpillConfigId.SPILL_CONFIG_SPARK, isSpillEnabled, spillPath, maxSpillBytes);
+        this.numElementsForSpillThreshold = numElementsForSpillThreshold;
+        this.memUsagePctForSpillThreshold = memUsagePctForSpillThreshold;
     }
 
     /**
@@ -62,6 +82,25 @@ public class SparkSpillConfig extends SpillConfig {
      */
     public void setNumElementsForSpillThreshold(int numElementsForSpillThreshold) {
         this.numElementsForSpillThreshold = numElementsForSpillThreshold;
+    }
+
+    /**
+     * set the memory usage percentage for spill threshold.
+     *
+     * @param memUsagePctForSpillThreshold the memory usage percentage for spill
+     *            threshold
+     */
+    public void setMemUsagePctForSpillThreshold(int memUsagePctForSpillThreshold) {
+        this.memUsagePctForSpillThreshold = memUsagePctForSpillThreshold;
+    }
+
+    /**
+     * get the memory usage percentage for spill threshold.
+     *
+     * @return the num elements for spill threshold
+     */
+    public int getMemUsagePctForSpillThreshold() {
+        return memUsagePctForSpillThreshold;
     }
 
     @Override
