@@ -27,7 +27,7 @@ const int32_t DISTINCT_VALUE_COUNT = 4;
 const int32_t REPEAT_COUNT = 25000;
 const int32_t COLUMN_COUNT_2 = 2;
 const int32_t COLUMN_COUNT_4 = 4;
-const uint64_t MAX_SPILL_BYTES = (2L << 20);
+const uint64_t MAX_SPILL_BYTES = (5L << 20);
 
 using IntVector = NativeAndVectorType<DataTypeId::OMNI_INT>::vector;
 using LongVector = NativeAndVectorType<DataTypeId::OMNI_LONG>::vector;
@@ -1178,7 +1178,7 @@ TEST(NativeOmniSortTest, TestSortSpillWithMemoryThreshold)
     bool boolValue = true;
     double doubleValue = 20.0;
     Decimal128 decimal128(20, 0);
-    std::string stringValue("20");
+    std::string stringValue("20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20-20");
     int16_t shortValue = 20;
     const int32_t dataSize = 11;
     void *sortDatas[dataSize] = {&intValue, &longValue, &boolValue, &doubleValue, &intValue, &longValue, &decimal128,
@@ -1198,14 +1198,15 @@ TEST(NativeOmniSortTest, TestSortSpillWithMemoryThreshold)
         nullFirsts[i] = 0;
     }
 
-    // set global memory limit 5M
-    mem::MemoryManager::SetGlobalMemoryLimit(5 * 1 << 20);
+    // set global memory limit 15M
+    mem::MemoryManager::SetGlobalMemoryLimit(15 * 1 << 20);
 
     auto sourceVecBatch1 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 500, true, false);
     auto sourceVecBatch2 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 500, true, false);
     auto sourceVecBatch3 = CreateSortInputForAllTypes(sourceTypes, sortDatas, dataSize, 500, true, false);
 
-    SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, INT32_MAX, 10);
+    // no row spill threshold, and memory percentage threshold 5%
+    SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, INT32_MAX, 5);
     OperatorConfig operatorConfig(spillConfig);
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
         sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig);
