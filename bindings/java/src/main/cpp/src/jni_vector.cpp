@@ -23,6 +23,7 @@ static BaseVector *TransformVector(long vectorAddr)
     return nativeVector;
 }
 
+#ifdef TRACE
 static void RecordStack(BaseVector *vector, JNIEnv *env)
 {
     jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId);
@@ -33,6 +34,7 @@ static void RecordStack(BaseVector *vector, JNIEnv *env)
     trace->ReplaceVectorPtrAllocated(reinterpret_cast<uintptr_t>(vector), stack);
     env->ReleaseStringUTFChars(jstack, stackChars);
 }
+#endif
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JNIEnv *env, jclass jcls,
     jint jValueCount, jint jVectorEncodingId, jint jVectorTypeId, jint jCapacityInBytes)
