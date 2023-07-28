@@ -36,7 +36,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortDescNullLast)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 8;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye", "bye", "hi", "hi", "hi"};
@@ -78,7 +77,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscNullLast)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 8;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye", "bye", "hi", "hi", "hi"};
@@ -120,7 +118,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase1)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 4;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye"};
@@ -162,7 +159,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase2)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 4;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye"};
@@ -204,7 +200,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase3)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 3;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye"};
@@ -246,7 +241,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase4)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 5;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye", "bye"};
@@ -288,7 +282,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase5)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 3;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye"};
@@ -330,7 +323,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase6)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 5;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye", "bye"};
@@ -372,7 +364,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase7)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 4;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye"};
@@ -414,7 +405,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase8)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 4;
     std::string expData1[expectedDataSize] = {"bye", "bye", "bye", "bye"};
@@ -465,7 +455,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase9)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 13;
     int64_t expData1[expectedDataSize] = { 22, 22, 23, 21, 21, 21, 22, 22, 22, 22, 21, 21, 21 };
@@ -525,7 +514,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase10)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 6;
     int64_t expData1[expectedDataSize] = { 22, 22, 23, 22, 22, 22 };
@@ -594,7 +582,6 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase11)
     topNSortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch;
     topNSortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
 
     constexpr int32_t expectedDataSize = 21;
     std::string expData1[expectedDataSize] = {

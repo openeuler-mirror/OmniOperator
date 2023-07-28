@@ -37,8 +37,8 @@ public:
         }
     }
     ~PartitionValue() = default;
-    int32_t maxCapacity;
     int32_t nextIndex;
+    int32_t maxCapacity;
     std::vector<VectorBatch *> vecBatches;
     std::vector<int32_t> rowIndexes;
 };
