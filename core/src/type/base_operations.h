@@ -10,8 +10,8 @@
 #include "width_integer.h"
 
 namespace omniruntime::type {
-static constexpr int128 DECIMAL128_MAX_VALUE = (int128(5421010862427522170) << 64) + 687399551400673279;
-static constexpr int128 DECIMAL128_MIN_VALUE = -((int128(5421010862427522170) << 64) + 687399551400673279);
+static constexpr int128_t DECIMAL128_MAX_VALUE = (int128_t(5421010862427522170) << 64) + 687399551400673279;
+static constexpr int128_t DECIMAL128_MIN_VALUE = -((int128_t(5421010862427522170) << 64) + 687399551400673279);
 
 template<typename T>
 static inline bool AddCheckedOverflow(T left, T right, T &result)

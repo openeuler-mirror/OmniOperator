@@ -825,6 +825,12 @@ TEST(FunctionTest, DecimalMulOpeartion)
         &high, &low);
     EXPECT_EQ(Decimal128(high, low).ToString(), "152415787806736055266232119611091911");
 
+    l = Decimal128("1164203084928762410");
+    r = Decimal128("1000000000000000000000");
+    MulDec128Dec128Dec128ReScale(contextPtr, l.HighBits(), l.LowBits(), 38, 19, r.HighBits(), r.LowBits(), 38, 19, 38,
+        15, &high, &low);
+    EXPECT_EQ(Decimal128(high, low).ToString(), "11642030849287624");
+
     MulDec128Dec128Dec128ReScale(contextPtr, 0, 123, 3, 2, 0, 321, 3, 1, 5, 3, &high, &low);
     EXPECT_EQ(high, 0);
     EXPECT_EQ(low, 39483);

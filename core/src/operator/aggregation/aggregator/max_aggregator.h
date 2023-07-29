@@ -31,8 +31,8 @@ template <typename T> T GetMin()
         return std::numeric_limits<float>::lowest();
     } else if constexpr (std::is_same_v<T, double>) {
         return std::numeric_limits<double>::lowest();
-    } else if constexpr (std::is_same_v<T, int128>) {
-        return std::numeric_limits<int128>::lowest();
+    } else if constexpr (std::is_same_v<T, int128_t>) {
+        return std::numeric_limits<int128_t>::lowest();
     } else if constexpr (std::is_same_v<T, omniruntime::type::Decimal128>) {
         return Decimal128(type::DECIMAL128_MIN_VALUE);
     } else {

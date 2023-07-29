@@ -201,7 +201,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToDoubleHalfUp(Decimal128 *x, int32
         if (isAnyNull[i]) {
             continue;
         }
-        doubleString = Decimal64(Decimal128Wrapper(x[i])).SetScale(scale).ToString();
+        doubleString = Decimal128Wrapper(x[i]).SetScale(scale).ToString();
         output[i] = stod(doubleString);
     }
 }
@@ -394,7 +394,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToIntRetNull(bool *isNull, Decimal1
 {
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = static_cast<int32_t>(Decimal128Wrapper(x[i]).ReScale(-scale, RoundingMode::ROUND_FLOOR)
-            .ToInt128().convert_to<__int128>());
+            .ToInt128());
     }
 }
 
@@ -403,7 +403,7 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToLongRetNull(bool *isNull, Decimal
 {
     for (int i = 0; i < rowCnt; ++i) {
         output[i] = static_cast<int64_t>(Decimal128Wrapper(x[i]).ReScale(-scale, RoundingMode::ROUND_FLOOR)
-            .ToInt128().convert_to<__int128>());
+            .ToInt128());
     }
 }
 

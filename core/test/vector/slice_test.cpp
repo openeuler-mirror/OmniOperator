@@ -68,17 +68,10 @@ TEST(vector2, v2_slice_get_set_value_string)
 {
     v2_slice_get_set_value<std::string_view>();
 }
-TEST(vector2, v2_slice_get_set_value_dec32)
-{
-    v2_slice_get_set_value<boost_dec32>();
-}
-TEST(vector2, v2_slice_get_set_value_dec64)
-{
-    v2_slice_get_set_value<boost_dec64>();
-}
+
 TEST(vector2, v2_slice_get_set_value_dec128)
 {
-    v2_slice_get_set_value<boost_dec128>();
+    v2_slice_get_set_value<int128_t>();
 }
 
 template <typename T> void v2_slice_container()

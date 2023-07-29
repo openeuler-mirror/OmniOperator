@@ -7,15 +7,11 @@
 #include "memory/thread_memory_manager.h"
 #include "vector/vector.h"
 #include "jemalloc/jemalloc.h"
-#include "boost/multiprecision/cpp_dec_float.hpp"
-#include "boost/multiprecision/number.hpp"
 #include "vector/vector_test_util.h"
 
 namespace omniruntime::mem::test {
 using namespace vec;
 using namespace vec::test;
-using boost_dec64 = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<64>>;
-
 
 void TestUnlimitedAccountMultipleThreads(int count, int64_t size)
 {
@@ -152,15 +148,9 @@ TEST(MemoryManager, testStatisticsFunction)
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
     EXPECT_EQ(threadUntracked, 2684); // doubleVector + int64Vector + int32Vector
 
-    // mem 6228 = vector, nullsBuffer, valuesBuffer size(128) + null size(100) + value size(6000)
-    auto dec64Vector = CreateVector<boost_dec64>(100);
-    threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 8912); // total size include vector above
-
     int32Vector.reset();
     int64Vector.reset();
     doubleVector.reset();
-    dec64Vector.reset();
 
     int64_t finalSize = threadMemoryManager->GetUntrackedMemory();
     EXPECT_EQ(finalSize, 0);

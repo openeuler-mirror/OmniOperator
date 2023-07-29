@@ -94,13 +94,13 @@ TEST(DecimalOperations, decode_avg_decimal)
     ExecutionContext executionContext;
     state.val = executionContext.GetArena()->Allocate(24);
 
-    int128 oldDec = CreateInt128(2, 3);
+    int128_t oldDec = CreateInt128(2, 3);
     int64_t oldOther = 1;
     int64_t oldOverflow = 1;
     EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), oldDec, oldOverflow, oldOther);
 
     // decode phase
-    int128 newDec = 0;
+    int128_t newDec = 0;
     int64_t newOverflow = 0;
     int64_t newOther = 0;
     DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), newDec, newOverflow, newOther);
