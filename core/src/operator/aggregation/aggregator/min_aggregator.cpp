@@ -19,7 +19,6 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
 
     auto vectorValues = VectorHelper::UnsafeGetValues(vector);
     auto rowCount = vector->GetSize();
-    auto outputTypeId = this->outputTypes.GetType(0)->GetId();
 
     HmppResult result = HMPP_STS_NO_ERR;
     auto minVal = reinterpret_cast<ResultType *>(this->executionContext->GetArena()->Allocate(sizeof(ResultType)));
@@ -45,12 +44,10 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, V
         LogDebug("HMPP-Agg-min");
         result = HMPPS_Min_64f(static_cast<double *>(static_cast<double *>(vectorValues)), rowCount,
             reinterpret_cast<double *>(minVal));
-    } else if constexpr (IN_ID == OMNI_DECIMAL128) {
+    } else {
         LogDebug("HMPP-Agg-min");
         result = HMPPS_Min_decimal(static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)), rowCount,
             reinterpret_cast<HmppDecimal128 *>(minVal));
-    } else {
-        throw OmniException("NOT SUPPORT", "Unsupported input type for min aggregate");
     }
 
     if (result != HMPP_STS_NO_ERR) {

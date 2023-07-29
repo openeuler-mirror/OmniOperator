@@ -74,7 +74,7 @@ VECTORIZE_LOOP inline void AddChar(AggregateState &state, BaseVector *vector, co
 }
 
 void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std::string_view>> *rawVector,
-    const char *&res, int32_t &idx);
+    const char *res, int32_t idx);
 
 template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddCharFilter(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
@@ -128,8 +128,8 @@ VECTORIZE_LOOP inline void AddDictChar(AggregateState &state, BaseVector *vector
     }
 }
 
-const char *InitialVarcharDictState(AggregateState &state, Vector<DictionaryContainer<std::string_view>> *rawVector,
-    int32_t idx);
+void InitialVarcharDictState(AggregateState &state, Vector<DictionaryContainer<std::string_view>> *rawVector,
+    const char *res, int32_t idx);
 
 template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddDictCharFilter(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
@@ -145,7 +145,7 @@ VECTORIZE_LOOP inline void AddDictCharFilter(AggregateState &state, BaseVector *
 
         for (; idx < end; ++idx) {
             if (boolPtr[idx]) {
-                res = InitialVarcharDictState(state, rawVector, idx);
+                InitialVarcharDictState(state, rawVector, res, idx);
                 break;
             }
         }
