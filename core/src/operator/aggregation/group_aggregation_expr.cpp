@@ -116,9 +116,8 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
-    auto *op =
-        new HashAggregationWithExprOperator(*originSourceTypes, *sourceTypes, projectCols, projectFuncs,
-                                            aggSimpleFilters, hashAggOperator);
+    auto *op = new HashAggregationWithExprOperator(*originSourceTypes, *sourceTypes, projectCols, projectFuncs,
+        aggSimpleFilters, hashAggOperator);
     std::vector<type::DataTypeId> dataTypeIds;
     for (int32_t i = 0; i < originSourceTypes->GetSize(); ++i) {
         dataTypeIds.push_back(originSourceTypes->GetType(i)->GetId());
@@ -145,8 +144,8 @@ HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 
 int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch = AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes,
-        projectFuncs, projectCols);
+    VectorBatch *newInputVecBatch =
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projectFuncs, projectCols);
     // do filter and update newInputVecBatch
     // if is true not filter
     AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, aggSimpleFilters, context, originTypes);

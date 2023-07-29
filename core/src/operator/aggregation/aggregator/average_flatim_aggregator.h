@@ -7,111 +7,98 @@
 #ifndef OMNI_RUNTIME_AVERAGE_FLAT_IM_AGGREGATOR_H
 #define OMNI_RUNTIME_AVERAGE_FLAT_IM_AGGREGATOR_H
 
-#include "aggregator.h"
+#include "sum_flatim_aggregator.h"
 
 namespace omniruntime {
 namespace op {
-template <bool INPUT_RAW, bool OUT_PARTIAL, typename RawInputVectorType, typename ResultType = double>
-class AverageFlatIMAggregator : public Aggregator {
-using FixedVector = Vector<RawInputVectorType>;
-using DicVector = Vector<DictionaryContainer<RawInputVectorType>>;
-public:
-    AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels)
-        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels)
-    {}
+template <DataTypeId IN_ID, DataTypeId OUT_ID = OMNI_DOUBLE>
+class AverageFlatIMAggregator : public SumFlatIMAggregator<IN_ID, OUT_ID> {
+    using RawInputType = typename AggNativeAndVectorType<IN_ID>::type;
+    using ResultType = typename AggNativeAndVectorType<OUT_ID>::type;
+    using RawInputVectorType = Vector<RawInputType>;
+    using DicVector = Vector<DictionaryContainer<RawInputVectorType>>;
 
+public:
     AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
-        : Aggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw, outputPartial,
-        isOverflowAsNull)
+        : SumFlatIMAggregator<IN_ID, OUT_ID>(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw,
+        outputPartial, isOverflowAsNull)
     {}
 
     ~AverageFlatIMAggregator() override {}
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
     {
-        BaseVector *vector = vectorBatch->Get(channels[0]);
-        if (vector->IsNull(rowIndex)) {
-            return;
-        }
-
-        if (state.val == nullptr) {
-            this->InitiateGroup(state, vectorBatch, rowIndex);
-            return;
-        }
-
-        if constexpr (INPUT_RAW) {
-            auto currentVal = static_cast<ResultType *>(state.val);
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                *reinterpret_cast<ResultType *>(state.val) =
-                    (static_cast<DicVector *>(vector))->GetValue(rowIndex) + *currentVal;
-            } else {
-                *reinterpret_cast<ResultType *>(state.val) =
-                    (static_cast<FixedVector *>(vector))->GetValue(rowIndex) + *currentVal;
-            }
-            ++state.count;
+        if (AverageFlatIMAggregator<IN_ID, OUT_ID>::inputRaw) {
+            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap,
+                indexMap);
         } else {
-            double avgVal;
-            avgVal = static_cast<Vector<double> *>(vector)->GetValue(rowIndex);
-            auto avgCountVector = vectorBatch->Get(channels[1]);
+            using InType = double;
+            auto *res = reinterpret_cast<ResultType *>(state.val);
+            // when input is not raw, vector is container with <double, long> columns for <sum, count>
 
-            int64_t avgCnt;
-            avgCnt = static_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
+            auto *sumVector =
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
+                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
 
-            auto currentVal = static_cast<ResultType *>(state.val);
-            state.count += avgCnt;
-            *currentVal += avgVal;
+            auto *cntVector =
+                reinterpret_cast<Vector<int64_t> *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
+                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
+
+            // no dict in Vector<T> when input is not raw
+            auto *ptr = reinterpret_cast<double *>(GetValuesFromVector<IN_ID>(sumVector));
+            auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(cntVector));
+            ptr += rowOffset;
+            cntPtr += rowOffset;
+            if (nullMap == nullptr) {
+                AddAvg<InType, ResultType, SumOp<InType, ResultType, false>>(res, state.count, ptr, cntPtr, rowCount);
+            } else {
+                AddConditionalAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(res,
+                    state.count, ptr, cntPtr, rowCount, nullMap);
+            }
         }
     }
 
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
+        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
     {
-        BaseVector *vector = vectorBatch->Get(channels[0]);
-        if (vector->IsNull(rowIndex)) {
-            return;
-        }
-
-        // for partial aggregation
-        if constexpr (INPUT_RAW) {
-            auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                auto rowVal = (static_cast<DicVector *>(vector))->GetValue(rowIndex);
-                *reinterpret_cast<ResultType *>(ptr) = rowVal;
-            } else {
-                auto rowVal = (static_cast<FixedVector *>(vector))->GetValue(rowIndex);
-                *reinterpret_cast<ResultType *>(ptr) = rowVal;
-            }
-            state.val = ptr;
-            state.count = 1;
+        if (AverageFlatIMAggregator<IN_ID, OUT_ID>::inputRaw) {
+            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap,
+                indexMap);
         } else {
-            double avgVal;
-            if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                avgVal = static_cast<Vector<DictionaryContainer<double>> *>(vector)->GetValue(rowIndex);
-            } else {
-                avgVal = static_cast<Vector<double> *>(vector)->GetValue(rowIndex);
-            }
+            using InType = double;
+            // when input is not raw, vector is <doubleVector, longVector> columns for <sum, count>
+            auto *sumVector =
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
+                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
 
-            auto avgCountVector = vectorBatch->Get(channels[1]);
-            int64_t avgCnt;
-            if (avgCountVector->GetEncoding() == OMNI_DICTIONARY) {
-                avgCnt = static_cast<Vector<DictionaryContainer<int64_t>> *>(avgCountVector)->GetValue(rowIndex);
+            auto *cntVector =
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
+                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
+
+            auto *ptr = reinterpret_cast<double *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
+            auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(cntVector));
+            ptr += rowOffset;
+            cntPtr += rowOffset;
+            if (nullMap == nullptr) {
+                AddUseRowIndexAvg<InType, ResultType, SumOp<InType, ResultType, false>>(rowStates, aggIdx, ptr, cntPtr);
             } else {
-                avgCnt = static_cast<Vector<int64_t> *>(avgCountVector)->GetValue(rowIndex);
+                // Reza: can we use customize float operation similar to sumConditionalFloat
+                AddConditionalUseRowIndexAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
+                    rowStates, aggIdx, ptr, cntPtr, nullMap);
             }
-            auto ptr = executionContext->GetArena()->Allocate(sizeof(ResultType));
-            *reinterpret_cast<ResultType *>(ptr) = avgVal;
-            state.val = ptr;
-            state.count = avgCnt;
         }
     }
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        if constexpr (OUT_PARTIAL) {
+        if (SumFlatIMAggregator<IN_ID, OUT_ID>::outputPartial) {
             auto avgValVector = static_cast<Vector<double> *>(vectors[0]);
             auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
-            // all input are nulls, return 0
-            if (state.val == nullptr) {
+
+            if (state.count == 0) {
+                // all input are nulls, return 0
                 avgValVector->SetValue(rowIndex, 0);
                 avgCountVector->SetValue(rowIndex, 0);
                 return;
@@ -121,10 +108,13 @@ public:
             avgCountVector->SetValue(rowIndex, state.count);
         } else {
             auto avgValVector = static_cast<Vector<double> *>(vectors[0]);
-            if (state.count <= 0 || state.val == nullptr) {
+
+            if (state.count == 0) {
+                // only contains null
                 avgValVector->SetNull(rowIndex);
                 return;
             }
+
             auto currentVal = *(static_cast<ResultType *>(state.val));
             auto result = currentVal / state.count;
             avgValVector->SetValue(rowIndex, result);

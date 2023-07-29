@@ -95,30 +95,6 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, BaseVector *v,
-    Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
-    const int32_t *indexMap)
-{
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
-
-    if (v->GetEncoding() != vec::OMNI_DICTIONARY) {
-        if (nullMap == nullptr) {
-            AddCharFilter<MinCharOp>(state, v, rowOffset, rowCount, boolPtr);
-        } else {
-            AddConditionalCharFilter<MinCharOp>(state, v, rowOffset, rowCount, nullMap, boolPtr);
-        }
-    } else {
-        if (nullMap == nullptr) {
-            AddDictCharFilter<MinDictCharOp>(state, v, rowOffset, rowCount, boolPtr);
-        } else {
-            AddDictConditionalCharFilter<MinDictCharOp>(state, v, rowOffset, rowCount, nullMap, boolPtr);
-        }
-    }
-
-    SaveState(state);
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -133,32 +109,6 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
             AddDictUseRowIndexChar<MinDictCharOp>(rowStates, aggIdx, rowOffset, vector);
         } else {
             AddDictConditionalUseRowIndexChar<MinDictCharOp>(rowStates, aggIdx, rowOffset, vector, nullMap);
-        }
-    }
-
-    for (AggregateState *states : rowStates) {
-        SaveState(states[aggIdx]);
-    }
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, BaseVector *v, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-    const int32_t *indexMap)
-{
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
-
-    if (v->GetEncoding() != vec::OMNI_DICTIONARY) {
-        if (nullMap == nullptr) {
-            AddUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, v, rowOffset, boolPtr);
-        } else {
-            AddConditionalUseRowIndexCharFilter<MinCharOp>(rowStates, aggIdx, v, rowOffset, nullMap, boolPtr);
-        }
-    } else {
-        if (nullMap == nullptr) {
-            AddDictUseRowIndexCharFilter<MinDictCharOp>(rowStates, aggIdx, rowOffset, v, boolPtr);
-        } else {
-            AddDictConditionalUseRowIndexCharFilter<MinDictCharOp>(rowStates, aggIdx, rowOffset, v, nullMap, boolPtr);
         }
     }
 
@@ -194,17 +144,6 @@ ALWAYS_INLINE void MinVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState
 // and used explicit template instantiation to generate template instances
 
 void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std::string_view>> *rawVector,
-    const char *res, int32_t idx)
-{
-    if (state.val == nullptr || state.count == 0) {
-        auto strView = rawVector->GetValue(idx);
-        res = strView.data();
-        state.count = strView.size();
-        state.count |= UPDATE_FLAG;
-    }
-}
-
-void InitialVarcharDictState(AggregateState &state, Vector<DictionaryContainer<std::string_view>> *rawVector,
     const char *res, int32_t idx)
 {
     if (state.val == nullptr || state.count == 0) {

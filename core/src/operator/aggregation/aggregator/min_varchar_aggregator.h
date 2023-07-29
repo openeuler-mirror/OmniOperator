@@ -73,37 +73,6 @@ VECTORIZE_LOOP inline void AddChar(AggregateState &state, BaseVector *vector, co
     }
 }
 
-void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std::string_view>> *rawVector,
-    const char *res, int32_t idx);
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddCharFilter(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const int8_t *__restrict boolPtr)
-{
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-    auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
-    if (rowCount > 0) {
-        const char *res = reinterpret_cast<char *>(state.val);
-        int32_t idx = rowOffset;
-        const auto end = rowOffset + rowCount;
-
-        for (; idx < end; ++idx) {
-            if (boolPtr[idx]) {
-                InitialVarcharState(state, rawVector, res, idx);
-                break;
-            }
-        }
-
-        while (idx < end) {
-            if (boolPtr[idx]) {
-                res = OP(res, state.count, vector, idx);
-            }
-            idx++;
-        }
-        state.val = const_cast<char *>(res);
-    }
-}
-
 template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddDictChar(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
     const int32_t rowCount)
@@ -123,38 +92,6 @@ VECTORIZE_LOOP inline void AddDictChar(AggregateState &state, BaseVector *vector
         }
         while (idx < end) {
             res = OP(res, state.count, vector, idx++);
-        }
-        state.val = const_cast<char *>(res);
-    }
-}
-
-void InitialVarcharDictState(AggregateState &state, Vector<DictionaryContainer<std::string_view>> *rawVector,
-    const char *res, int32_t idx);
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddDictCharFilter(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const int8_t *__restrict boolPtr)
-{
-    if (rowCount > 0) {
-        boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-        auto rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
-
-        const char *res = reinterpret_cast<char *>(state.val);
-        int32_t idx = rowOffset;
-        const auto end = rowOffset + rowCount;
-
-        for (; idx < end; ++idx) {
-            if (boolPtr[idx]) {
-                InitialVarcharDictState(state, rawVector, res, idx);
-                break;
-            }
-        }
-
-        while (idx < end) {
-            if (boolPtr[idx]) {
-                res = OP(res, state.count, vector, idx);
-            }
-            idx++;
         }
         state.val = const_cast<char *>(res);
     }
@@ -203,51 +140,6 @@ VECTORIZE_LOOP inline void AddConditionalChar(AggregateState &state, BaseVector 
 }
 
 template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddConditionalCharFilter(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const uint8_t *__restrict condition, const int8_t *__restrict boolPtr)
-{
-    if (rowCount <= 0) {
-        return;
-    }
-
-    if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-        LogWarn("[AddConditionalChar]: ConditionMap pointer NOT aligned");
-    }
-    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-    auto rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
-
-    const char *res = reinterpret_cast<char *>(state.val);
-    int32_t idx = rowOffset;
-    const auto end = rowOffset + rowCount;
-
-    if (state.val == nullptr || state.count == 0) {
-        while (idx < end) {
-            if (boolPtr[idx] && !(*condition)) {
-                auto strView = rawVector->GetValue(idx);
-                res = strView.data();
-                state.count = strView.size();
-                state.count |= UPDATE_FLAG;
-                ++condition;
-                ++idx;
-                break;
-            }
-            ++condition;
-            ++idx;
-        }
-    }
-
-    while (idx < end) {
-        if (boolPtr[idx] && !(*condition)) {
-            res = OP(res, state.count, vector, idx);
-        }
-        ++condition;
-        ++idx;
-    }
-    state.val = const_cast<char *>(res);
-}
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddDictConditionalChar(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
     const int32_t rowCount, const uint8_t *__restrict condition)
 {
@@ -288,50 +180,6 @@ VECTORIZE_LOOP inline void AddDictConditionalChar(AggregateState &state, BaseVec
 }
 
 template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddDictConditionalCharFilter(AggregateState &state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *__restrict condition,
-    const int8_t *__restrict boolPtr)
-{
-    if (rowCount <= 0) {
-        return;
-    }
-#ifdef DEBUG
-    if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-        LogWarn("[addDictConditionalChar]: ConditionMap pointer NOT aligned");
-    }
-#endif
-    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-
-    auto *rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
-    const char *res = reinterpret_cast<char *>(state.val);
-    int32_t idx = rowOffset;
-    const auto end = rowOffset + rowCount;
-
-    if (state.val == nullptr || state.count == 0) {
-        while (idx < end) {
-            if (boolPtr[idx] && !condition[idx]) {
-                auto strView = rawVector->GetValue(idx);
-                res = strView.data();
-                state.count = strView.size();
-                state.count |= UPDATE_FLAG;
-                ++idx;
-                break;
-            }
-            ++idx;
-        }
-    }
-
-    while (idx < end) {
-        if (boolPtr[idx] && !condition[idx]) {
-            res = OP(res, state.count, vector, idx);
-        }
-        ++idx;
-    }
-    state.val = const_cast<char *>(res);
-}
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
     BaseVector *vector, const int32_t rowOffset)
 {
@@ -352,34 +200,6 @@ VECTORIZE_LOOP inline void AddUseRowIndexChar(std::vector<AggregateState *> &row
             }
             ++rowIdx;
         }
-    }
-}
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddUseRowIndexCharFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    BaseVector *vector, const int32_t rowOffset, const int8_t *__restrict boolPtr)
-{
-    const size_t rowCount = rowStates.size();
-    if (rowCount <= 0) {
-        return;
-    }
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-    auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
-    int32_t rowIdx = rowOffset;
-    for (size_t i = 0; i < rowCount; ++i) {
-        if (boolPtr[i]) {
-            auto &state = rowStates[i][aggIdx];
-            if (state.val == nullptr || state.count == 0) {
-                auto strView = rawVector->GetValue(rowIdx);
-                auto *res = strView.data();
-                state.count = strView.size();
-                state.count |= UPDATE_FLAG;
-                state.val = const_cast<char *>(res);
-            } else {
-                state.val = const_cast<char *>(OP(reinterpret_cast<char *>(state.val), state.count, vector, rowIdx));
-            }
-        }
-        ++rowIdx;
     }
 }
 
@@ -406,35 +226,6 @@ VECTORIZE_LOOP inline void AddDictUseRowIndexChar(std::vector<AggregateState *> 
         }
     }
 }
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddDictUseRowIndexCharFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    const int32_t rowOffset, BaseVector *vector, const int8_t *__restrict boolPtr)
-{
-    const size_t rowCount = rowStates.size();
-    if (rowCount <= 0) {
-        return;
-    }
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-    auto *dictVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
-    int32_t rowIdx = rowOffset;
-    for (size_t i = 0; i < rowCount; ++i) {
-        if (boolPtr[i]) {
-            auto &state = rowStates[i][aggIdx];
-            if (state.val == nullptr || state.count == 0) {
-                auto strView = dictVector->GetValue(rowIdx);
-                auto *res = strView.data();
-                state.count = strView.size();
-                state.count |= UPDATE_FLAG;
-                state.val = const_cast<char *>(res);
-            } else {
-                state.val = const_cast<char *>(OP(reinterpret_cast<char *>(state.val), state.count, vector, rowIdx));
-            }
-            rowIdx++;
-        }
-    }
-}
-
 
 template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
@@ -471,44 +262,6 @@ VECTORIZE_LOOP inline void AddConditionalUseRowIndexChar(std::vector<AggregateSt
 }
 
 template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddConditionalUseRowIndexCharFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *__restrict condition,
-    const int8_t *__restrict boolPtr)
-{
-    const size_t rowCount = rowStates.size();
-    if (rowCount <= 0) {
-        return;
-    }
-
-#ifdef DEBUG
-    if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-        LogWarn("[addConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
-    }
-#endif
-    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-    auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
-
-    int32_t rowIdx = rowOffset;
-    for (size_t i = 0; i < rowCount; ++i) {
-        if (boolPtr[i] && !(*condition)) {
-            auto &state = rowStates[i][aggIdx];
-            if (state.val == nullptr || state.count == 0) {
-                auto strView = rawVector->GetValue(rowIdx);
-                auto *res = strView.data();
-                state.count = strView.size();
-                state.count |= UPDATE_FLAG;
-                state.val = const_cast<char *>(res);
-            } else {
-                state.val = const_cast<char *>(OP(reinterpret_cast<char *>(state.val), state.count, vector, rowIdx));
-            }
-        }
-        ++rowIdx;
-        ++condition;
-    }
-}
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, const int32_t rowOffset, BaseVector *vector, const uint8_t *__restrict condition)
 {
@@ -538,43 +291,6 @@ VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<Aggrega
             }
             rowIdx++;
         }
-    }
-}
-
-template <const char *(*OP)(const char *, int64_t &, BaseVector *, const int32_t)>
-VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexCharFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, const int32_t rowOffset, BaseVector *vector, const uint8_t *__restrict condition,
-    const int8_t *__restrict boolPtr)
-{
-    const size_t rowCount = rowStates.size();
-    if (rowCount <= 0) {
-        return;
-    }
-#ifdef DEBUG
-    if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-        LogWarn("[addDictConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
-    }
-#endif
-    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
-    boolPtr = (const int8_t *)__builtin_assume_aligned(boolPtr, ARRAY_ALIGNMENT);
-    auto rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
-    int32_t rowIdx = rowOffset;
-
-    for (size_t i = 0; i < rowCount; ++i) {
-        if (boolPtr[i] && !condition[i]) {
-            auto &state = rowStates[i][aggIdx];
-            if (state.val == nullptr || state.count == 0) {
-                auto strView = rawVector->GetValue(rowIdx);
-                auto res = strView.data();
-                state.count = strView.size();
-                state.count |= UPDATE_FLAG;
-                state.val = const_cast<char *>(res);
-            } else {
-                state.val =
-                    const_cast<char *>(OP(reinterpret_cast<const char *>(state.val), state.count, vector, rowIdx));
-            }
-        }
-        rowIdx++;
     }
 }
 
@@ -626,14 +342,8 @@ protected:
     void ProcessSingleInternal(AggregateState &state, BaseVector *v, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap, const int32_t *indexMap) override;
 
-    void ProcessSingleInternalFilter(AggregateState &state, BaseVector *v, Vector<bool> *booleanVector,
-        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
-
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
-
-    void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
-        Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
 
 private:
     ALWAYS_INLINE void SaveState(AggregateState &state);

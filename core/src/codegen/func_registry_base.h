@@ -11,6 +11,7 @@ namespace omniruntime::codegen {
 class BaseFunctionRegistry {
 public:
     virtual std::vector<Function> GetFunctions() = 0;
+    virtual ~BaseFunctionRegistry() = default;
 };
 }
 

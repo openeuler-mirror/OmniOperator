@@ -44,9 +44,11 @@ static bool hashagg_equal(BaseVector *vector1, uint32_t offset1, BaseVector *vec
     return true;
 }
 
-static void PrintResultByHashAggEqual(BaseVector *vector1, BaseVector *vector2, Timer &timer, double &sum,
-    bool &isEqual)
+static void PrintResultByHashAggEqual(BaseVector *vector1, BaseVector *vector2, Timer &timer)
 {
+    double sum = 0.0f;
+    bool isEqual;
+
     for (int j = 0; j < ROUNDS; j++) {
         timer.Reset();
 
@@ -78,9 +80,10 @@ static bool join_equal(VarcharVector *leftVector, int32_t leftIndex, VarcharVect
     }
 }
 
-static void PrintResultByJoinEqual(VarcharVector *vector1, VarcharVector *vector2, Timer &timer, double &sum,
-    bool &isEqual)
+static void PrintResultByJoinEqual(VarcharVector *vector1, VarcharVector *vector2, Timer &timer)
 {
+    double sum = 0.0f;
+    bool isEqual;
     for (int j = 0; j < ROUNDS; j++) {
         timer.Reset();
 
@@ -117,9 +120,8 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     timer.SetStart();
 
     std::cout << "Compare same varchar: " << std::endl;
-    double sum = 0;
-    bool isEqual = false;
-    PrintResultByJoinEqual(vector1, vector2, timer, sum, isEqual);
+
+    PrintResultByJoinEqual(vector1, vector2, timer);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
@@ -129,8 +131,8 @@ TEST(varcharType, VarcharValueEqualsValueIgnoreNullsPerf)
     }
 
     std::cout << "Compare different varchar: " << std::endl;
-    sum = 0;
-    PrintResultByJoinEqual(vector1, vector3, timer, sum, isEqual);
+
+    PrintResultByJoinEqual(vector1, vector3, timer);
 
     delete vector1;
     delete vector2;
@@ -159,9 +161,8 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     timer.SetStart();
 
     std::cout << "Compare same varchar: " << std::endl;
-    double sum = 0;
-    bool isEqual = false;
-    PrintResultByHashAggEqual(vector1, vector2, timer, sum, isEqual);
+
+    PrintResultByHashAggEqual(vector1, vector2, timer);
 
     VarcharVector *vector3 = new VarcharVector(ROW_SIZE);
     for (int i = 0; i < ROW_SIZE; i++) {
@@ -172,8 +173,8 @@ TEST(varcharType, IsSameNodeFuncVarcharImplPerf)
     }
 
     std::cout << "Compare different varchar: " << std::endl;
-    sum = 0;
-    PrintResultByHashAggEqual(vector1, vector3, timer, sum, isEqual);
+
+    PrintResultByHashAggEqual(vector1, vector3, timer);
 
     delete vector1;
     delete vector2;

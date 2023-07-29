@@ -95,29 +95,6 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector,
-    Vector<bool> *booleanVector, const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap,
-    const int32_t *indexMap)
-{
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
-
-    if (indexMap == nullptr) {
-        if (nullMap == nullptr) {
-            AddCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, boolPtr);
-        } else {
-            AddConditionalCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, nullMap, boolPtr);
-        }
-    } else {
-        if (nullMap == nullptr) {
-            AddDictCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, boolPtr);
-        } else {
-            AddDictConditionalCharFilter<MaxCharOp>(state, vector, rowOffset, rowCount, nullMap, boolPtr);
-        }
-    }
-    SaveState(state);
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
     const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
 {
@@ -132,33 +109,6 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
             AddDictUseRowIndexChar<MaxDictCharOp>(rowStates, aggIdx, rowOffset, vector);
         } else {
             AddDictConditionalUseRowIndexChar<MaxDictCharOp>(rowStates, aggIdx, rowOffset, vector, nullMap);
-        }
-    }
-
-    for (AggregateState *states : rowStates) {
-        SaveState(states[aggIdx]);
-    }
-}
-
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, BaseVector *v, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-    const int32_t *indexMap)
-{
-    int8_t *boolPtr = reinterpret_cast<int8_t *>(GetValuesFromVector<type::OMNI_BOOLEAN>(booleanVector));
-
-    if (indexMap == nullptr) {
-        if (nullMap == nullptr) {
-            AddUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, v, rowOffset, boolPtr);
-        } else {
-            AddConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, v, rowOffset, nullMap, boolPtr);
-        }
-    } else {
-        if (nullMap == nullptr) {
-            AddDictUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, rowOffset, v, boolPtr);
-        } else {
-            AddDictConditionalUseRowIndexCharFilter<MaxCharOp>(rowStates, aggIdx, rowOffset, v, nullMap, boolPtr);
         }
     }
 

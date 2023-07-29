@@ -34,6 +34,7 @@ BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t r
 #endif
 
     auto vector = vectorBatch->Get(channel);
+
     *nullMap = vector->HasNull() ? reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector)) : nullptr;
     if (*nullMap != nullptr) {
         *nullMap += rowOffset;

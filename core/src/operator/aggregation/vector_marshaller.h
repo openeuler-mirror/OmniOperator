@@ -24,8 +24,7 @@ using VectorDeSerializer = const char *(*)(BaseVector *baseVector, int32_t rowId
 using VectorSerializer = void (*)(BaseVector *baseVector, int32_t rowIdx, mem::SimpleArenaAllocator &arenaAllocator,
     type::StringRef &result);
 
-template <type::DataTypeId id>
-char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
+template <type::DataTypeId id> char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 
 extern std::vector<VectorSerializer> vectorSerializerCenter;
 extern std::vector<VectorSerializer> dicVectorSerializerCenter;

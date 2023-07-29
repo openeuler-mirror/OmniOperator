@@ -140,6 +140,7 @@ public:
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount) override
     {
+        curVectorBatch = vectorBatch;
         AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
@@ -151,6 +152,7 @@ public:
     void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t filterIndex) override
     {
+        curVectorBatch = vectorBatch;
         AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
 
@@ -166,10 +168,29 @@ public:
                 break;
             }
         }
-
+        auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
+        filterPtr += rowOffset;
         if (needFilterJude) {
-            ProcessSingleInternalFilter(state, vector, booleanVector, rowOffset, rowCount, nullMap, indexMap.data);
+            // notSatisfiedArray can filter row which no need to aggregate
+            // the nullMap: true means null
+            // booleanVector: false means one row has been filtered
+            std::vector<uint8_t> notSatisfiedArray;
+            notSatisfiedArray.resize(rowCount);
+            if (nullMap == nullptr) {
+                for (int i = 0; i < rowCount; ++i) {
+                    notSatisfiedArray[i] = not filterPtr[i];
+                }
+            } else {
+                auto *nullmapPtr = nullMap;
+                nullmapPtr += rowOffset;
+                for (int i = 0; i < rowCount; ++i) {
+                    notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
+                }
+            }
+            ProcessSingleInternal(state, vector, rowOffset, rowCount, notSatisfiedArray.data(), indexMap.data);
         } else {
+            // true/false meaning in nullmap is same with notSatisfiedArray
+            // true means one row no need to aggregate
             ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
         }
     }
@@ -178,6 +199,7 @@ public:
     void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t rowOffset) override
     {
+        curVectorBatch = vectorBatch;
         AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
 
@@ -189,6 +211,7 @@ public:
     void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
         const int32_t filterStart, const int32_t rowOffset) override
     {
+        curVectorBatch = vectorBatch;
         AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
 
@@ -205,9 +228,29 @@ public:
             }
         }
 
+        auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
+        filterPtr += rowOffset;
         if (needFilterJude) {
-            ProcessGroupInternalFilter(rowStates, aggIdx, vector, booleanVector, rowOffset, nullMap, indexMap.data);
+            // notSatisfiedArray can filter row which no need to aggregate
+            // the nullMap: true means null
+            // booleanVector: false means one row has been filtered
+            std::vector<uint8_t> notSatisfiedArray;
+            notSatisfiedArray.resize(rowCount);
+            if (nullMap == nullptr) {
+                for (int i = 0; i < rowCount; ++i) {
+                    notSatisfiedArray[i] = not filterPtr[i];
+                }
+            } else {
+                auto *nullmapPtr = nullMap;
+                nullmapPtr += rowOffset;
+                for (int i = 0; i < rowCount; ++i) {
+                    notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
+                }
+            }
+            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, notSatisfiedArray.data(), indexMap.data);
         } else {
+            // true/false meaning in nullmap is same with notSatisfiedArray
+            // true means one row no need to aggregate
             ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
         }
     }
@@ -225,15 +268,9 @@ protected:
     virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
-    virtual void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
-        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
-
     virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) = 0;
 
-    virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-        const int32_t *indexMap) = 0;
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, const int index, const char *errorMsg)
     {
@@ -287,6 +324,9 @@ protected:
                 return expected == actual;
         }
     }
+
+protected:
+    VectorBatch *curVectorBatch = nullptr;
 
 private:
     template <typename OutType> OutType CastWithOverflowDecimalInput(const Decimal128 &val, bool &overflow)

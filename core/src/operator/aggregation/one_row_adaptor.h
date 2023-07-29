@@ -32,8 +32,7 @@ using SetValueFunction =
     std::function<void(VectorBatch *vecBatch, int32_t columnIndex, uintptr_t dataPtr, int32_t len)>;
 
 template <>
-void SetValueIntoVector<uint8_t *>(VectorBatch *vecBatch, int32_t columnIndex,
-    uintptr_t dataPtr, int32_t len)
+void SetValueIntoVector<uint8_t *>(VectorBatch *vecBatch, int32_t columnIndex, uintptr_t dataPtr, int32_t len)
 {
     auto *vec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vecBatch->Get(columnIndex));
     if (len == -1) {
@@ -46,33 +45,32 @@ void SetValueIntoVector<uint8_t *>(VectorBatch *vecBatch, int32_t columnIndex,
     vec->SetNotNull(0);
 }
 
-static std::vector<SetValueFunction> setValueFunctions {
-    nullptr,                                 // OMNI_NONE = 0
-    SetValueIntoVector<int32_t>,             // OMNI_INT = 1
-    SetValueIntoVector<int64_t>,             // OMNI_LONG = 2
-    SetValueIntoVector<double>,              // OMNI_DOUBLE = 3
-    SetValueIntoVector<uint8_t>,             // OMNI_BOOLEAN = 4
-    SetValueIntoVector<int16_t>,             // OMNI_SHORT = 5
-    SetValueIntoVector<int64_t>,             // OMNI_DECIMAL64 = 6
-    SetValueIntoVector<Decimal128>,    // OMNI_DECIMAL128 = 7
-    SetValueIntoVector<int32_t>,             // OMNI_DATE32 = 8
-    SetValueIntoVector<int64_t>,             // OMNI_DATE64 = 9
-    SetValueIntoVector<int32_t>,             // OMNI_TIME32 = 10
-    SetValueIntoVector<int64_t>,             // OMNI_TIME64 = 11
-    SetValueIntoVector<int64_t>,             // OMNI_TIMESTAMP = 12
-    SetValueIntoVector<int64_t>,             // OMNI_INTERVAL_MONTHS = 13
-    SetValueIntoVector<int64_t>,             // OMNI_INTERVAL_DAY_TIME = 14
-    SetValueIntoVector<uint8_t *>,           // OMNI_VARCHAR = 15
-    SetValueIntoVector<uint8_t *>,           // OMNI_CHAR = 16
-    nullptr,                                 // OMNI_CONTAINER = 17
+static std::vector<SetValueFunction> setValueFunctions{
+    nullptr,                        // OMNI_NONE = 0
+    SetValueIntoVector<int32_t>,    // OMNI_INT = 1
+    SetValueIntoVector<int64_t>,    // OMNI_LONG = 2
+    SetValueIntoVector<double>,     // OMNI_DOUBLE = 3
+    SetValueIntoVector<uint8_t>,    // OMNI_BOOLEAN = 4
+    SetValueIntoVector<int16_t>,    // OMNI_SHORT = 5
+    SetValueIntoVector<int64_t>,    // OMNI_DECIMAL64 = 6
+    SetValueIntoVector<Decimal128>, // OMNI_DECIMAL128 = 7
+    SetValueIntoVector<int32_t>,    // OMNI_DATE32 = 8
+    SetValueIntoVector<int64_t>,    // OMNI_DATE64 = 9
+    SetValueIntoVector<int32_t>,    // OMNI_TIME32 = 10
+    SetValueIntoVector<int64_t>,    // OMNI_TIME64 = 11
+    SetValueIntoVector<int64_t>,    // OMNI_TIMESTAMP = 12
+    SetValueIntoVector<int64_t>,    // OMNI_INTERVAL_MONTHS = 13
+    SetValueIntoVector<int64_t>,    // OMNI_INTERVAL_DAY_TIME = 14
+    SetValueIntoVector<uint8_t *>,  // OMNI_VARCHAR = 15
+    SetValueIntoVector<uint8_t *>,  // OMNI_CHAR = 16
+    nullptr,                        // OMNI_CONTAINER = 17
 };
 /**
  * handle resource by RAII
  */
 class OneRowAdaptor {
 public:
-    OneRowAdaptor()
-    {}
+    OneRowAdaptor() {}
 
     void Init(const std::vector<type::DataTypeId> &inputTypes)
     {

@@ -62,7 +62,7 @@ public:
         kv.first = keyParam;
     }
 
-    explicit GroupByHashSlot(KeyType &&keyParam) : isAssigned(true), kv(std::move(keyParam), ValueType {}) {}
+    explicit GroupByHashSlot(KeyType &&keyParam) : isAssigned(true), kv(std::move(keyParam), ValueType{}) {}
 
     GroupByHashSlot(GroupByHashSlot &&o) noexcept : kv(std::move(o.kv)), hashVal(o.hashVal)
     {
@@ -542,9 +542,9 @@ private:
             ++elementsSize;
             allocator.Allocate(sizeof(Slot), reinterpret_cast<uint8_t **>(&nullSlot));
             new (nullSlot)Slot(std::forward<T>(key));
-            return InsertResult<ValueType> { nullSlot->GetValue(), true };
+            return InsertResult<ValueType>{ nullSlot->GetValue(), true };
         } else {
-            return InsertResult<ValueType> { nullSlot->GetValue(), false };
+            return InsertResult<ValueType>{ nullSlot->GetValue(), false };
         }
     }
 
