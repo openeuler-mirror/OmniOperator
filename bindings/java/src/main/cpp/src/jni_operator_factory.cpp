@@ -22,6 +22,7 @@
 #include "operator/join/lookup_outer_join.h"
 #include "operator/join/lookup_outer_join_expr.h"
 #include "operator/join/sortmergejoin/sort_merge_join_expr.h"
+#include "operator/join/sortmergejoin/sort_merge_join_expr_v3.h"
 #include "operator/topn/topn.h"
 #include "operator/topn/topn_expr.h"
 #include "operator/topnsort/topn_sort_expr.h"
@@ -1287,6 +1288,104 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
     Expr::DeleteExprs(bufferedKeysArrExprs);
 
     env->ReleaseIntArrayElements(jOutputChannels, bufferedOutputCols, 0);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactoryV3_createSmjStreamedTableWithExprOperatorFactoryV3(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
+    jint jJoinType, jstring jFilter, jstring jOperatorConfig)
+{
+    switch ((JoinType)jJoinType) {
+        case JoinType::OMNI_JOIN_TYPE_INNER:
+        case JoinType::OMNI_JOIN_TYPE_LEFT:
+        case JoinType::OMNI_JOIN_TYPE_FULL:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_SEMI:
+        case JoinType::OMNI_JOIN_TYPE_LEFT_ANTI:
+            break;
+        default:
+            return 0L;
+    }
+
+    auto streamedTypesChars = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    auto streamedDataTypes = Deserialize(streamedTypesChars);
+    env->ReleaseStringUTFChars(jSourceTypes, streamedTypesChars);
+
+    auto streamedKeyExpsCount = env->GetArrayLength(jEqualKeyExprs);
+    std::string streamedKeyExpsArr[streamedKeyExpsCount];
+    GetExpressions(env, jEqualKeyExprs, streamedKeyExpsArr, streamedKeyExpsCount);
+
+    auto streamedOutputColsCnt = env->GetArrayLength(jOutputChannels);
+    auto streamedOutputColsPtr = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
+    std::vector<int32_t> streamedOutputCols(streamedOutputColsPtr, streamedOutputColsPtr + streamedOutputColsCnt);
+    env->ReleaseIntArrayElements(jOutputChannels, streamedOutputColsPtr, 0);
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
+    std::string filterExpression;
+    if (jFilter == nullptr) {
+        filterExpression = "";
+    } else {
+        auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
+        filterExpression = std::string(filterChars);
+        env->ReleaseStringUTFChars(jFilter, filterChars);
+    }
+
+    vector<omniruntime::expressions::Expr *> streamedKeysArrExprs;
+    JNI_METHOD_START
+    // parse the expressions
+    GetExprsFromJson(streamedKeyExpsArr, streamedKeyExpsCount, streamedKeysArrExprs);
+    JNI_METHOD_END(0L)
+
+    StreamedTableWithExprOperatorFactoryV3 *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory =
+        StreamedTableWithExprOperatorFactoryV3::CreateStreamedTableWithExprOperatorFactory(streamedDataTypes,
+        streamedKeysArrExprs, streamedOutputCols, (JoinType)jJoinType, filterExpression, operatorConfig);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, streamedKeysArrExprs)
+    Expr::DeleteExprs(streamedKeysArrExprs);
+
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactoryV3_createSmjBufferedTableWithExprOperatorFactoryV3(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
+    jlong jSmjStreamedTableWithExprOperatorFactory, jstring jOperatorConfig)
+{
+    auto bufferedTypesChars = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
+    auto bufferedDataTypes = Deserialize(bufferedTypesChars);
+    env->ReleaseStringUTFChars(jSourceTypes, bufferedTypesChars);
+
+    auto bufferedKeyExpsCnt = env->GetArrayLength(jEqualKeyExprs);
+    std::string bufferedKeyExpsArr[bufferedKeyExpsCnt];
+    GetExpressions(env, jEqualKeyExprs, bufferedKeyExpsArr, bufferedKeyExpsCnt);
+
+    auto bufferedOutputColsPtr = env->GetIntArrayElements(jOutputChannels, JNI_FALSE);
+    auto bufferedOutputColsCnt = env->GetArrayLength(jOutputChannels);
+    std::vector<int32_t> bufferedOutputCols(bufferedOutputColsPtr, bufferedOutputColsPtr + bufferedOutputColsCnt);
+    env->ReleaseIntArrayElements(jOutputChannels, bufferedOutputColsPtr, 0);
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
+    vector<omniruntime::expressions::Expr *> bufferedKeysArrExprs;
+    JNI_METHOD_START
+    // parse the expressions
+    GetExprsFromJson(bufferedKeyExpsArr, bufferedKeyExpsCnt, bufferedKeysArrExprs);
+    JNI_METHOD_END(0L)
+
+    BufferedTableWithExprOperatorFactoryV3 *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = BufferedTableWithExprOperatorFactoryV3::CreateBufferedTableWithExprOperatorFactory(
+        bufferedDataTypes, bufferedKeysArrExprs, bufferedOutputCols,
+        (StreamedTableWithExprOperatorFactoryV3 *)jSmjStreamedTableWithExprOperatorFactory, operatorConfig);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, bufferedKeysArrExprs)
+    Expr::DeleteExprs(bufferedKeysArrExprs);
+
     return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
 }
 

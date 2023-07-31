@@ -268,6 +268,27 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
     jlong jSmjStreamedTableWithExprOperatorFactory, jstring jOperatorConfig);
 
 /*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactoryV3
+ * Method:    createSmjStreamedTableWithExprOperatorFactoryV3
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;[IILjava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFactoryV3_createSmjStreamedTableWithExprOperatorFactoryV3(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
+    jint jJoinType, jstring jFilter, jstring jOperatorConfig);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactoryV3
+ * Method:    createSmjBufferedTableWithExprOperatorFactoryV3
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;[IJ)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFactoryV3_createSmjBufferedTableWithExprOperatorFactoryV3(
+    JNIEnv *env, jclass jObj, jstring jSourceTypes, jobjectArray jEqualKeyExprs, jintArray jOutputChannels,
+    jlong jSmjStreamedTableWithExprOperatorFactoryV3, jstring jOperatorConfig);
+
+
+/*
  * Class:     nova_hetu_omniruntime_operator_OmniExprVerify
  * Method:    exprVerify
  * Signature: (Ljava/lang/String;ILjava/lang/String;[Ljava/lang/Object;II)J
@@ -300,8 +321,8 @@ Java_nova_hetu_omniruntime_operator_filter_OmniBloomFilterOperatorFactory_create
  * Signature: (Ljava/lang/String;IZ[Ljava/lang/String;[Ljava/lang/String;[I[ILjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory_createTopNSortWithExprOperatorFactory
-    (JNIEnv *, jclass, jstring, jint, jboolean, jobjectArray, jobjectArray, jintArray, jintArray, jstring);
+Java_nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory_createTopNSortWithExprOperatorFactory(
+    JNIEnv *, jclass, jstring, jint, jboolean, jobjectArray, jobjectArray, jintArray, jintArray, jstring);
 
 #ifdef __cplusplus
 }
