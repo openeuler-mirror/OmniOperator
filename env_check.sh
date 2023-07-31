@@ -75,9 +75,8 @@ setup_dependencies() {
     cp -r ${workspace}/../benchmark ${open_source_dir}
     cp -r ${workspace}/../googletest ${open_source_dir}/benchmark
   fi
-  cp -r ${workspace}/../boost ${open_source_dir}
 
-  echo "Start build open source code for huawei_secure_c, jemalloc, json, llvm, gtest and boost"
+  echo "Start build open source code for huawei_secure_c, jemalloc, json, llvm and gtest"
   cd ${workspace}/${open_source_dir}/huawei_secure_c/src
   sudo make
   cd ${workspace}/${open_source_dir}
@@ -96,10 +95,6 @@ setup_dependencies() {
     cmake -E chdir "build" cmake -DCMAKE_BUILD_TYPE=Release ../
     sudo cmake --build "build" --config Release --target install
   fi
-
-  cd ${workspace}/${open_source_dir}/boost
-  sudo chmod -R 755 ./tools && dos2unix ./bootstrap.sh && dos2unix ./tools/build/src/engine/build.sh
-  sudo /bin/bash ./bootstrap.sh && sudo ./b2 headers install
 }
 
 # package build_script/build.sh functionality here
