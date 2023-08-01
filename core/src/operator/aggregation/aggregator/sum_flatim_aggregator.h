@@ -32,9 +32,9 @@ public:
         auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            AddUseRowIndex<ResultType, ResultType, SumOp<ResultType, ResultType>>(rowStates, aggIdx, ptr);
+            AddUseRowIndex<ResultType, ResultType, SumOp<ResultType, ResultType, false>>(rowStates, aggIdx, ptr);
         } else {
-            AddConditionalUseRowIndex<ResultType, ResultType, SumConditionalOp<ResultType, ResultType, false>>(
+            AddConditionalUseRowIndex<ResultType, ResultType, SumConditionalOp<ResultType, ResultType, false, false>>(
                 rowStates, aggIdx, ptr, nullMap);
         }
     }
