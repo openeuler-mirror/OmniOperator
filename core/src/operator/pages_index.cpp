@@ -20,18 +20,19 @@ const int32_t QUICK_SORT_BIG_LEN = 64;
 const int32_t QUICK_SORT_STEP_SIZE = 8;
 const int32_t QUICK_SORT_MIDDLE = 2;
 
-void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, BaseVector ***columns, std::vector<int64_t> &values,
-    std::vector<uint32_t> &varcharLength, uint64_t *addresses, int32_t from, int32_t to, int32_t currentCol);
-
-template <typename T> BaseVector *ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBatch);
-
-BaseVector *ConstructVarcharVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBatch);
+template <type::DataTypeId dataTypeId>
+BaseVector *ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBatch, bool hasNull,
+    bool hasDictionary);
 
 // function implements for class PagesIndex
 PagesIndex::PagesIndex(const DataTypes &types)
     : dataTypes(types), typesCount(types.GetSize()), columns(nullptr), valueAddresses(nullptr), positionCount(0)
-{}
+{
+    hasDictionaries.resize(typesCount);
+    hasNulls.resize(typesCount);
+    std::fill(hasDictionaries.begin(), hasDictionaries.end(), false);
+    std::fill(hasNulls.begin(), hasNulls.end(), false);
+}
 
 void ALWAYS_INLINE Swap(std::vector<int64_t> &values, uint64_t *addresses, int32_t a, int32_t b)
 {
@@ -92,16 +93,32 @@ void PagesIndex::Prepare()
         // put vectors to a collector.
         for (uint32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
             auto vector = vecBatch->Get(static_cast<int32_t>(colIdx));
+            if (vector->HasNull()) {
+                hasNulls[colIdx] = true;
+            }
+            if (vector->GetEncoding() == OMNI_DICTIONARY) {
+                hasDictionaries[colIdx] = true;
+            }
             this->columns[colIdx][vecBatchIdx] = vector;
         }
     }
 }
 
-template <int32_t sortAscendings>
+static bool ALWAYS_INLINE NewOnlyEqualVarChar(int64_t leftValue, uint32_t leftLength, int64_t rightValue,
+    uint32_t rightLength)
+{
+    if (leftLength != rightLength) {
+        return false;
+    } else {
+        return memcmp((void *)rightValue, (void *)leftValue, leftLength) == 0;
+    }
+}
+
+template <int32_t sortAscending>
 static int32_t ALWAYS_INLINE NewOnlyCompareVarChar(int64_t leftValue, uint32_t leftLength, int64_t rightValue,
     uint32_t rightLength)
 {
-    if constexpr (sortAscendings == 1) {
+    if constexpr (sortAscending == 1) {
         int32_t result = memcmp((void *)leftValue, (void *)rightValue, std::min(leftLength, rightLength));
         if (result != 0) {
             return result;
@@ -116,7 +133,7 @@ static int32_t ALWAYS_INLINE NewOnlyCompareVarChar(int64_t leftValue, uint32_t l
     }
 }
 
-template <int32_t sortAscendings>
+template <int32_t sortAscending>
 void QuickSortColumnSmallVarChar(std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength,
     uint64_t *addresses, int32_t from, int32_t to)
 {
@@ -126,7 +143,7 @@ void QuickSortColumnSmallVarChar(std::vector<int64_t> &values, std::vector<uint3
         uint64_t iAddr = addresses[i];
         int32_t j = i - 1;
         while (j >= from) {
-            if (NewOnlyCompareVarChar<sortAscendings>(values[j], varcharLength[j], iPtr, iLength) <= 0) {
+            if (NewOnlyCompareVarChar<sortAscending>(values[j], varcharLength[j], iPtr, iLength) <= 0) {
                 break;
             }
             values[j + 1] = values[j];
@@ -140,17 +157,17 @@ void QuickSortColumnSmallVarChar(std::vector<int64_t> &values, std::vector<uint3
     }
 }
 
-template <int32_t sortAscendings>
+template <int32_t sortAscending>
 int32_t NewMedian3VarChar(std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int32_t a, int32_t b,
     int32_t c)
 {
-    int32_t ab = NewOnlyCompareVarChar<sortAscendings>(values[a], varcharLength[a], values[b], varcharLength[b]);
-    int32_t ac = NewOnlyCompareVarChar<sortAscendings>(values[a], varcharLength[a], values[c], varcharLength[c]);
-    int32_t bc = NewOnlyCompareVarChar<sortAscendings>(values[b], varcharLength[b], values[c], varcharLength[c]);
+    int32_t ab = NewOnlyCompareVarChar<sortAscending>(values[a], varcharLength[a], values[b], varcharLength[b]);
+    int32_t ac = NewOnlyCompareVarChar<sortAscending>(values[a], varcharLength[a], values[c], varcharLength[c]);
+    int32_t bc = NewOnlyCompareVarChar<sortAscending>(values[b], varcharLength[b], values[c], varcharLength[c]);
     return ((ab < 0) ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-template <int32_t sortAscendings>
+template <int32_t sortAscending>
 int32_t NO_INLINE NewGetMedianPositionVarChar(std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength,
     int32_t from, int32_t to, int32_t len)
 {
@@ -159,11 +176,11 @@ int32_t NO_INLINE NewGetMedianPositionVarChar(std::vector<int64_t> &values, std:
     int32_t m = from + len / QUICK_SORT_MIDDLE;
     if (len > QUICK_SORT_BIG_LEN) {
         int32_t s = len / QUICK_SORT_STEP_SIZE;
-        l = NewMedian3VarChar<sortAscendings>(values, varcharLength, l, l + s, l + QUICK_SORT_MIDDLE * s);
-        m = NewMedian3VarChar<sortAscendings>(values, varcharLength, m - s, m, m + s);
-        n = NewMedian3VarChar<sortAscendings>(values, varcharLength, n - QUICK_SORT_MIDDLE * s, n - s, n);
+        l = NewMedian3VarChar<sortAscending>(values, varcharLength, l, l + s, l + QUICK_SORT_MIDDLE * s);
+        m = NewMedian3VarChar<sortAscending>(values, varcharLength, m - s, m, m + s);
+        n = NewMedian3VarChar<sortAscending>(values, varcharLength, n - QUICK_SORT_MIDDLE * s, n - s, n);
     }
-    return NewMedian3VarChar<sortAscendings>(values, varcharLength, l, m, n);
+    return NewMedian3VarChar<sortAscending>(values, varcharLength, l, m, n);
 }
 
 // bigger NCHUNK leads to ROB stall and wasted comparison due to b > c
@@ -173,7 +190,7 @@ static constexpr int32_t NSTEP = 12;
 // Currently the comparison using subtraction includes 9 insts. ROB-size=96, 96/9=10
 static constexpr int32_t NMAX_SIZE = NCHUNK * NSTEP;
 
-template <int32_t sortAscendings>
+template <int32_t sortAscending>
 int32_t ALWAYS_INLINE NewGetNextCompareLeftVarChar(int32_t *comparetmp, int32_t &k, int32_t &limit, int32_t b,
     int32_t c, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int64_t pivotValue,
     uint32_t pivotLength)
@@ -188,37 +205,37 @@ int32_t ALWAYS_INLINE NewGetNextCompareLeftVarChar(int32_t *comparetmp, int32_t 
     int32_t i = b;
     int32_t j = 0;
     for (; j < limit - NSTEP; i += NSTEP, j += NSTEP) {
-        comparetmp[j] = NewOnlyCompareVarChar<sortAscendings>(values[i], varcharLength[i], pivotValue, pivotLength);
+        comparetmp[j] = NewOnlyCompareVarChar<sortAscending>(values[i], varcharLength[i], pivotValue, pivotLength);
         comparetmp[j + 1] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 1], varcharLength[i + 1], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 1], varcharLength[i + 1], pivotValue, pivotLength);
         comparetmp[j + 2] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 2], varcharLength[i + 2], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 2], varcharLength[i + 2], pivotValue, pivotLength);
         comparetmp[j + 3] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 3], varcharLength[i + 3], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 3], varcharLength[i + 3], pivotValue, pivotLength);
         comparetmp[j + 4] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 4], varcharLength[i + 4], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 4], varcharLength[i + 4], pivotValue, pivotLength);
         comparetmp[j + 5] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 5], varcharLength[i + 5], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 5], varcharLength[i + 5], pivotValue, pivotLength);
         comparetmp[j + 6] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 6], varcharLength[i + 6], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 6], varcharLength[i + 6], pivotValue, pivotLength);
         comparetmp[j + 7] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 7], varcharLength[i + 7], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 7], varcharLength[i + 7], pivotValue, pivotLength);
         comparetmp[j + 8] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 8], varcharLength[i + 8], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 8], varcharLength[i + 8], pivotValue, pivotLength);
         comparetmp[j + 9] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 9], varcharLength[i + 9], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 9], varcharLength[i + 9], pivotValue, pivotLength);
         comparetmp[j + 10] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 10], varcharLength[i + 10], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 10], varcharLength[i + 10], pivotValue, pivotLength);
         comparetmp[j + 11] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i + 11], varcharLength[i + 11], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i + 11], varcharLength[i + 11], pivotValue, pivotLength);
     }
     for (; j < limit; ++i, ++j) {
-        comparetmp[j] = NewOnlyCompareVarChar<sortAscendings>(values[i], varcharLength[i], pivotValue, pivotLength);
+        comparetmp[j] = NewOnlyCompareVarChar<sortAscending>(values[i], varcharLength[i], pivotValue, pivotLength);
     }
     return comparetmp[0];
 }
 
-template <int32_t sortAscendings>
+template <int32_t sortAscending>
 int32_t ALWAYS_INLINE NewGetNextCompareRightVarChar(int32_t *comparetmp, int32_t &k, int32_t &limit, int32_t b,
     int32_t c, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int64_t pivotValue,
     uint32_t pivotLength)
@@ -233,32 +250,32 @@ int32_t ALWAYS_INLINE NewGetNextCompareRightVarChar(int32_t *comparetmp, int32_t
     int32_t i = c;
     int32_t j = 0;
     for (; j < limit - NSTEP; i -= NSTEP, j += NSTEP) {
-        comparetmp[j] = NewOnlyCompareVarChar<sortAscendings>(values[i], varcharLength[i], pivotValue, pivotLength);
+        comparetmp[j] = NewOnlyCompareVarChar<sortAscending>(values[i], varcharLength[i], pivotValue, pivotLength);
         comparetmp[j + 1] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 1], varcharLength[i - 1], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 1], varcharLength[i - 1], pivotValue, pivotLength);
         comparetmp[j + 2] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 2], varcharLength[i - 2], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 2], varcharLength[i - 2], pivotValue, pivotLength);
         comparetmp[j + 3] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 3], varcharLength[i - 3], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 3], varcharLength[i - 3], pivotValue, pivotLength);
         comparetmp[j + 4] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 4], varcharLength[i - 4], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 4], varcharLength[i - 4], pivotValue, pivotLength);
         comparetmp[j + 5] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 5], varcharLength[i - 5], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 5], varcharLength[i - 5], pivotValue, pivotLength);
         comparetmp[j + 6] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 6], varcharLength[i - 6], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 6], varcharLength[i - 6], pivotValue, pivotLength);
         comparetmp[j + 7] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 7], varcharLength[i - 7], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 7], varcharLength[i - 7], pivotValue, pivotLength);
         comparetmp[j + 8] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 8], varcharLength[i - 8], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 8], varcharLength[i - 8], pivotValue, pivotLength);
         comparetmp[j + 9] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 9], varcharLength[i - 9], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 9], varcharLength[i - 9], pivotValue, pivotLength);
         comparetmp[j + 10] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 10], varcharLength[i - 10], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 10], varcharLength[i - 10], pivotValue, pivotLength);
         comparetmp[j + 11] =
-            NewOnlyCompareVarChar<sortAscendings>(values[i - 11], varcharLength[i - 11], pivotValue, pivotLength);
+            NewOnlyCompareVarChar<sortAscending>(values[i - 11], varcharLength[i - 11], pivotValue, pivotLength);
     }
     for (; j < limit; --i, ++j) {
-        comparetmp[j] = NewOnlyCompareVarChar<sortAscendings>(values[i], varcharLength[i], pivotValue, pivotLength);
+        comparetmp[j] = NewOnlyCompareVarChar<sortAscending>(values[i], varcharLength[i], pivotValue, pivotLength);
     }
     return comparetmp[0];
 }
@@ -296,17 +313,17 @@ void NO_INLINE VectorSwapVarChar(std::vector<int64_t> &values, std::vector<uint3
     }
 }
 
-template <int32_t sortAscendings>
+template <int32_t sortAscending>
 void QuickSortColumnInternalVarchar(std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength,
     uint64_t *addresses, int32_t from, int32_t to, int32_t *comparetmp)
 {
     int32_t len = to - from;
     if (len <= QUICK_SORT_SMALL_LEN) {
-        QuickSortColumnSmallVarChar<sortAscendings>(values, varcharLength, addresses, from, to);
+        QuickSortColumnSmallVarChar<sortAscending>(values, varcharLength, addresses, from, to);
         return;
     }
 
-    int32_t m = NewGetMedianPositionVarChar<sortAscendings>(values, varcharLength, from, to, len);
+    int32_t m = NewGetMedianPositionVarChar<sortAscending>(values, varcharLength, from, to, len);
 
     int64_t pivotValue = values[m];
     uint32_t pivotLength = varcharLength[m];
@@ -324,14 +341,14 @@ void QuickSortColumnInternalVarchar(std::vector<int64_t> &values, std::vector<ui
     int32_t *rightComparetmp = comparetmp + NMAX_SIZE;
     while (true) {
         int32_t comparison;
-        while (b <= c && (comparison = NewGetNextCompareLeftVarChar<sortAscendings>(leftComparetmp, bk, blim, b, c,
+        while (b <= c && (comparison = NewGetNextCompareLeftVarChar<sortAscending>(leftComparetmp, bk, blim, b, c,
             values, varcharLength, pivotValue, pivotLength)) <= 0) {
             if (UNLIKELY(comparison == 0)) {
                 SwapVarchar(values, varcharLength, addresses, a++, b);
             }
             b++;
         }
-        while (c >= b && (comparison = NewGetNextCompareRightVarChar<sortAscendings>(rightComparetmp, ck, clim, b, c,
+        while (c >= b && (comparison = NewGetNextCompareRightVarChar<sortAscending>(rightComparetmp, ck, clim, b, c,
             values, varcharLength, pivotValue, pivotLength)) >= 0) {
             if (UNLIKELY(comparison == 0)) {
                 SwapVarchar(values, varcharLength, addresses, c, d--);
@@ -354,19 +371,19 @@ void QuickSortColumnInternalVarchar(std::vector<int64_t> &values, std::vector<ui
 
     // Recursively sort non-partition-elements
     if ((s = b - a) > 1) {
-        QuickSortColumnInternalVarchar<sortAscendings>(values, varcharLength, addresses, from, from + s, comparetmp);
+        QuickSortColumnInternalVarchar<sortAscending>(values, varcharLength, addresses, from, from + s, comparetmp);
     }
     if ((s = d - c) > 1) {
-        QuickSortColumnInternalVarchar<sortAscendings>(values, varcharLength, addresses, n - s, n, comparetmp);
+        QuickSortColumnInternalVarchar<sortAscending>(values, varcharLength, addresses, n - s, n, comparetmp);
     }
 }
 
-template <int32_t sortAscendings>
+template <int32_t sortAscending>
 void QuickSortColumnVarChar(std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, uint64_t *addresses,
     int32_t from, int32_t to)
 {
     int32_t compareResult[NMAX_SIZE + NMAX_SIZE];
-    QuickSortColumnInternalVarchar<sortAscendings>(values, varcharLength, addresses, from, to, compareResult);
+    QuickSortColumnInternalVarchar<sortAscending>(values, varcharLength, addresses, from, to, compareResult);
 }
 
 template <DataTypeId D> static ALWAYS_INLINE typename NativeType<D>::type NewGetValue(int64_t valuePtr)
@@ -402,17 +419,32 @@ static int8_t ALWAYS_INLINE NewOnlyCompareAscending(typename NativeType<D>::type
     }
 }
 
-template <DataTypeId D, int32_t sortAscendings>
+template <DataTypeId D>
+static bool ALWAYS_INLINE NewOnlyEqual(typename NativeType<D>::type &left, typename NativeType<D>::type &right)
+{
+    if constexpr (D == OMNI_DOUBLE) {
+        double diff = left - right;
+        if (std::abs(diff) < __DBL_EPSILON__) {
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return left == right;
+    }
+}
+
+template <DataTypeId D, int32_t sortAscending>
 static int8_t ALWAYS_INLINE NewOnlyCompare(typename NativeType<D>::type &left, typename NativeType<D>::type &right)
 {
-    if constexpr (sortAscendings == 1) {
+    if constexpr (sortAscending == 1) {
         return NewOnlyCompareAscending<D>(left, right);
     } else {
         return NewOnlyCompareAscending<D>(right, left);
     }
 }
 
-template <DataTypeId D, int32_t sortAscendings>
+template <DataTypeId D, int32_t sortAscending>
 void QuickSortColumnSmall(std::vector<int64_t> &values, uint64_t *addresses, int32_t from, int32_t to)
 {
     for (int32_t i = from + 1; i < to; ++i) {
@@ -422,7 +454,7 @@ void QuickSortColumnSmall(std::vector<int64_t> &values, uint64_t *addresses, int
         int32_t j = i - 1;
         while (j >= from) {
             auto jValue = NewGetValue<D>(values[j]);
-            if (NewOnlyCompare<D, sortAscendings>(jValue, iValue) <= 0) {
+            if (NewOnlyCompare<D, sortAscending>(jValue, iValue) <= 0) {
                 break;
             }
             values[j + 1] = values[j];
@@ -434,19 +466,19 @@ void QuickSortColumnSmall(std::vector<int64_t> &values, uint64_t *addresses, int
     }
 }
 
-template <DataTypeId D, int32_t sortAscendings>
+template <DataTypeId D, int32_t sortAscending>
 int32_t NewMedian3(std::vector<int64_t> &values, int32_t a, int32_t b, int32_t c)
 {
     auto va = NewGetValue<D>(values[a]);
     auto vb = NewGetValue<D>(values[b]);
     auto vc = NewGetValue<D>(values[c]);
-    int8_t ab = NewOnlyCompare<D, sortAscendings>(va, vb);
-    int8_t ac = NewOnlyCompare<D, sortAscendings>(va, vc);
-    int8_t bc = NewOnlyCompare<D, sortAscendings>(vb, vc);
+    int8_t ab = NewOnlyCompare<D, sortAscending>(va, vb);
+    int8_t ac = NewOnlyCompare<D, sortAscending>(va, vc);
+    int8_t bc = NewOnlyCompare<D, sortAscending>(vb, vc);
     return ((ab < 0) ? (bc < 0 ? b : ac < 0 ? c : a) : (bc > 0 ? b : ac > 0 ? c : a));
 }
 
-template <DataTypeId D, int32_t sortAscendings>
+template <DataTypeId D, int32_t sortAscending>
 int32_t NO_INLINE NewGetMedianPosition(std::vector<int64_t> &values, int32_t from, int32_t to, int32_t len)
 {
     int32_t l = from;
@@ -454,14 +486,14 @@ int32_t NO_INLINE NewGetMedianPosition(std::vector<int64_t> &values, int32_t fro
     int32_t m = from + len / QUICK_SORT_MIDDLE;
     if (len > QUICK_SORT_BIG_LEN) {
         int32_t s = len / QUICK_SORT_STEP_SIZE;
-        l = NewMedian3<D, sortAscendings>(values, l, l + s, l + QUICK_SORT_MIDDLE * s);
-        m = NewMedian3<D, sortAscendings>(values, m - s, m, m + s);
-        n = NewMedian3<D, sortAscendings>(values, n - QUICK_SORT_MIDDLE * s, n - s, n);
+        l = NewMedian3<D, sortAscending>(values, l, l + s, l + QUICK_SORT_MIDDLE * s);
+        m = NewMedian3<D, sortAscending>(values, m - s, m, m + s);
+        n = NewMedian3<D, sortAscending>(values, n - QUICK_SORT_MIDDLE * s, n - s, n);
     }
-    return NewMedian3<D, sortAscendings>(values, l, m, n);
+    return NewMedian3<D, sortAscending>(values, l, m, n);
 }
 
-template <DataTypeId D, int32_t sortAscendings>
+template <DataTypeId D, int32_t sortAscending>
 int8_t ALWAYS_INLINE NewGetNextCompareLeft(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
     std::vector<int64_t> &values, typename NativeType<D>::type &pivotValue)
 {
@@ -479,35 +511,35 @@ int8_t ALWAYS_INLINE NewGetNextCompareLeft(int8_t *comparetmp, int32_t &k, int32
         auto v1 = NewGetValue<D>(values[i + 1]);
         auto v2 = NewGetValue<D>(values[i + 2]);
         auto v3 = NewGetValue<D>(values[i + 3]);
-        comparetmp[j] = NewOnlyCompare<D, sortAscendings>(v0, pivotValue);
-        comparetmp[j + 1] = NewOnlyCompare<D, sortAscendings>(v1, pivotValue);
-        comparetmp[j + 2] = NewOnlyCompare<D, sortAscendings>(v2, pivotValue);
-        comparetmp[j + 3] = NewOnlyCompare<D, sortAscendings>(v3, pivotValue);
+        comparetmp[j] = NewOnlyCompare<D, sortAscending>(v0, pivotValue);
+        comparetmp[j + 1] = NewOnlyCompare<D, sortAscending>(v1, pivotValue);
+        comparetmp[j + 2] = NewOnlyCompare<D, sortAscending>(v2, pivotValue);
+        comparetmp[j + 3] = NewOnlyCompare<D, sortAscending>(v3, pivotValue);
         auto v4 = NewGetValue<D>(values[i + 4]);
         auto v5 = NewGetValue<D>(values[i + 5]);
         auto v6 = NewGetValue<D>(values[i + 6]);
         auto v7 = NewGetValue<D>(values[i + 7]);
-        comparetmp[j + 4] = NewOnlyCompare<D, sortAscendings>(v4, pivotValue);
-        comparetmp[j + 5] = NewOnlyCompare<D, sortAscendings>(v5, pivotValue);
-        comparetmp[j + 6] = NewOnlyCompare<D, sortAscendings>(v6, pivotValue);
-        comparetmp[j + 7] = NewOnlyCompare<D, sortAscendings>(v7, pivotValue);
+        comparetmp[j + 4] = NewOnlyCompare<D, sortAscending>(v4, pivotValue);
+        comparetmp[j + 5] = NewOnlyCompare<D, sortAscending>(v5, pivotValue);
+        comparetmp[j + 6] = NewOnlyCompare<D, sortAscending>(v6, pivotValue);
+        comparetmp[j + 7] = NewOnlyCompare<D, sortAscending>(v7, pivotValue);
         auto v8 = NewGetValue<D>(values[i + 8]);
         auto v9 = NewGetValue<D>(values[i + 9]);
         auto v10 = NewGetValue<D>(values[i + 10]);
         auto v11 = NewGetValue<D>(values[i + 11]);
-        comparetmp[j + 8] = NewOnlyCompare<D, sortAscendings>(v8, pivotValue);
-        comparetmp[j + 9] = NewOnlyCompare<D, sortAscendings>(v9, pivotValue);
-        comparetmp[j + 10] = NewOnlyCompare<D, sortAscendings>(v10, pivotValue);
-        comparetmp[j + 11] = NewOnlyCompare<D, sortAscendings>(v11, pivotValue);
+        comparetmp[j + 8] = NewOnlyCompare<D, sortAscending>(v8, pivotValue);
+        comparetmp[j + 9] = NewOnlyCompare<D, sortAscending>(v9, pivotValue);
+        comparetmp[j + 10] = NewOnlyCompare<D, sortAscending>(v10, pivotValue);
+        comparetmp[j + 11] = NewOnlyCompare<D, sortAscending>(v11, pivotValue);
     }
     for (; j < limit; ++i, ++j) {
         auto v = NewGetValue<D>(values[i]);
-        comparetmp[j] = NewOnlyCompare<D, sortAscendings>(v, pivotValue);
+        comparetmp[j] = NewOnlyCompare<D, sortAscending>(v, pivotValue);
     }
     return comparetmp[0];
 }
 
-template <DataTypeId D, int32_t sortAscendings>
+template <DataTypeId D, int32_t sortAscending>
 inline int8_t NewGetNextCompareRight(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
     std::vector<int64_t> &values, typename NativeType<D>::type &pivotValue)
 {
@@ -525,45 +557,45 @@ inline int8_t NewGetNextCompareRight(int8_t *comparetmp, int32_t &k, int32_t &li
         auto v1 = NewGetValue<D>(values[i - 1]);
         auto v2 = NewGetValue<D>(values[i - 2]);
         auto v3 = NewGetValue<D>(values[i - 3]);
-        comparetmp[j] = NewOnlyCompare<D, sortAscendings>(v0, pivotValue);
-        comparetmp[j + 1] = NewOnlyCompare<D, sortAscendings>(v1, pivotValue);
-        comparetmp[j + 2] = NewOnlyCompare<D, sortAscendings>(v2, pivotValue);
-        comparetmp[j + 3] = NewOnlyCompare<D, sortAscendings>(v3, pivotValue);
+        comparetmp[j] = NewOnlyCompare<D, sortAscending>(v0, pivotValue);
+        comparetmp[j + 1] = NewOnlyCompare<D, sortAscending>(v1, pivotValue);
+        comparetmp[j + 2] = NewOnlyCompare<D, sortAscending>(v2, pivotValue);
+        comparetmp[j + 3] = NewOnlyCompare<D, sortAscending>(v3, pivotValue);
         auto v4 = NewGetValue<D>(values[i - 4]);
         auto v5 = NewGetValue<D>(values[i - 5]);
         auto v6 = NewGetValue<D>(values[i - 6]);
         auto v7 = NewGetValue<D>(values[i - 7]);
-        comparetmp[j + 4] = NewOnlyCompare<D, sortAscendings>(v4, pivotValue);
-        comparetmp[j + 5] = NewOnlyCompare<D, sortAscendings>(v5, pivotValue);
-        comparetmp[j + 6] = NewOnlyCompare<D, sortAscendings>(v6, pivotValue);
-        comparetmp[j + 7] = NewOnlyCompare<D, sortAscendings>(v7, pivotValue);
+        comparetmp[j + 4] = NewOnlyCompare<D, sortAscending>(v4, pivotValue);
+        comparetmp[j + 5] = NewOnlyCompare<D, sortAscending>(v5, pivotValue);
+        comparetmp[j + 6] = NewOnlyCompare<D, sortAscending>(v6, pivotValue);
+        comparetmp[j + 7] = NewOnlyCompare<D, sortAscending>(v7, pivotValue);
         auto v8 = NewGetValue<D>(values[i - 8]);
         auto v9 = NewGetValue<D>(values[i - 9]);
         auto v10 = NewGetValue<D>(values[i - 10]);
         auto v11 = NewGetValue<D>(values[i - 11]);
-        comparetmp[j + 8] = NewOnlyCompare<D, sortAscendings>(v8, pivotValue);
-        comparetmp[j + 9] = NewOnlyCompare<D, sortAscendings>(v9, pivotValue);
-        comparetmp[j + 10] = NewOnlyCompare<D, sortAscendings>(v10, pivotValue);
-        comparetmp[j + 11] = NewOnlyCompare<D, sortAscendings>(v11, pivotValue);
+        comparetmp[j + 8] = NewOnlyCompare<D, sortAscending>(v8, pivotValue);
+        comparetmp[j + 9] = NewOnlyCompare<D, sortAscending>(v9, pivotValue);
+        comparetmp[j + 10] = NewOnlyCompare<D, sortAscending>(v10, pivotValue);
+        comparetmp[j + 11] = NewOnlyCompare<D, sortAscending>(v11, pivotValue);
     }
     for (; j < limit; --i, ++j) {
         auto v = NewGetValue<D>(values[i]);
-        comparetmp[j] = NewOnlyCompare<D, sortAscendings>(v, pivotValue);
+        comparetmp[j] = NewOnlyCompare<D, sortAscending>(v, pivotValue);
     }
     return comparetmp[0];
 }
 
-template <DataTypeId D, int32_t sortAscendings>
+template <DataTypeId D, int32_t sortAscending>
 void QuickSortColumnInternal(std::vector<int64_t> &values, uint64_t *addresses, int32_t from, int32_t to,
     int8_t *comparetmp)
 {
     int32_t len = to - from;
     if (len <= QUICK_SORT_SMALL_LEN) {
-        QuickSortColumnSmall<D, sortAscendings>(values, addresses, from, to);
+        QuickSortColumnSmall<D, sortAscending>(values, addresses, from, to);
         return;
     }
 
-    int32_t m = NewGetMedianPosition<D, sortAscendings>(values, from, to, len);
+    int32_t m = NewGetMedianPosition<D, sortAscending>(values, from, to, len);
 
     auto pivotValue = NewGetValue<D>(values[m]);
 
@@ -580,15 +612,15 @@ void QuickSortColumnInternal(std::vector<int64_t> &values, uint64_t *addresses, 
     int8_t *rightComparetmp = comparetmp + NMAX_SIZE;
     while (true) {
         int8_t comparison;
-        while (b <= c && (comparison = NewGetNextCompareLeft<D, sortAscendings>(leftComparetmp, bk, blim, b, c, values,
+        while (b <= c && (comparison = NewGetNextCompareLeft<D, sortAscending>(leftComparetmp, bk, blim, b, c, values,
             pivotValue)) <= 0) {
             if (UNLIKELY(comparison == 0)) {
                 Swap(values, addresses, a++, b);
             }
             b++;
         }
-        while (c >= b && (comparison = NewGetNextCompareRight<D, sortAscendings>(rightComparetmp, ck, clim, b, c,
-            values, pivotValue)) >= 0) {
+        while (c >= b && (comparison = NewGetNextCompareRight<D, sortAscending>(rightComparetmp, ck, clim, b, c, values,
+            pivotValue)) >= 0) {
             if (UNLIKELY(comparison == 0)) {
                 Swap(values, addresses, c, d--);
             }
@@ -610,88 +642,134 @@ void QuickSortColumnInternal(std::vector<int64_t> &values, uint64_t *addresses, 
 
     // Recursively sort non-partition-elements
     if ((s = b - a) > 1) {
-        QuickSortColumnInternal<D, sortAscendings>(values, addresses, from, from + s, comparetmp);
+        QuickSortColumnInternal<D, sortAscending>(values, addresses, from, from + s, comparetmp);
     }
     if ((s = d - c) > 1) {
-        QuickSortColumnInternal<D, sortAscendings>(values, addresses, n - s, n, comparetmp);
+        QuickSortColumnInternal<D, sortAscending>(values, addresses, n - s, n, comparetmp);
     }
 }
 
-template <DataTypeId D, int32_t sortAscendings>
+template <DataTypeId D, int32_t sortAscending>
 void QuickSortColumn(std::vector<int64_t> &values, uint64_t *addresses, int32_t from, int32_t to)
 {
     int8_t comparetmp[NMAX_SIZE + NMAX_SIZE];
-    QuickSortColumnInternal<D, sortAscendings>(values, addresses, from, to, comparetmp);
+    QuickSortColumnInternal<D, sortAscending>(values, addresses, from, to, comparetmp);
 }
 
-template <DataTypeId D>
-void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, BaseVector ***columns, std::vector<int64_t> &values,
-    std::vector<uint32_t> &varcharLength, uint64_t *addresses, int32_t from, int32_t to, int32_t currentCol)
+template <DataTypeId D, bool hasNull, bool hasDictionary, bool sortNullFirst>
+void SortNullAndGetValue(BaseVector **sortColumn, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength,
+    uint64_t *addresses, int32_t &from, int32_t &to)
 {
-    auto sortNullFirst = sortNullFirsts[currentCol];
-    auto sortAscending = sortAscendings[currentCol];
-    auto batchesOfCurrentColumn = columns[sortCols[currentCol]];
     int32_t nonNullFrom = from;
-    int32_t nonNullTo = to; // [nonNullFrom, nonNullTo) mark the range of non-null values
-    // we are going to sort one column, so we extract all the rows of the column between from and to
+    int32_t nonNullTo = to;
     int32_t i = from;
     while (i < nonNullTo) {
         uint64_t encodedIndex = addresses[i];
         uint32_t vecBatchIdx = DecodeSliceIndex(encodedIndex);
         uint32_t rowIdx = DecodePosition(encodedIndex);
-        auto column = batchesOfCurrentColumn[vecBatchIdx];
-        if constexpr (D == OMNI_VARCHAR || D == OMNI_CHAR) {
+        auto column = sortColumn[vecBatchIdx];
+        if constexpr (hasNull) {
             if (UNLIKELY(column->IsNull(rowIdx))) {
                 // first, put all nulls at the first or at the last according sortNullFirst
-                if (sortNullFirst) {
-                    SwapVarchar(values, varcharLength, addresses, i++, nonNullFrom++); // [0, nonNullFrom)
-                } else { // we swap the last nonNull element back to i -- we need to CHECK the new i-th element again!
-                    SwapVarchar(values, varcharLength, addresses, i, --nonNullTo); // [i, nonNullTo)
+                if constexpr (D == OMNI_VARCHAR) {
+                    if constexpr (sortNullFirst) {
+                        SwapVarchar(values, varcharLength, addresses, i++, nonNullFrom++); // [0, nonNullFrom)
+                    } else { // swap the last nonNull element back to i--,need to CHECK the new i-th element again!
+                        SwapVarchar(values, varcharLength, addresses, i, --nonNullTo); // [i, nonNullTo)
+                    }
+                } else {
+                    if constexpr (sortNullFirst) {
+                        Swap(values, addresses, i++, nonNullFrom++); // [0, nonNullFrom)
+                    } else { // swap the last nonNull element back to i--,need to CHECK the new i-th element again!
+                        Swap(values, addresses, i, --nonNullTo); // [i, nonNullTo)
+                    }
                 }
-            } else {
-                std::string_view value;
+                continue;
+            }
+        }
+
+        if constexpr (D == OMNI_VARCHAR) {
+            std::string_view value;
+            if constexpr (hasDictionary) {
                 if (column->GetEncoding() == OMNI_DICTIONARY) {
                     value = static_cast<DictionaryVarcharVector *>(column)->GetValue(rowIdx);
                 } else {
                     value = static_cast<VarcharVector *>(column)->GetValue(rowIdx);
                 }
-                values[i] = reinterpret_cast<long>(const_cast<char *>(value.data()));
-                varcharLength[i] = value.length();
-                ++i;
+            } else {
+                value = static_cast<VarcharVector *>(column)->GetValue(rowIdx);
             }
+            values[i] = reinterpret_cast<int64_t>(const_cast<char *>(value.data()));
+            varcharLength[i] = value.length();
+            ++i;
         } else {
-            if (UNLIKELY(column->IsNull(rowIdx))) {
-                // first, put all nulls at the first or at the last according sortNullFirst
-                if (sortNullFirst) {
-                    Swap(values, addresses, i++, nonNullFrom++); // [0, nonNullFrom)
-                } else { // we swap the last nonNull element back to i -- we need to CHECK the new i-th element again!
-                    Swap(values, addresses, i, --nonNullTo); // [i, nonNullTo)
+            using T = typename NativeType<D>::type;
+            if constexpr (hasDictionary) {
+                using DictionaryFlatVector = vec::Vector<DictionaryContainer<T>>;
+                auto dictionaryVector = static_cast<DictionaryFlatVector *>(column);
+                if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
+                    T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
+                    int32_t originalRowIndex = unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector)[rowIdx];
+                    values[i] = reinterpret_cast<int64_t>(valuePtr + originalRowIndex);
+                } else {
+                    values[i] = dictionaryVector->GetValue(rowIdx);
                 }
             } else {
-                // get the value raw addr
-                using T = typename NativeType<D>::type;
-                if (column->GetEncoding() == OMNI_DICTIONARY) {
-                    using DictionaryFlatVector = vec::Vector<DictionaryContainer<T>>;
-                    auto dictionaryVector = reinterpret_cast<DictionaryFlatVector *>(column);
-                    if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
-                        T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
-                        int32_t originalRowIndex = unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector)[rowIdx];
-                        values[i] = reinterpret_cast<long>(valuePtr + originalRowIndex);
-                    } else {
-                        values[i] = dictionaryVector->GetValue(rowIdx);
-                    }
+                using FlatVector = Vector<T>;
+                if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
+                    values[i] = reinterpret_cast<int64_t>(
+                        unsafe::UnsafeVector::GetRawValues(static_cast<FlatVector *>(column)) + rowIdx);
                 } else {
-                    using FlatVector = Vector<T>;
-                    if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
-                        values[i] = reinterpret_cast<long>(
-                            unsafe::UnsafeVector::GetRawValues(reinterpret_cast<FlatVector *>(column)) + rowIdx);
-                    } else {
-                        values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
-                    }
+                    values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
                 }
-                ++i;
             }
+            ++i;
+        }
+    }
+    from = nonNullFrom;
+    to = nonNullTo;
+}
+
+template <DataTypeId D>
+void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+    int32_t sortColCount, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
+    int32_t currentCol)
+{
+    auto sortCol = sortCols[currentCol];
+    auto sortAscending = sortAscendings[currentCol];
+    auto sortColumn = columns[sortCol];
+    auto hasNull = hasNulls[sortCol];
+    auto hasDictionary = hasDictionaries[sortCol];
+    int32_t nonNullFrom = from;
+    int32_t nonNullTo = to; // [nonNullFrom, nonNullTo) mark the range of non-null values
+    // we are going to sort one column, so we extract all the rows of the column between from and to
+    if (sortNullFirsts[currentCol] == 0) {
+        if (hasNull && hasDictionary) {
+            SortNullAndGetValue<D, true, true, false>(sortColumn, values, varcharLength, valueAddresses, nonNullFrom,
+                nonNullTo);
+        } else if (hasNull) {
+            SortNullAndGetValue<D, true, false, false>(sortColumn, values, varcharLength, valueAddresses, nonNullFrom,
+                nonNullTo);
+        } else if (hasDictionary) {
+            SortNullAndGetValue<D, false, true, false>(sortColumn, values, varcharLength, valueAddresses, nonNullFrom,
+                nonNullTo);
+        } else {
+            SortNullAndGetValue<D, false, false, false>(sortColumn, values, varcharLength, valueAddresses, nonNullFrom,
+                nonNullTo);
+        }
+    } else {
+        if (hasNull && hasDictionary) {
+            SortNullAndGetValue<D, true, true, true>(sortColumn, values, varcharLength, valueAddresses, nonNullFrom,
+                nonNullTo);
+        } else if (hasNull) {
+            SortNullAndGetValue<D, true, false, true>(sortColumn, values, varcharLength, valueAddresses, nonNullFrom,
+                nonNullTo);
+        } else if (hasDictionary) {
+            SortNullAndGetValue<D, false, true, true>(sortColumn, values, varcharLength, valueAddresses, nonNullFrom,
+                nonNullTo);
+        } else {
+            SortNullAndGetValue<D, false, false, true>(sortColumn, values, varcharLength, valueAddresses, nonNullFrom,
+                nonNullTo);
         }
     }
 
@@ -699,15 +777,15 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
         // second, sort all non-null values
         if constexpr (D == OMNI_VARCHAR || D == OMNI_CHAR) {
             if (sortAscending == 0) {
-                QuickSortColumnVarChar<0>(values, varcharLength, addresses, nonNullFrom, nonNullTo);
+                QuickSortColumnVarChar<0>(values, varcharLength, valueAddresses, nonNullFrom, nonNullTo);
             } else {
-                QuickSortColumnVarChar<1>(values, varcharLength, addresses, nonNullFrom, nonNullTo);
+                QuickSortColumnVarChar<1>(values, varcharLength, valueAddresses, nonNullFrom, nonNullTo);
             }
         } else {
             if (sortAscending == 0) {
-                QuickSortColumn<D, 0>(values, addresses, nonNullFrom, nonNullTo);
+                QuickSortColumn<D, 0>(values, valueAddresses, nonNullFrom, nonNullTo);
             } else {
-                QuickSortColumn<D, 1>(values, addresses, nonNullFrom, nonNullTo);
+                QuickSortColumn<D, 1>(values, valueAddresses, nonNullFrom, nonNullTo);
             }
         }
     }
@@ -720,11 +798,11 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
     // third, sort next column for the null range
     auto nextCol = currentCol + 1;
     if (nonNullFrom != from && from + 1 < nonNullFrom) {
-        ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns, values,
-            varcharLength, addresses, from, nonNullFrom, nextCol);
+        ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from, nonNullFrom,
+            nextCol);
     } else if (nonNullTo != to && nonNullTo + 1 < to) {
-        ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns, values,
-            varcharLength, addresses, nonNullTo, to, nextCol);
+        ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, nonNullTo, to,
+            nextCol);
     }
 
     if (nonNullFrom + 1 >= nonNullTo) {
@@ -740,90 +818,92 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
         for (int32_t i = nonNullFrom + 1; i < nonNullTo; ++i) {
             int64_t value = values[i];
             uint32_t length = varcharLength[i];
-            if (NewOnlyCompareVarChar<0>(value, length, currentValue, currentLength) != 0) {
+            if (!NewOnlyEqualVarChar(value, length, currentValue, currentLength)) {
                 currentValue = value;
                 currentLength = length;
                 if (start + 1 != i) { // sort next column when |equivalent class| > 1
-                    ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns, values,
-                        varcharLength, addresses, start, i, nextCol);
+                    ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start,
+                        i, nextCol);
                 }
                 start = i;
             }
         }
         if (start + 1 != nonNullTo) {
-            ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns, values,
-                varcharLength, addresses, start, nonNullTo, nextCol);
+            ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start,
+                nonNullTo, nextCol);
         }
     } else {
         typename NativeType<D>::type currentValue = NewGetValue<D>(values[nonNullFrom]);
         int32_t start = nonNullFrom;
         for (int32_t i = nonNullFrom + 1; i < nonNullTo; ++i) {
             typename NativeType<D>::type value = NewGetValue<D>(values[i]);
-            if (NewOnlyCompare<D, 0>(value, currentValue) != 0) {
+            if (!NewOnlyEqual<D>(value, currentValue) != 0) {
                 currentValue = value;
                 if (start + 1 != i) { // sort next column when |equivalent class| > 1
-                    ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns, values,
-                        varcharLength, addresses, start, i, nextCol);
+                    ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start,
+                        i, nextCol);
                 }
                 start = i;
             }
         }
         if (start + 1 != nonNullTo) {
-            ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns, values,
-                varcharLength, addresses, start, nonNullTo, nextCol);
+            ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, start,
+                nonNullTo, nextCol);
         }
     }
 }
 
-void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, BaseVector ***columns, std::vector<int64_t> &values,
-    std::vector<uint32_t> &varcharLength, uint64_t *addresses, int32_t from, int32_t to, int32_t currentCol)
+void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+    int32_t sortColCount, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
+    int32_t currentCol)
 {
-    switch (sortColTypes[currentCol]) {
+    switch (dataTypes.GetType(sortCols[currentCol])->GetId()) {
         case OMNI_INT:
         case OMNI_DATE32:
-            ColumnarSort<OMNI_INT>(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns,
-                values, varcharLength, addresses, from, to, currentCol);
+            ColumnarSort<OMNI_INT>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from,
+                to, currentCol);
             break;
         case OMNI_SHORT:
-            ColumnarSort<OMNI_SHORT>(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns,
-                values, varcharLength, addresses, from, to, currentCol);
+            ColumnarSort<OMNI_SHORT>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength,
+                from, to, currentCol);
             break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
-            ColumnarSort<OMNI_LONG>(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns,
-                values, varcharLength, addresses, from, to, currentCol);
+            ColumnarSort<OMNI_LONG>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from,
+                to, currentCol);
             break;
         case OMNI_DOUBLE:
-            ColumnarSort<OMNI_DOUBLE>(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns,
-                values, varcharLength, addresses, from, to, currentCol);
+            ColumnarSort<OMNI_DOUBLE>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength,
+                from, to, currentCol);
             break;
         case OMNI_BOOLEAN:
-            ColumnarSort<OMNI_BOOLEAN>(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns,
-                values, varcharLength, addresses, from, to, currentCol);
+            ColumnarSort<OMNI_BOOLEAN>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength,
+                from, to, currentCol);
             break;
         case OMNI_VARCHAR:
         case OMNI_CHAR:
-            ColumnarSort<OMNI_VARCHAR>(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns,
-                values, varcharLength, addresses, from, to, currentCol);
+            ColumnarSort<OMNI_VARCHAR>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength,
+                from, to, currentCol);
             break;
         case OMNI_DECIMAL128:
-            ColumnarSort<OMNI_DECIMAL128>(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns,
-                values, varcharLength, addresses, from, to, currentCol);
+            ColumnarSort<OMNI_DECIMAL128>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength,
+                from, to, currentCol);
             break;
         default:
             break;
     }
 }
 
-void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-    const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to)
+void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+    int32_t sortColCount, int32_t from, int32_t to)
 {
     std::vector<int64_t> values(this->positionCount);
     std::vector<uint32_t> varcharLength;
     bool hasVarCharCol = false;
+    auto dataTypeIds = dataTypes.GetIds();
     for (int32_t i = 0; i < sortColCount; ++i) {
-        if (sortColTypes[i] == OMNI_CHAR || sortColTypes[i] == OMNI_VARCHAR) {
+        auto sortColTypeId = dataTypeIds[sortCols[i]];
+        if (sortColTypeId == OMNI_CHAR || sortColTypeId == OMNI_VARCHAR) {
             hasVarCharCol = true;
             break;
         }
@@ -831,8 +911,7 @@ void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortColTypes, cons
     if (hasVarCharCol) {
         varcharLength.resize(this->positionCount);
     }
-    ColumnarSort(sortCols, sortColTypes, sortAscendings, sortNullFirsts, sortColCount, columns, values, varcharLength,
-        valueAddresses, from, to, 0);
+    ColumnarSort(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from, to, 0);
 }
 
 void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch,
@@ -845,31 +924,40 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
         int32_t outputCol = outputCols[j];
         int32_t colTypeId = sourceTypes[outputCol];
         BaseVector **inputVecBatch = inputVecBatches[outputCol];
+        bool hasDictionary = hasDictionaries[outputCol];
+        bool hasNull = hasNulls[outputCol];
         switch (colTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
-                outputVecBatch->Append(ConstructVector<int32_t>(vaStart, length, inputVecBatch));
+                outputVecBatch->Append(
+                    ConstructVector<OMNI_INT>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_SHORT:
-                outputVecBatch->Append(ConstructVector<int16_t>(vaStart, length, inputVecBatch));
+                outputVecBatch->Append(
+                    ConstructVector<OMNI_SHORT>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                outputVecBatch->Append(ConstructVector<int64_t>(vaStart, length, inputVecBatch));
+                outputVecBatch->Append(
+                    ConstructVector<OMNI_LONG>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_DOUBLE:
-                outputVecBatch->Append(ConstructVector<double>(vaStart, length, inputVecBatch));
+                outputVecBatch->Append(
+                    ConstructVector<OMNI_DOUBLE>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_BOOLEAN:
-                outputVecBatch->Append(ConstructVector<bool>(vaStart, length, inputVecBatch));
+                outputVecBatch->Append(
+                    ConstructVector<OMNI_BOOLEAN>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                outputVecBatch->Append(ConstructVarcharVector(vaStart, length, inputVecBatch));
+                outputVecBatch->Append(
+                    ConstructVector<OMNI_VARCHAR>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
                 break;
             }
             case OMNI_DECIMAL128:
-                outputVecBatch->Append(ConstructVector<Decimal128>(vaStart, length, inputVecBatch));
+                outputVecBatch->Append(
+                    ConstructVector<OMNI_DECIMAL128>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
                 break;
             default:
                 break;
@@ -882,68 +970,97 @@ PagesIndex::~PagesIndex()
     Clear();
 }
 
-template <typename T>
+template <type::DataTypeId dataTypeId, bool hasNull, bool hasDictionary>
 static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, BaseVector *outputVector,
     int32_t outputIndex)
 {
-    if (UNLIKELY(inputVector->IsNull(inputIndex))) {
-        outputVector->SetNull(outputIndex);
-        return;
+    if constexpr (hasNull) {
+        if (UNLIKELY(inputVector->IsNull(inputIndex))) {
+            if constexpr (dataTypeId == OMNI_VARCHAR) {
+                static_cast<VarcharVector *>(outputVector)->SetNull(outputIndex);
+            } else {
+                outputVector->SetNull(outputIndex);
+            }
+            return;
+        }
     }
+
+    using T = typename NativeType<dataTypeId>::type;
     T value;
-    if (UNLIKELY(inputVector->GetEncoding() == OMNI_DICTIONARY)) {
-        value = static_cast<Vector<DictionaryContainer<T>> *>(inputVector)->GetValue(inputIndex);
+    if constexpr (dataTypeId == OMNI_VARCHAR) {
+        if constexpr (hasDictionary) {
+            if (UNLIKELY(inputVector->GetEncoding() == OMNI_DICTIONARY)) {
+                value = static_cast<DictionaryVarcharVector *>(inputVector)->GetValue(inputIndex);
+            } else {
+                value = static_cast<VarcharVector *>(inputVector)->GetValue(inputIndex);
+            }
+        } else {
+            value = static_cast<VarcharVector *>(inputVector)->GetValue(inputIndex);
+        }
+        static_cast<VarcharVector *>(outputVector)->SetValue(outputIndex, value);
     } else {
-        value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
+        if constexpr (hasDictionary) {
+            if (UNLIKELY(inputVector->GetEncoding() == OMNI_DICTIONARY)) {
+                value = static_cast<Vector<DictionaryContainer<T>> *>(inputVector)->GetValue(inputIndex);
+            } else {
+                value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
+            }
+        } else {
+            value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
+        }
+        static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
     }
-    static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
 }
 
-template <typename T>
-NO_INLINE BaseVector *ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBatch)
+template <type::DataTypeId dataTypeId>
+NO_INLINE BaseVector *ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBatch, bool hasNull,
+    bool hasDictionary)
 {
-    auto outputVector = new Vector<T>(length);
+    BaseVector *outputVector = nullptr;
+    if constexpr (dataTypeId == OMNI_VARCHAR) {
+        outputVector = new VarcharVector(length);
+    } else {
+        using T = typename NativeType<dataTypeId>::type;
+        outputVector = new Vector<T>(length);
+    }
+
     int32_t outputIndex = 0;
     uint64_t *vaEnd = vaStart + length;
-    while (vaStart < vaEnd) { // here unroll is almost useless due to the excessive checks in SetValue
-        uint64_t valueAddress = *(vaStart++);
-        uint32_t pageIndex = DecodeSliceIndex(valueAddress);
-        auto inputVector = inputVecBatch[pageIndex];
-        uint32_t position = DecodePosition(valueAddress);
-        SetValue<T>(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
-    }
-    return outputVector;
-}
-
-static ALWAYS_INLINE void SetVarcharValue(BaseVector *inputVector, int32_t inputIndex, BaseVector *outputVector,
-    int32_t outputIndex)
-{
-    if (UNLIKELY(inputVector->IsNull(inputIndex))) {
-        reinterpret_cast<VarcharVector *>(outputVector)->SetNull(outputIndex);
-        return;
-    }
-
-    std::string_view value;
-    if (UNLIKELY(inputVector->GetEncoding() == OMNI_DICTIONARY)) {
-        value = static_cast<DictionaryVarcharVector *>(inputVector)->GetValue(inputIndex);
+    if (hasNull && hasDictionary) {
+        while (vaStart < vaEnd) { // here unroll is almost useless due to the excessive checks in SetValue
+            uint64_t valueAddress = *(vaStart++);
+            uint32_t pageIndex = DecodeSliceIndex(valueAddress);
+            auto inputVector = inputVecBatch[pageIndex];
+            uint32_t position = DecodePosition(valueAddress);
+            SetValue<dataTypeId, true, true>(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
+        }
+    } else if (hasNull) {
+        while (vaStart < vaEnd) { // here unroll is almost useless due to the excessive checks in SetValue
+            uint64_t valueAddress = *(vaStart++);
+            uint32_t pageIndex = DecodeSliceIndex(valueAddress);
+            auto inputVector = inputVecBatch[pageIndex];
+            uint32_t position = DecodePosition(valueAddress);
+            SetValue<dataTypeId, true, false>(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
+        }
+    } else if (hasDictionary) {
+        while (vaStart < vaEnd) { // here unroll is almost useless due to the excessive checks in SetValue
+            uint64_t valueAddress = *(vaStart++);
+            uint32_t pageIndex = DecodeSliceIndex(valueAddress);
+            auto inputVector = inputVecBatch[pageIndex];
+            uint32_t position = DecodePosition(valueAddress);
+            SetValue<dataTypeId, false, true>(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
+        }
     } else {
-        value = static_cast<VarcharVector *>(inputVector)->GetValue(inputIndex);
+        while (vaStart < vaEnd) { // here unroll is almost useless due to the excessive checks in SetValue
+            uint64_t valueAddress = *(vaStart++);
+            uint32_t pageIndex = DecodeSliceIndex(valueAddress);
+            auto inputVector = inputVecBatch[pageIndex];
+            uint32_t position = DecodePosition(valueAddress);
+            SetValue<dataTypeId, false, false>(inputVector, static_cast<int32_t>(position), outputVector,
+                outputIndex++);
+        }
     }
-    static_cast<VarcharVector *>(outputVector)->SetValue(outputIndex, value);
-}
 
-NO_INLINE BaseVector *ConstructVarcharVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBatch)
-{
-    auto *outputVector = new VarcharVector(length);
-    int32_t outputIndex = 0;
-    uint64_t *vaEnd = vaStart + length;
-    while (vaStart < vaEnd) {
-        uint64_t valueAddress = *(vaStart++);
-        uint32_t pageIndex = DecodeSliceIndex(valueAddress);
-        auto inputVector = inputVecBatch[pageIndex];
-        uint32_t position = DecodePosition(valueAddress);
-        SetVarcharValue(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
-    }
     return outputVector;
 }
 

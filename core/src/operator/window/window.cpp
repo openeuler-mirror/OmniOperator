@@ -374,17 +374,12 @@ void WindowOperator::FinishPagesIndex()
 void WindowOperator::SortPagesIndexIfNecessary()
 {
     if (pagesIndex->GetRowCount() > 1 && sortColCount != 0) {
-        int32_t sortColTypes[sortColCount];
-        for (int32_t i = 0; i < sortColCount; i++) {
-            sortColTypes[i] = sourceTypes.GetType(sortCols[i])->GetId();
-        }
-
         int32_t startPosition = 0;
         auto positionCount = pagesIndex->GetRowCount();
         while (startPosition < positionCount) {
             int32_t endPosition = FindGroupEnd(pagesIndex.get(), preSortedPartitionHashStrategy.get(), startPosition);
-            pagesIndex->Sort(sortCols.data(), sortColTypes, sortAscendings.data(), sortNullFirsts.data(), sortColCount,
-                startPosition, endPosition);
+            pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, startPosition,
+                endPosition);
             startPosition = endPosition;
         }
     }

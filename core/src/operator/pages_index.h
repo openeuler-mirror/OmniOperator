@@ -26,8 +26,8 @@ public:
 
     void Prepare();
 
-    void Sort(const int32_t *sortCols, const int32_t *sortColTypes, const int32_t *sortAscendings,
-        const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to);
+    void Sort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+        int32_t sortColCount, int32_t from, int32_t to);
 
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
         const int32_t *sourceTypes, int32_t offset, int32_t length) const;
@@ -63,12 +63,23 @@ public:
     }
 
 private:
+    void ColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+        int32_t sortColCount, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int32_t from,
+        int32_t to, int32_t currentCol);
+
+    template <DataTypeId D>
+    void ColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+        int32_t sortColCount, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int32_t from,
+        int32_t to, int32_t currentCol);
+
     const DataTypes dataTypes;
     uint32_t typesCount;
     omniruntime::vec::BaseVector ***columns; // Vector* [columnIndex][tableIndex]
     uint64_t *valueAddresses;
     uint32_t positionCount;
     std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
+    std::vector<bool> hasDictionaries;
+    std::vector<bool> hasNulls;
 };
 
 constexpr uint32_t SHIFT_SIZE_32 = 32;

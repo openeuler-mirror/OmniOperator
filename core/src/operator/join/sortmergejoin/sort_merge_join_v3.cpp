@@ -452,8 +452,8 @@ void SortMergeJoinOperatorV3::PrepareForStream()
     // first step sort
     streamPagesIndex->Prepare();
     auto streamRowCount = streamPagesIndex->GetRowCount();
-    streamPagesIndex->Sort(streamJoinCols.data(), streamJoinColTypes, streamSortAscendings, streamSortNullFirsts,
-        streamJoinColCount, 0, streamRowCount);
+    streamPagesIndex->Sort(streamJoinCols.data(), streamSortAscendings, streamSortNullFirsts, streamJoinColCount, 0,
+        streamRowCount);
 
     // second step prepare join columns, filter columns
     auto streamAddresses = streamPagesIndex->GetValueAddresses();
@@ -507,8 +507,8 @@ void SortMergeJoinOperatorV3::PrepareForBuffer()
     // first step sort
     bufferPagesIndex->Prepare();
     auto bufferRowCount = bufferPagesIndex->GetRowCount();
-    bufferPagesIndex->Sort(bufferJoinCols.data(), bufferJoinColTypes, bufferSortAscendings, bufferSortNullFirsts,
-        bufferJoinColCount, 0, bufferRowCount);
+    bufferPagesIndex->Sort(bufferJoinCols.data(), bufferSortAscendings, bufferSortNullFirsts, bufferJoinColCount, 0,
+        bufferRowCount);
 
     // second step prepare join columns, filter columns
     auto bufferAddresses = bufferPagesIndex->GetValueAddresses();

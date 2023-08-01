@@ -148,14 +148,7 @@ void SortOperator::Sort()
 {
     int32_t positionCount = pagesIndex->GetRowCount();
     int32_t sortColCount = sortCols.size();
-    int32_t to = positionCount;
-    int32_t from = 0;
-    int32_t sortColTypes[sortColCount];
-    for (int32_t i = 0; i < sortColCount; i++) {
-        sortColTypes[i] = sourceTypes.GetType(sortCols[i])->GetId();
-    }
-    pagesIndex->Sort(sortCols.data(), sortColTypes, sortAscendings.data(), sortNullFirsts.data(), sortColCount, from,
-        to);
+    pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0, positionCount);
 }
 
 void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesForSpill)
