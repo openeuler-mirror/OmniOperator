@@ -371,7 +371,11 @@ void QuickSortColumnVarChar(std::vector<int64_t> &values, std::vector<uint32_t> 
 
 template <DataTypeId D> static ALWAYS_INLINE typename NativeType<D>::type NewGetValue(int64_t valuePtr)
 {
-    return *reinterpret_cast<typename NativeType<D>::type *>(valuePtr);
+    if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
+        return *reinterpret_cast<typename NativeType<D>::type *>(valuePtr);
+    } else {
+        return valuePtr;
+    }
 }
 
 template <DataTypeId D>
@@ -670,13 +674,21 @@ void ColumnarSort(const int32_t *sortCols, const int32_t *sortColTypes, const in
                 if (column->GetEncoding() == OMNI_DICTIONARY) {
                     using DictionaryFlatVector = vec::Vector<DictionaryContainer<T>>;
                     auto dictionaryVector = reinterpret_cast<DictionaryFlatVector *>(column);
-                    T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
-                    int32_t originalRowIndex = unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector)[rowIdx];
-                    values[i] = reinterpret_cast<long>(valuePtr + originalRowIndex);
+                    if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
+                        T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
+                        int32_t originalRowIndex = unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector)[rowIdx];
+                        values[i] = reinterpret_cast<long>(valuePtr + originalRowIndex);
+                    } else {
+                        values[i] = dictionaryVector->GetValue(rowIdx);
+                    }
                 } else {
                     using FlatVector = Vector<T>;
-                    values[i] = reinterpret_cast<long>(
-                        unsafe::UnsafeVector::GetRawValues(reinterpret_cast<FlatVector *>(column)) + rowIdx);
+                    if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
+                        values[i] = reinterpret_cast<long>(
+                            unsafe::UnsafeVector::GetRawValues(reinterpret_cast<FlatVector *>(column)) + rowIdx);
+                    } else {
+                        values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
+                    }
                 }
                 ++i;
             }
