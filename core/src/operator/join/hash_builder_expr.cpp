@@ -15,14 +15,14 @@ using namespace omniruntime::vec;
 
 HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
     const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-    int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount, OverflowConfig *overflowConfig)
+    int32_t buildHashKeysCount, int32_t hashTableCount, OverflowConfig *overflowConfig)
 {
-    return new HashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, buildHashKeysCount, filter, hashTableCount,
+    return new HashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, buildHashKeysCount, hashTableCount,
         overflowConfig);
 }
 
 HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const type::DataTypes &buildTypes,
-    const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount, std::string &filter,
+    const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
     int32_t hashTableCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newBuildTypes;
@@ -30,7 +30,7 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const typ
         this->buildHashCols, this->projectFuncs, overflowConfig);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes),
-        this->buildHashCols.data(), buildHashKeysCount, filter, hashTableCount);
+        this->buildHashCols.data(), buildHashKeysCount, hashTableCount);
 }
 
 HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()

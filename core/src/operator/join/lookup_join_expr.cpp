@@ -18,11 +18,11 @@ LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLook
     const DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
     int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType joinType,
-    int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig)
+    int64_t hashBuilderFactoryAddr, Expr *filterExpr, OverflowConfig *overflowConfig)
 {
     auto operatorFactory = new LookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount, buildOutputTypes, joinType,
-        hashBuilderFactoryAddr, overflowConfig);
+        hashBuilderFactoryAddr, filterExpr, overflowConfig);
     return operatorFactory;
 }
 
@@ -30,7 +30,7 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
     int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType joinType,
-    int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig)
+    int64_t hashBuilderFactoryAddr, Expr *filterExpr, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newProbeTypes;
     OperatorUtil::CreateProjectFuncs(probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes, this->projections,
@@ -41,8 +41,8 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes),
         probeOutputCols, probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols,
         buildOutputColsCount, std::move(buildOutputTypes), joinType,
-        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()), probeTypes.GetSize(),
-        overflowConfig);
+        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()), filterExpr,
+        probeTypes.GetSize(), overflowConfig);
 }
 
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()

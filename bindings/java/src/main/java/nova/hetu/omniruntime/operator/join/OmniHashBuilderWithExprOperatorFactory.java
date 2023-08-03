@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -30,22 +29,26 @@ import java.util.concurrent.locks.ReentrantLock;
 public class OmniHashBuilderWithExprOperatorFactory
         extends OmniOperatorFactory<OmniHashBuilderWithExprOperatorFactory.FactoryContext> {
     /**
-     * The global lock is used for sharing hash builder operator and factory concurrently.
+     * The global lock is used for sharing hash builder operator and factory
+     * concurrently.
      */
     public static final Lock gLock = new ReentrantLock();
 
     /**
-     * The hashmap cached the shared hash builder operator, the key is the build plan node id.
+     * The hashmap cached the shared hash builder operator, the key is the build
+     * plan node id.
      */
     private static Map<Integer, OmniOperator> operatorCache = new HashMap<>();
 
     /**
-     * The hashmap cached the shared hash builder operator factory, the key is the build plan node id.
+     * The hashmap cached the shared hash builder operator factory, the key is the
+     * build plan node id.
      */
     private static Map<Integer, OmniHashBuilderWithExprOperatorFactory> factoryCache = new HashMap<>();
 
     /**
-     * The hashmap stores the num of lookup which is in-use shared hash builder operator
+     * The hashmap stores the num of lookup which is in-use shared hash builder
+     * operator
      * the key is the build plan node id.
      */
     private static Map<Integer, AtomicInteger> ref = new HashMap<>();
@@ -55,13 +58,12 @@ public class OmniHashBuilderWithExprOperatorFactory
      *
      * @param buildTypes the build input types
      * @param buildHashKeys the build hash keys
-     * @param filterExpression the filter expression in join
      * @param operatorCount the operator count
      * @param operatorConfig the operator config
      */
-    public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys,
-            Optional<String> filterExpression, int operatorCount, OperatorConfig operatorConfig) {
-        super(new FactoryContext(buildTypes, buildHashKeys, filterExpression, operatorCount, operatorConfig));
+    public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys, int operatorCount,
+            OperatorConfig operatorConfig) {
+        super(new FactoryContext(buildTypes, buildHashKeys, operatorCount, operatorConfig));
     }
 
     /**
@@ -70,22 +72,19 @@ public class OmniHashBuilderWithExprOperatorFactory
      *
      * @param buildTypes the build input types
      * @param buildHashKeys the build hash keys
-     * @param filterExpression the filter expression in join
      * @param operatorCount the operator count
      */
-    public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys,
-            Optional<String> filterExpression, int operatorCount) {
-        this(buildTypes, buildHashKeys, filterExpression, operatorCount, new OperatorConfig());
+    public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys, int operatorCount) {
+        this(buildTypes, buildHashKeys, operatorCount, new OperatorConfig());
     }
 
     private static native long createHashBuilderWithExprOperatorFactory(String buildTypes, String[] buildHashKeys,
-            String filterExpression, int operatorCount, String operatorConfig);
+            int operatorCount, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createHashBuilderWithExprOperatorFactory(DataTypeSerializer.serialize(context.buildTypes),
-                context.buildHashKeys, context.filterExpression, context.operatorCount,
-                OperatorConfig.serialize(context.operatorConfig));
+                context.buildHashKeys, context.operatorCount, OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**
@@ -96,8 +95,7 @@ public class OmniHashBuilderWithExprOperatorFactory
      * @param operator the shared hash builder operator
      */
     public static void saveHashBuilderOperatorAndFactory(Integer builderNodeId,
-                                                         OmniHashBuilderWithExprOperatorFactory factory,
-                                                         OmniOperator operator) {
+            OmniHashBuilderWithExprOperatorFactory factory, OmniOperator operator) {
         operatorCache.put(builderNodeId, operator);
         factoryCache.put(builderNodeId, factory);
     }
@@ -139,8 +137,6 @@ public class OmniHashBuilderWithExprOperatorFactory
 
         private final String[] buildHashKeys;
 
-        private final String filterExpression;
-
         private final int operatorCount;
 
         private final OperatorConfig operatorConfig;
@@ -150,15 +146,13 @@ public class OmniHashBuilderWithExprOperatorFactory
          *
          * @param buildTypes the build types
          * @param buildHashKeys the build hash keys
-         * @param filterExpression the join filter expression
          * @param operatorCount the operator count
          * @param operatorConfig the operator config
          */
-        public FactoryContext(DataType[] buildTypes, String[] buildHashKeys, Optional<String> filterExpression,
-                int operatorCount, OperatorConfig operatorConfig) {
+        public FactoryContext(DataType[] buildTypes, String[] buildHashKeys, int operatorCount,
+                OperatorConfig operatorConfig) {
             this.buildTypes = requireNonNull(buildTypes, "buildTypes");
             this.buildHashKeys = requireNonNull(buildHashKeys, "buildHashKeys");
-            this.filterExpression = filterExpression.isPresent() ? filterExpression.get() : "";
             this.operatorCount = operatorCount;
             this.operatorConfig = operatorConfig;
             setNeedCache(false);
@@ -166,8 +160,8 @@ public class OmniHashBuilderWithExprOperatorFactory
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(buildTypes), Arrays.hashCode(buildHashKeys), filterExpression,
-                    operatorCount, operatorConfig);
+            return Objects.hash(Arrays.hashCode(buildTypes), Arrays.hashCode(buildHashKeys), operatorCount,
+                    operatorConfig);
         }
 
         @Override
@@ -180,8 +174,7 @@ public class OmniHashBuilderWithExprOperatorFactory
             }
             FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(buildTypes, that.buildTypes) && Arrays.equals(buildHashKeys, that.buildHashKeys)
-                    && filterExpression.equals(that.filterExpression) && operatorCount == that.operatorCount
-                    && operatorConfig.equals(that.operatorConfig);
+                    && operatorCount == that.operatorCount && operatorConfig.equals(that.operatorConfig);
         }
     }
 }

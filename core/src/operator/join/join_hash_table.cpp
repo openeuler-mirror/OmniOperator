@@ -75,33 +75,6 @@ JoinHashTables::~JoinHashTables()
 {
     delete[] hashTables;
     hashTables = nullptr;
-    if (simpleFilter != nullptr) {
-        delete simpleFilter;
-        simpleFilter = nullptr;
-    }
-}
-
-void JoinHashTables::JoinFilterCodeGen(OverflowConfig *overflowConfig)
-{
-    if (this->filterExpr == nullptr) {
-        return;
-    }
-    simpleFilter = new SimpleFilter(*this->filterExpr);
-    auto result = simpleFilter->Initialize(overflowConfig);
-    if (!result) {
-        delete simpleFilter;
-        simpleFilter = nullptr;
-        throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "The expression is not supported yet.");
-    }
-
-    auto usedColumns = simpleFilter->GetVectorIndexes();
-    for (auto col : usedColumns) {
-        if (col < originalProbeColsCount) {
-            probeFilterCols.emplace_back(col);
-        } else {
-            buildFilterCols.emplace_back(col);
-        }
-    }
 }
 
 JoinHashTable::JoinHashTable(PagesHashStrategy *pagesHashStrategy, uint64_t *addresses, uint32_t addressesCount)

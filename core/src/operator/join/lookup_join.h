@@ -90,28 +90,29 @@ public:
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
         const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
-        OverflowConfig *overflowConfig);
+        omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
         const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
-        int32_t originalProbeColsCount, OverflowConfig *overflowConfig);
+        omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig);
     ~LookupJoinOperatorFactory() override;
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType joinType,
-        int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig);
+        int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
     // this is only for LookupJoinWithExprOperator
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
-        JoinType inputJoinType, int64_t hashBuilderFactoryAddr, int32_t originalProbeColsCount,
-        OverflowConfig *overflowConfig);
+        JoinType inputJoinType, int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr,
+        int32_t originalProbeColsCount, OverflowConfig *overflowConfig);
     Operator *CreateOperator() override;
 
 private:
     void CommonInitActions(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
         const type::DataTypes &buildOutputTypes);
+    void JoinFilterCodeGen(Expr *filterExpr, OverflowConfig *overflowConfig);
 
     DataTypes probeTypes;                 // all types for probe
     std::vector<int32_t> probeOutputCols; // output columns for probe
@@ -122,6 +123,9 @@ private:
     JoinType joinType;
     JoinHashTables *hashTables;
     int32_t rowSize;
+    SimpleFilter *simpleFilter = nullptr;
+    // this is for lookup join with expression operator when join key and join filter both are expressions
+    int32_t originalProbeColsCount;
 };
 
 class LookupJoinOperator : public Operator {
@@ -129,7 +133,7 @@ public:
     LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
         std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
-        JoinHashTables *hashTables, int32_t outputRowSize);
+        JoinHashTables *hashTables, SimpleFilter *simpleFilter, int32_t originalProbeColsCount, int32_t outputRowSize);
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
@@ -145,6 +149,11 @@ private:
     void PrepareCurrentProbe();
     void PopulateProbeHashes();
     void ProcessProbe(bool hasFilter);
+
+    ALWAYS_INLINE std::vector<BaseVector **> &GetBuildFilterColPtrs(uint32_t partition)
+    {
+        return tableBuildFilterColPtrs[partition];
+    }
 
     JoinType joinType;
     DataTypes probeTypes;
@@ -169,14 +178,16 @@ private:
 
     // this is for join filter
     SimpleFilter *simpleFilter = nullptr;
-    omniruntime::vec::BaseVector **probeFilterColumns = nullptr;
-    int64_t *values = nullptr;
-    bool *nulls = nullptr;
-    int32_t *lengths = nullptr;
+    int32_t originalProbeColsCount;
     std::vector<int32_t> probeFilterCols;
     std::vector<int32_t> buildFilterCols;
     int32_t *probeFilterTypeIds = nullptr;
     int32_t *buildFilterTypeIds = nullptr;
+    omniruntime::vec::BaseVector **probeFilterColumns = nullptr;
+    int64_t *values = nullptr;
+    bool *nulls = nullptr;
+    int32_t *lengths = nullptr;
+    std::vector<std::vector<BaseVector **>> tableBuildFilterColPtrs;
     bool firstVecBatch = false;
 };
 } // end of op

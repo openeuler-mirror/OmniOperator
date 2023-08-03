@@ -577,8 +577,7 @@ Java_nova_hetu_omniruntime_operator_project_OmniProjectOperatorFactory_createPro
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory(JNIEnv *env,
-    jclass jObj, jstring jBuildTypes, jintArray jBuildHashCols, jstring jFilterExpr, jint jSortChannel,
-    jobjectArray jSearchExprs, jint jOperatorCount)
+    jclass jObj, jstring jBuildTypes, jintArray jBuildHashCols, jint jOperatorCount, jstring jOperatorConfig)
 {
     auto buildTypesCharPtr = env->GetStringUTFChars(jBuildTypes, JNI_FALSE);
     auto buildHashColsCount = env->GetArrayLength(jBuildHashCols);
@@ -586,14 +585,11 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
 
     auto buildDataTypes = Deserialize(buildTypesCharPtr);
     env->ReleaseStringUTFChars(jBuildTypes, buildTypesCharPtr);
-    auto filterChars = env->GetStringUTFChars(jFilterExpr, JNI_FALSE);
-    std::string filterExpression = std::string(filterChars);
-    env->ReleaseStringUTFChars(jFilterExpr, filterChars);
 
     HashBuilderOperatorFactory *hashBuilderOperatorFactory = nullptr;
     JNI_METHOD_START
     hashBuilderOperatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(buildDataTypes,
-        buildHashColsArr, buildHashColsCount, filterExpression, jOperatorCount);
+        buildHashColsArr, buildHashColsCount, jOperatorCount);
     JNI_METHOD_END(0L)
 
     env->ReleaseIntArrayElements(jBuildHashCols, buildHashColsArr, 0);
@@ -616,7 +612,8 @@ omniruntime::expressions::Expr *CreateJoinFilterExpr(const std::string &filterSt
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *env,
     jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols, jintArray jBuildOutputCols,
-    jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory, jstring jOperatorConfig)
+    jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory, jstring jFilter,
+    jstring jOperatorConfig)
 {
     auto probeTypesCharPtr = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     auto probeOutputColsArr = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
@@ -632,25 +629,26 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     env->ReleaseStringUTFChars(jProbeTypes, probeTypesCharPtr);
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesCharPtr);
 
+    auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
+    std::string filterExpression = std::string(filterChars);
+    env->ReleaseStringUTFChars(jFilter, filterChars);
+    Expr *filterExpr = nullptr;
+    JNI_METHOD_START
+    // extract the expression and the BuildDataTypes to parse the expression
+    filterExpr = CreateJoinFilterExpr(filterExpression);
+    JNI_METHOD_END(0L)
+
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
     auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    Expr *filterExpr = nullptr;
-    JNI_METHOD_START
-    // extract the expression and the BuildDataTypes to parse the expression
-    auto hashTables = reinterpret_cast<HashBuilderOperatorFactory *>(jHashBuilderOperatorFactory)->GetHashTables();
-    std::string filterExpression = hashTables->GetFilterExpression();
-    filterExpr = CreateJoinFilterExpr(filterExpression);
-    hashTables->SetFilterExpr(filterExpr);
-    JNI_METHOD_END(0L)
-
     LookupJoinOperatorFactory *lookupJoinOperatorFactory = nullptr;
     JNI_METHOD_START
     lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeDataTypes,
         probeOutputColsArr, probeOutputColsCount, probeHashColsArr, probeHashColsCount, buildOutputColsArr,
-        buildOutputColsCount, buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, overflowConfig);
+        buildOutputColsCount, buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, filterExpr,
+        overflowConfig);
     JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
     Expr::DeleteExprs({ filterExpr });
 
@@ -718,7 +716,7 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_createHashBuilderWithExprOperatorFactory(
-    JNIEnv *env, jclass jObj, jstring jBuildTypes, jobjectArray jBuildHashKeys, jstring jFilter, jint jHashTableCount,
+    JNIEnv *env, jclass jObj, jstring jBuildTypes, jobjectArray jBuildHashKeys, jint jHashTableCount,
     jstring jOperatorConfig)
 {
     auto buildTypesChars = env->GetStringUTFChars(jBuildTypes, JNI_FALSE);
@@ -727,10 +725,6 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     GetExpressions(env, jBuildHashKeys, buildHashKeysArr, buildHashKeysCount);
     auto buildDataTypes = Deserialize(buildTypesChars);
     env->ReleaseStringUTFChars(jBuildTypes, buildTypesChars);
-
-    auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
-    std::string filterExpression = std::string(filterChars);
-    env->ReleaseStringUTFChars(jFilter, filterChars);
 
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
@@ -746,7 +740,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     HashBuilderWithExprOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildDataTypes,
-        buildHashKeysArrExprs, buildHashKeysCount, filterExpression, jHashTableCount, overflowConfig);
+        buildHashKeysArrExprs, buildHashKeysCount, jHashTableCount, overflowConfig);
     JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, buildHashKeysArrExprs)
     Expr::DeleteExprs(buildHashKeysArrExprs);
 
@@ -757,7 +751,7 @@ JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_createLookupJoinWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jobjectArray jProbeHashKeys,
     jintArray jBuildOutputCols, jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory,
-    jstring jOperatorConfig)
+    jstring jFilter, jstring jOperatorConfig)
 {
     auto probeTypesChars = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     auto probeOutputCols = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
@@ -774,21 +768,19 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     env->ReleaseStringUTFChars(jProbeTypes, probeTypesChars);
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesChars);
 
+    auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
+    std::string filterExpression = std::string(filterChars);
+    env->ReleaseStringUTFChars(jFilter, filterChars);
+    Expr *filterExpr = nullptr;
+    JNI_METHOD_START
+    // extract the expression and the BuildDataTypes to parse the expression
+    filterExpr = CreateJoinFilterExpr(filterExpression);
+    JNI_METHOD_END(0L)
+
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
     auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
-
-    // extract the expression and the BuildDataTypes to parse the expression
-    auto hashTables = reinterpret_cast<HashBuilderWithExprOperatorFactory *>(jHashBuilderOperatorFactory)
-                          ->GetHashBuilderOperatorFactory()
-                          ->GetHashTables();
-    std::string filterExpression = hashTables->GetFilterExpression();
-    Expr *filterExpr = nullptr;
-    JNI_METHOD_START
-    filterExpr = CreateJoinFilterExpr(filterExpression);
-    hashTables->SetFilterExpr(filterExpr);
-    JNI_METHOD_END(0L)
 
     vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs;
     JNI_METHOD_START
@@ -800,7 +792,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_METHOD_START
     operatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeDataTypes,
         probeOutputCols, probeOutputColsCount, probeHashKeysArrExprs, probeHashKeysCount, buildOutputCols,
-        buildOutputColsCount, buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, overflowConfig);
+        buildOutputColsCount, buildOutputDataTypes, (JoinType)jJoinType, jHashBuilderOperatorFactory, filterExpr,
+        overflowConfig);
     JNI_METHOD_END_WITH_MULTI_EXPRS(0L, { filterExpr }, probeHashKeysArrExprs)
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(probeHashKeysArrExprs);

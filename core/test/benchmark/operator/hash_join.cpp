@@ -69,8 +69,7 @@ protected:
     OperatorFactory *createOperatorFactory(const State &state) override
     {
         return new HashBuilderOperatorFactory(DataTypes(BUILD_TYPES[TestGroup(state)]),
-            BUILD_HASH_COLS[TestGroup(state)].data(), (int32_t)BUILD_HASH_COLS[TestGroup(state)].size(),
-            filterExpression, 1);
+            BUILD_HASH_COLS[TestGroup(state)].data(), (int32_t)BUILD_HASH_COLS[TestGroup(state)].size(),1);
     }
 
     std::vector<VectorBatchSupplier> createVecBatch(const State &state) override
@@ -140,7 +139,7 @@ protected:
             PROBE_OUTPUT_COLS[TestGroup(state)].data(), (int32_t)PROBE_OUTPUT_COLS[TestGroup(state)].size(),
             PROBE_HASH_COLS[TestGroup(state)].data(), (int32_t)PROBE_HASH_COLS[TestGroup(state)].size(),
             BUILD_OUTPUT_COLS[TestGroup(state)].data(), (int32_t)BUILD_OUTPUT_COLS[TestGroup(state)].size(),
-            DataTypes(buildOutputTypes), JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderOperatorFactory->GetHashTables(),
+            DataTypes(buildOutputTypes), JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderOperatorFactory->GetHashTables(), nullptr,
             new OverflowConfig());
     }
 

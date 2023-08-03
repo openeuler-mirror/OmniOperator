@@ -18,11 +18,11 @@ class HashBuilderWithExprOperatorFactory : public OperatorFactory {
 public:
     static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(
         const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-        int32_t buildHashKeysCount, std::string &filter, int32_t hashTableCount, OverflowConfig *overflowConfig);
+        int32_t buildHashKeysCount, int32_t hashTableCount, OverflowConfig *overflowConfig);
 
     HashBuilderWithExprOperatorFactory(const DataTypes &buildTypes,
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
-        std::string &filter, int32_t hashTableCount, OverflowConfig *overflowConfig);
+        int32_t hashTableCount, OverflowConfig *overflowConfig);
 
     ~HashBuilderWithExprOperatorFactory() override;
 

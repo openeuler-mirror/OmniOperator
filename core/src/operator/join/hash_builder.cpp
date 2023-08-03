@@ -11,7 +11,7 @@
 namespace omniruntime {
 namespace op {
 HashBuilderOperatorFactory::HashBuilderOperatorFactory(const DataTypes &buildTypes, const int32_t *buildHashCols,
-    int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount)
+    int32_t buildHashColsCount, int32_t operatorCount)
     : buildTypes(buildTypes), hashTableCount(operatorCount), operatorIndex(0)
 {
     if (operatorCount <= 0 || operatorCount > 10000) {
@@ -20,7 +20,6 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(const DataTypes &buildTyp
     this->buildHashCols.insert(this->buildHashCols.end(), buildHashCols, buildHashCols + buildHashColsCount);
     this->hashTables = new JoinHashTables(operatorCount);
     this->hashTables->SetBuildTypes(&(this->buildTypes));
-    this->hashTables->SetFilterExpression(filterExpr);
 }
 
 HashBuilderOperatorFactory::~HashBuilderOperatorFactory()
@@ -29,9 +28,9 @@ HashBuilderOperatorFactory::~HashBuilderOperatorFactory()
 }
 
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(const DataTypes &dataTypes,
-    const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount)
+    const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
 {
-    return new HashBuilderOperatorFactory(dataTypes, buildHashCols, buildHashColsCount, filterExpr, operatorCount);
+    return new HashBuilderOperatorFactory(dataTypes, buildHashCols, buildHashColsCount, operatorCount);
 }
 
 Operator *HashBuilderOperatorFactory::CreateOperator()

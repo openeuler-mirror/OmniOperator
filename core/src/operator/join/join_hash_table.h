@@ -237,43 +237,6 @@ public:
         this->probeTypes = probeDataTypes;
     }
 
-    ALWAYS_INLINE void SetOriginalProbeColsCount(int32_t originalColsCount)
-    {
-        this->originalProbeColsCount = originalColsCount;
-    }
-
-    ALWAYS_INLINE void SetFilterExpression(std::string &expression)
-    {
-        this->filterExpression = expression;
-    }
-
-    ALWAYS_INLINE std::string &GetFilterExpression()
-    {
-        return this->filterExpression;
-    }
-
-    void JoinFilterCodeGen(OverflowConfig *overflowConfig);
-
-    ALWAYS_INLINE SimpleFilter *GetSimpleFilter()
-    {
-        return simpleFilter;
-    }
-
-    ALWAYS_INLINE void SetFilterExpr(omniruntime::expressions::Expr *filterExpr)
-    {
-        this->filterExpr = filterExpr;
-    }
-
-    ALWAYS_INLINE std::vector<int32_t> &GetProbeFilterCols()
-    {
-        return probeFilterCols;
-    }
-
-    ALWAYS_INLINE std::vector<int32_t> &GetBuildFilterCols()
-    {
-        return buildFilterCols;
-    }
-
     ALWAYS_INLINE uint32_t GetVisitedCounts() const
     {
         return visitedCounts;
@@ -299,7 +262,8 @@ public:
         totalVisitedCounts += hashTable->GetVisitedPositionsSize();
     }
 
-    ALWAYS_INLINE void InitBuildFilterCols()
+    ALWAYS_INLINE void InitBuildFilterCols(std::vector<int32_t> &buildFilterCols, int32_t originalProbeColsCount,
+        std::vector<std::vector<BaseVector **>> &tableBuildFilterColPtrs)
     {
         tableBuildFilterColPtrs.resize(hashTableSize);
         auto buildFilterColsCount = buildFilterCols.size();
@@ -310,11 +274,6 @@ public:
                 tableBuildFilterColPtrs[hashTableIdx].emplace_back(buildColumns);
             }
         }
-    }
-
-    ALWAYS_INLINE std::vector<BaseVector **> &GetBuildFilterColPtrs(uint32_t partition)
-    {
-        return tableBuildFilterColPtrs[partition];
     }
 
     ALWAYS_INLINE void PositionVisited(uint32_t partition, uint32_t joinPosition)
@@ -331,11 +290,6 @@ public:
         return totalVisitedCounts;
     }
 
-    ALWAYS_INLINE int32_t GetOriginalProbeColsCount() const
-    {
-        return originalProbeColsCount;
-    }
-
 private:
     uint32_t hashTableCount;
     JoinHashTable **hashTables; // actually, the type is JoinHashTable **
@@ -344,14 +298,6 @@ private:
     uint32_t shiftSize;
     DataTypes *probeTypes;
     DataTypes *buildTypes;
-    // this is for lookup join with expression operator when join key and join filter both are expressions
-    int32_t originalProbeColsCount;
-    std::string filterExpression;
-    omniruntime::expressions::Expr *filterExpr = nullptr;
-    SimpleFilter *simpleFilter = nullptr;
-    std::vector<int32_t> probeFilterCols;
-    std::vector<int32_t> buildFilterCols;
-    std::vector<std::vector<BaseVector **>> tableBuildFilterColPtrs;
     uint32_t visitedCounts = 0;
     uint32_t totalVisitedCounts = 0;
 };
