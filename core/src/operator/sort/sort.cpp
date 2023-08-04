@@ -66,6 +66,10 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
     maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputCols.size());
     maxRowCountPerBatch = maxRowCountPerBatch == 0 ? 1 : maxRowCountPerBatch;
+    if (sourceTypes.GetSize() == 1 && sourceTypes.GetType(0)->GetId() != OMNI_VARCHAR &&
+        sourceTypes.GetType(0)->GetId() != OMNI_CHAR && sourceTypes.GetType(0)->GetId() != OMNI_BOOLEAN) {
+        canInplaceSort = true;
+    }
 }
 
 SortOperator::~SortOperator() = default;
@@ -123,7 +127,11 @@ OmniStatus SortOperator::Close()
 
 ErrorCode SortOperator::SpillToDisk()
 {
-    pagesIndex->Prepare();
+    if (!canInplaceSort) {
+        pagesIndex->Prepare();
+    } else {
+        DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(), sortNullFirsts[0]);
+    }
 
     Sort();
 
@@ -148,7 +156,12 @@ void SortOperator::Sort()
 {
     int32_t positionCount = pagesIndex->GetRowCount();
     int32_t sortColCount = sortCols.size();
-    pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0, positionCount);
+    if (!canInplaceSort) {
+        pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0, positionCount);
+    } else {
+        pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
+            positionCount);
+    }
 }
 
 void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesForSpill)
@@ -159,7 +172,7 @@ void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesF
         outputCols[i] = i;
     }
 
-    pagesIndex->GetSortedVecBatches(outputCols, vecBatchesForSpill);
+    pagesIndex->GetSortedVecBatches(outputCols, vecBatchesForSpill, canInplaceSort);
 }
 
 void SortOperator::PrepareOutput()
@@ -167,7 +180,11 @@ void SortOperator::PrepareOutput()
     if (pagesIndex->GetRowCount() <= 0 || hasSorted) {
         return;
     }
-    pagesIndex->Prepare();
+    if (!canInplaceSort) {
+        pagesIndex->Prepare();
+    } else {
+        DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(), sortNullFirsts[0]);
+    }
     // first step, sort
     Sort();
     hasSorted = true;
@@ -182,8 +199,13 @@ void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
         static_cast<int32_t>(std::min(static_cast<size_t>(maxRowCountPerBatch), (totalRowCount - rowCountOutputted)));
 
     auto *result = new VectorBatch(rowCountToOutput);
-    pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
-        rowCountToOutput);
+    if (!canInplaceSort) {
+        pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
+            rowCountToOutput);
+    } else {
+        pagesIndex->GetOutputInplaceSort(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(),
+            rowCountOutputted, rowCountToOutput);
+    }
     rowCountOutputted += rowCountToOutput;
     *outputVecBatch = result;
 }
@@ -193,7 +215,12 @@ void SortOperator::MergeFromDiskAndMemory(VectorBatch **outputVecBatch)
     if (!hasSorted) {
         std::vector<VectorBatch *> vecBatchesForSpill;
         if (pagesIndex->GetRowCount() > 0) {
-            pagesIndex->Prepare();
+            if (!canInplaceSort) {
+                pagesIndex->Prepare();
+            } else {
+                DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(),
+                    sortNullFirsts[0]);
+            }
             // first step, sort
             Sort();
             // second step, get sorted vector batches
