@@ -141,9 +141,9 @@ public:
         return false;
     }
 
-    int32_t GetNullCount() const
+    int32_t GetNullCount()
     {
-        return hasNull ? BitMap::ComputeBitCount(reinterpret_cast<const uint8_t *>(nulls), offset, size) : 0;
+        return HasNull() ? BitMap::ComputeBitCount(reinterpret_cast<const uint8_t *>(nulls), offset, size) : 0;
     }
 
     int32_t ALWAYS_INLINE GetOffset()

@@ -26,14 +26,46 @@ public:
 
     void Prepare();
 
+    template <DataTypeId typeId> void PrepareInplaceSort(int32_t nullFirst)
+    {
+        auto vecBatchCount = static_cast<int32_t>(inputVecBatches.size());
+
+        for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+            VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
+            auto col = vecBatch->Get(0);
+            totalNullCount += col->GetNullCount();
+            if (col->GetEncoding() == OMNI_DICTIONARY) {
+                vecBatch->SetVector(0, VectorHelper::DecodeDictionaryVector(col));
+                delete col;
+            }
+        }
+
+        inplaceSortColumn = VectorHelper::CreateFlatVector<typeId>(positionCount);
+        if (totalNullCount == 0) {
+            // all batches have no null value
+            PartitionNonNull<typeId>();
+        } else {
+            // support nulls first and nulls last
+            PartitionNull<typeId>(nullFirst);
+        }
+        inputVecBatches.clear();
+    }
+
     void Sort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+        int32_t sortColCount, int32_t from, int32_t to);
+
+    void SortInplace(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
         int32_t sortColCount, int32_t from, int32_t to);
 
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
         const int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
+    void GetOutputInplaceSort(int32_t *outputCols, int32_t outputColsCount,
+        omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset,
+        int32_t length) const;
+
     void GetSortedVecBatches(std::vector<int32_t> &outputCols,
-        std::vector<omniruntime::vec::VectorBatch *> &sortedVecBatches);
+        std::vector<omniruntime::vec::VectorBatch *> &sortedVecBatches, bool canSortInplace = false);
 
     void Clear();
 
@@ -72,6 +104,62 @@ private:
         int32_t sortColCount, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int32_t from,
         int32_t to, int32_t currentCol);
 
+    template <DataTypeId typeId> void PartitionNonNull()
+    {
+        using T = typename NativeType<typeId>::type;
+        auto vecBatchCount = static_cast<int32_t>(inputVecBatches.size());
+        int32_t valueIndex = 0;
+        for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+            VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
+            auto rowCount = vecBatch->GetRowCount();
+            auto *col = reinterpret_cast<Vector<T> *>(vecBatch->Get(0));
+            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                reinterpret_cast<Vector<T> *>(inplaceSortColumn)->SetValue(valueIndex++, col->GetValue(rowIdx));
+            }
+            VectorHelper::FreeVecBatch(vecBatch);
+        }
+    }
+
+    template <DataTypeId typeId> void PartitionNull(int32_t nullFirst)
+    {
+        using T = typename NativeType<typeId>::type;
+        auto vecBatchCount = static_cast<int32_t>(inputVecBatches.size());
+        auto values = reinterpret_cast<T *>(VectorHelper::UnsafeGetValues(inplaceSortColumn));
+        auto nulls = unsafe::UnsafeBaseVector::GetNulls(inplaceSortColumn);
+
+        // init values, nulls position
+        if (nullFirst) {
+            values += totalNullCount;
+        } else {
+            nulls += positionCount - totalNullCount;
+        }
+
+        int32_t valueIndex = 0;
+        int32_t nullIndex = 0;
+        for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+            VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
+            auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
+            auto *col = reinterpret_cast<Vector<T> *>(vecBatch->Get(0));
+            if (!col->HasNull()) {
+                for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                    values[valueIndex++] = col->GetValue(rowIdx);
+                }
+            } else {
+                for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                    if (col->IsNull(rowIdx)) {
+                        nulls[nullIndex++] = true;
+                    } else {
+                        values[valueIndex++] = col->GetValue(rowIdx);
+                    }
+                }
+            }
+            VectorHelper::FreeVecBatch(vecBatch);
+        }
+    }
+
+    template <DataTypeId dataTypeId>
+    void SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32_t from, int32_t to);
+
     const DataTypes dataTypes;
     uint32_t typesCount;
     omniruntime::vec::BaseVector ***columns; // Vector* [columnIndex][tableIndex]
@@ -80,6 +168,8 @@ private:
     std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
     std::vector<bool> hasDictionaries;
     std::vector<bool> hasNulls;
+    int64_t totalNullCount = 0;
+    omniruntime::vec::BaseVector *inplaceSortColumn = nullptr;
 };
 
 constexpr uint32_t SHIFT_SIZE_32 = 32;

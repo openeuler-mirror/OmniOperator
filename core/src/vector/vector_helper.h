@@ -31,8 +31,7 @@ public:
         return new Vector<DictionaryContainer<std::string_view>>(valueSize, dictionary, nullsBuffer, OMNI_CHAR);
     }
 
-    template <typename T>
-    static BaseVector *CreateDictionary(int32_t *values, int32_t valueSize, Vector<T> *vector)
+    template <typename T> static BaseVector *CreateDictionary(int32_t *values, int32_t valueSize, Vector<T> *vector)
     {
         std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);
         bool *nulls = nullsBuffer->GetBuffer();
@@ -68,8 +67,7 @@ public:
         }
     }
 
-    static BaseVector *CreateFlatVector(int32_t dataTypeId, int32_t size,
-                                                    int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    static BaseVector *CreateFlatVector(int32_t dataTypeId, int32_t size, int32_t capacityInBytes = INITIAL_STRING_SIZE)
     {
         using namespace omniruntime::type;
         return DYNAMIC_TYPE_DISPATCH(CreateFlatVector, dataTypeId, size, capacityInBytes);
@@ -165,8 +163,7 @@ public:
         }
     }
 
-    static BaseVector *CreateDictionaryVector(int *values, int valueSize, BaseVector *vector,
-        int dataTypeId)
+    static BaseVector *CreateDictionaryVector(int *values, int valueSize, BaseVector *vector, int dataTypeId)
     {
         switch (dataTypeId) {
             case type::OMNI_INT:
@@ -307,8 +304,7 @@ public:
         return nullptr;
     }
 
-    static BaseVector *SliceDictionaryVector(BaseVector *vector, int positionOffset,
-        int length)
+    static BaseVector *SliceDictionaryVector(BaseVector *vector, int positionOffset, int length)
     {
         switch (vector->GetTypeId()) {
             case type::OMNI_INT:
@@ -385,8 +381,7 @@ public:
         }
     }
 
-    static BaseVector *CopyPositionsDictionaryVector(BaseVector *vector, int *positions, int offset,
-        int length)
+    static BaseVector *CopyPositionsDictionaryVector(BaseVector *vector, int *positions, int offset, int length)
     {
         DataTypeId dataTypeId = vector->GetTypeId();
         switch (dataTypeId) {
@@ -583,6 +578,75 @@ public:
     {
         vecBatch->FreeAllVectors();
         delete vecBatch;
+    }
+
+    template <typename T> static BaseVector *DecodeFlatDictionaryVector(BaseVector *vector)
+    {
+        int size = vector->GetSize();
+        auto *flatVector = new Vector<T>(size);
+        auto dicVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector);
+        for (int i = 0; i < size; i++) {
+            if (dicVector->IsNull(i)) {
+                flatVector->SetNull(i);
+            } else {
+                flatVector->SetValue(i, dicVector->GetValue(i));
+            }
+        }
+        return flatVector;
+    }
+
+    static BaseVector *DecodeVarcharDictionaryVector(BaseVector *vector)
+    {
+        using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+        int size = vector->GetSize();
+        VarcharVector *flatVector = new VarcharVector(size);
+        auto dicVector =
+            reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector);
+        for (int i = 0; i < size; i++) {
+            if (dicVector->IsNull(i)) {
+                flatVector->SetNull(i);
+            } else {
+                std::string_view value = dicVector->GetValue(i);
+                flatVector->SetValue(i, value);
+            }
+        }
+        return flatVector;
+    }
+
+    static BaseVector *DecodeDictionaryVector(BaseVector *vector)
+    {
+        int32_t dataTypeId = vector->GetTypeId();
+        switch (dataTypeId) {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
+                return DecodeFlatDictionaryVector<int32_t>(vector);
+            }
+            case type::OMNI_SHORT: {
+                return DecodeFlatDictionaryVector<int16_t>(vector);
+            }
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
+                return DecodeFlatDictionaryVector<int64_t>(vector);
+            }
+            case type::OMNI_DECIMAL128: {
+                return DecodeFlatDictionaryVector<type::Decimal128>(vector);
+            }
+            case type::OMNI_DOUBLE: {
+                return DecodeFlatDictionaryVector<double>(vector);
+            }
+            case type::OMNI_BOOLEAN: {
+                return DecodeFlatDictionaryVector<bool>(vector);
+            }
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
+                return DecodeVarcharDictionaryVector(vector);
+            }
+            default: {
+                std::string message("No such data type " + std::to_string(dataTypeId));
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", message);
+            }
+        }
     }
 };
 }

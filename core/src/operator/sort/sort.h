@@ -158,6 +158,7 @@ private:
     VecBatchWithPositionComparator *comparator = nullptr;
     Spiller *spiller = nullptr;
     bool hasNext = true;
+    bool canInplaceSort = false;
 };
 } // end of namespace op
 } // end of namespace omniruntime

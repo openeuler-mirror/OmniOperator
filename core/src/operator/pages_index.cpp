@@ -894,6 +894,36 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
     }
 }
 
+void PagesIndex::SortInplace(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+    int32_t sortColCount, int32_t from, int32_t to)
+{
+    DYNAMIC_TYPE_DISPATCH(SortInplace, dataTypes.GetIds()[sortCols[0]], sortAscendings[0], sortNullFirsts[0], from, to);
+}
+
+template <DataTypeId typeId>
+void PagesIndex::SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32_t from, int32_t to)
+{
+    using T = typename NativeType<typeId>::type;
+    auto *values = reinterpret_cast<T *>(VectorHelper::UnsafeGetValues(inplaceSortColumn));
+    if (sortAscending) {
+        auto comp = [this](T &left, T &right) { return left < right; };
+        if (sortNullFirst) {
+            // null values have been preprocessed and can be skipped directly
+            std::sort(values + totalNullCount + from, values + to, comp);
+        } else {
+            std::sort(values + from, values + to - totalNullCount, comp);
+        }
+    } else {
+        auto comp = [this](T &left, T &right) { return left > right; };
+        if (sortNullFirst) {
+            // null values have been preprocessed and can be skipped directly
+            std::sort(values + totalNullCount + from, values + to, comp);
+        } else {
+            std::sort(values + from, values + to - totalNullCount, comp);
+        }
+    }
+}
+
 void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
     int32_t sortColCount, int32_t from, int32_t to)
 {
@@ -963,6 +993,12 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                 break;
         }
     }
+}
+
+void PagesIndex::GetOutputInplaceSort(int32_t *outputCols, int32_t outputColsCount,
+    omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset, int32_t length) const
+{
+    outputVecBatch->Append(VectorHelper::SliceVector(inplaceSortColumn, offset, length));
 }
 
 PagesIndex::~PagesIndex()
@@ -1064,7 +1100,8 @@ NO_INLINE BaseVector *ConstructVector(uint64_t *vaStart, int32_t length, BaseVec
     return outputVector;
 }
 
-void PagesIndex::GetSortedVecBatches(std::vector<int32_t> &outputCols, std::vector<VectorBatch *> &sortedVecBatches)
+void PagesIndex::GetSortedVecBatches(std::vector<int32_t> &outputCols, std::vector<VectorBatch *> &sortedVecBatches,
+    bool canInplaceSort)
 {
     int32_t outputColsCount = outputCols.size();
     int32_t maxRowCount = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputColsCount);
@@ -1077,7 +1114,11 @@ void PagesIndex::GetSortedVecBatches(std::vector<int32_t> &outputCols, std::vect
     for (int32_t i = 0; i < vecBatchCount; i++) {
         rowCount = std::min(maxRowCount, static_cast<int32_t>(positionCount) - offset);
         result = new VectorBatch(rowCount);
-        GetOutput(outputCols.data(), outputColsCount, result, dataTypes.GetIds(), offset, rowCount);
+        if (!canInplaceSort) {
+            GetOutput(outputCols.data(), outputColsCount, result, dataTypes.GetIds(), offset, rowCount);
+        } else {
+            GetOutputInplaceSort(outputCols.data(), outputColsCount, result, dataTypes.GetIds(), offset, rowCount);
+        }
         offset += rowCount;
         sortedVecBatches.push_back(result);
     }
@@ -1097,7 +1138,12 @@ void PagesIndex::Clear()
         delete[] valueAddresses;
         valueAddresses = nullptr;
     }
+    if (inplaceSortColumn != nullptr) {
+        delete inplaceSortColumn;
+        inplaceSortColumn = nullptr;
+    }
     positionCount = 0;
+    totalNullCount = 0;
     VectorHelper::FreeVecBatches(inputVecBatches);
     inputVecBatches.clear();
 }
