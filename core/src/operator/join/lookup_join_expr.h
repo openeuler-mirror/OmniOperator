@@ -21,13 +21,13 @@ public:
         int32_t *probeOutputCols, int32_t probeOutputColsCount,
         const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType joinType,
-        int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig);
+        int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
 
     LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes, int32_t *probeOutputCols,
         int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
         int32_t probeHashKeysCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
         const DataTypes &buildOutputTypes, JoinType joinType, int64_t hashBuilderFactoryAddr,
-        OverflowConfig *overflowConfig);
+        omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
 
     ~LookupJoinWithExprOperatorFactory() override;
 

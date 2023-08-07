@@ -76,8 +76,7 @@ public class OmniHashJoinOperatorsTest {
         int buildPageCount = 10;
 
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactoryWithoutJit = new OmniHashBuilderOperatorFactory(
-                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount,
-                new OperatorConfig());
+                buildTypes, buildHashCols, operatorCount, new OperatorConfig());
         OmniOperator hashBuilderOperatorWithoutJit = hashBuilderOperatorFactoryWithoutJit.createOperator();
         ImmutableList<VecBatch> buildVecsWithoutJit = buildVecs(buildPageCount);
 
@@ -98,7 +97,7 @@ public class OmniHashJoinOperatorsTest {
 
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactoryWithoutJit = new OmniLookupJoinOperatorFactory(
                 probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                hashBuilderOperatorFactoryWithoutJit, new OperatorConfig());
+                hashBuilderOperatorFactoryWithoutJit, Optional.empty(), new OperatorConfig());
         OmniOperator lookupJoinOperatorWithoutJit = lookupJoinOperatorFactoryWithoutJit.createOperator();
         ImmutableList<VecBatch> probeVecsWithoutJit = buildVecs(probePageCount);
 
@@ -109,8 +108,7 @@ public class OmniHashJoinOperatorsTest {
         System.out.println("LookupJoin without jit use " + (end - start) + " ms.");
 
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactoryWithJit = new OmniHashBuilderOperatorFactory(
-                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount,
-                new OperatorConfig());
+                buildTypes, buildHashCols, operatorCount, new OperatorConfig());
         OmniOperator hashBuilderOperatorWithJit = hashBuilderOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> buildVecsWithJit = buildVecs(buildPageCount);
 
@@ -124,7 +122,7 @@ public class OmniHashJoinOperatorsTest {
 
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactoryWithJit = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                hashBuilderOperatorFactoryWithJit, new OperatorConfig());
+                hashBuilderOperatorFactoryWithJit, Optional.empty(), new OperatorConfig());
         OmniOperator lookupJoinOperatorWithJit = lookupJoinOperatorFactoryWithJit.createOperator();
         ImmutableList<VecBatch> probeVecsWithJit = buildVecs(probePageCount);
 
@@ -173,7 +171,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {0};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -222,7 +220,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {0};
         int operatorCount = 2;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator1 = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator1.addInput(buildVecBatch1);
         hashBuilderOperator1.getOutput();
@@ -273,7 +271,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -319,7 +317,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -365,7 +363,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildJoinCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildJoinCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildJoinCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -411,7 +409,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -456,7 +454,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -504,7 +502,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -557,7 +555,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -608,7 +606,7 @@ public class OmniHashJoinOperatorsTest {
         String filterExpression = omniJsonGreaterThanExpr(getOmniJsonFieldReference(1, 1),
                 getOmniJsonFieldReference(1, 3));
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.of(filterExpression), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -624,7 +622,7 @@ public class OmniHashJoinOperatorsTest {
         DataType[] buildOutputTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                hashBuilderOperatorFactory);
+                hashBuilderOperatorFactory, Optional.of(filterExpression));
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
         lookupJoinOperator.addInput(probeVecBatch);
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
@@ -661,7 +659,7 @@ public class OmniHashJoinOperatorsTest {
                 omniFunctionExpr("substr", 15, getOmniJsonFieldReference(15, 3) + "," + getOmniJsonLiteral(1, false, 1)
                         + "," + getOmniJsonLiteral(1, false, 5)));
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.of(filterExpression), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -677,7 +675,7 @@ public class OmniHashJoinOperatorsTest {
         DataType[] buildOutputTypes = {IntDataType.INTEGER, new VarcharDataType(5)};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                hashBuilderOperatorFactory);
+                hashBuilderOperatorFactory, Optional.of(filterExpression));
         OmniOperator lookupJoinOperator = lookupJoinOperatorFactory.createOperator();
         lookupJoinOperator.addInput(probeVecBatch);
         Iterator<VecBatch> results = lookupJoinOperator.getOutput();
@@ -708,7 +706,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {0};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -747,7 +745,7 @@ public class OmniHashJoinOperatorsTest {
                 omniFunctionExpr("substring", 15, getOmniJsonFieldReference(2, 0) + ","
                         + getOmniJsonLiteral(1, false, 1) + "," + getOmniJsonLiteral(1, false, 5)));
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.of(filterExpression), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
 
         DataType[] probeTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] probeOutputCols = {0, 1};
@@ -756,7 +754,7 @@ public class OmniHashJoinOperatorsTest {
         DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
         OmniLookupJoinOperatorFactory lookupJoinOperatorFactory = new OmniLookupJoinOperatorFactory(probeTypes,
                 probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                hashBuilderOperatorFactory);
+                hashBuilderOperatorFactory, Optional.of(filterExpression));
 
         hashBuilderOperatorFactory.close();
         lookupJoinOperatorFactory.close();
@@ -767,12 +765,12 @@ public class OmniHashJoinOperatorsTest {
         DataType[] buildTypes = {LongDataType.LONG, LongDataType.LONG};
         int[] buildHashCols = {0};
         int operatorCount = 1;
-        OmniHashBuilderOperatorFactory.FactoryContext hashBuilderOperatorFactory1 = new OmniHashBuilderOperatorFactory.FactoryContext(
-                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount,
-                new OperatorConfig());
-        OmniHashBuilderOperatorFactory.FactoryContext hashBuilderOperatorFactory2 = new OmniHashBuilderOperatorFactory.FactoryContext(
-                buildTypes, buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount,
-                new OperatorConfig());
+        OmniHashBuilderOperatorFactory.FactoryContext hashBuilderOperatorFactory1 =
+                new OmniHashBuilderOperatorFactory.FactoryContext(buildTypes, buildHashCols, operatorCount,
+                        new OperatorConfig());
+        OmniHashBuilderOperatorFactory.FactoryContext hashBuilderOperatorFactory2 =
+                new OmniHashBuilderOperatorFactory.FactoryContext(buildTypes, buildHashCols, operatorCount,
+                        new OperatorConfig());
         OmniHashBuilderOperatorFactory.FactoryContext hashBuilderOperatorFactory3 = null;
         assertEquals(hashBuilderOperatorFactory2, hashBuilderOperatorFactory1);
         assertEquals(hashBuilderOperatorFactory1, hashBuilderOperatorFactory1);
@@ -785,13 +783,15 @@ public class OmniHashJoinOperatorsTest {
         DataType[] buildOutputTypes = {LongDataType.LONG, LongDataType.LONG};
 
         OmniHashBuilderOperatorFactory omniHashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount, new OperatorConfig());
-        OmniLookupJoinOperatorFactory.FactoryContext lookupJoinOperatorFactory1 = new OmniLookupJoinOperatorFactory.FactoryContext(
-                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                new OperatorConfig(), omniHashBuilderOperatorFactory);
-        OmniLookupJoinOperatorFactory.FactoryContext lookupJoinOperatorFactory2 = new OmniLookupJoinOperatorFactory.FactoryContext(
-                probeTypes, probeOutputCols, probeHashCols, buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER,
-                new OperatorConfig(), omniHashBuilderOperatorFactory);
+                buildHashCols, operatorCount, new OperatorConfig());
+        OmniLookupJoinOperatorFactory.FactoryContext lookupJoinOperatorFactory1 =
+                new OmniLookupJoinOperatorFactory.FactoryContext(probeTypes, probeOutputCols, probeHashCols,
+                        buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER, omniHashBuilderOperatorFactory,
+                        Optional.empty(), new OperatorConfig());
+        OmniLookupJoinOperatorFactory.FactoryContext lookupJoinOperatorFactory2 =
+                new OmniLookupJoinOperatorFactory.FactoryContext(probeTypes, probeOutputCols, probeHashCols,
+                        buildOutputCols, buildOutputTypes, OMNI_JOIN_TYPE_INNER, omniHashBuilderOperatorFactory,
+                        Optional.empty(), new OperatorConfig());
         OmniLookupJoinOperatorFactory.FactoryContext lookupJoinOperatorFactory3 = null;
 
         assertEquals(lookupJoinOperatorFactory2, lookupJoinOperatorFactory1);
@@ -834,7 +834,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -894,7 +894,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -953,7 +953,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildJoinCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildJoinCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildJoinCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -1013,7 +1013,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -1072,7 +1072,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();
@@ -1134,7 +1134,7 @@ public class OmniHashJoinOperatorsTest {
         int[] buildHashCols = {1};
         int operatorCount = 1;
         OmniHashBuilderOperatorFactory hashBuilderOperatorFactory = new OmniHashBuilderOperatorFactory(buildTypes,
-                buildHashCols, Optional.empty(), Optional.empty(), null, operatorCount);
+                buildHashCols, operatorCount);
         OmniOperator hashBuilderOperator = hashBuilderOperatorFactory.createOperator();
         hashBuilderOperator.addInput(buildVecBatch);
         hashBuilderOperator.getOutput();

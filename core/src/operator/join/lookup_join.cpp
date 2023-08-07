@@ -42,65 +42,90 @@ void LookupJoinOperatorFactory::CommonInitActions(const type::DataTypes &probeTy
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, JoinType joinType,
-    JoinHashTables *hashTables, OverflowConfig *overflowConfig)
-    : probeTypes(probeTypes), buildOutputTypes(buildOutputTypes), joinType(joinType), hashTables(hashTables)
+    JoinHashTables *hashTables, Expr *filterExpr, OverflowConfig *overflowConfig)
+    : probeTypes(probeTypes),
+      buildOutputTypes(buildOutputTypes),
+      joinType(joinType),
+      hashTables(hashTables),
+      originalProbeColsCount(probeTypes.GetSize())
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
         buildOutputCols, buildOutputColsCount, buildOutputTypes);
-    this->hashTables->SetOriginalProbeColsCount(probeTypes.GetSize());
     this->hashTables->SetProbeTypes(&(this->probeTypes));
-    this->hashTables->JoinFilterCodeGen(overflowConfig);
+    JoinFilterCodeGen(filterExpr, overflowConfig);
 }
 
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, JoinType joinType,
-    JoinHashTables *hashTables, int32_t originalProbeColsCount, OverflowConfig *overflowConfig)
-    : probeTypes(probeTypes), buildOutputTypes(buildOutputTypes), joinType(joinType), hashTables(hashTables)
+    JoinHashTables *hashTables, Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig)
+    : probeTypes(probeTypes),
+      buildOutputTypes(buildOutputTypes),
+      joinType(joinType),
+      hashTables(hashTables),
+      originalProbeColsCount(originalProbeColsCount)
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
         buildOutputCols, buildOutputColsCount, buildOutputTypes);
-    this->hashTables->SetOriginalProbeColsCount(originalProbeColsCount);
     this->hashTables->SetProbeTypes(&(this->probeTypes));
-    this->hashTables->JoinFilterCodeGen(overflowConfig);
+    JoinFilterCodeGen(filterExpr, overflowConfig);
 }
 
-LookupJoinOperatorFactory::~LookupJoinOperatorFactory() = default;
+LookupJoinOperatorFactory::~LookupJoinOperatorFactory()
+{
+    delete simpleFilter;
+    simpleFilter = nullptr;
+}
 
 LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
     int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType inputJoinType,
-    int64_t hashBuilderFactoryAddr, OverflowConfig *overflowConfig)
+    int64_t hashBuilderFactoryAddr, Expr *filterExpr, OverflowConfig *overflowConfig)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount, buildOutputTypes, inputJoinType,
-        hashBuilderFactory->GetHashTables(), overflowConfig);
+        hashBuilderFactory->GetHashTables(), filterExpr, overflowConfig);
     return pOperatorFactory;
 }
 
 LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
     int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType inputJoinType,
-    int64_t hashBuilderFactoryAddr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig)
+    int64_t hashBuilderFactoryAddr, Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount, buildOutputTypes, inputJoinType,
-        hashBuilderFactory->GetHashTables(), originalProbeColsCount, overflowConfig);
+        hashBuilderFactory->GetHashTables(), filterExpr, originalProbeColsCount, overflowConfig);
     return pOperatorFactory;
 }
 
 Operator *LookupJoinOperatorFactory::CreateOperator()
 {
     auto pLookupJoinOperator = new LookupJoinOperator(probeTypes, probeOutputCols, probeHashCols, probeHashColTypes,
-        buildOutputCols, buildOutputTypes, joinType, hashTables, rowSize);
+        buildOutputCols, buildOutputTypes, joinType, hashTables, simpleFilter, originalProbeColsCount, rowSize);
     return pLookupJoinOperator;
+}
+
+void LookupJoinOperatorFactory::JoinFilterCodeGen(Expr *filterExpr, OverflowConfig *overflowConfig)
+{
+    if (filterExpr == nullptr) {
+        return;
+    }
+    simpleFilter = new SimpleFilter(*filterExpr);
+    auto result = simpleFilter->Initialize(overflowConfig);
+    if (!result) {
+        delete simpleFilter;
+        simpleFilter = nullptr;
+        throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "The expression is not supported yet.");
+    }
 }
 
 LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
     std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes, std::vector<int32_t> &buildOutputCols,
-    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables, int32_t outputRowSize)
+    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables, SimpleFilter *simpleFilter,
+    int32_t originalProbeColsCount, int32_t outputRowSize)
     : joinType(joinType),
       probeTypes(probeTypes),
       probeOutputCols(probeOutputCols),
@@ -108,7 +133,9 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
       probeHashColTypes(probeHashColTypes),
       buildOutputCols(buildOutputCols),
       buildOutputTypes(buildOutputTypes),
-      hashTables(hashTables)
+      hashTables(hashTables),
+      simpleFilter(simpleFilter),
+      originalProbeColsCount(originalProbeColsCount)
 {
     std::vector<DataTypePtr> tmpProbeOutputTypesVec;
     for (size_t i = 0; i < probeOutputCols.size(); i++) {
@@ -123,18 +150,23 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
     this->probeHashColumns = new BaseVector *[probeHashCols.size()]();
     this->probeOutputColumns = new BaseVector *[probeOutputCols.size()]();
 
-    this->simpleFilter = hashTables->GetSimpleFilter();
-    if (this->simpleFilter != nullptr) {
-        auto originalProbeColsCount = hashTables->GetOriginalProbeColsCount();
+    if (simpleFilter != nullptr) {
+        auto usedColumns = simpleFilter->GetVectorIndexes();
+        for (auto col : usedColumns) {
+            if (col < originalProbeColsCount) {
+                probeFilterCols.emplace_back(col);
+            } else {
+                buildFilterCols.emplace_back(col);
+            }
+        }
+
         auto buildColsCount = hashTables->GetBuildDataTypes()->GetSize();
         auto allColsCount = originalProbeColsCount + buildColsCount;
         this->values = new int64_t[allColsCount]();
         this->nulls = new bool[allColsCount]();
         this->lengths = new int32_t[allColsCount]();
-        this->probeFilterCols = hashTables->GetProbeFilterCols();
-        this->buildFilterCols = hashTables->GetBuildFilterCols();
-        this->probeFilterColumns = new BaseVector *[this->probeFilterCols.size()]();
 
+        this->probeFilterColumns = new BaseVector *[this->probeFilterCols.size()]();
         auto probeFilterColsCount = this->probeFilterCols.size();
         auto buildFilterColsCount = this->buildFilterCols.size();
         this->probeFilterTypeIds = new int32_t[probeFilterColsCount];
@@ -247,7 +279,7 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
     if (!firstVecBatch && simpleFilter != nullptr) {
         firstVecBatch = true;
-        hashTables->InitBuildFilterCols();
+        hashTables->InitBuildFilterCols(buildFilterCols, originalProbeColsCount, tableBuildFilterColPtrs);
     }
     curInputBatch = vecBatch;
 
@@ -532,7 +564,7 @@ ALWAYS_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition
             OperatorUtil::GetValuePtrAndLength(probeVec, probeRow, lengths + colIdx, probeFilterTypeIds[j]);
     }
 
-    auto &buildFilterColPtrs = hashTables->GetBuildFilterColPtrs(partition);
+    auto &buildFilterColPtrs = GetBuildFilterColPtrs(partition);
     uint64_t buildAddress = pagesHash->GetAddresses()[joinPosition];
     auto buildBatchIdx = DecodeSliceIndex(buildAddress);
     auto buildRowIdx = DecodePosition(buildAddress);
@@ -584,8 +616,7 @@ void CalculateColDec64HashesHMPP(BaseVector *vector, int32_t rowCount, int64_t *
 {
     if (vector->GetEncoding() != OMNI_DICTIONARY) {
         LogDebug("HMPP-Join-hashDec64");
-        const auto *decimalAddr =
-            reinterpret_cast<const int64_t *>(VectorHelper::UnsafeGetValues(vector));
+        const auto *decimalAddr = reinterpret_cast<const int64_t *>(VectorHelper::UnsafeGetValues(vector));
         auto *resultHash = new int64_t[rowCount]();
         int8_t *nullAddr = nullptr;
         if (vector->HasNull()) {

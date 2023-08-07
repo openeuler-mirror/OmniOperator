@@ -105,22 +105,22 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOpera
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory
  * Method:    createHashBuilderOperatorFactory
- * Signature: (Ljava/lang/String;[ILjava/lang/String;I[Ljava/lang/String;I)J
+ * Signature: (Ljava/lang/String;[IILjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHashBuilderOperatorFactory(JNIEnv *env,
-    jclass jObj, jstring jBuildTypes, jintArray jBuildHashCols, jstring jFilterExpr, jint jSortChannel,
-    jobjectArray jSearchExprs, jint jOperatorCount);
+    jclass jObj, jstring jBuildTypes, jintArray jBuildHashCols, jint jOperatorCount, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory
  * Method:    createLookupJoinOperatorFactory
- * Signature: (Ljava/lang/String;[I[I[ILjava/lang/String;IJ)J
+ * Signature: (Ljava/lang/String;[I[I[ILjava/lang/String;IJLjava/lang/String;Ljava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *env,
     jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols, jintArray jBuildOutputCols,
-    jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory, jstring jOperatorConfig);
+    jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory, jstring jFilter,
+    jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOperatorFactory
@@ -154,23 +154,23 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory
  * Method:    createHashBuilderWithExprOperatorFactory
- * Signature: (Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;I)J
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;ILjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_createHashBuilderWithExprOperatorFactory(
-    JNIEnv *env, jclass jObj, jstring jBuildTypes, jobjectArray jBuildHashKeys, jstring jFilter, jint jHashTableCount,
+    JNIEnv *env, jclass jObj, jstring jBuildTypes, jobjectArray jBuildHashKeys, jint jHashTableCount,
     jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory
  * Method:    createLookupJoinWithExprOperatorFactory
- * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[ILjava/lang/String;IJ)J
+ * Signature: (Ljava/lang/String;[I[Ljava/lang/String;[ILjava/lang/String;IJLjava/lang/String;Ljava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_createLookupJoinWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jobjectArray jProbeHashKeys,
     jintArray jBuildOutputCols, jstring jBuildOutputTypes, jint jJoinType, jlong jHashBuilderOperatorFactory,
-    jstring jOperatorConfig);
+    jstring jFilter, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinWithExprOperatorFactory

@@ -16,11 +16,10 @@ namespace op {
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
     HashBuilderOperatorFactory(const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount,
-        std::string &filterExpr, int32_t operatorCount);
-    int32_t Init();
+        int32_t operatorCount);
     ~HashBuilderOperatorFactory() override;
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const DataTypes &dataTypes,
-        const int32_t *buildHashCols, int32_t buildHashColsCount, std::string &filterExpr, int32_t operatorCount);
+        const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
     omniruntime::op::Operator *CreateOperator() override;
     JoinHashTables *GetHashTables() const
     {

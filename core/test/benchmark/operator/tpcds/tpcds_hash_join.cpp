@@ -35,9 +35,8 @@ protected:
         auto buildTypes = LoadDataTypesFromJson(buildMetaData, "buildTypes");
         auto hashTableCount = buildMetaData["operatorCount"].get<int32_t>();
         auto buildHashKeys = GetExprsFromJson(buildMetaData["buildHashKeys"].get<std::vector<std::string>>());
-        auto filterExpression = buildMetaData["filterExpression"].get<std::string>();
         hashBuilderOperatorFactory = new HashBuilderWithExprOperatorFactory(DataTypes(buildTypes), buildHashKeys,
-            (int32_t)buildHashKeys.size(), filterExpression, hashTableCount, new OverflowConfig());
+            (int32_t)buildHashKeys.size(), hashTableCount, new OverflowConfig());
         hashBuilderOperator = hashBuilderOperatorFactory->CreateOperator();
 
         for (const auto &vb : LoadVectorBatchFromPath(dependentDataPath, buildTypes)) {
@@ -64,7 +63,7 @@ protected:
         auto factory = new LookupJoinWithExprOperatorFactory(DataTypes(probeTypes), probeOutputCols.data(),
             (int32_t)probeOutputCols.size(), probeHashKeys, (int32_t)probeHashKeys.size(), buildOutputCols.data(),
             (int32_t)buildOutputCols.size(), DataTypes(buildOutputTypes),
-            JoinType(probeMetaData["joinType"]["value"].get<int>()), (int64_t)hashBuilderOperatorFactory,
+            JoinType(probeMetaData["joinType"]["value"].get<int>()), (int64_t)hashBuilderOperatorFactory, nullptr,
             new OverflowConfig());
 
         Expr::DeleteExprs(probeHashKeys);

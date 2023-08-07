@@ -14,7 +14,6 @@ import nova.hetu.omniruntime.type.DataTypeSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * The type Omni hash builder operator factory.
@@ -27,17 +26,12 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      *
      * @param buildTypes the build types
      * @param buildHashCols the build hash cols
-     * @param filterExpression the join filter expression
-     * @param sortChannel the sort channel
-     * @param searchExpressions the search expressions
      * @param operatorCount the operator count
      * @param operatorConfig the operator config
      */
-    public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
-            Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount,
+    public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, int operatorCount,
             OperatorConfig operatorConfig) {
-        super(new FactoryContext(buildTypes, buildHashCols, filterExpression, sortChannel, searchExpressions,
-                operatorCount, operatorConfig));
+        super(new FactoryContext(buildTypes, buildHashCols, operatorCount, operatorConfig));
     }
 
     /**
@@ -46,24 +40,19 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
      *
      * @param buildTypes the build types
      * @param buildHashCols the build hash cols
-     * @param filterExpression the join filter expression
-     * @param sortChannel the sort channel
-     * @param searchExpressions the search expressions
      * @param operatorCount the operator count
      */
-    public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
-            Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount) {
-        this(buildTypes, buildHashCols, filterExpression, sortChannel, searchExpressions, operatorCount,
-                new OperatorConfig());
+    public OmniHashBuilderOperatorFactory(DataType[] buildTypes, int[] buildHashCols, int operatorCount) {
+        this(buildTypes, buildHashCols, operatorCount, new OperatorConfig());
     }
 
     private static native long createHashBuilderOperatorFactory(String buildTypes, int[] buildHashCols,
-            String filterExpression, int sortChannel, String[] searchExpressions, int operatorCount);
+            int operatorCount, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createHashBuilderOperatorFactory(DataTypeSerializer.serialize(context.buildTypes), context.buildHashCols,
-                context.filterExpression, context.sortChannel, context.searchExpressions, context.operatorCount);
+                context.operatorCount, OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**
@@ -76,12 +65,6 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
 
         private final int[] buildHashCols;
 
-        private final String filterExpression;
-
-        private final Integer sortChannel;
-
-        private final String[] searchExpressions;
-
         private final int operatorCount;
 
         private final OperatorConfig operatorConfig;
@@ -91,20 +74,13 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
          *
          * @param buildTypes the build types
          * @param buildHashCols the build hash cols
-         * @param filterExpression the join filter expression
-         * @param sortChannel the sort channel
-         * @param searchExpressions the search expressions
          * @param operatorCount the operator count
          * @param operatorConfig the operator config
          */
-        public FactoryContext(DataType[] buildTypes, int[] buildHashCols, Optional<String> filterExpression,
-                Optional<Integer> sortChannel, String[] searchExpressions, int operatorCount,
+        public FactoryContext(DataType[] buildTypes, int[] buildHashCols, int operatorCount,
                 OperatorConfig operatorConfig) {
             this.buildTypes = requireNonNull(buildTypes, "buildTypes");
             this.buildHashCols = requireNonNull(buildHashCols, "buildHashCols");
-            this.filterExpression = filterExpression.isPresent() ? filterExpression.get() : "";
-            this.sortChannel = sortChannel.isPresent() ? sortChannel.get() : -1;
-            this.searchExpressions = searchExpressions;
             this.operatorCount = operatorCount;
             this.operatorConfig = operatorConfig;
             setNeedCache(false);
@@ -112,8 +88,8 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(buildTypes), Arrays.hashCode(buildHashCols), filterExpression,
-                    sortChannel, Arrays.hashCode(searchExpressions), operatorCount, operatorConfig);
+            return Objects.hash(Arrays.hashCode(buildTypes), Arrays.hashCode(buildHashCols), operatorCount,
+                    operatorConfig);
         }
 
         @Override
@@ -126,9 +102,7 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
             }
             FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(buildTypes, that.buildTypes) && Arrays.equals(buildHashCols, that.buildHashCols)
-                    && filterExpression.equals(that.filterExpression) && sortChannel.equals(sortChannel)
-                    && Arrays.equals(searchExpressions, that.searchExpressions) && operatorCount == that.operatorCount
-                    && operatorConfig.equals(that.operatorConfig);
+                    && operatorCount == that.operatorCount && operatorConfig.equals(that.operatorConfig);
         }
     }
 }

@@ -114,7 +114,7 @@ std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataType
     int32_t joinColsCount = 1;
 
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(sourceTypes, buildJoinCols,
-        joinColsCount, filterExpr, operatorCount);
+        joinColsCount, operatorCount);
 
     int32_t probeOutputCols[1] = {2};
     int32_t probeOutputColsCount = 1;
@@ -128,7 +128,7 @@ std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataType
 
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(sourceTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, overflowConfig);
+        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr, overflowConfig);
     std::vector<OperatorFactory *> operatorFactories = { hashBuilderFactory, lookupJoinFactory };
     return operatorFactories;
 }
