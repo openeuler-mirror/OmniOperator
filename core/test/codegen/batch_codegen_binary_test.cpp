@@ -912,13 +912,7 @@ TEST(BatchCodeGenTest, Decimal128Arith2)
         Decimal128 val0 = reinterpret_cast<Vector<Decimal128> *>(ret->Get(0))->GetValue(i);
         Decimal128 old0 = reinterpret_cast<Vector<Decimal128> *>(vecBatch->Get(0))->GetValue(i);
 
-        if (i <= 5) {
-            EXPECT_EQ(val0.HighBits(), 1LL << 63);
-            EXPECT_EQ(val0.LowBits() - 1, old0.LowBits() * 10);
-        } else {
-            EXPECT_EQ(val0.HighBits(), 0);
-            EXPECT_EQ(val0.LowBits() - 1, old0.LowBits() * 10 - 2);
-        }
+        EXPECT_EQ(val0.ToInt128(), old0.ToInt128() * 10 - 1);
     }
     Expr::DeleteExprs(exprs);
     VectorHelper::FreeVecBatch(vecBatch);

@@ -11,6 +11,7 @@ import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * 128-bit decimal vec.
@@ -98,32 +99,42 @@ public class Decimal128Vec extends DecimalVec {
      * @return new long array
      */
     public static long[] putDecimal(BigInteger bigInteger) {
-        byte[] bytes = bigInteger.abs().toByteArray();
+        ByteBuffer d128Buffer = ByteBuffer.allocate(Long.BYTES * 2);
+        byte[] bytes = bigInteger.toByteArray();
         int byteArrayLength = bytes.length;
+        for (int i = 0; i < byteArrayLength; i++) {
+            d128Buffer.put(bytes[byteArrayLength - i - 1]);
+        }
+        if (bigInteger.compareTo(BigInteger.ZERO) == -1) {
+            for (int i = byteArrayLength; i < 2 * Long.BYTES; i++) {
+                d128Buffer.put((byte) -1);
+            }
+        }
 
-        if (byteArrayLength > 2 * Long.BYTES) {
+        d128Buffer.clear();
+        d128Buffer.order(ByteOrder.LITTLE_ENDIAN);
+        long[] result = new long[2];
+        result[0] = d128Buffer.getLong();
+        result[1] = d128Buffer.getLong();
+        return result;
+    }
+
+    /**
+     * get long array from 128-bit BigInteger bytes
+     *
+     * @param bytes BigInteger bytes
+     * @param isNegative isNegative
+     * @return new long array
+     */
+    public static long[] putDecimal(byte[] bytes, boolean isNegative) {
+        if (bytes.length > 2 * Long.BYTES) {
             throw new OmniRuntimeException(OMNI_INNER_ERROR, "Decimal overflow.");
         }
-        // the array is big endian
-        byte[] highBytes = new byte[Long.BYTES];
-        byte[] lowBytes = new byte[Long.BYTES];
-        if (byteArrayLength <= Long.BYTES) {
-            System.arraycopy(bytes, 0, lowBytes, Long.BYTES - byteArrayLength, Math.min(byteArrayLength, Long.BYTES));
-        } else {
-            int offset = byteArrayLength - Long.BYTES;
-            System.arraycopy(bytes, 0, highBytes, 2 * Long.BYTES - byteArrayLength, Math.min(offset, Long.BYTES));
-            System.arraycopy(bytes, offset, lowBytes, 0, Long.BYTES);
-        }
-        boolean isNegative = bigInteger.compareTo(new BigInteger("0")) == -1;
+        BigInteger temp = new BigInteger(bytes);
         if (isNegative) {
-            long signBit = bytesToLong(highBytes) | (1L << 63);
-            highBytes = longToBytes(signBit);
+            temp = temp.abs().negate();
         }
-
-        long[] longs = new long[2];
-        longs[1] = bytesToLong(highBytes);
-        longs[0] = bytesToLong(lowBytes);
-        return longs;
+        return putDecimal(temp);
     }
 
     /**
@@ -133,16 +144,12 @@ public class Decimal128Vec extends DecimalVec {
      * @return new BigInteger
      */
     public static BigInteger getDecimal(long[] longs) {
-        boolean isNegative = longs[1] < 0;
-        if (isNegative) {
-            longs[1] = longs[1] & 0x7FFFFFFFFFFFFFFFL;
-        }
         byte[] bytes = new byte[Long.BYTES * 2];
         byte[] highBytes = longToBytes(longs[1]);
         byte[] lowBytes = longToBytes(longs[0]);
         System.arraycopy(highBytes, 0, bytes, 0, Long.BYTES);
         System.arraycopy(lowBytes, 0, bytes, 8, Long.BYTES);
-        return isNegative ? new BigInteger(bytes).multiply(new BigInteger("-1")) : new BigInteger(bytes);
+        return new BigInteger(bytes);
     }
 
     /**

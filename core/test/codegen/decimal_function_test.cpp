@@ -355,8 +355,8 @@ TEST(FunctionTest, CastDecimal64To128)
     EXPECT_EQ(high, 0);
     EXPECT_EQ(low, 1231230);
     CastDecimal64To128(contextPtr, -123123, 17, 3, false, 38, 4, &high, &low);
-    EXPECT_EQ(high, 1L << 63);
-    EXPECT_EQ(low, 1231230);
+    EXPECT_EQ(high, ~0);
+    EXPECT_EQ(low, -1231230);
     CastDecimal64To128(contextPtr, 123125, 17, 3, false, 38, 2, &high, &low);
     EXPECT_EQ(high, 0);
     EXPECT_EQ(low, 12313);
@@ -376,7 +376,7 @@ TEST(FunctionTest, CastDecimal128To64)
     EXPECT_EQ(result, 0);
     result = CastDecimal128To64(contextPtr, 0, 123, 38, 1, false, 4, 3);
     EXPECT_EQ(result, 0);
-    result = CastDecimal128To64(contextPtr, 1L << 63, 123, 38, 1, false, 18, 3);
+    result = CastDecimal128To64(contextPtr, ~0, -123, 38, 1, false, 18, 3);
     EXPECT_EQ(result, -12300);
     result = CastDecimal128To64(contextPtr, 0, 12366, 38, 2, false, 18, 1);
     EXPECT_EQ(result, 1237);
@@ -478,7 +478,7 @@ TEST(FunctionTest, CastIntToDecimal128)
     EXPECT_EQ(low, 9123);
     s = -45594;
     CastIntToDecimal128(contextPtr, s, false, 38, 3, &high, &low);
-    EXPECT_EQ(low, 4559'4000);
+    EXPECT_EQ(low, -4559'4000);
     s = 0;
     CastIntToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
     EXPECT_EQ(low, 0);
@@ -519,7 +519,7 @@ TEST(FunctionTest, CastDoubleToDecimal128)
     EXPECT_EQ(low, 9123);
     s = -9123.973;
     CastDoubleToDecimal128(contextPtr, s, false, 18, 3, &high, &low);
-    EXPECT_EQ(low, 9123973);
+    EXPECT_EQ(low, -9123973);
     s = 0;
     CastDoubleToDecimal128(contextPtr, s, false, 18, 0, &high, &low);
     EXPECT_EQ(low, 0);
@@ -607,7 +607,7 @@ TEST(FunctionTest, CastDecimal128ToLong)
     EXPECT_EQ(result, 89);
     result = CastDecimal128ToLongHalfUp(contextPtr, 1, 1, 38, 20, false);
     EXPECT_EQ(result, 0);
-    result = CastDecimal128ToLongHalfUp(contextPtr, 1L << 63, 9223372036854775808UL, 22, 0, false);
+    result = CastDecimal128ToLongHalfUp(contextPtr, ~0, -9223372036854775808UL, 22, 0, false);
     EXPECT_EQ(result, INT64_MIN);
     delete context;
 }
@@ -675,20 +675,20 @@ TEST(FunctionTest, CastStringToDecimal128)
     EXPECT_EQ(high, 0);
     s = "-36893488147419103230";
     CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 37, 0, &high, &low);
-    EXPECT_EQ(low, 1844'6744'0737'0955'1614UL);
-    EXPECT_EQ(high, -922'3372'0368'5477'5807L);
+    EXPECT_EQ(low, -1844'6744'0737'0955'1614UL);
+    EXPECT_EQ(high, ~1);
     s = "-10078";
     CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 0, &high, &low);
-    EXPECT_EQ(low, 10078);
-    EXPECT_EQ(high, 1L << 63);
+    EXPECT_EQ(low, -10078);
+    EXPECT_EQ(high, ~0);
     s = "123.999";
     CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 0, &high, &low);
     EXPECT_EQ(low, 124);
     EXPECT_EQ(high, 0);
     s = "-10.11";
     CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 17, 0, &high, &low);
-    EXPECT_EQ(low, 10);
-    EXPECT_EQ(high, 1L << 63);
+    EXPECT_EQ(low, -10);
+    EXPECT_EQ(high, ~0);
     s = "-10.1a1";
     CastStringToDecimal128(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false, 21, 1, &high, &low);
     EXPECT_TRUE(isNull);
@@ -869,8 +869,8 @@ TEST(FunctionTest, DecimalModOpeartion)
     int64_t high;
     uint64_t low;
     ModDec64Dec128Dec128ReScale(contextPtr, -1234500, 7, 2, 0, 1234512, 7, 2, 7, 2, &high, &low);
-    EXPECT_EQ(high, 1L << 63);
-    EXPECT_EQ(low, 1234500);
+    EXPECT_EQ(high, ~0);
+    EXPECT_EQ(low, -1234500);
 
     Decimal128 right = Decimal128("250009700094102345239493000152399025");
     ModDec128Dec64Dec128ReScale(contextPtr, right.HighBits(), right.LowBits(), 36, 36, 7, 10, 0, 36, 36, &high, &low);
@@ -1035,8 +1035,8 @@ TEST(FunctionTest, DecimalModOpeartionForSpark)
     int64_t high;
     uint64_t low;
     ModDec64Dec128Dec128NotReScale(contextPtr, -1234500, 7, 2, 0, 1234512, 7, 2, 7, 2, &high, &low);
-    EXPECT_EQ(high, 1L << 63);
-    EXPECT_EQ(low, 1234500);
+    EXPECT_EQ(high, ~0);
+    EXPECT_EQ(low, -1234500);
 
     Decimal128 right = Decimal128("250009700094102345239493000152399025");
     ModDec128Dec64Dec128NotReScale(contextPtr, right.HighBits(), right.LowBits(), 36, 36, 7, 10, 0, 36, 36, &high,

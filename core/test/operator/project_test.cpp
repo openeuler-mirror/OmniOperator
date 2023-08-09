@@ -1020,23 +1020,8 @@ TEST(ProjectionTest, Decimal128Arithmetic2)
         Decimal128 val1 = (reinterpret_cast<Vector<Decimal128> *>(outputVecBatch->Get(1)))->GetValue(i);
         Decimal128 old0 = (reinterpret_cast<Vector<Decimal128> *>(t->Get(0)))->GetValue(i);
         Decimal128 old1 = (reinterpret_cast<Vector<Decimal128> *>(t->Get(1)))->GetValue(i);
-        if (i <= 5) {
-            EXPECT_EQ(val0.HighBits(), 1LL << 63);
-            EXPECT_EQ(val0.LowBits(), old0.LowBits() + 1);
-        } else {
-            EXPECT_EQ(val0.HighBits(), 0);
-            EXPECT_EQ(val0.LowBits(), old0.LowBits() - 1);
-        }
-        if (i <= 5) {
-            EXPECT_EQ(val1.HighBits(), 1LL << 63);
-            EXPECT_EQ(val1.LowBits(), old1.LowBits() - 1);
-        } else if (i == 6) {
-            EXPECT_EQ(val1.HighBits(), 0);
-            EXPECT_EQ(val1.LowBits(), old1.LowBits() - 1);
-        } else {
-            EXPECT_EQ(val1.HighBits(), 0);
-            EXPECT_EQ(val1.LowBits(), old1.LowBits() + 1);
-        }
+        EXPECT_EQ(val0.ToInt128(), Decimal128(old0.ToInt128() - 1).ToInt128());
+        EXPECT_EQ(val1.ToInt128(), Decimal128(old1.ToInt128() + 1).ToInt128());
     }
 
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -1084,25 +1069,8 @@ TEST(ProjectionTest, Decimal128Arithmetic3)
         Decimal128 val1 = (reinterpret_cast<Vector<Decimal128> *>(outputVecBatch->Get(1)))->GetValue(i);
         Decimal128 old0 = (reinterpret_cast<Vector<Decimal128> *>(t->Get(0)))->GetValue(i);
         Decimal128 old1 = (reinterpret_cast<Vector<Decimal128> *>(t->Get(1)))->GetValue(i);
-
-        if (i <= 5) {
-            EXPECT_EQ(val0.HighBits(), 1LL << 63);
-            EXPECT_EQ(val0.LowBits(), old0.LowBits() + 1);
-        } else {
-            EXPECT_EQ(val0.HighBits(), 0);
-            EXPECT_EQ(val0.LowBits(), old0.LowBits() - 1);
-        }
-
-        if (i <= 5) {
-            EXPECT_EQ(val1.HighBits(), 1LL << 63);
-            EXPECT_EQ(val1.LowBits(), old1.LowBits() - 1);
-        } else if (i == 6) {
-            EXPECT_EQ(val1.HighBits(), 0);
-            EXPECT_EQ(val1.LowBits(), old1.LowBits() - 1);
-        } else {
-            EXPECT_EQ(val1.HighBits(), 0);
-            EXPECT_EQ(val1.LowBits(), old1.LowBits() + 1);
-        }
+        EXPECT_EQ(val0.ToInt128(), Decimal128(old0.ToInt128() - 1).ToInt128());
+        EXPECT_EQ(val1.ToInt128(), Decimal128(old1.ToInt128() + 1).ToInt128());
     }
 
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -2204,12 +2172,12 @@ TEST(ProjectionTest, testDecimal64ArithOutputDecimal128)
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
     Decimal128 val0 = (reinterpret_cast<Vector<Decimal128> *>(outputVecBatch->Get(0)))->GetValue(0);
-    EXPECT_EQ(val0.HighBits(), 1L << 63);
-    EXPECT_EQ(val0.LowBits(), 999999999999999997L);
+    EXPECT_EQ(val0.HighBits(), ~0);
+    EXPECT_EQ(val0.LowBits(), -999999999999999997L);
     Decimal128 val1 = (reinterpret_cast<Vector<Decimal128> *>(outputVecBatch->Get(1)))->GetValue(0);
 
-    EXPECT_EQ(val1.HighBits(), 1L << 63);
-    EXPECT_EQ(val1.LowBits(), 1000000000000000001);
+    EXPECT_EQ(val1.HighBits(), ~0);
+    EXPECT_EQ(val1.LowBits(), -1000000000000000001);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(op);

@@ -57,16 +57,8 @@ extern "C" DLLEXPORT void FillDouble(double *dataArray, bool *nullArray, double 
 extern "C" DLLEXPORT void FillDecimal128(Decimal128 *dataArray, bool *nullArray, __int128_t literal, bool isNull,
     int32_t rowCnt)
 {
-    bool isNegative = literal < 0;
-    std::abs(literal);
-    uint64_t lowBits = ((__uint128_t)literal) & 0xFFFF'FFFF'FFFF'FFFF;
-    int64_t highBits = ((__uint128_t)literal) >> 64;
-    if (isNegative) {
-        highBits = highBits | 0x8000'0000'0000'0000;
-    }
-
     for (int i = 0; i < rowCnt; i++) {
-        dataArray[i].SetValue(highBits, lowBits);
+        dataArray[i].SetValue(literal);
         nullArray[i] = isNull;
     }
 }

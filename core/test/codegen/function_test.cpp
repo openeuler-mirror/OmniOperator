@@ -118,16 +118,12 @@ TEST(FunctionTest, XxH64Decimal64)
 
 TEST(FunctionTest, XxH64Decimal128)
 {
-    std::string s1 = "-8888888888888888888.8000000000000000";
-    std::string s2 = "8888888888888888888.80000000000001";
-    auto value1 = Decimal128(s1);
-    auto value2 = Decimal128(s2);
+    auto value1 = Decimal128(0x80111e8f827844e5, 0x7c03905da66c0000);
+    auto value2 = Decimal128(0x00002bd35ae79a49, 0xf98f65489dd30001);
     EXPECT_EQ(XxH64Decimal128(value1.HighBits(), value1.LowBits(), 38, 16, false, 42, false), -216624505269361667);
     EXPECT_EQ(XxH64Decimal128(value2.HighBits(), value2.LowBits(), 38, 16, false, 42, false), 8484287969139273592);
-    std::string s3 = "2.999999999999999999";
-    auto value3 = Decimal128(s3);
-    std::string s4 = "-0.999999999999999999";
-    auto value4 = Decimal128(s4);
+    auto value3 = Decimal128(0x0, 0x29a2241af62bffff);
+    auto value4 = Decimal128(0x8000000000000000, 0x0de0b6b3a763ffff);
     EXPECT_EQ(XxH64Decimal128(value3.HighBits(), value3.LowBits(), 38, 18, false, 42, false), -5056633277332826927);
     EXPECT_EQ(XxH64Decimal128(value4.HighBits(), value4.LowBits(), 38, 18, false, 42, false), -6640857474798889004);
 }

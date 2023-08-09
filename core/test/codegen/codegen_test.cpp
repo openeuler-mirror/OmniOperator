@@ -1952,8 +1952,8 @@ TEST(CodeGenTest, DecimalNegate)
     // creating decimal
     int64_t c1[2] = {3, 0};
     int64_t d1[2] = {4, 0};
-    int64_t e1[2] = {3, 1L << 63};
-    int64_t f1[2] = {4, 1L << 63};
+    int64_t e1[2] = {-3, ~0};
+    int64_t f1[2] = {-4, ~0};
 
     int64_t *vals = new int64_t[4];
     vals[0] = reinterpret_cast<int64_t>(c1);
@@ -2023,7 +2023,7 @@ TEST(CodeGenTest, Decimal128AbsAndCompare)
     expr->Accept(printExprTree);
 
     // creating decimal
-    int64_t c1[2] = {3, 1L << 63};
+    int64_t c1[2] = {-3, ~0};
     int64_t d1[2] = {3, 0};
 
     int64_t *vals = new int64_t[2];

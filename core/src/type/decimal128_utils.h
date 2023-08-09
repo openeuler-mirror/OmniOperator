@@ -24,9 +24,8 @@ public:
             val = (10 * val) + (*p - '0');
             p++;
         }
-        __uint128_t signBit = 1;
         if (*s == '-') {
-            val = val | (signBit << 127);
+            val = -val;
         }
         return val;
     }

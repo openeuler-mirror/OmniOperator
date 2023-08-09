@@ -178,11 +178,11 @@ TEST(Decimal128, multiple_negate)
 
 TEST(Decimal128, multiple_mix)
 {
-    Decimal128Wrapper left = Decimal128Wrapper(1L << 63, 234527000012345L);
+    Decimal128Wrapper left = Decimal128Wrapper(-1, -234527000012345L);
     Decimal128Wrapper right = Decimal128Wrapper(0L, 1000000);
     Decimal128Wrapper result;
     result = left.Multiply(right);
-    Decimal128Wrapper expected = Decimal128Wrapper(-9223372036854775796L, 13166071127830380608U);
+    Decimal128Wrapper expected = Decimal128Wrapper(Decimal128("-234527000012345000000"));
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
@@ -239,44 +239,44 @@ TEST(Decimal128, divide_positive_round_up)
 
 TEST(Decimal128, divide_negative)
 {
-    Decimal128Wrapper left(Decimal128::SIGN_LONG_MASK, 4);
-    Decimal128Wrapper right(0, 2);
+    Decimal128Wrapper left("-4");
+    Decimal128Wrapper right("2");
     Decimal128Wrapper result;
     result = left.Divide(right, 0);
-    Decimal128Wrapper expected(Decimal128::SIGN_LONG_MASK, 2);
+    Decimal128Wrapper expected("-2");
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
 TEST(Decimal128, divide_negative1)
 {
-    Decimal128Wrapper left(Decimal128::SIGN_LONG_MASK, 4);
-    Decimal128Wrapper right(Decimal128::SIGN_LONG_MASK, 2);
+    Decimal128Wrapper left("-4");
+    Decimal128Wrapper right("-2");
     Decimal128Wrapper result;
     result = left.Divide(right, 0);
-    Decimal128Wrapper expected(0, 2);
+    Decimal128Wrapper expected("2");
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
 TEST(Decimal128, divide_negative2)
 {
-    Decimal128Wrapper left(0, 4);
-    Decimal128Wrapper right(Decimal128::SIGN_LONG_MASK, 2);
+    Decimal128Wrapper left("4");
+    Decimal128Wrapper right("-2");
     Decimal128Wrapper result;
     result = left.Divide(right, 0);
-    Decimal128Wrapper expected(Decimal128::SIGN_LONG_MASK, 2);
+    Decimal128Wrapper expected("-2");
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
 
 TEST(Decimal128, divide_negative_round_up)
 {
-    Decimal128Wrapper left(0, 4);
-    Decimal128Wrapper right(Decimal128::SIGN_LONG_MASK, 3);
+    Decimal128Wrapper left("4");
+    Decimal128Wrapper right("-3");
     Decimal128Wrapper result;
     result = left.Divide(right, 0);
-    Decimal128Wrapper expected(Decimal128::SIGN_LONG_MASK, 1);
+    Decimal128Wrapper expected("-1");
     EXPECT_EQ(result.HighBits(), expected.HighBits());
     EXPECT_EQ(result.LowBits(), expected.LowBits());
 }
@@ -297,7 +297,7 @@ TEST(Decimal128, negative_dividend_positive_divisor_and_with_scale_factor)
     Decimal128Wrapper right(1652201977500);
     Decimal128Wrapper result;
     result = left.Divide(right, 16);
-    Decimal128Wrapper expected((int64_t)9223372036854775808U, 755730317481720);
+    Decimal128Wrapper expected(-1, -755730317481720);
     EXPECT_EQ(result, expected);
 }
 
@@ -393,8 +393,8 @@ TEST(Decimal128, compare_gt)
 
 TEST(Decimal128, compare_negative)
 {
-    Decimal128Wrapper left(0x8000'0000'0000'0000LL, 1);
-    Decimal128Wrapper right(0x8000'0000'0000'0000LL, 2);
+    Decimal128Wrapper left("-1");
+    Decimal128Wrapper right("-2");
     auto result = left < right;
     EXPECT_EQ(result, false);
 }
@@ -774,29 +774,29 @@ TEST(Decimal128, multiply)
     EXPECT_EQ(Decimal128Wrapper(0x0, 0x0), result1);
 
     // 1 * MAX_DECIMAL = MAX_DECIMAL
-    Decimal128Wrapper lValue2(0x0, 0x1);
-    Decimal128Wrapper rValue2(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128Wrapper lValue2(1);
+    Decimal128Wrapper rValue2("99999999999999999999999999999999999999");
     Decimal128Wrapper result2;
     result2 = lValue2.Multiply(rValue2);
-    EXPECT_EQ(Decimal128Wrapper(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF), result2);
+    EXPECT_EQ(Decimal128Wrapper("99999999999999999999999999999999999999"), result2);
 
     // 1 * MIN_DECIMAL = MIN_DECIMAL
-    Decimal128Wrapper lValue3(0x0, 0x1);
-    Decimal128Wrapper rValue3(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128Wrapper lValue3(1);
+    Decimal128Wrapper rValue3("-99999999999999999999999999999999999999");
     Decimal128Wrapper result3;
     result3 = lValue3.Multiply(rValue3);
-    EXPECT_EQ(Decimal128Wrapper(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF), result3);
+    EXPECT_EQ(Decimal128Wrapper("-99999999999999999999999999999999999999"), result3);
 
     // -1 * MAX_DECIMAL = MIN_DECIMAL
-    Decimal128Wrapper lValue4(0x8000000000000000, 0x1);
-    Decimal128Wrapper rValue4(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128Wrapper lValue4("-1");
+    Decimal128Wrapper rValue4("99999999999999999999999999999999999999");
     Decimal128Wrapper result4;
     result4 = lValue4.Multiply(rValue4);
-    EXPECT_EQ(Decimal128Wrapper(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF), result4);
+    EXPECT_EQ(Decimal128Wrapper("-99999999999999999999999999999999999999"), result4);
 
     // -1 * MIN_DECIMAL = MAX_DECIMAL
-    Decimal128Wrapper lValue5(0x8000000000000000, 0x1);
-    Decimal128Wrapper rValue5(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128Wrapper lValue5(~0, -0x1);
+    Decimal128Wrapper rValue5(~0x4B3B4CA85A86C47A, -0x98A223FFFFFFFFF);
     Decimal128Wrapper result5;
     result5 = lValue5.Multiply(rValue5);
     EXPECT_EQ(Decimal128Wrapper(0x4B3B4CA85A86C47A, 0x98A223FFFFFFFFF), result5);
@@ -817,17 +817,17 @@ TEST(Decimal128, multiply)
 
     // Integer.MAX_VALUE * Integer.MIN_VALUE = -4611686016279904256
     Decimal128Wrapper lValue8(0x0, 0x7FFFFFFF);
-    Decimal128Wrapper rValue8(0x8000000000000000, 0x80000000);
+    Decimal128Wrapper rValue8(-1, -0x80000000ll);
     Decimal128Wrapper result8;
     result8 = lValue8.Multiply(rValue8);
-    EXPECT_EQ(Decimal128Wrapper(0x8000000000000000, 0x3FFFFFFF80000000), result8);
+    EXPECT_EQ(Decimal128Wrapper("-4611686016279904256"), result8);
 
     // 99999999999999 * -1000000000000000000000000 = -99999999999999000000000000000000000000
     Decimal128Wrapper lValue9(0x0, 0x5AF3107A3FFF);
-    Decimal128Wrapper rValue9(0x800000000000D3C2, 0x1BCECCEDA1000000);
+    Decimal128Wrapper rValue9(~0xD3C2, -0x1BCECCEDA1000000ll);
     Decimal128Wrapper result9;
     result9 = lValue9.Multiply(rValue9);
-    EXPECT_EQ(Decimal128Wrapper(0xCB3B4CA85A85F0B7, 0xEDBB55525F000000), result9);
+    EXPECT_EQ(Decimal128Wrapper(~0x4B3B4CA85A85F0B7, -0xEDBB55525F000000), result9);
 
     // 12380837221737387489365741632769922889 * 3 = 37142511665212162468097224898309768667
     Decimal128Wrapper lValue10(0x950766754840EB8, 0xDF69328A17B69749);
@@ -855,14 +855,14 @@ TEST(Decimal128, multiplyByInt)
 
     // Integer.MAX_VALUE * -3 = -6442450941
     Decimal128Wrapper lValue3(0x0, 0x7FFFFFFF);
-    Decimal128Wrapper rValue3(0x8000000000000000, 0x3);
+    Decimal128Wrapper rValue3(~0, -0x3);
     Decimal128Wrapper result3;
     result3 = lValue3.Multiply(rValue3);
-    EXPECT_EQ(Decimal128Wrapper(0x8000000000000000, 0x17FFFFFFD), result3);
+    EXPECT_EQ(Decimal128Wrapper(~0, -0x17FFFFFFD), result3);
 
     // Integer.MIN_VALUE * -3 = 6442450944
-    Decimal128Wrapper lValue4(0x8000000000000000, 0x80000000);
-    Decimal128Wrapper rValue4(0x8000000000000000, 0x3);
+    Decimal128Wrapper lValue4(~0, -0x80000000ll);
+    Decimal128Wrapper rValue4(~0, -0x3);
     Decimal128Wrapper result4;
     result4 = lValue4.Multiply(rValue4);
     EXPECT_EQ(Decimal128Wrapper(0x0, 0x180000000), result4);
@@ -879,7 +879,7 @@ TEST(Decimal128, multiplyOverflow)
 {
     // 99999999999999 * -10000000000000000000000000
     Decimal128Wrapper lValue1(0x0, 0x5AF3107A3FFF);
-    Decimal128Wrapper rValue1(0x8000000000108B2A, 0x161401484A000000);
+    Decimal128Wrapper rValue1(~0x108B2A, -0x161401484A000000);
     Decimal128Wrapper result1;
     result1 = lValue1.Multiply(rValue1);
     EXPECT_EQ(result1.IsOverflow(), OpStatus::OP_OVERFLOW);
@@ -919,16 +919,16 @@ TEST(Decimal128, rescaleLE18)
     EXPECT_EQ(Decimal128Wrapper(0x0, 0x96), result5);
 
     // -14  (-1) = -1
-    Decimal128Wrapper value6(0x8000000000000000, 0xE);
+    Decimal128Wrapper value6(~0, -0xE);
     Decimal128Wrapper result6;
     result6 = value6.ReScale(-1);
-    EXPECT_EQ(Decimal128Wrapper(0x8000000000000000, 0x1), result6);
+    EXPECT_EQ(Decimal128Wrapper(~0, -0x1), result6);
 
     // -14  (1) = -140
-    Decimal128Wrapper value7(0x8000000000000000, 0xE);
+    Decimal128Wrapper value7(~0, -0xE);
     Decimal128Wrapper result7;
     result7 = value7.ReScale(1);
-    EXPECT_EQ(Decimal128Wrapper(0x8000000000000000, 0x8C), result7);
+    EXPECT_EQ(Decimal128Wrapper(~0, -0x8C), result7);
 
     // 0  (1) = 0
     Decimal128Wrapper value8(0x0, 0x0);
@@ -955,10 +955,10 @@ TEST(Decimal128, rescaleLE18)
     EXPECT_EQ(Decimal128Wrapper(0x0, 0x97), result14);
 
     // -140000000000000000000  (-18) = -140
-    Decimal128Wrapper value15(0x8000000000000007, 0x96E3EA3F8AB00000);
+    Decimal128Wrapper value15(~0x7, -0x96E3EA3F8AB00000);
     Decimal128Wrapper result15;
     result15 = value15.ReScale(-18);
-    EXPECT_EQ(Decimal128Wrapper(0x8000000000000000, 0x8C), result15);
+    EXPECT_EQ(Decimal128Wrapper(~0, -0x8C), result15);
 
     // 9223372036854775808  (-18) = 9
     Decimal128Wrapper value16(0x0, 0x8000000000000000);
@@ -979,10 +979,10 @@ TEST(Decimal128, rescaleLE18)
     EXPECT_EQ(Decimal128Wrapper(0x785EE10D5DA46D9, 0xF436A000000000), result19);
 
     // -99999999999999999999999999999999999999  (-10) = -10000000000000000000000000000
-    Decimal128Wrapper value20(0xCB3B4CA85A86C47A, 0x98A223FFFFFFFFF);
+    Decimal128Wrapper value20("-99999999999999999999999999999999999999");
     Decimal128Wrapper result20;
     result20 = value20.ReScale(-10);
-    EXPECT_EQ(Decimal128Wrapper(0x80000000204FCE5E, 0x3E25026110000000), result20);
+    EXPECT_EQ(Decimal128Wrapper(~0x204FCE5E, -0x3E25026110000000).ToInt128(), result20.ToInt128());
 }
 #ifdef DIV_CAL_NEED_CHECK
 TEST(Decimal128, rescaleGT18)
@@ -1037,4 +1037,39 @@ TEST(Decimal128, rescaleGT18)
     EXPECT_EQ(Decimal128Wrapper(0x0, 0x1), result23);
 }
 #endif
+TEST(Decimal128, DecimalRepresentationEquivalence)
+{
+    Decimal128Wrapper a0("0");
+    Decimal128Wrapper b0(0);
+    Decimal128Wrapper c0(0, 0);
+    EXPECT_EQ(a0, b0);
+    EXPECT_EQ(a0, c0);
+
+    // Negative values represented as 2's complement
+    Decimal128Wrapper a1("-1");
+    Decimal128Wrapper b1(-1);
+    Decimal128Wrapper c1(~0, -1);
+    EXPECT_EQ(a1, b1);
+    EXPECT_EQ(a1, c1);
+
+    Decimal128Wrapper a2("1");
+    Decimal128Wrapper b2(1);
+    Decimal128Wrapper c2(0, 1);
+    EXPECT_EQ(a2, b2);
+    EXPECT_EQ(a2, c2);
+
+    // Bit patterns calculated from WolframAlpha
+    Decimal128Wrapper a3("99999999999999999999999999999999999999");
+    Decimal128Wrapper c3(0x4b3b4ca85a86c47a, 0x098a223fffffffff);
+    EXPECT_EQ(a3, c3);
+
+    Decimal128Wrapper a4("-99999999999999999999999999999999999999");
+    Decimal128Wrapper c4(~0x4b3b4ca85a86c47a, -0x098a223fffffffff);
+    EXPECT_EQ(a4, c4);
+
+    // -(2^65 + 2^64)
+    Decimal128Wrapper a5("-55340232221128654848");
+    Decimal128Wrapper c5(-3, 0);
+    EXPECT_EQ(a5, c5);
+}
 }

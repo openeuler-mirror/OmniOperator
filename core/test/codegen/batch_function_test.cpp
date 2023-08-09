@@ -433,7 +433,7 @@ TEST(BatchFunctionTest, CastDecimalToDecimal)
     int64_t decimal64Val[2] = { 1234567L, INT64_MAX };
     Decimal128 decimal128Val[2];
     decimal128Val[0].SetValue(0, 1234567);
-    decimal128Val[1].SetValue(1LL << 63, 123456);
+    decimal128Val[1].SetValue(~0, -123456);
     bool isAnyNull[2] = { false, false };
     bool overflowNull[2] = { false, false };
     int64_t output64[2];
@@ -451,8 +451,8 @@ TEST(BatchFunctionTest, CastDecimalToDecimal)
     BatchCastDecimal128To128(contextPtr, decimal128Val, 20, 10, isAnyNull, output128, 38, 18, rowCnt);
     EXPECT_EQ(output128[0].HighBits(), 0);
     EXPECT_EQ(output128[0].LowBits(), 123456700000000L);
-    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[1].LowBits(), 12345600000000L);
+    EXPECT_EQ(output128[1].HighBits(), ~0);
+    EXPECT_EQ(output128[1].LowBits(), -12345600000000L);
 
     overflowNull[0] = false;
     overflowNull[1] = false;
@@ -621,15 +621,15 @@ TEST(BatchFunctionTest, DecimalAdd)
         rowCnt);
     EXPECT_EQ(output128[0].HighBits(), 0);
     EXPECT_EQ(output128[0].LowBits(), 212345650000000);
-    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[1].LowBits(), 21234570000000);
+    EXPECT_EQ(output128[1].HighBits(), ~0);
+    EXPECT_EQ(output128[1].LowBits(), -21234570000000);
 
     Decimal128 decimal128Val1[2];
     decimal128Val1[0].SetValue(0, INT64_MAX);
     decimal128Val1[1].SetValue(0, 99'999'999'999'999'999UL);
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 123456789);
-    decimal128Val2[1].SetValue(1LL << 63, 987654321);
+    decimal128Val2[1].SetValue(~0, -987654321);
     BatchAddDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal128Val2, 19, 9, 38, 9,
         rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
@@ -670,22 +670,20 @@ TEST(BatchFunctionTest, DecimalAddRetNull)
     EXPECT_EQ(output128[0].HighBits(), 0);
     EXPECT_EQ(output128[0].LowBits(), 212345650000000);
     EXPECT_FALSE(overflowNull[1]);
-    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[1].LowBits(), 21234570000000);
+    EXPECT_EQ(output128[1].HighBits(), ~0);
+    EXPECT_EQ(output128[1].LowBits(), -21234570000000);
 
     Decimal128 decimal128Val1[2];
-    decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
-    decimal128Val1[1].SetValue(0, 99'999'999'999'999'999UL);
+    decimal128Val1[0] = Decimal128("-9223372036854775807");
+    decimal128Val1[1] = Decimal128("99999999999999999");
     Decimal128 decimal128Val2[2];
-    decimal128Val2[0].SetValue(0, 123456789);
-    decimal128Val2[1].SetValue(1LL << 63, 987654321);
+    decimal128Val2[0] = Decimal128("123456789");
+    decimal128Val2[1] = Decimal128("-987654321");
     BatchAddDec128Dec128Dec128RetNull(overflowNull, decimal128Val1, 19, 9, decimal128Val2, 19, 9, 38, 19, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
-    EXPECT_EQ(decimal128Val1[0].HighBits(), -9'223'372'031'854'775'809L);
-    EXPECT_EQ(decimal128Val1[0].LowBits(), 17'212'176'173'709'551'616UL);
+    EXPECT_EQ(decimal128Val1[0], Decimal128("-92233720367313190180000000000"));
     EXPECT_FALSE(overflowNull[1]);
-    EXPECT_EQ(decimal128Val1[1].HighBits(), 0x33B'2E3C);
-    EXPECT_EQ(decimal128Val1[1].LowBits(), 0x16BF'F881'EB1B'7800);
+    EXPECT_EQ(decimal128Val1[1], Decimal128("999999990123456780000000000"));
 
     BatchAddDec64Dec128Dec128RetNull(overflowNull, decimal64Val1, 9, 2, decimal128Val1, 30, 19, 30, 21, rowCnt);
     EXPECT_TRUE(overflowNull[0]);
@@ -717,17 +715,17 @@ TEST(BatchFunctionTest, DecimalSubtract)
 
     BatchSubDec64Dec64Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 9, 2, decimal64Val2, 7, 2, output128, 19, 9,
         rowCnt);
-    EXPECT_EQ(output128[0].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[0].LowBits(), 187'654'310'000'000L);
-    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[1].LowBits(), 0x1486'7F11'1880);
+    EXPECT_EQ(output128[0].HighBits(), ~0);
+    EXPECT_EQ(output128[0].LowBits(), -187'654'310'000'000L);
+    EXPECT_EQ(output128[1].HighBits(), ~0);
+    EXPECT_EQ(output128[1].LowBits(), -0x1486'7F11'1880);
 
     Decimal128 decimal128Val1[2];
     decimal128Val1[0].SetValue(0, INT64_MAX);
     decimal128Val1[1].SetValue(1234, 9'999'000'000);
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 100'000);
-    decimal128Val2[1].SetValue(1LL << 63 | 1234, 987654321);
+    decimal128Val2[1].SetValue(~1234, -987654321);
     BatchSubDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal128Val2, 30, 9, 38, 9,
         rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
@@ -741,7 +739,7 @@ TEST(BatchFunctionTest, DecimalSubtract)
 
     context->ResetError();
     decimal64Val1[0] = 823'484'382'638'232'596L;
-    decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
+    decimal128Val1[0].SetValue(~0, -INT64_MAX);
     BatchSubDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 19, 19,
         rowCnt);
     EXPECT_TRUE(context->HasError());
@@ -765,22 +763,22 @@ TEST(BatchFunctionTest, DecimalSubtractRetNull)
 
     BatchSubDec64Dec64Dec128RetNull(overflowNull, decimal64Val1, 8, 2, decimal64Val2, 7, 2, output128, 19, 9, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
-    EXPECT_EQ(output128[0].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[0].LowBits(), 187'654'310'000'000UL);
+    EXPECT_EQ(output128[0].HighBits(), ~0);
+    EXPECT_EQ(output128[0].LowBits(), -187'654'310'000'000UL);
     EXPECT_FALSE(overflowNull[1]);
-    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[1].LowBits(), 0x1486'7F11'1880);
+    EXPECT_EQ(output128[1].HighBits(), ~0);
+    EXPECT_EQ(output128[1].LowBits(), -0x1486'7F11'1880);
 
     Decimal128 decimal128Val1[2];
-    decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
-    decimal128Val1[1].SetValue(1LL << 63, 1);
+    decimal128Val1[0].SetValue(~0, -INT64_MAX);
+    decimal128Val1[1].SetValue(~0, -1);
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 100'000);
-    decimal128Val2[1].SetValue(1LL << 63 | 1234, 100'000);
+    decimal128Val2[1].SetValue(~1234, -100'000);
     BatchSubDec128Dec128Dec128RetNull(overflowNull, decimal128Val1, 19, 9, decimal128Val2, 19, 9, 38, 9, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
-    EXPECT_EQ(decimal128Val1[0].HighBits(), 1LL << 63);
-    EXPECT_EQ(decimal128Val1[0].LowBits(), 9223372036854775807UL + 100'000UL);
+    EXPECT_EQ(decimal128Val1[0].HighBits(), ~0);
+    EXPECT_EQ(decimal128Val1[0].LowBits(), -9223372036854775807UL - 100'000UL);
     EXPECT_FALSE(overflowNull[1]);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 1234);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 99999);
@@ -815,12 +813,12 @@ TEST(BatchFunctionTest, DecimalMultiply)
         rowCnt);
     EXPECT_EQ(output128[0].HighBits(), 0);
     EXPECT_EQ(output128[0].LowBits(), 123'456'687'654L * 9999999L);
-    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[1].LowBits(), 9'976'302'931L * 1010101);
+    EXPECT_EQ(output128[1].HighBits(), ~0);
+    EXPECT_EQ(output128[1].LowBits(), -9'976'302'931L * 1010101);
 
     Decimal128 decimal128Val1[2];
     decimal128Val1[0].SetValue(0, 123456);
-    decimal128Val1[1].SetValue(1LL << 63, 999999);
+    decimal128Val1[1].SetValue(~0, -999999);
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 10000L);
     decimal128Val2[1].SetValue(0, 314159L);
@@ -828,8 +826,8 @@ TEST(BatchFunctionTest, DecimalMultiply)
         rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 1234560000);
-    EXPECT_EQ(decimal128Val1[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(decimal128Val1[1].LowBits(), 314158685841);
+    EXPECT_EQ(decimal128Val1[1].HighBits(), ~0);
+    EXPECT_EQ(decimal128Val1[1].LowBits(), -314158685841);
 
     decimal128Val1[0].SetValue(INT64_MAX, INT64_MAX);
     BatchMulDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 8, 2, decimal128Val1, 38, 9, 38, 9, rowCnt);
@@ -839,13 +837,13 @@ TEST(BatchFunctionTest, DecimalMultiply)
     decimal64Val1[0] = 123456789;
     decimal64Val1[1] = 314159;
     decimal128Val1[0].SetValue(0, 823'484'382'638'232'596UL);
-    decimal128Val1[1].SetValue((1LL << 63) | 123, 1UL);
+    decimal128Val1[1].SetValue(~123, -1);
     BatchMulDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 9, decimal64Val1, 18, 9, 38, 18,
         rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0x541858);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 0x78F3'8F5D'A9D8'69A4);
-    EXPECT_EQ(decimal128Val1[1].HighBits(), (1LL << 63) | 0x24D'9F95);
-    EXPECT_EQ(decimal128Val1[1].LowBits(), 0x4'CB2F);
+    EXPECT_EQ(decimal128Val1[1].HighBits(), ~0x24D'9F95);
+    EXPECT_EQ(decimal128Val1[1].LowBits(), -0x4'CB2F);
 
     delete context;
 }
@@ -866,15 +864,15 @@ TEST(BatchFunctionTest, DecimalMultiplyRetNull)
 
     BatchMulDec64Dec64Dec128RetNull(overflowNull, decimal64Val1, 12, 2, decimal64Val2, 7, 2, output128, 19, 4, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
-    EXPECT_EQ(output128[0].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[0].LowBits(), 123'456'687'654L * 9999999);
+    EXPECT_EQ(output128[0].HighBits(), ~0);
+    EXPECT_EQ(output128[0].LowBits(), -123'456'687'654L * 9999999);
     EXPECT_FALSE(overflowNull[1]);
-    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[1].LowBits(), 13'450'235'748'344);
+    EXPECT_EQ(output128[1].HighBits(), ~0);
+    EXPECT_EQ(output128[1].LowBits(), -13'450'235'748'344);
 
     Decimal128 decimal128Val1[2];
     decimal128Val1[0].SetValue(0, INT64_MAX);
-    decimal128Val1[1].SetValue((1LL << 63) | 1, 9999999);
+    decimal128Val1[1].SetValue(~1, -9999999);
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 100);
     decimal128Val2[1].SetValue(0, 31415926);
@@ -883,8 +881,8 @@ TEST(BatchFunctionTest, DecimalMultiplyRetNull)
     EXPECT_EQ(decimal128Val1[0].HighBits(), 49);
     EXPECT_EQ(decimal128Val1[0].LowBits(), 0xFFFFFFFFFFFFFF9C);
     EXPECT_FALSE(overflowNull[1]);
-    EXPECT_EQ(decimal128Val1[1].HighBits(), 0x1DF'5E76 | (1LL << 63));
-    EXPECT_EQ(decimal128Val1[1].LowBits(), 0x0001'1DB9'E539'008A);
+    EXPECT_EQ(decimal128Val1[1].HighBits(), ~0x1DF'5E76);
+    EXPECT_EQ(decimal128Val1[1].LowBits(), -0x0001'1DB9'E539'008A);
 
     BatchMulDec64Dec128Dec128RetNull(overflowNull, decimal64Val1, 9, 2, decimal128Val1, 38, 9, 19, 12, rowCnt);
     EXPECT_TRUE(overflowNull[0]);
@@ -913,12 +911,12 @@ TEST(BatchFunctionTest, DecimalDivide)
 
     Decimal128 decimal128Val1[2];
     decimal128Val1[0].SetValue(0, 100000);
-    decimal128Val1[1].SetValue(1LL << 63, 999);
+    decimal128Val1[1].SetValue(~0, -999);
     BatchDivDec64Dec128Dec64ReScale(contextPtr, isAnyNull, decimal64Val1, 7, 2, decimal128Val1, 19, 2, 14, 2, rowCnt);
     EXPECT_EQ(decimal64Val1[0], -1);
     EXPECT_EQ(decimal64Val1[1], -3003);
 
-    decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
+    decimal128Val1[0].SetValue(~0, -INT64_MAX);
     decimal128Val1[1].SetValue(0, 1234567890);
     BatchDivDec128Dec64Dec64ReScale(contextPtr, isAnyNull, decimal128Val1, 20, 6, decimal64Val2, 7, 2, 18, 8, rowCnt);
     EXPECT_EQ(decimal64Val2[0], -922337203685477581);
@@ -928,24 +926,24 @@ TEST(BatchFunctionTest, DecimalDivide)
         rowCnt);
     EXPECT_EQ(output128[0].HighBits(), 0);
     EXPECT_EQ(output128[0].LowBits(), 0);
-    EXPECT_EQ(output128[1].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[1].LowBits(), 811);
+    EXPECT_EQ(output128[1].HighBits(), ~0);
+    EXPECT_EQ(output128[1].LowBits(), -811);
 
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 1);
     decimal128Val2[1].SetValue(123, 456);
     BatchDivDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, 38, 6,
         rowCnt);
-    EXPECT_EQ(decimal128Val1[0].HighBits(), (1LL << 63) | 0x7A11F);
-    EXPECT_EQ(decimal128Val1[0].LowBits(), 0xFFFF'FFFF'FFF0'BDC0);
+    EXPECT_EQ(decimal128Val1[0].HighBits(), ~0x7A11F);
+    EXPECT_EQ(decimal128Val1[0].LowBits(), -0xFFFF'FFFF'FFF0'BDC0);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 0);
 
     decimal128Val1[0].SetValue(0, 1111111);
     decimal128Val1[1].SetValue(0, 31415);
     BatchDivDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val2, 18, 2, decimal128Val1, 19, 2, 19, 6, rowCnt);
-    EXPECT_EQ(decimal128Val1[0].HighBits(), 1LL << 63);
-    EXPECT_EQ(decimal128Val1[0].LowBits(), 0x0B85'1ECB'A5B9'0AB8);
+    EXPECT_EQ(decimal128Val1[0].HighBits(), ~0);
+    EXPECT_EQ(decimal128Val1[0].LowBits(), -0x0B85'1ECB'A5B9'0AB8);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 11789720548);
 
@@ -972,8 +970,8 @@ TEST(BatchFunctionTest, DecimalDivideRetNull)
 
     BatchDivDec64Dec64Dec128RetNull(overflowNull, decimal64Val1, 7, 0, decimal64Val2, 9, 6, output128, 19, 4, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
-    EXPECT_EQ(output128[0].HighBits(), 1LL << 63);
-    EXPECT_EQ(output128[0].LowBits(), 6561005);
+    EXPECT_EQ(output128[0].HighBits(), ~0);
+    EXPECT_EQ(output128[0].LowBits(), -6561005);
     EXPECT_FALSE(overflowNull[1]);
     EXPECT_EQ(output128[1].HighBits(), 0);
     EXPECT_EQ(output128[1].LowBits(), 3079693069307);
@@ -982,7 +980,7 @@ TEST(BatchFunctionTest, DecimalDivideRetNull)
     decimal64Val1[1] = 31415926;
     Decimal128 decimal128Val1[2];
     decimal128Val1[0].SetValue(0, 100000);
-    decimal128Val1[1].SetValue(1LL << 63, 54321);
+    decimal128Val1[1].SetValue(~0, -54321);
     BatchDivDec64Dec128Dec64RetNull(overflowNull, decimal64Val1, 12, 2, decimal128Val1, 38, 10, 16, 0, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal64Val1[0], 123'456'789'999'000UL);
@@ -999,12 +997,12 @@ TEST(BatchFunctionTest, DecimalDivideRetNull)
     decimal128Val1[1].SetValue(0, 31415666);
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 1);
-    decimal128Val2[1].SetValue(1LL << 63, 31415);
+    decimal128Val2[1].SetValue(~0, -31415);
     BatchDivDec128Dec128Dec128RetNull(overflowNull, decimal128Val1, 38, 0, decimal128Val2, 38, 19, 38, 0, rowCnt);
     EXPECT_TRUE(overflowNull[0]);
     EXPECT_FALSE(overflowNull[1]);
-    EXPECT_EQ(decimal128Val1[1].HighBits(), (1LL << 63) | 0x21E);
-    EXPECT_EQ(decimal128Val1[1].LowBits(), 0x1CD1'F72F'613F'51F0);
+    EXPECT_EQ(decimal128Val1[1].HighBits(), ~0x21E);
+    EXPECT_EQ(decimal128Val1[1].LowBits(), -0x1CD1'F72F'613F'51F0);
 
     overflowNull[0] = false;
     overflowNull[1] = false;
@@ -1047,7 +1045,7 @@ TEST(BatchFunctionTest, DecimalModulus)
     decimal128Val1[1].SetValue(0, 9'999'999'999);
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 1111111);
-    decimal128Val2[1].SetValue(1LL << 63, 1111111);
+    decimal128Val2[1].SetValue(~0, -1111111);
     BatchModDec128Dec128Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, 38, 2,
         rowCnt);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
@@ -1063,15 +1061,15 @@ TEST(BatchFunctionTest, DecimalModulus)
     BatchModDec64Dec128Dec128ReScale(contextPtr, isAnyNull, decimal64Val1, 18, 2, decimal128Val1, 38, 2, 38, 2, rowCnt);
     EXPECT_TRUE(context->HasError());
 
-    decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
+    decimal128Val1[0].SetValue(~0, -INT64_MAX);
     decimal128Val1[1].SetValue(0, 31415927);
     BatchModDec128Dec64Dec64ReScale(contextPtr, isAnyNull, decimal128Val1, 20, 6, decimal64Val2, 7, 2, 18, 6, rowCnt);
     EXPECT_EQ(decimal64Val2[0], -854775807);
     EXPECT_EQ(decimal64Val2[1], 31415927);
 
     BatchModDec128Dec64Dec128ReScale(contextPtr, isAnyNull, decimal128Val1, 19, 2, decimal64Val2, 9, 2, 20, 2, rowCnt);
-    EXPECT_EQ(decimal128Val1[0].HighBits(), 1LL << 63);
-    EXPECT_EQ(decimal128Val1[0].LowBits(), 698836018);
+    EXPECT_EQ(decimal128Val1[0].HighBits(), ~0);
+    EXPECT_EQ(decimal128Val1[0].LowBits(), -698836018);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 0);
 
@@ -1103,7 +1101,7 @@ TEST(BatchFunctionTest, DecimalModulusRetNull)
     decimal128Val1[1].SetValue(0, 9'999'999'999);
     Decimal128 decimal128Val2[2];
     decimal128Val2[0].SetValue(0, 1111111);
-    decimal128Val2[1].SetValue(1LL << 63, 1111111);
+    decimal128Val2[1].SetValue(~0, -1111111);
     BatchModDec128Dec128Dec128RetNull(overflowNull, decimal128Val1, 19, 2, decimal128Val2, 19, 2, 38, 2, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
     EXPECT_EQ(decimal128Val1[0].HighBits(), 0);
@@ -1124,7 +1122,7 @@ TEST(BatchFunctionTest, DecimalModulusRetNull)
 
     overflowNull[0] = false;
     overflowNull[1] = false;
-    decimal128Val1[0].SetValue(1LL << 63, INT64_MAX);
+    decimal128Val1[0].SetValue(~0, -INT64_MAX);
     decimal128Val1[1].SetValue(0, 31415927);
     BatchModDec128Dec64Dec64RetNull(overflowNull, decimal128Val1, 20, 6, decimal64Val2, 7, 2, 18, 6, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
@@ -1134,8 +1132,8 @@ TEST(BatchFunctionTest, DecimalModulusRetNull)
 
     BatchModDec128Dec64Dec128RetNull(overflowNull, decimal128Val1, 19, 2, decimal64Val2, 7, 2, 20, 2, rowCnt);
     EXPECT_FALSE(overflowNull[0]);
-    EXPECT_EQ(decimal128Val1[0].HighBits(), 1LL << 63);
-    EXPECT_EQ(decimal128Val1[0].LowBits(), 698836018);
+    EXPECT_EQ(decimal128Val1[0].HighBits(), ~0);
+    EXPECT_EQ(decimal128Val1[0].LowBits(), -698836018);
     EXPECT_FALSE(overflowNull[1]);
     EXPECT_EQ(decimal128Val1[1].HighBits(), 0);
     EXPECT_EQ(decimal128Val1[1].LowBits(), 0);

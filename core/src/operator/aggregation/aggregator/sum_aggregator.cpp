@@ -80,11 +80,7 @@ bool SumAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, Vec
         return false;
     }
 
-    // only OMNI_LONG or OMNI_DECIMAL128 type input support
-    if (this->inputTypes.GetType(0)->GetId() == OMNI_DECIMAL128) {
-        // just support row Raw data for decimal128
-        return inputRaw;
-    } else if (this->inputTypes.GetType(0)->GetId() == OMNI_LONG) {
+    if (this->inputTypes.GetType(0)->GetId() == OMNI_LONG) {
         return true;
     }
     return false;
