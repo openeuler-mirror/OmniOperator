@@ -88,18 +88,25 @@ case "$1" in
     cd $CWD/core/src/udf/java && mvn clean install
     ;;
   coverage)
-    setup_dependencies
+    setup_dependencies package
 
-    echo "-- Enable coverage for c++"
-    cd ${CWD} && build coverage:java --enable-hmpp
-    $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
+    echo "-- Package asan without test"
+    cd ${CWD} && build coverage:java --exclude-test --enable-hmpp
 
-    lcov --d $CWD/build --c --output-file test.info --rc lcov_branch_coverage=1
-    lcov --remove test.info '*/opt/buildtools/include/*' '*/usr/include/*' '*/usr/lib/*' '*/usr/lib64/*' '*/usr/local/include/*' '*/usr/local/lib/*' '*/usr/local/lib64/*' '*/test/*' -o final.info --rc lcov_branch_coverage=1
-    genhtml final.info -o ${CWD}/core/build/test_coverage --branch-coverage --rc lcov_branch_coverage=1
+    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
+    cd $CWD/core/src/udf/java && mvn clean install -DskipTests
 
-    cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true
-    cd $CWD/core/src/udf/java && mvn clean install
+    cd $CWD
+    # clean environment
+    [ -d "$TARGZ_NAME" ] && rm -rf $TARGZ_NAME
+    [ -f "$TARGZ_NAME.tar.gz" ] && rm -rf $TARGZ_NAME.tar.gz
+    [ -f "$ZIP_NAME.zip" ] && rm -rf $ZIP_NAME.zip
+
+    cp -r $OMNI_HOME/lib $TARGZ_NAME
+    cp $CWD/bindings/java/target/*.jar $TARGZ_NAME
+    cp $CWD/core/src/udf/java/target/*.jar $TARGZ_NAME
+    tar --owner root --group root -zcvf $TARGZ_NAME.tar.gz $TARGZ_NAME
+    zip $ZIP_NAME.zip $TARGZ_NAME.tar.gz
     ;;
   *)
     echo "-- Enable default options"
