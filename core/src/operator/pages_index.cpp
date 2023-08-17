@@ -705,14 +705,24 @@ void SortNullAndGetValue(BaseVector **sortColumn, std::vector<int64_t> &values, 
         } else {
             using T = typename NativeType<D>::type;
             if constexpr (hasDictionary) {
-                using DictionaryFlatVector = vec::Vector<DictionaryContainer<T>>;
-                auto dictionaryVector = static_cast<DictionaryFlatVector *>(column);
-                if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
-                    T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
-                    int32_t originalRowIndex = unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector)[rowIdx];
-                    values[i] = reinterpret_cast<int64_t>(valuePtr + originalRowIndex);
+                if (column->GetEncoding() == OMNI_DICTIONARY) {
+                    using DictionaryFlatVector = vec::Vector<DictionaryContainer<T>>;
+                    auto dictionaryVector = static_cast<DictionaryFlatVector *>(column);
+                    if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
+                        T *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
+                        int32_t originalRowIndex = unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector)[rowIdx];
+                        values[i] = reinterpret_cast<int64_t>(valuePtr + originalRowIndex);
+                    } else {
+                        values[i] = dictionaryVector->GetValue(rowIdx);
+                    }
                 } else {
-                    values[i] = dictionaryVector->GetValue(rowIdx);
+                    using FlatVector = Vector<T>;
+                    if constexpr (D == OMNI_DECIMAL128 || D == OMNI_DOUBLE) {
+                        values[i] = reinterpret_cast<int64_t>(
+                                unsafe::UnsafeVector::GetRawValues(static_cast<FlatVector *>(column)) + rowIdx);
+                    } else {
+                        values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
+                    }
                 }
             } else {
                 using FlatVector = Vector<T>;
