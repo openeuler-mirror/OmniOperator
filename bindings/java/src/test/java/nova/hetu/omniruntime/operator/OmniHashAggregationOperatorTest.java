@@ -258,7 +258,7 @@ public class OmniHashAggregationOperatorTest {
         Iterator<VecBatch> output = omniOperator.getOutput();
         VecBatch result = output.next();
         // adjust the output sequence in the vector.
-        Object[][] expectedDatas = {{"", null}, {4L, 6L}};
+        Object[][] expectedDatas = {{null, ""}, {6L, 4L}};
         assertVecBatchEquals(result, expectedDatas);
 
         freeVecBatch(result);
