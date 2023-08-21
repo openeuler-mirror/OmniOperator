@@ -368,7 +368,7 @@ template <template <typename> class HashAlgo> static void Calculate128ByHash(ben
 {
     auto dataSize = state.range(0);
     for (auto _ : state) {
-        omniruntime::op::GroupByHashMap<omniruntime::type::Decimal128, omniruntime::type::Decimal128,
+        omniruntime::op::BaseHashMap<omniruntime::type::Decimal128, omniruntime::type::Decimal128,
             HashAlgo<omniruntime::type::Decimal128>, omniruntime::op::Grower, omniruntime::op::OmniHashmapAllocator>
             mUseCityHash;
         omniruntime::op::DefaultHashMap<omniruntime::type::Decimal128, omniruntime::type::Decimal128> mDefault;

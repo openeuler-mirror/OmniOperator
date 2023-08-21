@@ -244,30 +244,6 @@ private:
 }
 
 namespace omniruntime::op {
-// in unit test, we think value is null when uint32_t value equal to zero .
-template <> struct NullValueTypeTraits<uint32_t> {
-    static bool IsNullValue(const uint32_t &value)
-    {
-        return value == 0;
-    }
-};
-
-// in unit test, we think value is null when uint32_t value equal to zero .
-template <typename T> struct NullValueTypeTraits<std::unique_ptr<T>> {
-    static bool IsNullValue(const std::unique_ptr<T> &value)
-    {
-        return NullValueTypeTraits<T>::IsNullValue(*value);
-    }
-};
-
-// in unit test, we think string is null when string.length() equal to zero .
-template <> struct NullValueTypeTraits<std::string> {
-    static bool IsNullValue(const std::string &str)
-    {
-        return str.empty();
-    }
-};
-
 // in unit test, use combine hash to generate NotPodClass's hash.
 template <> struct GroupbyHashCalculator<HashMapTest::NotPodSharedClass> {
     size_t operator () (const HashMapTest::NotPodSharedClass &data) const
@@ -335,7 +311,7 @@ TEST(GroupByHashMapTest, OnlyNullEmplace)
     {
         auto ret = hashMap.Emplace(nullInt);
         EXPECT_TRUE(ret.IsInsert());
-        EXPECT_TRUE(hashMap.HasNullCell());
+        EXPECT_TRUE(hashMap.HasNullSlot());
         ret.SetValue(1);
     }
     // the hashmap only contains null key
@@ -376,7 +352,7 @@ TEST(GroupByHashMapTest, TestUIntUIntPairWithNullEmplace)
 
     // verify total size and null cell
     EXPECT_EQ(hashMap.GetElementsSize(), testTotal);
-    EXPECT_TRUE(hashMap.HasNullCell());
+    EXPECT_TRUE(hashMap.HasNullSlot());
 
     // verify every cell' value by ForEachKV
 
@@ -392,7 +368,7 @@ TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
 {
     {
         // hashmap will release all memory
-        omniruntime::op::DefaultHashMap<NotPodSharedClass, MaxState> hashMap;
+        omniruntime::op::DefaultHashMap<NotPodSharedClass, MaxState *> hashMap;
 
         constexpr uint32_t total = 100;
         auto currentBytes = 0;
@@ -405,9 +381,9 @@ TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
                     // the data is referenced by hashmap ,and will release by hashmap's DeconstructAllSlot func
                     auto ret = hashMap.Emplace(data);
                     EXPECT_TRUE(ret.IsInsert());
-                    auto s = MaxState();
-                    s.InitState();
-                    ret.SetValue(std::move(s));
+                    auto s = new MaxState();
+                    s->InitState();
+                    ret.SetValue(s);
                 }
                 currentBytes += 8 * 2;
                 EXPECT_EQ(ResourceInfoCollector::GetInstance().GetState(), currentBytes);
@@ -429,7 +405,7 @@ TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
                     auto maxIndex = i * j + minMaxValue;
                     // simulate ProcessGroup interface
                     for (uint32_t t = maxIndex; t > maxIndex - minMaxValue; --t) {
-                        s.InputProcess(t);
+                        s->InputProcess(t);
                     }
                 }
             }
@@ -437,8 +413,9 @@ TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
 
         // verify every cell's maxValue;
         EXPECT_EQ(hashMap.GetElementsSize(), total * total * 2);
-        hashMap.ForEachKV([minMaxValue](const NotPodSharedClass &key, const MaxState &state) {
-            EXPECT_EQ(state.GetResult(), key.Get0() * key.Get1() + minMaxValue);
+        hashMap.ForEachKV([minMaxValue](const NotPodSharedClass &key, MaxState *state) {
+            EXPECT_EQ(state->GetResult(), key.Get0() * key.Get1() + minMaxValue);
+            delete state;
         });
     }
 
@@ -455,7 +432,7 @@ TEST(GroupByHashMapTest, TestStringMaxStateNoNullHashMap)
 {
     {
         // hashmap will release all memory of MaxState in this closure
-        omniruntime::op::DefaultHashMap<std::string, MaxState> hashMap;
+        omniruntime::op::DefaultHashMap<std::string, MaxState *> hashMap;
 
         constexpr uint32_t total = 1000;
 
@@ -463,10 +440,10 @@ TEST(GroupByHashMapTest, TestStringMaxStateNoNullHashMap)
             // the data is referenced by hashmap ,and will release by hashmap's DeconstructAllSlot func
             auto ret = hashMap.Emplace(std::to_string(i));
             EXPECT_TRUE(ret.IsInsert());
-            auto s = MaxState();
-            s.InitState();
+            auto s = new MaxState();
+            s->InitState();
             // s is only movable
-            ret.SetValue(std::move(s));
+            ret.SetValue(s);
         }
 
         // check total size
@@ -481,14 +458,15 @@ TEST(GroupByHashMapTest, TestStringMaxStateNoNullHashMap)
             auto maxIndex = i + minMaxValue;
             // simulate ProcessGroup interface
             for (uint32_t t = maxIndex; t > maxIndex - minMaxValue; --t) {
-                s.InputProcess(t);
+                s->InputProcess(t);
             }
         }
 
         // verify every cell's maxValue;
         EXPECT_EQ(hashMap.GetElementsSize(), total);
-        hashMap.ForEachKV([minMaxValue](const std::string &key, const MaxState &state) {
-            EXPECT_TRUE(state.GetResult() == minMaxValue + std::stoul(key));
+        hashMap.ForEachKV([minMaxValue](const std::string &key, MaxState *state) {
+            EXPECT_TRUE(state->GetResult() == minMaxValue + std::stoul(key));
+            delete state;
         });
     }
 
@@ -504,14 +482,14 @@ TEST(GroupByHashMapTest, TestStringUniquePtrHashMap)
 {
     constexpr uint32_t testTotal = 10000;
 
-    omniruntime::op::DefaultHashMap<std::string, std::unique_ptr<long>> hashMap;
+    omniruntime::op::DefaultHashMap<std::string, long*> hashMap;
     {
         std::string str;
         // emplace empty string
         auto ret = hashMap.Emplace(str);
         EXPECT_TRUE(ret.IsInsert());
-        EXPECT_TRUE(hashMap.HasNullCell());
-        ret.SetValue(std::make_unique<long>(0));
+        EXPECT_TRUE(hashMap.HasNullSlot());
+        ret.SetValue(nullptr);
     }
 
     {
@@ -519,7 +497,8 @@ TEST(GroupByHashMapTest, TestStringUniquePtrHashMap)
             auto curKey = std::to_string(ins);
             auto ret = hashMap.Emplace(curKey);
             EXPECT_TRUE(ret.IsInsert());
-            ret.SetValue(std::make_unique<long>(ins));
+            auto x = new long(ins);
+            ret.SetValue(x);
         }
     }
 
@@ -527,12 +506,13 @@ TEST(GroupByHashMapTest, TestStringUniquePtrHashMap)
     EXPECT_EQ(hashMap.GetElementsSize(), testTotal + 1);
 
     // verify every cell' value by ForEachKV
-    hashMap.ForEachKV([&](const std::string &key, const std::unique_ptr<long> &value) {
+    hashMap.ForEachKV([&](const std::string &key, long *value) {
         if (key.empty()) {
-            EXPECT_TRUE((*value) == 0);
+            EXPECT_TRUE( value == nullptr);
             return;
         }
         EXPECT_EQ(std::stol(key), (*value));
+        delete value;
     });
 }
 /*
@@ -543,12 +523,12 @@ TEST(GroupByHashMapTest, TestUniqueUniquePtrHashMap)
 {
     constexpr uint32_t testTotal = 10000;
 
-    omniruntime::op::DefaultHashMap<std::unique_ptr<uint32_t>, std::unique_ptr<long>> hashMap;
+    omniruntime::op::DefaultHashMap<std::unique_ptr<uint32_t>, long*> hashMap;
     {
         auto ret = hashMap.Emplace(std::make_unique<uint32_t>(0));
         EXPECT_TRUE(ret.IsInsert());
-        EXPECT_TRUE(hashMap.HasNullCell());
-        ret.SetValue(std::make_unique<long>(0));
+        EXPECT_TRUE(hashMap.HasNullSlot());
+        ret.SetValue(nullptr);
     }
 
     {
@@ -556,7 +536,8 @@ TEST(GroupByHashMapTest, TestUniqueUniquePtrHashMap)
             auto curKey = std::make_unique<uint32_t>(ins);
             auto ret = hashMap.Emplace(std::move(curKey));
             EXPECT_TRUE(ret.IsInsert());
-            ret.SetValue(std::make_unique<long>(ins));
+            auto x = new long(ins);
+            ret.SetValue(x);
         }
     }
 
@@ -564,12 +545,13 @@ TEST(GroupByHashMapTest, TestUniqueUniquePtrHashMap)
     EXPECT_EQ(hashMap.GetElementsSize(), testTotal + 1);
 
     // verify every cell' value by ForEachKV
-    hashMap.ForEachKV([&](const std::unique_ptr<uint32_t> &key, const std::unique_ptr<long> &value) {
+    hashMap.ForEachKV([&](const std::unique_ptr<uint32_t> &key, long *value) {
         if (*key == 0) {
-            EXPECT_TRUE((*value) == 0);
+            EXPECT_TRUE(value == nullptr);
             return;
         }
         EXPECT_EQ(*key, *value);
+        delete value;
     });
 }
 /**
