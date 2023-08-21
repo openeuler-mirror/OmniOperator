@@ -2,10 +2,14 @@
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: lookup join operator test implementations
  */
+#include <climits>
+
 #include "gtest/gtest.h"
 #include "operator/hash_util.h"
+#include "operator/hashmap/crc_hasher.h"
 
 using namespace omniruntime::op;
+using namespace omniruntime::simdutil;
 
 namespace HashUtilTest {
 TEST(HashUtilTest, TestHashValueInt)
@@ -242,6 +246,55 @@ TEST(HashUtilTest, TestHashValueVarchar)
     for (int32_t i = 0; i < 8; i++) {
         hash = HashUtil::HashValue((int8_t *)(values[i].c_str()), (int32_t)(values[i].length()));
         EXPECT_EQ(hash, expectedHashes[i]);
+    }
+}
+
+TEST(HashUtilTest, TestCRCHashNumericTypes)
+{
+    size_t hash;
+    int16_t shortValues[] = {1, 2, 3, INT16_MIN, INT16_MAX};
+    size_t expectedShortHashes[] = {988491858, 3786389307, 2828257820, 2260288385, 3837611627};
+    for (int i = 0; i < 5; ++i) {
+        hash = HashCRC32<int16_t>()(shortValues[i]);
+        EXPECT_EQ(hash, expectedShortHashes[i]);
+    }
+
+    int32_t intValues[] = {1, 2, 3, INT_MIN, INT_MAX};
+    size_t expectedIntHashes[] = {988491858, 3786389307, 2828257820, 494245929, 1856165212};
+    for (int i = 0; i < 5; ++i) {
+        hash = HashCRC32<int32_t>()(intValues[i]);
+        EXPECT_EQ(hash, expectedIntHashes[i]);
+    }
+
+    int64_t longValues[] = {1L, 2L, 3L, INT64_MIN, INT64_MAX};
+    size_t expectedLongHashes[] = {988491858, 3786389307, 2828257820, 4045501965, 896438080};
+    for (int i = 0; i < 5; ++i) {
+        hash = HashCRC32<int64_t>()(longValues[i]);
+        EXPECT_EQ(hash, expectedLongHashes[i]);
+    }
+
+    Decimal128 decimal128Values[] = {Decimal128(0, 1L), Decimal128(0, 2L), Decimal128(0, 3L),
+                                     Decimal128(INT64_MAX, UINT64_MAX), Decimal128(INT64_MIN, 0)};
+    size_t expectedDecimal128Hashes[] = {1334012139, 1551566872, 2927035878, 2451998871, 1064918637};
+    for (int i = 0; i < 5; ++i) {
+        hash = HashCRC32<Decimal128>()(decimal128Values[i]);
+        EXPECT_EQ(hash, expectedDecimal128Hashes[i]);
+    }
+}
+
+TEST(HashUtilTest, TestCRCHashVarchar)
+{
+    size_t hash;
+    const std::string str1 = "1234567";
+    const std::string str2 = "123456789";
+    const std::string str3 = "123456789123456789";
+    const std::string str4 = "abcdefghijklmnopqrstuvwxyz";
+    const std::string str5 = "01234567890123456789abcdefghijklmnopqrstuvwxyz";
+    StringRef stringValue[] = {StringRef(str1), StringRef(str2), StringRef(str3), StringRef(str4), StringRef(str5)};
+    size_t expectedStringHashes[] = {306354154, 3808858755, 2825671668, 2665934629, 1551261344};
+    for (int i = 0; i < 5; ++i) {
+        hash = HashCRC32<StringRef>()(stringValue[i]);
+        EXPECT_EQ(hash, expectedStringHashes[i]);
     }
 }
 }

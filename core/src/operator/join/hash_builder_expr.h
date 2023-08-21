@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * @Description: sort implementations
  */
 
@@ -16,13 +16,13 @@ namespace omniruntime {
 namespace op {
 class HashBuilderWithExprOperatorFactory : public OperatorFactory {
 public:
-    static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(
+    static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(JoinType joinType,
         const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-        int32_t buildHashKeysCount, int32_t hashTableCount, OverflowConfig *overflowConfig);
-
-    HashBuilderWithExprOperatorFactory(const DataTypes &buildTypes,
-        const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
         int32_t hashTableCount, OverflowConfig *overflowConfig);
+
+    HashBuilderWithExprOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
+        const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t hashTableCount,
+        OverflowConfig *overflowConfig);
 
     ~HashBuilderWithExprOperatorFactory() override;
 
