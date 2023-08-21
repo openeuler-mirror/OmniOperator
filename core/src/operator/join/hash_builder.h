@@ -1,45 +1,52 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * @Description: hash builder implementations
  */
 #ifndef __HASH_BUILDER_H__
 #define __HASH_BUILDER_H__
 
 #include <memory>
+
 #include "operator/operator_factory.h"
 #include "operator/operator.h"
-#include "operator/pages_index.h"
-#include "join_hash_table.h"
+#include "join_hash_table_variants.h"
+#include "common_join.h"
 
 namespace omniruntime {
 namespace op {
 class HashBuilderOperatorFactory : public OperatorFactory {
 public:
-    HashBuilderOperatorFactory(const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount,
-        int32_t operatorCount);
-    ~HashBuilderOperatorFactory() override;
-    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(const DataTypes &dataTypes,
+    HashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes, const int32_t *buildHashCols,
+        int32_t buildHashColsCount, int32_t operatorCount);
+    ~HashBuilderOperatorFactory()
+    {
+        delete hashTablesVariants;
+    }
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
         const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
     omniruntime::op::Operator *CreateOperator() override;
-    JoinHashTables *GetHashTables() const
+
+    HashTableVariants *GetHashTablesVariants()
     {
-        return hashTables;
+        return hashTablesVariants;
     }
 
 private:
     DataTypes buildTypes;
     std::vector<int32_t> buildHashCols;
-    JoinHashTables *hashTables;
+    HashTableVariants *hashTablesVariants;
     int32_t hashTableCount;
     std::atomic<int32_t> operatorIndex;
+
+    template <class RowRefListType>
+    HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType);
 };
 
 class HashBuilderOperator : public Operator {
 public:
-    HashBuilderOperator(const DataTypes &buildTypes, std::vector<int32_t> &buildHashCols, JoinHashTables *hashTables,
-        int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex);
+    HashBuilderOperator(const DataTypes &buildTypes, HashTableVariants *hashTables, int32_t partitionIndex);
 
-    ~HashBuilderOperator() override;
+    ~HashBuilderOperator() = default;
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 
@@ -55,10 +62,8 @@ public:
 
 private:
     DataTypes buildTypes;
-    std::vector<int32_t> buildHashCols;
-    JoinHashTables *hashTables;
     int32_t partitionIndex;
-    std::unique_ptr<PagesIndex> pagesIndex;
+    HashTableVariants *hashTablesVariants;
 };
 } // end of op
 } // end of omniruntime

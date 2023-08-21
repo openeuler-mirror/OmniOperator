@@ -5,7 +5,7 @@
 #include <random>
 #include <chrono>
 #include <unordered_map>
-#include "operator/aggregation/group_hash_map/group_hash_map.h"
+#include "operator/hashmap/base_hash_map.h"
 #include "benchmark/benchmark.h"
 #include "cstddef"
 #include "type/decimal128.h"

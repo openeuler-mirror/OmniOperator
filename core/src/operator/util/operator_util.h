@@ -28,6 +28,7 @@ public:
         COMPARE_STATUS_OTHER,
     };
 
+    static constexpr int32_t DEFAULT_CHAR_LENGTH = 200;
     static constexpr int32_t MAX_VEC_BATCH_SIZE_IN_BYTES = 1024 * 1024;
     static const int32_t SIZE_OF_BYTE = sizeof(int8_t);
     static const int32_t SIZE_OF_BOOL = SIZE_OF_BYTE;
@@ -38,6 +39,7 @@ public:
     static const int32_t SIZE_OF_DECIMAL64 = SIZE_OF_LONG;
     static const int32_t SIZE_OF_DECIMAL128 = SIZE_OF_LONG << 1;
     static const int32_t SIZE_OF_DATE32 = SIZE_OF_INT;
+    static const int32_t SIZE_OF_DATE64 = SIZE_OF_LONG;
 
     using CompareFunc = int32_t (*)(vec::BaseVector *leftVector, int32_t leftPosition, vec::BaseVector *rightVector,
         int32_t rightPosition);
@@ -61,9 +63,20 @@ public:
                 return OperatorUtil::SIZE_OF_DECIMAL128;
             case OMNI_DATE32:
                 return OperatorUtil::SIZE_OF_DATE32;
-            case OMNI_VARCHAR:
-            case OMNI_CHAR:
-                return static_cast<VarcharDataType &>(*dataTypePtr).GetWidth();
+            case OMNI_DATE64:
+                return OperatorUtil::SIZE_OF_DATE64;
+            case OMNI_CHAR: {
+                // if width is not set (which is the case when width=CHAR_MAX_WIDTH), we use 'DEFAULT_CHAR_LENGTH' width
+                // otherwise, estimation of row bytes would be too large and could overflow and be
+                const auto width = static_cast<VarcharDataType &>(*dataTypePtr).GetWidth();
+                return width < CHAR_MAX_WIDTH ? width : DEFAULT_CHAR_LENGTH;
+            }
+            case OMNI_VARCHAR: {
+                // if width is not set (which is the case when width=INT_MAX), we use default DEFAULT_CHAR_LENGTH width
+                // otherwise, estimation of row bytes would be too large and could overflow and be
+                const auto width = static_cast<VarcharDataType &>(*dataTypePtr).GetWidth();
+                return width < INT_MAX ? width : DEFAULT_CHAR_LENGTH;
+            }
             default:
                 return 0;
         }

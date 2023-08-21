@@ -11,7 +11,7 @@ namespace op {
 // execution context during operator
 class ExecutionContext {
 public:
-    explicit ExecutionContext() : arena() {}
+    explicit ExecutionContext(int64_t minChunkSize = 4096) : arena(minChunkSize) {}
 
     ~ExecutionContext() = default;
 
