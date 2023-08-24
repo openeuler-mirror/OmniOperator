@@ -57,27 +57,24 @@ public:
 
     ~GroupByHashSlot() = default;
 
-    explicit GroupByHashSlot(const KeyType &keyParam) : isAssigned(true)
+    explicit GroupByHashSlot(const KeyType &keyParam)
     {
         kv.first = keyParam;
     }
 
-    explicit GroupByHashSlot(KeyType &&keyParam) : isAssigned(true), kv(std::move(keyParam), ValueType{}) {}
+    explicit GroupByHashSlot(KeyType &&keyParam) : kv(std::move(keyParam), ValueType{}) {}
 
     GroupByHashSlot(GroupByHashSlot &&o) noexcept : kv(std::move(o.kv)), hashVal(o.hashVal)
     {
-        isAssigned = true;
         o.hashVal = 0;
-        o.isAssigned = false;
     }
 
-    GroupByHashSlot(const KeyType &key, const ValueType &value) : kv(key, value), isAssigned(true) {}
+    GroupByHashSlot(const KeyType &key, const ValueType &value) : kv(key, value) {}
 
     GroupByHashSlot &operator = (GroupByHashSlot &&o) noexcept
     {
         kv = std::move(o.kv);
         SetHashVal(o.GetHashVal());
-        isAssigned = true;
         return *this;
     }
 
@@ -123,7 +120,6 @@ public:
     {
         kv = o.kv;
         SetHashVal(o.GetHashVal());
-        isAssigned = true;
         return *this;
     }
 
@@ -131,24 +127,9 @@ public:
     {
         kv = o.kv;
         SetHashVal(o.GetHashVal());
-        isAssigned = true;
-    }
-
-    bool IsAssigned() const noexcept
-    {
-        return isAssigned;
     }
 
 private:
-    /* *
-     * isAssigned indicates whether the class is constructed.
-     * the usage of this class in Hashmap is divided into two phases:
-     * memory initialization and object construction.
-     * when the slot memory is initialized, memset sets all memory fields to zero
-     * and the obtained value is false if caller attempts to get value of isAssigned.
-     * when the constructor function is invoked, the value of isAssigned is set to true.
-     */
-    bool isAssigned = false;
     std::pair<KeyType, ValueType> kv;
     size_t hashVal;
 };
@@ -172,7 +153,7 @@ public:
 
     int Allocate(uint64_t size, uint8_t **buffer)
     {
-        auto ret = pool->Alloc(static_cast<int64_t>(size), true);
+        auto ret = pool->Alloc(static_cast<int64_t>(size), false);
         *buffer = static_cast<uint8_t *>(ret);
         if (ret == nullptr) {
             throw exception::OmniException("allocate in OmniHashmapAllocator", "allocate memory fail");
@@ -292,7 +273,7 @@ struct OutputState {
  * @tparam KeyType must have default constructor , must support move-assign function or copy-assign function
  * @tparam ValueType must support movable
  * @tparam HashType Hash Algorithm of KeyType
- * @tparam GrowStrategy Rehash when size exceed totalSize / 2
+ * @tparam GrowStrategy Rehash when size exceed (1ULL << degree) * 0.75
  * @tparam Allocator memory pool
  */
 template <typename KeyType, typename ValueType, typename HashType, typename GrowStrategy, typename Allocator,
@@ -309,8 +290,10 @@ public:
     {
         auto defaultSize = grower.GetCurrentSize();
         allocator.Allocate(defaultSize * sizeof(Slot), &address);
-        totalSize = defaultSize;
-        capacity = totalSize * sizeof(Slot);
+        isAssigned = new bool[defaultSize];
+        memset_sp(isAssigned, sizeof(bool) * defaultSize, 0, sizeof(bool) * defaultSize);
+        mask = defaultSize - 1;
+        capacity = defaultSize * sizeof(Slot);
         slots = reinterpret_cast<Slot *>(address);
         elementsSize = 0;
     }
@@ -325,13 +308,13 @@ public:
     GroupByHashMap(GroupByHashMap &&o) noexcept
     {
         address = o.address;
-        totalSize = o.totalSize;
+        mask = o.mask;
         capacity = o.capacity;
         slots = o.slots;
         elementsSize = o.elementsSize;
         o.address = nullptr;
         o.slots = nullptr;
-        o.totalSize = 0;
+        o.mask = 0;
         o.capacity = 0;
         o.elementsSize = 0;
     }
@@ -374,8 +357,9 @@ public:
         auto pos = FindPosition(key, hashValue);
         bool inserted = false;
 
-        if (not slots[pos].IsAssigned()) {
+        if (not isAssigned[pos]) {
             inserted = true;
+            isAssigned[pos] = true;
             new (&slots[pos]) Slot(std::forward<T>(key));
             ++elementsSize;
         }
@@ -394,7 +378,7 @@ public:
 
         int index = 0;
         while (remainNum) {
-            while (not slots[index].IsAssigned()) {
+            while (not isAssigned[index]) {
                 ++index;
             }
             func(slots[index].GetKey(), slots[index].GetValue());
@@ -415,6 +399,7 @@ public:
             DeconstructAllSlot();
         }
         allocator.Release(address, GetCapacity());
+        delete[] isAssigned;
         if (nullSlot != nullptr) {
             allocator.Release(reinterpret_cast<uint8_t *>(nullSlot), sizeof(Slot));
         }
@@ -423,13 +408,14 @@ public:
     class HashmapIteratorOutput {
     public:
         HashmapIteratorOutput(GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *mapPtr,
-            uint32_t pos, uint32_t hasBeenOutputCount)
+            uint32_t pos, uint32_t hasBeenOutputCount, bool *assigned)
             : groupByHashMapPtr(mapPtr)
         {
             remainSlot =
                 groupByHashMapPtr->GetElementsSize() - (groupByHashMapPtr->HasNullCell() ? 1 : 0) - hasBeenOutputCount;
 
-            slotIterator = groupByHashMapPtr->slots + pos;
+            isAssigned = std::move(assigned);
+            this->pos = pos;
         }
 
         template <class Func> OutputState HandleElements(uint32_t expectSize, Func func)
@@ -439,41 +425,42 @@ public:
                 FindNext();
                 --remainSlot;
                 --remainHandleSize;
-                func(slotIterator->GetKey(), slotIterator->GetValue());
+                func((groupByHashMapPtr->slots + pos)->GetKey(), (groupByHashMapPtr->slots + pos)->GetValue());
                 // value in cur pos has been assigned , so we need to plus one
                 MoveToNext();
             }
             if (remainHandleSize == 0) {
-                return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize);
+                return OutputState(pos, expectSize);
             }
             if (groupByHashMapPtr->HasNullCell()) {
                 --remainHandleSize;
                 func(groupByHashMapPtr->nullSlot->GetKey(), groupByHashMapPtr->nullSlot->GetValue());
             }
-            return OutputState(slotIterator - groupByHashMapPtr->slots, expectSize - remainHandleSize);
+            return OutputState(pos, expectSize - remainHandleSize);
         }
 
     private:
-        Slot *slotIterator;
         GroupByHashMap<KeyType, ValueType, HashType, GrowStrategy, Allocator> *groupByHashMapPtr;
+        bool *isAssigned = nullptr;
+        uint32_t pos = 0;
         uint32_t remainSlot = 0;
 
         void FindNext()
         {
-            while (not slotIterator->IsAssigned()) {
-                slotIterator++;
+            while (not isAssigned[pos]) {
+                ++pos;
             }
         }
 
         void MoveToNext()
         {
-            ++slotIterator;
+            ++pos;
         }
     };
 
     HashmapIteratorOutput GetOutputMachine(uint32_t pos = 0, uint32_t hasBeenOutputCount = 0)
     {
-        return HashmapIteratorOutput(this, pos, hasBeenOutputCount);
+        return HashmapIteratorOutput(this, pos, hasBeenOutputCount, isAssigned);
     }
 
 private:
@@ -483,10 +470,11 @@ private:
         new (&slots[pos]) Slot(cell);
     }
 
-    void Reinsert(Slot &&cell)
+    void Reinsert(Slot &&cell, bool *newIsAssigned)
     {
-        auto pos = FindPosition(cell.GetKey(), cell.GetHashVal());
+        auto pos = FindPosition(cell.GetKey(), cell.GetHashVal(), newIsAssigned);
         new (&slots[pos]) Slot(std::move(cell));
+        newIsAssigned[pos] = true;
     }
 
     void Rehash()
@@ -495,18 +483,22 @@ private:
         Slot *oldCells = slots;
         uint64_t reHashSize = grower.GrowSize();
         allocator.Allocate(reHashSize * sizeof(Slot), &address);
+        bool *newIsAssigned = new bool[reHashSize];
+        memset_sp(newIsAssigned, sizeof(bool) * reHashSize, 0, sizeof(bool) * reHashSize);
         slots = reinterpret_cast<Slot *>(address);
         EnlargeSizeRecord(reHashSize);
         int remainNum = elementsSize - (HasNullCell() ? 1 : 0);
         int index = 0;
         while (remainNum != 0) {
-            while (not oldCells[index].IsAssigned()) {
+            while (not isAssigned[index]) {
                 ++index;
             }
-            Reinsert(std::move(oldCells[index]));
+            Reinsert(std::move(oldCells[index]), newIsAssigned);
             --remainNum;
             ++index;
         }
+        delete[] isAssigned;
+        isAssigned = std::move(newIsAssigned);
         allocator.Release((uint8_t *)oldCells, oldSize);
     }
 
@@ -522,10 +514,21 @@ private:
 
     size_t FindPosition(const KeyType &key, size_t hashValue)
     {
-        auto nextPos = (hashValue & (totalSize - 1));
-        while (slots[nextPos].IsAssigned() && not slots[nextPos].IsSameKey(hashValue, key)) {
+        auto nextPos = (hashValue & mask);
+        while (isAssigned[nextPos] && not slots[nextPos].IsSameKey(hashValue, key)) {
             ++nextPos;
-            nextPos &= (totalSize - 1);
+            nextPos &= mask;
+        }
+        return nextPos;
+    }
+
+    // update newIsAssigned when rehash
+    size_t FindPosition(const KeyType &key, size_t hashValue, bool *newIsAssigned)
+    {
+        auto nextPos = (hashValue & mask);
+        while (newIsAssigned[nextPos] && not slots[nextPos].IsSameKey(hashValue, key)) {
+            ++nextPos;
+            nextPos &= mask;
         }
         return nextPos;
     }
@@ -558,7 +561,7 @@ private:
         }
         int index = 0;
         while (remainNum) {
-            while (not slots[index].IsAssigned()) {
+            while (not isAssigned[index]) {
                 ++index;
             }
             slots[index].~Slot();
@@ -570,17 +573,27 @@ private:
 
     void EnlargeSizeRecord(uint64_t newElementsSize)
     {
-        totalSize = newElementsSize;
+        mask = newElementsSize - 1;
         capacity = newElementsSize * sizeof(Slot);
     }
 
     uint8_t *address;
     Allocator allocator;
     Slot *slots;
+    /* *
+     * isAssigned is an array and isAssigned[i] indicates whether the slots[i] is constructed.
+     * the usage of this class in Hashmap is divided into two phases:
+     * memory initialization and object construction.
+     * when the slot memory is initialized, the array memory is also initialized
+     * and the array memory field is set to zero, that is, the default value is false.
+     * When the slot is constructed, the value of isAssigned is set to true.
+     */
+    bool *isAssigned = nullptr;
     Slot *nullSlot = nullptr;
     size_t elementsSize;
     HashType hasher;
-    uint64_t totalSize;
+    // mask is used as cardinality for hash calculation
+    uint64_t mask;
     uint64_t capacity;
     static constexpr uint8_t defaultDegreeSize = 16;
     GrowStrategy grower;
