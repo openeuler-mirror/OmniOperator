@@ -135,3 +135,32 @@ TEST(DtFuzzFactoryCreateTest, testWindowFactoryCreate)
     ASSERT_FALSE(factory == nullptr);
     delete factory;
 }
+
+TEST(DtFuzzFactoryCreateTest, testTopNSortFactoryCreate)
+{
+    DataTypes sourceTypes(supportedTypes);
+    std::vector<omniruntime::expressions::Expr *> partitionKeys = { new FieldExpr(8, VarcharType(CHAR_SIZE)) };
+    std::vector<omniruntime::expressions::Expr *> sortKeys = { new FieldExpr(1, IntType()) };
+    auto factory = CreateTopNSortFactory(sourceTypes, partitionKeys, sortKeys, 10);
+    ASSERT_FALSE(factory == nullptr);
+    Expr::DeleteExprs(partitionKeys);
+    Expr::DeleteExprs(sortKeys);
+    delete factory;
+}
+
+TEST(DtFuzzFactoryCreateTest, testStreamedTableWithExprOperatorFactoryCreate)
+{
+    auto factory = CreateStreamedWithExprOperatorFactory();
+    ASSERT_FALSE(factory == nullptr);
+    delete factory;
+}
+
+TEST(DtFuzzFactoryCreateTest, testSortMergeJoinV3FactoryCreate)
+{
+    StreamedTableWithExprOperatorFactoryV3 *streamedTableWithExprOperatorFactoryV3 =
+        dynamic_cast<StreamedTableWithExprOperatorFactoryV3 *>(CreateStreamedWithExprOperatorFactory());
+    auto factory = CreateSortMergeJoinV3Factory(streamedTableWithExprOperatorFactoryV3);
+    ASSERT_FALSE(factory == nullptr);
+    delete streamedTableWithExprOperatorFactoryV3;
+    delete factory;
+}

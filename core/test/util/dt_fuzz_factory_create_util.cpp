@@ -13,17 +13,21 @@
 #include "operator/union/union.h"
 #include "operator/topn/topn.h"
 #include "operator/join/sortmergejoin/sort_merge_join.h"
+#include "operator/topnsort/topn_sort_expr.h"
 #include "operator/window/window.h"
+#include "operator/join/sortmergejoin/sort_merge_join_expr_v3.h"
+#include "test_util.h"
 #include "dt_fuzz_factory_create_util.h"
 
 using namespace omniruntime::type;
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
+using namespace TestUtil;
 
 namespace DtFuzzFactoryCreateUtil {
 const int32_t SHORT_DECIMAL_SIZE = 18;
 const int32_t LONG_DECIMAL_SIZE = 38;
-int32_t CHAR_SIZE = 10;
+constexpr int32_t CHAR_SIZE = 10;
 OperatorFactory *CreateFilterFactory(omniruntime::type::DataTypes &sourceTypes, BinaryExpr *filterExpr,
     std::vector<Expr *> projections, OverflowConfig *overflowConfig)
 {
@@ -106,13 +110,40 @@ OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sour
     return operatorFactory;
 }
 
+Expr *CreateJoinFilterExpr()
+{
+    std::string filterStr = "substr";
+    DataTypePtr retType = VarcharType();
+
+    auto leftSubstrColumn = new FieldExpr(1, VarcharType());
+    auto leftSubstrIndex = new LiteralExpr(1, IntType());
+    auto leftSubstrLen = new LiteralExpr(5, IntType());
+    std::vector<Expr *> leftSubstrArgs;
+    leftSubstrArgs.push_back(leftSubstrColumn);
+    leftSubstrArgs.push_back(leftSubstrIndex);
+    leftSubstrArgs.push_back(leftSubstrLen);
+    auto leftSubstrExpr = GetFuncExpr(filterStr, leftSubstrArgs, VarcharType());
+
+    auto rightSubstrColumn = new FieldExpr(3, VarcharType());
+    auto rightSubstrIndex = new LiteralExpr(1, IntType());
+    auto rightSubstrLen = new LiteralExpr(5, IntType());
+    std::vector<Expr *> rightSubstrArgs;
+    rightSubstrArgs.push_back(rightSubstrColumn);
+    rightSubstrArgs.push_back(rightSubstrIndex);
+    rightSubstrArgs.push_back(rightSubstrLen);
+    auto rightSubstrExpr = GetFuncExpr(filterStr, rightSubstrArgs, VarcharType());
+
+    auto *notEqualExpr =
+        new BinaryExpr(omniruntime::expressions::Operator::NEQ, leftSubstrExpr, rightSubstrExpr, BooleanType());
+    return notEqualExpr;
+}
 
 std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataTypes &sourceTypes,
     OverflowConfig *overflowConfig, std::string filterExpr, int32_t operatorCount)
 {
     int32_t buildJoinCols[1] = {1};
     int32_t joinColsCount = 1;
-
+    operatorCount = 1;
     auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(sourceTypes, buildJoinCols,
         joinColsCount, operatorCount);
 
@@ -125,12 +156,27 @@ std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataType
     int32_t buildOutputColsCount = 1;
 
     auto hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderFactory);
-
+    Expr *joinFilterExpr = CreateJoinFilterExpr();
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(sourceTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr, overflowConfig);
+        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, joinFilterExpr, overflowConfig);
     std::vector<OperatorFactory *> operatorFactories = { hashBuilderFactory, lookupJoinFactory };
+    delete joinFilterExpr;
     return operatorFactories;
+}
+
+OperatorFactory *CreateTopNSortFactory(omniruntime::type::DataTypes &sourceTypes,
+    std::vector<omniruntime::expressions::Expr *> partitionKeys, std::vector<omniruntime::expressions::Expr *> sortKeys,
+    int32_t dataSize)
+{
+    std::vector<int32_t> sortAscendings = { 0 };
+    std::vector<int32_t> sortNullFirsts = { 0 };
+    auto overflowConfig = new OverflowConfig();
+
+    auto operatorFactory = new TopNSortWithExprOperatorFactory(sourceTypes, dataSize, false, partitionKeys, sortKeys,
+        sortAscendings, sortNullFirsts, overflowConfig);
+    delete overflowConfig;
+    return operatorFactory;
 }
 
 OperatorFactory *CreateDistinctLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount)
@@ -216,6 +262,40 @@ OperatorFactory *CreateWindowFactory(omniruntime::type::DataTypes &sourceTypes)
         windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 1, windowFrameTypes,
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, true);
+    return operatorFactory;
+}
+
+OperatorFactory *CreateStreamedWithExprOperatorFactory()
+{
+    std::string filterJsonStr = "{\"exprType\":\"BINARY\","
+        "\"returnType\":4,"
+        "\"operator\":\"GREATER_THAN\","
+        "\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},"
+        "\"right\":{\"exprType\":\"LITERAL\",\"dataType\":1, \"isNull\":false, \"value\":2}}";
+    std::vector<DataTypePtr> streamTypeVector = { IntType(), LongType() };
+    DataTypes streamedTblTypes(streamTypeVector);
+    auto *col0 = new FieldExpr(0, IntType());
+    std::vector<Expr *> streamedEqualKeyExprs = { col0 };
+    std::vector<int32_t> streamedOutputCols = { 1 };
+    OperatorConfig operatorConfig;
+    auto operatorFactory =
+        StreamedTableWithExprOperatorFactoryV3::CreateStreamedTableWithExprOperatorFactory(streamedTblTypes,
+        streamedEqualKeyExprs, streamedOutputCols, JoinType::OMNI_JOIN_TYPE_INNER, filterJsonStr, operatorConfig);
+    Expr::DeleteExprs(streamedEqualKeyExprs);
+    return operatorFactory;
+}
+
+OperatorFactory *CreateSortMergeJoinV3Factory(StreamedTableWithExprOperatorFactoryV3 *streamedWithExprOperatorFactory)
+{
+    OperatorConfig operatorConfig;
+    std::vector<DataTypePtr> bufferTypesVector = { DoubleType(), IntType() };
+    DataTypes bufferedTblTypes(bufferTypesVector);
+    auto *col1 = new FieldExpr(1, IntType());
+    std::vector<Expr *> bufferedEqualKeyExprs = { col1 };
+    std::vector<int32_t> bufferedOutputCols = { 0 };
+    auto operatorFactory = BufferedTableWithExprOperatorFactoryV3::CreateBufferedTableWithExprOperatorFactory(
+        bufferedTblTypes, bufferedEqualKeyExprs, bufferedOutputCols, streamedWithExprOperatorFactory, operatorConfig);
+    Expr::DeleteExprs(bufferedEqualKeyExprs);
     return operatorFactory;
 }
 }
