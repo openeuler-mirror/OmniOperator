@@ -82,6 +82,11 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
                     numElementsForSpillThreshold, memUsagePctForSpillThreshold);
                 break;
             }
+            default: {
+                std::string omniExceptionInfo = "In fucntion DeserializeOperatorConfig, no such data type " +
+                    std::to_string(static_cast<int>(spillConfigId));
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            }
         }
     }
 

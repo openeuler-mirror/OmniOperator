@@ -247,8 +247,9 @@ void FillPrecomputedHash(VectorBatch *vectorBatch, const int32_t *inputTypeIds, 
             break;
         }
         default:
-            LogError("Invalid hash data type(%d) for precomputed hash column.", inputTypeIds[preComputedHashCol]);
-            break;
+            std::string omniExceptionInfo = "Error in FillPrecomputedHash, Invalid hash data type " +
+                std::to_string(inputTypeIds[preComputedHashCol]) + " for precomputed hash column.";
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
     }
 }
 
@@ -271,8 +272,9 @@ void GenerateCombinedHash(VectorBatch *vectorBatch, const int32_t start, int32_t
         colIndex = distinctColumns[i];
         typeId = inputTypeIds[colIndex];
         if (DISTINCT_LIMIT_FUNC_SET[typeId].generateHashFuncVect == nullptr) {
-            LogError("No such data type %d", typeId);
-            break;
+            std::string omniExceptionInfo =
+                "Error in GenerateCombinedHash, No such data type " + std::to_string(typeId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
 
         if (vectorBatch->Get(colIndex)->GetEncoding() == omniruntime::vec::Encoding::OMNI_DICTIONARY) {

@@ -242,8 +242,9 @@ int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeNa
             break;
 
         default:
-            LogError("Invalid data type(%d) for %s column.", typeId, valueTypeName.data());
-            break;
+            std::string omniExceptionInfo = "Error in WindowPartition::GetFrameValue, Invalid data type " +
+                std::to_string(typeId) + "for column " + valueTypeName.data();
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
     }
 
     return value;

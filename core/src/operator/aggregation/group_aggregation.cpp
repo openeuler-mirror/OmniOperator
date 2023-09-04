@@ -178,9 +178,11 @@ OmniStatus HashAggregationOperator::Init()
         serialize = std::make_unique<decltype(serialize)::element_type>();
         serialize->InitSize(groupByCols.size());
     } else {
-        LogError("can not support groupByColumnsHandleType : %d.", groupByColumnsHandleType);
         // only the serialization method is used now
-        return OMNI_STATUS_ERROR;
+        std::string omniExceptionInfo =
+            "In function HashAggregationOperator::Init, can not support groupByColumnsHandleType " +
+            std::to_string(static_cast<int>(groupByColumnsHandleType));
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
     }
 
     auto groupByColsSize = groupByCols.size();

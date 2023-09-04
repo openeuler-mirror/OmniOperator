@@ -110,8 +110,9 @@ public:
                 break;
             }
             default: {
-                LogError("No such data type %d", dataTypeId);
-                break;
+                std::string omniExceptionInfo =
+                    "In function AppendToVector, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }

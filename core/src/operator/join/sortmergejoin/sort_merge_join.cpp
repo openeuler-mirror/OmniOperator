@@ -95,7 +95,9 @@ int32_t HandleSortMergeJoinNoResultSituation(DynamicPagesIndex *streamedTblPages
             break;
         }
         default: {
-            LogError("Unsupported join type: %u.", joinType);
+            std::string omniExceptionInfo =
+                "Error in HandleSortMergeJoinNoResultSituation, no such data type " + std::to_string(joinType);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
     return -1;
