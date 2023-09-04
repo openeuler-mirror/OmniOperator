@@ -269,8 +269,8 @@ void LookupJoinOperator::ProcessProbe(bool hasFilter)
             }
             break;
         default: {
-            LogError("Unsupported join type: %u.", joinType);
-            break;
+            std::string omniExceptionInfo = "Error in ProcessProbe, no such data type " + std::to_string(joinType);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 }

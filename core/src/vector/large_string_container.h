@@ -44,7 +44,11 @@ public:
 
         // src len can be 0, but dest len can not be 0 when empty strings, otherwise the memcpy_s return errno 34
         errno_t result = memcpy_s(charBuffer + offsets[index], valueSize + 1, value.data(), valueSize);
-        ASSERT(result == EOK);
+        if (UNLIKELY(result != EOK)) {
+            std::string omniExceptionInfo = "In function SetValue, memcpy faild, ret is：" + std::to_string(result) +
+                ", reason is: " + std::string(strerror(errno));
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", omniExceptionInfo);
+        }
 
         offsets[index + 1] = needCapacityInBytes;
         lastOffsetPosition = index;
@@ -108,7 +112,11 @@ private:
         if (oldBuffer->Capacity() > 0) {
             errno_t result =
                 memcpy_s(newBuffer->Data(), newBuffer->Capacity(), oldBuffer->Data(), oldBuffer->Capacity());
-            ASSERT(result == EOK);
+            if (UNLIKELY(result != EOK)) {
+                std::string omniExceptionInfo = "In function ExpandBufferToCapacity, memcpy faild, ret is：" +
+                    std::to_string(result) + ", reason is: " + std::string(strerror(errno));
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", omniExceptionInfo);
+            }
         }
         bufferSupplier = std::move(newBuffer);
         return bufferSupplier->Data();

@@ -42,10 +42,11 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
             return std::make_unique<FirstIncludeNullAggregatorFactory>();
         }
         default: {
-            LogError("No such aggregate type %d", aggType);
+            std::string omniExceptionInfo =
+                "In function CreateAggregatorFactory, no such aggregate type " + std::to_string(aggType);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
-    return nullptr;
 }
 
 template <template <bool, bool, typename...> class T, typename... Args>
@@ -108,8 +109,10 @@ std::unique_ptr<Aggregator> SumSparkAggregatorFactory::CreateAggregator(const Da
                 outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
         }
         default: {
-            LogError("Unsupported input type %d for spark sum aggregate", inputTypeId);
-            return nullptr;
+            std::string omniExceptionInfo =
+                "In function SumSparkAggregatorFactory::CreateAggregator, no such input type " +
+                std::to_string(inputTypeId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 }
@@ -158,8 +161,10 @@ std::unique_ptr<Aggregator> AverageSparkAggregatorFactory::CreateAggregator(cons
                 outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
         }
         default: {
-            LogError("Unsupported input type %d for spark average aggregate", inputTypeId);
-            return nullptr;
+            std::string omniExceptionInfo =
+                "In function AverageSparkAggregatorFactory::CreateAggregator, no such input type " +
+                std::to_string(inputTypeId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 }
@@ -225,8 +230,10 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
                 outputPartial, isOverflowAsNull);
         }
         default: {
-            LogError("Unsupported input type %d for first aggregate", inputTypeId);
-            return nullptr;
+            std::string omniExceptionInfo =
+                "In function FirstAggregatorFactory::CreateAggregator, no such input type " +
+                std::to_string(inputTypeId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 }

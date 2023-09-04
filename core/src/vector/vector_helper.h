@@ -62,8 +62,9 @@ public:
         } else if (vectorEncodingId == OMNI_ENCODING_CONTAINER) {
             return new ContainerVector(capacityInBytes, size);
         } else {
-            LogError("No such encoding type %d", vectorEncodingId);
-            return nullptr;
+            std::string omniExceptionInfo =
+                "In function CreateVector, no such encoding type " + std::to_string(vectorEncodingId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 
@@ -192,8 +193,9 @@ public:
                     reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector));
             }
             default: {
-                LogError("No such data type %d", dataTypeId);
-                break;
+                std::string omniExceptionInfo =
+                    "In function CreateDictionaryVector, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }
@@ -234,8 +236,9 @@ public:
                     reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vector)));
             }
             default: {
-                LogError("No such data type %d", vector->GetTypeId());
-                break;
+                std::string omniExceptionInfo =
+                    "In function UnsafeGetValuesDictionary, no such data type " + std::to_string(vector->GetTypeId());
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }
@@ -283,8 +286,9 @@ public:
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<ContainerVector *>(vector)));
             default: {
-                LogError("No such data type %d", dataTypeId);
-                return nullptr;
+                std::string omniExceptionInfo =
+                    "In function UnsafeGetValues, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("VECTOR_HELPER_ERROR", omniExceptionInfo);
             }
         }
     }
@@ -334,8 +338,9 @@ public:
                     length);
             }
             default: {
-                LogError("No such data type %d", vector->GetTypeId());
-                return nullptr;
+                std::string omniExceptionInfo =
+                    "In function SliceDictionaryVector, no such data type " + std::to_string(vector->GetTypeId());
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }
@@ -375,8 +380,9 @@ public:
             case type::OMNI_CONTAINER:
                 return reinterpret_cast<ContainerVector *>(vector)->Slice(positionOffset, length);
             default: {
-                LogError("No such data type %d", dataTypeId);
-                return nullptr;
+                std::string omniExceptionInfo =
+                    "In function SliceVector, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }
@@ -418,8 +424,9 @@ public:
                     ->CopyPositions(positions, offset, length);
             }
             default: {
-                LogError("No such data type %d", dataTypeId);
-                break;
+                std::string omniExceptionInfo =
+                    "In fuction CopyPositionsDictionaryVector, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }
@@ -460,8 +467,9 @@ public:
             case type::OMNI_CONTAINER:
                 return reinterpret_cast<ContainerVector *>(vector)->CopyPositions(positions, offset, length);
             default: {
-                LogError("No such data type %d", dataTypeId);
-                return nullptr;
+                std::string omniExceptionInfo =
+                    "In function CopyPositionsVector, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }
@@ -504,8 +512,9 @@ public:
             }
 
             default: {
-                LogError("No such data type %d", dataTypeId);
-                return nullptr;
+                std::string omniExceptionInfo =
+                    "In function UnsafeGetDictionary, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }
@@ -551,8 +560,9 @@ public:
                 reinterpret_cast<ContainerVector *>(destVector)->Append(srcVector, offset, length);
                 break;
             default: {
-                LogError("No such data type %d", dataTypeId);
-                break;
+                std::string omniExceptionInfo =
+                    "In function AppendVector, no such data type " + std::to_string(dataTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
         }
     }

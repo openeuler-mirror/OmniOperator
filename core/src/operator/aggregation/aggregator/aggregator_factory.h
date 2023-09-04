@@ -64,8 +64,9 @@ protected:
                 return FromKnownOutput<OMNI_CHAR>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
             default:
-                LogError("Unsupported output type %s", TypeUtil::TypeToStringLog(outputTypeId).c_str());
-                return nullptr;
+                std::string omniExceptionInfo =
+                    "In function CreateAggregatorInternal, no such input type " + std::to_string(outputTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 
@@ -117,8 +118,9 @@ protected:
                 return T<OMNI_INVALID, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels,
                     inputRaw, outputPartial, isOverflowAsNull);
             default:
-                LogError("Unsupported input type %s", TypeUtil::TypeToStringLog(inputTypeId).c_str());
-                return nullptr;
+                std::string omniExceptionInfo =
+                    "In function FromKnownOutput, no such input type " + std::to_string(inputTypeId);
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 };
