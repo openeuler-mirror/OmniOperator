@@ -129,7 +129,11 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndexAvg(std::vector<AggregateState *> &r
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
-            OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], cntPtr[i]);
+            if (cntPtr[i] >= 0) {
+                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], cntPtr[i]);
+            } else {
+                state.count = -1;
+            }
         }
     }
 }
@@ -187,7 +191,11 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexAvg(std::vector<Aggregate
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
-            OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], cntPtr[i], condition[i]);
+            if (cntPtr[i] > 0 && !static_cast<bool>(condition[i])) {
+                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], cntPtr[i], condition[i]);
+            } else {
+                state.count = -1;
+            }
         }
     }
 }

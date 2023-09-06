@@ -196,9 +196,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditionalAvg(OUT *res_, int64_t &fl
         OUT res = *res_;
         int64_t flag = flag_;
         for (size_t i = 0; i < rowCount; ++i) {
-            if (cntPtr[i] > 0) {
+            if (cntPtr[i] > 0 && !static_cast<bool>(condition[i])) {
                 OP(&res, flag, ptr[i], cntPtr[i], condition[i]);
-            } else if (cntPtr[i] < 0) {
+            } else {
                 // overflow in last stage
                 flag = -1;
                 break;
