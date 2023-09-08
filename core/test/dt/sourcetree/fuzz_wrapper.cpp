@@ -19,6 +19,8 @@
 #include "operator/window/window.h"
 #include "operator/join/lookup_join.h"
 #include "operator/join/sortmergejoin/sort_merge_join.h"
+#include "operator/topnsort/topn_sort_expr.h"
+#include "operator/join/sortmergejoin/sort_merge_join_expr_v3.h"
 #include "expression/expressions.h"
 #include "test/util/dt_fuzz_factory_create_util.h"
 #include "test/util/test_util.h"
@@ -61,7 +63,7 @@ VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, in
             0;
         sourceVectors[i] =
             VectorHelper::CreateVector(OMNI_FLAT, sourceTypeIds[i], totalDataSize, capacityInBytes);
-        VectorHelper::SetValue(sourceVectors[i], 0, sortDatas[i], sourceTypeIds[i]);
+        VectorHelper::SetValue(sourceVectors[i], 0, sortDatas[i]);
     }
     for (int32_t i = 1; i < totalDataSize; i++) {
         for (int32_t j = 0; j < sourceTypesSize; j++) {
@@ -70,7 +72,7 @@ VectorBatch *CreateInputForAllTypes(DataTypes &sourceTypes, void **sortDatas, in
             } else if ((i % modValue == 0) && hasNull) {
                 sourceVectors[j]->SetNull(i);
             } else {
-                VectorHelper::SetValue(sourceVectors[j], i, sortDatas[j], sourceTypeIds[j]);
+                VectorHelper::SetValue(sourceVectors[j], i, sortDatas[j]);
             }
         }
     }
@@ -370,6 +372,51 @@ void TestTopN(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_
     DeleteOperatorFactory(topNOperatorFactory);
 }
 
+void TestTopNSort(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
+{
+    std::cout << "TopNSort Fuzz" << std::endl;
+    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, false, true);
+    std::vector<omniruntime::expressions::Expr *> partitionKeys = { new FieldExpr(8, VarcharType(CHAR_SIZE)) };
+    std::vector<omniruntime::expressions::Expr *> sortKeys = { new FieldExpr(1, IntType()) };
+    TopNSortWithExprOperatorFactory *topNSortOperatorFactory = dynamic_cast<TopNSortWithExprOperatorFactory *>(
+        CreateTopNSortFactory(sourceTypes, partitionKeys, sortKeys, dataSize));
+    auto topNSortOperator = static_cast<TopNSortWithExprOperator *>(topNSortOperatorFactory->CreateOperator());
+    topNSortOperator->AddInput(sourceVecBatch);
+    VectorBatch *outputVectorBatch = nullptr;
+    topNSortOperator->GetOutput(&outputVectorBatch);
+
+    if (outputVectorBatch) {
+        VectorHelper::FreeVecBatch(outputVectorBatch);
+    }
+    omniruntime::op::Operator::DeleteOperator(topNSortOperator);
+    DeleteOperatorFactory(topNSortOperatorFactory);
+}
+
+void TestSortMergeJoinV3(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize,
+    uint16_t loopCount)
+{
+    std::cout << "SortMergeJoinV3 Fuzz" << std::endl;
+
+    auto sourceVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, false, true);
+    StreamedTableWithExprOperatorFactoryV3 *streamedTableWithExprOperatorFactoryV3 =
+        dynamic_cast<StreamedTableWithExprOperatorFactoryV3 *>(CreateStreamedWithExprOperatorFactory());
+    BufferedTableWithExprOperatorFactoryV3 *sortMergeJoinV3OperatorFactory =
+        dynamic_cast<BufferedTableWithExprOperatorFactoryV3 *>(
+        CreateSortMergeJoinV3Factory(streamedTableWithExprOperatorFactoryV3));
+    auto sortMergeJoinV3Operator =
+        static_cast<BufferedTableWithExprOperatorV3 *>(sortMergeJoinV3OperatorFactory->CreateOperator());
+    sortMergeJoinV3Operator->AddInput(sourceVecBatch);
+    VectorBatch *outputVectorBatch = nullptr;
+    sortMergeJoinV3Operator->GetOutput(&outputVectorBatch);
+
+    if (outputVectorBatch) {
+        VectorHelper::FreeVecBatch(outputVectorBatch);
+    }
+    omniruntime::op::Operator::DeleteOperator(sortMergeJoinV3Operator);
+    DeleteOperatorFactory(streamedTableWithExprOperatorFactoryV3);
+    DeleteOperatorFactory(sortMergeJoinV3OperatorFactory);
+}
+
 void TestWindow(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "Window Fuzz" << std::endl;
@@ -459,6 +506,8 @@ int GlobalFuzz(struct FuzzData fzd, uint16_t loopCount, std::string filterExpr, 
             TestTopN(inputDatas, sourceTypes, dataSize, loopCount);
             TestUnion(inputDatas, sourceTypes, dataSize, loopCount);
             TestWindow(inputDatas, sourceTypes, dataSize, loopCount);
+            TestTopNSort(inputDatas, sourceTypes, dataSize, loopCount);
+            TestSortMergeJoinV3(inputDatas, sourceTypes, dataSize, loopCount);
             break;
         }
     }

@@ -4,9 +4,10 @@
  */
 #ifndef OMNI_RUNTIME_DT_FUZZ_FACTORY_CREATE_UTIL_H
 #define OMNI_RUNTIME_DT_FUZZ_FACTORY_CREATE_UTIL_H
-
+#include "operator/join/sortmergejoin/sort_merge_join_expr_v3.h"
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
+
 
 namespace DtFuzzFactoryCreateUtil {
 OperatorFactory *CreateFilterFactory(omniruntime::type::DataTypes &sourceTypes, BinaryExpr *filterExpr,
@@ -34,6 +35,12 @@ omniruntime::op::Operator *CreateSortMergeJoinOperator(omniruntime::type::DataTy
 OperatorFactory *CreateTopNFactory(omniruntime::type::DataTypes &sourceTypes);
 
 OperatorFactory *CreateWindowFactory(omniruntime::type::DataTypes &sourceTypes);
+
+OperatorFactory *CreateTopNSortFactory(omniruntime::type::DataTypes &sourceTypes,
+    std::vector<omniruntime::expressions::Expr *> partitionKeys, std::vector<omniruntime::expressions::Expr *> sortKeys,
+    int32_t dataSize);
+OperatorFactory *CreateStreamedWithExprOperatorFactory();
+OperatorFactory *CreateSortMergeJoinV3Factory(StreamedTableWithExprOperatorFactoryV3 *streamedWithExprOperatorFactory);
 }
 
 #endif // OMNI_RUNTIME_DT_FUZZ_FACTORY_CREATE_UTIL_H
