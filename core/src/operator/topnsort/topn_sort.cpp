@@ -4,9 +4,11 @@
 #include "topn_sort.h"
 #include "operator/util/operator_util.h"
 #include "type/data_type.h"
+#include "vector/vector_helper.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::type;
+using namespace omniruntime::vec;
 
 template <type::DataTypeId typeId> void *GetValueFromFlat(BaseVector *inputVec, int32_t inputPos, int32_t &length)
 {
@@ -26,26 +28,6 @@ template <type::DataTypeId typeId> void *GetValueFromFlat(BaseVector *inputVec, 
     }
 }
 
-template <type::DataTypeId typeId> void *GetValueFromDictionary(BaseVector *inputVec, int32_t inputPos, int32_t &length)
-{
-    if (inputVec->IsNull(inputPos)) {
-        length = 0;
-        return nullptr;
-    }
-    if constexpr (typeId == OMNI_VARCHAR || typeId == OMNI_CHAR) {
-        auto value = static_cast<Vector<DictionaryContainer<std::string_view>> *>(inputVec)->GetValue(inputPos);
-        length = value.length();
-        return const_cast<char *>(value.data());
-    } else {
-        length = 0;
-        using RawDataType = typename NativeAndVectorType<typeId>::type;
-        auto dictionaryVector = static_cast<Vector<DictionaryContainer<RawDataType>> *>(inputVec);
-        auto values = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
-        auto originalRowIndex = *(unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector) + inputPos);
-        return values + originalRowIndex;
-    }
-}
-
 template <type::DataTypeId typeId>
 bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightVec, int32_t rightPos)
 {
@@ -61,16 +43,8 @@ bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightV
     if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR) {
         std::string_view leftValue;
         std::string_view rightValue;
-        if (leftVec->GetEncoding() == OMNI_DICTIONARY) {
-            leftValue = static_cast<Vector<DictionaryContainer<std::string_view>> *>(leftVec)->GetValue(leftPos);
-        } else {
-            leftValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftVec)->GetValue(leftPos);
-        }
-        if (rightVec->GetEncoding() == OMNI_DICTIONARY) {
-            rightValue = static_cast<Vector<DictionaryContainer<std::string_view>> *>(rightVec)->GetValue(rightPos);
-        } else {
-            rightValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightVec)->GetValue(rightPos);
-        }
+        leftValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(leftVec)->GetValue(leftPos);
+        rightValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightVec)->GetValue(rightPos);
         auto leftLength = leftValue.length();
         auto rightLength = rightValue.length();
         if (leftLength != rightLength) {
@@ -82,17 +56,8 @@ bool EqualValueTemplate(BaseVector *leftVec, int32_t leftPos, BaseVector *rightV
         using RawDataType = typename NativeAndVectorType<typeId>::type;
         RawDataType leftValue;
         RawDataType rightValue;
-        if (leftVec->GetEncoding() == OMNI_DICTIONARY) {
-            leftValue = static_cast<Vector<DictionaryContainer<RawDataType>> *>(leftVec)->GetValue(leftPos);
-        } else {
-            leftValue = static_cast<Vector<RawDataType> *>(leftVec)->GetValue(leftPos);
-        }
-        if (rightVec->GetEncoding() == OMNI_DICTIONARY) {
-            rightValue = static_cast<Vector<DictionaryContainer<RawDataType>> *>(rightVec)->GetValue(rightPos);
-        } else {
-            rightValue = static_cast<Vector<RawDataType> *>(rightVec)->GetValue(rightPos);
-        }
-
+        leftValue = static_cast<Vector<RawDataType> *>(leftVec)->GetValue(leftPos);
+        rightValue = static_cast<Vector<RawDataType> *>(rightVec)->GetValue(rightPos);
         if constexpr (typeId == OMNI_DOUBLE) {
             if (std::abs(leftValue - rightValue) < __DBL_EPSILON__) {
                 return true;
@@ -204,29 +169,6 @@ static int32_t CompareValueOptimizeFromFlat(void *valuePtr, int32_t length, Base
 }
 
 template <type::DataTypeId typeId>
-static int32_t CompareValueOptimizeFromDictionary(void *valuePtr, int32_t length, BaseVector *rightVec,
-    int32_t rightPos)
-{
-    if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR) {
-        auto leftValue = (char *)valuePtr;
-        auto rightValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(rightVec)->GetValue(rightPos);
-        auto leftLength = static_cast<uint64_t>(length);
-        auto rightLength = rightValue.length();
-        int32_t result = memcmp(leftValue, rightValue.data(), std::min(leftLength, rightLength));
-        if (result != 0) {
-            return result;
-        }
-
-        return leftLength - rightLength;
-    } else {
-        using RawDataType = typename NativeAndVectorType<typeId>::type;
-        auto leftValue = *((RawDataType *)valuePtr);
-        auto rightValue = static_cast<Vector<RawDataType> *>(rightVec)->GetValue(rightPos);
-        return leftValue > rightValue ? 1 : leftValue < rightValue ? -1 : 0;
-    }
-}
-
-template <type::DataTypeId typeId>
 static int32_t CompareValueFromFlat(BaseVector *leftVec, int32_t leftPos, BaseVector *rightVec, int32_t rightPos)
 {
     if constexpr (typeId == OMNI_CHAR || typeId == OMNI_VARCHAR) {
@@ -291,27 +233,6 @@ static std::vector<GetValueFunc> getValueFromFlatFuncs = {
     nullptr                            // OMNI_CONTAINER,
 };
 
-static std::vector<GetValueFunc> getValueFromDictionaryFuncs = {
-    nullptr,                                 // OMNI_NONE,
-    GetValueFromDictionary<OMNI_INT>,        // OMNI_INT
-    GetValueFromDictionary<OMNI_LONG>,       // OMNI_LONG
-    GetValueFromDictionary<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    GetValueFromDictionary<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    GetValueFromDictionary<OMNI_SHORT>,      // OMNI_SHORT
-    GetValueFromDictionary<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    GetValueFromDictionary<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    GetValueFromDictionary<OMNI_DATE32>,     // OMNI_DATE32
-    GetValueFromDictionary<OMNI_DATE64>,     // OMNI_DATE64
-    GetValueFromDictionary<OMNI_TIME32>,     // OMNI_TIME32
-    GetValueFromDictionary<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                                 // OMNI_TIMESTAMP
-    nullptr,                                 // OMNI_INTERVAL_MONTHS
-    nullptr,                                 // OMNI_INTERVAL_DAY_TIME
-    GetValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    GetValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr                                  // OMNI_CONTAINER,
-};
-
 static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
     nullptr,                                       // OMNI_NONE,
     CompareValueOptimizeFromFlat<OMNI_INT>,        // OMNI_INT
@@ -331,27 +252,6 @@ static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
     CompareValueOptimizeFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueOptimizeFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
     nullptr                                        // OMNI_CONTAINER,
-};
-
-static std::vector<CompareOptimizeFunc> compareOptimizeFromDictionaryFuncs = {
-    nullptr,                                             // OMNI_NONE,
-    CompareValueOptimizeFromDictionary<OMNI_INT>,        // OMNI_INT
-    CompareValueOptimizeFromDictionary<OMNI_LONG>,       // OMNI_LONG
-    CompareValueOptimizeFromDictionary<OMNI_DOUBLE>,     // OMNI_DOUBLE
-    CompareValueOptimizeFromDictionary<OMNI_BOOLEAN>,    // OMNI_BOOLEAN
-    CompareValueOptimizeFromDictionary<OMNI_SHORT>,      // OMNI_SHORT
-    CompareValueOptimizeFromDictionary<OMNI_DECIMAL64>,  // OMNI_DECIMAL64,
-    CompareValueOptimizeFromDictionary<OMNI_DECIMAL128>, // OMNI_DECIMAL128
-    CompareValueOptimizeFromDictionary<OMNI_DATE32>,     // OMNI_DATE32
-    CompareValueOptimizeFromDictionary<OMNI_DATE64>,     // OMNI_DATE64
-    CompareValueOptimizeFromDictionary<OMNI_TIME32>,     // OMNI_TIME32
-    CompareValueOptimizeFromDictionary<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                                             // OMNI_TIMESTAMP
-    nullptr,                                             // OMNI_INTERVAL_MONTHS
-    nullptr,                                             // OMNI_INTERVAL_DAY_TIME
-    CompareValueOptimizeFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
-    CompareValueOptimizeFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr                                              // OMNI_CONTAINER,
 };
 
 static std::vector<CompareFunc> compareFromFlatFuncs = {
@@ -593,38 +493,23 @@ void TopNSortOperator::Prepare(BaseVector **inputVectors, int32_t inputColNum)
         auto partitionCol = partitionCols[i];
         auto curVector = inputVectors[partitionCol];
         auto curTypeId = sourceTypeIds[partitionCol];
-        if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
-            serializers[i] = dicVectorSerializerCenter[curTypeId];
-        } else {
-            serializers[i] = vectorSerializerCenter[curTypeId];
-        }
+        serializers[i] = vectorSerializerCenter[curTypeId];
     }
 
     if (sortColNum == 1) {
         auto sortCol = sortCols[0];
         auto curTypeId = sourceTypeIds[sortCol];
-        if (inputVectors[sortCol]->GetEncoding() == OMNI_DICTIONARY) {
-            sortGetValueFuncs[0] = getValueFromDictionaryFuncs[curTypeId];
-            sortCompareOptimizeFuncs[0] = compareOptimizeFromDictionaryFuncs[curTypeId];
-            equalFuncs[0] = equalFromFlatFuncs[curTypeId];
-        } else {
-            sortGetValueFuncs[0] = getValueFromFlatFuncs[curTypeId];
-            sortCompareOptimizeFuncs[0] = compareOptimizeFromFlatFuncs[curTypeId];
-            equalFuncs[0] = equalFromFlatFuncs[curTypeId];
-        }
+        sortGetValueFuncs[0] = getValueFromFlatFuncs[curTypeId];
+        sortCompareOptimizeFuncs[0] = compareOptimizeFromFlatFuncs[curTypeId];
+        equalFuncs[0] = equalFromFlatFuncs[curTypeId];
         return;
     }
 
     for (int32_t i = 0; i < sortColNum; i++) {
         auto sortCol = sortCols[i];
         auto curTypeId = sourceTypeIds[sortCol];
-        if (inputVectors[sortCol]->GetEncoding() == OMNI_DICTIONARY) {
-            sortCompareFuncs[i] = compareFromDictionaryFuncs[curTypeId];
-            equalFuncs[i] = equalFromFlatFuncs[curTypeId];
-        } else {
-            sortCompareFuncs[i] = compareFromFlatFuncs[curTypeId];
-            equalFuncs[i] = equalFromFlatFuncs[curTypeId];
-        }
+        sortCompareFuncs[i] = compareFromFlatFuncs[curTypeId];
+        equalFuncs[i] = equalFromFlatFuncs[curTypeId];
     }
 }
 
@@ -773,9 +658,16 @@ void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *
 int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
 {
     inputs.emplace_back(inputVecBatch);
-
     auto inputVectors = inputVecBatch->GetVectors();
     auto inputColNum = sourceTypes.GetSize();
+    for (int32_t i = 0; i < inputColNum; i++) {
+        auto inputVector = inputVectors[i];
+        if (inputVector->GetEncoding() == OMNI_DICTIONARY) {
+            inputVectors[i] = VectorHelper::DecodeDictionaryVector(inputVector);
+            delete inputVector;
+            inputVector = nullptr;
+        }
+    }
     Prepare(inputVectors, inputColNum);
 
     BaseVector *partitionVectors[partitionColNum];
