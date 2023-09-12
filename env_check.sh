@@ -70,13 +70,12 @@ setup_dependencies() {
   cp -r ${workspace}/../huawei_secure_c ${open_source_dir}
   cp -r ${workspace}/../jemalloc ${open_source_dir}
   cp -r ${workspace}/../json ${open_source_dir}
-  cp -r ${workspace}/../llvm-project ${open_source_dir}
   if [ "$1" != "package" ] && [ "$1" != "release" ]; then
     cp -r ${workspace}/../benchmark ${open_source_dir}
     cp -r ${workspace}/../googletest ${open_source_dir}/benchmark
   fi
 
-  echo "Start build open source code for huawei_secure_c, jemalloc, json, llvm and gtest"
+  echo "Start build open source code for huawei_secure_c, jemalloc, json and gtest"
   cd ${workspace}/${open_source_dir}/huawei_secure_c/src
   sudo make
   cd ${workspace}/${open_source_dir}
