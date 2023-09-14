@@ -99,7 +99,7 @@ private:
         int32_t sortColCount, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int32_t from,
         int32_t to, int32_t currentCol);
 
-    template <DataTypeId D>
+    template <typename RawType>
     void ColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
         int32_t sortColCount, std::vector<int64_t> &values, std::vector<uint32_t> &varcharLength, int32_t from,
         int32_t to, int32_t currentCol);
