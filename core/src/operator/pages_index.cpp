@@ -33,7 +33,7 @@ PagesIndex::PagesIndex(const DataTypes &types)
     std::fill(hasNulls.begin(), hasNulls.end(), false);
 }
 
-template <typename RawType> void ALWAYS_INLINE Swap(RawType *values, uint64_t *addresses, int32_t a, int32_t b)
+void ALWAYS_INLINE Swap(int64_t *values, uint64_t *addresses, int32_t a, int32_t b)
 {
     auto tmpValue = values[a];
     auto tmpAddr = addresses[a];
@@ -43,8 +43,7 @@ template <typename RawType> void ALWAYS_INLINE Swap(RawType *values, uint64_t *a
     addresses[b] = tmpAddr;
 }
 
-template <typename RawType>
-__attribute__((noinline)) void VectorSwap(RawType *values, uint64_t *addresses, int32_t from, int32_t l, int32_t s)
+__attribute__((noinline)) void VectorSwap(int64_t *values, uint64_t *addresses, int32_t from, int32_t l, int32_t s)
 {
     int32_t i = 0;
     for (; i < s - 8; i += 8, from += 8, l += 8) {
@@ -415,90 +414,136 @@ template <int32_t sortAscending> static bool ALWAYS_INLINE Decimal128Compare(Dec
 }
 
 template <typename RawType, int32_t sortAscending>
-void QuickSortColumnSmall(void *values, uint64_t *addresses, int32_t from, int32_t to)
+void QuickSortColumnSmall(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
 {
     if constexpr (std::is_same_v<RawType, Decimal128>) {
-        auto decimal128Values = (int64_t *)values;
         for (int32_t i = from + 1; i < to; ++i) {
-            auto iValuePtr = decimal128Values[i];
+            auto iValuePtr = values[i];
             auto iValue = *((Decimal128 *)iValuePtr);
             auto iAddr = addresses[i];
             int32_t j = i - 1;
             while (j >= from) {
-                auto jValuePtr = decimal128Values[j];
+                auto jValuePtr = values[j];
                 auto jValue = *((Decimal128 *)jValuePtr);
                 if (!Decimal128Compare<sortAscending>(jValue, iValue)) {
                     break;
                 }
-                decimal128Values[j + 1] = decimal128Values[j];
+                values[j + 1] = values[j];
                 addresses[j + 1] = addresses[j];
                 --j;
             }
-            decimal128Values[j + 1] = iValuePtr;
+            values[j + 1] = iValuePtr;
             addresses[j + 1] = iAddr;
         }
     } else {
-        auto rawValues = (RawType *)values;
         for (int32_t i = from + 1; i < to; ++i) {
-            auto iValue = rawValues[i];
+            RawType iValue = values[i];
             auto iAddr = addresses[i];
             int32_t j = i - 1;
             while (j >= from) {
-                auto jValue = rawValues[j];
+                RawType jValue = values[j];
                 if (!NewOnlyCompare<RawType, sortAscending>(jValue, iValue)) {
                     break;
                 }
-                rawValues[j + 1] = rawValues[j];
+                values[j + 1] = values[j];
                 addresses[j + 1] = addresses[j];
                 --j;
             }
-            rawValues[j + 1] = iValue;
+            values[j + 1] = iValue;
             addresses[j + 1] = iAddr;
         }
     }
 }
 
-template <typename RawType, int32_t sortAscending> int32_t NewMedian3(void *values, int32_t a, int32_t b, int32_t c)
+template <typename RawType> int32_t NewMedian3(int64_t *values, int32_t a, int32_t b, int32_t c, RawType &pivotValue)
 {
+    RawType va;
+    RawType vb;
+    RawType vc;
     if constexpr (std::is_same_v<RawType, Decimal128>) {
-        auto decimal128Values = (int64_t *)values;
-        auto va = *((Decimal128 *)(decimal128Values[a]));
-        auto vb = *((Decimal128 *)(decimal128Values[b]));
-        auto vc = *((Decimal128 *)(decimal128Values[c]));
-        int8_t ab = Decimal128Compare<sortAscending>(va, vb);
-        int8_t ac = Decimal128Compare<sortAscending>(va, vc);
-        int8_t bc = Decimal128Compare<sortAscending>(vb, vc);
-        return ((!ab) ? (!bc ? b : !ac ? c : a) : (bc ? b : ac ? c : a));
+        va = *((Decimal128 *)(values[a]));
+        vb = *((Decimal128 *)(values[b]));
+        vc = *((Decimal128 *)(values[c]));
     } else {
-        auto rawValues = (RawType *)values;
-        auto va = rawValues[a];
-        auto vb = rawValues[b];
-        auto vc = rawValues[c];
-        int8_t ab = NewOnlyCompare<RawType, sortAscending>(va, vb);
-        int8_t ac = NewOnlyCompare<RawType, sortAscending>(va, vc);
-        int8_t bc = NewOnlyCompare<RawType, sortAscending>(vb, vc);
-        return ((!ab) ? (!bc ? b : !ac ? c : a) : (bc ? b : ac ? c : a));
+        va = values[a];
+        vb = values[b];
+        vc = values[c];
+    }
+
+    if (va <= vb) {
+        if (vb <= vc) {
+            pivotValue = vb;
+            return b;
+        }
+        if (va <= vc) {
+            pivotValue = vc;
+            return c;
+        } else {
+            pivotValue = va;
+            return a;
+        }
+    } else {
+        if (vb > vc) {
+            pivotValue = vb;
+            return b;
+        }
+        if (va > vc) {
+            pivotValue = vc;
+            return c;
+        } else {
+            pivotValue = va;
+            return a;
+        }
     }
 }
 
-template <typename RawType, int32_t sortAscending>
-int32_t NO_INLINE NewGetMedianPosition(void *values, int32_t from, int32_t to, int32_t len)
+template <typename RawType>
+int32_t NO_INLINE NewGetMedianPosition(int64_t *values, int32_t from, int32_t to, int32_t len, RawType &pivotValue)
 {
     int32_t l = from;
     int32_t n = to - 1;
     int32_t m = from + len / QUICK_SORT_MIDDLE;
     if (len > QUICK_SORT_BIG_LEN) {
         int32_t s = len / QUICK_SORT_STEP_SIZE;
-        l = NewMedian3<RawType, sortAscending>(values, l, l + s, l + QUICK_SORT_MIDDLE * s);
-        m = NewMedian3<RawType, sortAscending>(values, m - s, m, m + s);
-        n = NewMedian3<RawType, sortAscending>(values, n - QUICK_SORT_MIDDLE * s, n - s, n);
+        RawType vl;
+        RawType vm;
+        RawType vn;
+        l = NewMedian3<RawType>(values, l, l + s, l + QUICK_SORT_MIDDLE * s, vl);
+        m = NewMedian3<RawType>(values, m - s, m, m + s, vm);
+        n = NewMedian3<RawType>(values, n - QUICK_SORT_MIDDLE * s, n - s, n, vn);
+        if (vl <= vm) {
+            if (vm <= vn) {
+                pivotValue = vm;
+                return m;
+            }
+            if (vl <= vn) {
+                pivotValue = vn;
+                return n;
+            } else {
+                pivotValue = vl;
+                return l;
+            }
+        } else {
+            if (vm > vn) {
+                pivotValue = vm;
+                return m;
+            }
+            if (vl > vn) {
+                pivotValue = vn;
+                return n;
+            } else {
+                pivotValue = vl;
+                return l;
+            }
+        }
+    } else {
+        return NewMedian3<RawType>(values, l, m, n, pivotValue);
     }
-    return NewMedian3<RawType, sortAscending>(values, l, m, n);
 }
 
 template <typename RawType, int32_t sortAscending>
 bool ALWAYS_INLINE NewGetNextCompareLeft(bool *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
-    void *values, RawType &pivotValue)
+    int64_t *values, RawType &pivotValue)
 {
     if (k < limit) {
         return comparetmp[k++];
@@ -510,67 +555,65 @@ bool ALWAYS_INLINE NewGetNextCompareLeft(bool *comparetmp, int32_t &k, int32_t &
     int32_t i = b;
     int32_t j = 0;
     if constexpr (std::is_same_v<RawType, Decimal128>) {
-        auto decimal128Values = (int64_t *)values;
         for (; j < limit - NSTEP; i += NSTEP, j += NSTEP) {
-            auto v0 = *((Decimal128 *)(decimal128Values[i]));
-            auto v1 = *((Decimal128 *)(decimal128Values[i + 1]));
-            auto v2 = *((Decimal128 *)(decimal128Values[i + 2]));
-            auto v3 = *((Decimal128 *)(decimal128Values[i + 3]));
+            auto v0 = *((Decimal128 *)(values[i]));
+            auto v1 = *((Decimal128 *)(values[i + 1]));
+            auto v2 = *((Decimal128 *)(values[i + 2]));
+            auto v3 = *((Decimal128 *)(values[i + 3]));
             comparetmp[j] = Decimal128Compare<sortAscending>(v0, pivotValue);
             comparetmp[j + 1] = Decimal128Compare<sortAscending>(v1, pivotValue);
             comparetmp[j + 2] = Decimal128Compare<sortAscending>(v2, pivotValue);
             comparetmp[j + 3] = Decimal128Compare<sortAscending>(v3, pivotValue);
-            auto v4 = *((Decimal128 *)(decimal128Values[i + 4]));
-            auto v5 = *((Decimal128 *)(decimal128Values[i + 5]));
-            auto v6 = *((Decimal128 *)(decimal128Values[i + 6]));
-            auto v7 = *((Decimal128 *)(decimal128Values[i + 7]));
+            auto v4 = *((Decimal128 *)(values[i + 4]));
+            auto v5 = *((Decimal128 *)(values[i + 5]));
+            auto v6 = *((Decimal128 *)(values[i + 6]));
+            auto v7 = *((Decimal128 *)(values[i + 7]));
             comparetmp[j + 4] = Decimal128Compare<sortAscending>(v4, pivotValue);
             comparetmp[j + 5] = Decimal128Compare<sortAscending>(v5, pivotValue);
             comparetmp[j + 6] = Decimal128Compare<sortAscending>(v6, pivotValue);
             comparetmp[j + 7] = Decimal128Compare<sortAscending>(v7, pivotValue);
-            auto v8 = *((Decimal128 *)(decimal128Values[i + 8]));
-            auto v9 = *((Decimal128 *)(decimal128Values[i + 9]));
-            auto v10 = *((Decimal128 *)(decimal128Values[i + 10]));
-            auto v11 = *((Decimal128 *)(decimal128Values[i + 11]));
+            auto v8 = *((Decimal128 *)(values[i + 8]));
+            auto v9 = *((Decimal128 *)(values[i + 9]));
+            auto v10 = *((Decimal128 *)(values[i + 10]));
+            auto v11 = *((Decimal128 *)(values[i + 11]));
             comparetmp[j + 8] = Decimal128Compare<sortAscending>(v8, pivotValue);
             comparetmp[j + 9] = Decimal128Compare<sortAscending>(v9, pivotValue);
             comparetmp[j + 10] = Decimal128Compare<sortAscending>(v10, pivotValue);
             comparetmp[j + 11] = Decimal128Compare<sortAscending>(v11, pivotValue);
         }
         for (; j < limit; ++i, ++j) {
-            auto v = *((Decimal128 *)(decimal128Values[i]));
+            auto v = *((Decimal128 *)(values[i]));
             comparetmp[j] = Decimal128Compare<sortAscending>(v, pivotValue);
         }
     } else {
-        auto rawValues = (RawType *)values;
         for (; j < limit - NSTEP; i += NSTEP, j += NSTEP) {
-            auto v0 = rawValues[i];
-            auto v1 = rawValues[i + 1];
-            auto v2 = rawValues[i + 2];
-            auto v3 = rawValues[i + 3];
+            RawType v0 = values[i];
+            RawType v1 = values[i + 1];
+            RawType v2 = values[i + 2];
+            RawType v3 = values[i + 3];
             comparetmp[j] = NewOnlyCompare<RawType, sortAscending>(v0, pivotValue);
             comparetmp[j + 1] = NewOnlyCompare<RawType, sortAscending>(v1, pivotValue);
             comparetmp[j + 2] = NewOnlyCompare<RawType, sortAscending>(v2, pivotValue);
             comparetmp[j + 3] = NewOnlyCompare<RawType, sortAscending>(v3, pivotValue);
-            auto v4 = rawValues[i + 4];
-            auto v5 = rawValues[i + 5];
-            auto v6 = rawValues[i + 6];
-            auto v7 = rawValues[i + 7];
+            RawType v4 = values[i + 4];
+            RawType v5 = values[i + 5];
+            RawType v6 = values[i + 6];
+            RawType v7 = values[i + 7];
             comparetmp[j + 4] = NewOnlyCompare<RawType, sortAscending>(v4, pivotValue);
             comparetmp[j + 5] = NewOnlyCompare<RawType, sortAscending>(v5, pivotValue);
             comparetmp[j + 6] = NewOnlyCompare<RawType, sortAscending>(v6, pivotValue);
             comparetmp[j + 7] = NewOnlyCompare<RawType, sortAscending>(v7, pivotValue);
-            auto v8 = rawValues[i + 8];
-            auto v9 = rawValues[i + 9];
-            auto v10 = rawValues[i + 10];
-            auto v11 = rawValues[i + 11];
+            RawType v8 = values[i + 8];
+            RawType v9 = values[i + 9];
+            RawType v10 = values[i + 10];
+            RawType v11 = values[i + 11];
             comparetmp[j + 8] = NewOnlyCompare<RawType, sortAscending>(v8, pivotValue);
             comparetmp[j + 9] = NewOnlyCompare<RawType, sortAscending>(v9, pivotValue);
             comparetmp[j + 10] = NewOnlyCompare<RawType, sortAscending>(v10, pivotValue);
             comparetmp[j + 11] = NewOnlyCompare<RawType, sortAscending>(v11, pivotValue);
         }
         for (; j < limit; ++i, ++j) {
-            auto v = rawValues[i];
+            RawType v = values[i];
             comparetmp[j] = NewOnlyCompare<RawType, sortAscending>(v, pivotValue);
         }
     }
@@ -578,7 +621,7 @@ bool ALWAYS_INLINE NewGetNextCompareLeft(bool *comparetmp, int32_t &k, int32_t &
 }
 
 template <typename RawType, int32_t sortAscending>
-inline bool NewGetNextCompareRight(bool *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c, void *values,
+inline bool NewGetNextCompareRight(bool *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c, int64_t *values,
     RawType &pivotValue)
 {
     if (k < limit) {
@@ -591,67 +634,65 @@ inline bool NewGetNextCompareRight(bool *comparetmp, int32_t &k, int32_t &limit,
     int32_t i = c;
     int32_t j = 0;
     if constexpr (std::is_same_v<RawType, Decimal128>) {
-        auto decimal128Values = (int64_t *)values;
         for (; j < limit - NSTEP; i -= NSTEP, j += NSTEP) {
-            auto v0 = *((Decimal128 *)(decimal128Values[i]));
-            auto v1 = *((Decimal128 *)(decimal128Values[i - 1]));
-            auto v2 = *((Decimal128 *)(decimal128Values[i - 2]));
-            auto v3 = *((Decimal128 *)(decimal128Values[i - 3]));
+            auto v0 = *((Decimal128 *)(values[i]));
+            auto v1 = *((Decimal128 *)(values[i - 1]));
+            auto v2 = *((Decimal128 *)(values[i - 2]));
+            auto v3 = *((Decimal128 *)(values[i - 3]));
             comparetmp[j] = Decimal128Compare<sortAscending>(v0, pivotValue);
             comparetmp[j + 1] = Decimal128Compare<sortAscending>(v1, pivotValue);
             comparetmp[j + 2] = Decimal128Compare<sortAscending>(v2, pivotValue);
             comparetmp[j + 3] = Decimal128Compare<sortAscending>(v3, pivotValue);
-            auto v4 = *((Decimal128 *)(decimal128Values[i - 4]));
-            auto v5 = *((Decimal128 *)(decimal128Values[i - 5]));
-            auto v6 = *((Decimal128 *)(decimal128Values[i - 6]));
-            auto v7 = *((Decimal128 *)(decimal128Values[i - 7]));
+            auto v4 = *((Decimal128 *)(values[i - 4]));
+            auto v5 = *((Decimal128 *)(values[i - 5]));
+            auto v6 = *((Decimal128 *)(values[i - 6]));
+            auto v7 = *((Decimal128 *)(values[i - 7]));
             comparetmp[j + 4] = Decimal128Compare<sortAscending>(v4, pivotValue);
             comparetmp[j + 5] = Decimal128Compare<sortAscending>(v5, pivotValue);
             comparetmp[j + 6] = Decimal128Compare<sortAscending>(v6, pivotValue);
             comparetmp[j + 7] = Decimal128Compare<sortAscending>(v7, pivotValue);
-            auto v8 = *((Decimal128 *)(decimal128Values[i - 8]));
-            auto v9 = *((Decimal128 *)(decimal128Values[i - 9]));
-            auto v10 = *((Decimal128 *)(decimal128Values[i - 10]));
-            auto v11 = *((Decimal128 *)(decimal128Values[i - 11]));
+            auto v8 = *((Decimal128 *)(values[i - 8]));
+            auto v9 = *((Decimal128 *)(values[i - 9]));
+            auto v10 = *((Decimal128 *)(values[i - 10]));
+            auto v11 = *((Decimal128 *)(values[i - 11]));
             comparetmp[j + 8] = Decimal128Compare<sortAscending>(v8, pivotValue);
             comparetmp[j + 9] = Decimal128Compare<sortAscending>(v9, pivotValue);
             comparetmp[j + 10] = Decimal128Compare<sortAscending>(v10, pivotValue);
             comparetmp[j + 11] = Decimal128Compare<sortAscending>(v11, pivotValue);
         }
         for (; j < limit; --i, ++j) {
-            auto v = *((Decimal128 *)(decimal128Values[i]));
+            auto v = *((Decimal128 *)(values[i]));
             comparetmp[j] = Decimal128Compare<sortAscending>(v, pivotValue);
         }
     } else {
-        auto rawValues = (RawType *)values;
         for (; j < limit - NSTEP; i -= NSTEP, j += NSTEP) {
-            auto v0 = rawValues[i];
-            auto v1 = rawValues[i - 1];
-            auto v2 = rawValues[i - 2];
-            auto v3 = rawValues[i - 3];
+            RawType v0 = values[i];
+            RawType v1 = values[i - 1];
+            RawType v2 = values[i - 2];
+            RawType v3 = values[i - 3];
             comparetmp[j] = NewOnlyCompare<RawType, sortAscending>(v0, pivotValue);
             comparetmp[j + 1] = NewOnlyCompare<RawType, sortAscending>(v1, pivotValue);
             comparetmp[j + 2] = NewOnlyCompare<RawType, sortAscending>(v2, pivotValue);
             comparetmp[j + 3] = NewOnlyCompare<RawType, sortAscending>(v3, pivotValue);
-            auto v4 = rawValues[i - 4];
-            auto v5 = rawValues[i - 5];
-            auto v6 = rawValues[i - 6];
-            auto v7 = rawValues[i - 7];
+            RawType v4 = values[i - 4];
+            RawType v5 = values[i - 5];
+            RawType v6 = values[i - 6];
+            RawType v7 = values[i - 7];
             comparetmp[j + 4] = NewOnlyCompare<RawType, sortAscending>(v4, pivotValue);
             comparetmp[j + 5] = NewOnlyCompare<RawType, sortAscending>(v5, pivotValue);
             comparetmp[j + 6] = NewOnlyCompare<RawType, sortAscending>(v6, pivotValue);
             comparetmp[j + 7] = NewOnlyCompare<RawType, sortAscending>(v7, pivotValue);
-            auto v8 = rawValues[i - 8];
-            auto v9 = rawValues[i - 9];
-            auto v10 = rawValues[i - 10];
-            auto v11 = rawValues[i - 11];
+            RawType v8 = values[i - 8];
+            RawType v9 = values[i - 9];
+            RawType v10 = values[i - 10];
+            RawType v11 = values[i - 11];
             comparetmp[j + 8] = NewOnlyCompare<RawType, sortAscending>(v8, pivotValue);
             comparetmp[j + 9] = NewOnlyCompare<RawType, sortAscending>(v9, pivotValue);
             comparetmp[j + 10] = NewOnlyCompare<RawType, sortAscending>(v10, pivotValue);
             comparetmp[j + 11] = NewOnlyCompare<RawType, sortAscending>(v11, pivotValue);
         }
         for (; j < limit; --i, ++j) {
-            auto v = rawValues[i];
+            RawType v = values[i];
             comparetmp[j] = NewOnlyCompare<RawType, sortAscending>(v, pivotValue);
         }
     }
@@ -659,36 +700,19 @@ inline bool NewGetNextCompareRight(bool *comparetmp, int32_t &k, int32_t &limit,
 }
 
 template <typename RawType, int32_t sortAscending>
-void QuickSortColumnInternal(void *values, uint64_t *addresses, int32_t from, int32_t to, bool *comparetmp)
+void QuickSortColumnInternal(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, bool *comparetmp)
 {
-    std::cout << "QuickSortColumnInternal input" << std::endl;
-    for (int32_t i = from; i < to; i++) {
-        std::cout << ((RawType *)values)[i] << "\t";
-    }
-    std::cout << std::endl;
     int32_t len = to - from;
-    if (len <= QUICK_SORT_SMALL_LEN) {
+    if (len <= QUICK_SORT_SMALL_LEN) { // point 3
         QuickSortColumnSmall<RawType, sortAscending>(values, addresses, from, to);
-        std::cout << "QuickSortColumnInternal output" << std::endl;
-        for (int32_t i = from; i < to; i++) {
-            std::cout << ((RawType *)values)[i] << "\t";
-        }
-        std::cout << std::endl;
         return;
     }
 
     int32_t b = from + 1;
     int32_t c = to - 1;
-    int32_t m = NewGetMedianPosition<RawType, sortAscending>(values, from, to, len);
     RawType pivotValue;
-    if constexpr (std::is_same_v<RawType, Decimal128>) {
-        Swap<int64_t>((int64_t *)values, addresses, from, m);
-        auto pivotValuePtr = ((int64_t *)values)[from];
-        pivotValue = *((Decimal128 *)pivotValuePtr);
-    } else {
-        Swap((RawType *)values, addresses, from, m);
-        pivotValue = ((RawType *)values)[from];
-    }
+    int32_t m = NewGetMedianPosition<RawType>(values, from, to, len, pivotValue); // point 1
+    Swap(values, addresses, from, m);
 
     int32_t bk = 0;
     int32_t blim = 0;
@@ -698,6 +722,7 @@ void QuickSortColumnInternal(void *values, uint64_t *addresses, int32_t from, in
     bool *rightComparetmp = comparetmp + NMAX_SIZE;
     while (true) {
         bool comparison;
+        // point 2
         while (b <= c && !(comparison = NewGetNextCompareLeft<RawType, sortAscending>(leftComparetmp, bk, blim, b, c,
             values, pivotValue))) {
             b++;
@@ -709,23 +734,9 @@ void QuickSortColumnInternal(void *values, uint64_t *addresses, int32_t from, in
         if (b > c) {
             break;
         }
-        if constexpr (std::is_same_v<RawType, Decimal128>) {
-            Swap<int64_t>((int64_t *)values, addresses, b++, c--);
-        } else {
-            Swap((RawType *)values, addresses, b++, c--);
-        }
+        Swap(values, addresses, b++, c--);
     }
-    if constexpr (std::is_same_v<RawType, Decimal128>) {
-        Swap<int64_t>((int64_t *)values, addresses, from, c);
-    } else {
-        Swap((RawType *)values, addresses, from, c);
-    }
-
-    std::cout << "QuickSortColumnInternal output" << std::endl;
-    for (int32_t i = from; i < to; i++) {
-        std::cout << ((RawType *)values)[i] << "\t";
-    }
-    std::cout << std::endl;
+    Swap(values, addresses, from, c);
 
     // Recursively sort non-partition-elements
     if (c - from > 1) {
@@ -737,24 +748,16 @@ void QuickSortColumnInternal(void *values, uint64_t *addresses, int32_t from, in
 }
 
 template <typename RawType, int32_t sortAscending>
-void QuickSortColumn(void *values, uint64_t *addresses, int32_t from, int32_t to)
+void QuickSortColumn(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
 {
     bool comparetmp[NMAX_SIZE + NMAX_SIZE];
     QuickSortColumnInternal<RawType, sortAscending>(values, addresses, from, to, comparetmp);
 }
 
 template <typename RawType, bool hasNull, bool hasDictionary, bool sortNullFirst>
-void SortNullAndGetValue(BaseVector **sortColumn, void *values, std::vector<uint32_t> &varcharLength,
+void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<uint32_t> &varcharLength,
     uint64_t *addresses, int32_t &from, int32_t &to)
 {
-    int64_t *decimal128Values = nullptr;
-    RawType *rawValues = nullptr;
-    if constexpr (std::is_same_v<RawType, Decimal128>) {
-        decimal128Values = (int64_t *)values;
-    } else {
-        rawValues = (RawType *)values;
-    }
-
     int32_t nonNullFrom = from;
     int32_t nonNullTo = to;
     int32_t i = from;
@@ -767,17 +770,9 @@ void SortNullAndGetValue(BaseVector **sortColumn, void *values, std::vector<uint
             if (UNLIKELY(column->IsNull(rowIdx))) {
                 // first, put all nulls at the first or at the last according sortNullFirst
                 if constexpr (sortNullFirst) {
-                    if constexpr (std::is_same_v<RawType, Decimal128>) {
-                        Swap<int64_t>(decimal128Values, addresses, i++, nonNullFrom++); // [0, nonNullFrom)
-                    } else {
-                        Swap(rawValues, addresses, i++, nonNullFrom++); // [0, nonNullFrom)
-                    }
+                    Swap(values, addresses, i++, nonNullFrom++); // [0, nonNullFrom)
                 } else { // swap the last nonNull element back to i--,need to CHECK the new i-th element again!
-                    if constexpr (std::is_same_v<RawType, Decimal128>) {
-                        Swap<int64_t>(decimal128Values, addresses, i, --nonNullTo); // [i, nonNullTo)
-                    } else {
-                        Swap(rawValues, addresses, i, --nonNullTo); // [i, nonNullTo)
-                    }
+                    Swap(values, addresses, i, --nonNullTo); // [i, nonNullTo)
                 }
                 continue;
             }
@@ -790,26 +785,26 @@ void SortNullAndGetValue(BaseVector **sortColumn, void *values, std::vector<uint
                 if constexpr (std::is_same_v<RawType, Decimal128>) {
                     RawType *valuePtr = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
                     int32_t originalRowIndex = unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector)[rowIdx];
-                    decimal128Values[i] = reinterpret_cast<int64_t>(valuePtr + originalRowIndex);
+                    values[i] = reinterpret_cast<int64_t>(valuePtr + originalRowIndex);
                 } else {
-                    rawValues[i] = dictionaryVector->GetValue(rowIdx);
+                    values[i] = dictionaryVector->GetValue(rowIdx);
                 }
             } else {
                 using FlatVector = Vector<RawType>;
                 if constexpr (std::is_same_v<RawType, Decimal128>) {
-                    decimal128Values[i] = reinterpret_cast<int64_t>(
+                    values[i] = reinterpret_cast<int64_t>(
                         unsafe::UnsafeVector::GetRawValues(static_cast<FlatVector *>(column)) + rowIdx);
                 } else {
-                    rawValues[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
+                    values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
                 }
             }
         } else {
             using FlatVector = Vector<RawType>;
             if constexpr (std::is_same_v<RawType, Decimal128>) {
-                decimal128Values[i] = reinterpret_cast<int64_t>(
+                values[i] = reinterpret_cast<int64_t>(
                     unsafe::UnsafeVector::GetRawValues(static_cast<FlatVector *>(column)) + rowIdx);
             } else {
-                rawValues[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
+                values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
             }
         }
         ++i;
@@ -862,7 +857,7 @@ void SortNullAndGetVarcharValue(BaseVector **sortColumn, int64_t *values, std::v
 
 template <typename RawType>
 void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
-    int32_t sortColCount, void *values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
+    int32_t sortColCount, int64_t *values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
     int32_t currentCol)
 {
     auto sortCol = sortCols[currentCol];
@@ -935,11 +930,10 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
     // fourth, divide ranges for non-null values first, and continue to sort the next column for each range
     int32_t start = nonNullFrom;
     if constexpr (std::is_same_v<RawType, Decimal128>) {
-        auto decimal128Values = (int64_t *)values;
-        auto currentValuePtr = decimal128Values[nonNullFrom];
+        auto currentValuePtr = values[nonNullFrom];
         auto currentValue = *((Decimal128 *)currentValuePtr);
         for (int32_t i = nonNullFrom + 1; i < nonNullTo; ++i) {
-            auto valuePtr = decimal128Values[i];
+            auto valuePtr = values[i];
             auto value = *((Decimal128 *)valuePtr);
             if (value != currentValue) {
                 currentValue = value;
@@ -951,9 +945,9 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
             }
         }
     } else {
-        RawType currentValue = ((RawType *)values)[nonNullFrom];
+        RawType currentValue = values[nonNullFrom];
         for (int32_t i = nonNullFrom + 1; i < nonNullTo; ++i) {
-            RawType value = ((RawType *)values)[i];
+            RawType value = values[i];
             if (!NewOnlyEqual<RawType>(value, currentValue) != 0) {
                 currentValue = value;
                 if (start + 1 != i) { // sort next column when |equivalent class| > 1
@@ -1066,7 +1060,7 @@ void PagesIndex::VarcharColumnarSort(const int32_t *sortCols, const int32_t *sor
 }
 
 void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
-    int32_t sortColCount, void *values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
+    int32_t sortColCount, int64_t *values, std::vector<uint32_t> &varcharLength, int32_t from, int32_t to,
     int32_t currentCol)
 {
     switch (dataTypes.GetType(sortCols[currentCol])->GetId()) {
