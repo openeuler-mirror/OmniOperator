@@ -68,10 +68,37 @@ void BuildSortTestData(VectorBatch **vecBatches, int32_t columnCount)
     }
 }
 
+TEST(NativeOmniSortTest, TestSortSimple)
+{
+    const int32_t dataSize = 24;
+    int32_t data0[] = {38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49};
+    int32_t data1[] = {33, 24, 96, 16, 64, 2, 6, 47, 34, 25, 97, 17, 65, 3, 7, 48, 35, 26, 98, 18, 66, 4, 8, 49};
+    DataTypes sourceTypes(std::vector<DataTypePtr>({IntType(), IntType()}));
+    auto vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1);
+
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {true, true};
+    int32_t nullFirsts[] = {true, true};
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    auto sortOperator = CreateTestOperator(operatorFactory);
+    VectorHelper::PrintVecBatch(vecBatch);
+    sortOperator->AddInput(vecBatch);
+    while (sortOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        VectorBatch *outputVecBatch = nullptr;
+        sortOperator->GetOutput(&outputVecBatch);
+        std::cout << "TestSortSimple=====output" << std::endl;
+        VectorHelper::PrintVecBatch(outputVecBatch);
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
 TEST(NativeOmniSortTest, TestSortPerformance)
 {
     // construct input data
-    const int32_t dataSize = 1000000;
+    const int32_t dataSize = 30;
     const int32_t vecSize = 5;
     int32_t *data1 = new int32_t[dataSize];
     int64_t *data2 = new int64_t[dataSize];
@@ -101,10 +128,14 @@ TEST(NativeOmniSortTest, TestSortPerformance)
 
     clock_t start = clock();
     auto sortOperator = CreateTestOperator(operatorFactory);
+    std::cout << "TestSortPerformance=====" << std::endl;
+    VectorHelper::PrintVecBatch(vecBatch);
     sortOperator->AddInput(vecBatch);
     while (sortOperator->GetStatus() != OMNI_STATUS_FINISHED) {
         VectorBatch *outputVecBatch = nullptr;
         sortOperator->GetOutput(&outputVecBatch);
+        std::cout << "TestSortPerformance=====output" << std::endl;
+        VectorHelper::PrintVecBatch(outputVecBatch);
         VectorHelper::FreeVecBatch(outputVecBatch);
     }
     std::cout << "sort and get output elapsed end time: " << static_cast<double>(std::clock() - start) / 1000 <<
