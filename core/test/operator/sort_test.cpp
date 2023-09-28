@@ -98,7 +98,7 @@ TEST(NativeOmniSortTest, TestSortSimple)
 TEST(NativeOmniSortTest, TestSortPerformance)
 {
     // construct input data
-    const int32_t dataSize = 30;
+    const int32_t dataSize = 10000;
     const int32_t vecSize = 5;
     int32_t *data1 = new int32_t[dataSize];
     int64_t *data2 = new int64_t[dataSize];
@@ -128,14 +128,10 @@ TEST(NativeOmniSortTest, TestSortPerformance)
 
     clock_t start = clock();
     auto sortOperator = CreateTestOperator(operatorFactory);
-    std::cout << "TestSortPerformance=====" << std::endl;
-    VectorHelper::PrintVecBatch(vecBatch);
     sortOperator->AddInput(vecBatch);
     while (sortOperator->GetStatus() != OMNI_STATUS_FINISHED) {
         VectorBatch *outputVecBatch = nullptr;
         sortOperator->GetOutput(&outputVecBatch);
-        std::cout << "TestSortPerformance=====output" << std::endl;
-        VectorHelper::PrintVecBatch(outputVecBatch);
         VectorHelper::FreeVecBatch(outputVecBatch);
     }
     std::cout << "sort and get output elapsed end time: " << static_cast<double>(std::clock() - start) / 1000 <<
