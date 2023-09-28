@@ -4,6 +4,8 @@
  */
 
 #include "max_aggregator.h"
+#include "operator/aggregation/neon_aggregation/neon_aggregation_external.h"
+
 #ifdef ENABLE_HMPP
 #include "aggregator_util.h"
 #include "HMPP/hmpps.h"
@@ -126,19 +128,56 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
+#ifdef ENABLE_NEON
+            if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
+                Add<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount);
+            } else {
+                simd::SIMDAdd<InType,ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount);
+            }
+#else
             Add<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount);
+#endif
         } else {
+#ifdef ENABLE_NEON
+            if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
+                AddConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+                                                                                                rowCount, nullMap);
+            } else {
+                simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr,
+                                                                                 rowCount, nullMap);
+            }
+#else
             AddConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
                 rowCount, nullMap);
+#endif
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
+#ifdef ENABLE_NEON
+            if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
+                AddDict<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
+            } else {
+                simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount, indexMap);
+            }
+#else
             AddDict<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
+#endif
         } else {
+#ifdef ENABLE_NEON
+            if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
+                AddDictConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
+                                                                                                    rowCount, nullMap, indexMap);
+
+            } else {
+                simd::SIMDAddDictConditional<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr,
+                                                                                     rowCount, nullMap, indexMap);
+            }
+#else
             AddDictConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
                 rowCount, nullMap, indexMap);
+#endif
         }
     }
 }
