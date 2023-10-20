@@ -1199,6 +1199,39 @@ void ExpressionCodeGen::ExtractVectorIndexes()
     this->vectorIndexes = exprInfoExtractor.GetVectorIndexes();
 }
 
+Value *ExpressionCodeGen::StringEqual(Value *lhs, Value *lLen, Value *rhs, Value *rLen, Value *isNull)
+{
+    BasicBlock *lenEqualBlock;
+    BasicBlock *lenNotEqualBlock;
+    BasicBlock *mergeBlock;
+    Value *lenCond = builder->CreateAnd(builder->CreateICmpEQ(lLen, rLen), builder->CreateNot(isNull));
+    lenEqualBlock = BasicBlock::Create(*context, "lenEqualBlock", builder->GetInsertBlock()->getParent());
+    lenNotEqualBlock = BasicBlock::Create(*context, "lenNotEqualBlock", builder->GetInsertBlock()->getParent());
+    mergeBlock = BasicBlock::Create(*context, "ifcont", builder->GetInsertBlock()->getParent());
+    builder->CreateCondBr(lenCond, lenEqualBlock, lenNotEqualBlock);
+    builder->SetInsertPoint(lenEqualBlock);
+
+    std::vector<Value *> argVals { lhs, lLen, rhs, rLen };
+    auto signature =
+        FunctionSignature(strEqualStr, std::vector<DataTypeId> { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN);
+    auto f = modulePtr->getFunction(FunctionRegistry::LookupFunction(&signature)->GetId());
+    auto ret = CreateCall(f, argVals, "call_str_eq");
+    InlineFunctionInfo inlineFunctionInfo;
+    llvm::InlineFunction(*ret, inlineFunctionInfo);
+
+    builder->CreateBr(mergeBlock);
+
+    builder->SetInsertPoint(lenNotEqualBlock);
+    builder->CreateBr(mergeBlock);
+
+    builder->SetInsertPoint(mergeBlock);
+
+    PHINode *phiValue = builder->CreatePHI(llvmTypes->I1Type(), 2, "ifequal");
+    phiValue->addIncoming(ret, lenEqualBlock);
+    phiValue->addIncoming(lenCond, lenNotEqualBlock);
+    return phiValue;
+}
+
 // Other operations which require externed functions
 Value *ExpressionCodeGen::StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen)
 {
@@ -1542,27 +1575,28 @@ Value *ExpressionCodeGen::BinaryExprStringHelper(const BinaryExpr *binaryExpr, V
 {
     PHINode *leftPhi;
     PHINode *rightPhi;
-    Value *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
+    Value *isNull = builder->CreateOr(leftIsNull, rightIsNull);
     BinaryExprNullHelper(binaryExpr, leftVal, rightVal, leftIsNull, rightIsNull, &leftPhi, &rightPhi);
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(
+            return builder->CreateAnd(builder->CreateNot(isNull), builder->CreateICmpSLT(
                 this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         case omniruntime::expressions::Operator::GT:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSGT(
+            return builder->CreateAnd(builder->CreateNot(isNull), builder->CreateICmpSGT(
                 this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         case omniruntime::expressions::Operator::LTE:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSLE(
+            return builder->CreateAnd(builder->CreateNot(isNull), builder->CreateICmpSLE(
                 this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
         case omniruntime::expressions::Operator::GTE:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpSGE(
+            return builder->CreateAnd(builder->CreateNot(isNull), builder->CreateICmpSGE(
                 this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
-        case omniruntime::expressions::Operator::EQ:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpEQ(
-                this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
-        case omniruntime::expressions::Operator::NEQ:
-            return builder->CreateAnd(isNeitherNull, builder->CreateICmpNE(
-                this->StringCmp(leftVal, leftLen, rightVal, rightLen), llvmTypes->CreateConstantInt(0)));
+        case omniruntime::expressions::Operator::EQ: {
+            return this->StringEqual(leftVal, leftLen, rightVal, rightLen, isNull);
+        }
+        case omniruntime::expressions::Operator::NEQ: {
+            return builder->CreateNot(this->StringEqual(leftVal, leftLen, rightVal, rightLen, isNull));
+        }
+
         default: {
             LogWarn("Unsupported string binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
@@ -1796,10 +1830,8 @@ void ExpressionCodeGen::InExprDecimal128Helper(CodeGenValuePtr &valueToCompare, 
 void ExpressionCodeGen::InExprStringHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue,
     Value *&tmpCmpData, Value *&tmpCmpNull)
 {
-    tmpCmpData =
-        builder->CreateICmpEQ(StringCmp(valueToCompare->data, valueToCompare->length, argiValue->data, value->length),
-        llvmTypes->CreateConstantInt(0));
     tmpCmpNull = builder->CreateOr(valueToCompare->isNull, argiValue->isNull);
+    tmpCmpData = StringEqual(valueToCompare->data, valueToCompare->length, argiValue->data, value->length, tmpCmpNull);
 }
 
 void ExpressionCodeGen::InExprDoubleHelper(CodeGenValuePtr &valueToCompare, CodeGenValuePtr &argiValue,

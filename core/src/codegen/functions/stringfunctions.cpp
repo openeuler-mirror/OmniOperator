@@ -5,6 +5,19 @@
 #include "stringfunctions.h"
 
 namespace omniruntime::codegen::function {
+/**
+ * This function is only called when apLen is equal to bpLen. When apLen and bpLen are different,
+ * it will directly return false instead of calling StrEquals.
+ */
+extern "C" DLLEXPORT bool StrEquals(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
+{
+    for (int i = 0; i < apLen; ++i) {
+        if (ap[i] != bp[i]) {
+            return false;
+        }
+    }
+    return true;
+}
 
 extern "C" DLLEXPORT int32_t StrCompare(const char *ap, int32_t apLen, const char *bp, int32_t bpLen)
 {

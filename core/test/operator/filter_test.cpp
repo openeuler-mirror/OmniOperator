@@ -20,6 +20,68 @@ using namespace omniruntime::expressions;
 using namespace std;
 using namespace TestUtil;
 
+
+const std::string strCompareExpr = "{"
+    "  \"exprType\": \"BINARY\","
+    "  \"returnType\": 4,"
+    "  \"operator\": \"AND\","
+    "  \"left\": {"
+    "    \"exprType\": \"BINARY\","
+    "    \"returnType\": 4,"
+    "    \"operator\": \"AND\","
+    "    \"left\": {"
+    "      \"exprType\": \"UNARY\","
+    "      \"returnType\": 4,"
+    "      \"operator\": \"not\","
+    "      \"expr\": {"
+    "        \"exprType\": \"IS_NULL\","
+    "        \"returnType\": 4,"
+    "        \"arguments\": ["
+    "          {"
+    "            \"exprType\": \"FIELD_REFERENCE\","
+    "            \"dataType\": 15,"
+    "            \"colVal\": 0,"
+    "            \"width\": 10"
+    "          }"
+    "        ]"
+    "      }"
+    "    },"
+    "    \"right\": {"
+    "      \"exprType\": \"UNARY\","
+    "      \"returnType\": 4,"
+    "      \"operator\": \"not\","
+    "      \"expr\": {"
+    "        \"exprType\": \"IS_NULL\","
+    "        \"returnType\": 4,"
+    "        \"arguments\": ["
+    "          {"
+    "            \"exprType\": \"FIELD_REFERENCE\","
+    "            \"dataType\": 15,"
+    "            \"colVal\": 1,"
+    "            \"width\": 10"
+    "          }"
+    "        ]"
+    "      }"
+    "    }"
+    "  },"
+    "  \"right\": {"
+    "    \"exprType\": \"BINARY\","
+    "    \"returnType\": 4,"
+    "    \"operator\": \"EQUAL\","
+    "    \"left\": {"
+    "      \"exprType\": \"FIELD_REFERENCE\","
+    "      \"dataType\": 15,"
+    "      \"colVal\": 0,"
+    "      \"width\": 10"
+    "    },"
+    "    \"right\": {"
+    "      \"exprType\": \"FIELD_REFERENCE\","
+    "      \"dataType\": 15,"
+    "      \"colVal\": 1,"
+    "      \"width\": 10"
+    "    }"
+    "  }"
+    "}";
 void PrintValueLine(const double *valueArray, const int32_t arrLength)
 {
     std::cout << "[";
@@ -145,6 +207,81 @@ TEST(FilterTest, LessThanProcessRow)
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
     delete overflowConfig;
+}
+
+TEST(FilterTest, ExprCodegenStringCompare)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 10000000;
+
+    // prepare expression isnotnull(a) and isnotnull(b) and (a = b)
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(), VarcharType() }));
+    auto field0 = new FieldExpr(0, VarcharType());
+    auto field1 = new FieldExpr(1, VarcharType());
+    Expr *filterExpr = JSONParser::ParseJSON(nlohmann::json::parse(strCompareExpr));
+    std::vector<Expr *> projections = { field0, field1 };
+
+    // prepare test data
+    auto vec1 = new Vector<LargeStringContainer<std::string_view>>(numRows);
+    auto vec2 = new Vector<LargeStringContainer<std::string_view>>(numRows);
+    auto *expectedData1 = new std::string[numRows];
+    auto *expectedData2 = new std::string[numRows];
+    auto expectSelectedRows = 0;
+
+    string_view str0 = "31";
+    string_view str1 = "2413";
+
+    for (int i = 0; i < numRows; ++i) {
+        if (i % 2 == 0) {
+            vec1->SetValue(i, str0);
+        } else {
+            vec1->SetValue(i, str1);
+        }
+        vec2->SetValue(i, str1);
+        if ((vec1->GetValue(i) == vec2->GetValue(i)) && (!vec1->IsNull(i) && !vec2->IsNull(i))) {
+            expectedData1[expectSelectedRows] = vec1->GetValue(i);
+            expectedData2[expectSelectedRows] = vec2->GetValue(i);
+            expectSelectedRows++;
+        }
+    }
+
+    auto vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(vec1);
+    vecBatch->Append(vec2);
+
+    // prepare filter factory and operator
+    auto createStart = std::chrono::high_resolution_clock::now();
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(std::move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    auto createEnd = std::chrono::high_resolution_clock::now();
+    std::cout << "The time of creating operator and factory is " <<
+        std::chrono::duration_cast<std::chrono::microseconds>(createEnd - createStart).count() << std::endl;
+
+    // evaluate expression
+    auto evaluateStart = std::chrono::high_resolution_clock::now();
+    op->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    auto evaluateEnd = std::chrono::high_resolution_clock::now();
+    std::cout << "The time of evaluate expression is " <<
+        std::chrono::duration_cast<std::chrono::microseconds>(evaluateEnd - evaluateStart).count() << std::endl;
+
+    // verify correctness
+    std::cout << "The numReturned is " << numReturned << std::endl;
+    EXPECT_EQ(numReturned, expectSelectedRows);
+    AssertVecBatchEquals(outputVecBatch, 2, expectSelectedRows, expectedData1, expectedData2);
+
+    // delete
+    if (outputVecBatch != nullptr) {
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+    delete[] expectedData1;
+    delete[] expectedData2;
 }
 
 TEST(FilterTest, LessThan)

@@ -9,6 +9,12 @@ namespace omniruntime::codegen {
 using namespace omniruntime::type;
 using namespace codegen::function;
 
+const std::string StrEqualFnStr()
+{
+    const std::string compareFnStr = "strequal";
+    return compareFnStr;
+}
+
 const std::string ConcatFnStr()
 {
     const std::string concatFnStr = "concat";
@@ -100,6 +106,9 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(ToLowerChar), LowerFnStr(), {}, { OMNI_CHAR }, OMNI_CHAR, INPUT_DATA, true),
 
         Function(reinterpret_cast<void *>(StrCompare), CompareFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT),
+
+        Function(reinterpret_cast<void *>(StrEquals), StrEqualFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_BOOLEAN),
 
         Function(reinterpret_cast<void *>(CastIntToString), CastFnStr(), {}, { OMNI_INT }, OMNI_VARCHAR, INPUT_DATA,
             true),
