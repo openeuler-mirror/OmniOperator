@@ -126,17 +126,12 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-#ifdef ENABLE_NEON
             if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
                 Add<InType, ResultType, MinOp<InType, ResultType>>(res, state.count, ptr, rowCount);
             } else {
                 simd::SIMDAdd<InType,ResultType, simd::BasicOp::Min>(res, state.count, ptr, rowCount);
             }
-#else
-            Add<InType, ResultType, MinOp<InType, ResultType>>(res, state.count, ptr, rowCount);
-#endif
         } else {
-#ifdef ENABLE_NEON
             if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
                 AddConditional<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
                                                                                                 rowCount, nullMap);
@@ -144,26 +139,17 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
                 simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Min>(res, state.count, ptr,
                                                                                  rowCount, nullMap);
             }
-#else
-            AddConditional<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
-                rowCount, nullMap);
-#endif
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
-#ifdef ENABLE_NEON
             if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
                 AddDict<InType, ResultType, MinOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
             } else {
                 simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Min>(res, state.count, ptr, rowCount, indexMap);
             }
-#else
-            AddDict<InType, ResultType, MinOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
-#endif
         } else {
-#ifdef ENABLE_NEON
             if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
                 AddDictConditional<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
                                                                                                     rowCount, nullMap, indexMap);
@@ -171,11 +157,6 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
                 simd::SIMDAddDictConditional<InType, ResultType,simd::BasicOp::Min>(res, state.count, ptr,
                                                                                     rowCount, nullMap, indexMap);
             }
-
-#else
-            AddDictConditional<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
-                rowCount, nullMap, indexMap);
-#endif
         }
     }
 }

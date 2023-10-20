@@ -77,23 +77,10 @@ public:
         auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-#ifdef ENABLE_NEON
             simd::SIMDAdd<ResultType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount);
-#else
-            Add<ResultType, ResultType, SumOp<ResultType, ResultType, false>>(res, state.count, ptr, rowCount);
-#endif
         } else {
-#ifdef ENABLE_NEON
             simd::SIMDAddConditional<ResultType, ResultType, simd::BasicOp::Sum>(res,
                     state.count, ptr, rowCount, nullMap);
-#else
-            if constexpr (std::is_floating_point_v<ResultType>) {
-                SumConditionalFloat<ResultType, ResultType, false>(res, state.count, ptr, rowCount, nullMap);
-            } else {
-                AddConditional<ResultType, ResultType, SumConditionalOp<ResultType, ResultType, false, false>>(res,
-                    state.count, ptr, rowCount, nullMap);
-            }
-#endif
         }
     }
 
@@ -106,34 +93,17 @@ public:
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-#ifdef ENABLE_NEON
                     simd::SIMDAdd<InType,ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount);
-#else
-                    Add<InType, ResultType, SumOp<InType, ResultType, false>>(res, state.count, ptr, rowCount);
-#endif
                 } else {
-#ifdef ENABLE_NEON
                     simd::SIMDAddConditional<InType,ResultType, simd::BasicOp::Sum>(res, state.count, ptr,
                                                                  rowCount, nullMap);
-#else
-                    if constexpr (std::is_floating_point_v<InType>) {
-                        SumConditionalFloat<InType, ResultType, false>(res, state.count, ptr, rowCount, nullMap);
-                    } else {
-                        AddConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(res,
-                            state.count, ptr, rowCount, nullMap);
-                    }
-#endif
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-#ifdef ENABLE_NEON
                     simd::SIMDAddDict<InType,ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount, indexMap);
-#else
-                    AddDict<InType, ResultType, SumOp<InType, ResultType, false>>(res, state.count, ptr, rowCount,
-                        indexMap);
-#endif
+
                 } else {
                     AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(res,
                         state.count, ptr, rowCount, nullMap, indexMap);

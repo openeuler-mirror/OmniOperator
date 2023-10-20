@@ -85,9 +85,6 @@ else
       elif [ "$i" == '--exclude-test' ]; then
           echo "-- Exclude Test Source"
           OPTIONS+=" -DEXCLUDE_TEST=ON"
-      elif [ "$i" == '--disable-neon' ]; then
-          echo "-- Compile disable neno"
-          OPTIONS+=" -DENABLE_NEON=OFF"
       else
           exit_with_message_and_print_help "ERROR: Invalid option: $i"
       fi

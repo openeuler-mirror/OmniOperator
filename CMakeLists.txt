@@ -123,6 +123,3 @@ message(STATUS "Option Enable Benchmark: ${ENABLE_BENCHMARK}")
 
 option(ENABLE_HMPP "Using HMPP library" OFF)
 message(STATUS "Option ENABLE_HMPP: ${ENABLE_HMPP}")
-
-option(ENABLE_NEON "Using neno" ON)
-message(STATUS "Option ENABLE_NEON: ${ENABLE_NEON}")
