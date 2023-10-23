@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "vector/vector.h"
 #include "type/data_type.h"
+#include "neon_sort64.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
@@ -704,7 +705,12 @@ void QuickSortColumnInternal(int64_t *values, uint64_t *addresses, int32_t from,
 {
     int32_t len = to - from;
     if (len <= QUICK_SORT_SMALL_LEN) { // point 3
-        QuickSortColumnSmall<RawType, sortAscending>(values, addresses, from, to);
+        if constexpr (std::is_same_v<RawType, int32_t> || std::is_same_v<RawType, int64_t> ||
+            std::is_same_v<RawType, int16_t> || std::is_same_v<RawType, double>) {
+            SmallCaseSort<sortAscending>(values, addresses, from, to);
+        } else {
+            QuickSortColumnSmall<RawType, sortAscending>(values, addresses, from, to);
+        }
         return;
     }
 
