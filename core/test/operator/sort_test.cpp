@@ -150,9 +150,14 @@ TEST(NativeOmniSortTest, TestSortPerformance)
 TEST(NativeOmniSortTest, TestSortLongColumn)
 {
     // construct input data
-    const int32_t dataSize = 5;
-    int32_t data1[dataSize] = {4, 3, 2, 1, 0};
-    int64_t data2[dataSize] = {0, 1, 2, 3, 4};
+    const int32_t dataSize = 37;
+    int32_t data1[dataSize];
+    int64_t data2[dataSize];
+    const int32_t lastData = dataSize - 1;
+    for (int32_t i = 0; i < dataSize; i++) {
+        data1[i] = lastData - i;
+        data2[i] = i;
+    }
 
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     std::vector<DataTypePtr> typess = { IntType(), LongType() };
@@ -173,6 +178,10 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
+    for (int32_t i = 0; i < dataSize; i++) {
+        expectData1[i] = i;
+        expectData2[i] = lastData - i;
+    }
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
@@ -284,6 +293,53 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
 
     // free memory
     VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortDoubleColumnNeon)
+{
+    // construct input data
+    const int32_t dataSize = 37;
+    // prepare data
+    int32_t data0[dataSize];
+    int64_t data1[dataSize];
+    double data2[dataSize];
+    for (int32_t i = 0; i < dataSize; i++) {
+        data0[i] = i;
+        data1[i] = i;
+        data2[i] = 39.9 - 1.1 * i;
+    }
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+    VectorHelper::PrintVecBatch(vecBatch);
+
+    int32_t outputCols[2] = {1, 2};
+    int32_t sortCols[2] = {2, 0};
+    int32_t ascendings[2] = {true, false};
+    int32_t nullFirsts[2] = {true, true};
+
+    auto operatorFactory =
+            SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int64_t expectData1[dataSize];
+    double expectData2[dataSize];
+    for (int32_t i = 0; i < dataSize; i++) {
+        expectData1[i] = data1[dataSize - 1 - i];
+        expectData2[i] = data2[dataSize - 1 - i];
+    }
+    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), DoubleType() });
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
 }

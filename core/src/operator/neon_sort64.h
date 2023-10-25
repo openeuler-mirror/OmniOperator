@@ -5,7 +5,9 @@
 #include "arm_neon.h"
 #include <type_traits>
 #include <limits>
+#include <string>
 #include "vector"
+#include "util/omni_exception.h"
 
 constexpr int64_t OMNIMAX64 = INT64_MAX;
 constexpr int64_t OMNIMIN64 = INT64_MIN;
