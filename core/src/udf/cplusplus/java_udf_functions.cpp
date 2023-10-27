@@ -18,7 +18,7 @@ using namespace omniruntime::codegen;
 const std::string GET_ENV_FAILED = "Get env from JVM failed.";
 const std::string JVM_OOM = "The JVM is likely OOM.";
 
-using OutputState = struct OutputState {
+struct OutputState {
     int32_t outputValueCapacity;
     int32_t rowIdx;
 };

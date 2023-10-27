@@ -196,7 +196,7 @@ void WindowOperator::PrepareOutput()
 {
     Initialization();
     totalRowCount = pagesIndex->GetRowCount();
-    if (totalRowCount <= 0) {
+    if (totalRowCount == 0) {
         return;
     }
     FinishPagesIndex();

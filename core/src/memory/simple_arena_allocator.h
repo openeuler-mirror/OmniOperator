@@ -140,7 +140,7 @@ private:
     int64_t availBytes;
     uint8_t *availBuf;
     // Record the size of the memory used continuously.
-    uint32_t continuousUsedMemoryBytes;
+    int64_t continuousUsedMemoryBytes;
     std::vector<Chunk *> chunks;
     Allocator *allocator;
 };

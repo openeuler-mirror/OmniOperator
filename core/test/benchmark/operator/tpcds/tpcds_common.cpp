@@ -49,10 +49,13 @@ std::vector<VectorBatchSupplier> LoadVectorBatchFromPath(const std::string &path
     std::vector<std::string> files = {};
     auto *dir = opendir(path.c_str());
     dirent *file;
-    while ((file = readdir(dir)) != nullptr) {
-        if (strstr(file->d_name, ".tbl") && file->d_type != FOLDER_FLAG) {
-            files.emplace_back(file->d_name);
+    if (dir != nullptr) {
+        while ((file = readdir(dir)) != nullptr) {
+            if (strstr(file->d_name, ".tbl") && file->d_type != FOLDER_FLAG) {
+                files.emplace_back(file->d_name);
+            }
         }
+        closedir(dir);
     }
 
     std::vector<VectorBatchSupplier> vectorSuppliers;
@@ -132,16 +135,19 @@ void getJsonMeta(const std::string &dir, std::vector<std::string> &paths, const 
     auto *dirScan = opendir(dir.c_str());
 
     dirent *file;
-    while ((file = readdir(dirScan)) != nullptr) {
-        if (file->d_type == FOLDER_FLAG && file->d_name[0] != '.') {
-            getJsonMeta(dir + "/" + file->d_name, paths, identifier);
-            continue;
+    if (dirScan != nullptr) {
+        while ((file = readdir(dirScan)) != nullptr) {
+            if (file->d_type == FOLDER_FLAG && file->d_name[0] != '.') {
+                getJsonMeta(dir + "/" + file->d_name, paths, identifier);
+                continue;
+            }
+            if (strstr(file->d_name, "operator_meta.json") &&
+                std::ifstream(dir + std::string("/").append(identifier)).good()) {
+                paths.emplace_back(dir);
+                break;
+            }
         }
-        if (strstr(file->d_name, "operator_meta.json") &&
-            std::ifstream(dir + std::string("/").append(identifier)).good()) {
-            paths.emplace_back(dir);
-            break;
-        }
+        closedir(dirScan);
     }
 }
 }
