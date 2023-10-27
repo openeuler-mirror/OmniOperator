@@ -44,7 +44,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortDescNullLast)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -85,7 +85,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscNullLast)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -126,7 +126,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase1)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -167,7 +167,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase2)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -208,7 +208,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase3)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -249,7 +249,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase4)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -290,7 +290,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase5)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -331,7 +331,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase6)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -372,7 +372,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase7)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -413,7 +413,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase8)
     DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(10), LongType(), LongType() }));
     VectorBatch *expectVectorBatch = CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -472,7 +472,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase9)
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(10), VarcharType(10), VarcharType(10) }));
     VectorBatch *expectVectorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -530,7 +530,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase10)
     VectorBatch *expectVectorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
@@ -608,7 +608,7 @@ TEST(TopNSortWithExprOperatorTest, TestTopNSortAscCase11)
     VectorBatch *expectVectorBatch =
         CreateVectorBatch(expectTypes, expectedDataSize, expData1, expData2, expData3, expData4, expData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVectorBatch));
 
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);

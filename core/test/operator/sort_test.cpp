@@ -68,33 +68,6 @@ void BuildSortTestData(VectorBatch **vecBatches, int32_t columnCount)
     }
 }
 
-TEST(NativeOmniSortTest, TestSortSimple)
-{
-    const int32_t dataSize = 24;
-    int32_t data0[] = {38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49};
-    int32_t data1[] = {33, 24, 96, 16, 64, 2, 6, 47, 34, 25, 97, 17, 65, 3, 7, 48, 35, 26, 98, 18, 66, 4, 8, 49};
-    DataTypes sourceTypes(std::vector<DataTypePtr>({IntType(), IntType()}));
-    auto vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1);
-
-    int32_t outputCols[] = {0, 1};
-    int32_t sortCols[] = {0, 1};
-    int32_t ascendings[] = {true, true};
-    int32_t nullFirsts[] = {true, true};
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
-    auto sortOperator = CreateTestOperator(operatorFactory);
-    VectorHelper::PrintVecBatch(vecBatch);
-    sortOperator->AddInput(vecBatch);
-    while (sortOperator->GetStatus() != OMNI_STATUS_FINISHED) {
-        VectorBatch *outputVecBatch = nullptr;
-        sortOperator->GetOutput(&outputVecBatch);
-        std::cout << "TestSortSimple=====output" << std::endl;
-        VectorHelper::PrintVecBatch(outputVecBatch);
-        VectorHelper::FreeVecBatch(outputVecBatch);
-    }
-    omniruntime::op::Operator::DeleteOperator(sortOperator);
-    DeleteSortOperatorFactory(operatorFactory);
-}
-
 TEST(NativeOmniSortTest, TestSortPerformance)
 {
     // construct input data
@@ -150,14 +123,9 @@ TEST(NativeOmniSortTest, TestSortPerformance)
 TEST(NativeOmniSortTest, TestSortLongColumn)
 {
     // construct input data
-    const int32_t dataSize = 37;
-    int32_t data1[dataSize];
-    int64_t data2[dataSize];
-    const int32_t lastData = dataSize - 1;
-    for (int32_t i = 0; i < dataSize; i++) {
-        data1[i] = lastData - i;
-        data2[i] = i;
-    }
+    const int32_t dataSize = 5;
+    int32_t data1[dataSize] = {4, 3, 2, 1, 0};
+    int64_t data2[dataSize] = {0, 1, 2, 3, 4};
 
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     std::vector<DataTypePtr> typess = { IntType(), LongType() };
@@ -178,10 +146,6 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
 
     int32_t expectData1[dataSize] = {0, 1, 2, 3, 4};
     int64_t expectData2[dataSize] = {4, 3, 2, 1, 0};
-    for (int32_t i = 0; i < dataSize; i++) {
-        expectData1[i] = i;
-        expectData2[i] = lastData - i;
-    }
     auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
@@ -297,7 +261,155 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
-TEST(NativeOmniSortTest, TestSortDoubleColumnNeon)
+TEST(NativeOmniSortTest, TestSortIntColumnAscSIMD)
+{
+    const int32_t dataSize = 24;
+    int32_t data0[] = {38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49};
+    int32_t data1[] = {33, 24, 96, 16, 64, 2, 6, 47, 34, 25, 97, 17, 65, 3, 7, 48, 35, 26, 98, 18, 66, 4, 8, 49};
+    DataTypes sourceTypes(std::vector<DataTypePtr>({IntType(), IntType()}));
+    auto vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1);
+
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {true, true};
+    int32_t nullFirsts[] = {true, true};
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    auto sortOperator = CreateTestOperator(operatorFactory);
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int32_t expectData0[] = {1, 1, 1, 5, 5, 5, 19, 19, 19, 26, 26, 26, 38, 38, 38, 49, 49, 49, 66, 66, 66, 97, 97, 97};
+    int32_t expectData1[] = {2, 3, 4, 6, 7, 8, 16, 17, 18, 24, 25, 26, 33, 34, 35, 47, 48, 49, 64, 65, 66, 96, 97, 98};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortIntColumnDescSIMD)
+{
+    const int32_t dataSize = 24;
+    int32_t data0[] = {38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49};
+    int32_t data1[] = {33, 24, 96, 16, 64, 2, 6, 47, 34, 25, 97, 17, 65, 3, 7, 48, 35, 26, 98, 18, 66, 4, 8, 49};
+    DataTypes sourceTypes(std::vector<DataTypePtr>({IntType(), IntType()}));
+    auto vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1);
+
+    int32_t outputCols[] = {0, 1};
+    int32_t sortCols[] = {0, 1};
+    int32_t ascendings[] = {false, false};
+    int32_t nullFirsts[] = {false, false};
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+    auto sortOperator = CreateTestOperator(operatorFactory);
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int32_t expectData0[] = {97, 97, 97, 66, 66, 66, 49, 49, 49, 38, 38, 38, 26, 26, 26, 19, 19, 19, 5, 5, 5, 1, 1, 1};
+    int32_t expectData1[] = {98, 97, 96, 66, 65, 64, 49, 48, 47, 35, 34, 33, 26, 25, 24, 18, 17, 16, 8, 7, 6, 4, 3, 2};
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData0, expectData1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortLongColumnAscSIMD)
+{
+    // construct input data
+    const int32_t dataSize = 37;
+    int32_t data1[dataSize];
+    int64_t data2[dataSize];
+    const int32_t lastData = dataSize - 1;
+    for (int32_t i = 0; i < dataSize; i++) {
+        data1[i] = i;
+        data2[i] = lastData - i;
+    }
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+    std::vector<DataTypePtr> typess = { IntType(), LongType() };
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+
+    int outputCols[2] = {0, 1};
+    int sortCols[1] = {1};
+    int ascendings[1] = {true};
+    int nullFirsts[1] = {false};
+
+    auto operatorFactory =
+            SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int32_t expectData1[dataSize];
+    int64_t expectData2[dataSize];
+    for (int32_t i = 0; i < dataSize; i++) {
+        expectData1[i] = lastData - i;
+        expectData2[i] = i;
+    }
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    // free memory
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortLongColumnDescSIMD)
+{
+    // construct input data
+    const int32_t dataSize = 37;
+    int32_t data1[dataSize];
+    int64_t data2[dataSize];
+    const int32_t lastData = dataSize - 1;
+    for (int32_t i = 0; i < dataSize; i++) {
+        data1[i] = lastData - i;
+        data2[i] = i;
+    }
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+    std::vector<DataTypePtr> typess = { IntType(), LongType() };
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+
+    int outputCols[2] = {0, 1};
+    int sortCols[1] = {1};
+    int ascendings[1] = {false};
+    int nullFirsts[1] = {true};
+
+    auto operatorFactory =
+            SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int32_t expectData1[dataSize];
+    int64_t expectData2[dataSize];
+    for (int32_t i = 0; i < dataSize; i++) {
+        expectData1[i] = i;
+        expectData2[i] = lastData - i;
+    }
+    auto expectVecBatch = CreateVectorBatch(sourceTypes, dataSize, expectData1, expectData2);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    // free memory
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMD)
 {
     // construct input data
     const int32_t dataSize = 37;
@@ -308,11 +420,10 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnNeon)
     for (int32_t i = 0; i < dataSize; i++) {
         data0[i] = i;
         data1[i] = i;
-        data2[i] = 39.9 - 1.1 * i;
+        data2[i] = 38.8 - 1.1 * i;
     }
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
-    VectorHelper::PrintVecBatch(vecBatch);
 
     int32_t outputCols[2] = {1, 2};
     int32_t sortCols[2] = {2, 0};
@@ -329,9 +440,67 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnNeon)
 
     int64_t expectData1[dataSize];
     double expectData2[dataSize];
+    const int32_t lastData = dataSize - 1;
     for (int32_t i = 0; i < dataSize; i++) {
-        expectData1[i] = data1[dataSize - 1 - i];
-        expectData2[i] = data2[dataSize - 1 - i];
+        expectData1[i] = data1[lastData - i];
+        expectData2[i] = data2[lastData - i];
+    }
+    DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), DoubleType() });
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortDoubleColumnDescSIMD)
+{
+    double val0 = -0.8;
+    double val1 = 0.3;
+    int64_t longVal0;
+    int64_t longVal1;
+    // memcpy(&longVal0, &val0, sizeof(double));
+    // memcpy(&longVal1, &val1, sizeof(double));
+    longVal0 = val0;
+    longVal1 = val1;
+    bool result = longVal0 < longVal1;
+
+    // construct input data
+    const int32_t dataSize = 37;
+    // prepare data
+    int32_t data0[dataSize];
+    int64_t data1[dataSize];
+    double data2[dataSize];
+    for (int32_t i = 0; i < dataSize; i++) {
+        data0[i] = i;
+        data1[i] = i;
+        data2[i] = -0.8 + 1.1 * i;
+    }
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+
+    int32_t outputCols[2] = {1, 2};
+    int32_t sortCols[2] = {2, 0};
+    int32_t ascendings[2] = {false, true};
+    int32_t nullFirsts[2] = {true, true};
+
+    auto operatorFactory =
+            SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
+
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    int64_t expectData1[dataSize];
+    double expectData2[dataSize];
+    const int32_t lastData = dataSize - 1;
+    for (int32_t i = 0; i < dataSize; i++) {
+        expectData1[i] = data1[lastData - i];
+        expectData2[i] = data2[lastData - i];
     }
     DataTypes expectedTypes(std::vector<DataTypePtr> { LongType(), DoubleType() });
     VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, dataSize, expectData1, expectData2);

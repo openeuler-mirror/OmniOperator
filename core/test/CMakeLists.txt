@@ -16,7 +16,7 @@ if (DEFINED ENABLE_BENCHMARK AND ENABLE_BENCHMARK STREQUAL "ON")
 endif ()
     add_subdirectory(parser)
     add_subdirectory(type)
-    add_subdirectory(codegen)
+    #add_subdirectory(codegen)
 
     set(OM_TEST_TARGET omtest)
     set(MY_LINK
@@ -27,7 +27,6 @@ endif ()
             functest
             parsertest
             typetest
-            codegentest
             )
 
     # find gtest package

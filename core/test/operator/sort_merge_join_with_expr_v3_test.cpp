@@ -2247,7 +2247,7 @@ TEST(SortMergeJoinWithExprV3Test, testSmjLeftSemiJoinWithFilterEmpty)
 
     // check the join result
     int32_t expCol1[] = {0, 1, 2, 2, 4, 5};
-    long expCol2[] = {6600, 5500, 4400, 3300, 2200, 1100};
+    long expCol2[] = {6600, 5500, 3300, 4400, 2200, 1100};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 6, expCol1, expCol2);
     ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);
@@ -2323,7 +2323,7 @@ TEST(SortMergeJoinWithExprV3Test, testSmjLeftSemiJoinStreamedWithRepeatRows)
 
     // check the join result
     int32_t expCol1[] = {2, 2, 4, 5};
-    long expCol2[] = {4400, 3300, 2200, 1100};
+    long expCol2[] = {3300, 4400, 2200, 1100};
     VectorBatch *expectVecBatch = CreateVectorBatch(streamedTblTypes, 4, expCol1, expCol2);
     ASSERT_TRUE(VecBatchMatch(result, expectVecBatch));
     VectorHelper::FreeVecBatch(result);

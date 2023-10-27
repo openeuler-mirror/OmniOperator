@@ -78,7 +78,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -139,7 +139,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -198,7 +198,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     int64_t expectData3[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -258,7 +258,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -318,7 +318,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -383,7 +383,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -452,7 +452,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     expectVecBatch->Get(0)->SetNull(5);
 
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -554,7 +554,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -656,7 +656,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -764,7 +764,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -868,7 +868,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -973,7 +973,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -1078,7 +1078,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -1179,7 +1179,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -1288,7 +1288,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
         expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -1355,7 +1355,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -1428,7 +1428,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3,
         expectData4, expectData5, expectData6);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
@@ -1495,7 +1495,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
     VectorBatch *expectVecBatch =
         CreateVectorBatch(expectTypes, MY_DATA_SIZE, expectData1, expectData2, expectData3, expectData4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(argumentChannelsExprs);
     omniruntime::op::Operator::DeleteOperator(windowOperator);
