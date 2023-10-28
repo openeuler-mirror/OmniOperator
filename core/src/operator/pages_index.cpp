@@ -1097,11 +1097,11 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
             }
         } else {
             if (sortAscending == 0) {
-                //QuickSortDescSIMD<0>(values, valueAddresses, nonNullFrom, nonNullTo);
-                QuickSortFixedLength<0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                // QuickSortFixedLength<0>(values, valueAddresses, nonNullFrom, nonNullTo);
             } else {
-                //QuickSortAscSIMD<1>(values, valueAddresses, nonNullFrom, nonNullTo);
-                QuickSortFixedLength<1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                QuickSortAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                // QuickSortFixedLength<1>(values, valueAddresses, nonNullFrom, nonNullTo);
             }
         }
     }
