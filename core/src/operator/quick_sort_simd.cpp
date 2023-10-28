@@ -10,6 +10,58 @@
 
 const int32_t SMALL_CASE_LENGTH = 16;
 
+template <int32_t sortAscending>
+void QuickSortSmallCase(int64_t *values, int32_t from, int32_t to)
+{
+    for (int32_t i = from + 1; i < to; ++i) {
+        int64_t iValue = values[i];
+        int32_t j = i - 1;
+        while (j >= from) {
+            int64_t jValue = values[j];
+            if constexpr (sortAscending != 0) {
+                if (jValue <= iValue) {
+                    break;
+                }
+            } else {
+                if (jValue >= iValue) {
+                    break;
+                }
+            }
+            values[j + 1] = jValue;
+            --j;
+        }
+        values[j + 1] = iValue;
+    }
+}
+
+template <int32_t sortAscending>
+void QuickSortSmallCase(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
+{
+    for (int32_t i = from + 1; i < to; ++i) {
+        int64_t iValue = values[i];
+        uint64_t iAddr = addresses[i];
+        int32_t j = i - 1;
+        while (j >= from) {
+            int64_t jValue = values[j];
+            if constexpr (sortAscending != 0) {
+                if (jValue <= iValue) {
+                    break;
+                }
+            } else {
+                if (jValue >= iValue) {
+                    break;
+                }
+            }
+            uint64_t jAddr = addresses[j];
+            values[j + 1] = jValue;
+            addresses[j + 1] = jAddr;
+            --j;
+        }
+        values[j + 1] = iValue;
+        addresses[j + 1] = iAddr;
+    }
+}
+
 static int32_t ALWAYS_INLINE CountTrue(uint64x2_t mask)
 {
     auto sMask = vreinterpretq_s64_u64(mask);
@@ -419,12 +471,12 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
 {
     int32_t num = to - from;
     if (num <= SMALL_CASE_LENGTH) {
-        SmallCaseSort<sortAscending>(values, addresses, from, to);
+        QuickSortSmallCase<sortAscending>(values, addresses, from, to);
         return;
     }
 
     auto count = DrawSamples<sortAscending>(values, from, to, valueBuf);
-    SmallCaseSortWithoutAddress<sortAscending>(valueBuf, 0, count);
+    QuickSortSmallCase<sortAscending>(valueBuf, 0, count);
     int64x2_t pivotVec = ChoosePivot(valueBuf, 0, count);
 
     if (depth == 0) {
