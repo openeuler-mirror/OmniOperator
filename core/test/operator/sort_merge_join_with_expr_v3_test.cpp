@@ -2244,6 +2244,7 @@ TEST(SortMergeJoinWithExprV3Test, testSmjLeftSemiJoinWithFilterEmpty)
 
     VectorBatch *result;
     bufferedTblWithExprOperator->GetOutput(&result);
+    VectorHelper::PrintVecBatch(result);
 
     // check the join result
     int32_t expCol1[] = {0, 1, 2, 2, 4, 5};
@@ -2320,6 +2321,7 @@ TEST(SortMergeJoinWithExprV3Test, testSmjLeftSemiJoinStreamedWithRepeatRows)
 
     VectorBatch *result;
     bufferedTblWithExprOperator->GetOutput(&result);
+    VectorHelper::PrintVecBatch(result);
 
     // check the join result
     int32_t expCol1[] = {2, 2, 4, 5};

@@ -5,6 +5,8 @@
 #ifndef __SORT_H__
 #define __SORT_H__
 
+#include <iostream>
+#include <fstream>
 #include <vector>
 #include <memory>
 #include "util/error_code.h"
@@ -159,6 +161,11 @@ private:
     Spiller *spiller = nullptr;
     bool hasNext = true;
     bool canInplaceSort = false;
+
+    std::ofstream file;
+    int32_t inputRowCount = 0;
+    int32_t outputRowCount = 0;
+    bool first = true;
 };
 } // end of namespace op
 } // end of namespace omniruntime

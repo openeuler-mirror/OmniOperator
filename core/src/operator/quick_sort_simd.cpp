@@ -480,6 +480,7 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
     int64x2_t pivotVec = ChoosePivot(valueBuf, 0, count);
 
     if (depth == 0) {
+        LogError("THE DEPTH IS ZERO AND THE DATA COULD BE UNORDER!!!");
         return;
     }
 
