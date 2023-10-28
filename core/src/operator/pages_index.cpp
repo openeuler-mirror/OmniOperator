@@ -396,21 +396,21 @@ template <typename RawType> static bool ALWAYS_INLINE NewOnlyEqual(RawType &left
     }
 }
 
-template <int32_t sortAscending> static bool ALWAYS_INLINE FixedLengthCompare(int64_t left, int64_t right)
+template <int32_t sortAscending> static int8_t ALWAYS_INLINE FixedLengthCompare(int64_t left, int64_t right)
 {
     if constexpr (sortAscending == 1) {
-        return left > right;
+        return left > right ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : left < right ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     } else {
-        return right > left;
+        return right > left ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : right < left ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     }
 }
 
-template <int32_t sortAscending> static bool ALWAYS_INLINE Decimal128Compare(Decimal128 &left, Decimal128 &right)
+template <int32_t sortAscending> static int8_t ALWAYS_INLINE Decimal128Compare(Decimal128 &left, Decimal128 &right)
 {
-    if constexpr (sortAscending) {
-        return left > right;
+    if constexpr (sortAscending == 1) {
+        return left > right ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : left < right ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     } else {
-        return right > left;
+        return right > left ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : right < left ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     }
 }
 
@@ -425,8 +425,14 @@ void QuickSortDecimal128Small(int64_t *values, uint64_t *addresses, int32_t from
         while (j >= from) {
             auto jValuePtr = values[j];
             auto jValue = *((Decimal128 *)jValuePtr);
-            if (!Decimal128Compare<sortAscending>(jValue, iValue)) {
-                break;
+            if constexpr (sortAscending == 0) {
+                if (jValue >= iValue) {
+                    break;
+                }
+            } else {
+                if (jValue <= iValue) {
+                    break;
+                }
             }
             values[j + 1] = values[j];
             addresses[j + 1] = addresses[j];
@@ -509,7 +515,7 @@ Decimal128 GetMedianDecimal128Value(int64_t *values, int32_t from, int32_t to, i
 }
 
 template <int32_t sortAscending>
-bool ALWAYS_INLINE GetNextCompareDecimal128Left(bool *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
+int8_t ALWAYS_INLINE GetNextCompareDecimal128Left(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
     int64_t *values, Decimal128 &pivotValue)
 {
     if (k < limit) {
@@ -555,7 +561,7 @@ bool ALWAYS_INLINE GetNextCompareDecimal128Left(bool *comparetmp, int32_t &k, in
 }
 
 template <int32_t sortAscending>
-inline bool GetNextCompareDecimal128Right(bool *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c, int64_t *values,
+inline int8_t GetNextCompareDecimal128Right(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c, int64_t *values,
     Decimal128 &pivotValue)
 {
     if (k < limit) {
@@ -601,7 +607,7 @@ inline bool GetNextCompareDecimal128Right(bool *comparetmp, int32_t &k, int32_t 
 }
 
 template <int32_t sortAscending>
-void QuickSortDecimal128Internal(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, bool *comparetmp)
+void QuickSortDecimal128Internal(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int8_t *comparetmp)
 {
     int32_t len = to - from;
     if (len <= QUICK_SORT_SMALL_LEN) { // point 3
@@ -620,8 +626,8 @@ void QuickSortDecimal128Internal(int64_t *values, uint64_t *addresses, int32_t f
     int32_t blim = 0;
     int32_t ck = 0;
     int32_t clim = 0;
-    bool *leftComparetmp = comparetmp;
-    bool *rightComparetmp = comparetmp + NMAX_SIZE;
+    int8_t *leftComparetmp = comparetmp;
+    int8_t *rightComparetmp = comparetmp + NMAX_SIZE;
     while (true) {
         int8_t comparison;
         while (b <= c && (comparison = GetNextCompareDecimal128Left<sortAscending>(leftComparetmp, bk, blim, b, c, values,
@@ -664,7 +670,7 @@ void QuickSortDecimal128Internal(int64_t *values, uint64_t *addresses, int32_t f
 template <int32_t sortAscending>
 void QuickSortDecimal128(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
 {
-    bool comparetmp[NMAX_SIZE + NMAX_SIZE];
+    int8_t comparetmp[NMAX_SIZE + NMAX_SIZE];
     QuickSortDecimal128Internal<sortAscending>(values, addresses, from, to, comparetmp);
 }
 
@@ -768,7 +774,7 @@ void QuickSortFixedLengthSmall(int64_t *values, uint64_t *addresses, int32_t fro
 }
 
 template <int32_t sortAscending>
-bool ALWAYS_INLINE GetNextCompareFixedLengthLeft(bool *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
+int8_t ALWAYS_INLINE GetNextCompareFixedLengthLeft(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
     int64_t *values, int64_t &pivotValue)
 {
     if (k < limit) {
@@ -814,7 +820,7 @@ bool ALWAYS_INLINE GetNextCompareFixedLengthLeft(bool *comparetmp, int32_t &k, i
 }
 
 template <int32_t sortAscending>
-inline bool GetNextCompareFixedLengthRight(bool *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c, int64_t *values,
+inline int8_t GetNextCompareFixedLengthRight(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c, int64_t *values,
     int64_t &pivotValue)
 {
     if (k < limit) {
@@ -860,7 +866,7 @@ inline bool GetNextCompareFixedLengthRight(bool *comparetmp, int32_t &k, int32_t
 }
 
 template <int32_t sortAscending>
-void QuickSortFixedLengthInternal(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, bool *comparetmp)
+void QuickSortFixedLengthInternal(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int8_t *comparetmp)
 {
     int32_t len = to - from;
     if (len <= QUICK_SORT_SMALL_LEN) { // point 3
@@ -879,8 +885,8 @@ void QuickSortFixedLengthInternal(int64_t *values, uint64_t *addresses, int32_t 
     int32_t blim = 0;
     int32_t ck = 0;
     int32_t clim = 0;
-    bool *leftComparetmp = comparetmp;
-    bool *rightComparetmp = comparetmp + NMAX_SIZE;
+    int8_t *leftComparetmp = comparetmp;
+    int8_t *rightComparetmp = comparetmp + NMAX_SIZE;
     while (true) {
         int8_t comparison;
         while (b <= c && (comparison = GetNextCompareFixedLengthLeft<sortAscending>(leftComparetmp, bk, blim, b, c, values,
@@ -923,7 +929,7 @@ void QuickSortFixedLengthInternal(int64_t *values, uint64_t *addresses, int32_t 
 template <int32_t sortAscending>
 void QuickSortFixedLength(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
 {
-    bool comparetmp[NMAX_SIZE + NMAX_SIZE];
+    int8_t comparetmp[NMAX_SIZE + NMAX_SIZE];
     QuickSortFixedLengthInternal<sortAscending>(values, addresses, from, to, comparetmp);
 }
 // end for compare scalar and simd test
@@ -1091,9 +1097,11 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
             }
         } else {
             if (sortAscending == 0) {
-                QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                //QuickSortDescSIMD<0>(values, valueAddresses, nonNullFrom, nonNullTo);
+                QuickSortFixedLength<0>(values, valueAddresses, nonNullFrom, nonNullTo);
             } else {
-                QuickSortAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                //QuickSortAscSIMD<1>(values, valueAddresses, nonNullFrom, nonNullTo);
+                QuickSortFixedLength<1>(values, valueAddresses, nonNullFrom, nonNullTo);
             }
         }
     }
