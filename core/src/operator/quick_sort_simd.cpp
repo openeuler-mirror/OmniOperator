@@ -479,9 +479,8 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
     QuickSortSmallCase<sortAscending>(valueBuf, 0, count);
     int64x2_t pivotVec = ChoosePivot(valueBuf, 0, count);
 
-    if (depth == 0) {
-        LogError("THE DEPTH IS ZERO AND THE DATA COULD BE UNORDER!!!");
-        return;
+    if (depth <= 0) {
+        LogError("THE DEPTH IS LESS THAN OR EQUAL TO ZERO!!!");
     }
 
     --depth;
@@ -495,12 +494,12 @@ void QuickSortAscSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_
 {
     int64_t valueBuf[50];
     uint64_t addrBuf[50];
-    QuickSortInternalSIMD<1>(values, addresses, from, to, valueBuf, addrBuf, 50);
+    QuickSortInternalSIMD<1>(values, addresses, from, to, valueBuf, addrBuf, 100);
 }
 
 void QuickSortDescSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
 {
     int64_t valueBuf[50];
     uint64_t addrBuf[50];
-    QuickSortInternalSIMD<0>(values, addresses, from, to, valueBuf, addrBuf, 50);
+    QuickSortInternalSIMD<0>(values, addresses, from, to, valueBuf, addrBuf, 100);
 }
