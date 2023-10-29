@@ -479,11 +479,11 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
     SmallCaseSortWithoutAddress<sortAscending>(valueBuf, 0, count);
     int64x2_t pivotVec = ChoosePivot(valueBuf, 0, count);
 
-    if (depth <= 0) {
+    /*if (depth <= 0) {
         LogError("THE DEPTH IS LESS THAN OR EQUAL TO ZERO!!!");
     }
 
-    --depth;
+    --depth;*/
 
     int32_t pivotIndex = PartitionWithSIMD<sortAscending>(values, addresses, from, to, pivotVec, valueBuf, addrBuf);
     QuickSortInternalSIMD<sortAscending>(values, addresses, from, pivotIndex, valueBuf, addrBuf, depth);
