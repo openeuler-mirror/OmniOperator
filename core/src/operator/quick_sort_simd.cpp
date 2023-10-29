@@ -471,12 +471,12 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
 {
     int32_t num = to - from;
     if (num <= SMALL_CASE_LENGTH) {
-        QuickSortSmallCase<sortAscending>(values, addresses, from, to);
+        SmallCaseSort<sortAscending>(values, addresses, from, to);
         return;
     }
 
     auto count = DrawSamples<sortAscending>(values, from, to, valueBuf);
-    QuickSortSmallCase<sortAscending>(valueBuf, 0, count);
+    SmallCaseSortWithoutAddress<sortAscending>(valueBuf, 0, count);
     int64x2_t pivotVec = ChoosePivot(valueBuf, 0, count);
 
     if (depth <= 0) {
