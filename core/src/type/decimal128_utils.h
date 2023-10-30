@@ -52,9 +52,8 @@ public:
         int32_t int32Array[tmpLen];
 
         int32_t len = 0;
-        int32_t idx1 = 0;
         int32_t idx2 = 0;
-        while (idx1 < tmpLen) {
+        for (int idx1 = 0; idx1 < tmpLen; idx1++) {
             auto val = tmpArray[idx1];
             if (val != 0) {
                 len = tmpLen - idx1;
@@ -62,8 +61,7 @@ public:
                     int32Array[idx2++] = tmpArray[idx1];
                     idx1++;
                 }
-            } else {
-                idx1++;
+                break;
             }
         }
 

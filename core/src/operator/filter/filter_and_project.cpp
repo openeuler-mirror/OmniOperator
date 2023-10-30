@@ -180,9 +180,9 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
             outLens[i] = inputLens[projections[i]->GetColumnProjectionIndex()];
         } else {
             context->GetArena()->Reset();
-            for (int i = 0; i < vecCount; ++i) {
-                delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
-                delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);
+            for (int j = 0; j < vecCount; ++j) {
+                delete[] reinterpret_cast<bool *>(nullsAddrs[j]);
+                delete[] reinterpret_cast<int32_t *>(offsetsAddrs[j]);
             }
             delete[] dictsAddrs;
             delete[] nullsAddrs;
