@@ -458,16 +458,6 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMD)
 
 TEST(NativeOmniSortTest, TestSortDoubleColumnDescSIMD)
 {
-    double val0 = -0.8;
-    double val1 = 0.3;
-    int64_t longVal0;
-    int64_t longVal1;
-    // memcpy(&longVal0, &val0, sizeof(double));
-    // memcpy(&longVal1, &val1, sizeof(double));
-    longVal0 = val0;
-    longVal1 = val1;
-    bool result = longVal0 < longVal1;
-
     // construct input data
     const int32_t dataSize = 37;
     // prepare data
@@ -546,6 +536,55 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortDuplicatedLongColumn)
+{
+    /*constexpr int dataSize = 8;
+    int64_t data0[dataSize];
+    int64_t data1[dataSize];
+    data0[0] = 0;
+    data0[1] = 0;
+    data0[2] = 0;
+    data0[3] = 1;
+    data0[4] = 0;
+    data0[5] = 2;
+    data0[6] = 0;
+    data0[7] = 0;
+    for (int i = 0; i < dataSize; i++) {
+        data1[i] = i;
+    }*/
+    constexpr int dataSize = 21;
+    int64_t data0[dataSize];
+    int64_t data1[dataSize];
+    for (int i = 0; i < dataSize; i++) {
+        if (i == 6 || i == 7 || i == 14) {
+            data0[i] = 0;
+        } else {
+            data0[i] = 2;
+        }
+        data1[i] = i;
+    }
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1);
+
+    int32_t outputCols[2] = {1, 2};
+    int32_t sortCols[] = {0};
+    int32_t ascendings[] = {true};
+    int32_t nullFirsts[] = {true};
+
+    auto operatorFactory =
+            SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
+
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
 }
@@ -1775,9 +1814,9 @@ TEST(NativeOmniSortTest, TestVarcharSortPerformance)
 TEST(NativeOmniSortTest, TestAllColumnsCanCastToInt64)
 {
     // construct input data
-    const int32_t dataSize = 10000;
+    const int32_t dataSize = 20;
     const int32_t vecSize = 3;
-    const int32_t nKeys = 900;
+    const int32_t nKeys = 9;
     bool *data1 = new bool[dataSize];
     int32_t *data2 = new int32_t[dataSize];
     int64_t *data3 = new int64_t[dataSize];

@@ -8,7 +8,15 @@
 #include "huawei_secure_c/include/securec.h"
 #include "neon_sort64.h"
 
-const int32_t SMALL_CASE_LENGTH = 16;
+constexpr int32_t SMALL_CASE_LENGTH = 6;
+constexpr int32_t CHUNK_SIZE = 8;
+
+enum class PivotResult {
+    Done,  // skip all partition
+    Normal,// handle left and right partition
+    First, // skip left partition
+    Last,  // skip right partition
+};
 
 template <int32_t sortAscending>
 void QuickSortSmallCase(int64_t *values, int32_t from, int32_t to)
@@ -76,6 +84,16 @@ static uint64x2_t ALWAYS_INLINE Not(uint64x2_t value)
     return vreinterpretq_u64_u8(negResult);
 }
 
+template <int32_t sortAscending>
+static uint64x2_t ALWAYS_INLINE Compare(int64x2_t vec0, int64x2_t vec1)
+{
+    if constexpr (sortAscending == 0) {
+        return vcltq_s64(vec1, vec0);
+    } else {
+        return vcltq_s64(vec0, vec1);
+    }
+}
+
 static uint64_t ALWAYS_INLINE BitsFromMask(uint64x2_t maskVec)
 {
     alignas(16) static constexpr uint64_t kSliceLanes[2] = {1, 2};
@@ -94,33 +112,57 @@ static uint64x2_t ALWAYS_INLINE FirstN(int32_t num)
     return compareVec;
 }
 
-template <int32_t sortAscending>
-static int64x2_t ALWAYS_INLINE GetMedianValue(int64x2_t v0, int64x2_t v1, int64x2_t v2)
+static bool ALWAYS_INLINE AllTrue(uint64x2_t mask)
 {
-    int64x2_t v0Copy = v0;
-    uint64x2_t comp = vcltq_s64(v2, v0);
-    if constexpr (sortAscending == 0) {
-        v0 = vbslq_s64(comp, v0, v2);
-        v2 = vbslq_s64(comp, v2, v0Copy);
+    uint8x8_t shrResult = vshrn_n_u16(vreinterpretq_u16_u64(mask), 4);
+    uint64_t value = vget_lane_u64(vreinterpret_u64_u8(shrResult), 0);
+    return value == ~0ull;
+}
 
-        comp = vcltq_s64(v1, v0);
-        v1 = vbslq_s64(comp, v1, v0);
-        comp = vcltq_s64(v2, v1);
-        v1 = vbslq_s64(comp, v1, v2);
-    } else {
-        v0 = vbslq_s64(comp, v2, v0);
-        v2 = vbslq_s64(comp, v0Copy, v2);
-
-        comp = vcltq_s64(v1, v0);
-        v1 = vbslq_s64(comp, v0, v1);
-        comp = vcltq_s64(v2, v1);
-        v1 = vbslq_s64(comp, v2, v1);
-    }
-    return v1;
+static bool ALWAYS_INLINE AllFalse(uint64x2_t mask)
+{
+    uint8x8_t shrResult = vshrn_n_u16(vreinterpretq_u16_u64(mask), 4);
+    uint64_t value = vget_lane_u64(vreinterpret_u64_u8(shrResult), 0);
+    return value == 0;
 }
 
 template <int32_t sortAscending>
-static int32_t ALWAYS_INLINE DrawSamples(int64_t *values, int32_t from, int32_t to, int64_t *buf)
+static void ALWAYS_INLINE GetMedianValue(int64x2_t val0, int64x2_t val1, int64x2_t val2, uint64x2_t addr0, uint64x2_t addr1, uint64x2_t addr2, int64x2_t &medialVal, uint64x2_t &mediaAddr)
+{
+    int64x2_t val0Copy = val0;
+    uint64x2_t addr0Copy = addr0;
+    uint64x2_t comp = vcltq_s64(val2, val0);
+    if constexpr (sortAscending == 0) {
+        val0 = vbslq_s64(comp, val0, val2);
+        val2 = vbslq_s64(comp, val2, val0Copy);
+        addr0 = vbslq_u64(comp, addr0, addr2);
+        addr2 = vbslq_u64(comp, addr2, addr0Copy);
+
+        comp = vcltq_s64(val1, val0);
+        val1 = vbslq_s64(comp, val1, val0);
+        addr1 = vbslq_u64(comp, addr1, addr0);
+        comp = vcltq_s64(val2, val1);
+        val1 = vbslq_s64(comp, val1, val2);
+        addr1 = vbslq_u64(comp, addr1, addr2);
+    } else {
+        val0 = vbslq_s64(comp, val2, val0);
+        val2 = vbslq_s64(comp, val0Copy, val2);
+        addr0 = vbslq_u64(comp, addr2, addr0);
+        addr2 = vbslq_u64(comp, addr0Copy, addr2);
+
+        comp = vcltq_s64(val1, val0);
+        val1 = vbslq_s64(comp, val0, val1);
+        addr1 = vbslq_u64(comp, addr0, addr1);
+        comp = vcltq_s64(val2, val1);
+        val1 = vbslq_s64(comp, val2, val1);
+        addr1 = vbslq_u64(comp, addr2, addr1);
+    }
+    medialVal = val1;
+    mediaAddr = addr1;
+}
+
+template <int32_t sortAscending>
+static int32_t ALWAYS_INLINE DrawSamples(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64_t *valueBuf, uint64_t *addrBuf)
 {
     constexpr int32_t N = 2;
     int32_t num = to - from;
@@ -128,31 +170,514 @@ static int32_t ALWAYS_INLINE DrawSamples(int64_t *values, int32_t from, int32_t 
     int64_t *valueMid = values + from + num / 2;
     int64_t *valueLast = values + to - N;
 
-    int32_t oneStep = num / 8;
+    uint64_t *addrStart = addresses + from;
+    uint64_t *addrMid = addresses + from + num / 2;
+    uint64_t *addrLast = addresses + to - N;
+
+    int32_t oneStep = num / CHUNK_SIZE;
     int32_t twoStep = oneStep + oneStep;
 
-    int64x2_t v1 = vld1q_s64(valueStart);
-    int64x2_t v2 = vld1q_s64(valueStart + oneStep);
-    int64x2_t v3 = vld1q_s64(valueStart + twoStep);
+    int64x2_t valueVec1 = vld1q_s64(valueStart);
+    int64x2_t valueVec2 = vld1q_s64(valueStart + oneStep);
+    int64x2_t valueVec3 = vld1q_s64(valueStart + twoStep);
+    int64x2_t valueVec4 = vld1q_s64(valueMid - oneStep);
+    int64x2_t valueVec5 = vld1q_s64(valueMid);
+    int64x2_t valueVec6 = vld1q_s64(valueMid + oneStep);
+    int64x2_t valueVec7 = vld1q_s64(valueLast);
+    int64x2_t valueVec8 = vld1q_s64(valueLast - oneStep);
+    int64x2_t valueVec9 = vld1q_s64(valueLast - twoStep);
 
-    int64x2_t v4 = vld1q_s64(valueMid - oneStep);
-    int64x2_t v5 = vld1q_s64(valueMid);
-    int64x2_t v6 = vld1q_s64(valueMid + oneStep);
+    uint64x2_t addrVec1 = vld1q_u64(addrStart);
+    uint64x2_t addrVec2 = vld1q_u64(addrStart + oneStep);
+    uint64x2_t addrVec3 = vld1q_u64(addrStart + twoStep);
+    uint64x2_t addrVec4 = vld1q_u64(addrMid - oneStep);
+    uint64x2_t addrVec5 = vld1q_u64(addrMid);
+    uint64x2_t addrVec6 = vld1q_u64(addrMid + oneStep);
+    uint64x2_t addrVec7 = vld1q_u64(addrLast);
+    uint64x2_t addrVec8 = vld1q_u64(addrLast - oneStep);
+    uint64x2_t addrVec9 = vld1q_u64(addrLast - twoStep);
 
-    int64x2_t v7 = vld1q_s64(valueLast);
-    int64x2_t v8 = vld1q_s64(valueLast - oneStep);
-    int64x2_t v9 = vld1q_s64(valueLast - twoStep);
+    int64x2_t medianVal1, medianVal2, medianVal3;
+    uint64x2_t medianAddr1, medianAddr2, medianAddr3;
+    GetMedianValue<sortAscending>(valueVec1, valueVec2, valueVec3, addrVec1, addrVec2, addrVec3, medianVal1, medianAddr1);
+    GetMedianValue<sortAscending>(valueVec4, valueVec5, valueVec6, addrVec4, addrVec5, addrVec6, medianVal2, medianAddr2);
+    GetMedianValue<sortAscending>(valueVec7, valueVec8, valueVec9, addrVec7, addrVec8, addrVec9, medianVal3, medianAddr3);
+    vst1q_s64(valueBuf, medianVal1);
+    vst1q_s64(valueBuf + N, medianVal2);
+    vst1q_s64(valueBuf + 2 * N, medianVal3);
+    vst1q_u64(addrBuf, medianAddr1);
+    vst1q_u64(addrBuf + N, medianAddr2);
+    vst1q_u64(addrBuf + 2 * N, medianAddr3);
 
-    int64x2_t medianVec1 = GetMedianValue<sortAscending>(v1, v2, v3);
-    int64x2_t medianVec2 = GetMedianValue<sortAscending>(v4, v5, v6);
-    int64x2_t medianVec3 = GetMedianValue<sortAscending>(v7, v8, v9);
-    int64_t *bufPtr = buf;
-    vst1q_s64(bufPtr, medianVec1);
-    bufPtr += N;
-    vst1q_s64(bufPtr, medianVec2);
-    bufPtr += N;
-    vst1q_s64(bufPtr, medianVec3);
     return N * 3;
+}
+
+static int64x2_t ALWAYS_INLINE OrXor(int64x2_t v1, int64x2_t x1, int64x2_t x2) {
+    int64x2_t eorRes = veorq_s64(x1, x2);
+    return vorrq_s64(v1, eorRes);
+}
+
+static bool ALWAYS_INLINE NoValueDifference(int64x2_t diff)
+{
+    auto zero = vdupq_n_s64(0);
+    auto equalResult = vceqq_s64(diff, zero);
+    return AllTrue(equalResult);
+}
+
+static bool ALWAYS_INLINE UnsortedSampleEqual(int64_t *valueBuf, int32_t from ,int32_t to)
+{
+    constexpr int32_t N = 2;
+    int64x2_t first = vdupq_n_s64(valueBuf[from]);
+    int64x2_t diff = vdupq_n_s64(0);
+    for (int32_t i = from; i < to; i += N) {
+        int64x2_t vec = vld1q_s64(valueBuf + i);
+        diff = OrXor(diff, first, vec);
+    }
+
+    return NoValueDifference(diff);
+}
+
+static uint64x2_t ALWAYS_INLINE NotEqualValues(int64x2_t valueVec, int64x2_t pivotVec)
+{
+    uint64x2_t equalResult = vceqq_s64(valueVec, pivotVec);
+    return Not(equalResult);
+}
+
+static int32_t ALWAYS_INLINE FindKnownFirstTrue(uint64x2_t mask)
+{
+    uint8x8_t result = vshrn_n_u16(vreinterpretq_u16_u64(mask), 4);
+    uint64_t value = vget_lane_u64(vreinterpret_u64_u8(result), 0);
+    constexpr int32_t kDiv = 4 * sizeof(int64_t);
+    return __builtin_ctzll(value) / kDiv;
+}
+
+static bool ALWAYS_INLINE AllEqual(int64x2_t pivotVec, int64_t *values, int32_t from, int32_t to, int32_t *secondIdx)
+{
+    constexpr int32_t N = 2;
+    int32_t num = to - from;
+    int64_t *valueStart = values + from;
+
+    int64x2_t zero = vdupq_n_s64(0);
+    const size_t misalign =
+            (reinterpret_cast<uintptr_t>(valueStart) / sizeof(int64_t)) & (N - 1);
+    int32_t consume = N - misalign;
+
+    int64x2_t firstVec = vld1q_s64(valueStart);
+    uint64x2_t firstMask = FirstN(consume);
+    uint64x2_t notEqualResult = NotEqualValues(firstVec, pivotVec);
+    uint64x2_t firstDiff = vandq_u64(firstMask, notEqualResult);
+    if (!AllFalse(firstDiff)) {
+        auto lane = FindKnownFirstTrue(firstDiff);
+        *secondIdx = from + lane;
+        return false;
+    }
+
+    int32_t i = consume;
+    int64x2_t diff0 = zero;
+    int64x2_t diff1 = zero;
+    constexpr int32_t kLoops = 8;
+    int32_t lanesPerGroup = kLoops * 2 * N;
+    for (; i + lanesPerGroup <= num; i += lanesPerGroup) {
+        for (size_t loop = 0; loop < kLoops; ++loop) {
+            int64x2_t v0 = vld1q_s64(valueStart + i + loop * 2 * N);
+            int64x2_t v1 = vld1q_s64(valueStart + i + loop * 2 * N + N);
+            diff0 = OrXor(diff0, v0, pivotVec);
+            diff1 = OrXor(diff1, v1, pivotVec);
+        }
+
+        int64x2_t orResult = vorrq_s64(diff0, diff1);
+        if (!NoValueDifference(orResult)) {
+            for (;; i += N) {
+                int64x2_t curVec = vld1q_s64(valueStart + i);
+                uint64x2_t diff = NotEqualValues(curVec, pivotVec);
+                if (!AllFalse(diff)) {
+                    auto lane = FindKnownFirstTrue(diff);
+                    *secondIdx = from + i + lane;
+                    return false;
+                }
+            }
+        }
+    }
+
+    for (; i + N <= num; i += N) {
+        int64x2_t curVec = vld1q_s64(valueStart + i);
+        uint64x2_t diff = NotEqualValues(curVec, pivotVec);
+        if (!AllFalse(diff)) {
+            auto lane = FindKnownFirstTrue(diff);
+            *secondIdx = from + i + lane;
+            return false;
+        }
+    }
+
+    i = num - N;
+    int64x2_t lastVec = vld1q_s64(valueStart + i);
+    uint64x2_t diff = NotEqualValues(lastVec, pivotVec);
+    if (!AllFalse(diff)) {
+        auto lane = FindKnownFirstTrue(diff);
+        *secondIdx = from + i + lane;
+        return false;
+    }
+    return true;
+}
+
+static void ALWAYS_INLINE SafeCopyN(int32_t num, int64_t *from, int64_t *to)
+{
+    for (int32_t i = 0; i < num; ++i) {
+        to[i] = from[i];
+    }
+}
+
+static void ALWAYS_INLINE BlendedStore(int64x2_t vec, uint64x2_t mask, int64_t *valuePtr)
+{
+    int64x2_t tmpValueVec = vld1q_s64(valuePtr);
+    int64x2_t blendedAddrVec = vbslq_s64(mask, vec, tmpValueVec);
+    vst1q_s64(valuePtr, blendedAddrVec);
+}
+
+static bool ALWAYS_INLINE MaybePartitionTwoValueR(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64x2_t valueL, int64x2_t valueR, int32_t addrLeftIdx, int64_t *valueBuf, int64x2_t &third)
+{
+    constexpr int32_t N = 2;
+    uint64x2_t addrL = vdupq_n_u64(addresses[addrLeftIdx]);
+    int64_t *valueStart = values + from;
+    uint64_t *addrStart = addresses + from;
+    int32_t num = to - from;
+    int32_t pos = num - N;
+    int32_t countR = 0;
+    for (; pos >= 0; pos -= N) {
+        int64x2_t curVec = vld1q_s64(valueStart + pos);
+        // It is not clear how to apply OrXor here - that can check if *both*
+        // comparisons are true, but here we want *either*. Comparing the unsigned
+        // min of differences to zero works, but is expensive for u64 prior to AVX3.
+        uint64x2_t eqL = vceqq_s64(curVec, valueL);
+        uint64x2_t eqR = vceqq_s64(curVec, valueR);
+        uint64x2_t orResult = vorrq_u64(eqL, eqR);
+        if (!AllTrue(orResult)) {
+            uint64x2_t andNotResult = vbicq_u64(Not(eqR), eqL);
+            auto lane = FindKnownFirstTrue(andNotResult);
+            third = vdupq_n_s64(valueStart[pos + lane]);
+            pos += N;
+            int32_t endL = num - countR;
+            for (; pos + N <= endL; pos += N) {
+                vst1q_s64(valueStart + pos, valueL);
+            }
+            int32_t remaining = endL - pos;
+            if (remaining > 0) {
+                uint64x2_t firstNMask = FirstN(remaining);
+                BlendedStore(valueL, firstNMask, valueStart + pos);
+                SafeCopyN(remaining, (int64_t *)addrStart + pos, (int64_t *)addrStart);
+                BlendedStore(vreinterpretq_s64_u64(addrL), firstNMask, (int64_t *)addrStart + pos);
+            }
+            return false;
+        }
+        vst1q_s64(valueStart + pos, valueR);
+        countR += CountTrue(eqR);
+    }
+
+    // Final partial (or empty) vector, masked comparison.
+    int32_t remaining = pos + N;
+    int64x2_t vec = vld1q_s64(valueStart);  // Safe because num >= N.
+    uint64x2_t firstNMask = FirstN(remaining);
+    uint64x2_t eqL = vceqq_s64(vec, valueL);
+    uint64x2_t eqR = vandq_u64(vceqq_s64(vec, valueR), firstNMask);
+    uint64x2_t eq = vorrq_u64(vorrq_u64(eqL, eqR), Not(firstNMask));
+    if (!AllTrue(eq)) {
+        auto lane = FindKnownFirstTrue(Not(eq));
+        third = vdupq_n_s64(valueStart[lane]);
+        pos += N;  // rewind: we haven't yet committed changes in this iteration.
+        int32_t endL = num - countR;
+        for (; pos + N <= endL; pos += N) {
+            vst1q_s64(valueStart + pos, valueL);
+        }
+        remaining = endL - pos;
+        if (remaining > 0) {
+            firstNMask = FirstN( remaining);
+            BlendedStore(valueL, firstNMask, valueStart + pos);
+            SafeCopyN(remaining, (int64_t *)addrStart + pos, (int64_t *)addrStart);
+            BlendedStore(vreinterpretq_s64_u64(addrL), firstNMask, (int64_t *)addrStart + pos);
+        }
+        return false;
+    }
+    auto lastR = CountTrue(eqR);
+    countR += lastR;
+
+    // First finish writing valueR - [0, N) lanes were not yet written.
+    vst1q_s64(valueStart, valueR);
+
+    // Fill left side (ascending order for clarity)
+    int32_t endL = num - countR;
+    int32_t i = 0;
+    for (; i + N <= endL; i += N) {
+        vst1q_s64(valueStart + i, valueL);
+    }
+    vst1q_s64(valueBuf, valueL);
+    SafeCopyN(endL - i, valueBuf, valueStart + i);
+    auto tmpAddr = addresses[addrLeftIdx];
+    addresses[addrLeftIdx] = addrStart[i];
+    addrStart[i] = tmpAddr;
+    return true;
+}
+
+static bool ALWAYS_INLINE MaybePartitionTwoValue(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64x2_t valueL, int64x2_t valueR, int32_t addrRightIdx, int64_t *valueBuf, uint64_t *addrBuf, int64x2_t &third)
+{
+    constexpr int32_t N = 2;
+    uint64x2_t addrL = vdupq_n_u64(addrBuf[0]);
+    uint64x2_t addrR = vdupq_n_u64(addresses[addrRightIdx]);
+    int64_t *valueStart = values + from;
+    uint64_t *addrStart = addresses + from;
+    int32_t num = to - from;
+    int32_t i = 0;
+    int32_t writeL = 0;
+
+    for (; i + N <= num; i += N) {
+        int64x2_t curVec = vld1q_s64(valueStart + i);
+        uint64x2_t eqL = vceqq_s64(curVec, valueL);
+        uint64x2_t eqR = vceqq_s64(curVec, valueR);
+        uint64x2_t orResult = vorrq_u64(eqL, eqR);
+        if (!AllTrue(orResult)) {
+            uint64x2_t andNotResult = vbicq_u64(Not(eqR), eqL);
+            auto lane = FindKnownFirstTrue(andNotResult);
+            third = vdupq_n_s64(valueStart[i + lane]);
+
+            // 'Undo' what we did by filling the remainder of what we read with R.
+            for (; writeL + N <= i; writeL += N) {
+                vst1q_s64(valueStart + writeL, valueR);
+            }
+            int32_t remaining = i - writeL;
+            uint64x2_t firstNMask = FirstN(remaining);
+            BlendedStore(valueR, firstNMask, valueStart + writeL);
+            SafeCopyN(remaining, (int64_t *)addrStart + writeL, (int64_t *)addrStart);
+            BlendedStore(vreinterpretq_s64_u64(addrR), firstNMask, (int64_t *)addrStart + writeL);
+            return false;
+        }
+        vst1q_s64(valueStart + writeL, valueL);
+        writeL += CountTrue(eqL);
+    }
+
+    // Final vector, masked comparison (no effect if i == num)
+    int32_t remaining = num - i;
+    SafeCopyN(remaining, valueStart + i, valueBuf);
+    SafeCopyN(remaining, (int64_t *)addrStart + i, (int64_t *)addrBuf);
+    int64x2_t vec = vld1q_s64(valueBuf);
+    uint64x2_t firstNMask = FirstN(remaining);
+    uint64x2_t eqL = vandq_u64(vceqq_s64(vec, valueL), firstNMask);
+    uint64x2_t eqR = vceqq_s64(vec, valueR);
+    // Invalid lanes are considered equal.
+    uint64x2_t eq = vorrq_u64(vorrq_u64(eqL, eqR), Not(firstNMask));
+    // At least one other value present; will require a regular partition.
+    if (!AllTrue(eq)) {
+        auto lane = FindKnownFirstTrue(Not(eq));
+        third = vdupq_n_s64(valueStart[i + lane]);
+        // 'Undo' what we did by filling the remainder of what we read with R.
+        for (; writeL + N <= i; writeL += N) {
+            vst1q_s64(valueStart + writeL, valueR);
+        }
+        remaining = i - writeL;
+        firstNMask = FirstN(remaining);
+        BlendedStore(valueR, firstNMask, valueStart + writeL);
+        SafeCopyN(remaining, (int64_t *)addrStart + writeL, (int64_t *)addrStart);
+        BlendedStore(vreinterpretq_s64_u64(addrR), firstNMask, (int64_t *)addrStart + writeL);
+        return false;
+    }
+    BlendedStore(valueL, firstNMask, valueStart + writeL);
+    SafeCopyN(remaining, (int64_t *)addrStart + writeL, (int64_t *)addrStart);
+    BlendedStore(vreinterpretq_s64_u64(addrL), firstNMask, (int64_t *)addrStart + writeL);
+    writeL += CountTrue(eqL);
+
+    // Fill right side
+    i = writeL;
+    for (; i + N <= num; i += N) {
+        vst1q_s64(valueStart + i, valueR);
+    }
+    remaining = num - i;
+    firstNMask = FirstN(remaining);
+    BlendedStore(valueR, firstNMask, valueStart + i);
+    SafeCopyN(remaining, (int64_t *)addrStart + i, (int64_t *)addrStart);
+    BlendedStore(vreinterpretq_s64_u64(addrR), firstNMask, (int64_t *)addrStart + i);
+
+    return true;
+}
+
+template <int32_t sortAscending>
+static bool ALWAYS_INLINE PartitionIfTwoKeys(int64x2_t pivotVal, int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int32_t secondIdx, int64x2_t secondVal, int64x2_t &thirdVal, int64_t *valueBuf, uint64_t *addrBuf)
+{
+    uint64x2_t pivotAddr = vdupq_n_u64(addrBuf[0]);
+    uint64x2_t secondAddr = vdupq_n_u64(addresses[secondIdx]);
+
+    uint64x2_t compareResult = Compare<sortAscending>(pivotVal, secondVal);
+    bool isPivotR = AllFalse(compareResult);
+    if (isPivotR) {
+        return MaybePartitionTwoValueR(values, addresses, from, to, secondVal, pivotVal, secondIdx, valueBuf, thirdVal);
+    } else {
+        return MaybePartitionTwoValue(values, addresses, secondIdx, to, pivotVal, secondVal, secondIdx, valueBuf, addrBuf, thirdVal);
+    }
+}
+
+template <int32_t sortAscending>
+static bool ExistsAnyAfter(int64_t *values, int32_t from, int32_t to, int64x2_t pivot)
+{
+    constexpr int32_t N = 2;
+    constexpr int32_t kLoops = 16;
+    constexpr int32_t lanesPerGroup = kLoops * N;
+    int32_t num = to - from;
+    int64_t *valueStart = values + from;
+
+    int32_t i = 0;
+    int64x2_t last = pivot;
+    for (; i + lanesPerGroup <= num; i += lanesPerGroup) {
+        for (int32_t loop = 0; loop < kLoops; ++loop) {
+            int64x2_t curVec = vld1q_s64(valueStart + i + loop * N);
+            uint64x2_t comp = vcltq_s64(curVec, last);
+            if constexpr (sortAscending == 0) {
+                last = vbslq_s64(comp, curVec, last);
+            } else {
+                last = vbslq_s64(comp, last, curVec);
+            }
+        }
+        uint64x2_t comp = Compare<sortAscending>(pivot, last);
+        bool allFalse = !AllFalse(comp);
+        if (allFalse) {
+            return true;
+        }
+    }
+
+    for (; i + N <= num; i += N) {
+        int64x2_t curVec = vld1q_s64(valueStart + i);
+        uint64x2_t comp = Compare<sortAscending>(pivot, curVec);
+        bool allFalse = !AllFalse(comp);
+        if (allFalse) {
+            return true;
+        }
+    }
+
+    if (i != num) {
+        int64x2_t curVec = vld1q_s64(valueStart + num - N);
+        uint64x2_t comp = Compare<sortAscending>(pivot, curVec);
+        bool allFalse = !AllFalse(comp);
+        if (allFalse) {
+            return true;
+        }
+    }
+    return false;
+}
+
+template <int32_t sortAscending>
+static bool ExistsAnyBefore(int64_t *values, int32_t from, int32_t to, int64x2_t pivot)
+{
+    constexpr int32_t N = 2;
+    constexpr int32_t kLoops = 16;
+    constexpr int32_t lanesPerGroup = kLoops * N;
+    int32_t num = to - from;
+    int64_t *valueStart = values + from;
+
+    int32_t i = 0;
+    int64x2_t first = pivot;
+    for (; i + lanesPerGroup <= num; i += lanesPerGroup) {
+        for (int32_t loop = 0; loop < kLoops; ++loop) {
+            int64x2_t curVec = vld1q_s64(valueStart + i + loop * N);
+            uint64x2_t comp = vcltq_s64(curVec, first);
+            if constexpr (sortAscending == 0) {
+                first = vbslq_s64(comp, first, curVec);
+            } else {
+                first = vbslq_s64(comp, curVec, first);
+            }
+        }
+
+        uint64x2_t comp = Compare<sortAscending>(first, pivot);
+        bool allFalse = !AllFalse(comp);
+        if (allFalse) {
+            return true;
+        }
+    }
+
+    for (; i + N <= num; i += N) {
+        int64x2_t curVec = vld1q_s64(valueStart + i);
+        uint64x2_t comp = Compare<sortAscending>(curVec, pivot);
+        bool allFalse = !AllFalse(comp);
+        if (allFalse) {
+            return true;
+        }
+    }
+
+    if (i != num) {
+        int64x2_t curVec = vld1q_s64(valueStart + num - N);
+        uint64x2_t comp = Compare<sortAscending>(curVec, pivot);
+        bool allFalse = !AllFalse(comp);
+        if (allFalse) {
+            return true;
+        }
+    }
+    return false;
+}
+
+template <int32_t sortAscending>
+static int64x2_t ChoosePivotForEqualSamples(int64_t *values, int32_t from, int32_t to, int64_t *valueBuf, int64x2_t secondVec, int64x2_t thirdVec, PivotResult &result)
+{
+    int64x2_t pivotVec = vdupq_n_s64(valueBuf[0]);
+    int64x2_t firstVec;
+    if constexpr (sortAscending == 0) {
+        firstVec = vdupq_n_s64(9223372036854775807L);
+    } else {
+        firstVec = vdupq_n_s64(-9223372036854775808L);
+    }
+    uint64x2_t eq1 = vceqq_s64(pivotVec, firstVec);
+    if (AllTrue(eq1)) {
+        result = PivotResult::First;
+        return pivotVec;
+    }
+
+    int64x2_t lastVec;
+    if constexpr (sortAscending == 0) {
+        lastVec = vdupq_n_s64(-9223372036854775808);
+    } else {
+        lastVec = vdupq_n_s64(9223372036854775807);
+    }
+    uint64x2_t eq2 = vceqq_s64(pivotVec, lastVec);
+    if (AllTrue(eq2)) {
+        result = PivotResult::Last;
+        int64x2_t resultVec;
+        if constexpr (sortAscending == 0) {
+            resultVec = vaddq_s64(pivotVec, vdupq_n_s64(1));
+        } else {
+            resultVec = vsubq_s64(pivotVec, vdupq_n_s64(1));
+        }
+        return resultVec;
+    }
+
+    int64x2_t secondCopy = secondVec;
+    uint64x2_t comp = vcltq_s64(thirdVec, secondVec);
+    if constexpr (sortAscending == 0) {
+        secondVec = vbslq_s64(comp, secondVec, thirdVec);
+        thirdVec = vbslq_s64(comp, thirdVec, secondCopy);
+    } else {
+        secondVec = vbslq_s64(comp, thirdVec, secondVec);
+        thirdVec = vbslq_s64(comp, secondCopy, thirdVec);
+    }
+    uint64x2_t comp1 = Compare<sortAscending>(secondVec, pivotVec);
+    uint64x2_t comp2 = Compare<sortAscending>(pivotVec, thirdVec);
+    bool before = !AllFalse(comp1);
+    bool after = !AllFalse(comp2);
+    if (before) {
+        if (after || ExistsAnyAfter<sortAscending>(values, from, to, pivotVec)) {
+            result = PivotResult::Normal;
+            return pivotVec;
+        }
+        result = PivotResult::Last;
+        int64x2_t resultVec;
+        if constexpr (sortAscending == 0) {
+            resultVec = vaddq_s64(pivotVec, vdupq_n_s64(1));
+        }  else {
+            resultVec = vsubq_s64(pivotVec, vdupq_n_s64(1));
+        }
+        return resultVec;
+    }
+
+    if (ExistsAnyBefore<sortAscending>(values, from, to, pivotVec)) {
+        result = PivotResult::Normal;
+        return pivotVec;
+    }
+
+    result = PivotResult::First;
+    return pivotVec;
 }
 
 static int64x2_t ALWAYS_INLINE ChoosePivot(int64_t *buf, int32_t from, int32_t to)
@@ -270,12 +795,7 @@ int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_
         uint64x2_t addrVec = vld1q_u64(addresses + readL);
         readL += N;
 
-        if constexpr (sortAscending == 0) {
-            compareResult = vcltq_s64(valueVec, pivotVec);
-        } else {
-            compareResult = vcltq_s64(pivotVec, valueVec);
-        }
-
+        compareResult = Compare<sortAscending>(pivotVec, valueVec);
         blendedMask = Not(compareResult);
         auto sizeL = CompressBlendedStore(valueVec, addrVec, blendedMask, valuePosL, addrPosL);
         valuePosL += sizeL;
@@ -289,12 +809,7 @@ int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_
         int64x2_t lastValueVec = vld1q_s64(values + readL);
         uint64x2_t lastAddrVec = vld1q_u64(addresses + readL);
 
-        if constexpr (sortAscending == 0) {
-            compareResult = vcltq_s64(lastValueVec, pivotVec);
-        } else {
-            compareResult = vcltq_s64(pivotVec, lastValueVec);
-        }
-
+        compareResult = Compare<sortAscending>(pivotVec, lastValueVec);
         blendedMask = vbicq_u64(firstMask, compareResult);
         auto sizeL = CompressBlendedStore(lastValueVec, lastAddrVec, blendedMask, valuePosL, addrPosL);
         valuePosL += sizeL;
@@ -316,12 +831,7 @@ static void ALWAYS_INLINE StoreLeftRight(int64_t *values, int64x2_t pivotVec, in
 {
     int32_t N = 2;
     remaining -= N;
-    uint64x2_t compareResult;
-    if constexpr (sortAscending == 0) {
-        compareResult = vcltq_s64(valueVec, pivotVec);
-    } else {
-        compareResult = vcltq_s64(pivotVec, valueVec);
-    }
+    uint64x2_t compareResult = Compare<sortAscending>(pivotVec, valueVec);
     int64x2_t compressValueVec = CompressNot(valueVec, compareResult);
     vst1q_s64(values + writeL, compressValueVec);
     vst1q_s64(values + remaining + writeL, compressValueVec);
@@ -454,12 +964,7 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
     uint64x2_t addrRightVec = vld1q_u64(addressStart + startR);
     vst1q_u64(addressStart + last, addrRightVec);
 
-    uint64x2_t compareResult;
-    if constexpr (sortAscending == 0) {
-        compareResult = vcltq_s64(valueLast, pivotVec);
-    } else {
-        compareResult = vcltq_s64(pivotVec, valueLast);
-    }
+    uint64x2_t compareResult = Compare<sortAscending>(pivotVec, valueLast);
     uint64x2_t blendedMask = Not(compareResult);
     writeL += CompressBlendedStore(valueLast, addrLast, blendedMask, valueStart + writeL, addressStart + writeL);
     CompressBlendedStore(valueLast, addrLast, compareResult, valueStart + writeL, addressStart + writeL);
@@ -475,9 +980,89 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
         return;
     }
 
-    auto count = DrawSamples<sortAscending>(values, from, to, valueBuf);
-    SmallCaseSortWithoutAddress<sortAscending>(valueBuf, 0, count);
-    int64x2_t pivotVec = ChoosePivot(valueBuf, 0, count);
+    auto count = DrawSamples<sortAscending>(values, addresses, from, to, valueBuf, addrBuf);
+    /*int32_t count = 6;
+    valueBuf[0] = 0;
+    valueBuf[1] = 0;
+    valueBuf[2] = 0;
+    valueBuf[3] = 0;
+    valueBuf[4] = 0;
+    valueBuf[5] = 0;
+    addrBuf[0] = 0;
+    addrBuf[1] = 1;
+    addrBuf[2] = 2;
+    addrBuf[3] = 4;
+    addrBuf[4] = 6;
+    addrBuf[5] = 7;*/
+
+    /*for (int32_t i = 0; i < 8; i++) {
+        addresses[i] = i;
+    }
+    // 0,0,0,1,0,2,0,0
+    valueBuf[0] = 0;
+    addrBuf[0] = 0;
+    from = 0;
+    to = 8;
+    values[0] = 0;
+    values[1] = 0;
+    values[2] = 0;
+    values[3] = 1;
+    values[4] = 0;
+    values[5] = 2;
+    values[6] = 0;
+    values[7] = 0;
+    int64x2_t newPivot = vdupq_n_s64(valueBuf[0]);
+    int32_t newSecond = 0;
+    bool allEqual = AllEqual(newPivot, values, from, to, &newSecond);
+    if (allEqual) {
+        return;
+    }
+    int64x2_t newSecondVec = vdupq_n_s64(values[newSecond]);
+    int64x2_t newThirdVec;
+    std::cout << "before PartitionIfTwoKeys" << std::endl;
+    std::cout << "=====VALUES=====" << std::endl;
+    for (size_t i = 0; i < 8; i++) {
+        std::cout << values[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "=====ADDRS=====" << std::endl;
+    for (size_t i = 0; i < 8; i++) {
+        std::cout << addresses[i] << " ";
+    }
+    std::cout << std::endl;
+    bool partitionResult = PartitionIfTwoKeys<sortAscending>(newPivot, values, addresses, from, to, newSecond, newSecondVec, newThirdVec, valueBuf, addrBuf);
+    std::cout << "after PartitionIfTwoKeys" << std::endl;
+    std::cout << "=====VALUES=====" << std::endl;
+    for (size_t i = 0; i < 8; i++) {
+        std::cout << values[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "=====ADDRS=====" << std::endl;
+    for (size_t i = 0; i < 8; i++) {
+        std::cout << addresses[i] << " ";
+    }
+    std::cout << std::endl;*/
+
+    int64x2_t pivotVal;
+    PivotResult result = PivotResult::Normal;
+    bool isSorted = UnsortedSampleEqual(valueBuf, 0, count);
+    if (isSorted) {
+        pivotVal = vdupq_n_s64(valueBuf[0]);
+        int32_t secondIdx = 0;
+        if (AllEqual(pivotVal, values, from, to, &secondIdx)) {
+            return;
+        }
+
+        int64x2_t secondVal = vdupq_n_s64(values[secondIdx]);
+        int64x2_t thirdVal;
+        if (PartitionIfTwoKeys<sortAscending>(pivotVal, values, addresses, from, to, secondIdx, secondVal, thirdVal, valueBuf, addrBuf)) {
+            return;
+        }
+        pivotVal = ChoosePivotForEqualSamples<sortAscending>(values, from, to, valueBuf, secondVal, thirdVal, result);
+    } else {
+        SmallCaseSortWithoutAddress<sortAscending>(valueBuf, 0, count);
+        pivotVal = ChoosePivot(valueBuf, 0, count);
+    }
 
     /*if (depth <= 0) {
         LogError("THE DEPTH IS LESS THAN OR EQUAL TO ZERO!!!");
@@ -485,9 +1070,13 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
 
     --depth;*/
 
-    int32_t pivotIndex = PartitionWithSIMD<sortAscending>(values, addresses, from, to, pivotVec, valueBuf, addrBuf);
-    QuickSortInternalSIMD<sortAscending>(values, addresses, from, pivotIndex, valueBuf, addrBuf, depth);
-    QuickSortInternalSIMD<sortAscending>(values, addresses, pivotIndex, to, valueBuf, addrBuf, depth);
+    int32_t pivotIndex = PartitionWithSIMD<sortAscending>(values, addresses, from, to, pivotVal, valueBuf, addrBuf);
+    if (result != PivotResult::First) {
+        QuickSortInternalSIMD<sortAscending>(values, addresses, from, pivotIndex, valueBuf, addrBuf, depth);
+    }
+    if (result != PivotResult::Last) {
+        QuickSortInternalSIMD<sortAscending>(values, addresses, pivotIndex, to, valueBuf, addrBuf, depth);
+    }
 }
 
 void QuickSortAscSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
