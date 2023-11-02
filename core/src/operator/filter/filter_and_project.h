@@ -48,7 +48,7 @@ public:
      * Get all the vector indexes used in the expression
      * @return set including the indexes, or empty set if filter not supported or initialized
      */
-    std::set<int32_t> GetVectorIndexes();
+    std::set<int32_t> &GetVectorIndexes();
 
     /* *
      * Evaluate the filter
