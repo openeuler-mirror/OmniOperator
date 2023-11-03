@@ -8,7 +8,7 @@
 #include "huawei_secure_c/include/securec.h"
 #include "neon_sort64.h"
 
-constexpr int32_t SMALL_CASE_LENGTH = 6;
+constexpr int32_t SMALL_CASE_LENGTH = 16;
 constexpr int32_t CHUNK_SIZE = 8;
 
 enum class PivotResult {
@@ -82,6 +82,68 @@ static uint64x2_t ALWAYS_INLINE Not(uint64x2_t value)
     uint8x16_t result = vreinterpretq_u8_u64(value);
     uint8x16_t negResult = vmvnq_u8(result);
     return vreinterpretq_u64_u8(negResult);
+}
+
+template <int32_t sortAscending>
+static int64x2_t ALWAYS_INLINE GetSmallestVec()
+{
+    if constexpr (sortAscending == 0) {
+        return vdupq_n_s64(-9223372036854775808);
+    } else {
+        return vdupq_n_s64(9223372036854775807);
+    }
+}
+
+template <int32_t sortAscending>
+static int64x2_t ALWAYS_INLINE GetLargestVec()
+{
+    if constexpr (sortAscending == 0) {
+        return vdupq_n_s64(9223372036854775807);
+    } else {
+        return vdupq_n_s64(-9223372036854775808);
+    }
+}
+
+template <int32_t sortAscending>
+static void ALWAYS_INLINE UpdateMinMax(int64x2_t value, int64x2_t &smallest, int64x2_t &largest)
+{
+    if constexpr (sortAscending == 0) {
+        uint64x2_t compare1 = vcgtq_s64(value, smallest);
+        smallest = vbslq_s64(compare1, value, smallest);
+        uint64x2_t compare2 = vcltq_s64(value, largest);
+        largest = vbslq_s64(compare2, value, largest);
+    } else {
+        uint64x2_t compare1 = vcltq_s64(value, smallest);
+        smallest = vbslq_s64(compare1, value, smallest);
+        uint64x2_t compare2 = vcgtq_s64(value, largest);
+        largest = vbslq_s64(compare2, value, largest);
+    }
+}
+
+template <int32_t sortAscending>
+static int64_t ALWAYS_INLINE GetSmallest(int64x2_t smallestVec)
+{
+    int64_t val0 = vgetq_lane_s64(smallestVec, 0);
+    int64_t val1 = vgetq_lane_s64(smallestVec, 1);
+    bool compare = val0 < val1;
+    if constexpr (sortAscending == 0) {
+        return compare ? val1 : val0;
+    } else {
+        return compare ? val0 : val1;
+    }
+}
+
+template <int32_t sortAscending>
+static int64_t ALWAYS_INLINE GetLargest(int64x2_t largestVec)
+{
+    int64_t val0 = vgetq_lane_s64(largestVec, 0);
+    int64_t val1 = vgetq_lane_s64(largestVec, 1);
+    bool compare = val0 > val1;
+    if constexpr (sortAscending == 0) {
+        return compare ? val1 : val0;
+    } else {
+        return compare ? val0 : val1;
+    }
 }
 
 template <int32_t sortAscending>
@@ -338,18 +400,20 @@ static bool ALWAYS_INLINE MaybePartitionTwoValueR(int64_t *values, uint64_t *add
 {
     constexpr int32_t N = 2;
     uint64x2_t addrL = vdupq_n_u64(addresses[addrLeftIdx]);
+    std::vector<uint64_t> leftAddrs;
     int64_t *valueStart = values + from;
     uint64_t *addrStart = addresses + from;
     int32_t num = to - from;
     int32_t pos = num - N;
     int32_t countR = 0;
     for (; pos >= 0; pos -= N) {
-        int64x2_t curVec = vld1q_s64(valueStart + pos);
+        int64x2_t curValVec = vld1q_s64(valueStart + pos);
+        uint64x2_t curAddrVec = vld1q_u64(addrStart + pos);
         // It is not clear how to apply OrXor here - that can check if *both*
         // comparisons are true, but here we want *either*. Comparing the unsigned
         // min of differences to zero works, but is expensive for u64 prior to AVX3.
-        uint64x2_t eqL = vceqq_s64(curVec, valueL);
-        uint64x2_t eqR = vceqq_s64(curVec, valueR);
+        uint64x2_t eqL = vceqq_s64(curValVec, valueL);
+        uint64x2_t eqR = vceqq_s64(curValVec, valueR);
         uint64x2_t orResult = vorrq_u64(eqL, eqR);
         if (!AllTrue(orResult)) {
             uint64x2_t andNotResult = vbicq_u64(Not(eqR), eqL);
@@ -613,24 +677,14 @@ template <int32_t sortAscending>
 static int64x2_t ChoosePivotForEqualSamples(int64_t *values, int32_t from, int32_t to, int64_t *valueBuf, int64x2_t secondVec, int64x2_t thirdVec, PivotResult &result)
 {
     int64x2_t pivotVec = vdupq_n_s64(valueBuf[0]);
-    int64x2_t firstVec;
-    if constexpr (sortAscending == 0) {
-        firstVec = vdupq_n_s64(9223372036854775807L);
-    } else {
-        firstVec = vdupq_n_s64(-9223372036854775808L);
-    }
+    int64x2_t firstVec = GetLargestVec<sortAscending>();
     uint64x2_t eq1 = vceqq_s64(pivotVec, firstVec);
     if (AllTrue(eq1)) {
         result = PivotResult::First;
         return pivotVec;
     }
 
-    int64x2_t lastVec;
-    if constexpr (sortAscending == 0) {
-        lastVec = vdupq_n_s64(-9223372036854775808);
-    } else {
-        lastVec = vdupq_n_s64(9223372036854775807);
-    }
+    int64x2_t lastVec = GetSmallestVec<sortAscending>();
     uint64x2_t eq2 = vceqq_s64(pivotVec, lastVec);
     if (AllTrue(eq2)) {
         result = PivotResult::Last;
@@ -774,7 +828,7 @@ static int32_t ALWAYS_INLINE CompressBlendedStore(int64x2_t valueVec, uint64x2_t
 }
 
 template <int32_t sortAscending>
-int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_t &num, int64x2_t pivotVec, int64_t *valueBuf, uint64_t *addrBuf)
+int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_t &num, int64x2_t pivotVec, int64_t *valueBuf, uint64_t *addrBuf, int64x2_t &smallestVec, int64x2_t &largestVec)
 {
     int32_t kUnroll = 4;
     int32_t N = 2;
@@ -792,6 +846,7 @@ int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_
     int32_t i = 0;
     for (; i + N <= num_rem; i += N) {
         int64x2_t valueVec = vld1q_s64(values + readL);
+        UpdateMinMax<sortAscending>(valueVec, smallestVec, largestVec);
         uint64x2_t addrVec = vld1q_u64(addresses + readL);
         readL += N;
 
@@ -807,6 +862,7 @@ int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_
     if (i != num_rem) {
         uint64x2_t firstMask = FirstN(num_rem - i);
         int64x2_t lastValueVec = vld1q_s64(values + readL);
+        UpdateMinMax<sortAscending>(lastValueVec, smallestVec, largestVec);
         uint64x2_t lastAddrVec = vld1q_u64(addresses + readL);
 
         compareResult = Compare<sortAscending>(pivotVec, lastValueVec);
@@ -854,7 +910,7 @@ static void ALWAYS_INLINE StoreLeftRight4(int64_t *values, int64x2_t pivotVec, i
 }
 
 template <int32_t sortAscending>
-int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64x2_t pivotVec, int64_t *valueBuf, uint64_t *addrBuf)
+int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64x2_t pivotVec, int64_t *valueBuf, uint64_t *addrBuf, int64x2_t &smallestVec, int64x2_t &largestVec)
 {
     constexpr int32_t N = 2;
     int32_t num = to - from;
@@ -865,9 +921,10 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
     int32_t last = num;
 
     int64x2_t valueLast = vld1q_s64(valueStart + last);
+    UpdateMinMax<sortAscending>(valueLast, smallestVec, largestVec);
     uint64x2_t addrLast = vld1q_u64(addressStart + last);
 
-    int32_t consumedL = PartitionToMultipleOfUnroll<sortAscending>(valueStart, addressStart, num, pivotVec, valueBuf, addrBuf);
+    int32_t consumedL = PartitionToMultipleOfUnroll<sortAscending>(valueStart, addressStart, num, pivotVec, valueBuf, addrBuf, smallestVec, largestVec);
     valueStart += consumedL;
     addressStart += consumedL;
     last -= consumedL;
@@ -950,16 +1007,29 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
                 addrReadL += advanceStep;
                 __builtin_prefetch(addrReadL + prefetchStep, 0, 3);
             }
+            UpdateMinMax<sortAscending>(curValueVec0, smallestVec, largestVec);
+            UpdateMinMax<sortAscending>(curValueVec1, smallestVec, largestVec);
+            UpdateMinMax<sortAscending>(curValueVec2, smallestVec, largestVec);
+            UpdateMinMax<sortAscending>(curValueVec3, smallestVec, largestVec);
             StoreLeftRight4<sortAscending>(valueStart, pivotVec, curValueVec0, curValueVec1, curValueVec2, curValueVec3, addressStart, curAddrVec0, curAddrVec1, curAddrVec2, curAddrVec3, writeL, remaining);
         }
 
+        UpdateMinMax<sortAscending>(leftValueVec0, smallestVec, largestVec);
+        UpdateMinMax<sortAscending>(leftValueVec1, smallestVec, largestVec);
+        UpdateMinMax<sortAscending>(leftValueVec2, smallestVec, largestVec);
+        UpdateMinMax<sortAscending>(leftValueVec3, smallestVec, largestVec);
         StoreLeftRight4<sortAscending>(valueStart, pivotVec, leftValueVec0, leftValueVec1, leftValueVec2, leftValueVec3, addressStart, leftAddrVec0, leftAddrVec1, leftAddrVec2, leftAddrVec3, writeL, remaining);
+        UpdateMinMax<sortAscending>(rightValueVec0, smallestVec, largestVec);
+        UpdateMinMax<sortAscending>(rightValueVec1, smallestVec, largestVec);
+        UpdateMinMax<sortAscending>(rightValueVec2, smallestVec, largestVec);
+        UpdateMinMax<sortAscending>(rightValueVec3, smallestVec, largestVec);
         StoreLeftRight4<sortAscending>(valueStart, pivotVec, rightValueVec0, rightValueVec1, rightValueVec2, rightValueVec3, addressStart, rightAddrVec0, rightAddrVec1, rightAddrVec2, rightAddrVec3, writeL, remaining);
     }
 
     int32_t totalR = last - writeL;
     int32_t startR = totalR < N ? writeL + totalR - 4 : writeL;
     int64x2_t valueRightVec = vld1q_s64(valueStart + startR);
+    UpdateMinMax<sortAscending>(valueRightVec, smallestVec, largestVec);
     vst1q_s64(valueStart + last, valueRightVec);
     uint64x2_t addrRightVec = vld1q_u64(addressStart + startR);
     vst1q_u64(addressStart + last, addrRightVec);
@@ -972,7 +1042,7 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
 }
 
 template <int32_t sortAscending>
-void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64_t *valueBuf, uint64_t *addrBuf, int32_t depth)
+void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64_t *valueBuf, uint64_t *addrBuf, bool chooseAvg = false, int64_t avg = 0)
 {
     int32_t num = to - from;
     if (num <= SMALL_CASE_LENGTH) {
@@ -980,86 +1050,11 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
         return;
     }
 
-    auto count = DrawSamples<sortAscending>(values, addresses, from, to, valueBuf, addrBuf);
-    /*int32_t count = 6;
-    valueBuf[0] = 0;
-    valueBuf[1] = 0;
-    valueBuf[2] = 0;
-    valueBuf[3] = 0;
-    valueBuf[4] = 0;
-    valueBuf[5] = 0;
-    addrBuf[0] = 0;
-    addrBuf[1] = 1;
-    addrBuf[2] = 2;
-    addrBuf[3] = 4;
-    addrBuf[4] = 6;
-    addrBuf[5] = 7;*/
-
-    /*for (int32_t i = 0; i < 8; i++) {
-        addresses[i] = i;
-    }
-    // 0,0,0,1,0,2,0,0
-    valueBuf[0] = 0;
-    addrBuf[0] = 0;
-    from = 0;
-    to = 8;
-    values[0] = 0;
-    values[1] = 0;
-    values[2] = 0;
-    values[3] = 1;
-    values[4] = 0;
-    values[5] = 2;
-    values[6] = 0;
-    values[7] = 0;
-    int64x2_t newPivot = vdupq_n_s64(valueBuf[0]);
-    int32_t newSecond = 0;
-    bool allEqual = AllEqual(newPivot, values, from, to, &newSecond);
-    if (allEqual) {
-        return;
-    }
-    int64x2_t newSecondVec = vdupq_n_s64(values[newSecond]);
-    int64x2_t newThirdVec;
-    std::cout << "before PartitionIfTwoKeys" << std::endl;
-    std::cout << "=====VALUES=====" << std::endl;
-    for (size_t i = 0; i < 8; i++) {
-        std::cout << values[i] << " ";
-    }
-    std::cout << std::endl;
-    std::cout << "=====ADDRS=====" << std::endl;
-    for (size_t i = 0; i < 8; i++) {
-        std::cout << addresses[i] << " ";
-    }
-    std::cout << std::endl;
-    bool partitionResult = PartitionIfTwoKeys<sortAscending>(newPivot, values, addresses, from, to, newSecond, newSecondVec, newThirdVec, valueBuf, addrBuf);
-    std::cout << "after PartitionIfTwoKeys" << std::endl;
-    std::cout << "=====VALUES=====" << std::endl;
-    for (size_t i = 0; i < 8; i++) {
-        std::cout << values[i] << " ";
-    }
-    std::cout << std::endl;
-    std::cout << "=====ADDRS=====" << std::endl;
-    for (size_t i = 0; i < 8; i++) {
-        std::cout << addresses[i] << " ";
-    }
-    std::cout << std::endl;*/
-
     int64x2_t pivotVal;
-    PivotResult result = PivotResult::Normal;
-    bool isSorted = UnsortedSampleEqual(valueBuf, 0, count);
-    if (isSorted) {
-        pivotVal = vdupq_n_s64(valueBuf[0]);
-        int32_t secondIdx = 0;
-        if (AllEqual(pivotVal, values, from, to, &secondIdx)) {
-            return;
-        }
-
-        int64x2_t secondVal = vdupq_n_s64(values[secondIdx]);
-        int64x2_t thirdVal;
-        if (PartitionIfTwoKeys<sortAscending>(pivotVal, values, addresses, from, to, secondIdx, secondVal, thirdVal, valueBuf, addrBuf)) {
-            return;
-        }
-        pivotVal = ChoosePivotForEqualSamples<sortAscending>(values, from, to, valueBuf, secondVal, thirdVal, result);
+    if (chooseAvg) {
+        pivotVal = vdupq_n_s64(avg);
     } else {
+        auto count = DrawSamples<sortAscending>(values, addresses, from, to, valueBuf, addrBuf);
         SmallCaseSortWithoutAddress<sortAscending>(valueBuf, 0, count);
         pivotVal = ChoosePivot(valueBuf, 0, count);
     }
@@ -1069,13 +1064,25 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
     }
 
     --depth;*/
+    int64x2_t smallestVec = GetSmallestVec<sortAscending>();
+    int64x2_t largestVec = GetLargestVec<sortAscending>();
+    int32_t partitionIdx = PartitionWithSIMD<sortAscending>(values, addresses, from, to, pivotVal, valueBuf, addrBuf, smallestVec, largestVec);
 
-    int32_t pivotIndex = PartitionWithSIMD<sortAscending>(values, addresses, from, to, pivotVal, valueBuf, addrBuf);
-    if (result != PivotResult::First) {
-        QuickSortInternalSIMD<sortAscending>(values, addresses, from, pivotIndex, valueBuf, addrBuf, depth);
+    double ratio = std::min(to - partitionIdx, partitionIdx - from) / double(to - from);
+    if (ratio < 0.2) {
+        chooseAvg = !chooseAvg;
     }
-    if (result != PivotResult::Last) {
-        QuickSortInternalSIMD<sortAscending>(values, addresses, pivotIndex, to, valueBuf, addrBuf, depth);
+
+    int64_t pivot = vgetq_lane_s64(pivotVal, 0);
+    int64_t smallest = GetSmallest<sortAscending>(smallestVec);
+    int64_t largest = GetLargest<sortAscending>(largestVec);
+    if (pivot != smallest) {
+        int64_t newAvg = (smallest & pivot) + ((smallest ^ pivot) >> 1);
+        QuickSortInternalSIMD<sortAscending>(values, addresses, from, partitionIdx, valueBuf, addrBuf, chooseAvg, newAvg);
+    }
+    if (pivot != largest) {
+        int64_t newAvg = (largest & pivot) + ((largest ^ pivot) >> 1);
+        QuickSortInternalSIMD<sortAscending>(values, addresses, partitionIdx, to, valueBuf, addrBuf, chooseAvg, newAvg);
     }
 }
 
@@ -1083,12 +1090,12 @@ void QuickSortAscSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_
 {
     int64_t valueBuf[50];
     uint64_t addrBuf[50];
-    QuickSortInternalSIMD<1>(values, addresses, from, to, valueBuf, addrBuf, 100);
+    QuickSortInternalSIMD<1>(values, addresses, from, to, valueBuf, addrBuf);
 }
 
 void QuickSortDescSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
 {
     int64_t valueBuf[50];
     uint64_t addrBuf[50];
-    QuickSortInternalSIMD<0>(values, addresses, from, to, valueBuf, addrBuf, 100);
+    QuickSortInternalSIMD<0>(values, addresses, from, to, valueBuf, addrBuf);
 }

@@ -542,21 +542,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
 TEST(NativeOmniSortTest, TestSortDuplicatedLongColumn)
 {
-    /*constexpr int dataSize = 8;
-    int64_t data0[dataSize];
-    int64_t data1[dataSize];
-    data0[0] = 0;
-    data0[1] = 0;
-    data0[2] = 0;
-    data0[3] = 1;
-    data0[4] = 0;
-    data0[5] = 2;
-    data0[6] = 0;
-    data0[7] = 0;
-    for (int i = 0; i < dataSize; i++) {
-        data1[i] = i;
-    }*/
-    constexpr int dataSize = 21;
+    constexpr int dataSize = 32;
     int64_t data0[dataSize];
     int64_t data1[dataSize];
     for (int i = 0; i < dataSize; i++) {
@@ -571,7 +557,7 @@ TEST(NativeOmniSortTest, TestSortDuplicatedLongColumn)
     DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1);
 
-    int32_t outputCols[2] = {1, 2};
+    int32_t outputCols[2] = {0, 1};
     int32_t sortCols[] = {0};
     int32_t ascendings[] = {true};
     int32_t nullFirsts[] = {true};
@@ -583,6 +569,7 @@ TEST(NativeOmniSortTest, TestSortDuplicatedLongColumn)
     sortOperator->AddInput(vecBatch);
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
+    VectorHelper::PrintVecBatch(outputVecBatch);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
