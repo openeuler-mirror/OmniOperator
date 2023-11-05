@@ -4,7 +4,7 @@
  */
 
 #include "max_aggregator.h"
-#include "operator/aggregation/neon_aggregation/neon_aggregation_external.h"
+#include "operator/aggregation/neon_aggregation/simd_aggregation_external.h"
 
 #ifdef ENABLE_HMPP
 #include "aggregator_util.h"
@@ -128,38 +128,36 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
+            if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 Add<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount);
             } else {
-                simd::SIMDAdd<InType,ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount);
+                simd::SIMDAdd<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount);
             }
-
         } else {
-            if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
+            if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 AddConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
-                                                                                                rowCount, nullMap);
+                    rowCount, nullMap);
             } else {
-                simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr,
-                                                                                 rowCount, nullMap);
+                simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount,
+                    nullMap);
             }
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
-            if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
+            if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 AddDict<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
             } else {
                 simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount, indexMap);
             }
         } else {
-            if constexpr (std::is_same_v<InType, Decimal128> || std::is_same_v<ResultType, Decimal128>) {
-                AddDictConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
-                                                                                                    rowCount, nullMap, indexMap);
-
+            if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
+                AddDictConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count,
+                    ptr, rowCount, nullMap, indexMap);
             } else {
-                simd::SIMDAddDictConditional<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr,
-                                                                                     rowCount, nullMap, indexMap);
+                simd::SIMDAddDictConditional<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount,
+                    nullMap, indexMap);
             }
         }
     }

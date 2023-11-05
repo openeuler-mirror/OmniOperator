@@ -1,162 +1,260 @@
+/*
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * @Description: all neon aggregator function test
+ */
 #include <arm_neon.h>
 #include <iostream>
 #include <functional>
-#include "vector"
-#include "chrono"
-#include "src/operator/aggregation/neon_aggregation/neon_aggregation_external.h"
+#include <vector>
+#include <chrono>
+#include <limits>
 #include <gtest/gtest.h>
-#include "time.h"
-using namespace omniruntime::simd;
+#include <ctime>
+#include "src/operator/aggregation/neon_aggregation/simd_aggregation_external.h"
 
-int32_t simdNoNull(int32_t *values, int32_t size){
+namespace omniruntime {
+using namespace simd;
+
+int32_t SimdNoNull(int32_t *values, int32_t size)
+{
     int64_t result = 0;
     int64_t flag = 0;
-    SIMDAdd<int32_t,int64_t,BasicOp::Sum>(&result, flag, values, size);
+    SIMDAdd<int32_t, int64_t, BasicOp::Sum>(&result, flag, values, size);
     return result;
 }
-template<typename T>
-T simdWithNull(T *values, uint8_t *nulls, int32_t size){
+
+template <typename T> T SimdWithNull(T *values, uint8_t *nulls, int32_t size)
+{
     int64_t result = 0;
     int64_t flag = 0;
-    SIMDAddConditional<T,int64_t ,BasicOp::Sum>(&result, flag, values, size, nulls);
+    SIMDAddConditional<T, int64_t, BasicOp::Sum>(&result, flag, values, size, nulls);
     return result;
 }
-template<typename T>
-T gcc_sum_with_nulls(T *values, uint8_t *nulls, int32_t size) {
+
+template <typename T> T GccSumWithNulls(T *values, uint8_t *nulls, int32_t size)
+{
     int i = 0;
     int64_t result = 0;
-    for (; i < size; i ++) {
-        if (not nulls[i]){
+    for (; i < size; i++) {
+        if (not nulls[i]) {
             result += values[i];
         }
     }
     return result;
 }
-template<typename T>
-T simdWithDict(int32_t size,  T* values, int32_t *indexs){
 
+template <typename T> T SimdSumWithDict(int32_t size, T *values, int32_t *indexs)
+{
     int64_t result = 0;
     int64_t flag = 0;
-    SIMDAddDict<T,int64_t,BasicOp::Sum>(&result, flag, values, size, indexs);
+    SIMDAddDict<T, int64_t, BasicOp::Sum>(&result, flag, values, size, indexs);
     return result;
 }
-template<typename T>
-T simdWithDictWithNull(const T* values, const uint8_t * nulls, int32_t *indexs,int32_t size){
 
+template <typename T> T SimdWithDictWithNull(const T *values, const uint8_t *nulls, int32_t *indexs, int32_t size)
+{
     double result = 0;
     int64_t flag = 0;
-    SIMDAddDictConditional<T,double,BasicOp::Sum>(&result, flag, values, size, nulls,indexs);
+    SIMDAddDictConditional<T, double, BasicOp::Sum>(&result, flag, values, size, nulls, indexs);
     return result;
 }
-template<typename T>
-T gccWithDictWithNull(const T* values, const uint8_t * nulls, int32_t *indexs,int32_t size){
 
-    double result = 0;
+template <typename T> T SimdMinWithDictWithNull(const T *values, const uint8_t *nulls, int32_t *indexs, int32_t size)
+{
+    T result = std::numeric_limits<T>::max();
     int64_t flag = 0;
-    for(int i=0;i<size;++i){
-        if(not nulls[i]){
-            result+= values[indexs[i]];
+    SIMDAddDictConditional<T, T, BasicOp::Min>(&result, flag, values, size, nulls, indexs);
+    return result;
+}
+
+template <typename T> T GccMinWithDictWithNull(const T *values, const uint8_t *nulls, int32_t *indexs, int32_t size)
+{
+    T result = std::numeric_limits<T>::max();
+    int64_t flag = 0;
+    for (int i = 0; i < size; ++i) {
+        if (not nulls[i]) {
+            result = std::min(result, (T)(values[indexs[i]]));
             ++flag;
         }
     }
     return result;
 }
-template<typename T>
-T gccSumDict(int n, T* data, int* idx)
+
+template <typename T> T SimdMaxWithDictWithNull(const T *values, const uint8_t *nulls, int32_t *indexs, int32_t size)
 {
-    double total_sum = 0;
-    for (int i = 0; i < n; i ++) {
+    T result = 0;
+    int64_t flag = 0;
+    SIMDAddDictConditional<T, T, BasicOp::Max>(&result, flag, values, size, nulls, indexs);
+    return result;
+}
+
+template <typename T> T GccMaxWithDictWithNull(const T *values, const uint8_t *nulls, int32_t *indexs, int32_t size)
+{
+    T result = std::numeric_limits<T>::min();
+    int64_t flag = 0;
+    for (int i = 0; i < size; ++i) {
+        if (not nulls[i]) {
+            result = std::max(result, (T)(values[indexs[i]]));
+            ++flag;
+        }
+    }
+    return result;
+}
+
+template <typename T> T GccWithDictWithNull(const T *values, const uint8_t *nulls, int32_t *indexs, int32_t size)
+{
+    double result = 0;
+    int64_t flag = 0;
+    for (int i = 0; i < size; ++i) {
+        if (not nulls[i]) {
+            result += (double)values[indexs[i]];
+            ++flag;
+        }
+    }
+    return result;
+}
+
+template <typename T> T GccSumDict(int n, T *data, int *idx)
+{
+    T total_sum = 0;
+    for (int i = 0; i < n; i++) {
         total_sum += data[idx[i]];
     }
     return total_sum;
 }
 
 
-int32_t gccTestNoNull(int32_t *values, int32_t size){
+int32_t GccTestNoNull(int32_t *values, int32_t size)
+{
     int64_t result = 0;
 
-    for(int i=0;i<size;++i){
-        result+=values[i];
+    for (int i = 0; i < size; ++i) {
+        result += values[i];
     }
     return result;
 }
 
-template<typename Ret, typename... Args>
-int32_t calc(const std::string &name,
-             Ret(*func)(Args...),
-             Args... args){
+template <typename Ret, typename... Args> int32_t Calc(const std::string &name, Ret (*func)(Args...), Args... args)
+{
     auto start = std::chrono::high_resolution_clock::now();
     float val = 0;
-    for(int i=0;i<10000;i++){
+    for (int i = 0; i < 1000; i++) {
         Ret ret = func(args...);
         val += ret;
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout<<name<<" spend : "<< duration<<"ms,result is "<< val <<std::endl;
-    return duration;
+    std::cout << name << " spend : " << duration << "ms,result is " << val << std::endl;
+    return val;
 }
-template<typename T>
-void test_simd_with_null(int32_t size){
+
+template <typename T> void TestSimdWithNull(int32_t size)
+{
     T values[size];
     uint8_t nulls[size];
-    for(int i=0;i<size;++i){
+    for (int i = 0; i < size; ++i) {
         values[i] = i * 1000;
-        nulls[i] = i%200==0;
+        nulls[i] = i % 200 == 0;
     }
-    calc<T>("simdWithNull",simdWithNull,values,nulls, (size));
-    calc<T>("gcc_sum_with_nulls",gcc_sum_with_nulls,values,nulls, (size));
+    auto ret = Calc<T>("SimdWithNull", SimdWithNull, values, nulls, (size));
+    auto expect = Calc<T>("GccSumWithNulls", GccSumWithNulls, values, nulls, (size));
+    EXPECT_EQ(ret, expect);
 }
 
-template<typename T>
-void test_simd_with_no_null(int32_t size){
+template <typename T> void TestSimdWithNoNull(int32_t size)
+{
     T values[size];
-    for(int i=0;i<size;++i){
+    for (int i = 0; i < size; ++i) {
         values[i] = i * 1000;
     }
-    calc<T>("simdNoNull",simdNoNull,values,(size));
-    calc<T>("gccTestNoNull",gccTestNoNull,values,(size));
+    auto ret = Calc<T>("simdNoNull", SimdNoNull, values, (size));
+    auto expect = Calc<T>("GccTestNoNull", GccTestNoNull, values, (size));
+    EXPECT_EQ(ret, expect);
 }
 
-template<typename T>
-T benchWithDict(int32_t size) {
-    T values[size] ;
+template <typename T> void BenchWithDict(int32_t size)
+{
+    T values[size];
     int32_t indexs[size];
-    for(int i=0;i<size;++i) {
+    for (int i = 0; i < size; ++i) {
         values[i] = i;
     }
-    for(int i=0;i<size;++i) {
+    for (int i = 0; i < size; ++i) {
         indexs[i] = 4;
     }
 
-    calc<T,int, T*, int32_t*>("simdWithDict",simdWithDict,(size), values,indexs);
-    calc<T,int, T*, int32_t*>("gccSumDict", gccSumDict,(size),values,indexs);
+    auto ret = Calc<T, int, T *, int32_t *>("SimdSumWithDict", SimdSumWithDict, (size), values, indexs);
+    auto expect = Calc<T, int, T *, int32_t *>("GccSumDict", GccSumDict, (size), values, indexs);
+    EXPECT_EQ(ret, expect);
 }
 
-template<typename T>
-void test_simd_with_dict(int32_t size){
+template <typename T> void TestSimdSumWithDictNull(int32_t size)
+{
     int32_t indexs[size];
     T values[size];
     uint8_t nulls[size];
-    for(int i=0;i<size;++i) {
+    for (int i = 0; i < size; ++i) {
         values[i] = i;
     }
-    for(int i=0;i<size;++i) {
-        indexs[i] = 4;
-        nulls[i] = i %size == 0;
+    for (int i = 0; i < size; ++i) {
+        indexs[i] = 40;
+        nulls[i] = (i % 20 == 0);
     }
 
-    calc<T,const T* , const uint8_t *, int32_t *,int32_t>("simdWithDictWithNull",simdWithDictWithNull,values,nulls,indexs, (size));
-    calc<T,const T*, const uint8_t *, int32_t *,int32_t>("gcc_sum_with_nulls",gccWithDictWithNull,values,nulls,indexs, (size));
+    auto ret = Calc<T, const T *, const uint8_t *, int32_t *, int32_t>("SimdWithDictWithNull", SimdWithDictWithNull,
+        values, nulls, indexs, (size));
+    auto expect = Calc<T, const T *, const uint8_t *, int32_t *, int32_t>("GccWithDictWithNull", GccWithDictWithNull,
+        values, nulls, indexs, (size));
+    EXPECT_EQ(ret, expect);
 }
 
-void verify() {
+template <typename T> void TestSimdMinWithDictNull(int32_t size)
+{
+    int32_t indexs[size];
+    T values[size];
+    uint8_t nulls[size];
+    for (int i = 0; i < size; ++i) {
+        values[i] = i;
+    }
+    for (int i = 0; i < size; ++i) {
+        indexs[i] = 40;
+        nulls[i] = i % 20 == 0;
+    }
+
+    auto ret = Calc<T, const T *, const uint8_t *, int32_t *, int32_t>("SimdMinWithDictWithNull",
+        SimdMinWithDictWithNull, values, nulls, indexs, (size));
+    auto expect = Calc<T, const T *, const uint8_t *, int32_t *, int32_t>("GccMinWithDictWithNull",
+        GccMinWithDictWithNull, values, nulls, indexs, (size));
+    EXPECT_EQ(ret, expect);
+}
+
+template <typename T> void TestSimdMaxWithDictNull(int32_t size)
+{
+    int32_t indexs[size];
+    T values[size];
+    uint8_t nulls[size];
+    for (int i = 0; i < size; ++i) {
+        values[i] = i;
+    }
+    for (int i = 0; i < size; ++i) {
+        indexs[i] = 40;
+        nulls[i] = i % 20 == 0;
+    }
+
+    Calc<T, const T *, const uint8_t *, int32_t *, int32_t>("SimdMaxWithDictWithNull", SimdMaxWithDictWithNull, values,
+        nulls, indexs, (size));
+    Calc<T, const T *, const uint8_t *, int32_t *, int32_t>("GccMaxWithDictWithNull", GccMaxWithDictWithNull, values,
+        nulls, indexs, (size));
+}
+
+void Verify()
+{
     int32_t expect = 0;
     int32_t actual = 0;
     srand(time(nullptr));
     int labCount = 1000;
-    while(labCount--) {
+    while (labCount--) {
         int value = random() % 59999;
         int nullNum = random();
         if (nullNum < 0) {
@@ -183,7 +281,7 @@ void verify() {
             }
         }
         int64_t flag = 0;
-        int32_t actual =0 ;
+        int32_t actual = 0;
         SIMDAddConditional<int32_t, int32_t, BasicOp::Sum>(&actual, flag, data.data(), value, nulls);
         if (expect != actual) {
             for (int i = 0; i < value; ++i) {
@@ -192,17 +290,21 @@ void verify() {
             for (int i = 0; i < value; ++i) {
                 std::cout << (nulls[i] == true) << std::endl;
             }
-            EXPECT_EQ(expect,actual);
+            EXPECT_EQ(expect, actual);
             break;
         }
     }
-
 }
 
-TEST(AggregatorNeonTest, int64_simd_neon)
+TEST(AggregatorNeonTest, simd_neon)
 {
-    verify();
-    test_simd_with_null<int64_t>(9999);
-    test_simd_with_no_null<int32_t>(9999);
-    test_simd_with_dict<int32_t>(9999);
+    Verify();
+    TestSimdWithNull<int64_t>(99999);
+    TestSimdWithNoNull<int32_t>(99999);
+    BenchWithDict<int32_t>(99999);
+    // 5% null value
+    TestSimdSumWithDictNull<int32_t>(99999);
+    TestSimdMinWithDictNull<int32_t>(99999);
+    TestSimdMaxWithDictNull<int32_t>(99999);
+}
 }

@@ -6,7 +6,7 @@
 #define OMNI_RUNTIME_SUM_FLAT_IM_AGGREGATOR_H
 
 #include "aggregator.h"
-#include "operator/aggregation/neon_aggregation/neon_aggregation_external.h"
+#include "operator/aggregation/neon_aggregation/simd_aggregation_external.h"
 
 namespace omniruntime {
 namespace op {
@@ -79,8 +79,8 @@ public:
         if (nullMap == nullptr) {
             simd::SIMDAdd<ResultType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount);
         } else {
-            simd::SIMDAddConditional<ResultType, ResultType, simd::BasicOp::Sum>(res,
-                    state.count, ptr, rowCount, nullMap);
+            simd::SIMDAddConditional<ResultType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount,
+                nullMap);
         }
     }
 
@@ -93,17 +93,17 @@ public:
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    simd::SIMDAdd<InType,ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount);
+                    simd::SIMDAdd<InType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount);
                 } else {
-                    simd::SIMDAddConditional<InType,ResultType, simd::BasicOp::Sum>(res, state.count, ptr,
-                                                                 rowCount, nullMap);
+                    simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount,
+                        nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    simd::SIMDAddDict<InType,ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount, indexMap);
-
+                    simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount,
+                        indexMap);
                 } else {
                     AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(res,
                         state.count, ptr, rowCount, nullMap, indexMap);
@@ -117,7 +117,7 @@ public:
     void InitState(AggregateState &state)
     {
         state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-        *reinterpret_cast<ResultType *>(state.val) = ResultType{};
+        *reinterpret_cast<ResultType *>(state.val) = ResultType {};
         state.count = 0;
     }
 
