@@ -15,6 +15,8 @@
 #include "vector/vector_helper.h"
 #include "util/test_util.h"
 #include "operator/omni_id_type_vector_traits.h"
+#include "operator/quick_sort_simd.h"
+#include "operator/pages_index.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -405,6 +407,81 @@ TEST(NativeOmniSortTest, TestSortLongColumnDescSIMD)
     // free memory
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    DeleteSortOperatorFactory(operatorFactory);
+}
+TEST(NativeOmniSortTest, TestSortLongColumnAscSIMDPerformance)
+{
+    // construct input data
+    const int64_t dataSize = 1000000;
+    auto *data1 = new int64_t[dataSize];
+    auto *data2 = new uint64_t[dataSize];
+    auto *data3 = new int64_t[dataSize];
+    auto *data4 = new uint64_t[dataSize];
+    for (int64_t i = 0; i < dataSize; i++) {
+        data1[i] = dataSize - i;
+        data2[i] = i;
+        data3[i] = dataSize - i;
+        data4[i] = i;
+    }
+
+    auto start1 = std::chrono::high_resolution_clock::now();
+    omniruntime::op::QuickSortFixedLengthAsc(data3, data4, 0, dataSize);
+    auto end1 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
+//    std::cout << "old sort long cost: " << duration2.count() << " ms\n";
+
+    auto start = std::chrono::high_resolution_clock::now();
+    QuickSortAscSIMD(data1, data2, 0, dataSize);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+//    std::cout << "simd sort long cost: " << duration1.count() << " ms\n";
+
+
+
+//    for(int i = 0; i < dataSize; i++) {
+//        if(data1[i] != i + 1 || data3[i] != i + 1) {
+//            std::cout<<"error!";
+//            break;
+//        }
+//    }
+    free(data1);
+    free(data2);
+}
+
+TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMDPerformance)
+{
+    // construct input data
+    const int64_t dataSize = 10000000;
+    double *data1 = new double[dataSize];
+    double baseNumber = 1.11111;
+    for (int64_t i = 0; i < dataSize; i++) {
+        data1[i] = baseNumber * static_cast<double>(i);
+    }
+
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ DoubleType() }));
+    std::vector<DataTypePtr> typess = { DoubleType() };
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1);
+
+    int outputCols[1] = {0};
+    int sortCols[1] = {0};
+    int ascendings[1] = {true};
+    int nullFirsts[1] = {false};
+
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols, ascendings, nullFirsts, 1);
+
+    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+    auto start = std::chrono::high_resolution_clock::now();
+    sortOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "simd sort long cost: " << duration1.count() << " ms\n";
+    // free memory
+    free(data1);
+    VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
 }

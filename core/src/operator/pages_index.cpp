@@ -926,11 +926,16 @@ void QuickSortFixedLengthInternal(int64_t *values, uint64_t *addresses, int32_t 
     }
 }
 
-template <int32_t sortAscending>
-void QuickSortFixedLength(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
+void QuickSortFixedLengthAsc(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
 {
     int8_t comparetmp[NMAX_SIZE + NMAX_SIZE];
-    QuickSortFixedLengthInternal<sortAscending>(values, addresses, from, to, comparetmp);
+    QuickSortFixedLengthInternal<1>(values, addresses, from, to, comparetmp);
+}
+
+void QuickSortFixedLengthDec(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
+{
+    int8_t comparetmp[NMAX_SIZE + NMAX_SIZE];
+    QuickSortFixedLengthInternal<0>(values, addresses, from, to, comparetmp);
 }
 // end for compare scalar and simd test
 

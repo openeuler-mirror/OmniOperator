@@ -16,6 +16,9 @@
 
 namespace omniruntime {
 namespace op {
+    void QuickSortFixedLengthAsc(int64_t *values, uint64_t *addresses, int32_t from, int32_t to);
+    void QuickSortFixedLengthDec(int64_t *values, uint64_t *addresses, int32_t from, int32_t to);
+
 class PagesIndex : public MemoryBuilder {
 public:
     explicit PagesIndex(const DataTypes &types);
