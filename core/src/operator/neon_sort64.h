@@ -8,6 +8,7 @@
 #include <string>
 #include "vector"
 #include "util/omni_exception.h"
+#include "util/compiler_util.h"
 
 constexpr int64_t OMNIMAX64 = INT64_MAX;
 constexpr int64_t OMNIMIN64 = INT64_MIN;
@@ -16,7 +17,7 @@ constexpr int64_t TWOOMNIMIN64[2] = {INT64_MIN, INT64_MIN};
 constexpr int32_t  SORTDESCENDING = 0;
 constexpr int32_t SORTASCENDING = 1;
 
-template <class VType, int32_t SortingRule = SORTASCENDING> VType Max64(VType &a, VType &b)
+template <class VType, int32_t SortingRule = SORTASCENDING> static VType ALWAYS_INLINE Max64(VType &a, VType &b)
 {
     if constexpr (SortingRule == SORTASCENDING) {
         if constexpr (std::is_same_v<VType, int64x2_t>) {
@@ -37,7 +38,7 @@ template <class VType, int32_t SortingRule = SORTASCENDING> VType Max64(VType &a
         }
     }
 }
-template <class VType, int32_t SortingRule = SORTASCENDING> VType Min64(VType &a, VType &b)
+template <class VType, int32_t SortingRule = SORTASCENDING> static VType ALWAYS_INLINE Min64(VType &a, VType &b)
 {
     if constexpr (SortingRule == SORTASCENDING) {
         if constexpr (std::is_same_v<VType, int64x2_t>) {
@@ -59,7 +60,7 @@ template <class VType, int32_t SortingRule = SORTASCENDING> VType Min64(VType &a
     }
 }
 
-template <class VType, int32_t SortRule> void Sort2(VType &a, VType &b)
+template <class VType, int32_t SortRule> static void ALWAYS_INLINE Sort2(VType &a, VType &b)
 {
     VType copyA = a;
     a = Min64<VType, SortRule>(a, b);
@@ -72,7 +73,7 @@ RevertU8x16(uint8x16_t __a)
 }
 
 template <class VType, class AddrType, int32_t SortRule>
-void Sort2WithAddr(VType &a, VType &b, AddrType &c, AddrType &d)
+static void ALWAYS_INLINE Sort2WithAddr(VType &a, VType &b, AddrType &c, AddrType &d)
 {
     VType copyA = a;
     VType copyB = b;
@@ -100,19 +101,19 @@ void Sort2WithAddr(VType &a, VType &b, AddrType &c, AddrType &d)
     }
 }
 
-int64x2_t ReverseKeys2(int64x2_t &v)
+static int64x2_t ALWAYS_INLINE ReverseKeys2(int64x2_t &v)
 {
     uint8x16_t copyV = vreinterpretq_u8_s64(v);
     return vreinterpretq_s64_u8(RevertU8x16(copyV));
 }
 
-uint64x2_t ReverseAddrs2(uint64x2_t &v)
+static uint64x2_t ALWAYS_INLINE ReverseAddrs2(uint64x2_t &v)
 {
     uint8x16_t copyV = vreinterpretq_u8_u64(v);
     return vreinterpretq_u64_u8(RevertU8x16(copyV));
 }
 
-template <int32_t SortRule> int64x2_t SortPair64(int64x2_t a, uint64x2_t &addr)
+template <int32_t SortRule> static int64x2_t ALWAYS_INLINE SortPair64(int64x2_t a, uint64x2_t &addr)
 {
     int64x2_t copyA = a;
     int64x2_t swappedA = ReverseKeys2(a);
@@ -124,7 +125,7 @@ template <int32_t SortRule> int64x2_t SortPair64(int64x2_t a, uint64x2_t &addr)
     return c;
 }
 
-template <class VType> VType LoadDdata(int64_t *keys)
+template <class VType> static VType ALWAYS_INLINE LoadDdata(int64_t *keys)
 {
     if constexpr (std::is_same_v<VType, int64x1_t>) {
         return vld1_s64(keys);
@@ -133,7 +134,7 @@ template <class VType> VType LoadDdata(int64_t *keys)
     }
 }
 
-template <class VType> VType LoadAddrDdata(uint64_t *addr)
+template <class VType> static VType ALWAYS_INLINE LoadAddrDdata(uint64_t *addr)
 {
     if constexpr (std::is_same_v<VType, uint64x1_t>) {
         return vld1_u64(addr);
@@ -143,7 +144,7 @@ template <class VType> VType LoadAddrDdata(uint64_t *addr)
 }
 
 template <class VType, class AddrType, int32_t SortRule>
-void Sort8(VType &v0, VType &v1, VType &v2, VType &v3, VType &v4, VType &v5, VType &v6, VType &v7, AddrType &vAddr0,
+static void ALWAYS_INLINE Sort8(VType &v0, VType &v1, VType &v2, VType &v3, VType &v4, VType &v5, VType &v6, VType &v7, AddrType &vAddr0,
            AddrType &vAddr1, AddrType &vAddr2, AddrType &vAddr3, AddrType &vAddr4, AddrType &vAddr5, AddrType &vAddr6,
            AddrType &vAddr7)
 {
@@ -174,7 +175,7 @@ void Sort8(VType &v0, VType &v1, VType &v2, VType &v3, VType &v4, VType &v5, VTy
 }
 
 template <int32_t SortRule>
-void Merge8x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4, int64x2_t &v5, int64x2_t &v6,
+static void ALWAYS_INLINE Merge8x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4, int64x2_t &v5, int64x2_t &v6,
               int64x2_t &v7, uint64x2_t &vAddr0, uint64x2_t &vAddr1, uint64x2_t &vAddr2, uint64x2_t &vAddr3, uint64x2_t &vAddr4,
               uint64x2_t &vAddr5, uint64x2_t &vAddr6, uint64x2_t &vAddr7)
 {
@@ -227,7 +228,7 @@ void Merge8x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x
     v7 = SortPair64<SortRule>(v7, vAddr7);
 }
 
-template <class VType, int32_t SortRule> void Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
+template <class VType, int32_t SortRule> static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
 {
     if constexpr (std::is_same_v<VType, int64x2_t>) {
         int32_t i = 0, index = 0;
@@ -303,7 +304,7 @@ template <class VType, int32_t SortRule> void Sort8Rows(int64_t *array, uint64_t
     }
 }
 template <int32_t SortRule>
-void Sort16(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4, int64x2_t &v5, int64x2_t &v6,
+static void ALWAYS_INLINE Sort16(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4, int64x2_t &v5, int64x2_t &v6,
             int64x2_t &v7, int64x2_t &v8, int64x2_t &v9, int64x2_t &va, int64x2_t &vb, int64x2_t &vc, int64x2_t &vd,
             int64x2_t &ve, int64x2_t &vf, uint64x2_t &vAddr0, uint64x2_t &vAddr1, uint64x2_t &vAddr2, uint64x2_t &vAddr3,
             uint64x2_t &vAddr4, uint64x2_t &vAddr5, uint64x2_t &vAddr6, uint64x2_t &vAddr7, uint64x2_t &vAddr8,
@@ -373,7 +374,7 @@ void Sort16(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_
 }
 
 template <int32_t SortRule>
-void Merge16x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4, int64x2_t &v5, int64x2_t &v6,
+static void ALWAYS_INLINE Merge16x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4, int64x2_t &v5, int64x2_t &v6,
                int64x2_t &v7, int64x2_t &v8, int64x2_t &v9, int64x2_t &va, int64x2_t &vb, int64x2_t &vc, int64x2_t &vd,
                int64x2_t &ve, int64x2_t &vf, uint64x2_t &vAddr0, uint64x2_t &vAddr1, uint64x2_t &vAddr2, uint64x2_t &vAddr3,
                uint64x2_t &vAddr4, uint64x2_t &vAddr5, uint64x2_t &vAddr6, uint64x2_t &vAddr7, uint64x2_t &vAddr8,
@@ -495,7 +496,7 @@ void Merge16x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64
     vf = SortPair64<SortRule>(vf, vAddrf);
 }
 
-template <int32_t SortRule> void Sort16Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
+template <int32_t SortRule> static void ALWAYS_INLINE Sort16Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
 {
     int32_t i = 0, index = 0;
     int64x2_t v[16];
@@ -548,7 +549,7 @@ template <int32_t SortRule> void Sort16Rows(int64_t *array, uint64_t *arrayAddr,
     }
 }
 
-template <int32_t SortRule> void Sort2Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
+template <int32_t SortRule> static void ALWAYS_INLINE Sort2Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
 {
     int64x1_t v0 = LoadDdata<int64x1_t>(array);
     int64x1_t v1 = LoadDdata<int64x1_t>(array + 1);
@@ -563,7 +564,7 @@ template <int32_t SortRule> void Sort2Rows(int64_t *array, uint64_t *arrayAddr, 
 }
 
 template <class VType, class AddrType, int32_t SortRule>
-void Sort4(VType &v0, VType &v1, VType &v2, VType &v3, AddrType &vAddr0, AddrType &vAddr1, AddrType &vAddr2,
+static void ALWAYS_INLINE Sort4(VType &v0, VType &v1, VType &v2, VType &v3, AddrType &vAddr0, AddrType &vAddr1, AddrType &vAddr2,
            AddrType &vAddr3)
 {
     Sort2WithAddr<VType, AddrType, SortRule>(v0, v2, vAddr0, vAddr2);
@@ -574,7 +575,7 @@ void Sort4(VType &v0, VType &v1, VType &v2, VType &v3, AddrType &vAddr0, AddrTyp
 }
 
 template <int32_t SortRule>
-void Merge4x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, uint64x2_t &vAddr0, uint64x2_t &vAddr1,
+static void ALWAYS_INLINE Merge4x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, uint64x2_t &vAddr0, uint64x2_t &vAddr1,
               uint64x2_t &vAddr2, uint64x2_t &vAddr3)
 {
     v3 = ReverseKeys2(v3);
@@ -599,7 +600,7 @@ void Merge4x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, uint64
     v3 = SortPair64<SortRule>(v3, vAddr3);
 }
 
-template <int32_t SortRule> int64x2_t SortPair64WithoutAddr(int64x2_t a)
+template <int32_t SortRule> static int64x2_t ALWAYS_INLINE SortPair64WithoutAddr(int64x2_t a)
 {
     int64x2_t swappedA = ReverseKeys2(a);
     Sort2<int64x2_t, SortRule>(a, swappedA);
@@ -607,7 +608,7 @@ template <int32_t SortRule> int64x2_t SortPair64WithoutAddr(int64x2_t a)
     return c;
 }
 
-template <int32_t SortRule> void Merge3x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
+template <int32_t SortRule> static void ALWAYS_INLINE Merge3x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
 {
     v2 = ReverseKeys2(v2);
     Sort2<int64x2_t, SortRule>(v1, v2);
@@ -618,14 +619,14 @@ template <int32_t SortRule> void Merge3x2(int64x2_t &v0, int64x2_t &v1, int64x2_
     v2 = SortPair64WithoutAddr<SortRule>(v2);
 }
 
-template <int32_t SortRule> void Sort3(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
+template <int32_t SortRule> static void ALWAYS_INLINE Sort3(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
 {
     Sort2<int64x2_t, SortRule>(v0, v2);
     Sort2<int64x2_t, SortRule>(v0, v1);
     Sort2<int64x2_t, SortRule>(v1, v2);
 }
 
-template <int32_t SortRule> void Sort3Rows(int64_t *array, int32_t dataLen)
+template <int32_t SortRule> static void ALWAYS_INLINE Sort3Rows(int64_t *array, int32_t dataLen)
 {
     int32_t i = 0, index = 0;
     int64x2_t v[3];
@@ -639,7 +640,7 @@ template <int32_t SortRule> void Sort3Rows(int64_t *array, int32_t dataLen)
     }
 }
 
-template <class VType, int32_t SortRule> void Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen) {
+template <class VType, int32_t SortRule> static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen) {
     if constexpr (std::is_same_v<VType, int64x1_t>) {
         int64x1_t v0 = LoadDdata<int64x1_t>(array);
         int64x1_t v1 = LoadDdata<int64x1_t>(array + 1);
@@ -717,7 +718,7 @@ template <class VType, int32_t SortRule> void Sort4Rows(int64_t *array, uint64_t
     }
 }
 
-uint32_t GenFuncId(uint32_t arrLen)
+static uint32_t ALWAYS_INLINE GenFuncId(uint32_t arrLen)
 {
     return 32 - static_cast<size_t>(__builtin_clz(arrLen - 1));
 }
@@ -738,7 +739,7 @@ static std::vector<SmallCaseSortFunc> SmallCaseSortFuncsDesc = {nullptr,
                                                                 Sort16Rows<SORTDESCENDING>};
 
 // This interface is used when the array length is 6.
-template <int32_t SortRule> void SmallCaseSortWithoutAddress(int64_t *array, int32_t from, int32_t to)
+template <int32_t SortRule> static void ALWAYS_INLINE SmallCaseSortWithoutAddress(int64_t *array, int32_t from, int32_t to)
 {
     if (to - from == 6) {
         Sort3Rows<SortRule>(array + from, 6);
@@ -748,7 +749,7 @@ template <int32_t SortRule> void SmallCaseSortWithoutAddress(int64_t *array, int
     throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", exceptionInfo.c_str());
 }
 
-template <int32_t SortRule> void SmallCaseSort(int64_t *array, uint64_t *address, int32_t from, int32_t to)
+template <int32_t SortRule> static void ALWAYS_INLINE SmallCaseSort(int64_t *array, uint64_t *address, int32_t from, int32_t to)
 {
     int32_t dataLen = to - from;
     if (dataLen <= 1) {

@@ -410,10 +410,12 @@ TEST(NativeOmniSortTest, TestSortLongColumnDescSIMD)
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
 }
+
 TEST(NativeOmniSortTest, TestSortLongColumnAscSIMDPerformance)
 {
     // construct input data
     const int64_t dataSize = 1000000;
+    auto prepareStart = std::chrono::high_resolution_clock::now();
     auto *data1 = new int64_t[dataSize];
     auto *data2 = new uint64_t[dataSize];
     auto *data3 = new int64_t[dataSize];
@@ -424,20 +426,21 @@ TEST(NativeOmniSortTest, TestSortLongColumnAscSIMDPerformance)
         data3[i] = dataSize - i;
         data4[i] = i;
     }
+    auto prepareEnd = std::chrono::high_resolution_clock::now();
+    auto preDuration = std::chrono::duration_cast<std::chrono::milliseconds>(prepareEnd - prepareStart);
+    std::cout << "prepare data cost: " << preDuration.count() << " ms\n";
 
     auto start1 = std::chrono::high_resolution_clock::now();
     omniruntime::op::QuickSortFixedLengthAsc(data3, data4, 0, dataSize);
     auto end1 = std::chrono::high_resolution_clock::now();
     auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
-//    std::cout << "old sort long cost: " << duration2.count() << " ms\n";
+    std::cout << "original sort long cost: " << duration2.count() << " ms\n";
 
     auto start = std::chrono::high_resolution_clock::now();
     QuickSortAscSIMD(data1, data2, 0, dataSize);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-//    std::cout << "simd sort long cost: " << duration1.count() << " ms\n";
-
-
+    std::cout << "simd sort long cost: " << duration1.count() << " ms\n";
 
 //    for(int i = 0; i < dataSize; i++) {
 //        if(data1[i] != i + 1 || data3[i] != i + 1) {
@@ -445,8 +448,11 @@ TEST(NativeOmniSortTest, TestSortLongColumnAscSIMDPerformance)
 //            break;
 //        }
 //    }
-    free(data1);
-    free(data2);
+
+    delete[] data1;
+    delete[] data2;
+    delete[] data3;
+    delete[] data4;
 }
 
 TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMDPerformance)

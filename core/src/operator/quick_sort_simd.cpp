@@ -189,52 +189,38 @@ static bool ALWAYS_INLINE AllFalse(uint64x2_t mask)
 }
 
 template <int32_t sortAscending>
-static void ALWAYS_INLINE GetMedianValue(int64x2_t val0, int64x2_t val1, int64x2_t val2, uint64x2_t addr0, uint64x2_t addr1, uint64x2_t addr2, int64x2_t &medialVal, uint64x2_t &mediaAddr)
+static void ALWAYS_INLINE GetMedianValue(int64x2_t val0, int64x2_t val1, int64x2_t val2, int64x2_t &medialVal)
 {
     int64x2_t val0Copy = val0;
-    uint64x2_t addr0Copy = addr0;
     uint64x2_t comp = vcltq_s64(val2, val0);
     if constexpr (sortAscending == 0) {
         val0 = vbslq_s64(comp, val0, val2);
         val2 = vbslq_s64(comp, val2, val0Copy);
-        addr0 = vbslq_u64(comp, addr0, addr2);
-        addr2 = vbslq_u64(comp, addr2, addr0Copy);
 
         comp = vcltq_s64(val1, val0);
         val1 = vbslq_s64(comp, val1, val0);
-        addr1 = vbslq_u64(comp, addr1, addr0);
         comp = vcltq_s64(val2, val1);
         val1 = vbslq_s64(comp, val1, val2);
-        addr1 = vbslq_u64(comp, addr1, addr2);
     } else {
         val0 = vbslq_s64(comp, val2, val0);
         val2 = vbslq_s64(comp, val0Copy, val2);
-        addr0 = vbslq_u64(comp, addr2, addr0);
-        addr2 = vbslq_u64(comp, addr0Copy, addr2);
 
         comp = vcltq_s64(val1, val0);
         val1 = vbslq_s64(comp, val0, val1);
-        addr1 = vbslq_u64(comp, addr0, addr1);
         comp = vcltq_s64(val2, val1);
         val1 = vbslq_s64(comp, val2, val1);
-        addr1 = vbslq_u64(comp, addr2, addr1);
     }
     medialVal = val1;
-    mediaAddr = addr1;
 }
 
 template <int32_t sortAscending>
-static int32_t ALWAYS_INLINE DrawSamples(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64_t *valueBuf, uint64_t *addrBuf)
+static int32_t ALWAYS_INLINE DrawSamples(int64_t *values, int32_t from, int32_t to, int64_t *valueBuf)
 {
     constexpr int32_t N = 2;
     int32_t num = to - from;
     int64_t *valueStart = values + from;
     int64_t *valueMid = values + from + num / 2;
     int64_t *valueLast = values + to - N;
-
-    uint64_t *addrStart = addresses + from;
-    uint64_t *addrMid = addresses + from + num / 2;
-    uint64_t *addrLast = addresses + to - N;
 
     int32_t oneStep = num / CHUNK_SIZE;
     int32_t twoStep = oneStep + oneStep;
@@ -249,27 +235,13 @@ static int32_t ALWAYS_INLINE DrawSamples(int64_t *values, uint64_t *addresses, i
     int64x2_t valueVec8 = vld1q_s64(valueLast - oneStep);
     int64x2_t valueVec9 = vld1q_s64(valueLast - twoStep);
 
-    uint64x2_t addrVec1 = vld1q_u64(addrStart);
-    uint64x2_t addrVec2 = vld1q_u64(addrStart + oneStep);
-    uint64x2_t addrVec3 = vld1q_u64(addrStart + twoStep);
-    uint64x2_t addrVec4 = vld1q_u64(addrMid - oneStep);
-    uint64x2_t addrVec5 = vld1q_u64(addrMid);
-    uint64x2_t addrVec6 = vld1q_u64(addrMid + oneStep);
-    uint64x2_t addrVec7 = vld1q_u64(addrLast);
-    uint64x2_t addrVec8 = vld1q_u64(addrLast - oneStep);
-    uint64x2_t addrVec9 = vld1q_u64(addrLast - twoStep);
-
     int64x2_t medianVal1, medianVal2, medianVal3;
-    uint64x2_t medianAddr1, medianAddr2, medianAddr3;
-    GetMedianValue<sortAscending>(valueVec1, valueVec2, valueVec3, addrVec1, addrVec2, addrVec3, medianVal1, medianAddr1);
-    GetMedianValue<sortAscending>(valueVec4, valueVec5, valueVec6, addrVec4, addrVec5, addrVec6, medianVal2, medianAddr2);
-    GetMedianValue<sortAscending>(valueVec7, valueVec8, valueVec9, addrVec7, addrVec8, addrVec9, medianVal3, medianAddr3);
+    GetMedianValue<sortAscending>(valueVec1, valueVec2, valueVec3, medianVal1);
+    GetMedianValue<sortAscending>(valueVec4, valueVec5, valueVec6, medianVal2);
+    GetMedianValue<sortAscending>(valueVec7, valueVec8, valueVec9, medianVal3);
     vst1q_s64(valueBuf, medianVal1);
     vst1q_s64(valueBuf + N, medianVal2);
     vst1q_s64(valueBuf + 2 * N, medianVal3);
-    vst1q_u64(addrBuf, medianAddr1);
-    vst1q_u64(addrBuf + N, medianAddr2);
-    vst1q_u64(addrBuf + 2 * N, medianAddr3);
 
     return N * 3;
 }
@@ -736,7 +708,7 @@ static int64x2_t ChoosePivotForEqualSamples(int64_t *values, int32_t from, int32
 
 static int64x2_t ALWAYS_INLINE ChoosePivot(int64_t *buf, int32_t from, int32_t to)
 {
-    int32_t N1 = 1;
+    constexpr int32_t N1 = 1;
     int32_t mid = from + (to - from) / 2;
     int64_t midValue = buf[mid];
     int64x2_t pivotVec;
@@ -830,8 +802,8 @@ static int32_t ALWAYS_INLINE CompressBlendedStore(int64x2_t valueVec, uint64x2_t
 template <int32_t sortAscending>
 int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_t &num, int64x2_t pivotVec, int64_t *valueBuf, uint64_t *addrBuf, int64x2_t &smallestVec, int64x2_t &largestVec)
 {
-    int32_t kUnroll = 4;
-    int32_t N = 2;
+    constexpr int32_t kUnroll = 4;
+    constexpr int32_t N = 2;
     const int32_t num_rem = (num < 2 * kUnroll * N) ? num : (num & (kUnroll * N - 1));
     if (num_rem <= 0) {
         return 0;
@@ -885,7 +857,7 @@ int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_
 template <int32_t sortAscending>
 static void ALWAYS_INLINE StoreLeftRight(int64_t *values, int64x2_t pivotVec, int64x2_t valueVec, uint64_t *addresses, uint64x2_t addrVec, int32_t &writeL, int32_t &remaining)
 {
-    int32_t N = 2;
+    constexpr int32_t N = 2;
     remaining -= N;
     uint64x2_t compareResult = Compare<sortAscending>(pivotVec, valueVec);
     int64x2_t compressValueVec = CompressNot(valueVec, compareResult);
@@ -913,6 +885,7 @@ template <int32_t sortAscending>
 int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64x2_t pivotVec, int64_t *valueBuf, uint64_t *addrBuf, int64x2_t &smallestVec, int64x2_t &largestVec)
 {
     constexpr int32_t N = 2;
+    constexpr int32_t kUnroll = 4;
     int32_t num = to - from;
     int64_t *valueStart = values + from;
     uint64_t *addressStart = addresses + from;
@@ -930,7 +903,6 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
     last -= consumedL;
     num -= consumedL;
 
-    constexpr int32_t kUnroll = 4;
     int64_t *valueReadL = valueStart;
     int64_t *valueReadR = valueStart + num;
     uint64_t *addrReadL = addressStart;
@@ -938,11 +910,11 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
     int32_t writeL = 0;
     int32_t remaining = num;
     if (num != 0) {
-        int32_t pos0 = 0 * N;
-        int32_t pos1 = 1 * N;
-        int32_t pos2 = 2 * N;
-        int32_t pos3 = 3 * N;
-        int32_t advanceStep = kUnroll * N;
+        constexpr int32_t pos0 = 0 * N;
+        constexpr int32_t pos1 = 1 * N;
+        constexpr int32_t pos2 = 2 * N;
+        constexpr int32_t pos3 = 3 * N;
+        constexpr int32_t advanceStep = kUnroll * N;
 
         int64x2_t leftValueVec0 = vld1q_s64(valueReadL + pos0);
         int64x2_t leftValueVec1 = vld1q_s64(valueReadL + pos1);
@@ -975,7 +947,7 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
             uint64x2_t curAddrVec1;
             uint64x2_t curAddrVec2;
             uint64x2_t curAddrVec3;
-            int32_t prefetchStep = 3 * kUnroll * N;
+            constexpr int32_t prefetchStep = 3 * kUnroll * N;
 
             int32_t capacityL = static_cast<int32_t>(valueReadL - valueStart) - writeL;
             if (capacityL > advanceStep) {
@@ -1054,7 +1026,7 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
     if (chooseAvg) {
         pivotVal = vdupq_n_s64(avg);
     } else {
-        auto count = DrawSamples<sortAscending>(values, addresses, from, to, valueBuf, addrBuf);
+        auto count = DrawSamples<sortAscending>(values, from, to, valueBuf);
         SmallCaseSortWithoutAddress<sortAscending>(valueBuf, 0, count);
         pivotVal = ChoosePivot(valueBuf, 0, count);
     }
