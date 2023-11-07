@@ -17,43 +17,43 @@ constexpr int64_t TWOOMNIMIN64[2] = {INT64_MIN, INT64_MIN};
 constexpr int32_t  SORTDESCENDING = 0;
 constexpr int32_t SORTASCENDING = 1;
 
-template <class VType, int32_t SortingRule = SORTASCENDING> static VType ALWAYS_INLINE Max64(VType &a, VType &b)
+template <class VType, int32_t SortingRule = SORTASCENDING>
+static VType ALWAYS_INLINE Max64(const VType &a, const VType &b)
 {
     if constexpr (SortingRule == SORTASCENDING) {
         if constexpr (std::is_same_v<VType, int64x2_t>) {
             uint64x2_t lessThan = vcltq_s64(a, b);
             return vbslq_s64(lessThan, b, a);
-        } else if constexpr (std::is_same_v<VType, int64x1_t>) {
+        } else {
             uint64x1_t lessThan = vclt_s64(a, b);
             return vbsl_s64(lessThan, b, a);
         }
-    }
-    if constexpr (SortingRule == SORTDESCENDING) {
+    } else {
         if constexpr (std::is_same_v<VType, int64x2_t>) {
             uint64x2_t lessThan = vcltq_s64(a, b);
             return vbslq_s64(lessThan, a, b);
-        } else if constexpr (std::is_same_v<VType, int64x1_t>) {
+        } else {
             uint64x1_t lessThan = vclt_s64(a, b);
             return vbsl_s64(lessThan, a, b);
         }
     }
 }
-template <class VType, int32_t SortingRule = SORTASCENDING> static VType ALWAYS_INLINE Min64(VType &a, VType &b)
+template <class VType, int32_t SortingRule = SORTASCENDING>
+static VType ALWAYS_INLINE Min64(const VType &a, const VType &b)
 {
     if constexpr (SortingRule == SORTASCENDING) {
         if constexpr (std::is_same_v<VType, int64x2_t>) {
             uint64x2_t lessThan = vcltq_s64(a, b);
             return vbslq_s64(lessThan, a, b);
-        } else if constexpr (std::is_same_v<VType, int64x1_t>) {
+        } else {
             uint64x1_t lessThan = vclt_s64(a, b);
             return vbsl_s64(lessThan, a, b);
         }
-    }
-    if constexpr (SortingRule == SORTDESCENDING) {
+    } else {
         if constexpr (std::is_same_v<VType, int64x2_t>) {
             uint64x2_t lessThan = vcltq_s64(a, b);
             return vbslq_s64(lessThan, b, a);
-        } else if constexpr (std::is_same_v<VType, int64x1_t>) {
+        } else {
             uint64x1_t lessThan = vclt_s64(a, b);
             return vbsl_s64(lessThan, b, a);
         }
@@ -86,17 +86,16 @@ static void ALWAYS_INLINE Sort2WithAddr(VType &a, VType &b, AddrType &c, AddrTyp
             d = c;
             c = copyD;
         }
-    }
-    if constexpr (std::is_same_v<VType, int64x2_t>) {
-        if(vgetq_lane_s64(a, 0) == vgetq_lane_s64(copyB, 0)) {
+    } else {
+        if (vgetq_lane_s64(a, 0) == vgetq_lane_s64(copyB, 0)) {
             uint64_t tempC0 = vgetq_lane_u64(c, 0);
-            c = vsetq_lane_u64(vgetq_lane_u64(d, 0),c,0);
-            d = vsetq_lane_u64(tempC0,d,0);
+            c = vsetq_lane_u64(vgetq_lane_u64(d, 0), c, 0);
+            d = vsetq_lane_u64(tempC0, d, 0);
         }
         if (vgetq_lane_s64(a, 1) == vgetq_lane_s64(copyB, 1)) {
             uint64_t tempC1 = vgetq_lane_u64(c, 1);
-            c = vsetq_lane_u64(vgetq_lane_u64(d, 1),c,1);
-            d = vsetq_lane_u64(tempC1,d,1);
+            c = vsetq_lane_u64(vgetq_lane_u64(d, 1), c, 1);
+            d = vsetq_lane_u64(tempC1, d, 1);
         }
     }
 }
@@ -118,7 +117,8 @@ template <int32_t SortRule> static int64x2_t ALWAYS_INLINE SortPair64(int64x2_t 
     int64x2_t copyA = a;
     int64x2_t swappedA = ReverseKeys2(a);
     Sort2<int64x2_t, SortRule>(a, swappedA);
-    int64x2_t c = { vgetq_lane_s64(a, 0), vgetq_lane_s64(swappedA, 0) };
+    int64x2_t c = vzip1q_s64(a, swappedA);
+
     if (vgetq_lane_s64(a, 0) != vgetq_lane_s64(copyA, 0)) {
         addr = ReverseAddrs2(addr);
     }
@@ -246,23 +246,23 @@ template <class VType, int32_t SortRule> static void ALWAYS_INLINE Sort8Rows(int
             if constexpr (SortRule == SORTDESCENDING) {
                 v[i] = vsetq_lane_s64(OMNIMIN64, v[i], 1);
                 for (int32_t p = 7; p > i; p--) {
-                    v[p] = vld1q_s64(TWOOMNIMIN64);
+                    v[p] = vld1q_dup_s64(TWOOMNIMIN64);
                 }
             } else if constexpr (SortRule == SORTASCENDING) {
                 v[i] = vsetq_lane_s64(OMNIMAX64, v[i], 1);
                 for (int32_t p = 7; p > i; p--) {
-                    v[p] = vld1q_s64(TWOOMNIMAX64);
+                    v[p] = vld1q_dup_s64(TWOOMNIMAX64);
                 }
             }
 
         } else {
             if constexpr (SortRule == SORTDESCENDING) {
                 for (int32_t p = 7; p >= i; p--) {
-                    v[p] = vld1q_s64(TWOOMNIMIN64);
+                    v[p] = vld1q_dup_s64(TWOOMNIMIN64);
                 }
             } else if constexpr (SortRule == SORTASCENDING) {
                 for (int32_t p = 7; p >= i; p--) {
-                    v[p] = vld1q_s64(TWOOMNIMAX64);
+                    v[p] = vld1q_dup_s64(TWOOMNIMAX64);
                 }
             }
         }
@@ -513,23 +513,23 @@ template <int32_t SortRule> static void ALWAYS_INLINE Sort16Rows(int64_t *array,
         if constexpr (SortRule == SORTASCENDING) {
             v[i] = vsetq_lane_s64(OMNIMAX64, v[i], 1);
             for (int32_t p = 15; p > i; p--) {
-                v[p] = vld1q_s64(TWOOMNIMAX64);
+                v[p] = vld1q_dup_s64(TWOOMNIMAX64);
             }
         } else if constexpr (SortRule == SORTDESCENDING) {
             v[i] = vsetq_lane_s64(OMNIMIN64, v[i], 1);
             for (int32_t p = 15; p > i; p--) {
-                v[p] = vld1q_s64(TWOOMNIMIN64);
+                v[p] = vld1q_dup_s64(TWOOMNIMIN64);
             }
         }
 
     } else {
         if constexpr (SortRule == SORTASCENDING) {
             for (int32_t p = 15; p >= i; p--) {
-                v[p] = vld1q_s64(TWOOMNIMAX64);
+                v[p] = vld1q_dup_s64(TWOOMNIMAX64);
             }
         } else if constexpr (SortRule == SORTDESCENDING) {
             for (int32_t p = 15; p >= i; p--) {
-                v[p] = vld1q_s64(TWOOMNIMIN64);
+                v[p] = vld1q_dup_s64(TWOOMNIMIN64);
             }
         }
     }
@@ -685,22 +685,22 @@ template <class VType, int32_t SortRule> static void ALWAYS_INLINE Sort4Rows(int
             if constexpr (SortRule == SORTDESCENDING) {
                 v[i] = vsetq_lane_s64(OMNIMIN64, v[i], 1);
                 for (int32_t p = 3; p > i; p--) {
-                    v[p] = vld1q_s64(TWOOMNIMIN64);
+                    v[p] = vld1q_dup_s64(TWOOMNIMIN64);
                 }
             } else if constexpr (SortRule == SORTASCENDING) {
                 v[i] = vsetq_lane_s64(OMNIMAX64, v[i], 1);
                 for (int32_t p = 3; p > i; p--) {
-                    v[p] = vld1q_s64(TWOOMNIMAX64);
+                    v[p] = vld1q_dup_s64(TWOOMNIMAX64);
                 }
             }
         } else {
             if constexpr (SortRule == SORTDESCENDING) {
                 for (int32_t p = 3; p >= i; p--) {
-                    v[p] = vld1q_s64(TWOOMNIMIN64);
+                    v[p] = vld1q_dup_s64(TWOOMNIMIN64);
                 }
             } else if constexpr (SortRule == SORTASCENDING) {
                 for (int32_t p = 3; p >= i; p--) {
-                    v[p] = vld1q_s64(TWOOMNIMAX64);
+                    v[p] = vld1q_dup_s64(TWOOMNIMAX64);
                 }
             }
         }
