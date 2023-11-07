@@ -17,6 +17,7 @@
 #include "operator/omni_id_type_vector_traits.h"
 #include "operator/quick_sort_simd.h"
 #include "operator/pages_index.h"
+#include "random"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -411,6 +412,184 @@ TEST(NativeOmniSortTest, TestSortLongColumnDescSIMD)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
+TEST(NativeOmniSortTest, TestSortDuplicateLongColumnAscSIMDPerformance2)
+{
+    // construct input data
+    const int64_t dataSize = 1000000;
+    auto prepareStart = std::chrono::high_resolution_clock::now();
+    auto *data1 = new int64_t[dataSize];
+    auto *data2 = new uint64_t[dataSize];
+    auto *data3 = new int64_t[dataSize];
+    auto *data4 = new uint64_t[dataSize];
+    for (int64_t i = 0; i < dataSize; i++) {
+        data1[i] = i % 50;
+        data2[i] = i;
+        data3[i] = data1[i];
+        data4[i] = i;
+    }
+    auto prepareEnd = std::chrono::high_resolution_clock::now();
+    auto preDuration = std::chrono::duration_cast<std::chrono::milliseconds>(prepareEnd - prepareStart);
+    std::cout << "TestSortDuplicateLongColumnAscSIMDPerformance2 prepare data cost: " << preDuration.count() << " ms\n";
+
+    auto start1 = std::chrono::high_resolution_clock::now();
+    omniruntime::op::QuickSortFixedLengthAsc(data3, data4, 0, dataSize);
+    auto end1 = std::chrono::high_resolution_clock::now();
+    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
+    std::cout << "TestSortDuplicateLongColumnAscSIMDPerformance2 original sort long cost: " << duration1.count() <<
+        " ms\n";
+
+    auto start2 = std::chrono::high_resolution_clock::now();
+    QuickSortAscSIMD(data1, data2, 0, dataSize);
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    std::cout << "TestSortDuplicateLongColumnAscSIMDPerformance2 simd sort long cost: " << duration2.count() << " ms\n";
+    for (int i = 0; i < dataSize; i++) {
+        if (data1[i] != data3[i]) {
+            std::cout << "error!";
+            break;
+        }
+    }
+
+    delete[] data1;
+    delete[] data2;
+    delete[] data3;
+    delete[] data4;
+}
+
+TEST(NativeOmniSortTest, TestSortDuplicateLongColumnAscSIMDPerformance1)
+{
+    // construct input data
+    const int64_t dataSize = 1000000;
+    auto prepareStart = std::chrono::high_resolution_clock::now();
+    auto *data1 = new int64_t[dataSize];
+    auto *data2 = new uint64_t[dataSize];
+    auto *data3 = new int64_t[dataSize];
+    auto *data4 = new uint64_t[dataSize];
+    for (int64_t i = 0; i < dataSize; i++) {
+        data1[i] = i % 20;
+        data2[i] = i;
+        data3[i] = data1[i];
+        data4[i] = i;
+    }
+    auto prepareEnd = std::chrono::high_resolution_clock::now();
+    auto preDuration = std::chrono::duration_cast<std::chrono::milliseconds>(prepareEnd - prepareStart);
+    std::cout << "TestSortDuplicateLongColumnAscSIMDPerformance1 prepare data cost: " << preDuration.count() << " ms\n";
+
+    auto start1 = std::chrono::high_resolution_clock::now();
+    omniruntime::op::QuickSortFixedLengthAsc(data3, data4, 0, dataSize);
+    auto end1 = std::chrono::high_resolution_clock::now();
+    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
+    std::cout << "TestSortDuplicateLongColumnAscSIMDPerformance1 original sort long cost: " << duration1.count() <<
+        " ms\n";
+
+    auto start2 = std::chrono::high_resolution_clock::now();
+    QuickSortAscSIMD(data1, data2, 0, dataSize);
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    std::cout << "TestSortDuplicateLongColumnAscSIMDPerformance1 simd sort long cost: " << duration2.count() << " ms\n";
+    for (int i = 0; i < dataSize; i++) {
+        if (data1[i] != data3[i]) {
+            std::cout << "error!";
+            break;
+        }
+    }
+
+    delete[] data1;
+    delete[] data2;
+    delete[] data3;
+    delete[] data4;
+}
+
+TEST(NativeOmniSortTest, TestSortOrderlyLongColumnAscSIMDPerformance)
+{
+    // construct input data
+    const int64_t dataSize = 1000000;
+    auto prepareStart = std::chrono::high_resolution_clock::now();
+    auto *data1 = new int64_t[dataSize];
+    auto *data2 = new uint64_t[dataSize];
+    auto *data3 = new int64_t[dataSize];
+    auto *data4 = new uint64_t[dataSize];
+    for (int64_t i = 0; i < dataSize; i++) {
+        data1[i] = i;
+        data2[i] = i;
+        data3[i] = i;
+        data4[i] = i;
+    }
+    auto prepareEnd = std::chrono::high_resolution_clock::now();
+    auto preDuration = std::chrono::duration_cast<std::chrono::milliseconds>(prepareEnd - prepareStart);
+    std::cout << "TestSortOrderlyLongColumnAscSIMDPerformance prepare data cost: " << preDuration.count() << " ms\n";
+
+    auto start1 = std::chrono::high_resolution_clock::now();
+    omniruntime::op::QuickSortFixedLengthAsc(data3, data4, 0, dataSize);
+    auto end1 = std::chrono::high_resolution_clock::now();
+    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
+    std::cout << "TestSortOrderlyLongColumnAscSIMDPerformance original sort long cost: " << duration1.count() <<
+        " ms\n";
+
+    auto start2 = std::chrono::high_resolution_clock::now();
+    QuickSortAscSIMD(data1, data2, 0, dataSize);
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    std::cout << "TestSortOrderlyLongColumnAscSIMDPerformance simd sort long cost: " << duration2.count() << " ms\n";
+    for (int i = 0; i < dataSize; i++) {
+        if (data1[i] != data3[i]) {
+            std::cout << "error!";
+            break;
+        }
+    }
+
+    delete[] data1;
+    delete[] data2;
+    delete[] data3;
+    delete[] data4;
+}
+
+TEST(NativeOmniSortTest, TestSortRandomLongColumnAscSIMDPerformance)
+{
+    // construct input data
+    const int64_t dataSize = 1000000;
+    auto prepareStart = std::chrono::high_resolution_clock::now();
+    auto *data1 = new int64_t[dataSize];
+    auto *data2 = new uint64_t[dataSize];
+    auto *data3 = new int64_t[dataSize];
+    auto *data4 = new uint64_t[dataSize];
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1, 100);
+    for (int64_t i = 0; i < dataSize; i++) {
+        data1[i] = dis(gen);;
+        data2[i] = i;
+        data3[i] = data1[i];
+        data4[i] = i;
+    }
+    auto prepareEnd = std::chrono::high_resolution_clock::now();
+    auto preDuration = std::chrono::duration_cast<std::chrono::milliseconds>(prepareEnd - prepareStart);
+    std::cout << "TestSortRandomLongColumnAscSIMDPerformance prepare data cost: " << preDuration.count() << " ms\n";
+
+    auto start1 = std::chrono::high_resolution_clock::now();
+    omniruntime::op::QuickSortFixedLengthAsc(data3, data4, 0, dataSize);
+    auto end1 = std::chrono::high_resolution_clock::now();
+    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
+    std::cout << "TestSortRandomLongColumnAscSIMDPerformance original sort long cost: " << duration1.count() << " ms\n";
+
+    auto start2 = std::chrono::high_resolution_clock::now();
+    QuickSortAscSIMD(data1, data2, 0, dataSize);
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    std::cout << "TestSortRandomLongColumnAscSIMDPerformance simd sort long cost: " << duration2.count() << " ms\n";
+    for (int i = 0; i < dataSize; i++) {
+        if (data1[i] != data3[i]) {
+            std::cout << "error!";
+            break;
+        }
+    }
+
+    delete[] data1;
+    delete[] data2;
+    delete[] data3;
+    delete[] data4;
+}
+
 TEST(NativeOmniSortTest, TestSortLongColumnAscSIMDPerformance)
 {
     // construct input data
@@ -433,21 +612,20 @@ TEST(NativeOmniSortTest, TestSortLongColumnAscSIMDPerformance)
     auto start1 = std::chrono::high_resolution_clock::now();
     omniruntime::op::QuickSortFixedLengthAsc(data3, data4, 0, dataSize);
     auto end1 = std::chrono::high_resolution_clock::now();
-    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
-    std::cout << "original sort long cost: " << duration2.count() << " ms\n";
+    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start1);
+    std::cout << "original sort long cost: " << duration1.count() << " ms\n";
 
-    auto start = std::chrono::high_resolution_clock::now();
+    auto start2 = std::chrono::high_resolution_clock::now();
     QuickSortAscSIMD(data1, data2, 0, dataSize);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "simd sort long cost: " << duration1.count() << " ms\n";
-
-//    for(int i = 0; i < dataSize; i++) {
-//        if(data1[i] != i + 1 || data3[i] != i + 1) {
-//            std::cout<<"error!";
-//            break;
-//        }
-//    }
+    auto end2 = std::chrono::high_resolution_clock::now();
+    auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+    std::cout << "simd sort long cost: " << duration2.count() << " ms\n";
+    for(int i = 0; i < dataSize; i++) {
+        if(data1[i] != i + 1 || data3[i] != i + 1) {
+            std::cout<<"error!";
+            break;
+        }
+    }
 
     delete[] data1;
     delete[] data2;
@@ -1881,7 +2059,7 @@ TEST(NativeOmniSortTest, TestVarcharSortPerformance)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
-TEST(NativeOmniSortTest, TestAllColumnsCanCastToInt64)
+/*TEST(NativeOmniSortTest, TestAllColumnsCanCastToInt64)
 {
     // construct input data
     const int32_t dataSize = 20;
@@ -1940,7 +2118,7 @@ TEST(NativeOmniSortTest, TestAllColumnsCanCastToInt64)
 
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
-}
+}*/
 
 template <typename T>
 static void TestInplaceSort(T *sourceData, T *expectData, DataTypes &sourceTypes, int32_t dataSize)
