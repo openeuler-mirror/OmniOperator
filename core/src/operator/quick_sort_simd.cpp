@@ -748,16 +748,20 @@ static uint64x2_t ALWAYS_INLINE GetIdxFromBitsForLong(uint64_t maskBits)
     return vreinterpretq_u64_u8(idxBytes);
 }
 
-static int64x2_t ALWAYS_INLINE CompressNot(int64x2_t value, uint64x2_t mask)
+static uint64x2_t ALWAYS_INLINE SwapMask(uint64x2_t mask)
 {
     uint64x2_t tmpMaskL = vzip1q_u64(mask, mask);
     uint64x2_t tmpMaskH = vzip2q_u64(mask, mask);
     uint64x2_t tmpSwap = vbicq_u64(tmpMaskL, tmpMaskH);
+    return tmpSwap;
+}
 
+static int64x2_t ALWAYS_INLINE CompressNot(int64x2_t value, uint64x2_t swapMask)
+{
     // shuffle
     uint8x16_t valueBytes = vreinterpretq_u8_s64(value);
     uint8x16_t shuffleBytes = vextq_u8(valueBytes, valueBytes, 8);
-    int64x2_t compressVec = vbslq_s64(tmpSwap, vreinterpretq_s64_u8(shuffleBytes), value);
+    int64x2_t compressVec = vbslq_s64(swapMask, vreinterpretq_s64_u8(shuffleBytes), value);
     return compressVec;
 }
 
@@ -855,30 +859,69 @@ int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_
 }
 
 template <int32_t sortAscending>
-static void ALWAYS_INLINE StoreLeftRight(int64_t *values, int64x2_t pivotVec, int64x2_t valueVec, uint64_t *addresses, uint64x2_t addrVec, int32_t &writeL, int32_t &remaining)
+static void ALWAYS_INLINE StoreLeftRight4(int64_t *values, int64x2_t pivotVec, int64x2_t valueVec0, int64x2_t valueVec1, int64x2_t valueVec2, int64x2_t valueVec3, uint64_t *addresses, uint64x2_t addrVec0, uint64x2_t addrVec1, uint64x2_t addrVec2, uint64x2_t addrVec3, int32_t &writeL, int32_t &remaining, int64x2_t &smallestVec, int64x2_t &largestVec)
 {
+    uint64x2_t compareResult0 = Compare<sortAscending>(pivotVec, valueVec0);
+    uint64x2_t compareResult1 = Compare<sortAscending>(pivotVec, valueVec1);
+    uint64x2_t compareResult2 = Compare<sortAscending>(pivotVec, valueVec2);
+    uint64x2_t compareResult3 = Compare<sortAscending>(pivotVec, valueVec3);
+    uint64x2_t swapMask0 = SwapMask(compareResult0);
+    uint64x2_t swapMask1 = SwapMask(compareResult1);
+    uint64x2_t swapMask2 = SwapMask(compareResult2);
+    uint64x2_t swapMask3 = SwapMask(compareResult3);
+    int32_t numRight0 = CountTrue(compareResult0);
+    int32_t numRight1 = CountTrue(compareResult1);
+    int32_t numRight2 = CountTrue(compareResult2);
+    int32_t numRight3 = CountTrue(compareResult3);
+    UpdateMinMax<sortAscending>(valueVec0, smallestVec, largestVec);
+
+    int64x2_t compressValueVec0 = CompressNot(valueVec0, swapMask0);
+    int64x2_t compressValueVec1 = CompressNot(valueVec1, swapMask1);
+    int64x2_t compressValueVec2 = CompressNot(valueVec2, swapMask2);
+    int64x2_t compressValueVec3 = CompressNot(valueVec3, swapMask3);
+    uint64x2_t compressAddrVec0 = vreinterpretq_u64_s64(CompressNot(vreinterpretq_s64_u64(addrVec0), swapMask0));
+    uint64x2_t compressAddrVec1 = vreinterpretq_u64_s64(CompressNot(vreinterpretq_s64_u64(addrVec1), swapMask1));
+    uint64x2_t compressAddrVec2 = vreinterpretq_u64_s64(CompressNot(vreinterpretq_s64_u64(addrVec2), swapMask2));
+    uint64x2_t compressAddrVec3 = vreinterpretq_u64_s64(CompressNot(vreinterpretq_s64_u64(addrVec3), swapMask3));
+    UpdateMinMax<sortAscending>(valueVec1, smallestVec, largestVec);
+
+    int32_t tmpPos1 = writeL - numRight0;
+    int32_t tmpPos2 = tmpPos1 - numRight1;
+    int32_t tmpPos3 = tmpPos2 - numRight2;
+
     constexpr int32_t N = 2;
-    remaining -= N;
-    uint64x2_t compareResult = Compare<sortAscending>(pivotVec, valueVec);
-    int64x2_t compressValueVec = CompressNot(valueVec, compareResult);
-    vst1q_s64(values + writeL, compressValueVec);
-    vst1q_s64(values + remaining + writeL, compressValueVec);
+    int32_t tmpRemaining = remaining - N;
+    int32_t writeL0 = writeL;
+    int32_t writeR0 = tmpRemaining + writeL;
+    int32_t writeL1 = N + tmpPos1;
+    int32_t writeR1 = tmpRemaining + tmpPos1;
+    int32_t writeL2 = 2 * N + tmpPos2;
+    int32_t writeR2 = tmpRemaining + tmpPos2;
+    int32_t writeL3 = 3 * N + tmpPos3;
+    int32_t writeR3 = tmpRemaining + tmpPos3;
 
-    uint64x2_t compressAddrVec = vreinterpretq_u64_s64(CompressNot(vreinterpretq_s64_u64(addrVec), compareResult));
-    vst1q_u64(addresses + writeL, compressAddrVec);
-    vst1q_u64(addresses + remaining + writeL, compressAddrVec);
+    vst1q_s64(values + writeL0, compressValueVec0);
+    vst1q_s64(values + writeL1, compressValueVec1);
+    vst1q_s64(values + writeL2, compressValueVec2);
+    vst1q_s64(values + writeL3, compressValueVec3);
+    vst1q_s64(values + writeR0, compressValueVec0);
+    vst1q_s64(values + writeR1, compressValueVec1);
+    vst1q_s64(values + writeR2, compressValueVec2);
+    vst1q_s64(values + writeR3, compressValueVec3);
+    UpdateMinMax<sortAscending>(valueVec2, smallestVec, largestVec);
 
-    int32_t numLeft = N - CountTrue(compareResult);
-    writeL += numLeft;
-}
+    vst1q_u64(addresses + writeL0, compressAddrVec0);
+    vst1q_u64(addresses + writeL1, compressAddrVec1);
+    vst1q_u64(addresses + writeL2, compressAddrVec2);
+    vst1q_u64(addresses + writeL3, compressAddrVec3);
+    vst1q_u64(addresses + writeR0, compressAddrVec0);
+    vst1q_u64(addresses + writeR1, compressAddrVec1);
+    vst1q_u64(addresses + writeR2, compressAddrVec2);
+    vst1q_u64(addresses + writeR3, compressAddrVec3);
+    UpdateMinMax<sortAscending>(valueVec3, smallestVec, largestVec);
 
-template <int32_t sortAscending>
-static void ALWAYS_INLINE StoreLeftRight4(int64_t *values, int64x2_t pivotVec, int64x2_t valueVec0, int64x2_t valueVec1, int64x2_t valueVec2, int64x2_t valueVec3, uint64_t *addresses, uint64x2_t addrVec0, uint64x2_t addrVec1, uint64x2_t addrVec2, uint64x2_t addrVec3, int32_t &writeL, int32_t &remaining)
-{
-    StoreLeftRight<sortAscending>(values, pivotVec, valueVec0, addresses, addrVec0, writeL, remaining);
-    StoreLeftRight<sortAscending>(values, pivotVec, valueVec1, addresses, addrVec1, writeL, remaining);
-    StoreLeftRight<sortAscending>(values, pivotVec, valueVec2, addresses, addrVec2, writeL, remaining);
-    StoreLeftRight<sortAscending>(values, pivotVec, valueVec3, addresses, addrVec3, writeL, remaining);
+    remaining -= 4 * N;
+    writeL += 4 * N - numRight0 - numRight1 - numRight2 - numRight3;
 }
 
 template <int32_t sortAscending>
@@ -979,23 +1022,12 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
                 addrReadL += advanceStep;
                 __builtin_prefetch(addrReadL + prefetchStep, 0, 3);
             }
-            UpdateMinMax<sortAscending>(curValueVec0, smallestVec, largestVec);
-            UpdateMinMax<sortAscending>(curValueVec1, smallestVec, largestVec);
-            UpdateMinMax<sortAscending>(curValueVec2, smallestVec, largestVec);
-            UpdateMinMax<sortAscending>(curValueVec3, smallestVec, largestVec);
-            StoreLeftRight4<sortAscending>(valueStart, pivotVec, curValueVec0, curValueVec1, curValueVec2, curValueVec3, addressStart, curAddrVec0, curAddrVec1, curAddrVec2, curAddrVec3, writeL, remaining);
+
+            StoreLeftRight4<sortAscending>(valueStart, pivotVec, curValueVec0, curValueVec1, curValueVec2, curValueVec3, addressStart, curAddrVec0, curAddrVec1, curAddrVec2, curAddrVec3, writeL, remaining, smallestVec, largestVec);
         }
 
-        UpdateMinMax<sortAscending>(leftValueVec0, smallestVec, largestVec);
-        UpdateMinMax<sortAscending>(leftValueVec1, smallestVec, largestVec);
-        UpdateMinMax<sortAscending>(leftValueVec2, smallestVec, largestVec);
-        UpdateMinMax<sortAscending>(leftValueVec3, smallestVec, largestVec);
-        StoreLeftRight4<sortAscending>(valueStart, pivotVec, leftValueVec0, leftValueVec1, leftValueVec2, leftValueVec3, addressStart, leftAddrVec0, leftAddrVec1, leftAddrVec2, leftAddrVec3, writeL, remaining);
-        UpdateMinMax<sortAscending>(rightValueVec0, smallestVec, largestVec);
-        UpdateMinMax<sortAscending>(rightValueVec1, smallestVec, largestVec);
-        UpdateMinMax<sortAscending>(rightValueVec2, smallestVec, largestVec);
-        UpdateMinMax<sortAscending>(rightValueVec3, smallestVec, largestVec);
-        StoreLeftRight4<sortAscending>(valueStart, pivotVec, rightValueVec0, rightValueVec1, rightValueVec2, rightValueVec3, addressStart, rightAddrVec0, rightAddrVec1, rightAddrVec2, rightAddrVec3, writeL, remaining);
+        StoreLeftRight4<sortAscending>(valueStart, pivotVec, leftValueVec0, leftValueVec1, leftValueVec2, leftValueVec3, addressStart, leftAddrVec0, leftAddrVec1, leftAddrVec2, leftAddrVec3, writeL, remaining, smallestVec, largestVec);
+        StoreLeftRight4<sortAscending>(valueStart, pivotVec, rightValueVec0, rightValueVec1, rightValueVec2, rightValueVec3, addressStart, rightAddrVec0, rightAddrVec1, rightAddrVec2, rightAddrVec3, writeL, remaining, smallestVec, largestVec);
     }
 
     int32_t totalR = last - writeL;
