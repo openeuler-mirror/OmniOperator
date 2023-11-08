@@ -5,8 +5,6 @@
 #ifndef __SORT_H__
 #define __SORT_H__
 
-#include <iostream>
-#include <fstream>
 #include <vector>
 #include <memory>
 #include "util/error_code.h"

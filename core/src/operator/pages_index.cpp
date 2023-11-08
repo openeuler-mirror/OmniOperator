@@ -133,8 +133,8 @@ static int32_t ALWAYS_INLINE NewOnlyCompareVarChar(int64_t leftValue, uint32_t l
 }
 
 template <int32_t sortAscending>
-void QuickSortVarCharSmall(int64_t *values, std::vector<uint32_t> &varcharLength, uint64_t *addresses,
-    int32_t from, int32_t to)
+void QuickSortVarCharSmall(int64_t *values, std::vector<uint32_t> &varcharLength, uint64_t *addresses, int32_t from,
+    int32_t to)
 {
     for (int32_t i = from + 1; i < to; ++i) {
         int64_t iPtr = values[i];
@@ -310,8 +310,8 @@ void NO_INLINE VectorSwapVarChar(int64_t *values, std::vector<uint32_t> &varchar
 }
 
 template <int32_t sortAscending>
-void QuickSortVarcharInternal(int64_t *values, std::vector<uint32_t> &varcharLength, uint64_t *addresses,
-    int32_t from, int32_t to, int32_t *comparetmp)
+void QuickSortVarcharInternal(int64_t *values, std::vector<uint32_t> &varcharLength, uint64_t *addresses, int32_t from,
+    int32_t to, int32_t *comparetmp)
 {
     int32_t len = to - from;
     if (len <= QUICK_SORT_SMALL_LEN) {
@@ -399,18 +399,26 @@ template <typename RawType> static bool ALWAYS_INLINE NewOnlyEqual(RawType &left
 template <int32_t sortAscending> static int8_t ALWAYS_INLINE FixedLengthCompare(int64_t left, int64_t right)
 {
     if constexpr (sortAscending == 1) {
-        return left > right ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : left < right ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
+        return left > right ?
+            OperatorUtil::COMPARE_STATUS_GREATER_THAN :
+            left < right ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     } else {
-        return right > left ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : right < left ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
+        return right > left ?
+            OperatorUtil::COMPARE_STATUS_GREATER_THAN :
+            right < left ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     }
 }
 
 template <int32_t sortAscending> static int8_t ALWAYS_INLINE Decimal128Compare(Decimal128 &left, Decimal128 &right)
 {
     if constexpr (sortAscending == 1) {
-        return left > right ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : left < right ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
+        return left > right ?
+            OperatorUtil::COMPARE_STATUS_GREATER_THAN :
+            left < right ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     } else {
-        return right > left ? OperatorUtil::COMPARE_STATUS_GREATER_THAN : right < left ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
+        return right > left ?
+            OperatorUtil::COMPARE_STATUS_GREATER_THAN :
+            right < left ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
     }
 }
 
@@ -561,8 +569,8 @@ int8_t ALWAYS_INLINE GetNextCompareDecimal128Left(int8_t *comparetmp, int32_t &k
 }
 
 template <int32_t sortAscending>
-inline int8_t GetNextCompareDecimal128Right(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c, int64_t *values,
-    Decimal128 &pivotValue)
+inline int8_t GetNextCompareDecimal128Right(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
+    int64_t *values, Decimal128 &pivotValue)
 {
     if (k < limit) {
         return comparetmp[k++];
@@ -630,15 +638,15 @@ void QuickSortDecimal128Internal(int64_t *values, uint64_t *addresses, int32_t f
     int8_t *rightComparetmp = comparetmp + NMAX_SIZE;
     while (true) {
         int8_t comparison;
-        while (b <= c && (comparison = GetNextCompareDecimal128Left<sortAscending>(leftComparetmp, bk, blim, b, c, values,
-            pivotValue)) <= 0) {
+        while (b <= c && (comparison = GetNextCompareDecimal128Left<sortAscending>(leftComparetmp, bk, blim, b, c,
+            values, pivotValue)) <= 0) {
             if (UNLIKELY(comparison == 0)) {
                 Swap(values, addresses, a++, b);
             }
             b++;
         }
-        while (c >= b && (comparison = GetNextCompareDecimal128Right<sortAscending>(rightComparetmp, ck, clim, b, c, values,
-            pivotValue)) >= 0) {
+        while (c >= b && (comparison = GetNextCompareDecimal128Right<sortAscending>(rightComparetmp, ck, clim, b, c,
+            values, pivotValue)) >= 0) {
             if (UNLIKELY(comparison == 0)) {
                 Swap(values, addresses, c, d--);
             }
@@ -673,271 +681,6 @@ void QuickSortDecimal128(int64_t *values, uint64_t *addresses, int32_t from, int
     int8_t comparetmp[NMAX_SIZE + NMAX_SIZE];
     QuickSortDecimal128Internal<sortAscending>(values, addresses, from, to, comparetmp);
 }
-
-// start for compare scalar and simd test
-int32_t GetMedian(int64_t *values, int32_t a, int32_t b, int32_t c, int64_t &pivotValue)
-{
-    int64_t va = values[a];
-    int64_t vb = values[b];
-    int64_t vc = values[c];
-    if (va <= vb) {
-        if (vb <= vc) {
-            pivotValue = vb;
-            return b;
-        }
-        if (va <= vc) {
-            pivotValue = vc;
-            return c;
-        } else {
-            pivotValue = va;
-            return a;
-        }
-    } else {
-        if (vb > vc) {
-            pivotValue = vb;
-            return b;
-        }
-        if (va > vc) {
-            pivotValue = vc;
-            return c;
-        } else {
-            pivotValue = va;
-            return a;
-        }
-    }
-}
-
-int64_t GetMedianFixedLengthValue(int64_t *values, int32_t from, int32_t to, int32_t len)
-{
-    int32_t l = from;
-    int32_t n = to - 1;
-    int32_t m = from + len / QUICK_SORT_MIDDLE;
-    if (len > QUICK_SORT_BIG_LEN) {
-        int32_t s = len / QUICK_SORT_STEP_SIZE;
-        int64_t vl;
-        int64_t vm;
-        int64_t vn;
-        l = GetMedian(values, l, l + s, l + QUICK_SORT_MIDDLE * s, vl);
-        m = GetMedian(values, m - s, m, m + s, vm);
-        n = GetMedian(values, n - QUICK_SORT_MIDDLE * s, n - s, n, vn);
-        if (vl <= vm) {
-            if (vm <= vn) {
-                return vm;
-            }
-            if (vl <= vn) {
-                return vn;
-            } else {
-                return vl;
-            }
-        } else {
-            if (vm > vn) {
-                return vm;
-            }
-            if (vl > vn) {
-                return vn;
-            } else {
-                return vl;
-            }
-        }
-    } else {
-        int64_t median;
-        GetMedian(values, l, m, n, median);
-        return median;
-    }
-}
-
-template <int32_t sortAscending>
-void QuickSortFixedLengthSmall(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
-{
-    for (int32_t i = from + 1; i < to; ++i) {
-        auto iValue = values[i];
-        auto iAddr = addresses[i];
-        int32_t j = i - 1;
-        while (j >= from) {
-            auto jValue = values[j];
-            if constexpr (sortAscending == 0) {
-                if (jValue >= iValue) {
-                    break;
-                }
-            } else {
-                if (jValue <= iValue) {
-                    break;
-                }
-            }
-            values[j + 1] = jValue;
-            addresses[j + 1] = addresses[j];
-            --j;
-        }
-        values[j + 1] = iValue;
-        addresses[j + 1] = iAddr;
-    }
-}
-
-template <int32_t sortAscending>
-int8_t ALWAYS_INLINE GetNextCompareFixedLengthLeft(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c,
-    int64_t *values, int64_t &pivotValue)
-{
-    if (k < limit) {
-        return comparetmp[k++];
-    }
-    k = 1;
-    // use up
-    limit = std::min(c - b + 1, NMAX_SIZE);
-
-    int32_t i = b;
-    int32_t j = 0;
-    for (; j < limit - NSTEP; i += NSTEP, j += NSTEP) {
-        auto v0 = values[i];
-        auto v1 = values[i + 1];
-        auto v2 = values[i + 2];
-        auto v3 = values[i + 3];
-        comparetmp[j] = FixedLengthCompare<sortAscending>(v0, pivotValue);
-        comparetmp[j + 1] = FixedLengthCompare<sortAscending>(v1, pivotValue);
-        comparetmp[j + 2] = FixedLengthCompare<sortAscending>(v2, pivotValue);
-        comparetmp[j + 3] = FixedLengthCompare<sortAscending>(v3, pivotValue);
-        auto v4 = values[i + 4];
-        auto v5 = values[i + 5];
-        auto v6 = values[i + 6];
-        auto v7 = values[i + 7];
-        comparetmp[j + 4] = FixedLengthCompare<sortAscending>(v4, pivotValue);
-        comparetmp[j + 5] = FixedLengthCompare<sortAscending>(v5, pivotValue);
-        comparetmp[j + 6] = FixedLengthCompare<sortAscending>(v6, pivotValue);
-        comparetmp[j + 7] = FixedLengthCompare<sortAscending>(v7, pivotValue);
-        auto v8 = values[i + 8];
-        auto v9 = values[i + 9];
-        auto v10 = values[i + 10];
-        auto v11 = values[i + 11];
-        comparetmp[j + 8] = FixedLengthCompare<sortAscending>(v8, pivotValue);
-        comparetmp[j + 9] = FixedLengthCompare<sortAscending>(v9, pivotValue);
-        comparetmp[j + 10] = FixedLengthCompare<sortAscending>(v10, pivotValue);
-        comparetmp[j + 11] = FixedLengthCompare<sortAscending>(v11, pivotValue);
-    }
-    for (; j < limit; ++i, ++j) {
-        auto v = values[i];
-        comparetmp[j] = FixedLengthCompare<sortAscending>(v, pivotValue);
-    }
-    return comparetmp[0];
-}
-
-template <int32_t sortAscending>
-inline int8_t GetNextCompareFixedLengthRight(int8_t *comparetmp, int32_t &k, int32_t &limit, int32_t b, int32_t c, int64_t *values,
-    int64_t &pivotValue)
-{
-    if (k < limit) {
-        return comparetmp[k++];
-    }
-    k = 1;
-    // use up
-    limit = std::min(c - b + 1, NMAX_SIZE);
-
-    int32_t i = c;
-    int32_t j = 0;
-    for (; j < limit - NSTEP; i -= NSTEP, j += NSTEP) {
-        auto v0 = values[i];
-        auto v1 = values[i - 1];
-        auto v2 = values[i - 2];
-        auto v3 = values[i - 3];
-        comparetmp[j] = FixedLengthCompare<sortAscending>(v0, pivotValue);
-        comparetmp[j + 1] = FixedLengthCompare<sortAscending>(v1, pivotValue);
-        comparetmp[j + 2] = FixedLengthCompare<sortAscending>(v2, pivotValue);
-        comparetmp[j + 3] = FixedLengthCompare<sortAscending>(v3, pivotValue);
-        auto v4 = values[i - 4];
-        auto v5 = values[i - 5];
-        auto v6 = values[i - 6];
-        auto v7 = values[i - 7];
-        comparetmp[j + 4] = FixedLengthCompare<sortAscending>(v4, pivotValue);
-        comparetmp[j + 5] = FixedLengthCompare<sortAscending>(v5, pivotValue);
-        comparetmp[j + 6] = FixedLengthCompare<sortAscending>(v6, pivotValue);
-        comparetmp[j + 7] = FixedLengthCompare<sortAscending>(v7, pivotValue);
-        auto v8 = values[i - 8];
-        auto v9 = values[i - 9];
-        auto v10 = values[i - 10];
-        auto v11 = values[i - 11];
-        comparetmp[j + 8] = FixedLengthCompare<sortAscending>(v8, pivotValue);
-        comparetmp[j + 9] = FixedLengthCompare<sortAscending>(v9, pivotValue);
-        comparetmp[j + 10] = FixedLengthCompare<sortAscending>(v10, pivotValue);
-        comparetmp[j + 11] = FixedLengthCompare<sortAscending>(v11, pivotValue);
-    }
-    for (; j < limit; --i, ++j) {
-        auto v = values[i];
-        comparetmp[j] = FixedLengthCompare<sortAscending>(v, pivotValue);
-    }
-    return comparetmp[0];
-}
-
-template <int32_t sortAscending>
-void QuickSortFixedLengthInternal(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int8_t *comparetmp)
-{
-    int32_t len = to - from;
-    if (len <= QUICK_SORT_SMALL_LEN) { // point 3
-        QuickSortFixedLengthSmall<sortAscending>(values, addresses, from, to);
-        return;
-    }
-
-    auto pivotValue = GetMedianFixedLengthValue(values, from, to, len);
-
-    int32_t a = from;
-    int32_t b = a;
-    int32_t c = to - 1;
-    int32_t d = c;
-
-    int32_t bk = 0;
-    int32_t blim = 0;
-    int32_t ck = 0;
-    int32_t clim = 0;
-    int8_t *leftComparetmp = comparetmp;
-    int8_t *rightComparetmp = comparetmp + NMAX_SIZE;
-    while (true) {
-        int8_t comparison;
-        while (b <= c && (comparison = GetNextCompareFixedLengthLeft<sortAscending>(leftComparetmp, bk, blim, b, c, values,
-                pivotValue)) <= 0) {
-            if (UNLIKELY(comparison == 0)) {
-                Swap(values, addresses, a++, b);
-            }
-            b++;
-        }
-        while (c >= b && (comparison = GetNextCompareFixedLengthRight<sortAscending>(rightComparetmp, ck, clim, b, c, values,
-                pivotValue)) >= 0) {
-            if (UNLIKELY(comparison == 0)) {
-                Swap(values, addresses, c, d--);
-            }
-            c--;
-        }
-        if (b > c) {
-            break;
-        }
-        Swap(values, addresses, b++, c--);
-    }
-
-    // Swap partition elements back to middle
-    int32_t s;
-    int32_t n = to;
-    s = std::min(a - from, b - a);
-    VectorSwap(values, addresses, from, b - s, s);
-    s = std::min(d - c, n - d - 1);
-    VectorSwap(values, addresses, b, n - s, s);
-
-    // Recursively sort non-partition-elements
-    if ((s = b - a) > 1) {
-        QuickSortFixedLengthInternal<sortAscending>(values, addresses, from, from + s, comparetmp);
-    }
-    if ((s = d - c) > 1) {
-        QuickSortFixedLengthInternal<sortAscending>(values, addresses, n - s, n, comparetmp);
-    }
-}
-
-void QuickSortFixedLengthAsc(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
-{
-    int8_t comparetmp[NMAX_SIZE + NMAX_SIZE];
-    QuickSortFixedLengthInternal<1>(values, addresses, from, to, comparetmp);
-}
-
-void QuickSortFixedLengthDec(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
-{
-    int8_t comparetmp[NMAX_SIZE + NMAX_SIZE];
-    QuickSortFixedLengthInternal<0>(values, addresses, from, to, comparetmp);
-}
-// end for compare scalar and simd test
 
 template <typename RawType, bool hasNull, bool hasDictionary, bool sortNullFirst>
 void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<uint32_t> &varcharLength,
@@ -1103,10 +846,8 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
         } else {
             if (sortAscending == 0) {
                 QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
-                // QuickSortFixedLength<0>(values, valueAddresses, nonNullFrom, nonNullTo);
             } else {
                 QuickSortAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
-                // QuickSortFixedLength<1>(values, valueAddresses, nonNullFrom, nonNullTo);
             }
         }
     }
