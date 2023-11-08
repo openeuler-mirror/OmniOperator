@@ -6,7 +6,8 @@
 #include "quick_sort_simd.h"
 #include "util/compiler_util.h"
 #include "huawei_secure_c/include/securec.h"
-#include "neon_sort64.h"
+#include "small_case_sort_simd.h"
+#include <vector>
 
 constexpr int32_t SMALL_CASE_LENGTH = 16;
 constexpr int32_t CHUNK_SIZE = 8;
@@ -1050,7 +1051,11 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
 {
     int32_t num = to - from;
     if (num <= SMALL_CASE_LENGTH) {
-        SmallCaseSort<sortAscending>(values, addresses, from, to);
+        if constexpr (sortAscending == 1) {
+            SmallCaseSortAsec(values, addresses, from, to);
+        } else {
+            SmallCaseSortDesc(values, addresses, from, to);
+        }
         return;
     }
 
@@ -1059,7 +1064,11 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
         pivotVal = vdupq_n_s64(avg);
     } else {
         auto count = DrawSamples<sortAscending>(values, from, to, valueBuf);
-        SmallCaseSortWithoutAddress<sortAscending>(valueBuf, 0, count);
+        if constexpr (sortAscending == 1) {
+            SmallCaseSortWithoutAddressAsec(valueBuf, 0, count);
+        } else {
+            SmallCaseSortWithoutAddressDesc(valueBuf, 0, count);
+        }
         pivotVal = ChoosePivot(valueBuf, 0, count);
     }
 
