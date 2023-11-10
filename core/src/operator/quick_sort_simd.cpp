@@ -4,15 +4,16 @@
  */
 
 #include "quick_sort_simd.h"
+#include <algorithm>
 #include "util/compiler_util.h"
 #include "huawei_secure_c/include/securec.h"
 #include "small_case_sort_simd.h"
-#include <vector>
 
 constexpr int32_t SMALL_CASE_LENGTH = 16;
 constexpr int32_t CHUNK_SIZE = 8;
 constexpr int32_t LANE_SIZE = 2;
 constexpr int32_t UNROLL_SIZE = 4;
+constexpr int32_t LOOP_SIZE = UNROLL_SIZE * LANE_SIZE;
 constexpr int32_t BUFFER_SIZE = 50;
 
 static int64x2_t SMALLEST_VEC = { INT64_MIN, INT64_MIN };
@@ -261,8 +262,8 @@ static int32_t ALWAYS_INLINE CompressBlendedStore(int64x2_t valueVec, uint64x2_t
 
     int64x2_t compressValueVec = Compress(valueVec, maskBits);
     int64x2_t tmpValueVec = vld1q_s64(valuePtr);
-    uint64x2_t blendedValueVec = vbslq_u64(storeMask, vreinterpretq_u64_s64(compressValueVec),
-        vreinterpretq_u64_s64(tmpValueVec)); // blendedVec = {26, 19, 97, 19}
+    uint64x2_t blendedValueVec =
+        vbslq_u64(storeMask, vreinterpretq_u64_s64(compressValueVec), vreinterpretq_u64_s64(tmpValueVec));
     vst1q_s64(valuePtr, vreinterpretq_s64_u64(blendedValueVec));
 
     int64x2_t compressAddrVec = Compress(vreinterpretq_s64_u64(addrVec), maskBits);
@@ -276,7 +277,7 @@ template <int32_t sortAscending>
 int32_t PartitionToMultipleOfUnroll(int64_t *values, uint64_t *addresses, int32_t &num, int64x2_t pivotVec,
     int64_t *valueBuf, uint64_t *addrBuf, int64x2_t &smallestVec, int64x2_t &largestVec)
 {
-    const int32_t num_rem = (num < 2 * UNROLL_SIZE * LANE_SIZE) ? num : (num & (UNROLL_SIZE * LANE_SIZE - 1));
+    const int32_t num_rem = (num < 2 * LOOP_SIZE) ? num : (num & (LOOP_SIZE - 1));
     if (num_rem <= 0) {
         return 0;
     }
@@ -332,6 +333,7 @@ static void ALWAYS_INLINE StoreLeftRight4(int64_t *values, int64x2_t pivotVec, i
     uint64x2_t addrVec2, uint64x2_t addrVec3, int32_t &writeL, int32_t &remaining, int64x2_t &smallestVec,
     int64x2_t &largestVec)
 {
+    UpdateMinMax<sortAscending>(valueVec0, smallestVec, largestVec);
     uint64x2_t compareResult0 = Compare<sortAscending>(pivotVec, valueVec0);
     uint64x2_t compareResult1 = Compare<sortAscending>(pivotVec, valueVec1);
     uint64x2_t compareResult2 = Compare<sortAscending>(pivotVec, valueVec2);
@@ -340,11 +342,6 @@ static void ALWAYS_INLINE StoreLeftRight4(int64_t *values, int64x2_t pivotVec, i
     uint64x2_t swapMask1 = SwapMask(compareResult1);
     uint64x2_t swapMask2 = SwapMask(compareResult2);
     uint64x2_t swapMask3 = SwapMask(compareResult3);
-    int32_t numRight0 = CountTrue(compareResult0);
-    int32_t numRight1 = CountTrue(compareResult1);
-    int32_t numRight2 = CountTrue(compareResult2);
-    int32_t numRight3 = CountTrue(compareResult3);
-    UpdateMinMax<sortAscending>(valueVec0, smallestVec, largestVec);
 
     int64x2_t compressValueVec0 = CompressNot(valueVec0, swapMask0);
     int64x2_t compressValueVec1 = CompressNot(valueVec1, swapMask1);
@@ -356,19 +353,26 @@ static void ALWAYS_INLINE StoreLeftRight4(int64_t *values, int64x2_t pivotVec, i
     uint64x2_t compressAddrVec3 = vreinterpretq_u64_s64(CompressNot(vreinterpretq_s64_u64(addrVec3), swapMask3));
     UpdateMinMax<sortAscending>(valueVec1, smallestVec, largestVec);
 
-    int32_t tmpPos1 = writeL - numRight0;
-    int32_t tmpPos2 = tmpPos1 - numRight1;
-    int32_t tmpPos3 = tmpPos2 - numRight2;
+    int32_t numRight0 = CountTrue(compareResult0);
+    int32_t numRight1 = CountTrue(compareResult1);
+    int32_t numRight2 = CountTrue(compareResult2);
+    int32_t numRight3 = CountTrue(compareResult3);
 
-    int32_t tmpRemaining = remaining - LANE_SIZE;
     int32_t writeL0 = writeL;
-    int32_t writeR0 = tmpRemaining + writeL;
+    int32_t writeR0 = remaining - LANE_SIZE + writeL;
+    int32_t tmpPos1 = writeL - numRight0;
     int32_t writeL1 = LANE_SIZE + tmpPos1;
-    int32_t writeR1 = tmpRemaining + tmpPos1;
+    int32_t writeR1 = remaining - LANE_SIZE + tmpPos1;
+    int32_t tmpPos2 = tmpPos1 - numRight1;
     int32_t writeL2 = 2 * LANE_SIZE + tmpPos2;
-    int32_t writeR2 = tmpRemaining + tmpPos2;
+    int32_t writeR2 = remaining - LANE_SIZE + tmpPos2;
+    int32_t tmpPos3 = tmpPos2 - numRight2;
     int32_t writeL3 = 3 * LANE_SIZE + tmpPos3;
-    int32_t writeR3 = tmpRemaining + tmpPos3;
+    int32_t writeR3 = remaining - LANE_SIZE + tmpPos3;
+
+    remaining -= LOOP_SIZE;
+    int32_t tmpPos = tmpPos3 - numRight3;
+    writeL = LOOP_SIZE + tmpPos;
 
     vst1q_s64(values + writeL0, compressValueVec0);
     vst1q_s64(values + writeL1, compressValueVec1);
@@ -389,9 +393,6 @@ static void ALWAYS_INLINE StoreLeftRight4(int64_t *values, int64x2_t pivotVec, i
     vst1q_u64(addresses + writeR2, compressAddrVec2);
     vst1q_u64(addresses + writeR3, compressAddrVec3);
     UpdateMinMax<sortAscending>(valueVec3, smallestVec, largestVec);
-
-    remaining -= 4 * LANE_SIZE;
-    writeL += 4 * LANE_SIZE - numRight0 - numRight1 - numRight2 - numRight3;
 }
 
 template <int32_t sortAscending>
@@ -427,14 +428,13 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
         constexpr int32_t pos1 = LANE_SIZE;
         constexpr int32_t pos2 = 2 * LANE_SIZE;
         constexpr int32_t pos3 = 3 * LANE_SIZE;
-        constexpr int32_t advanceStep = UNROLL_SIZE * LANE_SIZE;
 
         int64x2_t leftValueVec0 = vld1q_s64(valueReadL + pos0);
         int64x2_t leftValueVec1 = vld1q_s64(valueReadL + pos1);
         int64x2_t leftValueVec2 = vld1q_s64(valueReadL + pos2);
         int64x2_t leftValueVec3 = vld1q_s64(valueReadL + pos3);
-        valueReadL += advanceStep;
-        valueReadR -= advanceStep;
+        valueReadL += LOOP_SIZE;
+        valueReadR -= LOOP_SIZE;
         int64x2_t rightValueVec0 = vld1q_s64(valueReadR + pos0);
         int64x2_t rightValueVec1 = vld1q_s64(valueReadR + pos1);
         int64x2_t rightValueVec2 = vld1q_s64(valueReadR + pos2);
@@ -444,8 +444,8 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
         uint64x2_t leftAddrVec1 = vld1q_u64(addrReadL + pos1);
         uint64x2_t leftAddrVec2 = vld1q_u64(addrReadL + pos2);
         uint64x2_t leftAddrVec3 = vld1q_u64(addrReadL + pos3);
-        addrReadL += advanceStep;
-        addrReadR -= advanceStep;
+        addrReadL += LOOP_SIZE;
+        addrReadR -= LOOP_SIZE;
         uint64x2_t rightAddrVec0 = vld1q_u64(addrReadR + pos0);
         uint64x2_t rightAddrVec1 = vld1q_u64(addrReadR + pos1);
         uint64x2_t rightAddrVec2 = vld1q_u64(addrReadR + pos2);
@@ -460,18 +460,18 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
             uint64x2_t curAddrVec1;
             uint64x2_t curAddrVec2;
             uint64x2_t curAddrVec3;
-            constexpr int32_t prefetchStep = 3 * UNROLL_SIZE * LANE_SIZE;
+            constexpr int32_t prefetchStep = 3 * LOOP_SIZE;
 
             int32_t capacityL = static_cast<int32_t>(valueReadL - valueStart) - writeL;
-            if (capacityL > advanceStep) {
-                valueReadR -= advanceStep;
+            if (capacityL > LOOP_SIZE) {
+                valueReadR -= LOOP_SIZE;
                 curValueVec0 = vld1q_s64(valueReadR + pos0);
                 curValueVec1 = vld1q_s64(valueReadR + pos1);
                 curValueVec2 = vld1q_s64(valueReadR + pos2);
                 curValueVec3 = vld1q_s64(valueReadR + pos3);
                 __builtin_prefetch(valueReadR - prefetchStep, 0, 3);
 
-                addrReadR -= advanceStep;
+                addrReadR -= LOOP_SIZE;
                 curAddrVec0 = vld1q_u64(addrReadR + pos0);
                 curAddrVec1 = vld1q_u64(addrReadR + pos1);
                 curAddrVec2 = vld1q_u64(addrReadR + pos2);
@@ -482,14 +482,14 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
                 curValueVec1 = vld1q_s64(valueReadL + pos1);
                 curValueVec2 = vld1q_s64(valueReadL + pos2);
                 curValueVec3 = vld1q_s64(valueReadL + pos3);
-                valueReadL += advanceStep;
+                valueReadL += LOOP_SIZE;
                 __builtin_prefetch(valueReadL + prefetchStep, 0, 3);
 
                 curAddrVec0 = vld1q_u64(addrReadL + pos0);
                 curAddrVec1 = vld1q_u64(addrReadL + pos1);
                 curAddrVec2 = vld1q_u64(addrReadL + pos2);
                 curAddrVec3 = vld1q_u64(addrReadL + pos3);
-                addrReadL += advanceStep;
+                addrReadL += LOOP_SIZE;
                 __builtin_prefetch(addrReadL + prefetchStep, 0, 3);
             }
 
@@ -507,23 +507,27 @@ int32_t PartitionWithSIMD(int64_t *values, uint64_t *addresses, int32_t from, in
     }
 
     int32_t totalR = last - writeL;
-    int32_t startR = totalR < LANE_SIZE ? writeL + totalR - 4 : writeL;
-    int64x2_t valueRightVec = vld1q_s64(valueStart + startR);
-    UpdateMinMax<sortAscending>(valueRightVec, smallestVec, largestVec);
-    vst1q_s64(valueStart + last, valueRightVec);
-    uint64x2_t addrRightVec = vld1q_u64(addressStart + startR);
-    vst1q_u64(addressStart + last, addrRightVec);
-
     uint64x2_t compareResult = Compare<sortAscending>(pivotVec, valueLast);
     uint64x2_t blendedMask = Not(compareResult);
-    writeL += CompressBlendedStore(valueLast, addrLast, blendedMask, valueStart + writeL, addressStart + writeL);
-    CompressBlendedStore(valueLast, addrLast, compareResult, valueStart + writeL, addressStart + writeL);
+    if (totalR == 0) {
+        writeL += CompressStore(valueLast, addrLast, blendedMask, valueStart + writeL, addressStart + writeL);
+    } else {
+        int32_t startR = totalR < LANE_SIZE ? writeL + totalR - LANE_SIZE : writeL;
+        int64x2_t valueRightVec = vld1q_s64(valueStart + startR);
+        UpdateMinMax<sortAscending>(valueRightVec, smallestVec, largestVec);
+        vst1q_s64(valueStart + last, valueRightVec);
+        uint64x2_t addrRightVec = vld1q_u64(addressStart + startR);
+        vst1q_u64(addressStart + last, addrRightVec);
+
+        writeL += CompressBlendedStore(valueLast, addrLast, blendedMask, valueStart + writeL, addressStart + writeL);
+        CompressBlendedStore(valueLast, addrLast, compareResult, valueStart + writeL, addressStart + writeL);
+    }
     return consumedL + writeL + from;
 }
 
 template <int32_t sortAscending>
 void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64_t *valueBuf,
-    uint64_t *addrBuf, bool chooseAvg = false, int64_t avg = 0)
+    uint64_t *addrBuf, bool chooseAvg, int64_t avg)
 {
     int32_t num = to - from;
     if (num <= SMALL_CASE_LENGTH) {
@@ -561,12 +565,12 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
     int64_t pivot = vgetq_lane_s64(pivotVal, 0);
     int64_t smallest = GetSmallest<sortAscending>(smallestVec);
     int64_t largest = GetLargest<sortAscending>(largestVec);
-    if (pivot != smallest) {
+    if ((partitionIdx - from > 1) && (pivot != smallest)) {
         int64_t newAvg = (smallest & pivot) + ((smallest ^ pivot) >> 1);
         QuickSortInternalSIMD<sortAscending>(values, addresses, from, partitionIdx, valueBuf, addrBuf, chooseAvg,
             newAvg);
     }
-    if (pivot != largest) {
+    if ((to - partitionIdx > 1) && (pivot != largest)) {
         int64_t newAvg = (largest & pivot) + ((largest ^ pivot) >> 1);
         QuickSortInternalSIMD<sortAscending>(values, addresses, partitionIdx, to, valueBuf, addrBuf, chooseAvg, newAvg);
     }

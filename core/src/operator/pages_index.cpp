@@ -396,19 +396,6 @@ template <typename RawType> static bool ALWAYS_INLINE NewOnlyEqual(RawType &left
     }
 }
 
-template <int32_t sortAscending> static int8_t ALWAYS_INLINE FixedLengthCompare(int64_t left, int64_t right)
-{
-    if constexpr (sortAscending == 1) {
-        return left > right ?
-            OperatorUtil::COMPARE_STATUS_GREATER_THAN :
-            left < right ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
-    } else {
-        return right > left ?
-            OperatorUtil::COMPARE_STATUS_GREATER_THAN :
-            right < left ? OperatorUtil::COMPARE_STATUS_LESS_THAN : OperatorUtil::COMPARE_STATUS_EQUAL;
-    }
-}
-
 template <int32_t sortAscending> static int8_t ALWAYS_INLINE Decimal128Compare(Decimal128 &left, Decimal128 &right)
 {
     if constexpr (sortAscending == 1) {
@@ -423,7 +410,7 @@ template <int32_t sortAscending> static int8_t ALWAYS_INLINE Decimal128Compare(D
 }
 
 template <int32_t sortAscending>
-void QuickSortDecimal128Small(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
+static void ALWAYS_INLINE QuickSortDecimal128Small(int64_t *values, uint64_t *addresses, int32_t from, int32_t to)
 {
     for (int32_t i = from + 1; i < to; ++i) {
         auto iValuePtr = values[i];
@@ -451,74 +438,50 @@ void QuickSortDecimal128Small(int64_t *values, uint64_t *addresses, int32_t from
     }
 }
 
-int32_t GetMedianDecimal128(int64_t *values, int32_t a, int32_t b, int32_t c, Decimal128 &pivotValue)
+static Decimal128 ALWAYS_INLINE GetMedianDecimal128(Decimal128 &va, Decimal128 &vb, Decimal128 &vc)
 {
-    Decimal128 va = *((Decimal128 *)(values[a]));
-    Decimal128 vb = *((Decimal128 *)(values[b]));
-    Decimal128 vc = *((Decimal128 *)(values[c]));
     if (va <= vb) {
         if (vb <= vc) {
-            pivotValue = vb;
-            return b;
+            return vb;
         }
         if (va <= vc) {
-            pivotValue = vc;
-            return c;
+            return vc;
         } else {
-            pivotValue = va;
-            return a;
+            return va;
         }
     } else {
         if (vb > vc) {
-            pivotValue = vb;
-            return b;
+            return vb;
         }
         if (va > vc) {
-            pivotValue = vc;
-            return c;
+            return vc;
         } else {
-            pivotValue = va;
-            return a;
+            return va;
         }
     }
 }
 
-Decimal128 GetMedianDecimal128Value(int64_t *values, int32_t from, int32_t to, int32_t len)
+static Decimal128 ALWAYS_INLINE GetMedianDecimal128(int64_t *values, int32_t a, int32_t b, int32_t c)
+{
+    Decimal128 va = *((Decimal128 *)(values[a]));
+    Decimal128 vb = *((Decimal128 *)(values[b]));
+    Decimal128 vc = *((Decimal128 *)(values[c]));
+    return GetMedianDecimal128(va, vb, vc);
+}
+
+static Decimal128 ALWAYS_INLINE GetMedianDecimal128Value(int64_t *values, int32_t from, int32_t to, int32_t len)
 {
     int32_t l = from;
     int32_t n = to - 1;
     int32_t m = from + len / QUICK_SORT_MIDDLE;
     if (len > QUICK_SORT_BIG_LEN) {
         int32_t s = len / QUICK_SORT_STEP_SIZE;
-        Decimal128 vl;
-        Decimal128 vm;
-        Decimal128 vn;
-        l = GetMedianDecimal128(values, l, l + s, l + QUICK_SORT_MIDDLE * s, vl);
-        m = GetMedianDecimal128(values, m - s, m, m + s, vm);
-        n = GetMedianDecimal128(values, n - QUICK_SORT_MIDDLE * s, n - s, n, vn);
-        if (vl <= vm) {
-            if (vm <= vn) {
-                return vm;
-            }
-            if (vl <= vn) {
-                return vn;
-            } else {
-                return vl;
-            }
-        } else {
-            if (vm > vn) {
-                return vm;
-            }
-            if (vl > vn) {
-                return vn;
-            } else {
-                return vl;
-            }
-        }
+        Decimal128 vl = GetMedianDecimal128(values, l, l + s, l + QUICK_SORT_MIDDLE * s);
+        Decimal128 vm = GetMedianDecimal128(values, m - s, m, m + s);
+        Decimal128 vn = GetMedianDecimal128(values, n - QUICK_SORT_MIDDLE * s, n - s, n);
+        return GetMedianDecimal128(vl, vm, vn);
     } else {
-        Decimal128 median;
-        GetMedianDecimal128(values, l, m, n, median);
-        return median;
+        return GetMedianDecimal128(values, l, m, n);
     }
 }
 
@@ -716,7 +679,7 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
                     values[i] = reinterpret_cast<int64_t>(valuePtr + originalRowIndex);
                 } else if constexpr (std::is_same_v<RawType, double>) {
                     double value = dictionaryVector->GetValue(rowIdx);
-                    memcpy(values + i, &value, sizeof(double));
+                    memcpy_s(values + i, sizeof(double), &value, sizeof(double));
                 } else {
                     values[i] = dictionaryVector->GetValue(rowIdx);
                 }
@@ -727,7 +690,7 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
                         unsafe::UnsafeVector::GetRawValues(static_cast<FlatVector *>(column)) + rowIdx);
                 } else if constexpr (std::is_same_v<RawType, double>) {
                     double value = static_cast<FlatVector *>(column)->GetValue(rowIdx);
-                    memcpy(values + i, &value, sizeof(double));
+                    memcpy_s(values + i, sizeof(double), &value, sizeof(double));
                 } else {
                     values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
                 }
@@ -739,7 +702,7 @@ void SortNullAndGetValue(BaseVector **sortColumn, int64_t *values, std::vector<u
                     unsafe::UnsafeVector::GetRawValues(static_cast<FlatVector *>(column)) + rowIdx);
             } else if constexpr (std::is_same_v<RawType, double>) {
                 double value = static_cast<FlatVector *>(column)->GetValue(rowIdx);
-                memcpy(values + i, &value, sizeof(double));
+                memcpy_s(values + i, sizeof(double), &value, sizeof(double));
             } else {
                 values[i] = static_cast<FlatVector *>(column)->GetValue(rowIdx);
             }

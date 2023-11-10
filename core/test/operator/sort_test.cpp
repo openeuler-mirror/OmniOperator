@@ -194,6 +194,22 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
+TEST(NativeOmniSortTest, TestQuickSortInternalSIMD)
+{
+    constexpr int32_t dataSize = 18;
+    uint64_t data0[dataSize] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+    int64_t data1[dataSize] = {12546, 12558, 12557, 12556, 12558, 12557, 12556, 12550, 12550, 12565, 12549, 12556, 12556, 12546, 12549, 12549, 12557, 12565};
+
+    int64_t valueBuf[50];
+    uint64_t addrBuf[50];
+    QuickSortInternalSIMD<1>(data1, data0, 0, dataSize, valueBuf, addrBuf, true, 12562);
+
+    int64_t expectData[dataSize] = {12546, 12546, 12549, 12549, 12549, 12550, 12550, 12556, 12556, 12556, 12556, 12557, 12557, 12557, 12558, 12558, 12565, 12565};
+    for (int32_t i = 0; i < dataSize; i++) {
+        EXPECT_EQ(data1[i], expectData[i]);
+    }
+}
+
 TEST(NativeOmniSortTest, TestSortWithNullLast)
 {
     // construct input data
@@ -574,7 +590,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMDPerformance)
     auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     std::cout << "simd sort long cost: " << duration1.count() << " ms\n";
     // free memory
-    free(data1);
+    delete[] data1;
     VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
