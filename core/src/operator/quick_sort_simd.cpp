@@ -8,7 +8,7 @@
 #include "util/compiler_util.h"
 #include "huawei_secure_c/include/securec.h"
 #include "small_case_sort_simd.h"
-
+#include "arm_neon.h"
 constexpr int32_t SMALL_CASE_LENGTH = 16;
 constexpr int32_t CHUNK_SIZE = 8;
 constexpr int32_t LANE_SIZE = 2;

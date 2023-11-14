@@ -3529,8 +3529,8 @@ TEST(SortMergeJoinWithExprV3Test, testSmjInner1)
     bufferedTblWithExprOperator->GetOutput(&result);
 
     // check the join result
-    int32_t expectedData0[] = {8001, 8001, 1003, 1003, 8001, 8001, 1003, 1003};
-    int32_t expectedData1[] = {8001, 8001, 1003, 1003, 8001, 8001, 1003, 1003};
+    int32_t expectedData0[] = {1003, 1003, 8001, 8001, 1003, 1003, 8001, 8001};
+    int32_t expectedData1[] = {1003, 1003, 8001, 8001, 1003, 1003, 8001, 8001};
     AssertVecBatchEquals(result, 2, sizeof(expectedData0) / sizeof(expectedData0[0]), expectedData0,
         expectedData1);
     VectorHelper::FreeVecBatch(result);

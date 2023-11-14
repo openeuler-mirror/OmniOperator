@@ -581,7 +581,7 @@ template <int32_t sortAscending>
 void QuickSortDecimal128Internal(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int8_t *comparetmp)
 {
     int32_t len = to - from;
-    if (len <= QUICK_SORT_SMALL_LEN) { // point 3
+    if (len <= QUICK_SORT_SMALL_LEN) {
         QuickSortDecimal128Small<sortAscending>(values, addresses, from, to);
         return;
     }
