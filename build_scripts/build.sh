@@ -73,6 +73,9 @@ else
           [ "$build_type" != 'coverage' ] &&  exit_with_message "-- Please use coverage with --enable-dt"
           echo "-- Enable DT checker"
           OPTIONS+=" -DENABLE_DT=ON -DCOVERAGE=ON"
+      elif [ "$i" == '--enable-benchmark' ]; then
+          echo "-- Enable benchmark"
+          OPTIONS+=" -DENABLE_BENCHMARK=ON"
       elif [ "$i" == '--enable-hmpp' ]; then
           echo "-- Enable using hmpp library"
           OPTIONS+=" -DENABLE_HMPP=ON"
