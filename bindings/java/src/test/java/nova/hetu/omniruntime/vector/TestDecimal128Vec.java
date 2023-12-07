@@ -209,6 +209,29 @@ public class TestDecimal128Vec {
     }
 
     /**
+     * test Decimal128Vec set/get BigInteger using bytes
+     */
+    @Test
+    public void testSetGetBigIntegerBytes() {
+        final int size = 1024;
+        BigInteger decimal128 = new BigInteger("11111111111111111111111111111111111111");
+        byte[] bytes = decimal128.toByteArray();
+        boolean isNegative = decimal128.compareTo(new BigInteger("0")) == -1;
+        Decimal128Vec vec1 = new Decimal128Vec(size);
+
+        for (int i = 0; i < size; ++i) {
+            vec1.setBigInteger(i, bytes, isNegative);
+        }
+
+        for (int i = 0; i < size; ++i) {
+            byte[] val = vec1.getBytes(i);
+            BigInteger bigInteger = new BigInteger(val);
+            assertEquals(bigInteger, decimal128);
+        }
+        vec1.close();
+    }
+
+    /**
      * test Decimal128Vec set/get BigInteger
      */
     @Test

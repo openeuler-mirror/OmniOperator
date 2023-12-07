@@ -9,7 +9,7 @@
 namespace omniruntime {
 namespace op {
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-template <bool PARTIAL_OUT>
+template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT>
 void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateState &state,
     std::vector<BaseVector *> &vectors, int32_t rowIndex)
 {
@@ -43,9 +43,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
         bool overflow = state.count < 0;
         if (state.count > 0 && state.val != nullptr) {
             if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                Decimal128Wrapper result128 = Decimal128Wrapper(*reinterpret_cast<Decimal128 *>(state.val))
-                                                  .Divide(Decimal128Wrapper(state.count), 0);
-                result = this->template CastWithOverflow<Decimal128, OutType>(result128.ToDecimal128(), overflow);
+                DivideWithOverflow<DECIMAL_PRECISION_IMPROVEMENT>(state, result, overflow);
             } else {
                 // Result type is either double or int64, which for both cases we generate double avgResult;
                 double avgResult =
@@ -60,6 +58,21 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
         } else if (state.count == 0 || state.val == nullptr) {
             v->SetNull(rowIndex);
         }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+template <bool DECIMAL_PRECISION_IMPROVEMENT>
+void AverageAggregator<IN_ID, OUT_ID>::DivideWithOverflow(const AggregateState &state, OutType &result, bool &overflow)
+{
+    int128_t result128 = reinterpret_cast<Decimal128 *>(state.val)->ToInt128();
+    if constexpr (DECIMAL_PRECISION_IMPROVEMENT && std::is_same_v<OutType, Decimal128>) {
+        auto dividend = this->template CastWithOverflow<Decimal128, OutType>(Decimal128(result128), overflow);
+        DivideRoundUp(dividend.ToInt128(), static_cast<int128_t>(state.count), result128);
+        result = Decimal128(result128);
+    } else {
+        DivideRoundUp(result128, static_cast<int128_t>(state.count), result128);
+        result = this->template CastWithOverflow<Decimal128, OutType>(Decimal128(result128), overflow);
     }
 }
 
@@ -166,9 +179,14 @@ AverageAggregator<IN_ID, OUT_ID>::AverageAggregator(const DataTypes &inputTypes,
 {
     // varchar only in partial stage
     if constexpr (OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CONTAINER) {
-        extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<true>;
+        extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<true, false>;
     } else {
-        extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false>;
+        if (ConfigUtil::GetSupportDecimalPrecisionImprovementRule() ==
+            SupportDecimalPrecisionImprovementRule::IS_SUPPORT)  {
+            extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false, true>;
+        } else {
+            extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false, false>;
+        }
     }
 }
 

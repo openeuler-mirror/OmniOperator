@@ -2429,6 +2429,67 @@ TEST(AggregatorTest, max_test)
     delete maxFactory;
 }
 
+TEST(AggregatorTest, verify_decimal_presision_improvement)
+{
+    auto isSupportDecimalPrecisionImprovementRule = ConfigUtil::GetSupportDecimalPrecisionImprovementRule();
+
+    auto avgFactory = new AverageAggregatorFactory();
+    std::vector<int32_t> channel0 = { 0 };
+    ConfigUtil::SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_SUPPORT);
+    auto avgDeciAgg1 = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)).get()),
+        *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 10)).get()), channel0, true, false, true);
+
+    Decimal128Wrapper deci0("60000000000000000.00000000");
+    Decimal128Wrapper deci1("30000000000000000.00000000");
+    Decimal128Wrapper deci2("10000000000000000.00000000");
+
+    Decimal128 decimal0 = deci0.ToDecimal128();
+    Decimal128 decimal1 = deci1.ToDecimal128();
+    Decimal128 decimal2 = deci2.ToDecimal128();
+
+    auto *deci25_8Vec = new Vector<Decimal128>(3);
+    deci25_8Vec->SetValue(0, decimal0);
+    deci25_8Vec->SetValue(1, decimal1);
+    deci25_8Vec->SetValue(2, decimal2);
+
+    auto *vecBatch = new VectorBatch(3);
+    vecBatch->Append(deci25_8Vec);
+
+    auto *resultVec1 = new Vector<Decimal128>(1);
+    std::vector<BaseVector *> extractVec1 = { resultVec1 };
+    AggregateState state1{ nullptr };
+    avgDeciAgg1->InitState(state1);
+    avgDeciAgg1->ProcessGroup(state1, vecBatch, 0, 3);
+    avgDeciAgg1->ExtractValues(state1, extractVec1, 0);
+
+    Decimal128Wrapper expected1("33333333333333333.3333333333");
+    EXPECT_EQ(expected1.ToDecimal128().ToString(), Decimal128Wrapper(resultVec1->GetValue(0)).ToString());
+    EXPECT_EQ(expected1.ToDecimal128(), resultVec1->GetValue(0));
+
+    ConfigUtil::SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT);
+    auto avgDeciAgg2 = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)).get()),
+        *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 10)).get()), channel0, true, false, true);
+    auto *resultVec2 = new Vector<Decimal128>(1);
+    std::vector<BaseVector *> extractVec2 = { resultVec2 };
+    AggregateState state2{ nullptr };
+    avgDeciAgg2->InitState(state2);
+    avgDeciAgg2->ProcessGroup(state2, vecBatch, 0, 3);
+    avgDeciAgg2->ExtractValues(state2, extractVec2, 0);
+
+    Decimal128Wrapper expected2("33333333333333333.3333333300");
+    EXPECT_EQ(expected2.ToDecimal128().ToString(), Decimal128Wrapper(resultVec2->GetValue(0)).ToString());
+    EXPECT_EQ(expected2.ToDecimal128(), resultVec2->GetValue(0));
+
+    state1.val = nullptr;
+    state2.val = nullptr;
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete resultVec1;
+    delete resultVec2;
+    delete avgFactory;
+
+    ConfigUtil::SetSupportDecimalPrecisionImprovementRule(isSupportDecimalPrecisionImprovementRule);
+}
+
 TEST(AggregatorTest, avg_test)
 {
     int32_t rowPerVecBatch = 200;

@@ -56,6 +56,10 @@ public:
 
     static SupportExprFilterRule GetSupportExprFilterRule();
 
+    static void SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule rule);
+
+    static SupportDecimalPrecisionImprovementRule GetSupportDecimalPrecisionImprovementRule();
+
     static Policy *GetPolicy();
 
     // for test
@@ -85,6 +89,8 @@ private:
     static void InitStringToDateFormatRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitSupportExprFilterRule(Policy *policy, const std::string &ruleValueStr);
+
+    static void InitSupportDecimalPrecisionImprovementRule(Policy *policy, const std::string &ruleValueStr);
 
     static Policy *InitializePolicy();
 };

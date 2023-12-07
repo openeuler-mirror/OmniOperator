@@ -100,8 +100,7 @@ public abstract class Vec implements Closeable {
      * @param capacityInBytes the number of capacityInBytes
      */
     protected Vec(Vec vec, int offset, int length, int capacityInBytes) {
-        this(sliceVectorNative(vec.nativeVector, offset, length), capacityInBytes,
-                length, vec.dataType, false);
+        this(sliceVectorNative(vec.nativeVector, offset, length), capacityInBytes, length, vec.dataType, false);
     }
 
     /**
@@ -114,8 +113,8 @@ public abstract class Vec implements Closeable {
      * @param capacityInBytes the number of capacityInBytes
      */
     protected Vec(Vec vec, int[] positions, int offset, int length, int capacityInBytes) {
-        this(copyPositionsNative(vec.nativeVector, positions, offset, length),
-                capacityInBytes, length, vec.dataType, true);
+        this(copyPositionsNative(vec.nativeVector, positions, offset, length), capacityInBytes, length, vec.dataType,
+                true);
     }
 
     /**
@@ -167,8 +166,8 @@ public abstract class Vec implements Closeable {
     }
 
     private Vec(long nativeVector, int capacityInBytes, int size, DataType dataType, boolean isWritable) {
-        this(nativeVector, getValuesNative(nativeVector), getValueNullsNative(nativeVector),
-                capacityInBytes, size, dataType, isWritable);
+        this(nativeVector, getValuesNative(nativeVector), getValueNullsNative(nativeVector), capacityInBytes, size,
+                dataType, isWritable);
     }
 
     private static native long newVectorNative(int size, int vecEncodingId, int dataTypeId, int capacityInBytes);
@@ -291,12 +290,22 @@ public abstract class Vec implements Closeable {
     }
 
     /**
-     * set values buffer.
+     * set values buffer. VarcharVec cannot use this interface.
      *
      * @param buf buf of data
      */
     public void setValuesBuf(byte[] buf) {
         valuesBuf.setBytes(0, buf, 0, buf.length);
+    }
+
+    /**
+     * set values buffer and length. VarcharVec cannot use this interface.
+     *
+     * @param buf buf of data
+     * @param length the number of element
+     */
+    public void setValuesBuf(byte[] buf, int length) {
+        valuesBuf.setBytes(0, buf, 0, length);
     }
 
     /**
@@ -362,6 +371,17 @@ public abstract class Vec implements Closeable {
      */
     public void setNullsBuf(byte[] buf) {
         nullsBuf.setBytes(0, buf, 0, buf.length);
+        setNullFlagNative(nativeVector, true);
+    }
+
+    /**
+     * set nulls buffer and length.
+     *
+     * @param buf buf of null
+     * @param length the number of element
+     */
+    public void setNullsBuf(byte[] buf, int length) {
+        nullsBuf.setBytes(0, buf, 0, length);
         setNullFlagNative(nativeVector, true);
     }
 
