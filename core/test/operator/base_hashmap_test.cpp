@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "operator/union/union.h"
 #include "operator/hashmap/base_hash_map.h"
+#include "operator/hashmap/vector_marshaller.h"
 
 #define MUST_CARE_RET [[nodiscard]]
 
@@ -613,5 +614,136 @@ TEST(BaseHashMapTest, TestRehash)
     }
 
     EXPECT_EQ(hashMap.GetElementsSize(), testTotal);
+}
+
+TEST(BaseHashMapTest, TestMemoryUsageOfSerializing)
+{
+    using namespace omniruntime::vec;
+    omniruntime::mem::SimpleArenaAllocator arenaAllocator;
+    std::vector<BaseVector *> groupVectors;
+    std::vector<omniruntime::op::VectorSerializer> serializers;
+    int rowSize = 10000;
+
+    BaseVector *vector1 = new Vector<int>(rowSize);
+    BaseVector *vector2 = new Vector<long>(rowSize);
+    BaseVector *vector3 = new Vector<LargeStringContainer<std::string_view *>>(rowSize);
+    for (int i = 0; i < rowSize; ++i) {
+        // value is null.
+        vector1->SetNull(i);
+        vector2->SetNull(i);
+        (reinterpret_cast<Vector<LargeStringContainer<std::string_view *>> *>(vector3))->SetNull(i);
+    }
+    groupVectors.push_back(vector1);
+    groupVectors.push_back(vector2);
+    groupVectors.push_back(vector3);
+
+    serializers.push_back(omniruntime::op::vectorSerializerCenter[omniruntime::type::OMNI_INT]);
+    serializers.push_back(omniruntime::op::vectorSerializerCenter[omniruntime::type::OMNI_LONG]);
+    serializers.push_back(omniruntime::op::vectorSerializerCenter[omniruntime::type::OMNI_VARCHAR]);
+
+    EXPECT_EQ(arenaAllocator.TotalBytes(), 0);
+    for (int rowIdx = 0; rowIdx < rowSize; ++rowIdx) {
+        omniruntime::type::StringRef key;
+        for (int32_t groupColIdx = 0; groupColIdx < static_cast<int32_t >(groupVectors.size()); ++groupColIdx) {
+            auto curVector = groupVectors[groupColIdx];
+            auto &curFunc = serializers[groupColIdx];
+            curFunc(curVector, rowIdx, arenaAllocator, key);
+        }
+    }
+
+    int64_t usedBytes = arenaAllocator.UsedBytes();
+    // 30000 = vector1(10000) + vector2(10000) + vector3(10000)
+    EXPECT_EQ(usedBytes, 30000);
+
+    delete vector1;
+    delete vector2;
+    delete vector3;
+}
+
+TEST(BaseHashMapTest, TestSerializedAndDeserialized)
+{
+    using namespace omniruntime;
+    using namespace omniruntime::vec;
+
+    mem::SimpleArenaAllocator arenaAllocator;
+    std::vector<vec::BaseVector *> groupVectors;
+    std::vector<op::VectorSerializer> serializers;
+
+    std::vector<vec::BaseVector *> groupOutputVectors;
+    std::vector<op::VectorDeSerializer> deserializers;
+
+    int rowSize = 10000;
+    BaseVector *vector1 = new Vector<int>(rowSize);
+    BaseVector *vector2 = new Vector<long>(rowSize);
+    BaseVector *vector3 = new Vector<LargeStringContainer<std::string_view *>>(rowSize);
+    for (int i = 0; i < rowSize; ++i) {
+        if (i % 2 == 0) {
+            // set null
+            vector1->SetNull(i);
+            vector2->SetNull(i);
+            (dynamic_cast<Vector<LargeStringContainer<std::string_view *>> *>(vector3))->SetNull(i);
+        } else {
+            // set not null
+            (dynamic_cast<Vector<int> *>(vector1))->SetValue(i, 1);
+            (dynamic_cast<Vector<long> *>(vector2))->SetValue(i, 2);
+            std::string_view s("hello");
+            (dynamic_cast<Vector<LargeStringContainer<std::string_view *>> *>(vector3))->SetValue(i, s);
+        }
+    }
+    groupVectors.push_back(vector1);
+    groupVectors.push_back(vector2);
+    groupVectors.push_back(vector3);
+
+    serializers.push_back(omniruntime::op::vectorSerializerCenter[omniruntime::type::OMNI_INT]);
+    serializers.push_back(omniruntime::op::vectorSerializerCenter[omniruntime::type::OMNI_LONG]);
+    serializers.push_back(omniruntime::op::vectorSerializerCenter[omniruntime::type::OMNI_VARCHAR]);
+
+    BaseVector *outputVector1 = new Vector<int>(rowSize);
+    BaseVector *outputVector2 = new Vector<long>(rowSize);
+    BaseVector *outputVector3 = new Vector<LargeStringContainer<std::string_view *>>(rowSize);
+    groupOutputVectors.push_back(outputVector1);
+    groupOutputVectors.push_back(outputVector2);
+    groupOutputVectors.push_back(outputVector3);
+
+    deserializers.push_back(omniruntime::op::vectorDeSerializerCenter[omniruntime::type::OMNI_INT]);
+    deserializers.push_back(omniruntime::op::vectorDeSerializerCenter[omniruntime::type::OMNI_LONG]);
+    deserializers.push_back(omniruntime::op::vectorDeSerializerCenter[omniruntime::type::OMNI_VARCHAR]);
+
+    for (int rowIdx = 0; rowIdx < rowSize; ++rowIdx) {
+        type::StringRef key;
+        // serialize
+        for (int groupColIdx = 0; groupColIdx < static_cast<int32_t >(groupVectors.size()); ++groupColIdx) {
+            auto curVector = groupVectors[groupColIdx];
+            auto &curFunc = serializers[groupColIdx];
+            curFunc(curVector, rowIdx, arenaAllocator, key);
+        }
+        // deserialize
+        auto *pos = key.data;
+        for (int groupColIdx = 0; groupColIdx < static_cast<int32_t >(groupVectors.size()); ++groupColIdx) {
+            auto curVectorPtr = groupOutputVectors[groupColIdx];
+            auto deserializeFunc = deserializers[groupColIdx];
+            pos = deserializeFunc(curVectorPtr, rowIdx, pos);
+        }
+    }
+
+    for (int i = 0; i < rowSize; ++i) {
+        if (i % 2 == 0) {
+            EXPECT_EQ(outputVector1->IsNull(i), true);
+            EXPECT_EQ(outputVector2->IsNull(i), true);
+            EXPECT_EQ(outputVector3->IsNull(i), true);
+        } else {
+            EXPECT_EQ((dynamic_cast<Vector<int> *>(outputVector1))->GetValue(i), 1);
+            EXPECT_EQ((dynamic_cast<Vector<long> *>(outputVector2))->GetValue(i), 2);
+            std::string_view s("hello");
+            EXPECT_EQ((dynamic_cast<Vector<LargeStringContainer<std::string_view*>> *>(outputVector3))->GetValue(i), s);
+        }
+    }
+
+    delete vector1;
+    delete vector2;
+    delete vector3;
+    delete outputVector1;
+    delete outputVector2;
+    delete outputVector3;
 }
 } // end test

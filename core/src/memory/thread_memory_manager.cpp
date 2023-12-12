@@ -10,9 +10,7 @@ ThreadMemoryManager::ThreadMemoryManager() noexcept
     thread_local MemoryManager memoryManger(globalMemoryManager);
     currentMemoryManager = &memoryManger;
 #ifdef DEBUG
-    char threadName[16] = {0};
-    prctl(PR_GET_NAME, threadName);
-    StartScope(threadName);
+    pthread_getname_np(pthread_self(), currentScope, THREAD_NAME_SIZE);
 #endif
 }
 
@@ -21,24 +19,11 @@ ThreadMemoryManager::~ThreadMemoryManager() noexcept
     currentMemoryManager->Account(untrackedMemory);
     untrackedMemory = 0;
 #ifdef DEBUG
-    char threadName[16] = {0};
-    prctl(PR_GET_NAME, threadName);
-    RemoveScope(threadName);
-    DeleteScope(threadName);
+    DeleteScope(currentScope);
 #endif
 }
 
 #ifdef DEBUG
-void ThreadMemoryManager::StartScope(const std::string &scope)
-{
-    currentScope = scope;
-}
-
-void ThreadMemoryManager::RemoveScope(const std::string &scope)
-{
-    currentScope = "";
-}
-
 /**
  * The current logic is that when the scope ends,
  * the value of the thread's scopeMap in thread is set to 0, and the value of the global scopeMap decreases.

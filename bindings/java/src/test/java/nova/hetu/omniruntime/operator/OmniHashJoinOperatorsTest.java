@@ -929,7 +929,7 @@ public class OmniHashJoinOperatorsTest {
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 2);
-        Object[][] expectedData = {{null, null}, {null, null}, {3L, 1L}, {"ccc", "aaa"}};
+        Object[][] expectedData = {{null, null}, {null, null}, {1L, 3L}, {"aaa", "ccc"}};
         assertVecBatchEquals(appendBatch, expectedData);
 
         freeVecBatch(resultVecBatch);
@@ -989,7 +989,7 @@ public class OmniHashJoinOperatorsTest {
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 2);
-        Object[][] expectedData = {{null, null}, {null, null}, {3L, 1L}, {"ccc", "aaa"}};
+        Object[][] expectedData = {{null, null}, {null, null}, {1L, 3L}, {"aaa", "ccc"}};
         assertVecBatchEquals(appendBatch, expectedData);
 
         freeVecBatch(appendBatch);
