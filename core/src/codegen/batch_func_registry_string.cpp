@@ -27,6 +27,9 @@ const std::string LENGTH_FN_STR = "batch_length";
 const std::string REPLACE_FN_STR = "batch_replace";
 const std::string CONCAT_FN_STR_RETNULL = "batch_concat_null";
 const std::string CAST_FN_STR_RETNULL = "batch_CAST_null";
+const std::string INSTR_FN_STR = "batch_instr";
+const std::string STARTS_WITH_FN_STR = "batch_StartsWith";
+const std::string ENDS_WITH_FN_STR = "batch_EndsWith";
 }
 
 std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
@@ -132,7 +135,14 @@ std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchCastStringToDouble), CAST_FN_STR, {}, { OMNI_VARCHAR }, OMNI_DOUBLE,
             INPUT_DATA, true),
         Function(reinterpret_cast<void *>(BatchCastStrWithDiffWidthsRetNull), CAST_FN_STR_RETNULL, {}, { OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true) };
+            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+
+        Function(reinterpret_cast<void *>(BatchInStr), INSTR_FN_STR, {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchStartsWithStr), STARTS_WITH_FN_STR, {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchEndsWithStr), ENDS_WITH_FN_STR, {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_BOOLEAN, INPUT_DATA)};
 
     return batchStringFnRegistry;
 }

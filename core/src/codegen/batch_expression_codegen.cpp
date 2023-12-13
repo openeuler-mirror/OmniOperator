@@ -556,10 +556,22 @@ llvm::AllocaInst *BatchExpressionCodeGen::GetResultArray(omniruntime::type::Data
     return resultArray;
 }
 
-std::string ChangeFuncNameToNull(std::string signature)
+static std::string ChangeFuncNameToNull(const FuncExpr &fExpr)
 {
-    size_t pos = signature.find_first_of('_');
-    return signature.insert(pos, "_null");
+    auto typeSize = static_cast<int32_t>(fExpr.arguments.size() + 1);
+    auto originalFuncName = fExpr.function->GetId();
+    auto originalFuncChars = originalFuncName.c_str();
+    int32_t separatorIdx = 0;
+    auto pos = static_cast<int32_t>(originalFuncName.length() - 1);
+    for (; pos >= 0; pos--) {
+        if (originalFuncChars[pos] == '_') {
+            separatorIdx++;
+            if (separatorIdx == typeSize) {
+                break;
+            }
+        }
+    }
+    return originalFuncName.insert(pos, "_null");
 }
 
 void BatchExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
@@ -609,7 +621,7 @@ void BatchExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
     }
     argVals.push_back(this->batchCodegenContext->rowCnt);
 
-    auto f = modulePtr->getFunction("batch_" + ChangeFuncNameToNull(fExpr.function->GetId()));
+    auto f = modulePtr->getFunction("batch_" + ChangeFuncNameToNull(fExpr));
     if (f) {
         ret = CreateCall(f, argVals, fExpr.function->GetId());
         InlineFunctionInfo inlineFunctionInfo;

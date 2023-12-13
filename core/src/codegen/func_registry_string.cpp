@@ -81,6 +81,24 @@ const std::string SubstrFnStr()
     return substrFnStr;
 }
 
+const std::string InStrFnStr()
+{
+    const std::string instrFnStr = "instr";
+    return instrFnStr;
+}
+
+const std::string StartsWithFnStr()
+{
+    const std::string startsWithFnStr = "StartsWith";
+    return startsWithFnStr;
+}
+
+const std::string EndsWithFnStr()
+{
+    const std::string endsWithFnStr = "EndsWith";
+    return endsWithFnStr;
+}
+
 std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = { // concat functions
@@ -176,7 +194,16 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastStringToDoubleRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR },
             OMNI_DOUBLE, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStrWithDiffWidthsRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true)
+            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+
+        Function(reinterpret_cast<void *>(InStr), InStrFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_INT,
+            INPUT_DATA),
+
+        // like functions
+        Function(reinterpret_cast<void *>(StartsWithStr), StartsWithFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(EndsWithStr), EndsWithFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_BOOLEAN, INPUT_DATA)
     };
 
     return stringFnRegistry;
