@@ -98,6 +98,12 @@ const std::string PmodFnStr()
     return pmodFnStr;
 }
 
+const std::string NormalizeNaNAndZeroFnStr()
+{
+    const std::string normalizeNaNAndZeroFnStr = "NormalizeNaNAndZero";
+    return normalizeNaNAndZeroFnStr;
+}
+
 std::vector<Function> MathFunctionRegistry::GetFunctions()
 {
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
@@ -133,6 +139,8 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(EqualDouble), EqualFnStr(), {}, doubleParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(NotEqualDouble), NotEqualFnStr(), {}, doubleParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(NormalizeNaNAndZero), NormalizeNaNAndZeroFnStr(), {}, { OMNI_DOUBLE },
+            OMNI_DOUBLE, INPUT_DATA),
 
         // insert native function for each long operations
         Function(reinterpret_cast<void *>(AddInt64), AddFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),

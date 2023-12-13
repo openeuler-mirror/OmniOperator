@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Description: date time functions implementation
+ */
+
+#ifndef OMNI_RUNTIME_DATETIME_FUNCTIONS_H
+#define OMNI_RUNTIME_DATETIME_FUNCTIONS_H
+
+#include <cstdint>
+
+// All extern functions go here temporarily
+#ifdef _WIN32
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT
+#endif
+
+namespace omniruntime::codegen::function {
+extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, const char *fmtStr,
+    int32_t fmtLen, bool isNull);
+
+extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmtStr, int32_t fmtLen, bool isNull);
+
+extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_t timestamp, const char *fmtStr,
+    int32_t fmtLen, int32_t *outLen);
+
+extern "C" DLLEXPORT char *FromUnixTimeRetNull(int64_t contextPtr, bool *isNull, int64_t timestamp, const char *fmtStr,
+    int32_t fmtLen, int32_t *outLen);
+}
+#endif // OMNI_RUNTIME_DATETIME_FUNCTIONS_H

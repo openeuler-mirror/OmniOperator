@@ -25,6 +25,7 @@ const std::string GREATER_THAN_EQUAL_FN_STR = "batch_greaterThanEqual";
 const std::string EQUAL_FN_STR = "batch_equal";
 const std::string NOT_EQUAL_FN_STR = "batch_notEqual";
 const std::string PMOD_FN_STR = "batch_pmod";
+const std::string NORMALIZE_ZERO_FN_STR = "batch_NormalizeNaNAndZero";
 }
 
 std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
@@ -65,6 +66,8 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchEqualDouble), EQUAL_FN_STR, {}, doubleParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchNotEqualDouble), NOT_EQUAL_FN_STR, {}, doubleParams, OMNI_BOOLEAN,
             INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchNormalizeNaNAndZero), NORMALIZE_ZERO_FN_STR, {}, { OMNI_DOUBLE },
+            OMNI_DOUBLE, INPUT_DATA),
 
         Function(reinterpret_cast<void *>(BatchAddInt64), ADD_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchSubtractInt64), SUBTRACT_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA),

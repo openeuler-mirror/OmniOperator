@@ -61,6 +61,8 @@ extern "C" DLLEXPORT void BatchEqualDouble(double *left, double *right, bool *ou
 
 extern "C" DLLEXPORT void BatchNotEqualDouble(double *left, double *right, bool *output, int32_t rowCnt);
 
+extern "C" DLLEXPORT void BatchNormalizeNaNAndZero(double *input, bool *isAnyNull, double *output, int32_t rowCnt);
+
 // long functions
 extern "C" DLLEXPORT void BatchAddInt64(int64_t *left, int64_t *right, int32_t rowCnt);
 
