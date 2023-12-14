@@ -159,6 +159,7 @@ private:
     Spiller *spiller = nullptr;
     bool hasNext = true;
     bool canInplaceSort = false;
+    bool useRadixSort = false;
 };
 } // end of namespace op
 } // end of namespace omniruntime

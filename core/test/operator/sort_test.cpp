@@ -10,6 +10,7 @@
 #include <memory>
 #include <tuple>
 #include <algorithm>
+#include <random>
 #include "gtest/gtest.h"
 #include "operator/sort/sort.h"
 #include "vector/vector_helper.h"
@@ -2815,5 +2816,54 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase5)
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
+}
+
+TEST(NativeOmniSortTest, TestSortRadixSort)
+{
+    std::vector<std::pair<int64_t, int64_t>> dataRanges{{0, 16777215}, {-65535, 65535}};
+    for (int ir = 0; ir < dataRanges.size(); ir++) {
+        const int32_t dataSize = 1000;
+        int32_t data1[dataSize];
+        int64_t data2[dataSize];
+        std::vector<std::pair<int32_t, int64_t>>dataCombo(dataSize);
+        int64_t step = (dataRanges[ir].second - dataRanges[ir].first)/dataSize;
+        for (int i = 0; i < dataSize; i++) {
+            data1[i] = i;
+            data2[i] = dataRanges[i].first + step * i;
+            dataCombo[i] = {data1[i], data2[i]};
+        }
+
+        DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
+        VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+
+        int outputCols[2] = {0, 1};
+        int sortCols[1] = {1};
+        int ascendings[1] = {false};
+        int nullFirsts[1] = {true};
+        auto operatorFactory =
+                SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2,
+                                                               sortCols, ascendings, nullFirsts, 1);
+
+        auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
+        sortOperator->AddInput(vecBatch);
+        VectorBatch *outputVecBatch = nullptr;
+        sortOperator->GetOutput(&outputVecBatch);
+
+        // Create expected output
+        std::sort(dataCombo.begin(), dataCombo.end(), [](const auto& a, const auto& b){return a.second > b.second;});
+        int32_t expectData1[dataSize];
+        int64_t expectData2[dataSize];
+        std::vector<int32_t> nullPosition;
+        for (int i = 0; i < dataSize; i++) {
+            expectData1[i] = dataCombo[i].first;
+            expectData2[i] = dataCombo[i].second;
+        }
+        AssertVecBatchEquals(outputVecBatch, 2, dataSize, expectData1, expectData2);
+
+        // free memory
+        VectorHelper::FreeVecBatch(outputVecBatch);
+        omniruntime::op::Operator::DeleteOperator(sortOperator);
+        DeleteSortOperatorFactory(operatorFactory);
+    }
 }
 }  // namespace SortTest
