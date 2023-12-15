@@ -103,6 +103,7 @@ public:
     OmniStatus Close() override;
 
 private:
+    omniruntime::mem::AlignedBuffer<int32_t> selectedRowsBuffer;
     omniruntime::vec::VectorBatch *projectedVecs;
     std::shared_ptr<ExpressionEvaluator> &exprEvaluator;
 };

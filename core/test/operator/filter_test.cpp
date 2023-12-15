@@ -2387,10 +2387,19 @@ TEST(FilterTest, FilterStringWithNull)
     int32_t numReturned = op->GetOutput(&outputVecBatch);
 
     EXPECT_EQ(numReturned, 1);
-    auto *vcVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(outputVecBatch->Get(0));
-    for (int32_t i = 0; i < numReturned; i++) {
-        EXPECT_TRUE(vcVec->GetValue(i) == "hello");
+    BaseVector *vec = outputVecBatch->Get(0);
+    if (vec->GetEncoding() == omniruntime::vec::OMNI_DICTIONARY) {
+        auto *vcVec = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vec);
+        for (int32_t i = 0; i < numReturned; i++) {
+            EXPECT_TRUE(vcVec->GetValue(i) == "hello");
+        }
+    } else {
+        auto *vcVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
+        for (int32_t i = 0; i < numReturned; i++) {
+            EXPECT_TRUE(vcVec->GetValue(i) == "hello");
+        }
     }
+
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete factory;
