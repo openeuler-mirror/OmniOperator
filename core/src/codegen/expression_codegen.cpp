@@ -263,8 +263,21 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
             builder->CreateOr(left->isNull, right->isNull));
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL64) {
-        this->BinaryExprDecimal64Helper(bExpr, dynamic_cast<DecimalValue &>(*left.get()),
-            dynamic_cast<DecimalValue &>(*right.get()), left->isNull, right->isNull);
+        auto decimalLeft = dynamic_cast<DecimalValue &>(*left.get());
+        auto decimalRight = dynamic_cast<DecimalValue &>(*right.get());
+        if  (decimalLeft.GetScale() == decimalRight.GetScale() &&
+                (bExpr->op == omniruntime::expressions::Operator::LT ||
+                 bExpr->op == omniruntime::expressions::Operator::LTE ||
+                 bExpr->op == omniruntime::expressions::Operator::GT ||
+                 bExpr->op == omniruntime::expressions::Operator::GTE ||
+                 bExpr->op == omniruntime::expressions::Operator::EQ ||
+                 bExpr->op == omniruntime::expressions::Operator::NEQ)) {
+            auto output = this->BinaryExprLongHelper(bExpr, left->data, right->data, left->isNull, right->isNull);
+            this->value =
+                BuildDecimalValue(output, *(bExpr->GetReturnType()), builder->CreateOr(left->isNull, right->isNull));
+            return;
+        }
+        this->BinaryExprDecimal64Helper(bExpr, decimalLeft, decimalRight, left->isNull, right->isNull);
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DOUBLE) {
         this->value = make_shared<CodeGenValue>(
@@ -562,7 +575,13 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 break;
             }
             case OMNI_DECIMAL64: {
-                InExprDecimal64Helper(valueToCompare, argiValue, tmpCmpData, tmpCmpNull, retType);
+                DecimalValue &left = static_cast<DecimalValue &>(*valueToCompare);
+                DecimalValue &right = static_cast<DecimalValue &>(*argiValue);
+                if (left.GetScale() == right.GetScale()) {
+                    InExprIntegerHelper(valueToCompare, argiValue, tmpCmpData, tmpCmpNull);
+                } else {
+                    InExprDecimal64Helper(valueToCompare, argiValue, tmpCmpData, tmpCmpNull, retType);
+                }
                 break;
             }
             case OMNI_DOUBLE: {
@@ -1819,6 +1838,12 @@ bool ExpressionCodeGen::VisitBetweenExprHelper(BetweenExpr &bExpr, const std::sh
             auto &cmpLower = static_cast<DecimalValue &>(*lowerVal);
             auto &cmpVal = static_cast<DecimalValue &>(*val);
             auto &cmpUpper = static_cast<DecimalValue &>(*upperVal);
+            if (cmpVal.GetScale() == cmpLower.GetScale() && cmpVal.GetScale() == cmpUpper.GetScale()) {
+                *cmpLeft = builder->CreateICmpSLE(lowerVal->data, val->data, "between_cmpleft");
+                *cmpRight = builder->CreateICmpSLE(val->data, upperVal->data, "between_cmpright");
+                return true;
+            }
+
             std::vector<Value *> argValsCmpLeft {
                 cmpLower.data, const_cast<Value *>(cmpLower.GetPrecision()), const_cast<Value *>(cmpLower.GetScale()),
                 cmpVal.data,   const_cast<Value *>(cmpVal.GetPrecision()),   const_cast<Value *>(cmpVal.GetScale())
