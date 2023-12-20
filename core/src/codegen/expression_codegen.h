@@ -73,7 +73,7 @@ public:
         return 0;
     }
 
-    std::set<int32_t> vectorIndexes;
+    std::set<int32_t> vectorIndexes{};
 
 protected:
     /**

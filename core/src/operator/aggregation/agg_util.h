@@ -26,7 +26,7 @@ public:
         int64_t values[allColsCount];
         bool nulls[allColsCount];
         int32_t lengths[allColsCount];
-        std::set<int32_t> usedVectors = aggSimpleFilters->GetVectorIndexes();
+        std::set<int32_t> &usedVectors = aggSimpleFilters->GetVectorIndexes();
         for (auto iter = usedVectors.begin(); iter != usedVectors.end(); ++iter) {
             auto vecIdx = *iter;
             auto vector = inputVecBatch->Get(vecIdx);

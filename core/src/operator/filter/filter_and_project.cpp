@@ -58,12 +58,8 @@ bool SimpleFilter::Initialize(OverflowConfig *overflowConfig)
     return true;
 }
 
-set<int32_t> SimpleFilter::GetVectorIndexes()
+set<int32_t> &SimpleFilter::GetVectorIndexes()
 {
-    if (!this->initialized) {
-        LogWarn("SimpleFilter not initialized or failed to initialize.");
-        return set<int32_t>{};
-    }
     return this->codegen->vectorIndexes;
 }
 
