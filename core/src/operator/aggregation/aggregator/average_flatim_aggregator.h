@@ -38,12 +38,12 @@ public:
             // when input is not raw, vector is container with <double, long> columns for <sum, count>
 
             auto *sumVector =
-                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
-                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
+                    SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
 
             auto *cntVector =
-                reinterpret_cast<Vector<int64_t> *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
-                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
+                reinterpret_cast<Vector<int64_t> *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
+                    SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
 
             // no dict in Vector<T> when input is not raw
             auto *ptr = reinterpret_cast<double *>(GetValuesFromVector<IN_ID>(sumVector));
@@ -68,12 +68,12 @@ public:
             using InType = double;
             // when input is not raw, vector is <doubleVector, longVector> columns for <sum, count>
             auto *sumVector =
-                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
-                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
+                    SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
 
             auto *cntVector =
-                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
-                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
+                    SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
 
             auto *ptr = reinterpret_cast<double *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(cntVector));

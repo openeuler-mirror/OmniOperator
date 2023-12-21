@@ -19,14 +19,12 @@
 namespace omniruntime {
 using namespace type;
 namespace op {
-
 template <type::DataTypeId OmniId> void *GetValuesFromVector(BaseVector *vector)
 {
     using T = typename NativeType<OmniId>::type;
     if constexpr (std::is_same_v<std::string_view, T>) {
-        // TODO: need offsets for varChar, only return values
-        auto largeStringVector =
-            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
+        // note: need offsets for varChar, only return values
+        auto largeStringVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
         return unsafe::UnsafeStringVector::GetValues(largeStringVector);
     } else {
         auto rawVector = reinterpret_cast<Vector<T> *>(vector);
@@ -38,7 +36,7 @@ template <type::DataTypeId OmniId> void *GetValuesFromDict(BaseVector *vector)
 {
     using T = typename NativeType<OmniId>::type;
     if constexpr (std::is_same_v<std::string_view, T>) {
-        // TODO: need offsets for varChar, only return values
+        // note: need offsets for varChar, only return values
         auto *stringDictVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
         return unsafe::UnsafeDictionaryVector::GetVarCharDictionary(stringDictVector);
     } else {

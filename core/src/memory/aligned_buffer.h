@@ -27,15 +27,6 @@ public:
         Release();
     }
 
-    ALWAYS_INLINE void Release()
-    {
-        if (buffer != nullptr) {
-            allocator->Free(buffer, capacity);
-        }
-        buffer = nullptr;
-        capacity = 0;
-    }
-
     ALWAYS_INLINE RAW_DATA_TYPE *AllocateReuse(size_t size, bool zerofill)
     {
         if (buffer == nullptr) {
@@ -77,6 +68,15 @@ public:
     }
 
 private:
+    ALWAYS_INLINE void Release()
+    {
+        if (buffer != nullptr) {
+            allocator->Free(buffer, capacity);
+        }
+        buffer = nullptr;
+        capacity = 0;
+    }
+
     RAW_DATA_TYPE *buffer;
     size_t capacity;
     Allocator *allocator;

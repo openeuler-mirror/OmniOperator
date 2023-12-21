@@ -1199,8 +1199,8 @@ public:
         }
 
         bool isNeg = (right.val > 0 ^ val > 0) ? 1 : 0;
-        auto num_bits_required_after_scaling = MaxBitsRequiredAfterScaling(val, rescaleFactor);
-        if (num_bits_required_after_scaling < I64_BIT) {
+        auto numBitsRequiredAfterScaling = MaxBitsRequiredAfterScaling(val, rescaleFactor);
+        if (numBitsRequiredAfterScaling < I64_BIT) {
             // consider to use fast-path
             auto dividend = (rescaleFactor <= 0) ? val : val * INT64_TEN_POWERS_TABLE[rescaleFactor];
             result.val = dividend / right.val;
@@ -1238,22 +1238,22 @@ public:
             return result;
         }
 
-        int32_t ScaleFactor = GetResultScale(scale, right.scale, Op::MOD);
+        int32_t scaleFactor = GetResultScale(scale, right.scale, Op::MOD);
         if (val == 0) {
             result.val = 0;
-            result.SetScale(ScaleFactor);
+            result.SetScale(scaleFactor);
             return result;
         }
 
         if (scale == right.scale) {
             result.val = val % right.val;
         } else {
-            int128_t dividend128 = ReScaleTo128Bits(ScaleFactor);
-            int128_t divisor128 = right.ReScaleTo128Bits(ScaleFactor);
+            int128_t dividend128 = ReScaleTo128Bits(scaleFactor);
+            int128_t divisor128 = right.ReScaleTo128Bits(scaleFactor);
             int128_t remainder128 = dividend128 % divisor128;
             result.val = static_cast<int64_t>(remainder128);
         }
-        result.SetScale(ScaleFactor);
+        result.SetScale(scaleFactor);
 
         return result;
     }
@@ -1380,11 +1380,6 @@ public:
 
     explicit operator double() const
     {
-        if (scale <= MAX_DECIMAL64_DIGITS) {
-            double scaleValue = INT64_TEN_POWERS_TABLE[scale] * 1.0;
-            return val / scaleValue;
-        }
-
         return std::stod(ToString());
     }
 

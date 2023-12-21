@@ -75,8 +75,8 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState 
     return (this->*processSingleInternalPtr)(state, vector, rowOffset, rowCount, nullMap);
 }
 
-SIMD_ALWAYS_INLINE void ProcessGroupInternalFunctionForRawInput(std::vector<AggregateState *>&rowStates,
-                                                                const size_t aggIdx, const uint8_t *nullMap)
+SIMD_ALWAYS_INLINE void ProcessGroupInternalFunctionForRawInput(std::vector<AggregateState *> &rowStates,
+    const size_t aggIdx, const uint8_t *nullMap)
 {
     if (nullMap == nullptr) {
         for (AggregateState *states : rowStates) {
@@ -94,8 +94,9 @@ SIMD_ALWAYS_INLINE void ProcessGroupInternalFunctionForRawInput(std::vector<Aggr
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool RAW_IN>
-VECTORIZE_LOOP void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(std::vector<AggregateState *>
-        &rowStates, const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
+VECTORIZE_LOOP void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(
+    std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector, const int32_t rowOffset,
+    const uint8_t *nullMap)
 {
     if constexpr (RAW_IN) {
         ProcessGroupInternalFunctionForRawInput(rowStates, aggIdx, nullMap);

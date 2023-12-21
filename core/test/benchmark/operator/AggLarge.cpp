@@ -1,12 +1,11 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 
 #include <algorithm>    // std::random_shuffle
 #include <string_view>
 
 #include "common/common.h"
-#include "common/vector_util.h"
 #include "vector/vector_helper.h"
 #include "vector/vector_common.h"
 #include "operator/aggregation/non_group_aggregation.h"
