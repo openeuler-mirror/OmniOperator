@@ -150,6 +150,8 @@ private:
 
     Value *StringCmp(Value *lhs, Value *lLen, Value *rhs, Value *rLen);
 
+    Value *StringEqual(Value *lhs, Value *lLen, Value *rhs, Value *rLen, Value *isNull);
+
     void BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
         Value *rightIsNull, PHINode **leftPhi, PHINode **rightPhi);
 

@@ -81,23 +81,25 @@ extern "C" DLLEXPORT void BatchGreaterThanEqualStr(uint8_t **ap, int32_t *apLen,
 extern "C" DLLEXPORT void BatchEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
     int32_t rowCnt)
 {
-    auto tmp = new int32_t[rowCnt];
-    BatchStrCompare(ap, apLen, bp, bpLen, tmp, rowCnt);
     for (int i = 0; i < rowCnt; i++) {
-        res[i] = (tmp[i] == 0);
+        if (apLen[i] != bpLen[i]) {
+            res[i] = false;
+        } else {
+            res[i] = (memcmp(ap[i], bp[i], apLen[i]) == 0);
+        }
     }
-    delete[] tmp;
 }
 
 extern "C" DLLEXPORT void BatchNotEqualStr(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, bool *res,
     int32_t rowCnt)
 {
-    auto tmp = new int32_t[rowCnt];
-    BatchStrCompare(ap, apLen, bp, bpLen, tmp, rowCnt);
     for (int i = 0; i < rowCnt; i++) {
-        res[i] = (tmp[i] != 0);
+        if (apLen[i] != bpLen[i]) {
+            res[i] = true;
+        } else {
+            res[i] = (memcmp(ap[i], bp[i], apLen[i]) != 0);
+        }
     }
-    delete[] tmp;
 }
 
 extern "C" DLLEXPORT void BatchCastStringToDateNotAllowReducePrecison(int64_t contextPtr, uint8_t **str,

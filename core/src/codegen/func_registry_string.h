@@ -10,6 +10,7 @@
 
 // functions called directly from codegen
 const std::string strCompareStr = "compare";
+const std::string strEqualStr = "strequal";
 
 namespace omniruntime::codegen {
 class StringFunctionRegistry : public BaseFunctionRegistry {
