@@ -107,7 +107,7 @@ template <typename T> T GccWithDictWithNull(const T *values, const uint8_t *null
     int64_t flag = 0;
     for (int i = 0; i < size; ++i) {
         if (not nulls[i]) {
-            result += (double)values[indexs[i]];
+            result += static_cast<double>(values[indexs[i]]);
             ++flag;
         }
     }
@@ -251,7 +251,6 @@ template <typename T> void TestSimdMaxWithDictNull(int32_t size)
 void Verify()
 {
     int32_t expect = 0;
-    int32_t actual = 0;
     srand(time(nullptr));
     int labCount = 1000;
     while (labCount--) {
@@ -266,7 +265,7 @@ void Verify()
         uint8_t nulls[value];
         int countNull = nullNum;
         for (int i = 0; i < value; i++) {
-            if (countNull != 0 && rand() & 0x1) {
+            if ((countNull != 0) && (rand() & 0x1)) {
                 nulls[i] = true;
                 --countNull;
             } else {

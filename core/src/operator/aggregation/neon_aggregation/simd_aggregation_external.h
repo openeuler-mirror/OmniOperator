@@ -35,7 +35,7 @@ void SIMDAdd(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size_t r
 }
 
 
-template <uint32_t bytes> struct BytesType;
+template <uint32_t> struct BytesType;
 
 template <> struct BytesType<1> {
     using type = uint8_t;
@@ -113,7 +113,7 @@ inline typename CurUnderlyingSimd<OUT>::SimdType GatherDictWithNullValues(const 
         (*nulls) += CurUnderlyingSimd<OUT>::HandleNumOnce;
         off += CurUnderlyingSimd<OUT>::HandleNumOnce;
         flag_ += CurUnderlyingSimd<OUT>::HandleNumOnce;
-        for (; assignIndex < CurUnderlyingSimd<OUT>::HandleNumOnce; ++assignIndex,++(*indexMap)) {
+        for (; assignIndex < CurUnderlyingSimd<OUT>::HandleNumOnce; ++assignIndex, ++(*indexMap)) {
             data[assignIndex] = (ptr)[*(*indexMap)];
         }
         // output out type data from data

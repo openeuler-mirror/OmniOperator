@@ -105,9 +105,9 @@ template <typename IN, typename OUT> struct BinaryOperation<BasicOp::Min, IN, OU
     }
 };
 
-#define BasicDefineForSimd                                   \
+#define BASIC_DEFINE_FOR_SIMD                                   \
     static constexpr uint32_t RawSize = sizeof(RawType) * 8; \
-    static constexpr uint32_t HandleNumOnce = NeonBitWidth / RawSize;
+    static constexpr uint32_t HandleNumOnce = NeonBitWidth / RawSize
 
 static constexpr uint32_t NeonBitWidth = 128;
 
@@ -132,7 +132,7 @@ template <typename IN, typename OUT> static auto LoadDifferentType(const IN *raw
 template <> struct NeonSimd<int8_t> {
     using RawType = int8_t;
     using SimdType = int8x16_t;
-    BasicDefineForSimd
+    BASIC_DEFINE_FOR_SIMD;
 
     static auto AddFunc(const SimdType neonLeft, const SimdType neonRight)
     {
@@ -176,7 +176,7 @@ template <> struct NeonSimd<int8_t> {
 template <> struct NeonSimd<int16_t> {
     using RawType = int16_t;
     using SimdType = int16x8_t;
-    BasicDefineForSimd
+    BASIC_DEFINE_FOR_SIMD;
 
     static auto AddFunc(const SimdType neonLeft, const SimdType neonRight)
     {
@@ -221,7 +221,7 @@ template <> struct NeonSimd<int16_t> {
 template <> struct NeonSimd<int32_t> {
     using RawType = int32_t;
     using SimdType = int32x4_t;
-    BasicDefineForSimd
+    BASIC_DEFINE_FOR_SIMD;
 
     static auto AddFunc(const SimdType neonLeft, const SimdType neonRight)
     {
@@ -266,7 +266,7 @@ template <> struct NeonSimd<uint32_t> {
     using RawType = uint32_t;
     using SimdType = uint32x4_t;
 
-    BasicDefineForSimd
+    BASIC_DEFINE_FOR_SIMD;
 
     static auto AddFunc(const SimdType neonLeft, const SimdType neonRight)
     {
@@ -312,7 +312,7 @@ template <> struct NeonSimd<int64_t> {
     using SimdType = int64x2_t;
     using EqualSimdType = float64x2_t;
 
-    BasicDefineForSimd
+    BASIC_DEFINE_FOR_SIMD;
 
     static auto AddFunc(const SimdType neonLeft, const SimdType neonRight)
     {
