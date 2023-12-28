@@ -28,11 +28,11 @@ public:
     ~AverageSparkDecimalAggregator() override {}
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowOffset, const uint8_t *nullMap)
     {
         if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
             SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::ProcessGroupInternal(rowStates, aggIdx, vector,
-                rowOffset, nullMap, indexMap);
+                rowOffset, nullMap);
         } else {
             auto *sumVector = SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::curVectorBatch->Get(
                 SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::channels[0]);
@@ -55,12 +55,12 @@ public:
     }
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowCount, const uint8_t *nullMap)
     {
         auto *res = reinterpret_cast<ResultType *>(state.val);
         if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
             SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::ProcessSingleInternal(state, vector, rowOffset,
-                rowCount, nullMap, indexMap);
+                rowCount, nullMap);
         } else {
             auto *sumVector = SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::curVectorBatch->Get(
                 SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::channels[0]);

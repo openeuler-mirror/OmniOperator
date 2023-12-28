@@ -35,7 +35,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &s
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool RAW_IN>
 void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(AggregateState &state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
     if constexpr (RAW_IN) {
         if (nullMap == nullptr) {
@@ -46,7 +46,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
     } else {
         int64_t noUsed{};
 
-        if (indexMap == nullptr) {
+        if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
             auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
@@ -57,6 +57,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
             }
         } else {
             auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(vector));
+            auto *indexMap = GetIdsFromDict<OMNI_LONG>(vector) + rowOffset;
             if (nullMap == nullptr) {
                 AddDict<int64_t, int64_t, CountAllOp>(&(state.count), noUsed, ptr, rowCount, indexMap);
             } else {
@@ -69,34 +70,41 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
-    return (this->*processSingleInternalPtr)(state, vector, rowOffset, rowCount, nullMap, indexMap);
+    return (this->*processSingleInternalPtr)(state, vector, rowOffset, rowCount, nullMap);
+}
+
+SIMD_ALWAYS_INLINE void ProcessGroupInternalFunctionForRawInput(std::vector<AggregateState *> &rowStates,
+    const size_t aggIdx, const uint8_t *nullMap)
+{
+    if (nullMap == nullptr) {
+        for (AggregateState *states : rowStates) {
+            states[aggIdx].count++;
+        }
+    } else {
+        size_t rowCount = rowStates.size();
+        for (size_t i = 0; i < rowCount; ++i) {
+            if (!nullMap[i]) {
+                rowStates[i][aggIdx].count++;
+            }
+        }
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool RAW_IN>
-void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+VECTORIZE_LOOP void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(
+    std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector, const int32_t rowOffset,
+    const uint8_t *nullMap)
 {
     if constexpr (RAW_IN) {
-        if (nullMap == nullptr) {
-            for (AggregateState *states : rowStates) {
-                states[aggIdx].count++;
-            }
-        } else {
-            size_t rowCount = rowStates.size();
-            for (size_t i = 0; i < rowCount; ++i) {
-                if (!nullMap[i]) {
-                    rowStates[i][aggIdx].count++;
-                }
-            }
-        }
+        ProcessGroupInternalFunctionForRawInput(rowStates, aggIdx, nullMap);
     } else {
         size_t rowCount = rowStates.size();
         int64_t unsedFlag = 0;
 
-        if (indexMap == nullptr) {
+        if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
             auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
             ptr += rowOffset;
             if (nullMap == nullptr) {
@@ -110,6 +118,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(std::vec
             }
         } else {
             auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromDict<OMNI_LONG>(vector));
+            auto *indexMap = GetIdsFromDict<OMNI_LONG>(vector) + rowOffset;
             if (nullMap == nullptr) {
                 for (size_t i = 0; i < rowCount; ++i) {
                     CountAllOp(&(rowStates[i][aggIdx].count), unsedFlag, ptr[indexMap[i]], 0LL);
@@ -124,12 +133,11 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternalFunction(std::vec
     }
 }
 
-
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
-    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
 {
-    return (this->*processGroupInternalPtr)(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap);
+    return (this->*processGroupInternalPtr)(rowStates, aggIdx, vector, rowOffset, nullMap);
 }
 
 // Explicit template instantiation

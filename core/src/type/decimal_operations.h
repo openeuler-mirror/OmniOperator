@@ -49,6 +49,7 @@ enum class RoundingMode {
 static constexpr int MAX_PRECISION = 38;
 static constexpr int MAX_SCALE = 38;
 static constexpr int32_t MAX_DECIMAL64_DIGITS = 18;
+static constexpr int I64_BIT = 64;
 static constexpr uint128_t TenOfScaleMultipliers[39] = {
     uint128_t(1LL),
     uint128_t(10LL),
@@ -89,6 +90,47 @@ static constexpr uint128_t TenOfScaleMultipliers[39] = {
     uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL),
     uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 10),
     uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 100) };
+
+static constexpr uint128_t HalfTenOfScaleMultipliers[39] = {
+    uint128_t(0LL),
+    uint128_t(5LL),
+    uint128_t(50LL),
+    uint128_t(500LL),
+    uint128_t(5000LL),
+    uint128_t(50000LL),
+    uint128_t(500000LL),
+    uint128_t(5000000LL),
+    uint128_t(50000000LL),
+    uint128_t(500000000LL),
+    uint128_t(5000000000LL),
+    uint128_t(50000000000LL),
+    uint128_t(500000000000LL),
+    uint128_t(5000000000000LL),
+    uint128_t(50000000000000LL),
+    uint128_t(500000000000000LL),
+    uint128_t(5000000000000000LL),
+    uint128_t(50000000000000000LL),
+    uint128_t(500000000000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 5LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 50LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 500LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 5000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 50000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 500000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 5000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 50000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 500000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 5000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 50000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 500000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 5000000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 50000000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 500000000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 5000000000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 50000000000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 500000000000000000LL),
+    uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 5),
+    uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 50) };
 
 static constexpr double DOUBLE_10_POW[] = {
     1.0e0, 1.0e1, 1.0e2, 1.0e3, 1.0e4, 1.0e5,
@@ -905,8 +947,8 @@ private:
             return result;
         }
         if (scale > newScale) {
-            result = (val + TenOfScaleMultipliers[scale - newScale] / 2) /
-                     TenOfScaleMultipliers[scale - newScale];
+            result = (val + HalfTenOfScaleMultipliers[scale - newScale]) /
+                TenOfScaleMultipliers[scale - newScale];
         } else {
             result = result * TenOfScaleMultipliers[newScale - scale];
         }
@@ -919,7 +961,7 @@ private:
             return *this;
         }
         if (scale > newScale) {
-            val = (val + TenOfScaleMultipliers[scale - newScale] / 2) / TenOfScaleMultipliers[scale - newScale];
+            val = (val + HalfTenOfScaleMultipliers[scale - newScale]) / TenOfScaleMultipliers[scale - newScale];
         } else {
             *this = Multiply(Decimal128Wrapper(TenOfScaleMultipliers[newScale - scale]));
         }
@@ -945,6 +987,64 @@ private:
     uint128_t val = 0;
     OpStatus overflow = OpStatus::SUCCESS;
 };
+
+static std::array<int64_t, 19> INT64_TEN_POWERS_TABLE = {
+    1,                     // 0 / 10^0
+    10,                    // 1 / 10^1
+    100,                   // 2 / 10^2
+    1000,                  // 3 / 10^3
+    10000,                 // 4 / 10^4
+    100000,                // 5 / 10^5
+    1000000,               // 6 / 10^6
+    10000000,              // 7 / 10^7
+    100000000,             // 8 / 10^8
+    1000000000,            // 9 / 10^9
+    10000000000L,          // 10 / 10^10
+    100000000000L,         // 11 / 10^11
+    1000000000000L,        // 12 / 10^12
+    10000000000000L,       // 13 / 10^13
+    100000000000000L,      // 14 / 10^14
+    1000000000000000L,     // 15 / 10^15
+    10000000000000000L,    // 16 / 10^16
+    100000000000000000L,   // 17 / 10^17
+    1000000000000000000L   // 18 / 10^18
+};
+
+static inline int CountLeadingZeros(uint64_t value)
+{
+    int bitpos = 0;
+    while (value != 0) {
+        value >>= 1;
+        ++bitpos;
+    }
+    return I64_BIT - bitpos;
+}
+
+// Suppose we have a number that requires x bits to be represented and we scale it up by
+// 10^scale_by. Let's say now y bits are required to represent it. This function returns
+// the maximum possible y - x for a given 'scale_by'.
+static inline int32_t MaxBitsRequiredIncreaseAfterScaling(int32_t scale_by)
+{
+    // We rely on the following formula:
+    // bits_required(x * 10^y) <= bits_required(x) + floor(log2(10^y)) + 1
+    // We precompute floor(log2(10^x)) + 1 for x = 0, 1, 2...75, 76
+    static const int32_t floor_log2_plus_one[] = {
+        0,   4,   7,   10,  14,  17,  20,  24,  27,  30,  34,  37,  40,  44,  47,  50,
+        54,  57,  60,  64,  67,  70,  74,  77,  80,  84,  87,  90,  94,  97,  100, 103,
+        107, 110, 113, 117, 120, 123, 127, 130, 133, 137, 140, 143, 147, 150, 153, 157,
+        160, 163, 167, 170, 173, 177, 180, 183, 187, 190, 193, 196, 200, 203, 206, 210,
+        213, 216, 220, 223, 226, 230, 233, 236, 240, 243, 246, 250, 253};
+    return floor_log2_plus_one[scale_by];
+}
+
+// Returns the maximum possible number of bits required to represent num * 10^scale_by.
+static inline int32_t MaxBitsRequiredAfterScaling(int64_t value, int32_t scale_by)
+{
+    auto value_abs = std::abs(value);
+
+    int32_t num_occupied = 64 - CountLeadingZeros(value_abs);
+    return num_occupied + MaxBitsRequiredIncreaseAfterScaling(scale_by);
+}
 
 class Decimal64 : public BasicDecimal {
 public:
@@ -1093,47 +1193,68 @@ public:
             return *this;
         }
         Decimal64 result;
-        bool isNeg = (right.val > 0 ^ val > 0) ? 1 : 0;
-        int128_t dividend128 = abs(int128_t(ReScaleTo128Bits(rescaleFactor + scale)));
-        int128_t divisor128 = abs(int128_t(right.val));
-        int128_t quotient128;
-        int128_t remainder128;
-        if (divisor128 == 0) {
+        if (right.val == 0) {
             result.overflow = OpStatus::DIVIDE_BY_ZERO;
             return result;
         }
-        quotient128 = dividend128 / divisor128;
-        remainder128 = dividend128 % divisor128;
-        if (remainder128 * 2 >= divisor128) {
-            quotient128 += 1;
+
+        bool isNeg = (right.val > 0 ^ val > 0) ? 1 : 0;
+        auto numBitsRequiredAfterScaling = MaxBitsRequiredAfterScaling(val, rescaleFactor);
+        if (numBitsRequiredAfterScaling < I64_BIT) {
+            // consider to use fast-path
+            auto dividend = (rescaleFactor <= 0) ? val : val * INT64_TEN_POWERS_TABLE[rescaleFactor];
+            result.val = dividend / right.val;
+            auto reminder = dividend % right.val;
+
+            // round-up
+            if (std::abs(2 * reminder) >= abs(right.val)) {
+                result.val += (isNeg ? (-1) : 1);
+            }
+        } else {
+            int128_t dividend128 = abs(int128_t(ReScaleTo128Bits(rescaleFactor + scale)));
+            int128_t divisor128 = abs(int128_t(right.val));
+            int128_t quotient128 = dividend128 / divisor128;
+            int128_t remainder128 = dividend128 % divisor128;
+            if (remainder128 * 2 >= divisor128) {
+                quotient128 += 1;
+            }
+            if (quotient128 > DECIMAL128_MAX_VALUE) {
+                result.overflow = OpStatus::OP_OVERFLOW;
+                return result;
+            }
+            result.val = isNeg ? static_cast<int64_t>(-quotient128) : static_cast<int64_t>(quotient128);
         }
-        if (quotient128 > DECIMAL128_MAX_VALUE) {
-            result.overflow = OpStatus::OP_OVERFLOW;
-            return result;
-        }
-        result.val = isNeg ? static_cast<int64_t>(-quotient128) : static_cast<int64_t>(quotient128);
         return result;
     }
 
     Decimal64 Mod(const Decimal64 &right) const
     {
+        if (overflow == OpStatus::OP_OVERFLOW) {
+            return *this;
+        }
         Decimal64 result;
-        int32_t ScaleFactor = GetResultScale(scale, right.scale, Op::MOD);
-        int128_t dividend128 = ReScaleTo128Bits(ScaleFactor);
-        int128_t divisor128 = right.ReScaleTo128Bits(ScaleFactor);
-        int128_t remainder256;
-        if (divisor128 == 0) {
+        if (right.val == 0) {
             result.overflow = OpStatus::DIVIDE_BY_ZERO;
             return result;
         }
-        if (dividend128 == 0) {
+
+        int32_t scaleFactor = GetResultScale(scale, right.scale, Op::MOD);
+        if (val == 0) {
             result.val = 0;
-            result.SetScale(ScaleFactor);
+            result.SetScale(scaleFactor);
             return result;
         }
-        remainder256 = dividend128 % divisor128;
-        result.val = static_cast<int64_t>(remainder256);
-        result.SetScale(ScaleFactor);
+
+        if (scale == right.scale) {
+            result.val = val % right.val;
+        } else {
+            int128_t dividend128 = ReScaleTo128Bits(scaleFactor);
+            int128_t divisor128 = right.ReScaleTo128Bits(scaleFactor);
+            int128_t remainder128 = dividend128 % divisor128;
+            result.val = static_cast<int64_t>(remainder128);
+        }
+        result.SetScale(scaleFactor);
+
         return result;
     }
 
@@ -1177,8 +1298,8 @@ public:
             return result;
         }
         if (scale > newScale) {
-            result = (val + TenOfScaleMultipliers[scale - newScale] / 2) /
-                     TenOfScaleMultipliers[scale - newScale];
+            result = (val + HalfTenOfScaleMultipliers[scale - newScale]) /
+                TenOfScaleMultipliers[scale - newScale];
         } else {
             result *= TenOfScaleMultipliers[newScale - scale];
         }
@@ -1204,11 +1325,20 @@ public:
     OpStatus ToInt(int32_t &res) const
     {
         auto tenOfScale = static_cast<int64_t>(TenOfScaleMultipliers[scale]);
-        Decimal64 result = this->Divide(Decimal64(tenOfScale), 0);
-        if (result.val > INT32_MAX || result.val < INT32_MIN) {
+        int64_t res64;
+        if (scale == 0) {
+            res64 = val;
+        } else {
+            res64 = val / tenOfScale;
+            auto reminder = val % tenOfScale;
+            if (std::abs(2 * reminder) >= tenOfScale) {
+                res64 += ((val < 0) ? -1 : 1);
+            }
+        }
+        if (res64 > INT32_MAX || res64 < INT32_MIN) {
             return OpStatus::OP_OVERFLOW;
         } else {
-            res = static_cast<int32_t>(result.val);
+            res = static_cast<int32_t>(res64);
             return OpStatus::SUCCESS;
         }
     }
@@ -1216,8 +1346,15 @@ public:
     OpStatus ToLong(int64_t &res) const
     {
         auto tenOfScale = static_cast<int64_t>(TenOfScaleMultipliers[scale]);
-        Decimal64 result = this->Divide(Decimal64(tenOfScale), 0);
-        res = static_cast<int64_t>(result.val);
+        if (scale == 0) {
+            res = val;
+        } else {
+            res = val / tenOfScale;
+            auto reminder = val % tenOfScale;
+            if (std::abs(2 * reminder) >= tenOfScale) {
+                res += ((val < 0) ? -1 : 1);
+            }
+        }
         return OpStatus::SUCCESS;
     }
 
@@ -1257,7 +1394,13 @@ private:
             return *this;
         }
         if (scale > newScale) {
-            *this = Divide(TenOfScaleMultipliers[scale - newScale], 0);
+            int64_t scaleMultiplier = static_cast<int64_t>(TenOfScaleMultipliers[scale - newScale]);
+            auto result = val / scaleMultiplier;
+            auto remainder = val % scaleMultiplier;
+            if (abs(remainder) >= (scaleMultiplier >> 1)) {
+                result += (val > 0 ? 1 : -1);
+            }
+            val = result;
         } else {
             *this = Multiply(TenOfScaleMultipliers[newScale - scale]);
         }
@@ -1280,28 +1423,6 @@ private:
     int32_t scale = 0;
     int64_t val = 0;
     OpStatus overflow = OpStatus::SUCCESS;
-};
-
-static std::array<int64_t, 19> INT64_TEN_POWERS_TABLE = {
-    1,                     // 0 / 10^0
-    10,                    // 1 / 10^1
-    100,                   // 2 / 10^2
-    1000,                  // 3 / 10^3
-    10000,                 // 4 / 10^4
-    100000,                // 5 / 10^5
-    1000000,               // 6 / 10^6
-    10000000,              // 7 / 10^7
-    100000000,             // 8 / 10^8
-    1000000000,            // 9 / 10^9
-    10000000000L,          // 10 / 10^10
-    100000000000L,         // 11 / 10^11
-    1000000000000L,        // 12 / 10^12
-    10000000000000L,       // 13 / 10^13
-    100000000000000L,      // 14 / 10^14
-    1000000000000000L,     // 15 / 10^15
-    10000000000000000L,    // 16 / 10^16
-    100000000000000000L,   // 17 / 10^17
-    1000000000000000000L   // 18 / 10^18
 };
 
 class DecimalOperations {

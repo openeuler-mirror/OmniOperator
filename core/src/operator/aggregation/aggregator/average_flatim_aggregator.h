@@ -28,23 +28,22 @@ public:
     ~AverageFlatIMAggregator() override {}
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowCount, const uint8_t *nullMap)
     {
         if (AverageFlatIMAggregator<IN_ID, OUT_ID>::inputRaw) {
-            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap,
-                indexMap);
+            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
         } else {
             using InType = double;
             auto *res = reinterpret_cast<ResultType *>(state.val);
             // when input is not raw, vector is container with <double, long> columns for <sum, count>
 
             auto *sumVector =
-                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
-                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
+                    SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
 
             auto *cntVector =
-                reinterpret_cast<Vector<int64_t> *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
-                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
+                reinterpret_cast<Vector<int64_t> *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
+                    SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
 
             // no dict in Vector<T> when input is not raw
             auto *ptr = reinterpret_cast<double *>(GetValuesFromVector<IN_ID>(sumVector));
@@ -61,21 +60,20 @@ public:
     }
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowOffset, const uint8_t *nullMap)
     {
         if (AverageFlatIMAggregator<IN_ID, OUT_ID>::inputRaw) {
-            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap,
-                indexMap);
+            SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
         } else {
             using InType = double;
             // when input is not raw, vector is <doubleVector, longVector> columns for <sum, count>
             auto *sumVector =
-                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
-                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
+                    SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
 
             auto *cntVector =
-                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->
-                    Get(SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
+                reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
+                    SumFlatIMAggregator<IN_ID, OUT_ID>::channels[1]));
 
             auto *ptr = reinterpret_cast<double *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(cntVector));

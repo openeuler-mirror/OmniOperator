@@ -14,7 +14,7 @@
 namespace omniruntime::vec {
 class VectorHelper {
 public:
-    static BaseVector *CreateStringDictionary(int32_t *values, int32_t valueSize,
+    static BaseVector *CreateStringDictionary(const int32_t *values, int32_t valueSize,
         Vector<LargeStringContainer<std::string_view>> *vector)
     {
         std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);

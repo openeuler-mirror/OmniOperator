@@ -74,19 +74,6 @@ public:
     {
         return UnsafeDictionaryContainer::GetIds(vector->container.get()) + vector->offset;
     }
-
-    template <typename DATA_TYPE>
-    static ALWAYS_INLINE int32_t *GetIdsWithOffset(Vector<DictionaryContainer<DATA_TYPE>> *vector,
-        int32_t *idsWithOffset, int offset, int rowCount)
-    {
-        int *ids = GetIds(vector) + offset;
-
-        auto *ptr = idsWithOffset;
-        for (int32_t i = 0; i < rowCount; i++) {
-            ptr[i] = ids[i];
-        }
-        return ptr;
-    }
 };
 
 /**

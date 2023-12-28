@@ -9,13 +9,10 @@ TypedAggregator::TypedAggregator(const FunctionType aggregateType, const DataTyp
     const DataTypes &outputTypes, const std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial,
     const bool isOverflowAsNull)
     : Aggregator(aggregateType, inputTypes, outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull)
-{
-    auto curId = inputTypes.GetType(0);
-    getIdsWithOffFunction = getIdsWithOffsetFunctions.at(curId->GetId());
-}
+{}
 
 BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-    uint8_t **nullMap, AggregatorBuffer<int32_t> &indexMap, const size_t channelIdx)
+    uint8_t **nullMap, const size_t channelIdx)
 {
 #ifdef DEBUG
     if (channelIdx < 0 || channelIdx >= channels.size()) {
@@ -40,15 +37,7 @@ BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t r
         *nullMap += rowOffset;
     }
 
-    if (vector->GetEncoding() == vec::OMNI_DICTIONARY) {
-        indexMap.Create(this->executionContext->GetArena()->GetAllocator(), rowCount, false);
-        getIdsWithOffFunction(vector, indexMap.data, rowOffset, rowCount);
-        // return original vector rather than internal vector
-        return vector;
-    } else {
-        indexMap.Release();
-        return vector;
-    }
+    return vector;
 }
 
 bool TypedAggregator::CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,

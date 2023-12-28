@@ -3703,9 +3703,9 @@ TEST(AggregatorTest, typed_aggregator_test)
         {}
 
         BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-            uint8_t **nullMap, AggregatorBuffer<int32_t> &indexMap, const size_t channelIdx)
+            uint8_t **nullMap, const size_t channelIdx)
         {
-            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, indexMap, channelIdx);
+            return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, channelIdx);
         }
         void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex)
         {
@@ -3713,25 +3713,24 @@ TEST(AggregatorTest, typed_aggregator_test)
         }
 
         virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-            const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+            const int32_t rowCount, const uint8_t *nullMap)
         {
             return;
         }
 
         virtual void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
-            const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+            const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
         {
             return;
         }
 
         virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-            BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+            BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
         {
             return;
         }
         virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-            BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap,
-            const int32_t *indexMap)
+            BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap)
         {
             return;
         }
@@ -3770,13 +3769,10 @@ TEST(AggregatorTest, typed_aggregator_test)
             isOverflowAsNull);
 
         uint8_t *nullMap = nullptr;
-        AggregatorBuffer<int32_t> indexMap;
-        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, indexMap, 0);
-        indexMap.Release();
-        agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap, indexMap, 0);
-        indexMap.Release();
+        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, 0);
+        agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap, 0);
         rawVectorBatch->Get(0)->SetNull(1);
-        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, indexMap, 0);
+        agg.GetVector(vectorBatch, 0, dataSize, &nullMap, 0);
     }
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(rawVectorBatch);

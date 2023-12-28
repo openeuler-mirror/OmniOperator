@@ -175,15 +175,13 @@ BaseVector *Projection::ColumnProjectionDictionaryVectorCopyPositionsHelper(cons
 }
 
 template <typename T>
-BaseVector *Projection::ColumnProjectionFlatVectorSliceHelper(int32_t numSelectedRows,
-    BaseVector *colVec) const
+BaseVector *Projection::ColumnProjectionFlatVectorSliceHelper(int32_t numSelectedRows, BaseVector *colVec) const
 {
     return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
 }
 
 template <typename T>
-BaseVector *Projection::ColumnProjectionDictionaryVectorSliceHelper(int32_t numSelectedRows,
-    BaseVector *colVec) const
+BaseVector *Projection::ColumnProjectionDictionaryVectorSliceHelper(int32_t numSelectedRows, BaseVector *colVec) const
 {
     return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
 }
@@ -193,9 +191,9 @@ void Projection::ProjectHelperVarWidth(VectorBatch &vecBatch, int64_t *valueAddr
     ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &outTypeId) const
 {
     *outVec = new Vector<LargeStringContainer<std::string_view>>(numSelectedRows);
-    this->projector(valueAddrs, vecBatch.GetRowCount(), reinterpret_cast<int64_t>(*outVec),
-        selectedRows, numSelectedRows, nullAddrs, offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(*outVec),
-        nullptr, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    this->projector(valueAddrs, vecBatch.GetRowCount(), reinterpret_cast<int64_t>(*outVec), selectedRows,
+        numSelectedRows, nullAddrs, offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(*outVec), nullptr,
+        reinterpret_cast<int64_t>(context), dictionaryVectors);
 }
 
 void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
@@ -241,20 +239,20 @@ void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAd
             outValueAddr = 0;
     }
 
-    this->projector(valueAddrs, vecBatch.GetRowCount(), outValueAddr, selectedRows,
-        numSelectedRows, nullAddrs, offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(*outVec), nullptr,
-        reinterpret_cast<int64_t>(context), dictionaryVectors);
+    this->projector(valueAddrs, vecBatch.GetRowCount(), outValueAddr, selectedRows, numSelectedRows, nullAddrs,
+        offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(*outVec), nullptr, reinterpret_cast<int64_t>(context),
+        dictionaryVectors);
 }
 
-BaseVector *Projection::Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
-    int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds) const
+BaseVector *Projection::Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
+    ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds) const
 {
-    return this->Project(vecBatch, nullptr, vecBatch->GetRowCount(), valueAddrs, nullAddrs,
-        offsetAddrs, context, dictionaryVectors, typeIds);
+    return this->Project(vecBatch, nullptr, vecBatch->GetRowCount(), valueAddrs, nullAddrs, offsetAddrs, context,
+        dictionaryVectors, typeIds);
 }
 
-BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t selectedRows[],
-    int32_t numSelectedRows, const int32_t *typeIds) const
+BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows,
+    const int32_t *typeIds) const
 {
     switch (typeIds[columnProjectionIndex]) {
         case OMNI_INT:
@@ -305,8 +303,8 @@ BaseVector *Projection::ColumnProjectionHelper(VectorBatch *vecBatch, const int3
 }
 
 template <typename T>
-BaseVector *Projection::ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatch,
-    const int32_t *selectedRows, int32_t numSelectedRows) const
+BaseVector *Projection::ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+    int32_t numSelectedRows) const
 {
     auto colVec = vecBatch->Get(this->columnProjectionIndex);
     auto rowCnt = vecBatch->GetRowCount();
@@ -323,8 +321,10 @@ BaseVector *Projection::ColumnProjectionVarCharVectorHelper(VectorBatch *vecBatc
         if (colVec->GetEncoding() == OMNI_DICTIONARY) {
             return ColumnProjectionDictionaryVectorCopyPositionsHelper<T>(selectedRows, numSelectedRows, colVec);
         } else {
-            return ColumnProjectionFlatVectorCopyPositionsHelper<LargeStringContainer<std::string_view>>(selectedRows,
-                numSelectedRows, colVec);
+            // copyPosition for string vectors is 10 to 30 times slower than creating a dictionary
+            // so here rather than calling copyPosition with create a dictionary view of original input vector
+            return VectorHelper::CreateStringDictionary(selectedRows, numSelectedRows,
+                reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(colVec));
         }
     }
     return nullptr;
@@ -367,7 +367,8 @@ bool ExpressionEvaluator::IsSupportedExpr() const
     return isSupportedExpr;
 }
 
-VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionContext *context)
+VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionContext *context,
+    AlignedBuffer<int32_t> *selectedRowsBuffer)
 {
     const int vectorCount = vecBatch->GetVectorCount();
     intptr_t valueAddrs[vectorCount];
@@ -376,7 +377,8 @@ VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionConte
     intptr_t dictionaries[vectorCount];
     GetAddr(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
     if (hasFilter) {
-        return ProcessFilterAndProject(vecBatch, context, valueAddrs, nullAddrs, offsetAddrs, dictionaries);
+        return ProcessFilterAndProject(vecBatch, context, selectedRowsBuffer, valueAddrs, nullAddrs, offsetAddrs,
+            dictionaries);
     } else {
         return ProcessProject(vecBatch, context, valueAddrs, nullAddrs, offsetAddrs, dictionaries);
     }
@@ -418,8 +420,8 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
     auto rowCount = vecBatch->GetRowCount();
     auto projectedVecs = new VectorBatch(rowCount);
     for (int32_t i = 0; i < projectVecCount; i++) {
-        BaseVector *outCol = projections[i]->Project(vecBatch, valueAddrs, nullAddrs, offsetAddrs,
-            context, dictionaries, GetInputDataTypes().GetIds());
+        BaseVector *outCol = projections[i]->Project(vecBatch, valueAddrs, nullAddrs, offsetAddrs, context,
+            dictionaries, GetInputDataTypes().GetIds());
         if (context->HasError()) {
             VectorHelper::FreeVecBatch(projectedVecs);
             VectorHelper::FreeVecBatch(vecBatch);
@@ -435,33 +437,31 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
 }
 
 VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context,
-    intptr_t *valueAddrs, intptr_t *nullAddrs, intptr_t *offsetAddrs, intptr_t *dictionaries)
+    AlignedBuffer<int32_t> *selectedRowsBuffer, intptr_t *valueAddrs, intptr_t *nullAddrs, intptr_t *offsetAddrs,
+    intptr_t *dictionaries)
 {
     const int rowCount = vecBatch->GetRowCount();
-    auto selectedRows = new int32_t[rowCount];
+    auto selectedRows = selectedRowsBuffer->AllocateReuse(rowCount, false);
     int32_t numSelectedRows = filter->GetFilterFunc()(valueAddrs, rowCount, selectedRows, nullAddrs, offsetAddrs,
         reinterpret_cast<int64_t>(context), dictionaries);
     if (context->HasError()) {
         context->GetArena()->Reset();
-        delete[] selectedRows;
         VectorHelper::FreeVecBatch(vecBatch);
         std::string errorMessage = context->GetError();
         throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
     }
     if (numSelectedRows <= 0) {
         context->GetArena()->Reset();
-        delete[] selectedRows;
         VectorHelper::FreeVecBatch(vecBatch);
         return nullptr;
     }
 
     auto projectedVecs = new VectorBatch(numSelectedRows);
     for (int32_t i = 0; i < projectVecCount; i++) {
-        BaseVector *col = projections[i]->Project(vecBatch, selectedRows, numSelectedRows, valueAddrs,
-            nullAddrs, offsetAddrs, context, dictionaries, GetInputDataTypes().GetIds());
+        BaseVector *col = projections[i]->Project(vecBatch, selectedRows, numSelectedRows, valueAddrs, nullAddrs,
+            offsetAddrs, context, dictionaries, GetInputDataTypes().GetIds());
         if (context->HasError()) {
             VectorHelper::FreeVecBatch(projectedVecs);
-            delete[] selectedRows;
             VectorHelper::FreeVecBatch(vecBatch);
             context->GetArena()->Reset();
 
@@ -471,7 +471,6 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
         projectedVecs->Append(col);
     }
 
-    delete[] selectedRows;
     VectorHelper::FreeVecBatch(vecBatch);
     context->GetArena()->Reset();
     return projectedVecs;

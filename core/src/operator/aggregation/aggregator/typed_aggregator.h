@@ -97,37 +97,6 @@ template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_INVALID> {
     using vector = void;
 };
 
-template <typename T> struct AggregatorBuffer {
-    AggregatorBuffer() = default;
-
-    AggregatorBuffer(mem::Allocator *allocator, const size_t length, const bool zeroFill)
-    {
-        Create(allocator, length, zeroFill);
-    }
-
-    void Create(mem::Allocator *allocator, const size_t length, const bool zeroFill)
-    {
-        Release();
-        chunk = omniruntime::mem::Chunk::NewChunk(allocator, length * sizeof(T), zeroFill);
-        data = reinterpret_cast<T *>(chunk->GetAddress());
-    }
-
-    void Release()
-    {
-        delete chunk;
-        chunk = nullptr;
-        data = nullptr;
-    }
-
-    ~AggregatorBuffer()
-    {
-        Release();
-    }
-
-    omniruntime::mem::Chunk *chunk = nullptr;
-    T *data = nullptr;
-};
-
 class TypedMaskColAggregator;
 
 class TypedAggregator : public Aggregator {
@@ -141,11 +110,10 @@ public:
         const int32_t rowCount) override
     {
         curVectorBatch = vectorBatch;
-        AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
 
-        ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
+        ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
     }
 
     // for no groupby aggregation with filter
@@ -153,11 +121,10 @@ public:
         const int32_t filterIndex) override
     {
         curVectorBatch = vectorBatch;
-        AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
 
         int32_t rowCount = vectorBatch->GetRowCount();
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, indexMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
 
         Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
 
@@ -187,11 +154,11 @@ public:
                     notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
-            ProcessSingleInternal(state, vector, rowOffset, rowCount, notSatisfiedArray.data(), indexMap.data);
+            ProcessSingleInternal(state, vector, rowOffset, rowCount, notSatisfiedArray.data());
         } else {
             // true/false meaning in nullmap is same with notSatisfiedArray
             // true means one row no need to aggregate
-            ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap, indexMap.data);
+            ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
         }
     }
 
@@ -200,11 +167,10 @@ public:
         const int32_t rowOffset) override
     {
         curVectorBatch = vectorBatch;
-        AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
 
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
-        ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, 0);
+        ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
     }
 
     // for groupby hash aggregation with Filter
@@ -212,10 +178,9 @@ public:
         const int32_t filterStart, const int32_t rowOffset) override
     {
         curVectorBatch = vectorBatch;
-        AggregatorBuffer<int32_t> indexMap;
         uint8_t *nullMap = nullptr;
 
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, indexMap, 0);
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, 0);
         int32_t rowCount = rowStates.size();
 
         Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
@@ -247,11 +212,11 @@ public:
                     notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
-            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, notSatisfiedArray.data(), indexMap.data);
+            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, notSatisfiedArray.data());
         } else {
             // true/false meaning in nullmap is same with notSatisfiedArray
             // true means one row no need to aggregate
-            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap.data);
+            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
         }
     }
 
@@ -266,10 +231,10 @@ protected:
         const bool isOverflowAsNull);
 
     virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = 0;
+        const int32_t rowCount, const uint8_t *nullMap) = 0;
 
     virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) = 0;
+        const int32_t rowOffset, const uint8_t *nullMap) = 0;
 
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, const int index, const char *errorMsg)
@@ -281,7 +246,7 @@ protected:
     }
 
     virtual BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-        uint8_t **nullMap, AggregatorBuffer<int32_t> &indexMap, const size_t channelIdx);
+        uint8_t **nullMap, const size_t channelIdx);
 
     // this is needed in case, we directly create aggregator (using Aggregator::Create) without using AggregatorFactory
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,
@@ -305,8 +270,6 @@ protected:
     }
 
     Allocator *allocator = Allocator::GetAllocator();
-
-    GetIdsWithOffFunction getIdsWithOffFunction;
 
     static inline bool CheckType(const DataTypeId actual, const DataTypeId expected)
     {

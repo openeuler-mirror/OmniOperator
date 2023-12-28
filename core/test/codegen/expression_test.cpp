@@ -86,18 +86,43 @@ template <typename T> void DeleteArgument(T &args)
     delete args.ctx;
 }
 
-void PrintValueLine(const double *valueArray, const int32_t arrLength)
+void PrintValueLine(const double *wallTimeArray, const double *cpuTimeArray, const int32_t arrLength)
 {
-    std::cout << "[";
+    std::cout << "Wall Time: [";
     for (int i = 0; i < arrLength; ++i) {
         if (i == arrLength - 1) {
-            std::cout << valueArray[i];
+            std::cout << wallTimeArray[i];
         } else {
-            std::cout << valueArray[i];
+            std::cout << wallTimeArray[i];
             std::cout << ",";
         }
     }
     std::cout << "]" << std::endl;
+
+    std::cout << "Cpu Time: [";
+    for (int i = 0; i < arrLength; ++i) {
+        if (i == arrLength - 1) {
+            std::cout << cpuTimeArray[i];
+        } else {
+            std::cout << cpuTimeArray[i];
+            std::cout << ",";
+        }
+    }
+    std::cout << "]" << std::endl;
+}
+
+Expr *PrepareLongExpr()
+{
+    LiteralExpr *subLeft = new LiteralExpr(100L, LongType());
+    FieldExpr *subRight = new FieldExpr(1, LongType());
+    BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, LongType());
+    LiteralExpr *addLeft = new LiteralExpr(100L, LongType());
+    FieldExpr *addRight = new FieldExpr(2, LongType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, LongType());
+    FieldExpr *mulLeft = new FieldExpr(0, LongType());
+    BinaryExpr *mulExpr1 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, LongType());
+    BinaryExpr *mulExpr2 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, LongType());
+    return mulExpr2;
 }
 
 // Test projection on int64_t data type
@@ -180,8 +205,7 @@ TEST(ExpressionTest, q1LongType)
         VectorHelper::FreeVecBatch(outputVecBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
@@ -272,8 +296,7 @@ TEST(ExpressionTest, q1DoubleType)
         VectorHelper::FreeVecBatch(outputVecBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
@@ -364,8 +387,7 @@ TEST(ExpressionTest, q1DoubleFilter)
         EXPECT_EQ(result, actualCount);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     DeleteArgument(args);
     delete ltExpr;
@@ -461,8 +483,7 @@ TEST(ExpressionTest, q1Decimal64Type)
         VectorHelper::FreeVecBatch(vectorBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
@@ -567,8 +588,7 @@ TEST(ExpressionTest, q1Decimal128Type)
         VectorHelper::FreeVecBatch(vectorBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
@@ -649,8 +669,7 @@ TEST(ExpressionTest, q1Decimal64Cast)
         VectorHelper::FreeVecBatch(vectorBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
@@ -728,8 +747,7 @@ TEST(ExpressionTest, q1DateType)
         VectorHelper::FreeVecBatch(vectorBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
@@ -822,8 +840,7 @@ TEST(ExpressionTest, q1Case1)
         VectorHelper::FreeVecBatch(vectorBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
@@ -1055,8 +1072,7 @@ TEST(ExpressionTest, q1SwitchCase)
         VectorHelper::FreeVecBatch(vectorBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
@@ -1234,14 +1250,286 @@ TEST(ExpressionTest, q1If)
         VectorHelper::FreeVecBatch(vectorBatch);
     }
 
-    PrintValueLine(wallTime, rounds);
-    PrintValueLine(cpuTime, rounds);
+    PrintValueLine(wallTime, cpuTime, rounds);
 
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
     VectorHelper::FreeVecBatch(t);
     delete overflowConfig;
     delete[] col1;
+}
+
+Expr *GenerateCastExpr(DataTypePtr input, DataTypePtr output)
+{
+    std::vector<Expr *> args;
+    FieldExpr *col0Expr = new FieldExpr(0, input);
+    args.push_back(col0Expr);
+    auto cast0 = GetFuncExpr("CAST", args, output);
+    return cast0;
+}
+
+void PrintRunTime(std::string title, double wallTime, double cpuTime)
+{
+    std::cout << title << " wall " << wallTime << " cpu " << cpuTime << std::endl;
+}
+
+TEST(ExpressionTest, q1CastDoubleLong)
+{
+    const int32_t numRows = 20000000;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
+
+    // prepare data
+    double *col0 = new double[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col0[i] = (rand() % 100000 + 20) / 100.0;
+    }
+
+    // prepare expression
+    auto cast0 = GenerateCastExpr(DoubleType(), LongType());
+
+    std::vector<Expr *> exprs = { cast0 };
+    auto vecOfTypes = std::vector<DataTypePtr>({ DoubleType() });
+    DataTypes inputTypes(vecOfTypes);
+
+    Timer timer;
+
+    // make row vector
+    timer.Reset();
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0);
+    timer.CalculateElapse();
+    PrintRunTime("make row vector: ", timer.GetWallElapse(), timer.GetCpuElapse());
+
+    // prepare projection operator
+    timer.Reset();
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    timer.CalculateElapse();
+    PrintRunTime("compile expression: ", timer.GetWallElapse(), timer.GetCpuElapse());
+
+    double wallTime[rounds];
+    double cpuTime[rounds];
+    for (int i = 0; i < rounds; i++) {
+        // evaluate
+        timer.Reset();
+        auto copy = DuplicateVectorBatch(t);
+        op->AddInput(copy);
+        VectorBatch *outputVecBatch = nullptr;
+        op->GetOutput(&outputVecBatch);
+        timer.CalculateElapse();
+        wallTime[i] = timer.GetWallElapse();
+        cpuTime[i] = timer.GetCpuElapse();
+        std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
+        for (int i = 0; i < numRows; i++) {
+            int64_t result = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+            int64_t actual = (int64_t)(col0[i] + 0.5);
+            EXPECT_EQ(result, actual);
+        }
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
+
+    PrintValueLine(wallTime, cpuTime, rounds);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    VectorHelper::FreeVecBatch(t);
+    delete overflowConfig;
+    delete[] col0;
+}
+
+TEST(ExpressionTest, q1CastDecimal64Double)
+{
+    const int32_t numRows = 20000000;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
+
+    // prepare data
+    int64_t *col0 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col0[i] = rand() % 100000 + 20;
+    }
+
+
+    // prepare expression
+    auto cast0 = GenerateCastExpr(Decimal64Type(12, 2), DoubleType());
+
+    std::vector<Expr *> exprs = { cast0 };
+    auto vecOfTypes = std::vector<DataTypePtr>({ LongType() });
+    DataTypes inputTypes(vecOfTypes);
+
+    Timer timer;
+
+    // make row vector
+    timer.Reset();
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0);
+    timer.CalculateElapse();
+    PrintRunTime("make row vector: ", timer.GetWallElapse(), timer.GetCpuElapse());
+
+    // prepare projection operator
+    timer.Reset();
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    timer.CalculateElapse();
+    PrintRunTime("compile expression: ", timer.GetWallElapse(), timer.GetCpuElapse());
+
+    double wallTime[rounds];
+    double cpuTime[rounds];
+    for (int i = 0; i < rounds; i++) {
+        // evaluate
+        timer.Reset();
+        auto copy = DuplicateVectorBatch(t);
+        op->AddInput(copy);
+        VectorBatch *outputVecBatch = nullptr;
+        op->GetOutput(&outputVecBatch);
+        timer.CalculateElapse();
+        wallTime[i] = timer.GetWallElapse();
+        cpuTime[i] = timer.GetCpuElapse();
+        std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
+        for (int i = 0; i < numRows; i++) {
+            double result = (reinterpret_cast<Vector<double> *>(outputVecBatch->Get(0)))->GetValue(i);
+            double actual = col0[i] / 100.00;
+            EXPECT_TRUE(abs(result - actual) < 0.1);
+        }
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
+
+    PrintValueLine(wallTime, cpuTime, rounds);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    VectorHelper::FreeVecBatch(t);
+    delete overflowConfig;
+    delete[] col0;
+}
+
+TEST(ExpressionTest, q1CastDecimal64Int64)
+{
+    const int32_t numRows = 20000000;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
+
+    // prepare data
+    int64_t *col0 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col0[i] = rand() % 100000 + 20;
+    }
+
+    // prepare expression
+    auto cast0 = GenerateCastExpr(Decimal64Type(12, 2), LongType());
+
+    std::vector<Expr *> exprs = { cast0 };
+    auto vecOfTypes = std::vector<DataTypePtr>({ LongType() });
+    DataTypes inputTypes(vecOfTypes);
+
+    // make row vector
+    Timer timer;
+    timer.Reset();
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col0);
+    timer.CalculateElapse();
+    PrintRunTime("make row vector: ", timer.GetWallElapse(), timer.GetCpuElapse());
+
+    // prepare projection operator
+    timer.Reset();
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    timer.CalculateElapse();
+    PrintRunTime("compile expression: ", timer.GetWallElapse(), timer.GetCpuElapse());
+
+    double wallTime[rounds];
+    double cpuTime[rounds];
+    for (int i = 0; i < rounds; i++) {
+        // evaluate
+        timer.Reset();
+        auto copy = DuplicateVectorBatch(t);
+        op->AddInput(copy);
+        VectorBatch *outputVecBatch = nullptr;
+        op->GetOutput(&outputVecBatch);
+        timer.CalculateElapse();
+        wallTime[i] = timer.GetWallElapse();
+        cpuTime[i] = timer.GetCpuElapse();
+        std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
+        for (int i = 0; i < numRows; i++) {
+            int64_t result = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+            EXPECT_EQ(result, (col0[i] + 50) / 100);
+        }
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
+
+    PrintValueLine(wallTime, cpuTime, rounds);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    VectorHelper::FreeVecBatch(t);
+    delete overflowConfig;
+    delete[] col0;
+}
+
+TEST(ExpressionTest, q1TestNull)
+{
+    const int32_t numRows = 10;
+
+    // prepare data
+    int64_t *col1 = new int64_t[numRows];
+    int64_t *col2 = new int64_t[numRows];
+    int64_t *col3 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = rand() % 100000 + 20;
+        col2[i] = rand() % 50;
+        col3[i] = rand() % 8 + 5;
+    }
+
+    // prepare expression
+    Expr *expr = PrepareLongExpr();
+    std::vector<Expr *> exprs = { expr };
+    auto vecOfTypes = std::vector<DataTypePtr>({ LongType(), LongType(), LongType() });
+    DataTypes inputTypes(vecOfTypes);
+
+    // make row vector
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
+    t->Get(0)->SetNull(2);
+    t->Get(1)->SetNull(4);
+    t->Get(2)->SetNull(6);
+
+    // prepare projection operator
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+
+    // evaluate
+    VectorBatch *outputVecBatch = nullptr;
+    auto copy = DuplicateVectorBatch(t);
+
+    op->AddInput(copy);
+    op->GetOutput(&outputVecBatch);
+
+    // verify result
+    auto vector = reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0));
+    EXPECT_TRUE(vector->HasNull());
+    uint8_t *retnullptr = reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
+    for (int i = 0; i < numRows; i++) {
+        if (i == 2 || i == 4 || i == 6) {
+            EXPECT_TRUE(*(retnullptr + i));
+        } else {
+            int64_t result = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+            int64_t actualLong = col1[i] * (100L - col2[i]) * (100L + col3[i]);
+            EXPECT_EQ(result, actualLong);
+            EXPECT_FALSE(*(retnullptr + i));
+        }
+    }
+    VectorHelper::FreeVecBatch(outputVecBatch);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    VectorHelper::FreeVecBatch(t);
+    delete overflowConfig;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
 }
 
 template <typename T, int Size> static void bm_codegen_between()

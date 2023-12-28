@@ -147,7 +147,7 @@ public:
     }
 
     void ProcessGroupInternalFinal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        BaseVector *dataVector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        BaseVector *dataVector, const int32_t rowOffset, const uint8_t *nullMap)
     {
         // final stage : input vector will be Vector<Decimal128> or Vector<Decimal64>
         auto *dataPtr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(dataVector));
@@ -163,10 +163,10 @@ public:
     }
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowOffset, const uint8_t *nullMap)
     {
         if (inputRaw) {
-            if (indexMap == nullptr) {
+            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
@@ -178,6 +178,7 @@ public:
                 }
             } else {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
+                auto *indexMap = GetIdsFromDict<InDecimalId>(vector) + rowOffset;
                 if (nullMap == nullptr) {
                     AddDictUseRowIndex<InRawType, ResultType, SumOp<InRawType, ResultType>>(rowStates, aggIdx, ptr,
                         indexMap);
@@ -187,12 +188,12 @@ public:
                 }
             }
         } else {
-            ProcessGroupInternalFinal(rowStates, aggIdx, vector, rowOffset, nullMap, indexMap);
+            ProcessGroupInternalFinal(rowStates, aggIdx, vector, rowOffset, nullMap);
         }
     }
 
     void ProcessSingleInternalFinal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *conditionMap, const int32_t *indexMap)
+        const int32_t rowCount, const uint8_t *conditionMap)
     {
         auto *res = reinterpret_cast<ResultType *>(state.val);
         auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
@@ -234,11 +235,11 @@ public:
     }
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowCount, const uint8_t *nullMap)
     {
         auto *res = reinterpret_cast<ResultType *>(state.val);
         if (inputRaw) {
-            if (indexMap == nullptr) {
+            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
@@ -249,6 +250,7 @@ public:
                 }
             } else {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
+                auto *indexMap = GetIdsFromDict<InDecimalId>(vector) + rowOffset;
                 if (nullMap == nullptr) {
                     AddDict<InRawType, ResultType, SumOp<InRawType, ResultType>>(res, state.count, ptr, rowCount,
                         indexMap);
@@ -258,7 +260,7 @@ public:
                 }
             }
         } else {
-            ProcessSingleInternalFinal(state, vector, rowOffset, rowCount, nullMap, indexMap);
+            ProcessSingleInternalFinal(state, vector, rowOffset, rowCount, nullMap);
         }
     }
 

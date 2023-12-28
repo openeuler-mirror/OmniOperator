@@ -89,10 +89,10 @@ protected:
     {}
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *v, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap, const int32_t *indexMap) override;
+        const uint8_t *nullMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
+        const int32_t rowOffset, const uint8_t *nullMap) override;
 
 private:
     void SaveState(AggregateState &state);

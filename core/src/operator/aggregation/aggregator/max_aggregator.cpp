@@ -115,14 +115,14 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
     if (state.val == nullptr) {
         InitState(state);
     }
     auto *res = reinterpret_cast<ResultType *>(state.val);
 
-    if (indexMap == nullptr) {
+    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
@@ -133,6 +133,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
+        auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
             AddDict<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
         } else {
@@ -144,9 +145,9 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+    BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
 {
-    if (indexMap == nullptr) {
+    if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
@@ -157,6 +158,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
+        auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
             AddDictUseRowIndex<InType, ResultType, MaxOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
         } else {

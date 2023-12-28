@@ -40,10 +40,10 @@ public:
     }
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowOffset, const uint8_t *nullMap)
     {
         if (inputRaw) {
-            if (indexMap == nullptr) {
+            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
@@ -54,6 +54,7 @@ public:
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
+                auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
                     AddDictUseRowIndex<InType, ResultType, SumOp<InType, ResultType, false>>(rowStates, aggIdx, ptr,
                         indexMap);
@@ -87,11 +88,11 @@ public:
     }
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap)
+        const int32_t rowCount, const uint8_t *nullMap)
     {
         auto *res = reinterpret_cast<ResultType *>(state.val);
         if (inputRaw) {
-            if (indexMap == nullptr) {
+            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
@@ -106,6 +107,7 @@ public:
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
+                auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
                     AddDict<InType, ResultType, SumOp<InType, ResultType, false>>(res, state.count, ptr, rowCount,
                         indexMap);

@@ -83,26 +83,25 @@ protected:
     }
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) override;
+        const int32_t rowCount, const uint8_t *nullMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap) override;
+        const int32_t rowOffset, const uint8_t *nullMap) override;
 
     template <bool RAW_IN>
     void ProcessSingleInternalFunction(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap);
+        const int32_t rowCount, const uint8_t *nullMap);
 
     template <bool RAW_IN>
     void ProcessGroupInternalFunction(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap, const int32_t *indexMap);
+        const int32_t rowOffset, const uint8_t *nullMap);
 
 private:
     void (CountColumnAggregator<IN_ID, OUT_ID>::*processGroupInternalPtr)(std::vector<AggregateState *> &rowStates,
-        const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap,
-        const int32_t *indexMap) = nullptr;
+        const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap) = nullptr;
 
     void (CountColumnAggregator<IN_ID, OUT_ID>::*processSingleInternalPtr)(AggregateState &state, BaseVector *vector,
-        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap, const int32_t *indexMap) = nullptr;
+        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap) = nullptr;
 };
 }
 }
