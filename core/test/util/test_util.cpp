@@ -647,8 +647,8 @@ int64_t *MakeDecimals(int32_t size, int32_t start)
                 arr[INDEX_FACTOR * idx] = i;
                 arr[INDEX_FACTOR * idx + 1] = 0;
             } else {
-                arr[INDEX_FACTOR * idx] = i * -1;
-                arr[INDEX_FACTOR * idx + 1] = 1LL << 63;
+                arr[INDEX_FACTOR * idx] = i;
+                arr[INDEX_FACTOR * idx + 1] = -1;
             }
             idx++;
         }

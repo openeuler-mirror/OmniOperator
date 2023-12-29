@@ -290,41 +290,14 @@ public:
     Decimal128Wrapper() : val(0), signum(0)
     {}
 
-    Decimal128Wrapper(int64_t highBits, uint64_t lowBits)
-    {
-        if (highBits > 0) {
-            signum = 1;
-        } else if (highBits < 0) {
-            signum = -1;
-            highBits = highBits ^ SIGN_LONG_MASK;
-        } else {
-            if (lowBits == 0) {
-                signum = 0;
-            } else {
-                signum = 1;
-            }
-        }
-        val = static_cast<uint128_t>(highBits) << 64 | lowBits;
-    }
-
-    Decimal128Wrapper(Decimal128 value) : Decimal128Wrapper(value.HighBits(), value.LowBits())
+    Decimal128Wrapper(int64_t highBits, uint64_t lowBits) : Decimal128Wrapper(Decimal128(highBits, lowBits))
     {}
 
-    Decimal128Wrapper(const uint128_t &value)
-    {
-        if (value == 0) {
-            signum = 0;
-            val = 0;
-            return;
-        }
-        if (value < (uint128_t(1) << 127)) {
-            signum = 1;
-            val = value;
-        } else {
-            signum = -1;
-            val = (value ^ (uint128_t(1) << 127));
-        }
-    }
+    Decimal128Wrapper(Decimal128 value) : Decimal128Wrapper(value.ToInt128())
+    {}
+
+    Decimal128Wrapper(const uint128_t &value) : Decimal128Wrapper(static_cast<const int128_t &>(value))
+    {}
 
     Decimal128Wrapper(const int128_t &value)
     {
@@ -773,33 +746,34 @@ public:
 
     int64_t HighBits() const
     {
-        __uint128_t t = static_cast<__uint128_t>(val);
+        int128_t t = static_cast<int128_t>(val);
         if (signum == -1) {
-            return static_cast<int64_t>(t >> 64) ^ SIGN_LONG_MASK;
+            t = -t;
         }
         return static_cast<int64_t>(t >> 64);
     }
 
     uint64_t LowBits() const
     {
-        return static_cast<uint64_t>(val);
+        int128_t t = static_cast<int128_t>(val);
+        if (signum == -1) {
+            t = -t;
+        }
+        return static_cast<uint64_t>(t);
     }
 
     void SetValue(int64_t highBitsField, uint64_t lowBitsField)
     {
-        if (highBitsField > 0) {
-            signum = 1;
-        } else if (highBitsField < 0) {
+        int128_t v = Decimal128(highBitsField, lowBitsField).ToInt128();
+        if (v < 0) {
+            v = -v;
             signum = -1;
-            highBitsField = highBitsField ^ SIGN_LONG_MASK;
+        } else if (v == 0) {
+            signum = 0;
         } else {
-            if (lowBitsField == 0) {
-                signum = 0;
-            } else {
-                signum = 1;
-            }
+            signum = 1;
         }
-        val = static_cast<uint128_t>(highBitsField) << 64 | lowBitsField;
+        val = static_cast<uint128_t>(v);
     }
 
     void SetValue(uint128_t value)
@@ -895,8 +869,11 @@ public:
 
     Decimal128 ToDecimal128() const
     {
-        Decimal128 result(HighBits(), LowBits());
-        return result;
+        int128_t result = val;
+        if (signum < 0) {
+            result = -val;
+        }
+        return Decimal128(result);
     }
 
     Decimal128Wrapper operator+(const Decimal128Wrapper &right) const

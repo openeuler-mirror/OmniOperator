@@ -66,7 +66,7 @@ std::unique_ptr<DataTypes> AggregatorUtil::WrapWithDataTypes(const DataTypePtr &
 bool AggregatorUtil::IsHMPPMaxMinSupportDataTypeId(DataTypeId toChkDataTypeId)
 {
     static std::vector<DataTypeId> dataTypeIdsWhiteList = { OMNI_SHORT,     OMNI_INT,    OMNI_DATE32,    OMNI_LONG,
-                                                            OMNI_DECIMAL64, OMNI_DOUBLE, OMNI_DECIMAL128 };
+                                                            OMNI_DECIMAL64, OMNI_DOUBLE };
     for (auto dataTypeId : dataTypeIdsWhiteList) {
         if (dataTypeId == toChkDataTypeId) {
             return true;

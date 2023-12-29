@@ -84,9 +84,8 @@ bool AverageAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state,
         if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
             return false;
         }
-        // only long or decimal128 type input support
-        return this->inputTypes.GetType(0)->GetId() == OMNI_LONG ||
-            this->inputTypes.GetType(0)->GetId() == OMNI_DECIMAL128;
+        // only long supported
+        return this->inputTypes.GetType(0)->GetId() == OMNI_LONG;
     }
 }
 #endif
