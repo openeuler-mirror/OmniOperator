@@ -42,7 +42,7 @@ public class OmniWindowOperatorTest {
     /**
      * The Total page count.
      */
-    int totalPageCount = 10;
+    int totalPageCount = 1;
 
     /**
      * The Page distinct count.

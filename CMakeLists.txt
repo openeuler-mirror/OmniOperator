@@ -118,5 +118,8 @@ message(STATUS "Option Disable CPU checker: ${DISABLE_CPU_CHECKER}")
 option(COVERAGE "Enable DT" OFF)
 message(STATUS "Option Enable DT: ${ENABLE_DT}")
 
+option(ENABLE_BENCHMARK "Enable Benchmark" OFF)
+message(STATUS "Option Enable Benchmark: ${ENABLE_BENCHMARK}")
+
 option(ENABLE_HMPP "Using HMPP library" OFF)
 message(STATUS "Option ENABLE_HMPP: ${ENABLE_HMPP}")

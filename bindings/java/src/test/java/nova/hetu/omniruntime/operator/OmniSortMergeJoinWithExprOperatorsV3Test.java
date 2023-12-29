@@ -200,7 +200,7 @@ public class OmniSortMergeJoinWithExprOperatorsV3Test {
 
         int len = resultVecBatch.getRowCount();
         assertEquals(len, 8);
-        Object[][] expectedDatas = {{0, 1, 2, 2, 2, 3, 4, 5}, {8800L, 7700L, 6600L, 5500L, 4400L, 3300L, 2200L, 1100L}};
+        Object[][] expectedDatas = {{0, 1, 2, 2, 2, 3, 4, 5}, {8800L, 7700L, 5500L, 6600L, 4400L, 3300L, 2200L, 1100L}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);

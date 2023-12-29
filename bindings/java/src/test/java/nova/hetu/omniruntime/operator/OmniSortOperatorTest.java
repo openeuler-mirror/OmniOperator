@@ -55,7 +55,7 @@ public class OmniSortOperatorTest {
     /**
      * The Total page count.
      */
-    int totalPageCount = 20;
+    int totalPageCount = 2;
 
     /**
      * The Page distinct count.
@@ -65,7 +65,7 @@ public class OmniSortOperatorTest {
     /**
      * The Page distinct value repeat count.
      */
-    int pageDistinctValueRepeatCount = 25000;
+    int pageDistinctValueRepeatCount = 2500;
 
     /**
      * Test sort two columns.

@@ -68,7 +68,7 @@ public:
 
 private:
 
-    void Prepare(vec::BaseVector **inputVectors, int32_t inputColNum);
+    void Prepare(vec::BaseVector **inputVectors);
 
     void InsertNewValueOptimize(PartitionValue &value, vec::VectorBatch *inputVecBatch, vec::BaseVector **sortVectors,
         int32_t inputRowIdx);

@@ -486,12 +486,11 @@ int32_t TopNSortOperator::FindInsertPosition(BaseVector **insertSortVectors, int
     return position + 1;
 }
 
-void TopNSortOperator::Prepare(BaseVector **inputVectors, int32_t inputColNum)
+void TopNSortOperator::Prepare(BaseVector **inputVectors)
 {
     auto sourceTypeIds = sourceTypes.GetIds();
     for (int32_t i = 0; i < partitionColNum; ++i) {
         auto partitionCol = partitionCols[i];
-        auto curVector = inputVectors[partitionCol];
         auto curTypeId = sourceTypeIds[partitionCol];
         serializers[i] = vectorSerializerCenter[curTypeId];
     }
@@ -668,7 +667,7 @@ int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
             inputVector = nullptr;
         }
     }
-    Prepare(inputVectors, inputColNum);
+    Prepare(inputVectors);
 
     BaseVector *partitionVectors[partitionColNum];
     for (int32_t i = 0; i < partitionColNum; ++i) {
