@@ -138,13 +138,13 @@ void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, c
             if (colIdx == sortCol) {
                 totalNullCount += vector->GetNullCount();
             }
-            if (vector->HasNull() ) {
+            if (vector->HasNull()) {
                 hasNulls[colIdx] = true;
             }
         }
     }
     radixValueWidth = sizeof(T);
-    radixSortingSize = sizeof(T);
+    bool hasNegative = true;
     if constexpr (typeId == OMNI_LONG) {
         int64_t tmp = 0;
         for (uint16_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
@@ -155,13 +155,12 @@ void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, c
                 tmp |= col->GetValue(rowIdx);
             }
         }
-        uint32_t nLeadingZeroBytes = __builtin_clzl(static_cast<uint64_t>(tmp))/8;
-        radixSortingSize = LONG_NBYTES - nLeadingZeroBytes;
-        radixValueWidth = LONG_NBYTES - nLeadingZeroBytes > INT_NBYTES ? LONG_NBYTES : INT_NBYTES;
+        uint32_t nLeadingZeroBytes = __builtin_clzl(static_cast<uint64_t>(tmp)) / 8;
+        radixValueWidth = LONG_NBYTES - nLeadingZeroBytes;
+        hasNegative = tmp < 0;
     }
-    radixRowWidth = radixValueWidth + INT_NBYTES;
+    radixRowWidth = radixValueWidth + INT_NBYTES + SHORT_NBYTES;
     bool hasNull = totalNullCount != 0;
-    bool hasNegative = sizeof(T) == radixValueWidth;
     if (!hasNull && !hasNegative) {
         FillRadixDataChunk<typeId, false, false>(sortCol, nullsFirst);
     } else if (!hasNull && hasNegative) {
@@ -176,9 +175,9 @@ template<DataTypeId typeId, bool hasNull, bool hasNegative>
 ALWAYS_INLINE void PagesIndex::FillRadixDataChunk(const int32_t sortCol, const bool nullsFirst)
 {
     using T = typename NativeType<typeId>::type;
-    this->radixComboRow.resize(this->positionCount * this->radixRowWidth, 0);
+    uint8_t signFlipMask = 128;
+    this->radixComboRow.resize((this->positionCount + 1) * this->radixRowWidth, 0);
     constexpr uint32_t signByte = sizeof(T) - 1;
-
     uint8_t* rowPtr = (hasNull && nullsFirst) ?
             radixComboRow.data() + totalNullCount * radixRowWidth : radixComboRow.data();
     uint8_t* nullPtr = (hasNull && nullsFirst) ?
@@ -193,17 +192,18 @@ ALWAYS_INLINE void PagesIndex::FillRadixDataChunk(const int32_t sortCol, const b
         for (uint32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
             if constexpr (hasNull) {
                 if (col->IsNull(rowIdx)) {
-                    *reinterpret_cast<int32_t *>(nullPtr + radixValueWidth) =
-                            CompactEncodeSyntheticAddress(vecBatchIdx, rowIdx);
+                    memcpy_s(nullPtr + radixValueWidth, SHORT_NBYTES, &vecBatchIdx, SHORT_NBYTES);
+                    memcpy_s(nullPtr + radixValueWidth + SHORT_NBYTES, INT_NBYTES, &rowIdx, INT_NBYTES);
                     nullPtr += radixRowWidth;
                     continue;
                 }
             }
             auto value = col->GetValue(rowIdx);
             *reinterpret_cast<T *>(rowPtr) = value;
-            *reinterpret_cast<int32_t *>(rowPtr + radixValueWidth) = CompactEncodeSyntheticAddress(vecBatchIdx, rowIdx);
+            memcpy_s(rowPtr + radixValueWidth, SHORT_NBYTES, &vecBatchIdx, SHORT_NBYTES);
+            memcpy_s(rowPtr + radixValueWidth + SHORT_NBYTES, INT_NBYTES, &rowIdx, INT_NBYTES);
             if constexpr (hasNegative) {
-                rowPtr[signByte] ^= 127;
+                rowPtr[signByte] ^= signFlipMask;
             }
             rowPtr += radixRowWidth;
         }
@@ -1162,24 +1162,12 @@ void PagesIndex::SortWithRadixSort(const int32_t *sortCols, const int32_t *sortA
 {
     std::vector<Data_type> tempBlock(positionCount * radixRowWidth);
     uint32_t offset = sortNullFirsts[0] ? totalNullCount * radixRowWidth : 0;
-    if (radixRowWidth == 8) {
-        if (sortAscendings[0]) {
-            RadixSortMSD<true, 8>(radixComboRow.data() + offset, tempBlock.data() + offset,
-                                              positionCount - totalNullCount, radixSortingSize, false);
-        } else {
-            RadixSortMSD<false, 8>(radixComboRow.data() + offset, tempBlock.data() + offset,
-                                               positionCount - totalNullCount, radixSortingSize, false);
-        }
-    } else if (radixRowWidth == 12) {
-        if (sortAscendings[0]) {
-            RadixSortMSD<true, 12>(radixComboRow.data() + offset, tempBlock.data() + offset,
-                                  positionCount - totalNullCount, radixSortingSize, false);
-        } else {
-            RadixSortMSD<false, 12>(radixComboRow.data() + offset, tempBlock.data() + offset,
-                                   positionCount - totalNullCount, radixSortingSize, false);
-        }
+    if (sortAscendings[0]) {
+        RadixSortMSD<true>(radixComboRow.data() + offset, tempBlock.data() + offset,
+                                          positionCount - totalNullCount, radixValueWidth, false, radixRowWidth);
     } else {
-        std::cerr <<" wrong radix row width!"<<std::endl;
+        RadixSortMSD<false>(radixComboRow.data() + offset, tempBlock.data() + offset,
+                                           positionCount - totalNullCount, radixValueWidth, false, radixRowWidth);
     }
 }
 
@@ -1423,7 +1411,6 @@ NO_INLINE BaseVector *ConstructVectorRadixSort(const uint8_t *vaStart, int32_t l
                                                uint32_t radixRowWidth)
 {
     BaseVector *outputVec = nullptr;
-    constexpr uint32_t radixIDOffset = 10;
     if constexpr (dataTypeId == OMNI_VARCHAR) {
         outputVec = new VarcharVector(length);
     } else {
@@ -1432,31 +1419,30 @@ NO_INLINE BaseVector *ConstructVectorRadixSort(const uint8_t *vaStart, int32_t l
     }
     int32_t outputIndex = 0;
     const uint8_t *vaEnd = vaStart + length * radixRowWidth;
-    uint32_t position = 0;
     if (hasNull && hasDictionary) {
         while (vaStart < vaEnd) {
-            auto [pageIndex, position] = CompactDecodeSytheticAddress(*reinterpret_cast<const uint32_t *>(vaStart));
+            auto [pageIndex, position] = CompactDecodeSytheticAddress(vaStart);
             auto inputVector = inputVecBatch[pageIndex];
             vaStart += radixRowWidth;
             SetValue<dataTypeId, true, true>(inputVector, static_cast<int32_t>(position), outputVec, outputIndex++);
         }
     } else if (hasNull) {
         while (vaStart < vaEnd) {
-            auto [pageIndex, position] = CompactDecodeSytheticAddress(*reinterpret_cast<const uint32_t *>(vaStart));
+            auto [pageIndex, position] = CompactDecodeSytheticAddress(vaStart);
             auto inputVector = inputVecBatch[pageIndex];
             vaStart += radixRowWidth;
             SetValue<dataTypeId, true, false>(inputVector, static_cast<int32_t>(position), outputVec, outputIndex++);
         }
     } else if (hasDictionary) {
         while (vaStart < vaEnd) {
-            auto [pageIndex, position] = CompactDecodeSytheticAddress(*reinterpret_cast<const uint32_t *>(vaStart));
+            auto [pageIndex, position] = CompactDecodeSytheticAddress(vaStart);
             auto inputVector = inputVecBatch[pageIndex];
             vaStart += radixRowWidth;
             SetValue<dataTypeId, false, true>(inputVector, static_cast<int32_t>(position), outputVec, outputIndex++);
         }
     } else {
         while (vaStart < vaEnd) {
-            auto [pageIndex, position] = CompactDecodeSytheticAddress(*reinterpret_cast<const uint32_t *>(vaStart));
+            auto [pageIndex, position] = CompactDecodeSytheticAddress(vaStart);
             auto inputVector = inputVecBatch[pageIndex];
             vaStart += radixRowWidth;
             SetValue<dataTypeId, false, false>(inputVector, static_cast<int32_t>(position), outputVec, outputIndex++);

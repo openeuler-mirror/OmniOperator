@@ -18,7 +18,7 @@ using namespace omniruntime::vec;
 
 SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
-    const OperatorConfig &operatorConfig)
+    const OperatorConfig &operatorConfig, const uint32_t radixSortThreshold)
     : sourceTypes(dataTypes), operatorConfig(operatorConfig)
 {
     this->outputCols.insert(this->outputCols.end(), outputCols, outputCols + outputColCount);
@@ -188,7 +188,6 @@ void SortOperator::PrepareOutput()
         return;
     }
     if (!canInplaceSort) {
-        constexpr uint32_t radixSortSizeThreshold = 1e6;
         if (pagesIndex->GetRowCount() > radixSortSizeThreshold && sortCols.size() == 1
                 && !pagesIndex->HasDictionary(sortCols[0])) {
             useRadixSort = true;

@@ -234,14 +234,10 @@ static ALWAYS_INLINE uint64_t EncodeSyntheticAddress(uint32_t sliceIndex, uint32
 {
     return (static_cast<uint64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
 }
-static ALWAYS_INLINE uint32_t CompactEncodeSyntheticAddress(uint32_t sliceIndex, uint32_t sliceOffset)
+
+static ALWAYS_INLINE std::tuple<uint16_t, uint32_t> CompactDecodeSytheticAddress(const uint8_t* address)
 {
-    return (static_cast<uint32_t>(sliceIndex) << 18) | sliceOffset;
-}
-static ALWAYS_INLINE std::pair<uint32_t, uint32_t> CompactDecodeSytheticAddress(uint32_t address)
-{
-    static uint32_t mask = std::pow(2, 18) - 1;
-    return {address >> 18, address & mask};
+    return {*reinterpret_cast<const uint16_t*>(address), *reinterpret_cast<const uint32_t*>(address + 2)};
 }
 static ALWAYS_INLINE uint32_t DecodeSliceIndex(uint64_t sliceAddress)
 {
