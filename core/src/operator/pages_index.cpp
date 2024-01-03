@@ -148,15 +148,14 @@ void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, c
     if constexpr (typeId == OMNI_LONG) {
         int64_t tmp = 0;
         for (uint16_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
-            VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
             auto *col = static_cast<Vector<T> *>(columns[sortCol][vecBatchIdx]); // only one column
-            uint32_t rowCount = vecBatch->GetRowCount();
+            uint32_t rowCount = inputVecBatches[vecBatchIdx]->GetRowCount();
             for (uint32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
                 tmp |= col->GetValue(rowIdx);
             }
         }
-        uint32_t nLeadingZeroBytes = __builtin_clzl(static_cast<uint64_t>(tmp)) / 8;
-        radixValueWidth = LONG_NBYTES - nLeadingZeroBytes;
+        // __builtin_clzl(static_cast<uint64_t>(tmp)) gets number of leading zeros in tmp
+        radixValueWidth = LONG_NBYTES - __builtin_clzl(static_cast<uint64_t>(tmp)) / CHAR_BIT;
         hasNegative = tmp < 0;
     }
     radixRowWidth = radixValueWidth + INT_NBYTES + SHORT_NBYTES;
@@ -1194,10 +1193,10 @@ void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortAscendings, co
 }
 
 void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch,
-    const int32_t *sourceTypes, int32_t offset, int32_t length) const
+    const int32_t *sourceTypes, int32_t offset, int32_t len) const
 {
     if (!this->radixComboRow.empty()) {
-        GetOutputRadixSort(outputCols, outputColsCount, outputVecBatch, sourceTypes, offset, length);
+        GetOutputRadixSort(outputCols, outputColsCount, outputVecBatch, sourceTypes, offset, len);
         return;
     }
 
@@ -1213,35 +1212,34 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
         switch (colTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
-                outputVecBatch->Append(
-                    ConstructVector<OMNI_INT>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
+                outputVecBatch->Append(ConstructVector<OMNI_INT>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_SHORT:
                 outputVecBatch->Append(
-                    ConstructVector<OMNI_SHORT>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
+                    ConstructVector<OMNI_SHORT>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
                 outputVecBatch->Append(
-                    ConstructVector<OMNI_LONG>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
+                    ConstructVector<OMNI_LONG>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_DOUBLE:
                 outputVecBatch->Append(
-                    ConstructVector<OMNI_DOUBLE>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
+                    ConstructVector<OMNI_DOUBLE>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_BOOLEAN:
                 outputVecBatch->Append(
-                    ConstructVector<OMNI_BOOLEAN>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
+                    ConstructVector<OMNI_BOOLEAN>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
                 outputVecBatch->Append(
-                    ConstructVector<OMNI_VARCHAR>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
+                    ConstructVector<OMNI_VARCHAR>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
                 break;
             }
             case OMNI_DECIMAL128:
                 outputVecBatch->Append(
-                    ConstructVector<OMNI_DECIMAL128>(vaStart, length, inputVecBatch, hasNull, hasDictionary));
+                    ConstructVector<OMNI_DECIMAL128>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
                 break;
             default:
                 break;

@@ -18,7 +18,7 @@ using namespace omniruntime::vec;
 
 SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
-    const OperatorConfig &operatorConfig, const uint32_t radixSortThreshold)
+    const OperatorConfig &operatorConfig)
     : sourceTypes(dataTypes), operatorConfig(operatorConfig)
 {
     this->outputCols.insert(this->outputCols.end(), outputCols, outputCols + outputColCount);
@@ -70,6 +70,7 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
         sourceTypes.GetType(0)->GetId() != OMNI_CHAR && sourceTypes.GetType(0)->GetId() != OMNI_BOOLEAN) {
         canInplaceSort = true;
     }
+    this->radixSortSizeThreshold = operatorConfig.GetAdaptivityThreshold();
 }
 
 SortOperator::~SortOperator() = default;
@@ -159,11 +160,11 @@ void SortOperator::Sort()
     if (!canInplaceSort) {
         if (useRadixSort) {
             // This includes both radix sort and normal quick sort
-            pagesIndex->SortWithRadixSort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(),
-                                          sortColCount, 0, positionCount);
+            pagesIndex->SortWithRadixSort(sortCols.data(), sortAscendings.data(),
+                sortNullFirsts.data(), sortColCount, 0, positionCount);
         } else {
             pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
-                             positionCount);
+                positionCount);
         }
     } else {
         pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
@@ -188,8 +189,9 @@ void SortOperator::PrepareOutput()
         return;
     }
     if (!canInplaceSort) {
-        if (pagesIndex->GetRowCount() > radixSortSizeThreshold && sortCols.size() == 1
+        if (radixSortSizeThreshold != -1 && pagesIndex->GetRowCount() > radixSortSizeThreshold && sortCols.size() == 1
                 && !pagesIndex->HasDictionary(sortCols[0])) {
+            std::cout<<"useRadixSort " << radixSortSizeThreshold<<std::endl;
             useRadixSort = true;
             switch (sourceTypes.GetType(sortCols[0])->GetId()) {
                 case OMNI_LONG:

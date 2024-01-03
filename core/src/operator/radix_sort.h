@@ -1,6 +1,6 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * @Description: pages index implementations
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * @Description: sort implementations
  */
 #ifndef RADIX_SORT_H
 #define RADIX_SORT_H
@@ -19,12 +19,11 @@ constexpr uint32_t INT_NBYTES = 4;
 constexpr uint32_t SHORT_NBYTES = 2;
 template<bool sortAscending>
 void SortWithRemainingBytes(const DataPtr_type origPtr, const DataPtr_type tempPtr,
-                            const uint32_t &sortingSize, bool swap, uint32_t rowWidth,
-                            std::array<uint32_t, VALUES_PER_RADIX + 1>& locations);
+    const uint32_t &sortingSize, bool swap, uint32_t rowWidth, std::array<uint32_t, VALUES_PER_RADIX + 1>& locations);
 // Textbook LSD radix sort
 template<bool sortAscending>
 void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, const uint32_t len,
-                  const uint32_t &sortingSize, bool swap, uint32_t rowWidth)
+    const uint32_t &sortingSize, bool swap, uint32_t rowWidth)
 {
     std::array<uint32_t, VALUES_PER_RADIX> counts = {};
     for (uint32_t r = 0; r < sortingSize; ++r) {
@@ -76,7 +75,7 @@ void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, cons
 // MSD radix sort that switches to LSD radix sort with low bucket sizes
 template<bool sortAscending>
 void RadixSortMSD(const DataPtr_type origPtr, const DataPtr_type tempPtr, const uint32_t &len,
-                  const uint32_t &sortingSize, bool swap, uint32_t rowWidth)
+    const uint32_t &sortingSize, bool swap, uint32_t rowWidth)
 {
     std::array<uint32_t, VALUES_PER_RADIX + 1> locations = {};
     uint32_t *counts = locations.data() + 1;
@@ -132,8 +131,7 @@ void RadixSortMSD(const DataPtr_type origPtr, const DataPtr_type tempPtr, const 
 }
 template<bool sortAscending>
 void SortWithRemainingBytes(const DataPtr_type origPtr, const DataPtr_type tempPtr,
-                            const uint32_t &sortingSize, bool swap, uint32_t rowWidth,
-                            std::array<uint32_t, VALUES_PER_RADIX + 1>& locations)
+    const uint32_t &sortingSize, bool swap, uint32_t rowWidth, std::array<uint32_t, VALUES_PER_RADIX + 1>& locations)
 {
     // sort with remaining bytes
     uint32_t radixCount = locations[0];

@@ -53,6 +53,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     SpillConfig *resultSpillConfig = nullptr;
     OverflowConfig *resultOverflowConfig = nullptr;
     bool needSkipVerify = false;
+    int adaptThreshold = -1;
 
     auto result = nlohmann::json::parse(configString);
     if (result.contains("overflowConfig")) {
@@ -93,8 +94,11 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     if (result.contains("skipExpressionVerify")) {
         needSkipVerify = result.at("skipExpressionVerify").get<bool>();
     }
+    if (result.contains("adaptivityThreshold")) {
+        adaptThreshold = result.at("adaptivityThreshold").get<int>();
+    }
 
-    return OperatorConfig{ resultSpillConfig, resultOverflowConfig, needSkipVerify };
+    return OperatorConfig{ resultSpillConfig, resultOverflowConfig, needSkipVerify, adaptThreshold };
 }
 
 void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)
@@ -172,5 +176,6 @@ void OperatorConfig::CheckOperatorConfig(const OperatorConfig &operatorConfig)
 
     InitRootSpillTracker(spillPath, inputSpillConfig->GetMaxSpillBytes());
 }
+
 }
 }

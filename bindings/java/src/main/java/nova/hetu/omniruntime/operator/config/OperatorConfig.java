@@ -32,6 +32,8 @@ public class OperatorConfig {
 
     private boolean isSkipExpressionVerify;
 
+    private int adaptivityThreshold;
+
     /**
      * Operator config default constructor.
      */
@@ -78,6 +80,20 @@ public class OperatorConfig {
         this.spillConfig = spillConfig;
         this.overflowConfig = overflowConfig;
         this.isSkipExpressionVerify = isSkipExpressionVerify;
+    }
+
+    /**
+     * Operator config constructor.
+     *
+     * @param spillConfig the spill config
+     * @param overflowConfig the overflow config
+     * @param isSkipExpressionVerify whether to skip exprVerify
+     * @param adaptivityThreshold an int for adaptivity of operator. For example, radix sort threshold for Sort
+     */
+    public OperatorConfig(SpillConfig spillConfig, OverflowConfig overflowConfig, boolean isSkipExpressionVerify,
+        int adaptivityThreshold) {
+        this(spillConfig, overflowConfig, isSkipExpressionVerify);
+        this.adaptivityThreshold = adaptivityThreshold;
     }
 
     /**
@@ -135,6 +151,24 @@ public class OperatorConfig {
     }
 
     /**
+     * Set adaptivityThreshold
+     *
+     * @param adaptivityThreshold a threshold for some kind of adaptivity in operator
+     */
+    public void setAdaptivityThreshold(int adaptivityThreshold) {
+        this.adaptivityThreshold = adaptivityThreshold;
+    }
+
+    /**
+     * Get adaptivityThreshold
+     *
+     * @return adaptivityThreshold
+     */
+    public int getAdaptivityThreshold() {
+        return adaptivityThreshold;
+    }
+
+    /**
      * Serialize operator config to string.
      *
      * @param operatorConfig the operator config
@@ -172,11 +206,12 @@ public class OperatorConfig {
         }
         OperatorConfig that = (OperatorConfig) obj;
         return isSkipExpressionVerify == that.isSkipExpressionVerify && Objects.equals(spillConfig, that.spillConfig)
-                && Objects.equals(overflowConfig, that.overflowConfig);
+                && Objects.equals(overflowConfig, that.overflowConfig)
+                && adaptivityThreshold == that.adaptivityThreshold;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(spillConfig, overflowConfig, isSkipExpressionVerify);
+        return Objects.hash(spillConfig, overflowConfig, isSkipExpressionVerify, adaptivityThreshold);
     }
 }

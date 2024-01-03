@@ -25,16 +25,14 @@ SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOper
 
 SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
     int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
-    int32_t *sortNullFirsts, int32_t sortKeysCount,
-    const OperatorConfig &operatorConfig)
+    int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->projections,
         this->sortCols, this->projectFuncs, operatorConfig.GetOverflowConfig());
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes), outputCols,
-        outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount,
-        operatorConfig);
+        outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
 }
 
 SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(

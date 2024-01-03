@@ -88,14 +88,11 @@ public:
     void SortWithRadixSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
               int32_t sortColCount, int32_t from, int32_t to);
 
-    template<bool sortNullFirst>
-    void RadixSortPartitionNulls();
-
     void SortInplace(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
         int32_t sortColCount, int32_t from, int32_t to);
 
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
-        const int32_t *sourceTypes, int32_t offset, int32_t length) const;
+        const int32_t *sourceTypes, int32_t offset, int32_t len) const;
 
     void GetOutputInplaceSort(int32_t *outputCols, int32_t outputColsCount,
         omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset,

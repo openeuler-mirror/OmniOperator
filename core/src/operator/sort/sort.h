@@ -160,7 +160,7 @@ private:
     bool hasNext = true;
     bool canInplaceSort = false;
     bool useRadixSort = false;
-    uint32_t radixSortSizeThreshold = 1e6;
+    int32_t radixSortSizeThreshold = -1;
 };
 } // end of namespace op
 } // end of namespace omniruntime
