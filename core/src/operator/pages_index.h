@@ -73,8 +73,8 @@ public:
     void GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
         const int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
-    void GetSortedVecBatches(std::vector<int32_t> &outputCols,
-        std::vector<omniruntime::vec::VectorBatch *> &sortedVecBatches, bool canSortInplace = false);
+    void SetSpillVecBatch(vec::VectorBatch *spillVecBatch, std::vector<int32_t> &outputCols, uint64_t rowOffset,
+        bool canInplaceSort, bool canRadixSort);
 
     void Clear();
 

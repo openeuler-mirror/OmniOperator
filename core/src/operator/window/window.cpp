@@ -252,6 +252,8 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
      */
     int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
     auto output = new VectorBatch(rowCount);
+    DataTypes dataTypes(outputTypes);
+    VectorHelper::AppendVectors(output, dataTypes, rowCount);
     try {
         ProcessData(output, rowCount);
     } catch (const OmniException &e) {
@@ -290,9 +292,6 @@ void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
     pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(), rowCountOutputted,
         rowCount);
 
-    // the data of input columns will create vectors in pageIndex GetOutput, we need to create the vector for the window
-    // result
-    InitResultVectors(outputVecBatch, rowCount);
     for (int32_t j = 0; j < rowCount; j++) {
         if (partition == nullptr || !partition->HasNext()) {
             int32_t partitionStart = partition == nullptr ? 0 : partition->GetPartitionEnd();
@@ -305,48 +304,6 @@ void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
                 outputCols.data(), outputColsCount, windowFunctions, peerGroupHashStrategy.get());
         }
         partition->ProcessNextRow(inputVecBatchForAgg, outputVecBatch, j);
-    }
-}
-
-void WindowOperator::InitResultVectors(VectorBatch *&vecBatchField, const int32_t &rowCountField) const
-{
-    for (int colIndex = outputColsCount; colIndex < finalOutputColsCount; ++colIndex) {
-        auto &type = outputTypes[colIndex];
-        switch (type->GetId()) {
-            case OMNI_BOOLEAN:
-                vecBatchField->Append(new Vector<bool>(rowCountField));
-                break;
-            case OMNI_INT:
-            case OMNI_DATE32: {
-                vecBatchField->Append(new Vector<int32_t>(rowCountField));
-                break;
-            }
-            case OMNI_LONG:
-            case OMNI_DECIMAL64: {
-                vecBatchField->Append(new Vector<int64_t>(rowCountField));
-                break;
-            }
-            case OMNI_DOUBLE: {
-                vecBatchField->Append(new Vector<double>(rowCountField));
-                break;
-            }
-            case OMNI_SHORT: {
-                vecBatchField->Append(new Vector<int16_t>(rowCountField));
-                break;
-            }
-            case OMNI_VARCHAR:
-            case OMNI_CHAR: {
-                vecBatchField->Append(new Vector<LargeStringContainer<std::string_view>>(rowCountField));
-                break;
-            }
-            case OMNI_DECIMAL128: {
-                vecBatchField->Append(new Vector<Decimal128>(rowCountField));
-                break;
-            }
-            default: {
-                break;
-            }
-        }
     }
 }
 

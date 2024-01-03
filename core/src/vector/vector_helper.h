@@ -661,6 +661,86 @@ public:
             }
         }
     }
+
+    template <typename T> static void CopyFlatVector(BaseVector *destVector, BaseVector *srcVector, int32_t size)
+    {
+        // copy values
+        auto destValues = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(destVector));
+        auto srcValues = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(srcVector));
+        auto ret = memcpy_s(destValues, size * sizeof(T), srcValues, size * sizeof(T));
+        if (ret != EOK) {
+            std::string message("Values memory copy failed " + std::to_string(ret));
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+    }
+
+    // used for copy from flat vector to another flat vector, and it does not support string types
+    static void CopyFlatVector(BaseVector *destVector, BaseVector *srcVector)
+    {
+        if (srcVector->GetEncoding() != OMNI_FLAT || destVector->GetEncoding() != OMNI_FLAT) {
+            std::string message("Unsupported copy vector from or to a non flat vector.");
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", message);
+        }
+
+        auto destDataTypeId = destVector->GetTypeId();
+        auto srcDataTypeId = srcVector->GetTypeId();
+        if (destDataTypeId != srcDataTypeId) {
+            std::string message("Can't copy from data type " + std::to_string(srcDataTypeId) + " to data type " +
+                std::to_string(destDataTypeId));
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", message);
+        }
+
+        auto destSize = destVector->GetSize();
+        auto srcSize = srcVector->GetSize();
+        if (srcSize > destSize) {
+            std::string message("Can't copy since dest vector size " + std::to_string(destSize) +
+                " is smaller than src vector size " + std::to_string(srcSize));
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", message);
+        }
+
+        auto destNulls = unsafe::UnsafeBaseVector::GetNulls(destVector);
+        auto srcNulls = unsafe::UnsafeBaseVector::GetNulls(srcVector);
+        auto ret = memcpy_s(destNulls, srcSize, srcNulls, srcSize);
+        if (ret != EOK) {
+            std::string message("Nulls memory copy failed " + std::to_string(ret) + ", size " +
+                std::to_string(srcSize));
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+        switch (destDataTypeId) {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
+                CopyFlatVector<int32_t>(destVector, srcVector, srcSize);
+                break;
+            }
+            case type::OMNI_SHORT: {
+                CopyFlatVector<int16_t>(destVector, srcVector, srcSize);
+                break;
+            }
+            case type::OMNI_LONG:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64:
+            case type::OMNI_TIMESTAMP: {
+                CopyFlatVector<int64_t>(destVector, srcVector, srcSize);
+                break;
+            }
+            case type::OMNI_DECIMAL128: {
+                CopyFlatVector<Decimal128>(destVector, srcVector, srcSize);
+                break;
+            }
+            case type::OMNI_DOUBLE: {
+                CopyFlatVector<double>(destVector, srcVector, srcSize);
+                break;
+            }
+            case type::OMNI_BOOLEAN: {
+                CopyFlatVector<bool>(destVector, srcVector, srcSize);
+                break;
+            }
+            default: {
+                std::string message("Unsupported data type " + std::to_string(destDataTypeId));
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", message);
+            }
+        }
+    }
 };
 }
 

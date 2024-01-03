@@ -1,11 +1,9 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: decimal 128 type
  */
 #include <array>
 #include <iomanip>
-#include "util/debug.h"
-#include "data_operations.h"
 #include "decimal128.h"
 
 namespace omniruntime {
