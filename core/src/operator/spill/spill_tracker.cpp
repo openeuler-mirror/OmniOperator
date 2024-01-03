@@ -1,7 +1,8 @@
 /*
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
- * @Description: spill unit iterator
+ * @Description: spill tracker implementation
  */
+
 #include "spill_tracker.h"
 #include <unistd.h>
 #include "util/debug.h"

@@ -1,7 +1,8 @@
 /*
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
- * @Description: spill unit iterator
+ * @Description: spill tracker implementation
  */
+
 #ifndef OMNI_RUNTIME_SPILL_TRACKER_H
 #define OMNI_RUNTIME_SPILL_TRACKER_H
 
@@ -70,7 +71,7 @@ public:
 
     uint64_t GetSpilledBytes() override
     {
-        return spilledBytes;
+        return totalSpilledBytes;
     }
 
     bool CheckIfExceedAndReserve(uint64_t bytes) override;

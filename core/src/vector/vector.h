@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  * Description: vector  implementation
  */
 #ifndef OMNI_RUNTIME_VECTOR_H
@@ -81,6 +81,23 @@ public:
         errno_t ret = memcpy_s(startAddr + startIndex, length * sizeof(bool), nullsPtr, length * sizeof(bool));
         if (UNLIKELY(ret != EOK)) {
             std::string message = "memory copy failed " + std::to_string(ret) + ",vec size " + std::to_string(size) +
+                ", length " + std::to_string(length) + ", startIndex " + std::to_string(startIndex) + ", startAddr " +
+                std::to_string(reinterpret_cast<std::uintptr_t>(startAddr));
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+    }
+
+    void SetNulls(int startIndex, bool null, int length)
+    {
+        if (UNLIKELY(startIndex + length > size)) {
+            std::string message("vector is out of range(needed size:%d, real size:%d).", startIndex + length, size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+
+        bool *startAddr = reinterpret_cast<bool *>(nulls);
+        errno_t ret = memset_s(startAddr + startIndex, length * sizeof(bool), null, length * sizeof(bool));
+        if (UNLIKELY(ret != EOK)) {
+            std::string message = "memory set failed " + std::to_string(ret) + ",vec size " + std::to_string(size) +
                 ", length " + std::to_string(length) + ", startIndex " + std::to_string(startIndex) + ", startAddr " +
                 std::to_string(reinterpret_cast<std::uintptr_t>(startAddr));
             throw OmniException("OPERATOR_RUNTIME_ERROR", message);

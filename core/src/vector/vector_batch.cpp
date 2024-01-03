@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  */
 
 #include "unsafe_vector.h"
@@ -9,7 +9,7 @@ namespace omniruntime::vec {
 /**
  * @param rowCnt
  */
-VectorBatch::VectorBatch(size_t rowCnt) : rowCnt(rowCnt) {}
+VectorBatch::VectorBatch(size_t rowCnt) : capacity(rowCnt), rowCnt(rowCnt) {}
 
 VectorBatch::~VectorBatch() = default;
 
@@ -24,7 +24,7 @@ void VectorBatch::SetVector(int32_t index, BaseVector *vector)
 
 /**
  * @param vector
- *     */
+ */
 void VectorBatch::Append(BaseVector *vector)
 {
     vectors.emplace_back(vector);
@@ -63,18 +63,17 @@ void VectorBatch::FreeAllVectors()
     vectors.clear();
 }
 
+// This API is used to reuse the vector batch memory.
+// The caller must ensure that the row count does not exceed the row count of the first memory allocation
 void VectorBatch::Resize(size_t rowCount)
 {
-    if (rowCnt == rowCount) {
-        return;
-    }
-
-    if (rowCnt < rowCount) {
+    if (rowCount > capacity) {
         throw OmniException("UNSUPPORTED_ERROR", "Can only resize vector batch to a smaller value.");
     }
 
-    for (auto *vector: vectors) {
-        unsafe::UnsafeBaseVector::SetSize(vector, static_cast<int>(rowCount));
+    for (auto *vector : vectors) {
+        vector->SetNulls(0, false, static_cast<int32_t>(rowCount));
+        unsafe::UnsafeBaseVector::SetSize(vector, static_cast<int32_t>(rowCount));
     }
 
     rowCnt = rowCount;
