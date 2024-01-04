@@ -7,8 +7,8 @@
 #ifndef SMALL_CASE_SORT_SIMD_H
 #define SMALL_CASE_SORT_SIMD_H
 #include <cstdint>
-void SmallCaseSortAsec(int64_t *array, uint64_t *address, int32_t from, int32_t to);
-void SmallCaseSortDesc(int64_t *array, uint64_t *address, int32_t from, int32_t to);
-void SmallCaseSortWithoutAddressAsec(int64_t *array, int32_t from, int32_t to);
-void SmallCaseSortWithoutAddressDesc(int64_t *array, int32_t from, int32_t to);
+template <class RawDataType> void SmallCaseSortAsec(int64_t *array, uint64_t *address, int32_t from, int32_t to);
+template <class RawDataType> void SmallCaseSortDesc(int64_t *array, uint64_t *address, int32_t from, int32_t to);
+template <class RawDataType> void SmallCaseSortWithoutAddressAsec(int64_t *array, int32_t from, int32_t to);
+template <class RawDataType> void SmallCaseSortWithoutAddressDesc(int64_t *array, int32_t from, int32_t to);
 #endif // SMALL_CASE_SORT_SIMD_H
