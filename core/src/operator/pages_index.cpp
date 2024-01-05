@@ -806,6 +806,12 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
             } else {
                 QuickSortDecimal128<1>(values, valueAddresses, nonNullFrom, nonNullTo);
             }
+        } else if constexpr (std::is_same_v<RawType, double>) {
+            if (sortAscending == 0) {
+                QuickSortDoubleDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+            } else {
+                QuickSortDoubleAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+            }
         } else {
             if (sortAscending == 0) {
                 QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);

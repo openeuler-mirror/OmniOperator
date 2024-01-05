@@ -10,10 +10,12 @@
 
 void QuickSortAscSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to);
 void QuickSortDescSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to);
+void QuickSortDoubleAscSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to);
+void QuickSortDoubleDescSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to);
 
 // only for ut test
-template <int32_t sortAscending>
+template <typename RawType, int32_t sortAscending>
 void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, int32_t to, int64_t *valueBuf,
-    uint64_t *addrBuf, bool chooseAvg = false, int64_t avg = 0);
+    uint64_t *addrBuf, bool chooseAvg = false, RawType avg = 0);
 
 #endif // QUICK_SORT_SIMD_H
