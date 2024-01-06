@@ -21,6 +21,8 @@ constexpr int32_t BUFFER_SIZE = 50;
 
 static int64x2_t SMALLEST_VEC = { INT64_MIN, INT64_MIN };
 static int64x2_t LARGEST_VEC = { INT64_MAX, INT64_MAX };
+static float64x2_t SMALLEST_DOUBLE_VEC = { -DBL_MAX, -DBL_MAX };
+static float64x2_t LARGEST_DOUBLE_VEC = { DBL_MAX, DBL_MAX };
 
 static int32_t ALWAYS_INLINE CountTrue(uint64x2_t mask)
 {
@@ -36,21 +38,37 @@ static uint64x2_t ALWAYS_INLINE Not(uint64x2_t value)
     return vreinterpretq_u64_u8(negResult);
 }
 
-template <int32_t sortAscending> static int64x2_t ALWAYS_INLINE GetSmallestVec()
+template <class RawType, int32_t sortAscending> static int64x2_t ALWAYS_INLINE GetSmallestVec()
 {
-    if constexpr (sortAscending == 0) {
-        return SMALLEST_VEC;
+    if constexpr (std::is_same_v<RawType, double>) {
+        if constexpr (sortAscending == 0) {
+            return vreinterpretq_s64_f64(SMALLEST_DOUBLE_VEC);
+        } else {
+            return vreinterpretq_s64_f64(LARGEST_DOUBLE_VEC);
+        }
     } else {
-        return LARGEST_VEC;
+        if constexpr (sortAscending == 0) {
+            return SMALLEST_VEC;
+        } else {
+            return LARGEST_VEC;
+        }
     }
 }
 
-template <int32_t sortAscending> static int64x2_t ALWAYS_INLINE GetLargestVec()
+template <class RawType, int32_t sortAscending> static int64x2_t ALWAYS_INLINE GetLargestVec()
 {
-    if constexpr (sortAscending == 0) {
-        return LARGEST_VEC;
+    if constexpr (std::is_same_v<RawType, double>) {
+        if constexpr (sortAscending == 0) {
+            return vreinterpretq_s64_f64(LARGEST_DOUBLE_VEC);
+        } else {
+            return vreinterpretq_s64_f64(SMALLEST_DOUBLE_VEC);
+        }
     } else {
-        return SMALLEST_VEC;
+        if constexpr (sortAscending == 0) {
+            return LARGEST_VEC;
+        } else {
+            return SMALLEST_VEC;
+        }
     }
 }
 
@@ -659,8 +677,8 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
         pivotVal = ChoosePivot<RawType>(valueBuf, 0, count);
     }
 
-    int64x2_t smallestVec = GetSmallestVec<sortAscending>();
-    int64x2_t largestVec = GetLargestVec<sortAscending>();
+    int64x2_t smallestVec = GetSmallestVec<RawType, sortAscending>();
+    int64x2_t largestVec = GetLargestVec<RawType, sortAscending>();
     int32_t partitionIdx = PartitionWithSIMD<RawType, sortAscending>(values, addresses, from, to, pivotVal, valueBuf,
         addrBuf, smallestVec, largestVec);
 

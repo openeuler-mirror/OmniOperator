@@ -28,6 +28,15 @@ enum SimdDataType {
     SIMD_OTHERS
 };
 
+template void SmallCaseSortAsec<double>(int64_t *array, uint64_t *address, int32_t from, int32_t to);
+template void SmallCaseSortAsec<long>(int64_t *array, uint64_t *address, int32_t from, int32_t to);
+template void SmallCaseSortDesc<double>(int64_t *array, uint64_t *address, int32_t from, int32_t to);
+template void SmallCaseSortDesc<long>(int64_t *array, uint64_t *address, int32_t from, int32_t to);
+template void SmallCaseSortWithoutAddressAsec<double>(int64_t *array, int32_t from, int32_t to);
+template void SmallCaseSortWithoutAddressAsec<long>(int64_t *array, int32_t from, int32_t to);
+template void SmallCaseSortWithoutAddressDesc<double>(int64_t *array, int32_t from, int32_t to);
+template void SmallCaseSortWithoutAddressDesc<long>(int64_t *array, int32_t from, int32_t to);
+
 template <class VType, int32_t SortingRule, int32_t DataType>
 static VType ALWAYS_INLINE Max64(const VType &a, const VType &b)
 {
@@ -697,9 +706,9 @@ static void ALWAYS_INLINE Merge3x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
     Sort2<int64x2_t, SortRule, DataType>(v1, v2);
     v1 = ReverseKeys2(v1);
     Sort2<int64x2_t, SortRule, DataType>(v0, v1);
-    v0 = SortPair64WithoutAddr<SortRule>(v0);
-    v1 = SortPair64WithoutAddr<SortRule>(v1);
-    v2 = SortPair64WithoutAddr<SortRule>(v2);
+    v0 = SortPair64WithoutAddr<SortRule, DataType>(v0);
+    v1 = SortPair64WithoutAddr<SortRule, DataType>(v1);
+    v2 = SortPair64WithoutAddr<SortRule, DataType>(v2);
 }
 
 template <int32_t SortRule, int32_t DataType>
@@ -896,6 +905,7 @@ template <class RawDataType> void SmallCaseSortWithoutAddressDesc(int64_t *array
 }
 template <class RawDataType> void SmallCaseSortAsec(int64_t *array, uint64_t *address, int32_t from, int32_t to)
 {
+    std::cout<<"enter small case sort asec, begin is: "<<from<<", end is: "<<to<<std::endl;
     int32_t dataLen = to - from;
     if (dataLen <= 1) {
         return;
