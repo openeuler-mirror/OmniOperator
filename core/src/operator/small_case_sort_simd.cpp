@@ -12,16 +12,16 @@
 #include "arm_neon.h"
 #include "cfloat"
 
-constexpr int64_t OMNIMAX64 = INT64_MAX;
-constexpr int64_t OMNIMIN64 = INT64_MIN;
-double OMNIMINDOUBLE = -DBL_MAX;
-double OMNIMAXDOUBLE = DBL_MAX;
-constexpr int64_t TWOOMNIMAX64[2] = {INT64_MAX, INT64_MAX};
-constexpr int64_t TWOOMNIMIN64[2] = {INT64_MIN, INT64_MIN};
-double TWOMINDOUBLE[2] = {-DBL_MAX, -DBL_MAX};
-double TWOMAXDOUBLE[2] = {DBL_MAX, DBL_MAX};
-constexpr int32_t SORTDESCENDING = 0;
-constexpr int32_t SORTASCENDING = 1;
+static constexpr int64_t LARGEST_INT64 = INT64_MAX;
+static constexpr int64_t SMALLEST_INT64 = INT64_MIN;
+static double SMALLEST_DOUBLE = -DBL_MAX;
+static double LARGEST_DOUBLE = DBL_MAX;
+static constexpr int64x2_t LARGEST_INT64_VEC = {INT64_MAX, INT64_MAX};
+static constexpr int64x2_t SMALLEST_INT64_VEC = {INT64_MIN, INT64_MIN};
+static double SMALLEST_DOUBLE_VEC[2] = {-DBL_MAX, -DBL_MAX};
+static double LARGEST_DOUBLE_VEC[2] = {DBL_MAX, DBL_MAX};
+static constexpr int32_t SORTDESCENDING = 0;
+static constexpr int32_t SORTASCENDING = 1;
 
 enum SimdDataType {
     SIMD_DOUBLE,
@@ -305,26 +305,26 @@ static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t
 
         if constexpr (SortRule == SORTDESCENDING) {
             if constexpr (DataType == SIMD_DOUBLE) {
-                v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&OMNIMINDOUBLE)), v[i], 1);
+                v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&SMALLEST_DOUBLE)), v[i], 1);
                 for (int32_t p = 7; p > i; p--) {
-                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMINDOUBLE));
+                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(SMALLEST_DOUBLE_VEC));
                 }
             } else {
-                v[i] = vsetq_lane_s64(OMNIMIN64, v[i], 1);
+                v[i] = vsetq_lane_s64(SMALLEST_INT64, v[i], 1);
                 for (int32_t p = 7; p > i; p--) {
-                    v[p] = vld1q_dup_s64(TWOOMNIMIN64);
+                    v[p] = SMALLEST_INT64_VEC;
                 }
             }
         } else {
             if constexpr (DataType == SIMD_DOUBLE) {
-                v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&OMNIMAXDOUBLE)), v[i], 1);
+                v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&LARGEST_DOUBLE)), v[i], 1);
                 for (int32_t p = 7; p > i; p--) {
-                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMAXDOUBLE));
+                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(LARGEST_DOUBLE_VEC));
                 }
             } else {
-                v[i] = vsetq_lane_s64(OMNIMAX64, v[i], 1);
+                v[i] = vsetq_lane_s64(LARGEST_INT64, v[i], 1);
                 for (int32_t p = 7; p > i; p--) {
-                    v[p] = vld1q_dup_s64(TWOOMNIMAX64);
+                    v[p] = LARGEST_INT64_VEC;
                 }
             }
         }
@@ -332,21 +332,21 @@ static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t
         if constexpr (SortRule == SORTDESCENDING) {
             if constexpr (DataType == SIMD_DOUBLE) {
                 for (int32_t p = 7; p >= i; p--) {
-                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t*>(TWOMINDOUBLE));
+                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t*>(SMALLEST_DOUBLE_VEC));
                 }
             } else {
                 for (int32_t p = 7; p >= i; p--) {
-                    v[p] = vld1q_dup_s64(TWOOMNIMIN64);
+                    v[p] = SMALLEST_INT64_VEC;
                 }
             }
         } else {
             if constexpr (DataType == SIMD_DOUBLE) {
                 for (int32_t p = 7; p >= i; p--) {
-                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t*>(TWOMAXDOUBLE));
+                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t*>(LARGEST_DOUBLE_VEC));
                 }
             } else {
                 for (int32_t p = 7; p >= i; p--) {
-                    v[p] = vld1q_dup_s64(TWOOMNIMAX64);
+                    v[p] = LARGEST_INT64_VEC;
                 }
             }
         }
@@ -575,24 +575,24 @@ static void ALWAYS_INLINE Sort16Rows(int64_t *array, uint64_t *arrayAddr, int32_
             vAddr[i] = vsetq_lane_u64(*(arrayAddr + (index)), vAddr[i], 0);
 
             if constexpr (SortRule == SORTASCENDING) {
-                v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&OMNIMAXDOUBLE)), v[i], 1);
+                v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&LARGEST_DOUBLE)), v[i], 1);
                 for (int32_t p = 15; p > i; p--) {
-                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMAXDOUBLE));
+                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(LARGEST_DOUBLE_VEC));
                 }
             } else {
-                v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&OMNIMINDOUBLE)), v[i], 1);
+                v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&SMALLEST_DOUBLE)), v[i], 1);
                 for (int32_t p = 15; p > i; p--) {
-                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMINDOUBLE));
+                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(SMALLEST_DOUBLE_VEC));
                 }
             }
         } else {
             if constexpr (SortRule == SORTASCENDING) {
                 for (int32_t p = 15; p >= i; p--) {
-                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMAXDOUBLE));
+                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(LARGEST_DOUBLE_VEC));
                 }
             } else {
                 for (int32_t p = 15; p >= i; p--) {
-                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMINDOUBLE));
+                    v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(SMALLEST_DOUBLE_VEC));
                 }
             }
         }
@@ -602,24 +602,24 @@ static void ALWAYS_INLINE Sort16Rows(int64_t *array, uint64_t *arrayAddr, int32_
             vAddr[i] = vsetq_lane_u64(*(arrayAddr + (index)), vAddr[i], 0);
 
             if constexpr (SortRule == SORTASCENDING) {
-                v[i] = vsetq_lane_s64(OMNIMAX64, v[i], 1);
+                v[i] = vsetq_lane_s64(LARGEST_INT64, v[i], 1);
                 for (int32_t p = 15; p > i; p--) {
-                    v[p] = vld1q_dup_s64(TWOOMNIMAX64);
+                    v[p] = LARGEST_INT64_VEC;
                 }
             } else {
-                v[i] = vsetq_lane_s64(OMNIMIN64, v[i], 1);
+                v[i] = vsetq_lane_s64(SMALLEST_INT64, v[i], 1);
                 for (int32_t p = 15; p > i; p--) {
-                    v[p] = vld1q_dup_s64(TWOOMNIMIN64);
+                    v[p] = SMALLEST_INT64_VEC;
                 }
             }
         } else {
             if constexpr (SortRule == SORTASCENDING) {
                 for (int32_t p = 15; p >= i; p--) {
-                    v[p] = vld1q_dup_s64(TWOOMNIMAX64);
+                    v[p] = LARGEST_INT64_VEC;
                 }
             } else {
                 for (int32_t p = 15; p >= i; p--) {
-                    v[p] = vld1q_dup_s64(TWOOMNIMIN64);
+                    v[p] = SMALLEST_INT64_VEC;
                 }
             }
         }
@@ -747,9 +747,9 @@ static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t
         if constexpr (DataType == SIMD_DOUBLE) {
             if (dataLen == 3) {
                 if constexpr (SortRule == SORTASCENDING) {
-                    v3 = vset_lane_s64(*(reinterpret_cast<int64_t *>(&OMNIMAXDOUBLE)), v3, 0);
+                    v3 = vset_lane_s64(*(reinterpret_cast<int64_t *>(&LARGEST_DOUBLE)), v3, 0);
                 } else {
-                    v3 = vset_lane_s64(*(reinterpret_cast<int64_t *>(&OMNIMINDOUBLE)), v3, 0);
+                    v3 = vset_lane_s64(*(reinterpret_cast<int64_t *>(&SMALLEST_DOUBLE)), v3, 0);
                 }
             } else {
                 v3 = LoadDdata<int64x1_t>(array + 3);
@@ -792,26 +792,26 @@ static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t
             vAddr[i] = vsetq_lane_u64(*(arrayAddr + (index)), vAddr[i], 0);
             if constexpr (SortRule == SORTDESCENDING) {
                 if constexpr (DataType == SIMD_DOUBLE) {
-                    v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&OMNIMINDOUBLE)), v[i], 1);
+                    v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&SMALLEST_DOUBLE)), v[i], 1);
                     for (int32_t p = 3; p > i; p--) {
-                        v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMINDOUBLE));
+                        v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(SMALLEST_DOUBLE_VEC));
                     }
                 } else {
-                    v[i] = vsetq_lane_s64(OMNIMIN64, v[i], 1);
+                    v[i] = vsetq_lane_s64(SMALLEST_INT64, v[i], 1);
                     for (int32_t p = 3; p > i; p--) {
-                        v[p] = vld1q_dup_s64(TWOOMNIMIN64);
+                        v[p] = SMALLEST_INT64_VEC;
                     }
                 }
             } else {
                 if constexpr (DataType == SIMD_DOUBLE) {
-                    v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&OMNIMAXDOUBLE)), v[i], 1);
+                    v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&LARGEST_DOUBLE)), v[i], 1);
                     for (int32_t p = 3; p > i; p--) {
-                        v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMAXDOUBLE));
+                        v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(LARGEST_DOUBLE_VEC));
                     }
                 } else {
-                    v[i] = vsetq_lane_s64(OMNIMAX64, v[i], 1);
+                    v[i] = vsetq_lane_s64(LARGEST_INT64, v[i], 1);
                     for (int32_t p = 3; p > i; p--) {
-                        v[p] = vld1q_dup_s64(TWOOMNIMAX64);
+                        v[p] = LARGEST_INT64_VEC;
                     }
                 }
             }
@@ -819,21 +819,21 @@ static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t
             if constexpr (DataType == SIMD_DOUBLE) {
                 if constexpr (SortRule == SORTDESCENDING) {
                     for (int32_t p = 3; p >= i; p--) {
-                        v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMINDOUBLE));
+                        v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(SMALLEST_DOUBLE_VEC));
                     }
                 } else {
                     for (int32_t p = 3; p >= i; p--) {
-                        v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(TWOMAXDOUBLE));
+                        v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(LARGEST_DOUBLE_VEC));
                     }
                 }
             } else {
                 if constexpr (SortRule == SORTDESCENDING) {
                     for (int32_t p = 3; p >= i; p--) {
-                        v[p] = vld1q_dup_s64(TWOOMNIMIN64);
+                        v[p] = SMALLEST_INT64_VEC;
                     }
                 } else {
                     for (int32_t p = 3; p >= i; p--) {
-                        v[p] = vld1q_dup_s64(TWOOMNIMAX64);
+                        v[p] = LARGEST_INT64_VEC;
                     }
                 }
             }
@@ -905,7 +905,6 @@ template <class RawDataType> void SmallCaseSortWithoutAddressDesc(int64_t *array
 }
 template <class RawDataType> void SmallCaseSortAsec(int64_t *array, uint64_t *address, int32_t from, int32_t to)
 {
-    std::cout<<"enter small case sort asec, begin is: "<<from<<", end is: "<<to<<std::endl;
     int32_t dataLen = to - from;
     if (dataLen <= 1) {
         return;
