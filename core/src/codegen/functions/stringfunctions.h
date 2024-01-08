@@ -290,5 +290,13 @@ extern "C" DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char
 
 extern "C" DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *srcStr,
     int32_t srcLen, int32_t srcWidth, int32_t dstWidth, int32_t *outLen);
+
+extern "C" DLLEXPORT int32_t InStr(const char *srcStr, int32_t srcLen, const char *subStr, int32_t subLen, bool isNull);
+
+extern "C" DLLEXPORT bool StartsWithStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
+    bool isNull);
+
+extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
+    bool isNull);
 }
 #endif

@@ -2408,6 +2408,138 @@ TEST(FilterTest, FilterStringWithNull)
     delete overflowConfig;
 }
 
+TEST(FilterTest, StartsWith)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 9;
+    std::string col0[numRows] = {"", "", "abc", "abc", "abc", "abc", "", "abc", ""};
+    std::string col1[numRows] = {"", "abc", "", "abcd", "bd", "ab", "abc", "", ""};
+
+    auto vec0 = new Vector<vec::LargeStringContainer<std::string_view>>(numRows);
+    auto vec1 = new Vector<vec::LargeStringContainer<std::string_view>>(numRows);
+    for (int32_t i = 0; i < 6; i++) {
+        if (col0[i].empty()) {
+            vec0->SetNull(i);
+        } else {
+            std::string_view val0(col0[i].c_str(), col0[i].size());
+            vec0->SetValue(i, val0);
+        }
+        if (col1[i].empty()) {
+            vec1->SetNull(i);
+        } else {
+            std::string_view val1(col1[i].c_str(), col1[i].size());
+            vec1->SetValue(i, val1);
+        }
+    }
+    for (int32_t i = 6; i < numRows; i++) {
+        std::string_view val0(col0[i].c_str(), col0[i].size());
+        vec0->SetValue(i, val0);
+        std::string_view val1(col1[i].c_str(), col1[i].size());
+        vec1->SetValue(i, val1);
+    }
+
+    auto vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(vec0);
+    vecBatch->Append(vec1);
+
+    // filter
+    DataTypePtr retType = BooleanType();
+    std::string funcStr = "StartsWith";
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, VarcharType(5)));
+    args.push_back(new FieldExpr(1, VarcharType(5)));
+    auto funcExpr = GetFuncExpr(funcStr, args, retType);
+
+    std::vector<Expr *> projections = { new FieldExpr(0, VarcharType(5)), new FieldExpr(1, VarcharType(5)) };
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(5), VarcharType(5) }));
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(funcExpr, projections, inputTypes, overflowConfig);
+
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+
+    const int32_t expectNumRows = 3;
+    std::string expect0[expectNumRows] = {"abc", "abc", ""};
+    std::string expect1[expectNumRows] = {"ab", "", ""};
+    auto expectVecBatch = CreateVectorBatch(inputTypes, expectNumRows, expect0, expect1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, EndsWith)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 9;
+    std::string col0[numRows] = {"", "", "abc", "abc", "abc", "abc", "", "abc", ""};
+    std::string col1[numRows] = {"", "abc", "", "abcd", "bd", "bc", "abc", "", ""};
+
+    auto vec0 = new Vector<vec::LargeStringContainer<std::string_view>>(numRows);
+    auto vec1 = new Vector<vec::LargeStringContainer<std::string_view>>(numRows);
+    for (int32_t i = 0; i < 6; i++) {
+        if (col0[i].empty()) {
+            vec0->SetNull(i);
+        } else {
+            std::string_view val0(col0[i].c_str(), col0[i].size());
+            vec0->SetValue(i, val0);
+        }
+        if (col1[i].empty()) {
+            vec1->SetNull(i);
+        } else {
+            std::string_view val1(col1[i].c_str(), col1[i].size());
+            vec1->SetValue(i, val1);
+        }
+    }
+    for (int32_t i = 6; i < numRows; i++) {
+        std::string_view val0(col0[i].c_str(), col0[i].size());
+        vec0->SetValue(i, val0);
+        std::string_view val1(col1[i].c_str(), col1[i].size());
+        vec1->SetValue(i, val1);
+    }
+
+    auto vecBatch = new VectorBatch(numRows);
+    vecBatch->Append(vec0);
+    vecBatch->Append(vec1);
+
+    // filter
+    DataTypePtr retType = BooleanType();
+    std::string funcStr = "EndsWith";
+    std::vector<Expr *> args;
+    args.push_back(new FieldExpr(0, VarcharType(5)));
+    args.push_back(new FieldExpr(1, VarcharType(5)));
+    auto funcExpr = GetFuncExpr(funcStr, args, retType);
+
+    std::vector<Expr *> projections = { new FieldExpr(0, VarcharType(5)), new FieldExpr(1, VarcharType(5)) };
+    DataTypes inputTypes(std::vector<DataTypePtr>({ VarcharType(5), VarcharType(5) }));
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(funcExpr, projections, inputTypes, overflowConfig);
+
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    op->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+
+    const int32_t expectNumRows = 3;
+    std::string expect0[expectNumRows] = {"abc", "abc", ""};
+    std::string expect1[expectNumRows] = {"bc", "", ""};
+    auto expectVecBatch = CreateVectorBatch(inputTypes, expectNumRows, expect0, expect1);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
 TEST(FilterTest, SimpleFilter)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);

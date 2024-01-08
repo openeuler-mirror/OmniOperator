@@ -1080,10 +1080,22 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     this->value = std::make_shared<CodeGenValue>(ret, isAnyNull, outputLen);
 }
 
-static std::string ChangeFuncNameToNull(std::string signature)
+static std::string ChangeFuncNameToNull(const FuncExpr &fExpr)
 {
-    size_t pos = signature.find_first_of("_");
-    return signature.insert(pos, "_null");
+    auto typeSize = static_cast<int32_t>(fExpr.arguments.size() + 1);
+    auto originalFuncName = fExpr.function->GetId();
+    auto originalFuncChars = originalFuncName.c_str();
+    int32_t separatorIdx = 0;
+    auto pos = static_cast<int32_t>(originalFuncName.length() - 1);
+    for (; pos >= 0; pos--) {
+        if (originalFuncChars[pos] == '_') {
+            separatorIdx++;
+            if (separatorIdx == typeSize) {
+                break;
+            }
+        }
+    }
+    return originalFuncName.insert(pos, "_null");
 }
 
 std::vector<llvm::Value *> ExpressionCodeGen::GetDataAndOverflowNullArgs(
@@ -1148,7 +1160,7 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
     Value *ret = nullptr;
     Value *outputLen = nullptr;
     AllocaInst *outputLenPtr = nullptr;
-    std::string functionName = ChangeFuncNameToNull(fExpr.function->GetId());
+    std::string functionName = ChangeFuncNameToNull(fExpr);
 
     // Call Decimal IR Generator for decimal functions
     if (TypeUtil::IsDecimalType(funcRetType)) {

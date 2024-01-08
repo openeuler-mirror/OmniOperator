@@ -2109,7 +2109,74 @@ TEST(BatchFunctionTest, CastStrWithDiffWidthsRetNull)
     delete context;
 }
 
-TEST(FunctionTest, CastStringToDate)
+TEST(FunctionTest, BatchInstr)
+{
+    std::vector<std::string> srcStrVec {"", "", "abc", "abc", "abc", "abc", "", "abc", ""};
+    std::vector<std::string> subStrVec {"", "abc", "", "abcd", "bd", "bc", "ab", "", ""};
+    int32_t rowCnt = static_cast<int32_t>(srcStrVec.size());
+    char *srcStrs[rowCnt];
+    int32_t srcLens[rowCnt];
+    char *subStrs[rowCnt];
+    int32_t subLens[rowCnt];
+    bool isAnyNull[] = {true, true, true, false, false, false, false, false, false};
+    int32_t output[rowCnt];
+    for (int32_t row = 0; row < rowCnt; row++) {
+        srcStrs[row] = const_cast<char *>(srcStrVec[row].c_str());
+        srcLens[row] = srcStrVec[row].length();
+        subStrs[row] = const_cast<char *>(subStrVec[row].c_str());
+        subLens[row] = subStrVec[row].length();
+    }
+    BatchInStr(srcStrs, srcLens, subStrs, subLens, isAnyNull, output, rowCnt);
+    std::vector<int32_t> result(output, output + rowCnt);
+    std::vector<int32_t> expect {0, 0, 0, 0, 0, 2, 0, 1, 1};
+    AssertIntEquals(expect, result);
+}
+
+TEST(FunctionTest, BatchStartsWithStr)
+{
+    std::vector<std::string> srcStrVec {"", "", "abc", "abc", "abc", "abc", "", "abc", ""};
+    std::vector<std::string> matchStrVec {"ab", "ab", "ab", "ab", "ab", "ab", "ab", "ab", "ab"};
+    int32_t rowCnt = static_cast<int32_t>(srcStrVec.size());
+    char *srcStrs[rowCnt];
+    int32_t srcLens[rowCnt];
+    char *matchStrs[rowCnt];
+    int32_t matchLens[rowCnt];
+    bool isAnyNull[] = {true, true, false, false, false, false, false, false, false};
+    bool output[rowCnt];
+    for (int32_t row = 0; row < rowCnt; row++) {
+        srcStrs[row] = const_cast<char *>(srcStrVec[row].c_str());
+        srcLens[row] = srcStrVec[row].length();
+        matchStrs[row] = const_cast<char *>(matchStrVec[row].c_str());
+        matchLens[row] = matchStrVec[row].length();
+    }
+    BatchStartsWithStr(srcStrs, srcLens, matchStrs, matchLens, isAnyNull, output, rowCnt);
+    std::vector<bool> expect {false, false, true, true, true, true, false, true, false};
+    AssertBoolEquals(expect, output);
+}
+
+TEST(FunctionTest, BatchEndsWithStr)
+{
+    std::vector<std::string> srcStrVec {"", "", "abc", "abc", "abc", "abc", "", "abc", ""};
+    std::vector<std::string> matchStrVec {"bc", "bc", "bc", "bc", "bc", "bc", "bc", "bc", "bc"};
+    int32_t rowCnt = static_cast<int32_t>(srcStrVec.size());
+    char *srcStrs[rowCnt];
+    int32_t srcLens[rowCnt];
+    char *matchStrs[rowCnt];
+    int32_t matchLens[rowCnt];
+    bool isAnyNull[] = {true, true, false, false, false, false, false, false, false};
+    bool output[rowCnt];
+    for (int32_t row = 0; row < rowCnt; row++) {
+        srcStrs[row] = const_cast<char *>(srcStrVec[row].c_str());
+        srcLens[row] = srcStrVec[row].length();
+        matchStrs[row] = const_cast<char *>(matchStrVec[row].c_str());
+        matchLens[row] = matchStrVec[row].length();
+    }
+    BatchEndsWithStr(srcStrs, srcLens, matchStrs, matchLens, isAnyNull, output, rowCnt);
+    std::vector<bool> expect {false, false, true, true, true, true, false, true, false};
+    AssertBoolEquals(expect, output);
+}
+
+TEST(FunctionTest, BatchCastStringToDate)
 {
     // year-month-day
     ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::ALLOW_REDUCED_PRECISION);

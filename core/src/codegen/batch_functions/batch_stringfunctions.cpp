@@ -14,7 +14,6 @@
 #endif
 
 namespace omniruntime::codegen::function {
-
 extern "C" DLLEXPORT void BatchStrCompare(uint8_t **ap, int32_t *apLen, uint8_t **bp, int32_t *bpLen, int32_t *res,
     int32_t rowCnt)
 {
@@ -1041,5 +1040,72 @@ extern "C" DLLEXPORT void BatchReplaceStrStrWithoutRepReplace(int64_t contextPtr
                 strLen[index], reinterpret_cast<const char *>(EMPTY), 0, hasErr, outLen + index);
             return reinterpret_cast<uint8_t *>(const_cast<char *>(result));
         });
+}
+
+extern "C" DLLEXPORT void BatchInStr(char **srcStrs, int32_t *srcLens, char **subStrs, int32_t *subLens,
+    bool *isAnyNull, int32_t *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        auto srcLen = srcLens[i];
+        auto subLen = subLens[i];
+        // currently return 0 if not found that means 1-based
+        if (isAnyNull[i] || subLen > srcLen) {
+            output[i] = 0;
+            continue;
+        }
+        if (subLen == 0) {
+            output[i] = 1;
+            continue;
+        }
+        int32_t tailPos = srcLen - subLen;
+        int32_t cmpLen = subLen - 1;
+        auto srcStr = srcStrs[i];
+        auto subStr = subStrs[i];
+        int32_t result = 0;
+        int32_t pos = 0;
+        for (; pos <= tailPos; ++pos) {
+            if (srcStr[pos] == subStr[0] && memcmp(srcStr + pos + 1, subStr + 1, cmpLen) == 0) {
+                result = pos + 1;
+                break;
+            }
+        }
+        output[i] = result;
+    }
+}
+
+extern "C" DLLEXPORT void BatchStartsWithStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
+    bool *isAnyNull, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        auto srcLen = srcLens[i];
+        auto matchLen = matchLens[i];
+        if (isAnyNull[i] || matchLen > srcLen) {
+            output[i] = false;
+            continue;
+        }
+        if (matchLen == 0) {
+            output[i] = true;
+            continue;
+        }
+        output[i] = memcmp(srcStrs[i], matchStrs[i], matchLen) == 0;
+    }
+}
+
+extern "C" DLLEXPORT void BatchEndsWithStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
+    bool *isAnyNull, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        auto srcLen = srcLens[i];
+        auto matchLen = matchLens[i];
+        if (isAnyNull[i] || matchLen > srcLen) {
+            output[i] = false;
+            continue;
+        }
+        if (matchLen == 0) {
+            output[i] = true;
+            continue;
+        }
+        output[i] = memcmp(srcStrs[i] + srcLen - matchLen, matchStrs[i], matchLen) == 0;
+    }
 }
 }

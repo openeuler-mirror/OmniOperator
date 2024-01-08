@@ -1085,6 +1085,72 @@ TEST(FunctionTest, ConcatStrStr)
     delete context;
 }
 
+TEST(FunctionTest, Instr)
+{
+    int32_t result = InStr("", 0, "", 0, true);
+    EXPECT_EQ(result, 0);
+    result = InStr("", 0, "abc", 3, true);
+    EXPECT_EQ(result, 0);
+    result = InStr("abc", 3, "", 0, true);
+    EXPECT_EQ(result, 0);
+    result = InStr("abc", 3, "abcd", 4, false);
+    EXPECT_EQ(result, 0);
+    result = InStr("abc", 3, "bd", 2, false);
+    EXPECT_EQ(result, 0);
+    result = InStr("abc", 3, "bc", 2, false);
+    EXPECT_EQ(result, 2);
+    result = InStr("", 0, "ab", 2, false);
+    EXPECT_EQ(result, 0);
+    result = InStr("abc", 3, "", 0, false);
+    EXPECT_EQ(result, 1);
+    result = InStr("", 0, "", 0, false);
+    EXPECT_EQ(result, 1);
+}
+
+TEST(FunctionTest, StartsWithStr)
+{
+    bool result = StartsWithStr("", 0, "", 0, true);
+    EXPECT_EQ(result, false);
+    result = StartsWithStr("", 0, "abc", 3, true);
+    EXPECT_EQ(result, false);
+    result = StartsWithStr("abc", 3, "", 0, true);
+    EXPECT_EQ(result, false);
+    result = StartsWithStr("abc", 3, "abcd", 4, false);
+    EXPECT_EQ(result, false);
+    result = StartsWithStr("abc", 3, "bd", 2, false);
+    EXPECT_EQ(result, false);
+    result = StartsWithStr("abc", 3, "ab", 2, false);
+    EXPECT_EQ(result, true);
+    result = StartsWithStr("", 0, "ab", 2, false);
+    EXPECT_EQ(result, false);
+    result = StartsWithStr("abc", 3, "", 0, false);
+    EXPECT_EQ(result, true);
+    result = StartsWithStr("", 0, "", 0, false);
+    EXPECT_EQ(result, true);
+}
+
+TEST(FunctionTest, EndsWithStr)
+{
+    bool result = EndsWithStr("", 0, "", 0, true);
+    EXPECT_EQ(result, false);
+    result = EndsWithStr("", 0, "abc", 3, true);
+    EXPECT_EQ(result, false);
+    result = EndsWithStr("abc", 3, "", 0, true);
+    EXPECT_EQ(result, false);
+    result = EndsWithStr("abc", 3, "abcd", 4, false);
+    EXPECT_EQ(result, false);
+    result = EndsWithStr("abc", 3, "bd", 2, false);
+    EXPECT_EQ(result, false);
+    result = EndsWithStr("abc", 3, "bc", 2, false);
+    EXPECT_EQ(result, true);
+    result = EndsWithStr("", 0, "ab", 2, false);
+    EXPECT_EQ(result, false);
+    result = EndsWithStr("abc", 3, "", 0, false);
+    EXPECT_EQ(result, true);
+    result = EndsWithStr("", 0, "", 0, false);
+    EXPECT_EQ(result, true);
+}
+
 // Cast
 TEST(FunctionTest, CastStringToDate)
 {

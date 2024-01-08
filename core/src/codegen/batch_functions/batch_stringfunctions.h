@@ -387,6 +387,15 @@ static inline void ReplaceWithReplaceEmpty(int64_t contextPtr, uint8_t **str, in
         output[i] = ret;
     }
 }
+
+extern "C" DLLEXPORT void BatchInStr(char **srcStrs, int32_t *srcLens, char **subStrs, int32_t *subLens,
+    bool *isAnyNull, int32_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchStartsWithStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
+    bool *isAnyNull, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchEndsWithStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
+    bool *isAnyNull, bool *output, int32_t rowCnt);
 }
 
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

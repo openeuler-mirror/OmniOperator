@@ -804,4 +804,48 @@ extern "C" DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr
 {
     return StringUtil::CastStrStr(isNull, srcStr, srcWidth, srcLen, outLen, dstWidth);
 }
+
+extern "C" DLLEXPORT int32_t InStr(const char *srcStr, int32_t srcLen, const char *subStr, int32_t subLen, bool isNull)
+{
+    // currently return 0 if not found that means 1-based
+    if (isNull || subLen > srcLen) {
+        return 0;
+    }
+    if (subLen == 0) {
+        return 1;
+    }
+
+    int32_t tailPos = srcLen - subLen;
+    int32_t cmpLen = subLen - 1;
+    for (int32_t pos = 0; pos <= tailPos; ++pos) {
+        if (srcStr[pos] == subStr[0] && memcmp(srcStr + pos + 1, subStr + 1, cmpLen) == 0) {
+            return (pos + 1);
+        }
+    }
+    return 0;
+}
+
+extern "C" DLLEXPORT bool StartsWithStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
+    bool isNull)
+{
+    if (isNull || matchLen > srcLen) {
+        return false;
+    }
+    if (matchLen == 0) {
+        return true;
+    }
+    return memcmp(srcStr, matchStr, matchLen) == 0;
+}
+
+extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
+    bool isNull)
+{
+    if (isNull || matchLen > srcLen) {
+        return false;
+    }
+    if (matchLen == 0) {
+        return true;
+    }
+    return memcmp(srcStr + srcLen - matchLen, matchStr, matchLen) == 0;
+}
 }
