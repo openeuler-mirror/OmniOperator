@@ -3363,4 +3363,33 @@ TEST(ProjectionTest, AddDecimalReturnNull)
     delete factory;
     delete overflowConfig;
 }
+
+TEST(ProjectionTest, Nulls)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 100;
+    auto nullExpr = new LiteralExpr(true, BooleanType());
+    nullExpr->isNull = true;
+    std::vector<Expr *> exprs = { nullExpr };
+
+    std::vector<DataTypePtr> vecOfTypes = {};
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig(OVERFLOW_CONFIG_NULL);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
+    op->AddInput(t);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    for (int32_t i = 0; i < numRows; i++) {
+        EXPECT_TRUE(outputVecBatch->Get(0)->IsNull(i));
+    }
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
 }

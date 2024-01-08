@@ -55,11 +55,11 @@ public:
     ~Projection() = default;
 
     void ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
-        BaseVector **outVec, int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context,
+        BaseVector *outVec, int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context,
         int64_t *dictionaryVectors, DataTypeId &typeIds) const;
 
     void ProjectHelperVarWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
-        BaseVector **outVec, int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context,
+        BaseVector *outVec, int32_t numSelectedRows, int32_t selectedRows[], ExecutionContext *context,
         int64_t *dictionaryVectors, DataTypeId &typeIds) const;
 
     BaseVector *Project(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows, int64_t *valueAddrs,
@@ -96,8 +96,8 @@ public:
 
 private:
     const omniruntime::expressions::Expr *expr;
-    std::unique_ptr<ProjectionCodeGen> codeGen{ nullptr };
-    std::unique_ptr<BatchProjectionCodeGen> batchCodeGen{ nullptr };
+    std::unique_ptr<ProjectionCodeGen> codeGen { nullptr };
+    std::unique_ptr<BatchProjectionCodeGen> batchCodeGen { nullptr };
     bool isSupported = true;
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;
@@ -129,6 +129,8 @@ private:
     template <typename T>
     BaseVector *ColumnProjectionFlatVectorCopyPositionsHelper(const int32_t *selectedRows, int32_t numSelectedRows,
         BaseVector *colVec) const;
+
+    bool NullColumnProjection(BaseVector *outVec) const;
 };
 
 class ExpressionEvaluator {

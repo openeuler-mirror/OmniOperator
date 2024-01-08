@@ -102,6 +102,12 @@ bool Projection::Initialize(bool filter, const DataTypes &inputDataTypes, Overfl
         this->columnProjectionIndex = fieldExpr->colVal;
         return true;
     }
+
+    // short-circuit logic for null as col_name
+    if (expr->GetType() == ExprType::LITERAL_E && static_cast<const LiteralExpr *>(expr)->isNull) {
+        return true;
+    }
+
     intptr_t f;
     if (!ConfigUtil::IsEnableBatchExprEvaluate()) {
         this->codeGen = std::make_unique<ProjectionCodeGen>("proj_func", *(this->expr), filter, overflowConfig);
@@ -138,6 +144,19 @@ Projection::Projection(const Expr &expr, bool filter, DataTypePtr outType, const
     }
 }
 
+/* for supporting cast(null as string) or NULL as col_name */
+bool Projection::NullColumnProjection(BaseVector *outVec) const
+{
+    auto outNulls = unsafe::UnsafeBaseVector::GetNulls(outVec);
+    auto rowCount = outVec->GetSize();
+    auto result = memset_s(outNulls, rowCount, true, rowCount);
+    if (result != EOK) {
+        LogError("Memset failed, ret %d destMax %d count %d", result, rowCount, rowCount);
+        return false;
+    }
+    return true;
+}
+
 BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows,
     int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs, ExecutionContext *context,
     int64_t *dictionaryVectors, const int32_t *typeIds) const
@@ -147,13 +166,21 @@ BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], i
     }
 
     DataTypeId outTypeId = this->GetOutputType().GetId();
-    BaseVector *outVec = nullptr;
+    BaseVector *outVec = VectorHelper::CreateFlatVector(outTypeId, numSelectedRows);
+    if (expr->GetType() == ExprType::LITERAL_E && static_cast<const LiteralExpr *>(expr)->isNull) {
+        if (!NullColumnProjection(outVec)) {
+            delete outVec;
+            return nullptr;
+        } else {
+            return outVec;
+        }
+    }
 
     if (outTypeId == OMNI_VARCHAR || outTypeId == OMNI_CHAR) {
-        ProjectHelperVarWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, &outVec, numSelectedRows, selectedRows,
+        ProjectHelperVarWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, outVec, numSelectedRows, selectedRows,
             context, dictionaryVectors, outTypeId);
     } else {
-        ProjectHelperFixedWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, &outVec, numSelectedRows, selectedRows,
+        ProjectHelperFixedWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, outVec, numSelectedRows, selectedRows,
             context, dictionaryVectors, outTypeId);
     }
     context->GetArena()->Reset();
@@ -187,60 +214,21 @@ BaseVector *Projection::ColumnProjectionDictionaryVectorSliceHelper(int32_t numS
 }
 
 void Projection::ProjectHelperVarWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
-    int64_t *offsetAddrs, BaseVector **outVec, int32_t numSelectedRows, int32_t selectedRows[],
+    int64_t *offsetAddrs, BaseVector *outVec, int32_t numSelectedRows, int32_t selectedRows[],
     ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &outTypeId) const
 {
-    *outVec = new Vector<LargeStringContainer<std::string_view>>(numSelectedRows);
-    this->projector(valueAddrs, vecBatch.GetRowCount(), reinterpret_cast<int64_t>(*outVec), selectedRows,
-        numSelectedRows, nullAddrs, offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(*outVec), nullptr,
+    this->projector(valueAddrs, vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec), selectedRows,
+        numSelectedRows, nullAddrs, offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(outVec), nullptr,
         reinterpret_cast<int64_t>(context), dictionaryVectors);
 }
 
 void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,
-    int64_t *offsetAddrs, BaseVector **outVec, int32_t numSelectedRows, int32_t selectedRows[],
+    int64_t *offsetAddrs, BaseVector *outVec, int32_t numSelectedRows, int32_t selectedRows[],
     ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &outTypeId) const
 {
-    int64_t outValueAddr;
-    switch (outTypeId) {
-        case type::OMNI_INT:
-        case type::OMNI_DATE32:
-            *outVec = new Vector<int32_t>(numSelectedRows);
-            outValueAddr = reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int32_t> *>(*outVec)));
-            break;
-        case type::OMNI_SHORT:
-            *outVec = new Vector<int16_t>(numSelectedRows);
-            outValueAddr = reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(*outVec)));
-            break;
-        case type::OMNI_LONG:
-        case type::OMNI_DECIMAL64:
-            *outVec = new Vector<int64_t>(numSelectedRows);
-            outValueAddr = reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(*outVec)));
-            break;
-        case type::OMNI_DOUBLE:
-            *outVec = new Vector<double>(numSelectedRows);
-            outValueAddr = reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<double> *>(*outVec)));
-            break;
-        case type::OMNI_BOOLEAN:
-            *outVec = new Vector<bool>(numSelectedRows);
-            outValueAddr = reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<bool> *>(*outVec)));
-            break;
-        case type::OMNI_DECIMAL128:
-            *outVec = new Vector<Decimal128>(numSelectedRows);
-            outValueAddr = reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<type::Decimal128> *>(*outVec)));
-            break;
-        default:
-            LogError("Do not support such vector type %d", outTypeId);
-            outValueAddr = 0;
-    }
-
+    auto outValueAddr = reinterpret_cast<int64_t>(VectorHelper::UnsafeGetValues(outVec));
     this->projector(valueAddrs, vecBatch.GetRowCount(), outValueAddr, selectedRows, numSelectedRows, nullAddrs,
-        offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(*outVec), nullptr, reinterpret_cast<int64_t>(context),
+        offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(outVec), nullptr, reinterpret_cast<int64_t>(context),
         dictionaryVectors);
 }
 

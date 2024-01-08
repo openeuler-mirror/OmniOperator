@@ -11,6 +11,7 @@
 #include "codegen/batch_functions/batch_decimal_cast_functions.h"
 #include "operator/execution_context.h"
 #include "codegen/batch_functions/batch_stringfunctions.h"
+#include "codegen/batch_functions/batch_datetime_functions.h"
 #include "util/test_util.h"
 
 using namespace omniruntime::op;
@@ -310,6 +311,19 @@ TEST(BatchFunctionTest, DoubleArith)
     expect[1] = 10.0;
     BatchModulusDouble(left, right, rowCnt);
     EXPECT_TRUE(CmpArray<double>(left, expect, rowCnt));
+}
+
+TEST(BatchFunctionTest, BatchNormalizeNaNAndZero)
+{
+    const int32_t rowCnt = 2;
+    double input[rowCnt] = { -0.0, 3.5 };
+    bool isAnyNull[rowCnt] = { false, false };
+    double output[rowCnt];
+    std::vector<double> expect = { 0.0, 3.5 };
+    BatchNormalizeNaNAndZero(input, isAnyNull, output, rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        EXPECT_EQ(expect[i], output[i]);
+    }
 }
 
 TEST(BatchFunctionTest, Mm3Hash)
@@ -2109,10 +2123,10 @@ TEST(BatchFunctionTest, CastStrWithDiffWidthsRetNull)
     delete context;
 }
 
-TEST(FunctionTest, BatchInstr)
+TEST(BatchFunctionTest, BatchInstr)
 {
-    std::vector<std::string> srcStrVec {"", "", "abc", "abc", "abc", "abc", "", "abc", ""};
-    std::vector<std::string> subStrVec {"", "abc", "", "abcd", "bd", "bc", "ab", "", ""};
+    std::vector<std::string> srcStrVec { "", "", "abc", "abc", "abc", "abc", "", "abc", "" };
+    std::vector<std::string> subStrVec { "", "abc", "", "abcd", "bd", "bc", "ab", "", "" };
     int32_t rowCnt = static_cast<int32_t>(srcStrVec.size());
     char *srcStrs[rowCnt];
     int32_t srcLens[rowCnt];
@@ -2128,14 +2142,14 @@ TEST(FunctionTest, BatchInstr)
     }
     BatchInStr(srcStrs, srcLens, subStrs, subLens, isAnyNull, output, rowCnt);
     std::vector<int32_t> result(output, output + rowCnt);
-    std::vector<int32_t> expect {0, 0, 0, 0, 0, 2, 0, 1, 1};
+    std::vector<int32_t> expect { 0, 0, 0, 0, 0, 2, 0, 1, 1 };
     AssertIntEquals(expect, result);
 }
 
-TEST(FunctionTest, BatchStartsWithStr)
+TEST(BatchFunctionTest, BatchStartsWithStr)
 {
-    std::vector<std::string> srcStrVec {"", "", "abc", "abc", "abc", "abc", "", "abc", ""};
-    std::vector<std::string> matchStrVec {"ab", "ab", "ab", "ab", "ab", "ab", "ab", "ab", "ab"};
+    std::vector<std::string> srcStrVec { "", "", "abc", "abc", "abc", "abc", "", "abc", "" };
+    std::vector<std::string> matchStrVec { "ab", "ab", "ab", "ab", "ab", "ab", "ab", "ab", "ab" };
     int32_t rowCnt = static_cast<int32_t>(srcStrVec.size());
     char *srcStrs[rowCnt];
     int32_t srcLens[rowCnt];
@@ -2150,14 +2164,14 @@ TEST(FunctionTest, BatchStartsWithStr)
         matchLens[row] = matchStrVec[row].length();
     }
     BatchStartsWithStr(srcStrs, srcLens, matchStrs, matchLens, isAnyNull, output, rowCnt);
-    std::vector<bool> expect {false, false, true, true, true, true, false, true, false};
+    std::vector<bool> expect { false, false, true, true, true, true, false, true, false };
     AssertBoolEquals(expect, output);
 }
 
-TEST(FunctionTest, BatchEndsWithStr)
+TEST(BatchFunctionTest, BatchEndsWithStr)
 {
-    std::vector<std::string> srcStrVec {"", "", "abc", "abc", "abc", "abc", "", "abc", ""};
-    std::vector<std::string> matchStrVec {"bc", "bc", "bc", "bc", "bc", "bc", "bc", "bc", "bc"};
+    std::vector<std::string> srcStrVec { "", "", "abc", "abc", "abc", "abc", "", "abc", "" };
+    std::vector<std::string> matchStrVec { "bc", "bc", "bc", "bc", "bc", "bc", "bc", "bc", "bc" };
     int32_t rowCnt = static_cast<int32_t>(srcStrVec.size());
     char *srcStrs[rowCnt];
     int32_t srcLens[rowCnt];
@@ -2172,11 +2186,11 @@ TEST(FunctionTest, BatchEndsWithStr)
         matchLens[row] = matchStrVec[row].length();
     }
     BatchEndsWithStr(srcStrs, srcLens, matchStrs, matchLens, isAnyNull, output, rowCnt);
-    std::vector<bool> expect {false, false, true, true, true, true, false, true, false};
+    std::vector<bool> expect { false, false, true, true, true, true, false, true, false };
     AssertBoolEquals(expect, output);
 }
 
-TEST(FunctionTest, BatchCastStringToDate)
+TEST(BatchFunctionTest, BatchCastStringToDate)
 {
     // year-month-day
     ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::ALLOW_REDUCED_PRECISION);
@@ -2201,5 +2215,80 @@ TEST(FunctionTest, BatchCastStringToDate)
     BatchCastStringToDateRetNullAllowReducePrecison(isNull, srcAddr.data(), strLen.data(), output.data(), rowCnt);
     AssertIntEquals(expected, output);
     ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION);
+    delete context;
+}
+
+// date time functions
+TEST(BatchFunctionTest, BatchUnixTimestampFromStr)
+{
+    const int32_t rowCnt = 6;
+    std::string timeStrs[] = {"20231209", "20230912", "2023-12-09", "", "1989-07-10", "1985-06-29"};
+    std::string fmtStrs[] = {"%Y%m%d", "%Y%m%d", "%Y-%m-%d", "", "%Y-%m-%d", "%Y-%m-%d"};
+    const char *timeStrPtrs[rowCnt];
+    int32_t timeLens[rowCnt];
+    const char *fmtStrPtrs[rowCnt];
+    int32_t fmtLens[rowCnt];
+    for (int32_t i = 0; i < rowCnt; i++) {
+        timeStrPtrs[i] = const_cast<char *>(timeStrs[i].c_str());
+        timeLens[i] = timeStrs[i].length();
+        fmtStrPtrs[i] = fmtStrs[i].c_str();
+        fmtLens[i] = fmtStrs[i].length();
+    }
+
+    bool isAnyNull[] = {false, false, false, true, false, false};
+    int64_t output[rowCnt];
+    BatchUnixTimestampFromStr(timeStrPtrs, timeLens, fmtStrPtrs, fmtLens, isAnyNull, output, rowCnt);
+    std::vector<int64_t> result(output, output + rowCnt);
+    std::vector<int64_t> expect = { 1702051200, 1694448000, 1702051200, 0, 615999600, 488822400 };
+    AssertLongEquals(expect, result);
+}
+
+TEST(BatchFunctionTest, BatchUnixTimestampFromDate)
+{
+    const int32_t rowCnt = 3;
+    int32_t dates[] = {7130, 5658, 0};
+    std::string fmtStrs[] = {"%Y-%m-%d", "%Y-%m-%d", "%Y-%m-%d"};
+    const char *fmtStrPtrs[rowCnt];
+    int32_t fmtLens[rowCnt];
+    for (int32_t i = 0; i < rowCnt; i++) {
+        fmtStrPtrs[i] = fmtStrs[i].c_str();
+        fmtLens[i] = fmtStrs[i].length();
+    }
+
+    bool isAnyNull[] = {false, false, true};
+    int64_t output[rowCnt];
+    BatchUnixTimestampFromDate(dates, fmtStrPtrs, fmtLens, isAnyNull, output, rowCnt);
+    std::vector<int64_t> result(output, output + rowCnt);
+    std::vector<int64_t> expect = { 615999600, 488822400, 0 };
+    AssertLongEquals(expect, result);
+}
+
+TEST(BatchFunctionTest, BatchFromUnixTimeRetNull)
+{
+    const int32_t rowCnt = 5;
+    bool outputNull[rowCnt];
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t timestamps[rowCnt] = {615999600, 488822400, 0, -100, -100};
+    std::string fmtStrs[rowCnt] = {"%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S %Y-%m-%d %H:%M:%S"};
+    const char *fmtStrPtrs[rowCnt];
+    int32_t fmtLens[rowCnt];
+    char *output[rowCnt];
+    int32_t outLens[rowCnt];
+    for (int32_t i = 0; i < rowCnt; i++) {
+        fmtStrPtrs[i] = fmtStrs[i].c_str();
+        fmtLens[i] = fmtStrs[i].length();
+    }
+
+    BatchFromUnixTimeRetNull(outputNull, contextPtr, timestamps, fmtStrPtrs, fmtLens, output, outLens, rowCnt);
+    std::vector<uint8_t *> result(rowCnt);
+    std::vector<int32_t> resultLen(outLens, outLens + rowCnt);
+    for (int32_t i = 0; i < rowCnt; i++) {
+        result[i] = reinterpret_cast<uint8_t *>(output[i]);
+    }
+    std::vector<std::string> expect = { "1989-07-10 00:00:00", "1985-06-29 00:00:00", "1970-01-01 08:00:00",
+        "1970-01-01 07:58:20", "" };
+    AssertStringEquals(expect, result, resultLen);
     delete context;
 }

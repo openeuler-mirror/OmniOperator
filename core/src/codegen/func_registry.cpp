@@ -31,6 +31,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
     functionRegistries.push_back(make_unique<VarcharVectorFunctionRegistry>());
     functionRegistries.push_back(make_unique<HiveUdfRegistry>());
     functionRegistries.push_back(make_unique<StringFunctionRegistry>());
+    functionRegistries.push_back(make_unique<DateTimeFunctionRegistry>());
 
     auto policy = GetProperties().GetPolicy();
     if (policy->GetRoundingRule() == RoundingRule::HALF_UP) {
@@ -87,6 +88,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetBatchFunctionRegis
     functionRegistries.push_back(make_unique<BatchHashFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchVarcharVectorFunctionRegistry>());
     functionRegistries.push_back(make_unique<BatchUtilFunctionRegistry>());
+    functionRegistries.push_back(make_unique<BatchDateTimeFunctionRegistry>());
 
     auto policy = GetProperties().GetPolicy();
     if (policy->GetRoundingRule() == RoundingRule::HALF_UP) {

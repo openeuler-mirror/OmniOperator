@@ -9,7 +9,6 @@
 #include "codegen/functions/mathfunctions.h"
 #include "util/config_util.h"
 
-
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
 #else
@@ -150,6 +149,14 @@ extern "C" DLLEXPORT void BatchNotEqualDouble(double *left, double *right, bool 
 {
     for (int i = 0; i < rowCnt; i++) {
         output[i] = std::fabs(left[i] - right[i]) >= DBL_EPSILON;
+    }
+}
+
+extern "C" DLLEXPORT void BatchNormalizeNaNAndZero(double *input, bool *isAnyNull, double *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; i++) {
+        auto value = input[i];
+        output[i] = (std::fabs(-0.0 - value) < DBL_EPSILON) ? 0.0 : value;
     }
 }
 

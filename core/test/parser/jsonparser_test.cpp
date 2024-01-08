@@ -718,6 +718,16 @@ TEST(JSONParserTest, Literal_Unknown_Null)
     delete noneWithNull;
 }
 
+TEST(JSONParserTest, Literal_Bool_Null)
+{
+    string unparsedNullBool = GetNullTestJson(OMNI_BOOLEAN);
+    Expr *noneWithNull = JSONParser::ParseJSON(nlohmann::json::parse(unparsedNullBool));
+    // bool type default DataExpr
+    TestLiteralExpr expectedExpr(OMNI_BOOLEAN);
+    expectedExpr.isEqual(noneWithNull);
+    delete noneWithNull;
+}
+
 TEST(JSONParserTest, Literal_Int32_Null)
 {
     string unparsedNullInt32 = GetNullTestJson(OMNI_INT);
