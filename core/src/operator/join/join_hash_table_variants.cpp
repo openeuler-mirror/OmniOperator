@@ -9,8 +9,6 @@ namespace omniruntime {
 namespace op {
 static constexpr uint32_t ARRAY_THRESHOLD = 8;
 static constexpr double LOAD_FACTOR = 0.75;
-static constexpr uint32_t BLOCK_SIZE = 1024;
-static constexpr uint8_t MIN_DEGREE = 5;
 
 template <typename KeyType, typename RowRefListType>
 JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t hashTableCount,
@@ -34,8 +32,8 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
         executionContexts.emplace_back(std::make_unique<ExecutionContext>());
     }
 
-    for (int buildHashCol : buildHashCols) {
-        auto type = buildTypes->GetIds()[buildHashCol];
+    for (size_t i = 0; i < buildHashCols.size(); i++) {
+        auto type = buildTypes->GetIds()[buildHashCols[i]];
         if (type == OMNI_VARCHAR || type == OMNI_CHAR) {
             isFixedKeys = false;
             break;
@@ -43,8 +41,8 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
     }
 
     if (isFixedKeys) {
-        for (int buildHashCol : buildHashCols) {
-            auto type = buildTypes->GetIds()[buildHashCol];
+        for (size_t i = 0; i < buildHashCols.size(); i++) {
+            auto type = buildTypes->GetIds()[buildHashCols[i]];
             switch (type) {
                 case OMNI_INT:
                 case OMNI_DATE32:
@@ -178,12 +176,12 @@ template <bool isDic, typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceSingleNotNullKeyToNormalHashTable(HashTableType &hashTable,
     int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors)
 {
-    auto rowCount = vecBatch->GetRowCount();
+    auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
     auto &arenaAllocator = *(executionContexts[partitionIndex]->GetArena());
     RowRefListType *rowRef = nullptr;
     KeyType key;
 
-    for (auto offset = 0; offset < rowCount; offset++) {
+    for (uint32_t offset = 0; offset < rowCount; offset++) {
         bool unNullKey = (!buildVectors[0]->IsNull(offset));
         if (LIKELY(unNullKey)) {
             if constexpr (isDic) {
@@ -209,11 +207,11 @@ template <bool isDic, typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceSingleKeyToNormalHashTable(HashTableType &hashTable,
     int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors)
 {
-    auto rowCount = vecBatch->GetRowCount();
+    auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
     auto &arenaAllocator = *(executionContexts[partitionIndex]->GetArena());
     RowRefListType *rowRef = nullptr;
     KeyType key;
-    for (auto offset = 0; offset < rowCount; offset++) {
+    for (uint32_t offset = 0; offset < rowCount; offset++) {
         bool unNullKey = (!buildVectors[0]->IsNull(offset));
         if constexpr (isDic) {
             key = reinterpret_cast<Vector<DictionaryContainer<KeyType>> *>(buildVectors[0])->GetValue(offset);
@@ -248,7 +246,7 @@ template <typename KeyType, typename RowRefListType>
 template <typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceVariableKey(HashTableType &hashTable,
     int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum,
-    std::vector<int8_t> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes)
+    std::vector<bool> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes)
 {
     if (joinType != OMNI_JOIN_TYPE_FULL) {
         EmplaceVariableNotNullKeyToNormalHashTable(hashTable, partitionIndex, vecBatch, vecBatchIdx, buildVectors,
@@ -263,7 +261,7 @@ template <typename KeyType, typename RowRefListType>
 template <typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceVariableNotNullKeyToNormalHashTable(
     HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx,
-    BaseVector **buildVectors, int32_t buildColNum, std::vector<int8_t> &isNotNullKeys, std::vector<size_t> &hashes,
+    BaseVector **buildVectors, int32_t buildColNum, std::vector<bool> &isNotNullKeys, std::vector<size_t> &hashes,
     std::vector<KeyType> &tryRes)
 {
     auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
@@ -299,7 +297,7 @@ template <typename KeyType, typename RowRefListType>
 template <typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceVariableKeyToNormalHashTable(HashTableType &hashTable,
     int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum,
-    std::vector<int8_t> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes)
+    std::vector<bool> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes)
 {
     auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
     auto &arenaAllocator = *(executionContexts[partitionIndex]->GetArena());
@@ -396,7 +394,7 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildNormalHashTableWithVar
         auto vecBatchesNum = static_cast<int32_t>(inputVecBatches[partitionIndex].size());
 
         BaseVector *buildVectors[buildColNum];
-        std::vector<int8_t> isNotNullKeys(BLOCK_SIZE);
+        std::vector<bool> isNotNullKeys(BLOCK_SIZE);
         std::vector<size_t> hashes(BLOCK_SIZE);
         std::vector<StringRef> tryRes(BLOCK_SIZE);
         for (auto j = 0; j < vecBatchesNum; j++) {
@@ -597,8 +595,8 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceNotNullKeyToArrayTab
     for (auto j = 0; j < vecBatchCount; j++) {
         buildVectors[0] = inputVecBatches[partitionIndex][j]->Get(this->buildHashCols[0]);
         auto curVector = reinterpret_cast<Vector<T> *>(buildVectors[0]);
-        auto rowCount = inputVecBatches[partitionIndex][j]->GetRowCount();
-        for (auto offset = 0; offset < rowCount; offset++) {
+        auto rowCount = static_cast<uint32_t>(inputVecBatches[partitionIndex][j]->GetRowCount());
+        for (uint32_t offset = 0; offset < rowCount; offset++) {
             bool unNullKey = (!buildVectors[0]->IsNull(offset));
             if (LIKELY(unNullKey)) {
                 key = curVector->GetValue(offset);
@@ -636,8 +634,8 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceKeyToArrayTable(T &m
     for (auto j = 0; j < vecBatchCount; j++) {
         buildVectors[0] = inputVecBatches[partitionIndex][j]->Get(this->buildHashCols[0]);
         auto curVector = reinterpret_cast<Vector<T> *>(buildVectors[0]);
-        auto rowCount = inputVecBatches[partitionIndex][j]->GetRowCount();
-        for (auto offset = 0; offset < rowCount; offset++) {
+        auto rowCount = static_cast<uint32_t>(inputVecBatches[partitionIndex][j]->GetRowCount());
+        for (uint32_t offset = 0; offset < rowCount; offset++) {
             bool unNullKey = (!buildVectors[0]->IsNull(offset));
             if (LIKELY(unNullKey)) {
                 key = curVector->GetValue(offset);

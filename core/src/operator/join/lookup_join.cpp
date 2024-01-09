@@ -310,8 +310,8 @@ void LookupJoinOperator::ProcessProbe(bool hasFilter, bool singleHT)
             }
             break;
         default: {
-            std::string omniExceptionInfo = "Error in ProcessProbe, no such data type " + std::to_string(joinType);
-            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            LogError("Unsupported join type: %u.", joinType);
+            break;
         }
     }
 }
@@ -363,7 +363,6 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
-
 template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForInnerJoin()
 {
     std::visit(

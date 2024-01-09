@@ -309,14 +309,14 @@ TEST(BaseHashMapTest, OnlyNullEmplace)
     constexpr uint32_t testTotal = 1000;
     uint32_t nullInt = 0;
     {
-        auto ret = hashMap.EmplaceNullValue(nullInt);
+        auto ret = hashMap.Emplace(nullInt);
         EXPECT_TRUE(ret.IsInsert());
         EXPECT_TRUE(hashMap.HasNullCell());
         ret.SetValue(1);
     }
     // the hashmap only contains null key
     for (size_t key = 0; key < testTotal; ++key) {
-        auto ret = hashMap.EmplaceNullValue(nullInt);
+        auto ret = hashMap.Emplace(nullInt);
         EXPECT_TRUE(not ret.IsInsert());
         auto v = ret.GetValue();
         EXPECT_EQ(v, 1);
@@ -334,11 +334,7 @@ TEST(BaseHashMapTest, TestUIntUIntPairWithNullEmplace)
     constexpr uint32_t insertTime = 5;
 
     // the min value is 0, and null value is 0 , so the hashmap contains null key
-    auto ret = hashMap.EmplaceNullValue(0);
-    EXPECT_TRUE(ret.IsInsert());
-    ret.SetValue(1);
-
-    for (uint32_t key = 1; key < testTotal; ++key) {
+    for (uint32_t key = 0; key < testTotal; ++key) {
         auto ret = hashMap.Emplace(key);
         EXPECT_TRUE(ret.IsInsert());
         ret.SetValue(1);
@@ -346,11 +342,7 @@ TEST(BaseHashMapTest, TestUIntUIntPairWithNullEmplace)
 
     // update kv by insert again, only insert insertTime - 1 time
     for (uint32_t ins = 0; ins < insertTime - 1; ++ins) {
-        auto ret = hashMap.EmplaceNullValue(0);
-        EXPECT_TRUE(not ret.IsInsert());
-        auto &value = ret.GetValue();
-        ++value;
-        for (uint32_t key = 1; key < testTotal; ++key) {
+        for (uint32_t key = 0; key < testTotal; ++key) {
             auto ret = hashMap.Emplace(key);
             EXPECT_TRUE(not ret.IsInsert());
             auto &value = ret.GetValue();
@@ -494,7 +486,7 @@ TEST(BaseHashMapTest, TestStringUniquePtrHashMap)
     {
         std::string str;
         // emplace empty string
-        auto ret = hashMap.EmplaceNullValue(str);
+        auto ret = hashMap.Emplace(str);
         EXPECT_TRUE(ret.IsInsert());
         EXPECT_TRUE(hashMap.HasNullCell());
         ret.SetValue(nullptr);
@@ -533,7 +525,7 @@ TEST(BaseHashMapTest, TestUniqueUniquePtrHashMap)
 
     omniruntime::op::DefaultHashMap<std::unique_ptr<uint32_t>, long *> hashMap;
     {
-        auto ret = hashMap.EmplaceNullValue(std::make_unique<uint32_t>(0));
+        auto ret = hashMap.Emplace(std::make_unique<uint32_t>(0));
         EXPECT_TRUE(ret.IsInsert());
         EXPECT_TRUE(hashMap.HasNullCell());
         ret.SetValue(nullptr);

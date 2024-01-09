@@ -16,14 +16,14 @@ namespace omniruntime {
 namespace simdutil {
 using namespace omniruntime::type;
 
-inline uint64_t HashUint64(uint64_t x)
+inline uint64_t int_hash_crc32(uint64_t x)
 {
     uint64_t crc = -1ULL;
     __asm__ __volatile__("crc32cx %w[c], %w[c], %x[x]\n\t" : [ c ] "+r"(crc) : [ x ] "r"(x));
     return crc;
 }
 
-template <typename T> inline size_t CRC32Hasher(T key)
+template <typename T> inline size_t hash_crc32(T key)
 {
     union {
         T in;
@@ -31,13 +31,13 @@ template <typename T> inline size_t CRC32Hasher(T key)
     } u;
     u.out = 0;
     u.in = key;
-    return HashUint64(u.out);
+    return int_hash_crc32(u.out);
 }
 
 template <typename T> struct HashCRC32 {
     size_t operator () (T key) const
     {
-        return CRC32Hasher<T>(key);
+        return hash_crc32<T>(key);
     }
 };
 

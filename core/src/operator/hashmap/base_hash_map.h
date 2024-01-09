@@ -18,37 +18,42 @@
 #include "group_hasher.h"
 #include "memory/memory_pool.h"
 #include "memory/allocator.h"
+#include "null_key_traits.h"
 #include "type/string_ref.h"
 
 /**
- * BaseHashMap contains 7 requirements to notice:
- * 1 hashmap use slot as basic unit, every slot contains (key, value, hash value of key)
- * 2 the key and value of hashmap must support movable,
+ * base_hashmap contains 8 requirements to notice:
+ * 1 hashmap use slot as basic unit, every slot contains (key, value ,hash value of key)
+ * 2 the key and value of hashmap must support movable ,
  * the value must have default constructor and must support copy assign function or move assign function
  * 3 the key must overload operator== function or it is a POD structure
  * 4 the hash function will use std::hash by default if user didn't set hash function in group_hasher.h
- * 5 the hashmap will resize when exceed threshhold in GrowStrategy
- * 6 the Allocator is used to allocate memory for cells, user can define custom allocator as OmniHashmapAllocator does
- * 7 hashmap will call key's and value's deconstructor if necessary
+ * 5 the user-defined NullValueTypeTraits function in null_key_traits.h is used to
+ * determine whether the key of the hashmap is null. hashmap think all key is not null by default ,
+ * but stringref is null when (stringref.size == 0) and pointer is null when (pointer == nullptr)
+ * 6 the hashmap will resize when exceed thresh hold in GrowStrategy
+ * 7 the Allocator is used to allocate memory for cells, user can define custom allocator as OmniHashmapAllocator did
+ * 8 hashmap will call key and value 's deconstruct function in deconstruct function if necessary
  *
  * Basic Usage:
- * DefaultHashMap<uint32, uint32> hashmap;
+ * DefaultHashMap<uint32,uint32> hashmap;
  * auto ret = hash.emplace(key); //or auto ret = hash.emplace(std::move(key));  key is std::unique_ptr<int>
  * if(not ret.IsInserted()){
  * ret.SetValue(value);
  * };
  * hashmap.GetElementsSize();
- * hashmap.ForEachKV(CustomFunction);
+ * hashmap.ForEachKv(CustomFunction);
  */
 
 namespace omniruntime {
 namespace op {
 static const int32_t EIGHT = 8;
-static const double MAX_LOAD_FACTOR = 0.9;
+static const double PROPORTION = 0.9;
 
 /**
- * Basic Unit of Hashmap, Hashmap contains a continuous memory of HashSlots
- * Slot will cache hash value by default to compare value easily.
+ * Basic Unit of Hashmap , Hashmap contains a continuous memory of HashSlots
+ * Slot will cache hash value by default to compare value easily
+ * and isAssigned to
  * @tparam KeyType the key type of hashmap
  * @tparam ValueType the value type of hashmap
  */
@@ -137,14 +142,19 @@ private:
 
 /**
  * A user-defined Allocator must implement 2 functions
- * 1 Allocate(uint64_t size, uint8_t **buffer): allocate @size bytes, and set ret pointer to *buffer
- * 2 Release(uint8_t *buffer): release the memory
+ * 1 Allocate(uint64_t size, uint8_t **buffer)
+ * allocate @size bytes , and set ret pointer to *buffer ,ret allocated size,
+ * *buffer should be set zero
+ * 2 Release(uint8_t *buffer)
+ * release the memory which allocate by Allocator
+ *
  */
 class OmniHashmapAllocator {
 public:
-    OmniHashmapAllocator() : pool(mem::Allocator::GetAllocator()) {}
-
-    ~OmniHashmapAllocator() = default;
+    OmniHashmapAllocator()
+    {
+        pool = mem::Allocator::GetAllocator();
+    }
 
     int Allocate(uint64_t size, uint8_t **buffer)
     {
@@ -160,6 +170,8 @@ public:
     {
         pool->Free((void *)buffer, size);
     }
+
+    ~OmniHashmapAllocator() = default;
 
 private:
     mem::Allocator *pool = nullptr;
@@ -212,14 +224,21 @@ public:
     {
         CalculateThreshold();
     }
-    
+
+    /**
+     * the way to grow the size of hashmap
+     * @return
+     */
     uint64_t GrowSize()
     {
         degree += (degree >= enlargeThreshold ? expandFactoryOne : expandFactoryTwo);
         CalculateThreshold();
         return 1ULL << degree;
     }
-    
+
+    /**
+     * @return allocate byte of hashmap
+     */
     uint64_t GetCurrentSize()
     {
         return 1ULL << degree;
@@ -235,7 +254,7 @@ public:
 private:
     void CalculateThreshold()
     {
-        threshold = static_cast<uint64_t>(std::ceil(static_cast<double>(1ULL << degree) * MAX_LOAD_FACTOR));
+        threshold = static_cast<uint64_t>(std::ceil(static_cast<double>(1ULL << degree) * PROPORTION));
     }
 
     uint64_t threshold = 0;
@@ -277,10 +296,11 @@ template <typename T> ALWAYS_INLINE uint32_t TrailingZeros(T x)
 }
 
 /**
- * An abstraction of a bitmask. It provides an easy way to iterate through the indexes of the set bits of a bitmask.
- * When Shift=0 (platforms with SSE), this is a true bitmask.
- * On non-SSE platforms, the arithmetic used to emulate the SSE behavior works in bytes (Shift=3) and leaves each
- * bytes as either 0x00 or 0x80.
+ * An abstraction over a bitmask. It provides an easy way to iterate through the
+ * indexes of the set bits of a bitmask.  When Shift=0 (platforms with SSE),
+ * this is a true bitmask.  On non-SSE, platforms the arithematic used to
+ * emulate the SSE behavior works in bytes (Shift=3) and leaves each bytes as
+ * either 0x00 or 0x80.
  * For example:
  * for (i : BitMask<uint32_t, 16>(0x5)) -> yields 0, 2
  * for (i : BitMask<uint64_t, 8, 3>(0x0000000080800000)) -> yields 2, 3
@@ -325,7 +345,6 @@ private:
     {
         return left.mask_ == right.mask_;
     }
-
     friend bool operator != (const BitMask &left, const BitMask &right)
     {
         return left.mask_ != right.mask_;
@@ -338,14 +357,14 @@ static const uint32_t SHIFT_DISTANCE_7 = 7;
 using ctrl_t = signed char;
 using h2_t = uint8_t;
 
-ALWAYS_INLINE static size_t H1(size_t hashVal)
+ALWAYS_INLINE static size_t H1(size_t hashval)
 {
-    return (hashVal >> SHIFT_DISTANCE_7);
+    return (hashval >> SHIFT_DISTANCE_7);
 }
 
-ALWAYS_INLINE static h2_t H2(size_t hashVal)
+ALWAYS_INLINE static h2_t H2(size_t hashval)
 {
-    return (h2_t)(ctrl_t)(hashVal & 0x7F);
+    return (h2_t)(ctrl_t)(hashval & 0x7F);
 }
 
 enum Ctrl : ctrl_t {
@@ -455,16 +474,15 @@ struct GroupNeonImpl {
 
     int8x16_t ctrl;
 };
-
 using Group = GroupNeonImpl;
 
 template <size_t Width> class ProbeSeq {
 public:
-    ProbeSeq(size_t hashVal, size_t mask)
+    ProbeSeq(size_t hashval, size_t mask)
     {
         assert(((mask + 1) & mask) == 0 && "not a mask");
         mask_ = mask;
-        offset_ = hashVal & mask_;
+        offset_ = hashval & mask_;
     }
 
     ALWAYS_INLINE size_t GetOffset() const
@@ -491,12 +509,12 @@ private:
 };
 
 /**
- * A SIMD HashMap Implementation
- * @tparam KeyType must have default constructor, which supports move-assign function or copy-assign function
+ * design for group by
+ * @tparam KeyType must have default constructor , must support move-assign function or copy-assign function
  * @tparam ValueType must support movable
- * @tparam HashType hash Algorithm of KeyType
- * @tparam GrowStrategy rehash when size exceed max load factor
- * @tparam Allocator memory allocator
+ * @tparam HashType Hash Algorithm of KeyType
+ * @tparam GrowStrategy Rehash when size exceed (1ULL << degree) * 0.75
+ * @tparam Allocator memory pool
  */
 template <typename KeyType, typename ValueType, typename HashType, typename GrowStrategy, typename Allocator,
     std::enable_if_t<std::is_move_constructible_v<KeyType> && std::is_move_constructible_v<ValueType> &&
@@ -564,11 +582,13 @@ public:
     }
 
     /**
-     * Insert key into hashmap
-     * - if a new key inserted, the key will be copied or moved to create Slot. Caller can check InsertResult to
-     * determine whether need to set value.
-     * - Caller can use this function to update data, too. Just call GetValue function of InsertResult. It will return
-     * value reference.
+     * only allowed insert key , if a new key inserted, the key will be copied or moved to create Slot,
+     * at the same time, empty value will be created in Slot,
+     * and caller can check InsertResult to determine whether need to set value
+     * after caller call SetValue of InsertResult<ValueType> , both the key and value are set finish.
+     *
+     * caller can use this Emplace to Update data too. just call get value by call GetValue function of InsertResult
+     * InsertResult's GetValue function will return value reference, and caller can update the value
      */
     template <typename T,
         std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>>* = nullptr>
@@ -577,7 +597,9 @@ public:
         if (NeedRehash()) {
             Rehash();
         }
-
+        if (IsNullValue(key)) {
+            return EmplaceNullValue(std::forward<T>(key));
+        }
         auto hashValue = CalculateHash(key);
         bool inserted = false;
         auto pos = FindPosition(key, hashValue, inserted);
@@ -817,9 +839,9 @@ private:
         return c < kSentinel;
     }
 
-    ProbeSeq<Group::kWidth> Probe(size_t hashVal) const
+    ProbeSeq<Group::kWidth> Probe(size_t hashval) const
     {
-        return ProbeSeq<Group::kWidth>(H1(hashVal), capacity - 1);
+        return ProbeSeq<Group::kWidth>(H1(hashval), capacity - 1);
     }
 
     size_t FindPosition(const KeyType &key, size_t hashValue, bool &inserted)
@@ -850,6 +872,11 @@ private:
     {
         auto noFlag = false;
         return FindPosition(key, hashValue, noFlag);
+    }
+
+    bool IsNullValue(const KeyType &key)
+    {
+        return NullValueTypeTraits<KeyType>::IsNullValue(key);
     }
 
     // call deconstruct function of every cell
