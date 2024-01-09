@@ -2820,13 +2820,13 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase5)
 
 TEST(NativeOmniSortTest, TestSortRadixSort)
 {
-    std::vector<std::pair<int64_t, int64_t>> dataRanges{{-126, 126}};
+    std::vector<std::pair<int64_t, int64_t>> dataRanges { { -126, 126 } };
     for (int ir = 0; ir < dataRanges.size(); ir++) {
         const int32_t dataSize = 10;
         int32_t data1[dataSize];
         int64_t data2[dataSize];
-        std::vector<std::pair<int32_t, int64_t>>dataCombo(dataSize);
-        int64_t step = (dataRanges[ir].second - dataRanges[ir].first)/dataSize;
+        std::vector<std::pair<int32_t, int64_t>> dataCombo(dataSize);
+        int64_t step = (dataRanges[ir].second - dataRanges[ir].first) / dataSize;
         for (int i = 0; i < dataSize; i++) {
             data1[i] = i;
             data2[i] = dataRanges[ir].first + step * i;
@@ -2840,9 +2840,8 @@ TEST(NativeOmniSortTest, TestSortRadixSort)
         int sortCols[1] = {1};
         int ascendings[1] = {false};
         int nullFirsts[1] = {true};
-        auto operatorFactory =
-                SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2,
-                                                               sortCols, ascendings, nullFirsts, 1);
+        auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
+            ascendings, nullFirsts, 1);
 
         auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
         sortOperator->AddInput(vecBatch);
@@ -2850,7 +2849,7 @@ TEST(NativeOmniSortTest, TestSortRadixSort)
         sortOperator->GetOutput(&outputVecBatch);
 
         // Create expected output
-        std::sort(dataCombo.begin(), dataCombo.end(), [](const auto& a, const auto& b){return a.second > b.second;});
+        std::sort(dataCombo.begin(), dataCombo.end(), [](const auto &a, const auto &b) { return a.second > b.second; });
         int32_t expectData1[dataSize];
         int64_t expectData2[dataSize];
         std::vector<int32_t> nullPosition;

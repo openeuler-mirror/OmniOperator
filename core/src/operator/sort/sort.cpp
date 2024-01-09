@@ -70,10 +70,11 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
         sourceTypes.GetType(0)->GetId() != OMNI_CHAR && sourceTypes.GetType(0)->GetId() != OMNI_BOOLEAN) {
         canInplaceSort = true;
     }
+
+    this->radixSortSizeThreshold = operatorConfig.GetAdaptivityThreshold();
     if (not canInplaceSort) {
         useRadixSort = this->CanUseRadixSort();
     }
-    this->radixSortSizeThreshold = operatorConfig.GetAdaptivityThreshold();
 }
 
 SortOperator::~SortOperator() = default;
@@ -164,7 +165,6 @@ void SortOperator::Sort()
         pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
             positionCount);
     } else if (useRadixSort) {
-        // This includes both radix sort and normal quick sort
         pagesIndex->SortWithRadixSort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
             positionCount);
     } else {
@@ -197,8 +197,7 @@ bool SortOperator::CanUseRadixSort()
 
 bool SortOperator::CanUseRadixSortByRuntimeInfo()
 {
-    return pagesIndex->GetVectorBatchSize() > UINT16_MAX &&
-        pagesIndex->GetRowCount() > radixSortSizeThreshold &&
+    return pagesIndex->GetVectorBatchSize() <= UINT16_MAX && pagesIndex->GetRowCount() > radixSortSizeThreshold &&
         !pagesIndex->HasDictionary(sortCols[0]);
 }
 
@@ -215,7 +214,7 @@ void SortOperator::PrepareOutput()
     if (canInplaceSort) {
         DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(), sortNullFirsts[0]);
     } else if (useRadixSort) {
-        LogDebug("useRadixSort is %d\n", radixSortSizeThreshold);
+        LogDebug("radix Sort size threshold is %d\n", radixSortSizeThreshold);
         switch (sourceTypes.GetType(sortCols[0])->GetId()) {
             case OMNI_LONG:
                 pagesIndex->PrepareRadixSort<OMNI_LONG>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);

@@ -119,13 +119,13 @@ template <DataTypeId typeId>
 void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, const int32_t sortCol)
 {
     using T = typename NativeType<typeId>::type;
-    int32_t vecBatchCount = inputVecBatches.size();
+    size_t vecBatchCount = inputVecBatches.size();
     uint32_t columnCount = this->typesCount;
     this->columns = new BaseVector **[columnCount];
     for (uint32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
         this->columns[colIdx] = new BaseVector *[vecBatchCount];
     }
-    for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+    for (size_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
         VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
         // put vectors to a collector.
         for (uint32_t colIdx = 0; colIdx < columnCount; ++colIdx) {
@@ -146,7 +146,7 @@ void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, c
     bool hasNegative = true;
     if constexpr (typeId == OMNI_LONG) {
         int64_t tmp = 0;
-        for (uint16_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+        for (size_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
             auto *col = static_cast<Vector<T> *>(columns[sortCol][vecBatchIdx]); // only one column
             uint32_t rowCount = inputVecBatches[vecBatchIdx]->GetRowCount();
             for (uint32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
@@ -183,25 +183,43 @@ ALWAYS_INLINE void PagesIndex::FillRadixDataChunk(const int32_t sortCol, const b
         radixComboRow.data() :
         radixComboRow.data() + (positionCount - totalNullCount) * radixRowWidth;
 
-    int32_t vecBatchCount = inputVecBatches.size();
-    for (uint16_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
+    size_t vecBatchCount = inputVecBatches.size();
+    errno_t ret = EOK;
+    for (size_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
         VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
         auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
         auto *col = static_cast<Vector<T> *>(columns[sortCol][vecBatchIdx]); // only one column
-
         for (uint32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
             if constexpr (hasNull) {
                 if (col->IsNull(rowIdx)) {
-                    memcpy_s(nullPtr + radixValueWidth, SHORT_NBYTES, &vecBatchIdx, SHORT_NBYTES);
-                    memcpy_s(nullPtr + radixValueWidth + SHORT_NBYTES, INT_NBYTES, &rowIdx, INT_NBYTES);
+                    ret = memcpy_s(nullPtr + radixValueWidth, SHORT_NBYTES, &vecBatchIdx, SHORT_NBYTES);
+                    if (UNLIKELY(ret != EOK)) {
+                        std::string errStr ="copy radixValue vectorBathIdx error when value is null,"
+                                            "error is " + std::to_string(ret);
+                        throw OmniException("OPERATOR_RUNTIME_ERROR", errStr);
+                    }
+                    ret = memcpy_s(nullPtr + radixValueWidth + SHORT_NBYTES, INT_NBYTES, &rowIdx, INT_NBYTES);
+                    if (UNLIKELY(ret != EOK)) {
+                        std::string errStr = "copy radixValue rowIdx error when value is null,"
+                                             " error is " + std::to_string(ret);
+                        throw OmniException("OPERATOR_RUNTIME_ERROR", errStr);
+                    }
                     nullPtr += radixRowWidth;
                     continue;
                 }
             }
             auto value = col->GetValue(rowIdx);
             *reinterpret_cast<T *>(rowPtr) = value;
-            memcpy_s(rowPtr + radixValueWidth, SHORT_NBYTES, &vecBatchIdx, SHORT_NBYTES);
-            memcpy_s(rowPtr + radixValueWidth + SHORT_NBYTES, INT_NBYTES, &rowIdx, INT_NBYTES);
+            ret = memcpy_s(rowPtr + radixValueWidth, SHORT_NBYTES, &vecBatchIdx, SHORT_NBYTES);
+            if (UNLIKELY(ret != EOK)) {
+                std::string errStr = "copy radixValue vecBatchIdx error , error is " + std::to_string(ret);
+                throw OmniException("OPERATOR_RUNTIME_ERROR", errStr);
+            }
+            ret = memcpy_s(rowPtr + radixValueWidth + SHORT_NBYTES, INT_NBYTES, &rowIdx, INT_NBYTES);
+            if (UNLIKELY(ret != EOK)) {
+                std::string errStr = "copy radixValue rowIdx error , error is " + std::to_string(ret);
+                throw OmniException("OPERATOR_RUNTIME_ERROR", errStr);
+            }
             if constexpr (hasNegative) {
                 rowPtr[signByte] ^= signFlipMask;
             }

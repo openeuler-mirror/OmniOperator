@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: sort implementations
  */
 #ifndef RADIX_SORT_H
@@ -11,17 +11,20 @@
 #include <vector>
 
 using Data_type = uint8_t;
-using DataPtr_type = uint8_t*;
+using DataPtr_type = uint8_t *;
 constexpr uint32_t MSD_RADIX_SORT_SIZE_THRESHOLD = (1 << 20);
 constexpr uint32_t VALUES_PER_RADIX = 256;
 constexpr uint32_t LONG_NBYTES = 8;
 constexpr uint32_t INT_NBYTES = 4;
 constexpr uint32_t SHORT_NBYTES = 2;
-template<bool sortAscending>
+
+template <bool sortAscending>
 void SortWithRemainingBytes(const DataPtr_type origPtr, const DataPtr_type tempPtr,
-    const uint32_t &sortingSize, bool swap, uint32_t rowWidth, std::array<uint32_t, VALUES_PER_RADIX + 1>& locations);
+    const uint32_t &sortingSize, bool swap, uint32_t rowWidth,
+    std::array<uint32_t, VALUES_PER_RADIX + 1> &locations);
+
 // Textbook LSD radix sort
-template<bool sortAscending>
+template <bool sortAscending>
 void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, const uint32_t len,
     const uint32_t &sortingSize, bool swap, uint32_t rowWidth)
 {
@@ -31,7 +34,7 @@ void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, cons
         const DataPtr_type sourcePtr = swap ? tempPtr : dataPtr;
         const DataPtr_type targetPtr = swap ? dataPtr : tempPtr;
         const uint32_t offset = r;
-        /// starting with from-th row
+        // starting with from-th row
         DataPtr_type offsetPtr = sourcePtr + offset;
         for (uint32_t i = 0; i < len; ++i) {
             if constexpr (sortAscending) {
@@ -75,7 +78,7 @@ void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, cons
 }
 
 // MSD radix sort that switches to LSD radix sort with low bucket sizes
-template<bool sortAscending>
+template <bool sortAscending>
 void RadixSortMSD(const DataPtr_type origPtr, const DataPtr_type tempPtr, const uint32_t &len,
     const uint32_t &sortingSize, bool swap, uint32_t rowWidth)
 {
@@ -132,9 +135,10 @@ void RadixSortMSD(const DataPtr_type origPtr, const DataPtr_type tempPtr, const 
     SortWithRemainingBytes<sortAscending>(origPtr, tempPtr, sortingSize, swap, rowWidth, locations);
 }
 
-template<bool sortAscending>
+template <bool sortAscending>
 void SortWithRemainingBytes(const DataPtr_type origPtr, const DataPtr_type tempPtr,
-    const uint32_t &sortingSize, bool swap, uint32_t rowWidth, std::array<uint32_t, VALUES_PER_RADIX + 1>& locations)
+    const uint32_t &sortingSize, bool swap, uint32_t rowWidth,
+    std::array<uint32_t, VALUES_PER_RADIX + 1> &locations)
 {
     // sort with remaining bytes
     uint32_t radixCount = locations[0];
@@ -153,4 +157,4 @@ void SortWithRemainingBytes(const DataPtr_type origPtr, const DataPtr_type tempP
         loc = locations[radix] * rowWidth;
     }
 }
-#endif //#ifndef RADIX_SORT_H
+#endif // #ifndef RADIX_SORT_H

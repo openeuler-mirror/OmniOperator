@@ -70,7 +70,8 @@ public:
         omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset,
         int32_t length) const;
 
-    void GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
+    void GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount,
+        omniruntime::vec::VectorBatch *outputVecBatch,
         const int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
     void GetSortedVecBatches(std::vector<int32_t> &outputCols,
@@ -102,6 +103,7 @@ public:
     {
         return this->columns;
     }
+
     ALWAYS_INLINE bool HasDictionary(uint32_t index) const
     {
         return hasDictionaries[index];
