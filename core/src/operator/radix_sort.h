@@ -44,7 +44,9 @@ void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, cons
         // Compute offsets from counts
         uint32_t maxCount = counts[0];
         for (uint32_t val = 1; val < VALUES_PER_RADIX; ++val) {
-            if (counts[val] > maxCount) maxCount = counts[val];
+            if (counts[val] > maxCount) {
+                maxCount = counts[val];
+            }
             counts[val] = counts[val] + counts[val - 1];
         }
         if (maxCount == len) {
@@ -129,6 +131,7 @@ void RadixSortMSD(const DataPtr_type origPtr, const DataPtr_type tempPtr, const 
     }
     SortWithRemainingBytes<sortAscending>(origPtr, tempPtr, sortingSize, swap, rowWidth, locations);
 }
+
 template<bool sortAscending>
 void SortWithRemainingBytes(const DataPtr_type origPtr, const DataPtr_type tempPtr,
     const uint32_t &sortingSize, bool swap, uint32_t rowWidth, std::array<uint32_t, VALUES_PER_RADIX + 1>& locations)

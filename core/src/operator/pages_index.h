@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: pages index implementations
  */
 #ifndef __PAGES_INDEX_H__
@@ -16,7 +16,6 @@
 
 namespace omniruntime {
 namespace op {
-
 class PagesIndex : public MemoryBuilder {
 public:
     explicit PagesIndex(const DataTypes &types);
@@ -27,35 +26,8 @@ public:
 
     void Prepare();
 
-    template<DataTypeId typeId>
+    template <DataTypeId typeId>
     void PrepareRadixSort(const bool ascending, const bool nullFirst, const int32_t sortCol);
-
-    template<typename T> void GetMaxMinOfColumn(uint32_t colIndex, T& min, T& max, uint32_t rangeUpperBound)
-    {
-        int32_t vecBatchCount = inputVecBatches.size();
-        max = std::numeric_limits<T>::min();
-        min = std::numeric_limits<T>::max();
-        for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
-            VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
-            auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
-            auto vector = vecBatch->Get(colIndex);
-            if (vector->GetEncoding() != OMNI_DICTIONARY) {
-                auto valuePtr = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(vector));
-                const auto [minPtr, maxPtr] = std::minmax_element(valuePtr, valuePtr + rowCount);
-                max = std::max(max, *maxPtr);
-                min = std::min(min, *minPtr);
-                // to prevent max - min overflow
-                if (max > 0 && min < 0 && min + rangeUpperBound < max) {
-                    break;
-                }
-                if (max - min > rangeUpperBound) {
-                    break;
-                }
-            } else {
-                LogError("GetMaxMin won't be used with dictionary type!\n");
-            }
-        }
-    }
 
     template <DataTypeId typeId> void PrepareInplaceSort(int32_t nullFirst)
     {
@@ -86,7 +58,7 @@ public:
         int32_t sortColCount, int32_t from, int32_t to);
 
     void SortWithRadixSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
-              int32_t sortColCount, int32_t from, int32_t to);
+        int32_t sortColCount, int32_t from, int32_t to);
 
     void SortInplace(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
         int32_t sortColCount, int32_t from, int32_t to);
@@ -98,9 +70,8 @@ public:
         omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset,
         int32_t length) const;
 
-    void GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount,
-        omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset,
-        int32_t length) const;
+    void GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
+        const int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
     void GetSortedVecBatches(std::vector<int32_t> &outputCols,
         std::vector<omniruntime::vec::VectorBatch *> &sortedVecBatches, bool canSortInplace = false);
@@ -134,6 +105,11 @@ public:
     ALWAYS_INLINE bool HasDictionary(uint32_t index) const
     {
         return hasDictionaries[index];
+    }
+
+    ALWAYS_INLINE size_t GetVectorBatchSize() const
+    {
+        return inputVecBatches.size();
     }
 
 private:
@@ -203,7 +179,7 @@ private:
         }
     }
 
-    template<DataTypeId typeId, bool hasNull, bool hasNegative>
+    template <DataTypeId typeId, bool hasNull, bool hasNegative>
     ALWAYS_INLINE void FillRadixDataChunk(const int32_t sortCol, const bool nullsFirst);
 
     template <DataTypeId dataTypeId>
@@ -232,9 +208,9 @@ static ALWAYS_INLINE uint64_t EncodeSyntheticAddress(uint32_t sliceIndex, uint32
     return (static_cast<uint64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
 }
 
-static ALWAYS_INLINE std::tuple<uint16_t, uint32_t> CompactDecodeSytheticAddress(const uint8_t* address)
+static ALWAYS_INLINE std::tuple<uint16_t, uint32_t> CompactDecodeSytheticAddress(const uint8_t *address)
 {
-    return {*reinterpret_cast<const uint16_t*>(address), *reinterpret_cast<const uint32_t*>(address + 2)};
+    return { *reinterpret_cast<const uint16_t *>(address), *reinterpret_cast<const uint32_t *>(address + 2) };
 }
 static ALWAYS_INLINE uint32_t DecodeSliceIndex(uint64_t sliceAddress)
 {

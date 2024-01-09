@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: pages index implementations
  */
 #include <algorithm>
@@ -14,7 +14,6 @@ using namespace omniruntime::vec;
 using namespace omniruntime::type;
 
 namespace omniruntime::op {
-
 using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
 using DictionaryVarcharVector = Vector<DictionaryContainer<std::string_view>>;
 
@@ -29,7 +28,7 @@ BaseVector *ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **inpu
 
 template <type::DataTypeId dataTypeId>
 BaseVector *ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length, BaseVector **inputVecBatch, bool hasNull,
-                                     bool hasDictionary, uint32_t radixRowWidth);
+    bool hasDictionary, uint32_t radixRowWidth);
 
 // function implements for class PagesIndex
 PagesIndex::PagesIndex(const DataTypes &types)
@@ -116,7 +115,7 @@ template void PagesIndex::PrepareRadixSort<type::OMNI_SHORT>(const bool a, const
 template void PagesIndex::PrepareRadixSort<type::OMNI_BOOLEAN>(const bool a, const bool n, const int32_t s);
 template void PagesIndex::PrepareRadixSort<type::OMNI_DECIMAL64>(const bool a, const bool n, const int32_t s);
 
-template<DataTypeId typeId>
+template <DataTypeId typeId>
 void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, const int32_t sortCol)
 {
     using T = typename NativeType<typeId>::type;
@@ -170,17 +169,19 @@ void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, c
         FillRadixDataChunk<typeId, true, true>(sortCol, nullsFirst);
     }
 }
-template<DataTypeId typeId, bool hasNull, bool hasNegative>
+
+template <DataTypeId typeId, bool hasNull, bool hasNegative>
 ALWAYS_INLINE void PagesIndex::FillRadixDataChunk(const int32_t sortCol, const bool nullsFirst)
 {
     using T = typename NativeType<typeId>::type;
     uint8_t signFlipMask = 128;
     this->radixComboRow.resize((this->positionCount + 1) * this->radixRowWidth, 0);
     constexpr uint32_t signByte = sizeof(T) - 1;
-    uint8_t* rowPtr = (hasNull && nullsFirst) ?
-            radixComboRow.data() + totalNullCount * radixRowWidth : radixComboRow.data();
-    uint8_t* nullPtr = (hasNull && nullsFirst) ?
-            radixComboRow.data() : radixComboRow.data() + (positionCount - totalNullCount) * radixRowWidth;
+    uint8_t *rowPtr =
+        (hasNull && nullsFirst) ? radixComboRow.data() + totalNullCount * radixRowWidth : radixComboRow.data();
+    uint8_t *nullPtr = (hasNull && nullsFirst) ?
+        radixComboRow.data() :
+        radixComboRow.data() + (positionCount - totalNullCount) * radixRowWidth;
 
     int32_t vecBatchCount = inputVecBatches.size();
     for (uint16_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
@@ -208,6 +209,7 @@ ALWAYS_INLINE void PagesIndex::FillRadixDataChunk(const int32_t sortCol, const b
         }
     }
 }
+
 static bool ALWAYS_INLINE NewOnlyEqualVarChar(int64_t leftValue, uint32_t leftLength, int64_t rightValue,
     uint32_t rightLength)
 {
@@ -1157,20 +1159,20 @@ void PagesIndex::SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32
 }
 
 void PagesIndex::SortWithRadixSort(const int32_t *sortCols, const int32_t *sortAscendings,
-                                   const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to)
+    const int32_t *sortNullFirsts, int32_t sortColCount, int32_t from, int32_t to)
 {
     std::vector<Data_type> tempBlock(positionCount * radixRowWidth);
     uint32_t offset = sortNullFirsts[0] ? totalNullCount * radixRowWidth : 0;
     if (sortAscendings[0]) {
-        RadixSortMSD<true>(radixComboRow.data() + offset, tempBlock.data() + offset,
-                                          positionCount - totalNullCount, radixValueWidth, false, radixRowWidth);
+        RadixSortMSD<true>(radixComboRow.data() + offset, tempBlock.data() + offset, positionCount - totalNullCount,
+            radixValueWidth, false, radixRowWidth);
     } else {
-        RadixSortMSD<false>(radixComboRow.data() + offset, tempBlock.data() + offset,
-                                           positionCount - totalNullCount, radixValueWidth, false, radixRowWidth);
+        RadixSortMSD<false>(radixComboRow.data() + offset, tempBlock.data() + offset, positionCount - totalNullCount,
+            radixValueWidth, false, radixRowWidth);
     }
 }
 
-    
+
 void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
     int32_t sortColCount, int32_t from, int32_t to)
 {
@@ -1220,8 +1222,7 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                outputVecBatch->Append(
-                    ConstructVector<OMNI_LONG>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
+                outputVecBatch->Append(ConstructVector<OMNI_LONG>(vaStart, len, inputVecBatch, hasNull, hasDictionary));
                 break;
             case OMNI_DOUBLE:
                 outputVecBatch->Append(
@@ -1261,36 +1262,35 @@ void PagesIndex::GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount
         switch (colTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
-                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_INT>
-                        (vaStart, length, inputVecBatch, hasNull, hasDictionary, radixRowWidth));
+                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_INT>(vaStart, length, inputVecBatch, hasNull,
+                    hasDictionary, radixRowWidth));
                 break;
             case OMNI_SHORT:
-                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_SHORT>
-                            (vaStart, length, inputVecBatch, hasNull, hasDictionary, radixRowWidth));
+                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_SHORT>(vaStart, length, inputVecBatch, hasNull,
+                    hasDictionary, radixRowWidth));
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_LONG>
-                        (vaStart, length, inputVecBatch, hasNull, hasDictionary, radixRowWidth));
-
+                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_LONG>(vaStart, length, inputVecBatch, hasNull,
+                    hasDictionary, radixRowWidth));
                 break;
             case OMNI_DOUBLE:
-                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_DOUBLE>
-                            (vaStart, length, inputVecBatch, hasNull, hasDictionary, radixRowWidth));
+                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_DOUBLE>(vaStart, length, inputVecBatch, hasNull,
+                    hasDictionary, radixRowWidth));
                 break;
             case OMNI_BOOLEAN:
-                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_BOOLEAN>
-                            (vaStart, length, inputVecBatch, hasNull, hasDictionary, radixRowWidth));
+                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_BOOLEAN>(vaStart, length, inputVecBatch, hasNull,
+                    hasDictionary, radixRowWidth));
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_VARCHAR>
-                            (vaStart, length, inputVecBatch, hasNull, hasDictionary, radixRowWidth));
+                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_VARCHAR>(vaStart, length, inputVecBatch, hasNull,
+                    hasDictionary, radixRowWidth));
                 break;
             }
             case OMNI_DECIMAL128:
-                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_DECIMAL128>
-                            (vaStart, length, inputVecBatch, hasNull, hasDictionary, radixRowWidth));
+                outputVecBatch->Append(ConstructVectorRadixSort<OMNI_DECIMAL128>(vaStart, length, inputVecBatch,
+                    hasNull, hasDictionary, radixRowWidth));
                 break;
             default:
                 break;
@@ -1404,9 +1404,8 @@ NO_INLINE BaseVector *ConstructVector(uint64_t *vaStart, int32_t length, BaseVec
 }
 
 template <type::DataTypeId dataTypeId>
-NO_INLINE BaseVector *ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length,
-                                               BaseVector **inputVecBatch, bool hasNull, bool hasDictionary,
-                                               uint32_t radixRowWidth)
+NO_INLINE BaseVector *ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length, BaseVector **inputVecBatch,
+    bool hasNull, bool hasDictionary, uint32_t radixRowWidth)
 {
     BaseVector *outputVec = nullptr;
     if constexpr (dataTypeId == OMNI_VARCHAR) {
