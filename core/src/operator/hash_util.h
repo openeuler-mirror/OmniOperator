@@ -50,20 +50,8 @@ constexpr int32_t PTR_STEP_2 = 2;
 constexpr int32_t PTR_STEP_3 = 3;
 constexpr int32_t PTR_STEP_4 = 4;
 
-using ctrl_t = signed char;
-using h2_t = uint8_t;
 class HashUtil {
 public:
-    static size_t H1(size_t hashval, const ctrl_t *)
-    {
-        return (hashval >> 7);
-    }
-
-    static h2_t H2(size_t hashval)
-    {
-        return (h2_t)(ctrl_t)(hashval & 0x7F);
-    }
-
     static uint32_t HashArraySize(uint32_t expected, float f);
 
     static ALWAYS_INLINE int64_t HashValue(int32_t value)
