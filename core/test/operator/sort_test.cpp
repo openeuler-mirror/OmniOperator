@@ -2206,8 +2206,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase0)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2238,8 +2238,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase1)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2271,8 +2271,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase2)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2305,8 +2305,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase3)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2340,8 +2340,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase4)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2376,8 +2376,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase5)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2413,8 +2413,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase6)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2470,8 +2470,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase7)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2523,8 +2523,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase8)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2567,8 +2567,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase9)
     int ascendings[2] = { true, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2609,8 +2609,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase1)
     int ascendings[2] = { false, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2644,8 +2644,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase2)
     int ascendings[2] = { false, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2680,8 +2680,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase3)
     int ascendings[2] = { false, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
@@ -2730,8 +2730,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase4)
     int ascendings[2] = { false, true };
     int nullFirsts[2] = { false, false };
 
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-                                                                          ascendings, nullFirsts, 2);
+    auto operatorFactory =
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);

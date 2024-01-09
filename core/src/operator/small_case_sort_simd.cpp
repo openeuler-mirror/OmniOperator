@@ -23,7 +23,7 @@ static double LARGEST_DOUBLE_VEC[2] = {DBL_MAX, DBL_MAX};
 static constexpr int32_t SORTDESCENDING = 0;
 static constexpr int32_t SORTASCENDING = 1;
 
-enum SimdDataType {
+enum class SimdDataType {
     SIMD_DOUBLE,
     SIMD_OTHERS
 };
@@ -37,10 +37,10 @@ template void SmallCaseSortWithoutAddressAsec<long>(int64_t *array, int32_t from
 template void SmallCaseSortWithoutAddressDesc<double>(int64_t *array, int32_t from, int32_t to);
 template void SmallCaseSortWithoutAddressDesc<long>(int64_t *array, int32_t from, int32_t to);
 
-template <class VType, int32_t SortingRule, int32_t DataType>
+template <class VType, int32_t SortingRule, SimdDataType DataType>
 static VType ALWAYS_INLINE Max64(const VType &a, const VType &b)
 {
-    if constexpr (DataType == SIMD_DOUBLE) {
+    if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
         if constexpr (SortingRule == SORTASCENDING) {
             if constexpr (std::is_same_v<VType, int64x2_t>) {
                 uint64x2_t lessThan = vcltq_f64(vreinterpretq_f64_s64(a), vreinterpretq_f64_s64(b));
@@ -78,10 +78,10 @@ static VType ALWAYS_INLINE Max64(const VType &a, const VType &b)
         }
     }
 }
-template <class VType, int32_t SortingRule, int32_t DataType>
+template <class VType, int32_t SortingRule, SimdDataType DataType>
 static VType ALWAYS_INLINE Min64(const VType &a, const VType &b)
 {
-    if constexpr (DataType == SIMD_DOUBLE) {
+    if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
         if constexpr (SortingRule == SORTASCENDING) {
             if constexpr (std::is_same_v<VType, int64x2_t>) {
                 uint64x2_t lessThan = vcltq_f64(vreinterpretq_f64_s64(a), vreinterpretq_f64_s64(b));
@@ -120,7 +120,7 @@ static VType ALWAYS_INLINE Min64(const VType &a, const VType &b)
     }
 }
 
-template <class VType, int32_t SortRule, int32_t DataType> static void ALWAYS_INLINE Sort2(VType &a, VType &b)
+template <class VType, int32_t SortRule, SimdDataType DataType> static void ALWAYS_INLINE Sort2(VType &a, VType &b)
 {
     VType copyA = a;
     a = Min64<VType, SortRule, DataType>(a, b);
@@ -133,7 +133,7 @@ RevertU8x16(uint8x16_t __a)
     return __builtin_shuffle(__a, (uint8x16_t){ 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7 });
 }
 
-template <class VType, class AddrType, int32_t SortRule, int32_t DataType>
+template <class VType, class AddrType, int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort2WithAddr(VType &a, VType &b, AddrType &c, AddrType &d)
 {
     VType copyA = a;
@@ -172,7 +172,8 @@ static uint64x2_t ALWAYS_INLINE ReverseAddrs2(uint64x2_t &v)
     return vreinterpretq_u64_u8(RevertU8x16(copyV));
 }
 
-template <int32_t SortRule, int32_t DataType> static int64x2_t ALWAYS_INLINE SortPair64(int64x2_t a, uint64x2_t &addr)
+template <int32_t SortRule, SimdDataType DataType>
+static int64x2_t ALWAYS_INLINE SortPair64(int64x2_t a, uint64x2_t &addr)
 {
     int64x2_t copyA = a;
     int64x2_t swappedA = ReverseKeys2(a);
@@ -203,7 +204,7 @@ template <class VType> static VType ALWAYS_INLINE LoadAddrDdata(uint64_t *addr)
     }
 }
 
-template <class VType, class AddrType, int32_t SortRule, int32_t DataType>
+template <class VType, class AddrType, int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort8(VType &v0, VType &v1, VType &v2, VType &v3, VType &v4, VType &v5, VType &v6, VType &v7,
     AddrType &vAddr0, AddrType &vAddr1, AddrType &vAddr2, AddrType &vAddr3, AddrType &vAddr4, AddrType &vAddr5,
     AddrType &vAddr6, AddrType &vAddr7)
@@ -234,7 +235,7 @@ static void ALWAYS_INLINE Sort8(VType &v0, VType &v1, VType &v2, VType &v3, VTyp
     Sort2WithAddr<VType, AddrType, SortRule, DataType>(v5, v6, vAddr5, vAddr6);
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Merge8x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4,
     int64x2_t &v5, int64x2_t &v6, int64x2_t &v7, uint64x2_t &vAddr0, uint64x2_t &vAddr1, uint64x2_t &vAddr2,
     uint64x2_t &vAddr3, uint64x2_t &vAddr4, uint64x2_t &vAddr5, uint64x2_t &vAddr6, uint64x2_t &vAddr7)
@@ -247,10 +248,10 @@ static void ALWAYS_INLINE Merge8x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, 
     vAddr5 = ReverseAddrs2(vAddr5);
     v4 = ReverseKeys2(v4);
     vAddr4 = ReverseAddrs2(vAddr4);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v0, v7, vAddr0, vAddr7);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v1, v6, vAddr1, vAddr6);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v2, v5, vAddr2, vAddr5);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v3, v4, vAddr3, vAddr4);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v0, v7, vAddr0, vAddr7);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v1, v6, vAddr1, vAddr6);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v2, v5, vAddr2, vAddr5);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v3, v4, vAddr3, vAddr4);
 
     v3 = ReverseKeys2(v3);
     vAddr3 = ReverseAddrs2(vAddr3);
@@ -260,10 +261,10 @@ static void ALWAYS_INLINE Merge8x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, 
     vAddr7 = ReverseAddrs2(vAddr7);
     v6 = ReverseKeys2(v6);
     vAddr6 = ReverseAddrs2(vAddr6);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v0, v3, vAddr0, vAddr3);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v1, v2, vAddr1, vAddr2);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v4, v7, vAddr4, vAddr7);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v5, v6, vAddr5, vAddr6);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v0, v3, vAddr0, vAddr3);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v1, v2, vAddr1, vAddr2);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v4, v7, vAddr4, vAddr7);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v5, v6, vAddr5, vAddr6);
 
     v1 = ReverseKeys2(v1);
     vAddr1 = ReverseAddrs2(vAddr1);
@@ -273,22 +274,22 @@ static void ALWAYS_INLINE Merge8x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, 
     vAddr5 = ReverseAddrs2(vAddr5);
     v7 = ReverseKeys2(v7);
     vAddr7 = ReverseAddrs2(vAddr7);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v0, v1, vAddr0, vAddr1);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v2, v3, vAddr2, vAddr3);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v4, v5, vAddr4, vAddr5);
-    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule,DataType>(v6, v7, vAddr6, vAddr7);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v0, v1, vAddr0, vAddr1);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v2, v3, vAddr2, vAddr3);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v4, v5, vAddr4, vAddr5);
+    Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v6, v7, vAddr6, vAddr7);
 
-    v0 = SortPair64<SortRule,DataType>(v0, vAddr0);
-    v1 = SortPair64<SortRule,DataType>(v1, vAddr1);
-    v2 = SortPair64<SortRule,DataType>(v2, vAddr2);
-    v3 = SortPair64<SortRule,DataType>(v3, vAddr3);
-    v4 = SortPair64<SortRule,DataType>(v4, vAddr4);
-    v5 = SortPair64<SortRule,DataType>(v5, vAddr5);
-    v6 = SortPair64<SortRule,DataType>(v6, vAddr6);
-    v7 = SortPair64<SortRule,DataType>(v7, vAddr7);
+    v0 = SortPair64<SortRule, DataType>(v0, vAddr0);
+    v1 = SortPair64<SortRule, DataType>(v1, vAddr1);
+    v2 = SortPair64<SortRule, DataType>(v2, vAddr2);
+    v3 = SortPair64<SortRule, DataType>(v3, vAddr3);
+    v4 = SortPair64<SortRule, DataType>(v4, vAddr4);
+    v5 = SortPair64<SortRule, DataType>(v5, vAddr5);
+    v6 = SortPair64<SortRule, DataType>(v6, vAddr6);
+    v7 = SortPair64<SortRule, DataType>(v7, vAddr7);
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
 {
     int32_t i = 0, index = 0;
@@ -304,7 +305,7 @@ static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t
         vAddr[i] = vsetq_lane_u64(*(arrayAddr + (index)), vAddr[i], 0);
 
         if constexpr (SortRule == SORTDESCENDING) {
-            if constexpr (DataType == SIMD_DOUBLE) {
+            if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
                 v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&SMALLEST_DOUBLE)), v[i], 1);
                 for (int32_t p = 7; p > i; p--) {
                     v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(SMALLEST_DOUBLE_VEC));
@@ -316,7 +317,7 @@ static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t
                 }
             }
         } else {
-            if constexpr (DataType == SIMD_DOUBLE) {
+            if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
                 v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&LARGEST_DOUBLE)), v[i], 1);
                 for (int32_t p = 7; p > i; p--) {
                     v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(LARGEST_DOUBLE_VEC));
@@ -330,7 +331,7 @@ static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t
         }
     } else {
         if constexpr (SortRule == SORTDESCENDING) {
-            if constexpr (DataType == SIMD_DOUBLE) {
+            if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
                 for (int32_t p = 7; p >= i; p--) {
                     v[p] = vld1q_dup_s64(reinterpret_cast<int64_t*>(SMALLEST_DOUBLE_VEC));
                 }
@@ -340,7 +341,7 @@ static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t
                 }
             }
         } else {
-            if constexpr (DataType == SIMD_DOUBLE) {
+            if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
                 for (int32_t p = 7; p >= i; p--) {
                     v[p] = vld1q_dup_s64(reinterpret_cast<int64_t*>(LARGEST_DOUBLE_VEC));
                 }
@@ -365,7 +366,7 @@ static void ALWAYS_INLINE Sort8Rows(int64_t *array, uint64_t *arrayAddr, int32_t
     }
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort16(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4,
     int64x2_t &v5, int64x2_t &v6, int64x2_t &v7, int64x2_t &v8, int64x2_t &v9, int64x2_t &va, int64x2_t &vb,
     int64x2_t &vc, int64x2_t &vd, int64x2_t &ve, int64x2_t &vf, uint64x2_t &vAddr0, uint64x2_t &vAddr1,
@@ -435,7 +436,7 @@ static void ALWAYS_INLINE Sort16(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, in
     Sort2WithAddr<int64x2_t, uint64x2_t, SortRule, DataType>(v8, v9, vAddr8, vAddr9);
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Merge16x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, int64x2_t &v4,
     int64x2_t &v5, int64x2_t &v6, int64x2_t &v7, int64x2_t &v8, int64x2_t &v9, int64x2_t &va, int64x2_t &vb,
     int64x2_t &vc, int64x2_t &vd, int64x2_t &ve, int64x2_t &vf, uint64x2_t &vAddr0, uint64x2_t &vAddr1,
@@ -558,7 +559,7 @@ static void ALWAYS_INLINE Merge16x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2,
     vf = SortPair64<SortRule, DataType>(vf, vAddrf);
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort16Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
 {
     int32_t i = 0, index = 0;
@@ -569,7 +570,7 @@ static void ALWAYS_INLINE Sort16Rows(int64_t *array, uint64_t *arrayAddr, int32_
         vAddr[i] = vld1q_u64(arrayAddr + index);
     }
     // Consider whether it is a multiple of 2
-    if constexpr (DataType == SIMD_DOUBLE) {
+    if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
         if (dataLen % 2 != 0) {
             v[i] = vsetq_lane_s64(*(array + (index)), v[i], 0);
             vAddr[i] = vsetq_lane_u64(*(arrayAddr + (index)), vAddr[i], 0);
@@ -640,7 +641,7 @@ static void ALWAYS_INLINE Sort16Rows(int64_t *array, uint64_t *arrayAddr, int32_
     }
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort2Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
 {
     int64x1_t v0 = LoadDdata<int64x1_t>(array);
@@ -654,7 +655,7 @@ static void ALWAYS_INLINE Sort2Rows(int64_t *array, uint64_t *arrayAddr, int32_t
     vst1_u64(arrayAddr + 1, vAddr1);
 }
 
-template <class VType, class AddrType, int32_t SortRule, int32_t DataType>
+template <class VType, class AddrType, int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort4(VType &v0, VType &v1, VType &v2, VType &v3, AddrType &vAddr0, AddrType &vAddr1,
     AddrType &vAddr2, AddrType &vAddr3)
 {
@@ -665,7 +666,7 @@ static void ALWAYS_INLINE Sort4(VType &v0, VType &v1, VType &v2, VType &v3, Addr
     Sort2WithAddr<VType, AddrType, SortRule, DataType>(v1, v2, vAddr1, vAddr2);
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Merge4x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, int64x2_t &v3, uint64x2_t &vAddr0,
     uint64x2_t &vAddr1, uint64x2_t &vAddr2, uint64x2_t &vAddr3)
 {
@@ -691,7 +692,7 @@ static void ALWAYS_INLINE Merge4x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2, 
     v3 = SortPair64<SortRule, DataType>(v3, vAddr3);
 }
 
-template <int32_t SortRule, int32_t DataType> static int64x2_t ALWAYS_INLINE SortPair64WithoutAddr(int64x2_t a)
+template <int32_t SortRule, SimdDataType DataType> static int64x2_t ALWAYS_INLINE SortPair64WithoutAddr(int64x2_t a)
 {
     int64x2_t swappedA = ReverseKeys2(a);
     Sort2<int64x2_t, SortRule, DataType>(a, swappedA);
@@ -699,7 +700,7 @@ template <int32_t SortRule, int32_t DataType> static int64x2_t ALWAYS_INLINE Sor
     return c;
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Merge3x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
 {
     v2 = ReverseKeys2(v2);
@@ -711,7 +712,7 @@ static void ALWAYS_INLINE Merge3x2(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
     v2 = SortPair64WithoutAddr<SortRule, DataType>(v2);
 }
 
-template <int32_t SortRule, int32_t DataType>
+template <int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort3(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
 {
     Sort2<int64x2_t, SortRule, DataType>(v0, v2);
@@ -719,7 +720,7 @@ static void ALWAYS_INLINE Sort3(int64x2_t &v0, int64x2_t &v1, int64x2_t &v2)
     Sort2<int64x2_t, SortRule, DataType>(v1, v2);
 }
 
-template <int32_t SortRule, int32_t DataType> static void ALWAYS_INLINE Sort3Rows(int64_t *array, int32_t dataLen)
+template <int32_t SortRule, SimdDataType DataType> static void ALWAYS_INLINE Sort3Rows(int64_t *array, int32_t dataLen)
 {
     int64x2_t v[3];
     for (int32_t i = 0, index = 0; index + 2 <= dataLen; i++, index += 2) {
@@ -732,7 +733,7 @@ template <int32_t SortRule, int32_t DataType> static void ALWAYS_INLINE Sort3Row
     }
 }
 
-template <class VType, int32_t SortRule, int32_t DataType>
+template <class VType, int32_t SortRule, SimdDataType DataType>
 static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t dataLen)
 {
     if constexpr (std::is_same_v<VType, int64x1_t>) {
@@ -744,7 +745,7 @@ static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t
         uint64x1_t v1Addr = LoadAddrDdata<uint64x1_t>(arrayAddr + 1);
         uint64x1_t v2Addr = LoadAddrDdata<uint64x1_t>(arrayAddr + 2);
         uint64x1_t v3Addr;
-        if constexpr (DataType == SIMD_DOUBLE) {
+        if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
             if (dataLen == 3) {
                 if constexpr (SortRule == SORTASCENDING) {
                     v3 = vset_lane_s64(*(reinterpret_cast<int64_t *>(&LARGEST_DOUBLE)), v3, 0);
@@ -791,7 +792,7 @@ static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t
             v[i] = vsetq_lane_s64(*(array + (index)), v[i], 0);
             vAddr[i] = vsetq_lane_u64(*(arrayAddr + (index)), vAddr[i], 0);
             if constexpr (SortRule == SORTDESCENDING) {
-                if constexpr (DataType == SIMD_DOUBLE) {
+                if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
                     v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&SMALLEST_DOUBLE)), v[i], 1);
                     for (int32_t p = 3; p > i; p--) {
                         v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(SMALLEST_DOUBLE_VEC));
@@ -803,7 +804,7 @@ static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t
                     }
                 }
             } else {
-                if constexpr (DataType == SIMD_DOUBLE) {
+                if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
                     v[i] = vsetq_lane_s64(*(reinterpret_cast<int64_t *>(&LARGEST_DOUBLE)), v[i], 1);
                     for (int32_t p = 3; p > i; p--) {
                         v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(LARGEST_DOUBLE_VEC));
@@ -816,7 +817,7 @@ static void ALWAYS_INLINE Sort4Rows(int64_t *array, uint64_t *arrayAddr, int32_t
                 }
             }
         } else {
-            if constexpr (DataType == SIMD_DOUBLE) {
+            if constexpr (DataType == SimdDataType::SIMD_DOUBLE) {
                 if constexpr (SortRule == SORTDESCENDING) {
                     for (int32_t p = 3; p >= i; p--) {
                         v[p] = vld1q_dup_s64(reinterpret_cast<int64_t *>(SMALLEST_DOUBLE_VEC));
@@ -860,47 +861,54 @@ static uint32_t ALWAYS_INLINE GenFuncId(uint32_t arrLen)
 
 using SmallCaseSortFunc = void (*)(int64_t *, uint64_t *, int32_t);
 
-static std::vector<SmallCaseSortFunc> smallCaseSortFuncsAsec = { nullptr,
-                                                                 Sort2Rows<SORTASCENDING, SIMD_OTHERS>,
-                                                                 Sort4Rows<int64x1_t, SORTASCENDING, SIMD_OTHERS>,
-                                                                 Sort4Rows<int64x2_t, SORTASCENDING, SIMD_OTHERS>,
-                                                                 Sort8Rows<SORTASCENDING, SIMD_OTHERS>,
-                                                                 Sort16Rows<SORTASCENDING, SIMD_OTHERS> };
-static std::vector<SmallCaseSortFunc> smallCaseSortFuncsDesc = { nullptr,
-                                                                 Sort2Rows<SORTDESCENDING, SIMD_OTHERS>,
-                                                                 Sort4Rows<int64x1_t, SORTDESCENDING, SIMD_OTHERS>,
-                                                                 Sort4Rows<int64x2_t, SORTDESCENDING, SIMD_OTHERS>,
-                                                                 Sort8Rows<SORTDESCENDING, SIMD_OTHERS>,
-                                                                 Sort16Rows<SORTDESCENDING, SIMD_OTHERS> };
-static std::vector<SmallCaseSortFunc> smallCaseSortFuncsAsecDouble = { nullptr,
-                                                                       Sort2Rows<SORTASCENDING, SIMD_DOUBLE>,
-                                                                       Sort4Rows<int64x1_t, SORTASCENDING, SIMD_DOUBLE>,
-                                                                       Sort4Rows<int64x2_t, SORTASCENDING, SIMD_DOUBLE>,
-                                                                       Sort8Rows<SORTASCENDING, SIMD_DOUBLE>,
-                                                                       Sort16Rows<SORTASCENDING, SIMD_DOUBLE> };
-static std::vector<SmallCaseSortFunc> smallCaseSortFuncsDescDouble = { nullptr,
-                                                                       Sort2Rows<SORTDESCENDING, SIMD_DOUBLE>,
-                                                                       Sort4Rows<int64x1_t, SORTDESCENDING, SIMD_DOUBLE>,
-                                                                       Sort4Rows<int64x2_t, SORTDESCENDING, SIMD_DOUBLE>,
-                                                                       Sort8Rows<SORTDESCENDING, SIMD_DOUBLE>,
-                                                                       Sort16Rows<SORTDESCENDING, SIMD_DOUBLE> };
+static std::vector<SmallCaseSortFunc> smallCaseSortFuncsAsec = {
+    nullptr,
+    Sort2Rows<SORTASCENDING, SimdDataType::SIMD_OTHERS>,
+    Sort4Rows<int64x1_t, SORTASCENDING, SimdDataType::SIMD_OTHERS>,
+    Sort4Rows<int64x2_t, SORTASCENDING, SimdDataType::SIMD_OTHERS>,
+    Sort8Rows<SORTASCENDING, SimdDataType::SIMD_OTHERS>,
+    Sort16Rows<SORTASCENDING, SimdDataType::SIMD_OTHERS>
+};
+static std::vector<SmallCaseSortFunc> smallCaseSortFuncsDesc = {
+    nullptr,
+    Sort2Rows<SORTDESCENDING, SimdDataType::SIMD_OTHERS>,
+    Sort4Rows<int64x1_t, SORTDESCENDING, SimdDataType::SIMD_OTHERS>,
+    Sort4Rows<int64x2_t, SORTDESCENDING, SimdDataType::SIMD_OTHERS>,
+    Sort8Rows<SORTDESCENDING, SimdDataType::SIMD_OTHERS>,
+    Sort16Rows<SORTDESCENDING, SimdDataType::SIMD_OTHERS>
+};
+static std::vector<SmallCaseSortFunc> smallCaseSortFuncsAsecDouble = {
+    nullptr,
+    Sort2Rows<SORTASCENDING, SimdDataType::SIMD_DOUBLE>,
+    Sort4Rows<int64x1_t, SORTASCENDING, SimdDataType::SIMD_DOUBLE>,
+    Sort4Rows<int64x2_t, SORTASCENDING, SimdDataType::SIMD_DOUBLE>,
+    Sort8Rows<SORTASCENDING, SimdDataType::SIMD_DOUBLE>,
+    Sort16Rows<SORTASCENDING, SimdDataType::SIMD_DOUBLE>
+};
+static std::vector<SmallCaseSortFunc> smallCaseSortFuncsDescDouble = {
+    nullptr,
+    Sort2Rows<SORTDESCENDING, SimdDataType::SIMD_DOUBLE>,
+    Sort4Rows<int64x1_t, SORTDESCENDING, SimdDataType::SIMD_DOUBLE>,
+    Sort4Rows<int64x2_t, SORTDESCENDING, SimdDataType::SIMD_DOUBLE>,
+    Sort8Rows<SORTDESCENDING, SimdDataType::SIMD_DOUBLE>,
+    Sort16Rows<SORTDESCENDING, SimdDataType::SIMD_DOUBLE>
+};
 
 // This interface is used when the array length is 6.
 template <class RawDataType> void SmallCaseSortWithoutAddressAsec(int64_t *array, int32_t from, int32_t to)
 {
     if constexpr (std::is_same_v<RawDataType, double>) {
-        Sort3Rows<1, SIMD_DOUBLE>(array + from, 6);
+        Sort3Rows<1, SimdDataType::SIMD_DOUBLE>(array + from, 6);
     } else {
-        Sort3Rows<1, SIMD_OTHERS>(array + from, 6);
+        Sort3Rows<1, SimdDataType::SIMD_OTHERS>(array + from, 6);
     }
-
 }
 template <class RawDataType> void SmallCaseSortWithoutAddressDesc(int64_t *array, int32_t from, int32_t to)
 {
     if constexpr (std::is_same_v<RawDataType, double>) {
-        Sort3Rows<0, SIMD_DOUBLE>(array + from, 6);
+        Sort3Rows<0, SimdDataType::SIMD_DOUBLE>(array + from, 6);
     } else {
-        Sort3Rows<0, SIMD_OTHERS>(array + from, 6);
+        Sort3Rows<0, SimdDataType::SIMD_OTHERS>(array + from, 6);
     }
 }
 template <class RawDataType> void SmallCaseSortAsec(int64_t *array, uint64_t *address, int32_t from, int32_t to)
