@@ -57,9 +57,9 @@ using DecimalSumState = struct DecimalSumState {
 };
 
 using FirstState = struct FirstState {
-    void *val;
-    bool valIsNull;
-    bool valueSet;
+    void *val = nullptr;
+    bool valIsNull = true;
+    bool valueSet = false;
 };
 
 // Avg decimal and overflow is decode/encode in continuous memory
@@ -209,7 +209,7 @@ public:
         LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
 #endif
         int32_t rowIndex = rowOffset;
-        size_t rowCount = rowStates.size();
+        auto rowCount = static_cast<int32_t>(rowStates.size());
         bool needFilterJude = false;
 
         auto booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
@@ -221,7 +221,7 @@ public:
         }
 
         if (needFilterJude) {
-            for (size_t i = 0; i < rowCount; ++i) {
+            for (int32_t i = 0; i < rowCount; ++i) {
                 if (booleanVector->GetValue(i)) {
                     ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
                     continue;
@@ -229,7 +229,7 @@ public:
                 rowIndex++;
             }
         } else {
-            for (size_t i = 0; i < rowCount; ++i) {
+            for (int32_t i = 0; i < rowCount; ++i) {
                 ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
             }
         }

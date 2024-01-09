@@ -177,19 +177,39 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateFirstAggregatorHelper(
 {
     if (inputRaw) {
         if (outputPartial) {
-            return std::make_unique<FirstAggregator<true, true, InputType>>(aggregateType, inputTypes, outputTypes,
-                channels, inputRaw, outputPartial, isOverflowAsNull);
+            if (aggregateType == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
+                return std::make_unique<FirstAggregator<true, true, true, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<FirstAggregator<true, true, false, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
         } else {
-            return std::make_unique<FirstAggregator<true, false, InputType>>(aggregateType, inputTypes, outputTypes,
-                channels, inputRaw, outputPartial, isOverflowAsNull);
+            if (aggregateType == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
+                return std::make_unique<FirstAggregator<true, false, true, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<FirstAggregator<true, false, false, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
         }
     } else {
         if (outputPartial) {
-            return std::make_unique<FirstAggregator<false, true, InputType>>(aggregateType, inputTypes, outputTypes,
-                channels, inputRaw, outputPartial, isOverflowAsNull);
+            if (aggregateType == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
+                return std::make_unique<FirstAggregator<false, true, true, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<FirstAggregator<false, true, false, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
         } else {
-            return std::make_unique<FirstAggregator<false, false, InputType>>(aggregateType, inputTypes, outputTypes,
-                channels, inputRaw, outputPartial, isOverflowAsNull);
+            if (aggregateType == OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
+                return std::make_unique<FirstAggregator<false, false, true, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            } else {
+                return std::make_unique<FirstAggregator<false, false, false, InputType>>(aggregateType, inputTypes,
+                    outputTypes, channels, inputRaw, outputPartial, isOverflowAsNull);
+            }
         }
     }
 }
@@ -228,6 +248,11 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
         case OMNI_DECIMAL128: {
             return CreateFirstAggregatorHelper<Decimal128>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, isOverflowAsNull);
+        }
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
+            return CreateFirstAggregatorHelper<std::string_view>(aggregateType, inputTypes, outputTypes, channels,
+                inputRaw, outputPartial, isOverflowAsNull);
         }
         default: {
             std::string omniExceptionInfo =

@@ -314,34 +314,33 @@ void WindowOperator::InitResultVectors(VectorBatch *&vecBatchField, const int32_
         auto &type = outputTypes[colIndex];
         switch (type->GetId()) {
             case OMNI_BOOLEAN:
-                vecBatchField->Append(std::make_unique<Vector<bool>>(rowCountField).release());
+                vecBatchField->Append(new Vector<bool>(rowCountField));
                 break;
             case OMNI_INT:
             case OMNI_DATE32: {
-                vecBatchField->Append(std::make_unique<Vector<int32_t>>(rowCountField).release());
+                vecBatchField->Append(new Vector<int32_t>(rowCountField));
                 break;
             }
             case OMNI_LONG:
             case OMNI_DECIMAL64: {
-                vecBatchField->Append(std::make_unique<Vector<int64_t>>(rowCountField).release());
+                vecBatchField->Append(new Vector<int64_t>(rowCountField));
                 break;
             }
             case OMNI_DOUBLE: {
-                vecBatchField->Append(std::make_unique<Vector<double>>(rowCountField).release());
+                vecBatchField->Append(new Vector<double>(rowCountField));
                 break;
             }
             case OMNI_SHORT: {
-                vecBatchField->Append(std::make_unique<Vector<int16_t>>(rowCountField).release());
+                vecBatchField->Append(new Vector<int16_t>(rowCountField));
                 break;
             }
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                vecBatchField->Append(
-                    std::make_unique<Vector<LargeStringContainer<std::string_view>>>(rowCountField).release());
+                vecBatchField->Append(new Vector<LargeStringContainer<std::string_view>>(rowCountField));
                 break;
             }
             case OMNI_DECIMAL128: {
-                vecBatchField->Append(std::make_unique<Vector<Decimal128>>(rowCountField).release());
+                vecBatchField->Append(new Vector<Decimal128>(rowCountField));
                 break;
             }
             default: {
