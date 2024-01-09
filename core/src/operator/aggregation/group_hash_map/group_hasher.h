@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
  */
 
 #ifndef OMNI_RUNTIME_GROUP_HASHER_H
@@ -7,7 +7,6 @@
 #include <operator/hash_util.h>
 #include <type/string_ref.h>
 #include <functional>
-
 namespace omniruntime {
 namespace op {
 template <class T> struct GroupbyHashCalculator {

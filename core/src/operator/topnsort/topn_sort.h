@@ -7,9 +7,9 @@
 
 #include "operator/operator_factory.h"
 #include "operator/topn/topn.h"
-#include "operator/hashmap/base_hash_map.h"
+#include "operator/aggregation/group_hash_map/group_hash_map.h"
 #include "type/string_ref.h"
-#include "operator/hashmap/vector_marshaller.h"
+#include "operator/aggregation/vector_marshaller.h"
 
 namespace omniruntime::op {
 using GetValueFunc = void *(*)(vec::BaseVector *inputVec, int32_t inputPos, int32_t &length);

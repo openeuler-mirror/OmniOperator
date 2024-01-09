@@ -1,106 +1,84 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: hash builder implementations
  */
 #include "hash_builder.h"
 #include <vector>
 #include <memory>
+#include "join_hash_table.h"
+#include "operator/pages_hash_strategy.h"
 
 namespace omniruntime {
 namespace op {
-HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
-    const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
-    : buildTypes(buildTypes),
-      buildHashCols(std::vector<int32_t>(buildHashCols, buildHashCols + buildHashColsCount)),
-      hashTableCount(operatorCount),
-      operatorIndex(0)
+HashBuilderOperatorFactory::HashBuilderOperatorFactory(const DataTypes &buildTypes, const int32_t *buildHashCols,
+    int32_t buildHashColsCount, int32_t operatorCount)
+    : buildTypes(buildTypes), hashTableCount(operatorCount), operatorIndex(0)
 {
     if (operatorCount <= 0 || operatorCount > 10000) {
         throw OmniException("OPERATOR_RUNTIME_ERROR", "operatorCount is not in the acceptable range [1, 10000].");
     }
-    bool useRowRefList = (joinType == OMNI_JOIN_TYPE_INNER || joinType == OMNI_JOIN_TYPE_LEFT ||
-        joinType == OMNI_JOIN_TYPE_LEFT_SEMI || joinType == OMNI_JOIN_TYPE_LEFT_ANTI);
-    if (useRowRefList) {
-        hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType);
-    } else {
-        hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType);
-    }
+    this->buildHashCols.insert(this->buildHashCols.end(), buildHashCols, buildHashCols + buildHashColsCount);
+    this->hashTables = new JoinHashTables(operatorCount);
+    this->hashTables->SetBuildTypes(&(this->buildTypes));
 }
 
-template <class RowRefListType>
-HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashColsCount, int32_t operatorCount,
-    JoinType joinType)
+HashBuilderOperatorFactory::~HashBuilderOperatorFactory()
 {
-    if (buildHashColsCount == 1) {
-        auto type = buildTypes.GetIds()[buildHashCols[0]];
-        switch (type) {
-            case OMNI_BOOLEAN:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<int8_t, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
-            case OMNI_INT:
-            case OMNI_DATE32:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<int32_t, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
-            case OMNI_LONG:
-            case OMNI_DECIMAL64:
-            case OMNI_DOUBLE:
-            case OMNI_DATE64:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<int64_t, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
-            case OMNI_SHORT:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<int16_t, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
-            case OMNI_DECIMAL128:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<Decimal128, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
-            default:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<StringRef, RowRefListType>>,
-                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
-        }
-    } else {
-        return new HashTableVariants { std::in_place_type<JoinHashTableVariants<StringRef, RowRefListType>>,
-            operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
-    }
+    delete this->hashTables;
 }
 
-HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(JoinType joinType,
-    const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
+HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(const DataTypes &dataTypes,
+    const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
 {
-    return new HashBuilderOperatorFactory(joinType, buildTypes, buildHashCols, buildHashColsCount, operatorCount);
+    return new HashBuilderOperatorFactory(dataTypes, buildHashCols, buildHashColsCount, operatorCount);
 }
 
 Operator *HashBuilderOperatorFactory::CreateOperator()
 {
-    int32_t partitionIndex =
-        operatorIndex++ % std::visit([&](auto &&arg) { return arg.GetHashTableCount(); }, *hashTablesVariants);
-    return new HashBuilderOperator(this->buildTypes, hashTablesVariants, partitionIndex);
+    std::unique_ptr<PagesIndex> pagesIndex = std::make_unique<PagesIndex>(buildTypes);
+    int32_t partitionIndex = operatorIndex++ % hashTables->GetHashTableCount();
+
+    return new HashBuilderOperator(buildTypes, buildHashCols, hashTables, partitionIndex, pagesIndex);
 }
 
-HashBuilderOperator::HashBuilderOperator(const DataTypes &buildTypes, HashTableVariants *hashTables,
-    int32_t partitionIndex)
-    : buildTypes(buildTypes), partitionIndex(partitionIndex), hashTablesVariants(hashTables)
+HashBuilderOperator::HashBuilderOperator(const DataTypes &buildTypes, std::vector<int32_t> &buildHashCols,
+    JoinHashTables *hashTables, int32_t partitionIndex, std::unique_ptr<PagesIndex> &pagesIndex)
+    : buildTypes(buildTypes),
+      buildHashCols(buildHashCols),
+      hashTables(hashTables),
+      partitionIndex(partitionIndex),
+      pagesIndex(std::move(pagesIndex))
 {}
+
+HashBuilderOperator::~HashBuilderOperator()
+{
+    delete hashTables->GetHashTable(partitionIndex);
+}
 
 int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
-    std::visit([&](auto &&arg) { arg.AddVecBatch(partitionIndex, vecBatch); }, *hashTablesVariants);
+    pagesIndex->AddVecBatch(vecBatch);
     return 0;
 }
 
 int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
-    std::visit(
-        [&](auto &&arg) {
-            arg.Prepare(partitionIndex);
-            arg.BuildHashTable(partitionIndex);
-        },
-        *hashTablesVariants);
+    // add vecBatches into PagesIndex
+    pagesIndex->Prepare();
+
+    // build JoinHashTable
+    auto pagesHashStrategy =
+        new PagesHashStrategy(pagesIndex->GetColumns(), buildTypes, buildHashCols.data(), buildHashCols.size());
+    auto joinHashTable =
+        new JoinHashTable(pagesHashStrategy, pagesIndex->GetValueAddresses(), pagesIndex->GetRowCount());
+    hashTables->AddHashTable(partitionIndex, joinHashTable);
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
 OmniStatus HashBuilderOperator::Close()
 {
+    pagesIndex->Clear();
     return OMNI_STATUS_NORMAL;
 }
 } // end of op
