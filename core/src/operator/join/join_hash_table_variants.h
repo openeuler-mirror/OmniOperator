@@ -9,13 +9,13 @@
 #include <variant>
 #include <vector>
 
-#include "row_ref.h"
 #include "operator/hashmap/crc_hasher.h"
-#include "type/data_types.h"
 #include "operator/hashmap/base_hash_map.h"
 #include "operator/hashmap/array_map.h"
 #include "operator/hashmap/column_marshaller.h"
+#include "type/data_types.h"
 #include "common_join.h"
+#include "row_ref.h"
 
 namespace omniruntime {
 namespace op {
@@ -25,9 +25,6 @@ using JoinHashMap =
 
 template <typename KeyType, typename RowRefListType>
 using JoinHashTableVariant = ColumnSerializeHandler<JoinHashMap<KeyType, RowRefListType *>>;
-
-constexpr uint32_t BLOCK_SIZE = 1024;
-constexpr uint8_t MIN_DEGREE = 5;
 
 enum class HashTableImplementationType {
     NORMAL_HASH_TABLE,
@@ -165,17 +162,17 @@ private:
 
     template <typename HashTableType>
     void EmplaceVariableKey(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch,
-        int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum, std::vector<bool> &isNotNullKeys,
+        int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum, std::vector<int8_t> &isNotNullKeys,
         std::vector<size_t> &hashes, std::vector<KeyType> &tryRes);
 
     template <typename HashTableType>
     void EmplaceVariableNotNullKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex,
         VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum,
-        std::vector<bool> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes);
+        std::vector<int8_t> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes);
 
     template <typename HashTableType>
     void EmplaceVariableKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch,
-        int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum, std::vector<bool> &isNotNullKeys,
+        int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum, std::vector<int8_t> &isNotNullKeys,
         std::vector<size_t> &hashes, std::vector<KeyType> &tryRes);
 
     uint32_t hashTableCount;            // the number of hashTables will be built
