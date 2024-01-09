@@ -5,7 +5,7 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "operator/union/union.h"
-#include "operator/hashmap/base_hash_map.h"
+#include "operator/aggregation/group_hash_map/group_hash_map.h"
 
 #define MUST_CARE_RET [[nodiscard]]
 
@@ -175,7 +175,7 @@ public:
     }
     bool operator == (const NotPodSharedClass &o) const
     {
-        return Get0() == o.Get0() && std::abs(Get1() - o.Get1()) < DBL_EPSILON && Get2() == o.Get2();
+        return Get0() == o.Get0() && Get1() - o.Get1() < DBL_EPSILON && Get2() == o.Get2();
     }
 
 private:
@@ -267,12 +267,12 @@ template <typename T> struct GroupbyHashCalculator<std::unique_ptr<T>> {
 
 namespace HashMapTest {
 /**
- * test for base hashmap , only key > 0
+ * test for group by hashmap , only key > 0
  * and value is the key of insert time, current insert time is 5;
  * check size of GetElementsSize
  * call ForEachKV to verify all kv
  */
-TEST(BaseHashMapTest, TestUIntUIntPairNoNullEmplace)
+TEST(GroupByHashMapTest, TestUIntUIntPairNoNullEmplace)
 {
     constexpr uint32_t testTotal = 10000;
     constexpr uint32_t insertTime = 5;
@@ -302,7 +302,7 @@ TEST(BaseHashMapTest, TestUIntUIntPairNoNullEmplace)
     hashMap.ForEachKV([&](const uint32_t &key, const uint32_t &value) { EXPECT_EQ(value, insertTime); });
 }
 
-TEST(BaseHashMapTest, OnlyNullEmplace)
+TEST(GroupByHashMapTest, OnlyNullEmplace)
 {
     omniruntime::op::DefaultHashMap<uint32_t, uint32_t> hashMap;
 
@@ -311,7 +311,7 @@ TEST(BaseHashMapTest, OnlyNullEmplace)
     {
         auto ret = hashMap.Emplace(nullInt);
         EXPECT_TRUE(ret.IsInsert());
-        EXPECT_TRUE(hashMap.HasNullCell());
+        EXPECT_TRUE(hashMap.HasNullSlot());
         ret.SetValue(1);
     }
     // the hashmap only contains null key
@@ -326,7 +326,7 @@ TEST(BaseHashMapTest, OnlyNullEmplace)
     EXPECT_EQ(hashMap.GetElementsSize(), 1);
 }
 
-TEST(BaseHashMapTest, TestUIntUIntPairWithNullEmplace)
+TEST(GroupByHashMapTest, TestUIntUIntPairWithNullEmplace)
 {
     omniruntime::op::DefaultHashMap<uint32_t, uint32_t> hashMap;
 
@@ -352,7 +352,7 @@ TEST(BaseHashMapTest, TestUIntUIntPairWithNullEmplace)
 
     // verify total size and null cell
     EXPECT_EQ(hashMap.GetElementsSize(), testTotal);
-    EXPECT_TRUE(hashMap.HasNullCell());
+    EXPECT_TRUE(hashMap.HasNullSlot());
 
     // verify every cell' value by ForEachKV
 
@@ -364,7 +364,7 @@ TEST(BaseHashMapTest, TestUIntUIntPairWithNullEmplace)
  * but use non-POD structure not pointer to implement
  * hashmap will release all memory
  */
-TEST(BaseHashMapTest, TestValueWithResourceEmplace)
+TEST(GroupByHashMapTest, TestValueWithResourceEmplace)
 {
     {
         // hashmap will release all memory
@@ -428,7 +428,7 @@ TEST(BaseHashMapTest, TestValueWithResourceEmplace)
  * add null (empty string means null value)
  * hashmap will release all memory
  */
-TEST(BaseHashMapTest, TestStringMaxStateNoNullHashMap)
+TEST(GroupByHashMapTest, TestStringMaxStateNoNullHashMap)
 {
     {
         // hashmap will release all memory of MaxState in this closure
@@ -478,17 +478,17 @@ TEST(BaseHashMapTest, TestStringMaxStateNoNullHashMap)
  * the key value is std::string std::unique_ptr<int> p;
  * add null (empty string means null value
  */
-TEST(BaseHashMapTest, TestStringUniquePtrHashMap)
+TEST(GroupByHashMapTest, TestStringUniquePtrHashMap)
 {
     constexpr uint32_t testTotal = 10000;
 
-    omniruntime::op::DefaultHashMap<std::string, long *> hashMap;
+    omniruntime::op::DefaultHashMap<std::string, long*> hashMap;
     {
         std::string str;
         // emplace empty string
         auto ret = hashMap.Emplace(str);
         EXPECT_TRUE(ret.IsInsert());
-        EXPECT_TRUE(hashMap.HasNullCell());
+        EXPECT_TRUE(hashMap.HasNullSlot());
         ret.SetValue(nullptr);
     }
 
@@ -508,7 +508,7 @@ TEST(BaseHashMapTest, TestStringUniquePtrHashMap)
     // verify every cell' value by ForEachKV
     hashMap.ForEachKV([&](const std::string &key, long *value) {
         if (key.empty()) {
-            EXPECT_TRUE(value == nullptr);
+            EXPECT_TRUE( value == nullptr);
             return;
         }
         EXPECT_EQ(std::stol(key), (*value));
@@ -519,15 +519,15 @@ TEST(BaseHashMapTest, TestStringUniquePtrHashMap)
  * the key value is std::unique_ptr<int> std::unique_ptr<int> p;
  * add null (empty string means null value
  */
-TEST(BaseHashMapTest, TestUniqueUniquePtrHashMap)
+TEST(GroupByHashMapTest, TestUniqueUniquePtrHashMap)
 {
     constexpr uint32_t testTotal = 10000;
 
-    omniruntime::op::DefaultHashMap<std::unique_ptr<uint32_t>, long *> hashMap;
+    omniruntime::op::DefaultHashMap<std::unique_ptr<uint32_t>, long*> hashMap;
     {
         auto ret = hashMap.Emplace(std::make_unique<uint32_t>(0));
         EXPECT_TRUE(ret.IsInsert());
-        EXPECT_TRUE(hashMap.HasNullCell());
+        EXPECT_TRUE(hashMap.HasNullSlot());
         ret.SetValue(nullptr);
     }
 
@@ -558,7 +558,7 @@ TEST(BaseHashMapTest, TestUniqueUniquePtrHashMap)
  * the resource is not owned by hashmap
  * so the memory must be released by caller
  */
-TEST(BaseHashMapTest, TestUserDefinedRelease)
+TEST(GroupByHashMapTest, TestUserDefinedRelease)
 {
     {
         omniruntime::op::DefaultHashMap<uint32_t, ValueWithResource *> hashMap;
@@ -581,29 +581,5 @@ TEST(BaseHashMapTest, TestUserDefinedRelease)
     }
     // resource has been released by caller
     EXPECT_TRUE(ResourceInfoCollector::GetInstance().NoMemLeak());
-}
-
-TEST(BaseHashMapTest, TestRehash)
-{
-    constexpr uint32_t testTotal = 10000;
-    constexpr uint32_t insertTime = 4;
-
-    omniruntime::op::DefaultHashMap<uint32_t, uint32_t> hashMap(4);
-    for (uint32_t key = 0; key < testTotal; ++key) {
-        auto ret = hashMap.Emplace(key);
-        EXPECT_TRUE(ret.IsInsert());
-        ret.SetValue(key);
-    }
-
-    for (uint32_t ins = 0; ins < insertTime; ++ins) {
-        for (uint32_t key = 0; key < testTotal; ++key) {
-            auto ret = hashMap.Emplace(key);
-            EXPECT_FALSE(ret.IsInsert());
-            auto &value = ret.GetValue();
-            ++value;
-        }
-    }
-
-    EXPECT_EQ(hashMap.GetElementsSize(), testTotal);
 }
 } // end test

@@ -66,10 +66,11 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
+    int32_t hashKeysCount = 1;
     int32_t hashTableCount = 1;
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_INNER, buildTypes,
-        buildHashKeys, hashTableCount, nullptr);
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
+        hashKeysCount, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
     VectorBatch *hashBuilderOutput = nullptr;
@@ -134,11 +135,12 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
         LongType()) };
+    int32_t hashKeysCount = 1;
     int32_t hashTableCount = 1;
     auto overflowConfig = new OverflowConfig();
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_INNER, buildTypes,
-        buildHashKeys, hashTableCount, overflowConfig);
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
+        hashKeysCount, hashTableCount, overflowConfig);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
     VectorBatch *hashBuilderOutput = nullptr;
@@ -201,10 +203,11 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     buildVecBatch->Append(CreateDictionaryVector(*buildTypes.GetType(1), dataSize, ids, dataSize, buildData1));
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
+    int32_t hashKeysCount = 1;
     int32_t hashTableCount = 1;
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_FULL, buildTypes,
-        buildHashKeys, hashTableCount, nullptr);
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
+        hashKeysCount, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
     VectorBatch *hashBuilderOutput = nullptr;
@@ -269,7 +272,7 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
     vectorBatch->Get(1)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
@@ -297,10 +300,11 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = { new omniruntime::expressions::FieldExpr(1,
         LongType()) };
+    int32_t hashKeysCount = 1;
     int32_t hashTableCount = 1;
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_FULL, buildTypes,
-        buildHashKeys, hashTableCount, nullptr);
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
+        hashKeysCount, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
     VectorBatch *hashBuilderOutput = nullptr;
@@ -352,8 +356,8 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     const int32_t expectedDatasSize = 2;
     int64_t expectedData0[expectedDatasSize] = {0, 0};
     int64_t expectedData1[expectedDatasSize] = {0, 0};
-    int64_t expectedData2[expectedDatasSize] = {3, 1};
-    int64_t expectedData3[expectedDatasSize] = {333, 111};
+    int64_t expectedData2[expectedDatasSize] = {1, 3};
+    int64_t expectedData3[expectedDatasSize] = {111, 333};
     auto expectedVec0 = CreateVector(expectedDatasSize, expectedData0);
     auto expectedVec1 = CreateVector(expectedDatasSize, expectedData1);
     auto expectedVec2 = CreateVector(expectedDatasSize, expectedData2);
@@ -367,7 +371,7 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     vectorBatch->Get(0)->SetNull(1);
     vectorBatch->Get(1)->SetNull(0);
     vectorBatch->Get(1)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     Expr::DeleteExprs(buildHashKeys);
     Expr::DeleteExprs(probeHashKeys);
@@ -392,10 +396,11 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
     auto buildVecBatch = TestUtil::CreateVectorBatch(buildTypes, dataSize, buildData0, buildData1, buildData2);
 
     std::vector<omniruntime::expressions::Expr *> buildHashKeys = CreateBuildHashKeys();
+    int32_t hashKeysCount = 1;
     int32_t hashTableCount = 1;
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_INNER, buildTypes,
-        buildHashKeys, hashTableCount, nullptr);
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
+        hashKeysCount, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);
     VectorBatch *hashBuilderOutput = nullptr;
@@ -480,6 +485,7 @@ TEST(JoinWithExprTest, TestBothJoinKeyAndFilterWithExpr)
     auto substrExpr1 = new FuncExpr("substr",
         { castExpr1, new LiteralExpr(1, IntType()), new LiteralExpr(2, IntType()) }, VarcharType(50));
     std::vector<omniruntime::expressions::Expr *> buildHashKeys { substrExpr1 };
+    int32_t hashKeysCount = 1;
     std::string filter =
         "{\"exprType\":\"IF\",\"returnType\":4,\"condition\":{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":"
         "\"EQUAL\",\"left\":{\"exprType\":\"FIELD_REFERENCE\",\"dataType\":6,\"colVal\":0,\"precision\":18, "
@@ -496,8 +502,8 @@ TEST(JoinWithExprTest, TestBothJoinKeyAndFilterWithExpr)
         "\"scale\":2}}}";
     int32_t hashTableCount = 1;
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_LEFT, buildTypes,
-        buildHashKeys, hashTableCount, nullptr);
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys,
+        hashKeysCount, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
 
     const int32_t dataSize = 2;

@@ -12,14 +12,13 @@
 #include <unordered_map>
 #include <functional>
 #include <jemalloc/jemalloc.h>
-#include <arm_neon.h>
-
-#include "operator/hash_util.h"
+#include <operator/hash_util.h>
 #include "group_hasher.h"
 #include "memory/memory_pool.h"
 #include "memory/allocator.h"
 #include "null_key_traits.h"
 #include "type/string_ref.h"
+#include "simd_util.h"
 
 /**
  * base_hashmap contains 8 requirements to notice:
@@ -372,6 +371,44 @@ enum Ctrl : ctrl_t {
     kSentinel = -1
 };
 
+struct GroupPortableImpl {};
+
+#if defined(__x86_64__)
+
+struct GroupSse2Impl {
+    enum {
+        kWidth = 16
+    }; // the number of slots per group
+
+    explicit GroupSse2Impl(const ctrl_t *pos)
+    {
+        ctrl = _mm_loadu_si128(reinterpret_cast<const __m128i *>(pos));
+    }
+
+    // Returns a bitmask representing the positions of slots that match hash.
+    ALWAYS_INLINE BitMask<uint32_t, kWidth> Match(h2_t hash) const
+    {
+        auto match = _mm_set1_epi8((char)hash);
+        return BitMask<uint32_t, kWidth>(static_cast<uint32_t>(_mm_movemask_epi8(_mm_cmpeq_epi8(match, ctrl))));
+    }
+
+    // Returns a bitmask representing the positions of empty slots.
+    ALWAYS_INLINE BitMask<uint32_t, kWidth> MatchEmpty() const
+    {
+        return Match(static_cast<h2_t>(kEmpty));
+    }
+
+    // Returns the number of trailing empty elements in the group.
+    ALWAYS_INLINE uint32_t CountLeadingEmpty() const
+    {
+        auto special = _mm_set1_epi8(static_cast<uint8_t>(kSentinel));
+        return TrailingZeros(static_cast<uint32_t>(_mm_movemask_epi8(_mm_cmpgt_epi8(special, ctrl)) + 1));
+    }
+    __m128i ctrl;
+};
+using Group = GroupSse2Impl;
+
+#elif defined(__aarch64__) && defined(__ARM_NEON)
 static uint32_t mm_movemask_epi8(uint8x16_t input)
 {
     // Shift out everything but the sign bits with an unsigned shift right.
@@ -475,31 +512,38 @@ struct GroupNeonImpl {
     int8x16_t ctrl;
 };
 using Group = GroupNeonImpl;
+#endif
 
-template <size_t Width> class ProbeSeq {
+template <size_t Width> class probe_seq {
 public:
-    ProbeSeq(size_t hashval, size_t mask)
+    probe_seq(size_t hashval, size_t mask)
     {
         assert(((mask + 1) & mask) == 0 && "not a mask");
         mask_ = mask;
         offset_ = hashval & mask_;
     }
 
-    ALWAYS_INLINE size_t GetOffset() const
+    ALWAYS_INLINE size_t offset() const
     {
         return offset_;
     }
 
-    ALWAYS_INLINE size_t GetOffset(size_t i) const
+    ALWAYS_INLINE size_t offset(size_t i) const
     {
         return (offset_ + i) & mask_;
     }
 
-    ALWAYS_INLINE void GetNext()
+    ALWAYS_INLINE void next()
     {
         index_ += Width;
         offset_ += index_;
         offset_ &= mask_;
+    }
+
+    // 0-based probe index. The i-th probe in the probe sequence.
+    ALWAYS_INLINE size_t getindex() const
+    {
+        return index_;
     }
 
 private:
@@ -518,7 +562,7 @@ private:
  */
 template <typename KeyType, typename ValueType, typename HashType, typename GrowStrategy, typename Allocator,
     std::enable_if_t<std::is_move_constructible_v<KeyType> && std::is_move_constructible_v<ValueType> &&
-    (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)>* = nullptr>
+    (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)> * = nullptr>
 class BaseHashMap {
 public:
     using Slot = HashSlot<KeyType, ValueType>;
@@ -568,7 +612,7 @@ public:
      * Note: We use the second element of InsertResult to indicate whether to find the matched position or not.
      */
     template <typename T,
-        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>>* = nullptr>
+        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>> * = nullptr>
     ALWAYS_INLINE InsertResult<ValueType> FindMatchPosition(T &&key)
     {
         auto hashValue = CalculateHash(key);
@@ -591,7 +635,7 @@ public:
      * InsertResult's GetValue function will return value reference, and caller can update the value
      */
     template <typename T,
-        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>>* = nullptr>
+        std::enable_if_t<std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, KeyType>> * = nullptr>
     InsertResult<ValueType> Emplace(T &&key)
     {
         if (NeedRehash()) {
@@ -839,32 +883,32 @@ private:
         return c < kSentinel;
     }
 
-    ProbeSeq<Group::kWidth> Probe(size_t hashval) const
+    probe_seq<Group::kWidth> Probe(size_t hashval) const
     {
-        return ProbeSeq<Group::kWidth>(H1(hashval), capacity - 1);
+        return probe_seq<Group::kWidth>(H1(hashval), capacity - 1);
     }
 
     size_t FindPosition(const KeyType &key, size_t hashValue, bool &inserted)
     {
         auto seq = Probe(hashValue);
-        while (identifiers[seq.GetOffset()] != kEmpty) {
-            Group g { identifiers + seq.GetOffset() };
+        while (identifiers[seq.offset()] != kEmpty) {
+            Group g { identifiers + seq.offset() };
             // Traverse all the keys which match the low 7 bit hash
             for (uint32_t i : g.Match((h2_t)H2(hashValue))) {
                 // Compare the values of key. KeyType must be primitive or overload operator==()
-                if (slots[seq.GetOffset((size_t)i)].IsSameKey(hashValue, key)) {
-                    return seq.GetOffset((size_t)i);
+                if (slots[seq.offset((size_t)i)].IsSameKey(hashValue, key)) {
+                    return seq.offset((size_t)i);
                 }
             }
             auto mask = g.MatchEmpty();
             if (mask) {
                 inserted = true;
-                return seq.GetOffset((size_t)mask.LowestBitSet());
+                return seq.offset((size_t)mask.LowestBitSet());
             }
-            seq.GetNext();
+            seq.next();
         }
         inserted = true;
-        return seq.GetOffset();
+        return seq.offset();
     }
 
     // update newIsAssigned when rehash

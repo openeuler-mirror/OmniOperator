@@ -1,12 +1,14 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: lookup join implementations
  */
 #include <vector>
 #include <memory>
+#include "hash_builder.h"
+#include "vector/vector_common.h"
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
-#include "hash_builder.h"
+#include "operator/pages_hash_strategy.h"
 #include "lookup_join.h"
 #ifdef ENABLE_HMPP
 #include <HMPP/hmpp.h>
@@ -15,7 +17,8 @@
 #endif
 
 using namespace omniruntime::vec;
-namespace omniruntime::op {
+namespace omniruntime {
+namespace op {
 void LookupJoinOperatorFactory::CommonInitActions(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes)
@@ -39,7 +42,7 @@ void LookupJoinOperatorFactory::CommonInitActions(const type::DataTypes &probeTy
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, JoinType joinType,
-    HashTableVariants *hashTables, Expr *filterExpr, OverflowConfig *overflowConfig)
+    JoinHashTables *hashTables, Expr *filterExpr, OverflowConfig *overflowConfig)
     : probeTypes(probeTypes),
       buildOutputTypes(buildOutputTypes),
       joinType(joinType),
@@ -48,14 +51,14 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
         buildOutputCols, buildOutputColsCount, buildOutputTypes);
-    std::visit([&](auto &&arg) { arg.SetProbeTypes(&(this->probeTypes)); }, *hashTables);
+    this->hashTables->SetProbeTypes(&(this->probeTypes));
     JoinFilterCodeGen(filterExpr, overflowConfig);
 }
 
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, JoinType joinType,
-    HashTableVariants *hashTables, Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig)
+    JoinHashTables *hashTables, Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig)
     : probeTypes(probeTypes),
       buildOutputTypes(buildOutputTypes),
       joinType(joinType),
@@ -64,7 +67,7 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
         buildOutputCols, buildOutputColsCount, buildOutputTypes);
-    std::visit([&](auto &&arg) { arg.SetProbeTypes(&(this->probeTypes)); }, *hashTables);
+    this->hashTables->SetProbeTypes(&(this->probeTypes));
     JoinFilterCodeGen(filterExpr, overflowConfig);
 }
 
@@ -82,7 +85,7 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount, buildOutputTypes, inputJoinType,
-        hashBuilderFactory->GetHashTablesVariants(), filterExpr, overflowConfig);
+        hashBuilderFactory->GetHashTables(), filterExpr, overflowConfig);
     return pOperatorFactory;
 }
 
@@ -94,7 +97,7 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount, buildOutputTypes, inputJoinType,
-        hashBuilderFactory->GetHashTablesVariants(), filterExpr, originalProbeColsCount, overflowConfig);
+        hashBuilderFactory->GetHashTables(), filterExpr, originalProbeColsCount, overflowConfig);
     return pOperatorFactory;
 }
 
@@ -121,8 +124,8 @@ void LookupJoinOperatorFactory::JoinFilterCodeGen(Expr *filterExpr, OverflowConf
 
 LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
     std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes, std::vector<int32_t> &buildOutputCols,
-    const type::DataTypes &buildOutputTypes, JoinType joinType, HashTableVariants *hashTables,
-    SimpleFilter *simpleFilter, int32_t originalProbeColsCount, int32_t outputRowSize)
+    const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables, SimpleFilter *simpleFilter,
+    int32_t originalProbeColsCount, int32_t outputRowSize)
     : joinType(joinType),
       probeTypes(probeTypes),
       probeOutputCols(probeOutputCols),
@@ -144,8 +147,8 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
         probeOutputTypes.GetIds(), buildOutputCols.data(), buildOutputCols.size(), buildOutputTypes.GetIds(),
         outputRowSize);
     this->executionContext = new ExecutionContext();
-    this->probeHashColumns = new BaseVector *[probeHashCols.size()]();     // 2D array
-    this->probeOutputColumns = new BaseVector *[probeOutputCols.size()](); // 2D array
+    this->probeHashColumns = new BaseVector *[probeHashCols.size()]();
+    this->probeOutputColumns = new BaseVector *[probeOutputCols.size()]();
 
     if (simpleFilter != nullptr) {
         auto usedColumns = simpleFilter->GetVectorIndexes();
@@ -156,7 +159,8 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
                 buildFilterCols.emplace_back(col);
             }
         }
-        auto buildColsCount = std::visit([&](auto &&arg) { return arg.GetBuildDataTypes()->GetSize(); }, *hashTables);
+
+        auto buildColsCount = hashTables->GetBuildDataTypes()->GetSize();
         auto allColsCount = originalProbeColsCount + buildColsCount;
         this->values = new int64_t[allColsCount]();
         this->nulls = new bool[allColsCount]();
@@ -171,7 +175,7 @@ LookupJoinOperator::LookupJoinOperator(const DataTypes &probeTypes, std::vector<
         for (size_t i = 0; i < probeFilterColsCount; i++) {
             this->probeFilterTypeIds[i] = probeTypeIds[this->probeFilterCols[i]];
         }
-        auto buildTypeIds = std::visit([&](auto &&arg) { return arg.GetBuildDataTypes()->GetIds(); }, *hashTables);
+        auto buildTypeIds = hashTables->GetBuildDataTypes()->GetIds();
         for (size_t i = 0; i < buildFilterColsCount; i++) {
             this->buildFilterTypeIds[i] = buildTypeIds[this->buildFilterCols[i] - originalProbeColsCount];
         }
@@ -209,15 +213,7 @@ void LookupJoinOperator::PrepareCurrentProbe()
     std::fill(curProbeHashes.begin(), curProbeHashes.end(), 0);
     curProbeNulls.resize(curInputBatch->GetRowCount());
     std::fill(curProbeNulls.begin(), curProbeNulls.end(), 0);
-    std::visit(
-        [&](auto &&arg) {
-            if (arg.GetHashTableCount() == 1) {
-                PopulateProbeNulls();
-            } else {
-                PopulateProbeHashes();
-            }
-        },
-        *hashTables);
+    PopulateProbeHashes();
 
     if (this->simpleFilter != nullptr) {
         int32_t index = 0;
@@ -227,91 +223,54 @@ void LookupJoinOperator::PrepareCurrentProbe()
     }
 }
 
-void LookupJoinOperator::PrepareSerializers()
-{
-    probeSerializers.clear();
-    for (size_t i = 0; i < probeHashCols.size(); ++i) {
-        auto curVector = probeHashColumns[i];
-        if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
-            PushBackProbeSerializer(dicVectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
-        } else {
-            PushBackProbeSerializer(vectorSerializerIgnoreNullCenter[curVector->GetTypeId()]);
-        }
-    }
-}
-
-void LookupJoinOperator::ProcessProbe(bool hasFilter, bool singleHT)
+void LookupJoinOperator::ProcessProbe(bool hasFilter)
 {
     switch (joinType) {
         case OMNI_JOIN_TYPE_INNER:
-            if (hasFilter && singleHT) {
-                ProbeBatchForInnerJoin<true, true>();
-            } else if (hasFilter && !singleHT) {
-                ProbeBatchForInnerJoin<true, false>();
-            } else if (!hasFilter && singleHT) {
-                ProbeBatchForInnerJoin<false, true>();
+            if (hasFilter) {
+                ProbeBatchForInnerJoin<true>();
             } else {
-                ProbeBatchForInnerJoin<false, false>();
+                ProbeBatchForInnerJoin<false>();
             }
             break;
         case OMNI_JOIN_TYPE_LEFT:
-            if (hasFilter && singleHT) {
-                ProbeBatchForLeftJoin<true, true>();
-            } else if (hasFilter && !singleHT) {
-                ProbeBatchForLeftJoin<true, false>();
-            } else if (!hasFilter && singleHT) {
-                ProbeBatchForLeftJoin<false, true>();
+            if (hasFilter) {
+                ProbeBatchForLeftJoin<true>();
             } else {
-                ProbeBatchForLeftJoin<false, false>();
+                ProbeBatchForLeftJoin<false>();
             }
             break;
         case OMNI_JOIN_TYPE_RIGHT:
-            if (hasFilter && singleHT) {
-                ProbeBatchForRightJoin<true, true>();
-            } else if (hasFilter && !singleHT) {
-                ProbeBatchForRightJoin<true, false>();
-            } else if (!hasFilter && singleHT) {
-                ProbeBatchForRightJoin<false, true>();
+            if (hasFilter) {
+                ProbeBatchForRightJoin<true>();
             } else {
-                ProbeBatchForRightJoin<false, false>();
+                ProbeBatchForRightJoin<false>();
             }
             break;
         case OMNI_JOIN_TYPE_FULL:
-            if (hasFilter && singleHT) {
-                ProbeBatchForFullJoin<true, true>();
-            } else if (hasFilter && !singleHT) {
-                ProbeBatchForFullJoin<true, false>();
-            } else if (!hasFilter && singleHT) {
-                ProbeBatchForFullJoin<false, true>();
+            if (hasFilter) {
+                ProbeBatchForFullJoin<true>();
             } else {
-                ProbeBatchForFullJoin<false, false>();
+                ProbeBatchForFullJoin<false>();
             }
             break;
         case OMNI_JOIN_TYPE_LEFT_SEMI:
-            if (hasFilter && singleHT) {
-                ProbeBatchForLeftSemiJoin<true, true>();
-            } else if (hasFilter && !singleHT) {
-                ProbeBatchForLeftSemiJoin<true, false>();
-            } else if (!hasFilter && singleHT) {
-                ProbeBatchForLeftSemiJoin<false, true>();
+            if (hasFilter) {
+                ProbeBatchForLeftSemiJoin<true>();
             } else {
-                ProbeBatchForLeftSemiJoin<false, false>();
+                ProbeBatchForLeftSemiJoin<false>();
             }
             break;
         case OMNI_JOIN_TYPE_LEFT_ANTI:
-            if (hasFilter && singleHT) {
-                ProbeBatchForLeftAntiJoin<true, true>();
-            } else if (hasFilter && !singleHT) {
-                ProbeBatchForLeftAntiJoin<true, false>();
-            } else if (!hasFilter && singleHT) {
-                ProbeBatchForLeftAntiJoin<false, true>();
+            if (hasFilter) {
+                ProbeBatchForLeftAntiJoin<true>();
             } else {
-                ProbeBatchForLeftAntiJoin<false, false>();
+                ProbeBatchForLeftAntiJoin<false>();
             }
             break;
         default: {
-            LogError("Unsupported join type: %u.", joinType);
-            break;
+            std::string omniExceptionInfo = "Error in ProcessProbe, no such data type " + std::to_string(joinType);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
 }
@@ -320,14 +279,11 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
     if (!firstVecBatch && simpleFilter != nullptr) {
         firstVecBatch = true;
-        std::visit([&](
-            auto &&arg) { arg.InitBuildFilterCols(buildFilterCols, originalProbeColsCount, tableBuildFilterColPtrs); },
-            *hashTables);
+        hashTables->InitBuildFilterCols(buildFilterCols, originalProbeColsCount, tableBuildFilterColPtrs);
     }
     curInputBatch = vecBatch;
 
     PrepareCurrentProbe();
-    PrepareSerializers();
 
     // maybe the data has been pulled after the previous probe, and the operator status will be set to finished
     // and needs to be reset to normal.
@@ -338,8 +294,7 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     // start probe
-    ProcessProbe(simpleFilter != nullptr,
-        std::visit([&](auto &&arg) { return arg.GetHashTableCount() == 1; }, *hashTables));
+    ProcessProbe(simpleFilter != nullptr);
 
     if (curOutputBatch) {
         *outputVecBatch = curOutputBatch;
@@ -363,320 +318,243 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
-template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForInnerJoin()
+
+template <bool hasJoinFilter> void LookupJoinOperator::ProbeBatchForInnerJoin()
 {
-    std::visit(
-        [&](auto &&arg) {
-            auto inputRowCount = curInputBatch->GetRowCount();
-            uint32_t partition;
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
-                if (curProbeNulls[probePosition]) {
-                    continue;
+    auto inputRowCount = curInputBatch->GetRowCount();
+    for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+        if (curProbeNulls[probePosition]) {
+            continue;
+        }
+        uint32_t partition;
+        uint32_t joinPosition;
+        hashTables->GetJoinPosition(probePosition, probeHashColumns, curProbeHashes[probePosition], partition,
+            joinPosition);
+        while (joinPosition != INVALID_POSITION) {
+            auto hashTable = hashTables->GetHashTable(partition);
+            if constexpr (hasJoinFilter) {
+                auto filterResult = IsJoinPositionEligible(partition, joinPosition, probePosition);
+                if (filterResult) {
+                    outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
                 }
-
-                if constexpr (singleHT) {
-                    partition = 0U;
-                } else {
-                    partition =
-                        HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
-                }
-
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
-                    probePosition, partition);
-                if (!result.IsInsert()) {
-                    continue;
-                }
-                auto it = result.GetValue()->Begin();
-                while (it.IsOk()) {
-                    auto address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
-                    if constexpr (hasJoinFilter) {
-                        auto filterResult = IsJoinPositionEligible(partition, address, probePosition);
-                        if (filterResult) {
-                            outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                        }
-                    } else {
-                        outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                    }
-                    ++it;
-                }
-
-                if (outputBuilder->IsFull()) {
-                    outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
-                    curProbePosition = probePosition + 1;
-                    return;
-                }
+            } else {
+                outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
             }
-            executionContext->GetArena()->Reset();
-        },
-        *hashTables);
+            joinPosition = hashTable->GetNextJoinPosition(joinPosition);
+        }
+
+        // if the output row count exceeds the maxRowCount, then construct output to avoid probeIndex and buildIndex
+        // consume excessive memory
+        if (outputBuilder->IsFull()) {
+            outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
+            curProbePosition = probePosition + 1;
+            return;
+        }
+    }
 }
 
-template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForLeftJoin()
+template <bool hasJoinFilter> void LookupJoinOperator::ProbeBatchForLeftJoin()
 {
-    std::visit(
-        [&](auto &&arg) {
-            auto inputRowCount = curInputBatch->GetRowCount();
-            uint32_t partition;
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
-                if (curProbeNulls[probePosition]) {
-                    outputBuilder->AppendRow(probePosition, nullptr, 0);
-                    continue;
+    auto inputRowCount = curInputBatch->GetRowCount();
+    for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+        if (curProbeNulls[probePosition]) {
+            outputBuilder->AppendRow(probePosition, nullptr, 0);
+            continue;
+        }
+        uint32_t partition;
+        uint32_t joinPosition;
+        hashTables->GetJoinPosition(probePosition, probeHashColumns, curProbeHashes[probePosition], partition,
+            joinPosition);
+        bool hasProduceRow = false;
+        while (joinPosition != INVALID_POSITION) {
+            auto hashTable = hashTables->GetHashTable(partition);
+            if constexpr (hasJoinFilter) {
+                auto filterResult = IsJoinPositionEligible(partition, joinPosition, probePosition);
+                if (filterResult) {
+                    outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
+                    hasProduceRow = true;
                 }
-                bool hasProduceRow = false;
-                if constexpr (singleHT) {
-                    partition = 0U;
-                } else {
-                    partition =
-                        HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
-                }
-
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
-                    probePosition, partition);
-                if (result.IsInsert()) {
-                    auto it = result.GetValue()->Begin();
-                    while (it.IsOk()) {
-                        auto address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
-                        if constexpr (hasJoinFilter) {
-                            auto filterResult = IsJoinPositionEligible(partition, address, probePosition);
-                            if (filterResult) {
-                                outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                                hasProduceRow = true;
-                            }
-                        } else {
-                            outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                            hasProduceRow = true;
-                        }
-                        ++it;
-                    }
-                }
-                if (!hasProduceRow) {
-                    outputBuilder->AppendRow(probePosition, nullptr, 0);
-                }
-
-                if (outputBuilder->IsFull()) {
-                    outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
-                    curProbePosition = probePosition + 1;
-                    return;
-                }
+            } else {
+                outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
+                hasProduceRow = true;
             }
-            executionContext->GetArena()->Reset();
-        },
-        *hashTables);
+            joinPosition = hashTable->GetNextJoinPosition(joinPosition);
+        }
+        if (!hasProduceRow) {
+            outputBuilder->AppendRow(probePosition, nullptr, 0);
+        }
+
+        // if the output row count exceeds the maxRowCount, then construct output to avoid probeIndex and buildIndex
+        // consume excessive memory
+        if (outputBuilder->IsFull()) {
+            outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
+            curProbePosition = probePosition + 1;
+            return;
+        }
+    }
 }
 
-template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForRightJoin()
+template <bool hasJoinFilter> void LookupJoinOperator::ProbeBatchForRightJoin()
 {
-    std::visit(
-        [&](auto &&arg) {
-            using Mapped = typename std::decay_t<decltype(arg)>::Mapped;
-            if constexpr (std::is_same_v<Mapped, RowRefListWithFlags>) {
-                auto inputRowCount = curInputBatch->GetRowCount();
-                uint32_t partition;
-                for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
-                    if (curProbeNulls[probePosition]) {
-                        continue;
-                    }
-                    if constexpr (singleHT) {
-                        partition = 0U;
-                    } else {
-                        partition =
-                            HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
-                    }
-                    auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
-                        probePosition, partition);
-                    if (!result.IsInsert()) {
-                        continue;
-                    }
-                    auto it = result.GetValue()->Begin();
-                    while (it.IsOk()) {
-                        auto address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
-                        if constexpr (hasJoinFilter) {
-                            auto filterResult = IsJoinPositionEligible(partition, address, probePosition);
-                            if (filterResult) {
-                                outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                                arg.PositionVisited(it);
-                            }
-                        } else {
-                            outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                            arg.PositionVisited(it);
-                        }
-                        ++it;
-                    }
-                    if (outputBuilder->IsFull()) {
-                        outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
-                        curProbePosition = probePosition + 1;
-                        return;
-                    }
+    auto inputRowCount = curInputBatch->GetRowCount();
+    for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+        if (curProbeNulls[probePosition]) {
+            continue;
+        }
+        uint32_t partition;
+        uint32_t joinPosition;
+        hashTables->GetJoinPosition(probePosition, probeHashColumns, curProbeHashes[probePosition], partition,
+            joinPosition);
+        while (joinPosition != INVALID_POSITION) {
+            auto hashTable = hashTables->GetHashTable(partition);
+            if constexpr (hasJoinFilter) {
+                auto filterResult = IsJoinPositionEligible(partition, joinPosition, probePosition);
+                if (filterResult) {
+                    outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
+                    hashTables->PositionVisited(partition, joinPosition);
                 }
-                executionContext->GetArena()->Reset();
+            } else {
+                outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
+                hashTables->PositionVisited(partition, joinPosition);
             }
-        },
-        *hashTables);
+            joinPosition = hashTable->GetNextJoinPosition(joinPosition);
+        }
+
+        // if the output row count exceeds the maxRowCount, then construct output to avoid probeIndex and buildIndex
+        // consume excessive memory
+        if (outputBuilder->IsFull()) {
+            outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
+            curProbePosition = probePosition + 1;
+            return;
+        }
+    }
 }
 
-template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForFullJoin()
+template <bool hasJoinFilter> void LookupJoinOperator::ProbeBatchForFullJoin()
 {
-    std::visit(
-        [&](auto &&arg) {
-            using Mapped = typename std::decay_t<decltype(arg)>::Mapped;
-            if constexpr (std::is_same_v<Mapped, RowRefListWithFlags>) {
-                auto inputRowCount = curInputBatch->GetRowCount();
-                uint32_t partition;
-                for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
-                    if (curProbeNulls[probePosition]) {
-                        outputBuilder->AppendRow(probePosition, nullptr, 0);
-                        continue;
-                    }
-                    if constexpr (singleHT) {
-                        partition = 0U;
-                    } else {
-                        partition =
-                            HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
-                    }
-                    bool hasProduceRow = false;
-                    auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
-                        probePosition, partition);
-                    if (result.IsInsert()) {
-                        auto it = result.GetValue()->Begin();
-                        while (it.IsOk()) {
-                            auto address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
-                            if constexpr (hasJoinFilter) {
-                                auto filterResult = IsJoinPositionEligible(partition, address, probePosition);
-                                if (filterResult) {
-                                    outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                                    arg.PositionVisited(it);
-                                    hasProduceRow = true;
-                                }
-                            } else {
-                                outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                                arg.PositionVisited(it);
-                                hasProduceRow = true;
-                            }
-                            ++it;
-                        }
-                    }
-                    if (!hasProduceRow) {
-                        outputBuilder->AppendRow(probePosition, nullptr, 0);
-                    }
-
-                    if (outputBuilder->IsFull()) {
-                        outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
-                        curProbePosition = probePosition + 1;
-                        return;
-                    }
+    auto inputRowCount = curInputBatch->GetRowCount();
+    for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+        if (curProbeNulls[probePosition]) {
+            outputBuilder->AppendRow(probePosition, nullptr, 0);
+            continue;
+        }
+        uint32_t partition;
+        uint32_t joinPosition;
+        hashTables->GetJoinPosition(probePosition, probeHashColumns, curProbeHashes[probePosition], partition,
+            joinPosition);
+        bool hasProduceRow = false;
+        while (joinPosition != INVALID_POSITION) {
+            auto hashTable = hashTables->GetHashTable(partition);
+            if constexpr (hasJoinFilter) {
+                auto filterResult = IsJoinPositionEligible(partition, joinPosition, probePosition);
+                if (filterResult) {
+                    outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
+                    hasProduceRow = true;
+                    hashTables->PositionVisited(partition, joinPosition);
                 }
-                executionContext->GetArena()->Reset();
+            } else {
+                outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
+                hasProduceRow = true;
+                hashTables->PositionVisited(partition, joinPosition);
             }
-        },
-        *hashTables);
+            joinPosition = hashTable->GetNextJoinPosition(joinPosition);
+        }
+        if (!hasProduceRow) {
+            outputBuilder->AppendRow(probePosition, nullptr, 0);
+        }
+
+        // if the output row count exceeds the maxRowCount, then construct output to avoid probeIndex and buildIndex
+        // consume excessive memory
+        if (outputBuilder->IsFull()) {
+            outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
+            curProbePosition = probePosition + 1;
+            return;
+        }
+    }
 }
 
-template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForLeftSemiJoin()
+template <bool hasJoinFilter> void LookupJoinOperator::ProbeBatchForLeftSemiJoin()
 {
-    std::visit(
-        [&](auto &&arg) {
-            auto inputRowCount = curInputBatch->GetRowCount();
-            uint32_t partition;
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
-                if (curProbeNulls[probePosition]) {
-                    continue;
+    auto inputRowCount = curInputBatch->GetRowCount();
+    for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+        if (curProbeNulls[probePosition]) {
+            continue;
+        }
+        uint32_t partition;
+        uint32_t joinPosition;
+        hashTables->GetJoinPosition(probePosition, probeHashColumns, curProbeHashes[probePosition], partition,
+            joinPosition);
+        while (joinPosition != INVALID_POSITION) {
+            auto hashTable = hashTables->GetHashTable(partition);
+            if constexpr (hasJoinFilter) {
+                auto filterResult = IsJoinPositionEligible(partition, joinPosition, probePosition);
+                if (filterResult) {
+                    outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
+                    break;
                 }
-                if constexpr (singleHT) {
-                    partition = 0U;
-                } else {
-                    partition =
-                        HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
-                }
-
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
-                    probePosition, partition);
-                if (!result.IsInsert()) {
-                    continue;
-                }
-                auto it = result.GetValue()->Begin();
-                while (it.IsOk()) {
-                    auto address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
-                    if constexpr (hasJoinFilter) {
-                        auto filterResult = IsJoinPositionEligible(partition, address, probePosition);
-                        if (filterResult) {
-                            outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                            break;
-                        }
-                    } else {
-                        outputBuilder->AppendRow(probePosition, arg.GetColumns(partition), address);
-                        break;
-                    }
-                    ++it;
-                }
-
-                if (outputBuilder->IsFull()) {
-                    outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
-                    curProbePosition = probePosition + 1;
-                    return;
-                }
+            } else {
+                outputBuilder->AppendRow(probePosition, hashTable, joinPosition);
+                break;
             }
-            executionContext->GetArena()->Reset();
-        },
-        *hashTables);
+            joinPosition = hashTable->GetNextJoinPosition(joinPosition);
+        }
+
+        // if the output row count exceeds the maxRowCount, then construct output to avoid probeIndex and buildIndex
+        // consume excessive memory
+        if (outputBuilder->IsFull()) {
+            outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
+            curProbePosition = probePosition + 1;
+            return;
+        }
+    }
 }
 
-template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForLeftAntiJoin()
+template <bool hasJoinFilter> void LookupJoinOperator::ProbeBatchForLeftAntiJoin()
 {
-    std::visit(
-        [&](auto &&arg) {
-            auto inputRowCount = curInputBatch->GetRowCount();
-            uint32_t partition;
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
-                if (curProbeNulls[probePosition]) {
-                    outputBuilder->AppendRow(probePosition, nullptr, 0);
-                    continue;
+    auto inputRowCount = curInputBatch->GetRowCount();
+    for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+        if (curProbeNulls[probePosition]) {
+            outputBuilder->AppendRow(probePosition, nullptr, 0);
+            continue;
+        }
+        uint32_t partition;
+        uint32_t joinPosition;
+        hashTables->GetJoinPosition(probePosition, probeHashColumns, curProbeHashes[probePosition], partition,
+            joinPosition);
+        bool hasProduceRow = false;
+        while (joinPosition != INVALID_POSITION) {
+            auto hashTable = hashTables->GetHashTable(partition);
+            if constexpr (hasJoinFilter) {
+                auto filterResult = IsJoinPositionEligible(partition, joinPosition, probePosition);
+                if (filterResult) {
+                    hasProduceRow = true;
+                    break;
                 }
-
-                if constexpr (singleHT) {
-                    partition = 0U;
-                } else {
-                    partition =
-                        HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
-                }
-                bool hasProduceRow = false;
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
-                    probePosition, partition);
-                if (result.IsInsert()) {
-                    auto it = result.GetValue()->Begin();
-                    while (it.IsOk()) {
-                        if constexpr (hasJoinFilter) {
-                            auto address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
-                            auto filterResult = IsJoinPositionEligible(partition, address, probePosition);
-                            if (filterResult) {
-                                hasProduceRow = true;
-                                break;
-                            }
-                        } else {
-                            hasProduceRow = true;
-                            break;
-                        }
-                        ++it;
-                    }
-                }
-
-                if (!hasProduceRow) {
-                    outputBuilder->AppendRow(probePosition, nullptr, 0);
-                }
-
-                if (outputBuilder->IsFull()) {
-                    outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
-                    curProbePosition = probePosition + 1;
-                    return;
-                }
+            } else {
+                hasProduceRow = true;
+                break;
             }
-            executionContext->GetArena()->Reset();
-        },
-        *hashTables);
+            joinPosition = hashTable->GetNextJoinPosition(joinPosition);
+        }
+        if (!hasProduceRow) {
+            outputBuilder->AppendRow(probePosition, nullptr, 0);
+        }
+
+        // if the output row count exceeds the maxRowCount, then construct output to avoid probeIndex and buildIndex
+        // consume excessive memory
+        if (outputBuilder->IsFull()) {
+            outputBuilder->BuildOutput(probeOutputColumns, &curOutputBatch);
+            curProbePosition = probePosition + 1;
+            return;
+        }
+    }
 }
 
-NO_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition, uint64_t buildAddress,
+ALWAYS_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition, uint32_t joinPosition,
     uint32_t probeRow)
 {
+    auto hashTable = hashTables->GetHashTable(partition);
+    auto pagesHash = hashTable->GetPagesHash();
     auto probeFilterColsCount = probeFilterCols.size();
     for (uint32_t j = 0; j < probeFilterColsCount; ++j) {
         uint32_t colIdx = probeFilterCols[j];
@@ -687,8 +565,9 @@ NO_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition, ui
     }
 
     auto &buildFilterColPtrs = GetBuildFilterColPtrs(partition);
-    auto buildBatchIdx = LookupJoinOutputBuilder::DecodeVectorBatchId(buildAddress);
-    auto buildRowIdx = LookupJoinOutputBuilder::DecodeRowId(buildAddress);
+    uint64_t buildAddress = pagesHash->GetAddresses()[joinPosition];
+    auto buildBatchIdx = DecodeSliceIndex(buildAddress);
+    auto buildRowIdx = DecodePosition(buildAddress);
     auto buildFilterColsCount = buildFilterCols.size();
     for (uint32_t j = 0; j < buildFilterColsCount; ++j) {
         uint32_t colIdx = buildFilterCols[j];
@@ -699,6 +578,7 @@ NO_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition, ui
     }
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
 }
+
 #ifdef ENABLE_HMPP
 template <type::DataTypeId dataTypeId>
 void CalculateColHashesHMPP(BaseVector *vector, int32_t rowCount, int64_t *combinedHash, std::vector<int8_t> &nulls)
@@ -1062,18 +942,6 @@ void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
     }
 }
 
-void ALWAYS_INLINE LookupJoinOperator::PopulateProbeNulls()
-{
-    int32_t rowCount = curInputBatch->GetRowCount();
-    auto probeHashColsCount = probeHashCols.size();
-
-    for (size_t j = 0; j < probeHashColsCount; ++j) {
-        for (int32_t i = 0; i < rowCount; ++i) {
-            curProbeNulls[i] |= probeHashColumns[j]->IsNull(i);
-        }
-    }
-}
-
 LookupJoinOutputBuilder::LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const int32_t *probeOutputTypes, int32_t *buildOutputCols, int32_t buildOutputColsCount,
     const int32_t *buildOutputTypes, int32_t outputRowSize)
@@ -1094,14 +962,21 @@ LookupJoinOutputBuilder::LookupJoinOutputBuilder(int32_t *probeOutputCols, int32
     }
 }
 
-void NO_INLINE LookupJoinOutputBuilder::AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address)
+void ALWAYS_INLINE LookupJoinOutputBuilder::AppendRow(int32_t probePosition, const JoinHashTable *hashTable,
+    uint32_t joinPosition)
 {
     probeRowCount++;
     if (probeOutputColsCount > 0) {
         probeIndex.emplace_back(probePosition);
     }
     if (buildOutputColsCount > 0) {
-        buildIndex.emplace_back(array, address);
+        if (hashTable != nullptr) {
+            auto array = hashTable->GetBuildColumns();
+            auto address = hashTable->GetBuildValueAddresses()[joinPosition];
+            buildIndex.emplace_back(std::make_pair(array, address));
+        } else {
+            buildIndex.emplace_back(std::make_pair(nullptr, 0));
+        }
     }
 }
 
@@ -1117,8 +992,8 @@ static NO_INLINE BaseVector *ConstructBuildColumn(const std::pair<BaseVector ***
             static_cast<Vector<T> *>(ret)->SetNull(i);
         } else {
             uint64_t address = buildTemp[i].second;
-            auto buildRowIdx = LookupJoinOutputBuilder::DecodeRowId(address);
-            auto vecBatchIndex = LookupJoinOutputBuilder::DecodeVectorBatchId(address);
+            auto vecBatchIndex = DecodeSliceIndex(address);
+            auto buildRowIdx = DecodePosition(address);
             BaseVector *buildVector = array[outputCol][vecBatchIndex];
             if (buildVector->IsNull(buildRowIdx)) {
                 ret->SetNull(i);
@@ -1149,8 +1024,8 @@ static NO_INLINE BaseVector *ConstructBuildVarcharColumn(const std::pair<BaseVec
             static_cast<VarcharVector *>(ret)->SetNull(i);
         } else {
             uint64_t address = buildTemp[i].second;
-            auto buildRowIdx = LookupJoinOutputBuilder::DecodeRowId(address);
-            auto vecBatchIndex = LookupJoinOutputBuilder::DecodeVectorBatchId(address);
+            auto vecBatchIndex = DecodeSliceIndex(address);
+            auto buildRowIdx = DecodePosition(address);
             auto buildVector = array[outputCol][vecBatchIndex];
             if (buildVector->IsNull(buildRowIdx)) {
                 static_cast<VarcharVector *>(ret)->SetNull(i);
@@ -1236,7 +1111,6 @@ void LookupJoinOutputBuilder::BuildOutput(BaseVector **probeOutputColumns, Vecto
 {
     auto output = new VectorBatch(probeRowCount);
     if (probeOutputColsCount > 0) {
-        // only probe side will produce dic vector
         ConstructProbeColumns(output, probeOutputColumns);
     }
     if (buildOutputColsCount > 0) {
@@ -1248,4 +1122,5 @@ void LookupJoinOutputBuilder::BuildOutput(BaseVector **probeOutputColumns, Vecto
     buildIndex.clear();
     probeRowCount = 0;
 }
+} // end of op
 } // end of omniruntime

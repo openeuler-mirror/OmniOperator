@@ -45,8 +45,8 @@ endif (CCACHE_FOUND)
 
 #-ffast-math
 #-fopt-info-vec-optimized
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -march=armv8-a+crc -fno-var-tracking-assignments -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=armv8-a+crc -fno-var-tracking-assignments -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_COMPILE_LEVEL} -fno-var-tracking-assignments -pipe -g -Wall -fPIC -fno-omit-frame-pointer -fno-common -fno-stack-protector -ftest-coverage -fprofile-arcs")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -fno-var-tracking-assignments -pipe -Wall -Wtrampolines -D_FORTIFY_SOURCE=2 -fPIC -finline-functions -fstack-protector-strong -s -Wl,-z,noexecstack -Wl,-z,relro,-z,now")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -finline-limit=6000 --param inline-unit-growth=300")
 
 if(ENABLE_COMPILE_TIME_REPORT)

@@ -144,8 +144,8 @@ std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataType
     int32_t buildJoinCols[1] = {1};
     int32_t joinColsCount = 1;
     operatorCount = 1;
-    auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(OMNI_JOIN_TYPE_INNER,
-        sourceTypes, buildJoinCols, joinColsCount, operatorCount);
+    auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(sourceTypes, buildJoinCols,
+        joinColsCount, operatorCount);
 
     int32_t probeOutputCols[1] = {2};
     int32_t probeOutputColsCount = 1;

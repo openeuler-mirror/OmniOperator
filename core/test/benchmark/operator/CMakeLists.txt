@@ -26,4 +26,5 @@ target_link_libraries(groupby_hashmap_benchmark
         memory
         util
         pthread
+        ${OMNI_OPERATOR_SO}
 )

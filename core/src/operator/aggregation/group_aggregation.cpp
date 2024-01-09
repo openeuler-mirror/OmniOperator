@@ -159,10 +159,10 @@ void HashAggregationOperatorFactory::ChooseGroupByType()
 {
     // Currently, only the serialization method is used for all column types that need to be grouped by.
     // The method can be continuously evolved based on different types.
-    handleType = HandleType::serialize;
+    handleType = GroupByFieldHandleType::serialize;
 }
 
-void HashAggregationOperator::SetGroupByColumnsHandleType(HandleType t)
+void HashAggregationOperator::SetGroupByColumnsHandleType(GroupByFieldHandleType t)
 {
     groupByColumnsHandleType = t;
 }
@@ -174,7 +174,7 @@ OmniStatus HashAggregationOperator::Init()
     }
     isInited = true;
     // put at beginning so that we do not allocate memory if there is error
-    if (groupByColumnsHandleType == HandleType::serialize) {
+    if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
         serialize = std::make_unique<decltype(serialize)::element_type>();
         serialize->InitSize(groupByCols.size());
     } else {
@@ -226,7 +226,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         groupVectors[i] = curVector;
     }
 
-    if (groupByColumnsHandleType == HandleType::serialize) {
+    if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
         Emplace(serialize, vecBatch, groupVectors, groupColNum);
     } else {
         // only serialize method are used now
@@ -274,7 +274,7 @@ void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<
 int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t expectedBatchSize = 0;
-    if (groupByColumnsHandleType == HandleType::serialize) {
+    if (groupByColumnsHandleType == GroupByFieldHandleType::serialize) {
         expectedBatchSize = Output(serialize, outputVecBatch);
     } else {
         SetStatus(OMNI_STATUS_ERROR);

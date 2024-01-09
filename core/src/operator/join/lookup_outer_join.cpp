@@ -12,13 +12,12 @@ namespace omniruntime {
 namespace op {
 LookupOuterJoinOperatorFactory::LookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
-    const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables)
+    const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables)
     : buildOutputTypes(buildOutputTypes), probeTypes(probeTypes), hashTables(hashTables)
 {
     this->probeOutputCols.insert(this->probeOutputCols.end(), probeOutputCols, probeOutputCols + probeOutputColsCount);
     this->buildOutputCols.insert(this->buildOutputCols.end(), buildOutputCols,
         buildOutputCols + buildOutputTypes.GetSize());
-    PrepareTotalVisitedCounts();
 }
 
 LookupOuterJoinOperatorFactory::~LookupOuterJoinOperatorFactory() = default;
@@ -29,7 +28,7 @@ LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOute
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupOuterJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
-        buildOutputCols, buildOutputTypes, hashBuilderFactory->GetHashTablesVariants());
+        buildOutputCols, buildOutputTypes, hashBuilderFactory->GetHashTables());
     return pOperatorFactory;
 }
 
@@ -45,29 +44,8 @@ Operator *LookupOuterJoinOperatorFactory::CreateOperator()
     return lookupOuterJoinOperator;
 }
 
-void LookupOuterJoinOperatorFactory::PrepareTotalVisitedCounts()
-{
-    std::visit(
-        [&](auto &&arg) {
-            size_t partitionIndex = 0;
-            while (partitionIndex < arg.GetHashTableSize()) {
-                if (arg.GetHashTableTypes(partitionIndex) == HashTableImplementationType::ARRAY_HASH_TABLE) {
-                    auto &hashTable = arg.GetArrayTable(partitionIndex);
-                    hashTable->ForEachValue(
-                        [&](const auto &value) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
-                } else {
-                    auto &hashTable = arg.GetHashTable(partitionIndex);
-                    hashTable->hashmap.ForEachValue(
-                        [&](const auto &value) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
-                }
-                partitionIndex++;
-            }
-        },
-        *hashTables);
-}
-
 LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, std::vector<int32_t> &probeOutputCols,
-    std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables)
+    std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinHashTables *hashTables)
     : probeOutputTypes(probeOutputTypes),
       probeOutputCols(probeOutputCols),
       buildOutputCols(buildOutputCols),
@@ -89,24 +67,23 @@ LookupOuterJoinOperator::~LookupOuterJoinOperator()
 
 int32_t LookupOuterJoinOperator::AddInput(VectorBatch *vecBatch)
 {
-    // do nothing, lookup outer join just process matched rows in GetOutput
+    // do noting, lookup outer join just process matched rows in GetOutput
     return 0;
 }
 
 int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    totalRowCount =
-        std::visit([&](auto &&arg) { return arg.GetTotalVisitedCounts() - arg.GetVisitedCounts(); }, *hashTables);
+    totalRowCount = hashTables->GetTotalVisitedCounts() - hashTables->GetVisitedCounts();
     if (totalRowCount <= 0) {
         SetStatus(OMNI_STATUS_FINISHED);
         iterator->Reset();
         return 0;
     }
     int32_t rowCount = std::min(maxRowCount, static_cast<int32_t>(totalRowCount) - outputtedRowCount);
+    outputtedRowCount += rowCount;
     auto result = new VectorBatch(rowCount);
     BuildVecBatch(result);
     *outputVecBatch = result;
-    outputtedRowCount += rowCount;
     if (!HasNext()) {
         SetStatus(OMNI_STATUS_FINISHED);
         iterator->Reset();
@@ -135,14 +112,14 @@ void LookupOuterJoinOperator::BuildVecBatch(VectorBatch *vectorBatch)
         auto vector = VectorHelper::CreateVector(OMNI_FLAT, buildOutputTypes.GetType(buildCol)->GetId(), rowCount);
         vectorBatch->Append(vector);
     }
-
-    if (!visited) {
-        PrepareAllUnvisitedRows();
-        visited = true;
+    int32_t rows = 0;
+    auto outputIds = buildOutputTypes.GetIds();
+    auto buildOutputSize = buildOutputTypes.GetSize();
+    auto probeOutputSize = probeOutputTypes.GetSize();
+    while (rows < rowCount) {
+        AppendToNext(vectorBatch, outputIds, buildOutputSize, probeOutputSize, rows);
+        rows++;
     }
-
-    AppendAllUnvisitedRows(vectorBatch, buildOutputTypes.GetIds(), buildOutputTypes.GetSize(),
-        probeOutputTypes.GetSize(), rowCount);
 }
 
 template <DataTypeId typeId>
@@ -167,133 +144,43 @@ void AppendTo(VectorBatch *vectorBatch, int32_t destCol, int32_t destRowIndex, u
     destVector->SetValue(destRowIndex, value);
 }
 
-void LookupOuterJoinOperator::AppendAllUnvisitedRows(VectorBatch *vectorBatch, const int32_t *buildOutputIds,
-    int32_t buildOutputColsCount, int32_t probeOutputColsCount, int rowCount)
+void LookupOuterJoinOperator::AppendToNext(VectorBatch *vectorBatch, const int32_t *buildOutputIds,
+    int32_t buildOutputColsCount, int32_t probeOutputColsCount, int32_t destRowIndex)
 {
-    std::visit(
-        [&](auto &&arg) {
-            if (arg.GetHashTableSize() == 1) {
-                for (auto i = 0, addrIdx = outputtedRowCount; i < rowCount; i++, addrIdx++) {
-                    auto vecBatchIndex = addresses[addrIdx].first;
-                    auto srcRowIndex = addresses[addrIdx].second;
-
-                    for (int32_t col = 0; col < buildOutputColsCount; col++) {
-                        auto buildOutputCol = buildOutputCols[col];
-                        auto destCol = col + probeOutputColsCount;
-                        auto src = arg.GetColumns(0)[buildOutputCol][vecBatchIndex];
-                        DYNAMIC_TYPE_DISPATCH(AppendTo, buildOutputIds[col], vectorBatch, destCol, i, srcRowIndex, src);
-                    }
-                }
-            } else {
-                for (auto i = 0, addrIdx = outputtedRowCount; i < rowCount; i++, addrIdx++) {
-                    auto vecBatchIndex = addresses[addrIdx].first;
-                    auto srcRowIndex = addresses[addrIdx].second;
-
-                    for (int32_t col = 0; col < buildOutputColsCount; col++) {
-                        auto buildOutputCol = buildOutputCols[col];
-                        auto destCol = col + probeOutputColsCount;
-                        auto src = arg.GetColumns(hashTableIndexes[addrIdx])[buildOutputCol][vecBatchIndex];
-                        DYNAMIC_TYPE_DISPATCH(AppendTo, buildOutputIds[col], vectorBatch, destCol, i, srcRowIndex, src);
-                    }
-                }
-            }
-        },
-        *hashTables);
+    uint64_t address;
+    uint32_t hashTableIndex;
+    iterator->NextUnVisitedAddress(hashTableIndex, address);
+    auto vecBatchIndex = DecodeSliceIndex(address);
+    auto srcRowIndex = DecodePosition(address);
+    auto hashTable = hashTables->GetHashTable(hashTableIndex);
+    for (int32_t col = 0; col < buildOutputColsCount; col++) {
+        auto buildOutputCol = buildOutputCols[col];
+        auto destCol = col + probeOutputColsCount;
+        auto src = hashTable->GetPagesHash()->GetPagesHashStrategy()->GetBuildColumns()[buildOutputCol][vecBatchIndex];
+        DYNAMIC_TYPE_DISPATCH(AppendTo, buildOutputIds[col], vectorBatch, destCol, destRowIndex, srcRowIndex, src);
+    }
 }
 
-void LookupOuterJoinOperator::PrepareAllUnvisitedRows()
-{
-    std::visit(
-        [&](auto &&arg) {
-            if (arg.GetHashTableSize() == 1) {
-                iterator->GetAllUnVisitedAddressFromSingleTable(hashTableIndexes, addresses);
-            } else {
-                iterator->GetAllUnVisitedAddressFromMultipleTables(hashTableIndexes, addresses);
-            }
-        },
-        *hashTables);
-}
-
-LookupOuterPositionIterator::LookupOuterPositionIterator(HashTableVariants *hashTables)
-    : currentHashTable(0), currentPosition(0), hashTables(hashTables)
+LookupOuterPositionIterator::LookupOuterPositionIterator(JoinHashTables *joinHashTables)
+    : currentHashTable(0), currentPosition(0), joinHashTables(joinHashTables)
 {}
 
-void LookupOuterPositionIterator::GetAllUnVisitedAddressFromSingleTable(std::vector<uint32_t> &hashTableIndexes,
-    std::vector<std::pair<uint32_t, uint32_t>> &addresses)
+void LookupOuterPositionIterator::NextUnVisitedAddress(uint32_t &hashTableIndex, uint64_t &address)
 {
-    std::visit(
-        [&](auto &&arg) {
-            using VariantType = std::decay_t<decltype(arg)>;
-            using Mapped = typename VariantType::Mapped;
-            if constexpr (std::is_same_v<Mapped, RowRefListWithFlags>) {
-                if (arg.GetHashTableTypes(currentHashTable) == HashTableImplementationType::ARRAY_HASH_TABLE) {
-                    auto &hashTable = arg.GetArrayTable(currentHashTable);
-                    hashTable->ForEachValue([&](const auto &value) {
-                        auto it = value->Begin();
-                        while (it.IsOk()) {
-                            if (!it->visited) {
-                                addresses.emplace_back(std::make_pair(it->vecBatchIdx, it->rowIdx));
-                            }
-                            ++it;
-                        }
-                    });
-                } else {
-                    auto &hashTable = arg.GetHashTable(currentHashTable);
-                    hashTable->hashmap.ForEachValue([&](const auto &value) {
-                        auto it = value->Begin();
-                        while (it.IsOk()) {
-                            if (!it->visited) {
-                                addresses.emplace_back(std::make_pair(it->vecBatchIdx, it->rowIdx));
-                            }
-                            ++it;
-                        }
-                    });
-                }
-                currentHashTable++;
+    while (currentHashTable < joinHashTables->GetHashTableSize()) {
+        auto hashTable = joinHashTables->GetHashTable(currentHashTable);
+        while (currentPosition < hashTable->GetVisitedPositionsSize()) {
+            if (!hashTable->HasVisited(currentPosition)) {
+                address = hashTable->GetPagesHash()->GetAddresses()[currentPosition];
+                hashTableIndex = currentHashTable;
+                currentPosition++;
+                return;
             }
-        },
-        *hashTables);
-}
-
-void LookupOuterPositionIterator::GetAllUnVisitedAddressFromMultipleTables(std::vector<uint32_t> &hashTableIndexes,
-    std::vector<std::pair<uint32_t, uint32_t>> &addresses)
-{
-    std::visit(
-        [&](auto &&arg) {
-            using VariantType = std::decay_t<decltype(arg)>;
-            using Mapped = typename VariantType::Mapped;
-            if constexpr (std::is_same_v<Mapped, RowRefListWithFlags>) {
-                while (currentHashTable < arg.GetHashTableSize()) {
-                    if (arg.GetHashTableTypes(currentHashTable) == HashTableImplementationType::ARRAY_HASH_TABLE) {
-                        auto &hashTable = arg.GetArrayTable(currentHashTable);
-                        hashTable->ForEachValue([&](const auto &value) {
-                            auto it = value->Begin();
-                            while (it.IsOk()) {
-                                if (!it->visited) {
-                                    addresses.emplace_back(std::make_pair(it->vecBatchIdx, it->rowIdx));
-                                    hashTableIndexes.emplace_back(currentHashTable);
-                                }
-                                ++it;
-                            }
-                        });
-                    } else {
-                        auto &hashTable = arg.GetHashTable(currentHashTable);
-                        hashTable->hashmap.ForEachValue([&](const auto &value) {
-                            auto it = value->Begin();
-                            while (it.IsOk()) {
-                                if (!it->visited) {
-                                    addresses.emplace_back(std::make_pair(it->vecBatchIdx, it->rowIdx));
-                                    hashTableIndexes.emplace_back(currentHashTable);
-                                }
-                                ++it;
-                            }
-                        });
-                    }
-                    currentHashTable++;
-                }
-            }
-        },
-        *hashTables);
+            currentPosition++;
+        }
+        currentPosition = 0;
+        currentHashTable++;
+    }
 }
 
 void LookupOuterPositionIterator::Reset()
