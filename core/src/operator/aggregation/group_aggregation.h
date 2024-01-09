@@ -12,7 +12,7 @@
 #include "operator/execution_context.h"
 #include "operator/aggregation/aggregator/only_aggregator_factory.h"
 #include "operator/util/operator_util.h"
-#include "group_column_marshaller.h"
+#include "operator/hashmap/column_marshaller.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "operator/config/operator_config.h"
 #include "operator/filter/filter_and_project.h"
@@ -252,7 +252,7 @@ private:
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
-    void SetGroupByColumnsHandleType(GroupByFieldHandleType t);
+    void SetGroupByColumnsHandleType(HandleType t);
 
     friend class HashAggregationOperatorFactory;
     template <typename V, typename D>
@@ -266,8 +266,8 @@ private:
     std::vector<DataTypes> aggOutputTypes;
     std::vector<type::DataTypePtr> outputTypes;
     std::unique_ptr<ExecutionContext> executionContext;
-    GroupByFieldHandleType groupByColumnsHandleType = GroupByFieldHandleType::serialize;
-    std::unique_ptr<GroupbyColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
+    HandleType groupByColumnsHandleType = HandleType::serialize;
+    std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
     bool isInited = false;
 
     OutputState outputState;
@@ -322,7 +322,7 @@ private:
     std::vector<DataTypes> aggOutputTypes;
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
-    GroupByFieldHandleType handleType;
+    HandleType handleType;
     void ChooseGroupByType();
 };
 } // end of namespace op

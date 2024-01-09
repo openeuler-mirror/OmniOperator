@@ -5,6 +5,7 @@
 #define OMNI_RUNTIME_STRING_REF_H
 #include <string>
 #include <cstring>
+
 namespace omniruntime {
 namespace type {
 // replace stringRef with std::string_view
@@ -22,7 +23,9 @@ struct StringRef {
 
     explicit StringRef(char *data_) : data(data_), size(strlen(data_)) {}
 
-    friend bool operator == (const StringRef &lhs, const StringRef &rhs)
+    explicit StringRef(char *data_, size_t sz) : data(data_), size(sz) {}
+
+    friend bool ALWAYS_INLINE operator == (const StringRef &lhs, const StringRef &rhs)
     {
         auto leftSize = lhs.size;
         auto rightSize = rhs.size;

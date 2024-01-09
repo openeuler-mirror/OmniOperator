@@ -6,6 +6,7 @@ package nova.hetu.omniruntime.operator.join;
 
 import static java.util.Objects.requireNonNull;
 
+import nova.hetu.omniruntime.constants.JoinType;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
@@ -56,35 +57,39 @@ public class OmniHashBuilderWithExprOperatorFactory
     /**
      * Instantiates a new Omni hash builder with expression operator factory.
      *
+     * @param joinType the join type
      * @param buildTypes the build input types
      * @param buildHashKeys the build hash keys
      * @param operatorCount the operator count
      * @param operatorConfig the operator config
      */
-    public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys, int operatorCount,
-            OperatorConfig operatorConfig) {
-        super(new FactoryContext(buildTypes, buildHashKeys, operatorCount, operatorConfig));
+    public OmniHashBuilderWithExprOperatorFactory(JoinType joinType, DataType[] buildTypes, String[] buildHashKeys,
+            int operatorCount, OperatorConfig operatorConfig) {
+        super(new FactoryContext(joinType, buildTypes, buildHashKeys, operatorCount, operatorConfig));
     }
 
     /**
      * Instantiates a new Omni hash builder with expression operator factory with
      * default operator config.
      *
+     * @param joinType the join type
      * @param buildTypes the build input types
      * @param buildHashKeys the build hash keys
      * @param operatorCount the operator count
      */
-    public OmniHashBuilderWithExprOperatorFactory(DataType[] buildTypes, String[] buildHashKeys, int operatorCount) {
-        this(buildTypes, buildHashKeys, operatorCount, new OperatorConfig());
+    public OmniHashBuilderWithExprOperatorFactory(JoinType joinType, DataType[] buildTypes, String[] buildHashKeys,
+            int operatorCount) {
+        this(joinType, buildTypes, buildHashKeys, operatorCount, new OperatorConfig());
     }
 
-    private static native long createHashBuilderWithExprOperatorFactory(String buildTypes, String[] buildHashKeys,
-            int operatorCount, String operatorConfig);
+    private static native long createHashBuilderWithExprOperatorFactory(int joinType, String buildTypes,
+            String[] buildHashKeys, int operatorCount, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
-        return createHashBuilderWithExprOperatorFactory(DataTypeSerializer.serialize(context.buildTypes),
-                context.buildHashKeys, context.operatorCount, OperatorConfig.serialize(context.operatorConfig));
+        return createHashBuilderWithExprOperatorFactory(context.joinType.getValue(),
+                DataTypeSerializer.serialize(context.buildTypes), context.buildHashKeys, context.operatorCount,
+                OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**
@@ -133,6 +138,8 @@ public class OmniHashBuilderWithExprOperatorFactory
      * @since 2021-10-16
      */
     public static class FactoryContext extends OmniOperatorFactoryContext {
+        private final JoinType joinType;
+
         private final DataType[] buildTypes;
 
         private final String[] buildHashKeys;
@@ -144,13 +151,15 @@ public class OmniHashBuilderWithExprOperatorFactory
         /**
          * Instantiates a new Context.
          *
+         * @param joinType the join type
          * @param buildTypes the build types
          * @param buildHashKeys the build hash keys
          * @param operatorCount the operator count
          * @param operatorConfig the operator config
          */
-        public FactoryContext(DataType[] buildTypes, String[] buildHashKeys, int operatorCount,
+        public FactoryContext(JoinType joinType, DataType[] buildTypes, String[] buildHashKeys, int operatorCount,
                 OperatorConfig operatorConfig) {
+            this.joinType = requireNonNull(joinType, "joinType");
             this.buildTypes = requireNonNull(buildTypes, "buildTypes");
             this.buildHashKeys = requireNonNull(buildHashKeys, "buildHashKeys");
             this.operatorCount = operatorCount;
@@ -160,7 +169,7 @@ public class OmniHashBuilderWithExprOperatorFactory
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(buildTypes), Arrays.hashCode(buildHashKeys), operatorCount,
+            return Objects.hash(joinType, Arrays.hashCode(buildTypes), Arrays.hashCode(buildHashKeys), operatorCount,
                     operatorConfig);
         }
 
@@ -173,8 +182,9 @@ public class OmniHashBuilderWithExprOperatorFactory
                 return false;
             }
             FactoryContext that = (FactoryContext) obj;
-            return Arrays.equals(buildTypes, that.buildTypes) && Arrays.equals(buildHashKeys, that.buildHashKeys)
-                    && operatorCount == that.operatorCount && operatorConfig.equals(that.operatorConfig);
+            return joinType.equals(that.joinType) && Arrays.equals(buildTypes, that.buildTypes)
+                    && Arrays.equals(buildHashKeys, that.buildHashKeys) && operatorCount == that.operatorCount
+                    && operatorConfig.equals(that.operatorConfig);
         }
     }
 }
