@@ -39,15 +39,15 @@ public:
         return hashmap.Emplace(key);
     }
 
-    ALWAYS_INLINE void TryToInsertJoinKeysToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
+    ALWAYS_INLINE void TryToInsertJoinKeysToHashmap(BaseVector **joinVectors, int32_t joinColNum, int32_t rowIdx,
         int32_t i, mem::SimpleArenaAllocator &arenaAllocator, std::vector<type::StringRef> &keys,
-        std::vector<bool> &isNotNullKeys)
+        std::vector<int8_t> &isNotNullKeys)
     {
         keys[i].size = 0;
         keys[i].data = nullptr;
-        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
-            auto curVector = groupVectors[groupColIdx];
-            auto &curFunc = ignoreNullSerializers[groupColIdx];
+        for (int32_t joinColIdx = 0; joinColIdx < joinColNum; joinColIdx++) {
+            auto curVector = joinVectors[joinColIdx];
+            auto &curFunc = ignoreNullSerializers[joinColIdx];
             if (UNLIKELY(!curFunc(curVector, rowIdx, arenaAllocator, keys[i]))) {
                 isNotNullKeys[i] = false;
                 return;
@@ -56,12 +56,12 @@ public:
         isNotNullKeys[i] = true;
     }
 
-    ALWAYS_INLINE void TryToInsertFixedJoinKeysToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
+    ALWAYS_INLINE void TryToInsertFixedJoinKeysToHashmap(BaseVector **joinVectors, int32_t joinColNum, int32_t rowIdx,
         type::StringRef &key, bool &isNotNullKey)
     {
         size_t pos = 0;
-        for (int32_t groupColIdx = 0; groupColIdx < groupColNum; groupColIdx++) {
-            auto curVector = groupVectors[groupColIdx];
+        for (int32_t groupColIdx = 0; groupColIdx < joinColNum; groupColIdx++) {
+            auto curVector = joinVectors[groupColIdx];
             auto &curFunc = fixedKeysIgnoreNullSerializers[groupColIdx];
             if (UNLIKELY(!curFunc(curVector, rowIdx, key, pos))) {
                 isNotNullKey = false;
@@ -71,7 +71,7 @@ public:
         isNotNullKey = true;
     }
 
-    ALWAYS_INLINE void BatchCalculateHash(std::vector<KeyType> &keys, std::vector<bool> &isNotNullKeys,
+    ALWAYS_INLINE void BatchCalculateHash(std::vector<KeyType> &keys, std::vector<int8_t> &isNotNullKeys,
         std::vector<size_t> &hashes, int32_t maxStep)
     {
         for (int i = 0; i < maxStep; ++i) {
