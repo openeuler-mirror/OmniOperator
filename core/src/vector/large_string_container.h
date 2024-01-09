@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  */
 #ifndef OMNI_RUNTIME_LARGE_STRING_CONTAINER_H
 #define OMNI_RUNTIME_LARGE_STRING_CONTAINER_H

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  * @Description: join result builder implementations
  */
 
@@ -96,7 +96,7 @@ public:
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
     int32_t CollectRowsInfo(std::vector<std::pair<int32_t, int32_t>> &leftMeta,
                             std::vector<std::pair<int32_t, int32_t>> &rightMeta,
-                            int32_t inputSize, int32_t &counter);
+                            std::vector<bool> &canFreeRightBatches, int32_t inputSize, int32_t &counter);
 
     ALWAYS_INLINE bool NeedDoFilter() const
     {
@@ -138,6 +138,8 @@ private:
 
     void JoinFilterCodeGen(OverflowConfig *overflowConfig);
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
+    void SetCanFreeRightBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId,
+                                std::vector<bool> &canFreeRightBatches);
     VectorBatch *NewEmptyVectorBatch() const;
     void UpdateLeftAntiJoinHandler(int32_t addressPosition, std::vector<int8_t> &isSameBufferedKeyMatched,
         int32_t inputSize);
