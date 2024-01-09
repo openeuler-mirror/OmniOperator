@@ -293,9 +293,14 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
     GroupByMeta(rightGroupedRowsPerBatchId, rightMeta);
 
     // get the vectors of each batch
+    int32_t prevBatchId = 0;
     for (auto &batchRows: leftGroupedRowsPerBatchId) { // go over the different batches
         auto batchId = batchRows.first;
         auto rowIds = batchRows.second;
+        if (prevBatchId != batchId) {
+            this->leftTablePagesIndex->FreeBeforeVecBatch(prevBatchId);
+            prevBatchId = batchId;
+        }
         for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
             auto columnIndex = leftTableOutputCols[columnIdx];
             auto inputDataType = leftTableOutputTypes[columnIdx];
