@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: pages index implementations
  */
 #ifndef __PAGES_INDEX_H__
@@ -25,6 +25,9 @@ public:
     void AddVecBatch(omniruntime::vec::VectorBatch *vecBatch);
 
     void Prepare();
+
+    template <DataTypeId typeId>
+    void PrepareRadixSort(const bool ascending, const bool nullFirst, const int32_t sortCol);
 
     template <DataTypeId typeId> void PrepareInplaceSort(int32_t nullFirst)
     {
@@ -54,15 +57,22 @@ public:
     void Sort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
         int32_t sortColCount, int32_t from, int32_t to);
 
+    void SortWithRadixSort(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
+        int32_t sortColCount, int32_t from, int32_t to);
+
     void SortInplace(const int32_t *sortCols, const int32_t *sortAscendings, const int32_t *sortNullFirsts,
         int32_t sortColCount, int32_t from, int32_t to);
 
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
-        const int32_t *sourceTypes, int32_t offset, int32_t length) const;
+        const int32_t *sourceTypes, int32_t offset, int32_t len) const;
 
     void GetOutputInplaceSort(int32_t *outputCols, int32_t outputColsCount,
         omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset,
         int32_t length) const;
+
+    void GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount,
+        omniruntime::vec::VectorBatch *outputVecBatch,
+        const int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
     void GetSortedVecBatches(std::vector<int32_t> &outputCols,
         std::vector<omniruntime::vec::VectorBatch *> &sortedVecBatches, bool canSortInplace = false);
@@ -92,6 +102,16 @@ public:
     ALWAYS_INLINE omniruntime::vec::BaseVector ***GetColumns() const
     {
         return this->columns;
+    }
+
+    ALWAYS_INLINE bool HasDictionary(uint32_t index) const
+    {
+        return hasDictionaries[index];
+    }
+
+    ALWAYS_INLINE size_t GetVectorBatchSize() const
+    {
+        return inputVecBatches.size();
     }
 
 private:
@@ -161,6 +181,9 @@ private:
         }
     }
 
+    template <DataTypeId typeId, bool hasNull, bool hasNegative>
+    ALWAYS_INLINE void FillRadixDataChunk(const int32_t sortCol, const bool nullsFirst);
+
     template <DataTypeId dataTypeId>
     void SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32_t from, int32_t to);
 
@@ -174,6 +197,11 @@ private:
     std::vector<bool> hasNulls;
     int64_t totalNullCount = 0;
     omniruntime::vec::BaseVector *inplaceSortColumn = nullptr;
+
+    std::vector<uint8_t> radixComboRow;
+    uint32_t radixValueWidth;
+    uint32_t radixRowWidth;
+    uint32_t radixSortingSize;
 };
 
 constexpr uint32_t SHIFT_SIZE_32 = 32;
@@ -182,6 +210,10 @@ static ALWAYS_INLINE uint64_t EncodeSyntheticAddress(uint32_t sliceIndex, uint32
     return (static_cast<uint64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
 }
 
+static ALWAYS_INLINE std::tuple<uint16_t, uint32_t> CompactDecodeSytheticAddress(const uint8_t *address)
+{
+    return { *reinterpret_cast<const uint16_t *>(address), *reinterpret_cast<const uint32_t *>(address + 2) };
+}
 static ALWAYS_INLINE uint32_t DecodeSliceIndex(uint64_t sliceAddress)
 {
     return static_cast<uint32_t>(sliceAddress >> SHIFT_SIZE_32);

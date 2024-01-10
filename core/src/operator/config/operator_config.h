@@ -170,14 +170,21 @@ private:
 
 class OperatorConfig {
 public:
-    OperatorConfig() : spillConfig(new SpillConfig()), overflowConfig(new OverflowConfig()), isSkipVerify(false) {}
+    OperatorConfig()
+        : spillConfig(new SpillConfig()),
+          overflowConfig(new OverflowConfig()),
+          isSkipVerify(false),
+          adaptivityThreshold(-1)
+    {}
 
     OperatorConfig(const OperatorConfig &operatorConfig);
 
-    OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig, bool isSkipVerify)
+    OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig, bool isSkipVerify,
+        int adaptivityThreshold = -1)
         : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig()),
           overflowConfig((overflowConfig != nullptr) ? overflowConfig : new OverflowConfig()),
-          isSkipVerify(isSkipVerify)
+          isSkipVerify(isSkipVerify),
+          adaptivityThreshold(adaptivityThreshold)
     {}
 
     OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig)
@@ -234,6 +241,10 @@ public:
         this->isSkipVerify = needSkipVerify;
     }
 
+    int GetAdaptivityThreshold() const
+    {
+        return adaptivityThreshold;
+    }
     static OperatorConfig DeserializeOperatorConfig(const std::string &configString);
 
     static void CheckOperatorConfig(const OperatorConfig &operatorConfig);
@@ -242,6 +253,7 @@ private:
     SpillConfig *spillConfig = nullptr;
     OverflowConfig *overflowConfig = nullptr;
     bool isSkipVerify = false;
+    int adaptivityThreshold = -1;
 };
 }
 }

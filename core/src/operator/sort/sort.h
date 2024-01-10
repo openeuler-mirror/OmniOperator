@@ -141,6 +141,8 @@ private:
     void GetVecBatchesForSpill(std::vector<omniruntime::vec::VectorBatch *> &vecBatchesForSpill);
     void GetOutputFromMemory(VectorBatch **outputVecBatch);
     void MergeFromDiskAndMemory(VectorBatch **outputVecBatch);
+    bool CanUseRadixSort();
+    bool CanUseRadixSortByRuntimeInfo();
 
     type::DataTypes sourceTypes;
     std::vector<int32_t> outputCols;
@@ -159,6 +161,8 @@ private:
     Spiller *spiller = nullptr;
     bool hasNext = true;
     bool canInplaceSort = false;
+    bool useRadixSort = false;
+    int32_t radixSortSizeThreshold = -1;
 };
 } // end of namespace op
 } // end of namespace omniruntime

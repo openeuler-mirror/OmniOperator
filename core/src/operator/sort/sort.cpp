@@ -70,6 +70,11 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
         sourceTypes.GetType(0)->GetId() != OMNI_CHAR && sourceTypes.GetType(0)->GetId() != OMNI_BOOLEAN) {
         canInplaceSort = true;
     }
+
+    this->radixSortSizeThreshold = operatorConfig.GetAdaptivityThreshold();
+    if (not canInplaceSort) {
+        useRadixSort = this->CanUseRadixSort();
+    }
 }
 
 SortOperator::~SortOperator() = default;
@@ -81,7 +86,7 @@ int32_t SortOperator::AddInput(VectorBatch *vecBatch)
     if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
-        if (result != ErrorCode::SUCCESS) {
+        if (UNLIKELY(result != ErrorCode::SUCCESS)) {
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
     }
@@ -156,11 +161,14 @@ void SortOperator::Sort()
 {
     int32_t positionCount = pagesIndex->GetRowCount();
     int32_t sortColCount = sortCols.size();
-    if (!canInplaceSort) {
-        pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0, positionCount);
-    } else {
+    if (canInplaceSort) {
         pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
             positionCount);
+    } else if (useRadixSort) {
+        pagesIndex->SortWithRadixSort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
+            positionCount);
+    } else {
+        pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0, positionCount);
     }
 }
 
@@ -171,8 +179,26 @@ void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesF
     for (int32_t i = 0; i < typesCount; i++) {
         outputCols[i] = i;
     }
-
+    // This call GetOutput, which will decide whether to use radix sort
     pagesIndex->GetSortedVecBatches(outputCols, vecBatchesForSpill, canInplaceSort);
+}
+
+bool SortOperator::CanUseRadixSort()
+{
+    bool canUseRadixSort = (radixSortSizeThreshold != -1 && sortCols.size() == 1);
+    if (not canUseRadixSort) {
+        return false;
+    }
+    auto sortDataType = sourceTypes.GetType(sortCols[0])->GetId();
+    bool isAllowedDataType = (sortDataType == OMNI_LONG || sortDataType == OMNI_DATE32 || sortDataType == OMNI_INT ||
+        sortDataType == OMNI_SHORT || sortDataType == OMNI_BOOLEAN || sortDataType == OMNI_DECIMAL64);
+    return isAllowedDataType;
+}
+
+bool SortOperator::CanUseRadixSortByRuntimeInfo()
+{
+    return pagesIndex->GetVectorBatchSize() <= UINT16_MAX && pagesIndex->GetRowCount() > radixSortSizeThreshold &&
+        !pagesIndex->HasDictionary(sortCols[0]);
 }
 
 void SortOperator::PrepareOutput()
@@ -180,10 +206,39 @@ void SortOperator::PrepareOutput()
     if (pagesIndex->GetRowCount() <= 0 || hasSorted) {
         return;
     }
-    if (!canInplaceSort) {
-        pagesIndex->Prepare();
-    } else {
+    // update radix sort state
+    if (useRadixSort) {
+        useRadixSort = CanUseRadixSortByRuntimeInfo();
+    }
+
+    if (canInplaceSort) {
         DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(), sortNullFirsts[0]);
+    } else if (useRadixSort) {
+        LogDebug("radix Sort size threshold is %d\n", radixSortSizeThreshold);
+        switch (sourceTypes.GetType(sortCols[0])->GetId()) {
+            case OMNI_LONG:
+                pagesIndex->PrepareRadixSort<OMNI_LONG>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
+                break;
+            case OMNI_DATE32:
+            case OMNI_INT:
+                pagesIndex->PrepareRadixSort<OMNI_INT>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
+                break;
+            case OMNI_SHORT:
+                pagesIndex->PrepareRadixSort<OMNI_SHORT>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
+                break;
+            case OMNI_BOOLEAN:
+                pagesIndex->PrepareRadixSort<OMNI_BOOLEAN>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
+                break;
+            case OMNI_DECIMAL64:
+                pagesIndex->PrepareRadixSort<OMNI_DECIMAL64>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
+                break;
+            default:
+                useRadixSort = false;
+                pagesIndex->Prepare();
+                break;
+        }
+    } else {
+        pagesIndex->Prepare();
     }
     // first step, sort
     Sort();
@@ -200,6 +255,7 @@ void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
 
     auto *result = new VectorBatch(rowCountToOutput);
     if (!canInplaceSort) {
+        // This includes both radix sort and normal quick sort
         pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
             rowCountToOutput);
     } else {
