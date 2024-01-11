@@ -5,91 +5,9 @@
 
 #include "average_aggregator.h"
 #include "operator/aggregation/vector_getter.h"
-#ifdef ENABLE_HMPP
-#include "HMPP/hmpps.h"
-#endif
 
 namespace omniruntime {
 namespace op {
-#ifdef ENABLE_HMPP
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
-        throw OmniException("NOT SUPPORT", "Unsupported input type for avg aggregate");
-    } else {
-        auto vector = vectorBatch->Get(this->channels[0]);
-
-        auto vectorValues = VectorHelper::UnsafeGetValues(vector);
-        auto rowCount = vector->GetSize();
-        auto nullAddr = reinterpret_cast<void *>(unsafe::UnsafeBaseVector::GetNulls(vector));
-        bool overflow = false;
-        int32_t count = 0;
-
-        HmppResult result = HMPP_STS_NO_ERR;
-
-        if constexpr (IN_ID == OMNI_LONG) {
-            LogDebug("HMPP-Agg-avg");
-            double sumVal = 0;
-            result = HMPPS_Mean_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)), rowCount,
-                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal, &count);
-            if (result != HMPP_STS_NO_ERR) {
-                throw OmniException("HMPP ERROR", "avg failed for hmpp error");
-            }
-
-            if (state.val == nullptr) {
-                auto valPtr = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-                *reinterpret_cast<ResultType *>(valPtr) = static_cast<ResultType>(sumVal);
-                state.val = valPtr;
-                state.count = static_cast<int64_t>(count);
-            } else {
-                *(reinterpret_cast<ResultType *>(state.val)) += static_cast<ResultType>(sumVal);
-                state.count += static_cast<int64_t>(count);
-            }
-        } else {
-            // IN_ID == OMNI_DECIMAL128
-            LogDebug("HMPP-Agg-avg");
-            HmppDecimal128 sumVal{};
-            result = HMPPS_Mean_decimal128(static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)),
-                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal, &count);
-            if (result != HMPP_STS_NO_ERR) {
-                throw OmniException("HMPP ERROR", "avg failed for hmpp error");
-            }
-
-            if (state.val == nullptr) {
-                state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
-                *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
-            } else {
-                int128_t preSumVal = (*(reinterpret_cast<Decimal128 *>(state.val))).ToInt128();
-                overflow = AddCheckedOverflow(preSumVal, Decimal128(sumVal.high, sumVal.low).ToInt128(), preSumVal);
-                *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(preSumVal);
-            }
-            if (overflow) {
-                state.count = -1;
-            } else if (state.count >= 0) {
-                state.count += static_cast<int64_t>(count);
-            }
-        }
-    }
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool AverageAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    // just support raw input data
-    if (!AverageAggregator<IN_ID, OUT_ID>::inputRaw) {
-        return false;
-    } else {
-        // not accept dictionnary vector
-        if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
-            return false;
-        }
-        // only long supported
-        return this->inputTypes.GetType(0)->GetId() == OMNI_LONG;
-    }
-}
-#endif
-
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool PARTIAL_OUT>
 void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateState &state,

@@ -58,12 +58,8 @@ public:
 
     static Policy *GetPolicy();
 
-    static bool IsEnableHMPP();
-
     // for test
     static void SetEnableBatchExprEvaluate(bool isEnable);
-
-    static void SetEnableHMPP(bool isEnable);
 
 private:
     static std::map<std::string, std::string> configMap;

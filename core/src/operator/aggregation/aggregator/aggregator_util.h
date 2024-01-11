@@ -32,8 +32,6 @@ public:
     static std::vector<std::vector<int32_t>> WrapWithVector(std::vector<int32_t> &value);
 
     static std::unique_ptr<type::DataTypes> WrapWithDataTypes(const type::DataTypePtr &value);
-
-    static bool IsHMPPMaxMinSupportDataTypeId(type::DataTypeId);
 };
 }
 }

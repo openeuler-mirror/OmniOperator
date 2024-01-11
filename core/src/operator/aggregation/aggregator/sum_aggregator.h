@@ -168,12 +168,6 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class SumAggregator : public Type
 public:
     ~SumAggregator() override = default;
 
-#ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-#endif
-
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 
     void InitState(AggregateState &state) override;

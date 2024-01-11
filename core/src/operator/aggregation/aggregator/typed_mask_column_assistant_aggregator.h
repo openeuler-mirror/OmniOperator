@@ -86,18 +86,6 @@ class TypedMaskColAggregator : public TypedAggregator {
 public:
     ~TypedMaskColAggregator() override = default;
 
-#ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        this->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-    }
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        return realAggregator->CanProcessWithHMPP(state, vectorBatch);
-    }
-#endif
-
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount) override
     {

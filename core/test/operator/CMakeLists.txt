@@ -1,9 +1,4 @@
-if (ENABLE_HMPP)
-    aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
-ELSE ()
-    aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
-    list(REMOVE_ITEM OP_TESTS_LIST ${CMAKE_CURRENT_LIST_DIR}/hmpp_hash_test.cpp)
-endif()
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR} OP_TESTS_LIST)
 
 # test of aggregator will spend too much time especially link stage
 SET(ENABLE_AGG_TEST ON)

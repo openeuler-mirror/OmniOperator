@@ -47,12 +47,6 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxVarcharAggregator : publ
 public:
     ~MaxVarcharAggregator() override = default;
 
-#ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-#endif
-
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,

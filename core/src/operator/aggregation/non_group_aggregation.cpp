@@ -8,9 +8,6 @@
 #include "util/type_util.h"
 #include "agg_util.h"
 #include "vector_getter.h"
-#ifdef ENABLE_HMPP
-#include "util/config_util.h"
-#endif
 
 namespace omniruntime {
 namespace op {
@@ -85,24 +82,12 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggsStates[aggIdx];
 
-#ifdef ENABLE_HMPP
-        if (ConfigUtil::IsEnableHMPP() && aggregator->CanProcessWithHMPP(state, vecBatch)) {
-            aggregator->ProcessGroupWithHMPP(state, vecBatch);
-        } else if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
-            aggregator->ProcessGroupFilter(state, vecBatch, 0, filterIndex);
-            filterIndex++;
-        } else {
-            aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
-        }
-#else
         if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
             aggregator->ProcessGroupFilter(state, vecBatch, 0, filterIndex);
             filterIndex++;
         } else {
             aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
         }
-
-#endif
     }
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;

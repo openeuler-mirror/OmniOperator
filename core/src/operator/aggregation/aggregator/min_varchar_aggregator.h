@@ -6,9 +6,6 @@
 #define OMNI_RUNTIME_MIN_VARCHAR_AGGREGATOR_H
 
 #include "typed_aggregator.h"
-#ifdef ENABLE_HMPP
-#include "HMPP/hmpps.h"
-#endif
 #include "operator/aggregation/definitions.h"
 
 constexpr int64_t UPDATE_FLAG = 0x0000000100000000LL;
@@ -297,12 +294,6 @@ VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<Aggrega
 template <DataTypeId IN_ID, DataTypeId OUT_ID> class MinVarcharAggregator : public TypedAggregator {
 public:
     ~MinVarcharAggregator() override = default;
-
-#ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-#endif
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 

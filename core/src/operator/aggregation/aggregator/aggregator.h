@@ -116,18 +116,6 @@ public:
 
     virtual ~Aggregator() = default;
 
-#ifdef ENABLE_HMPP
-    virtual void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-    {
-        throw OmniException("NOT SUPPORT", "this aggregator is not supported by hmpp");
-    }
-    // HMPP handle flag for input handle framework, push down choice to aggregator
-    virtual bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-    {
-        return false;
-    }
-#endif
-
     virtual void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex)
     {
         throw OmniException("Not implemented",

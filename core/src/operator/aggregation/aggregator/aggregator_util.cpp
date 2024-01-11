@@ -62,17 +62,5 @@ std::unique_ptr<DataTypes> AggregatorUtil::WrapWithDataTypes(const DataTypePtr &
     vector.push_back(value);
     return std::make_unique<DataTypes>(vector);
 }
-
-bool AggregatorUtil::IsHMPPMaxMinSupportDataTypeId(DataTypeId toChkDataTypeId)
-{
-    static std::vector<DataTypeId> dataTypeIdsWhiteList = { OMNI_SHORT,     OMNI_INT,    OMNI_DATE32,    OMNI_LONG,
-                                                            OMNI_DECIMAL64, OMNI_DOUBLE };
-    for (auto dataTypeId : dataTypeIdsWhiteList) {
-        if (dataTypeId == toChkDataTypeId) {
-            return true;
-        }
-    }
-    return false;
-}
 } // end of namespace op
 } // end of namespace omniruntime

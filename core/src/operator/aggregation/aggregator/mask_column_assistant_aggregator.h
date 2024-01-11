@@ -21,21 +21,6 @@ public:
 
     ~MaskColAggregator() override = default;
 
-#ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        auto rowCount = vectorBatch->GetRowCount();
-        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            this->ProcessGroup(state, vectorBatch, rowIdx);
-        }
-    }
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override
-    {
-        return realAggregator->CanProcessWithHMPP(state, vectorBatch);
-    }
-#endif
-
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         BaseVector *maskVector = vectorBatch->Get(maskColumnId);

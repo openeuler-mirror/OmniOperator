@@ -30,7 +30,6 @@ print_help() {
     llvm, --enable-llvm-debug          = Enable LLVM Debug
     --disable-cpuchecker               = Disable CPU checker
     --enable-dt                        = Enable DT checker
-    --enable-hmpp                      = Enable using hmpp library
     --exclude-test                     = Exclude Test Source
   "
 }
