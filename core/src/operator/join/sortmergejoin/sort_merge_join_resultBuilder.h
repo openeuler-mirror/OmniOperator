@@ -94,40 +94,10 @@ public:
     ~JoinResultBuilder();
 
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
-    int32_t CollectRowsInfo(std::vector<std::pair<int32_t, int32_t>> &leftMeta,
-                            std::vector<std::pair<int32_t, int32_t>> &rightMeta,
-                            int32_t inputSize, int32_t &counter);
 
     ALWAYS_INLINE bool NeedDoFilter() const
     {
         return simpleFilter != nullptr;
-    }
-
-    void GroupByMeta(std::vector<std::pair<int32_t, std::vector<int32_t>>> &output,
-        const std::vector<std::pair<int32_t, int32_t>> &meta)
-    {
-        auto metaSize = meta.size();
-        if (metaSize == 0) {
-            return;
-        }
-        auto &pair = meta[0];
-        auto prevBatchId = pair.first;
-        std::vector<int32_t> rows;
-        rows.emplace_back(pair.second);
-
-        for (size_t i = 1; i < metaSize; i++) {
-            auto &tmpPair = meta[i];
-            auto batchId = tmpPair.first;
-            auto rowId = tmpPair.second;
-            if (prevBatchId != batchId) {
-                output.emplace_back(std::make_pair(prevBatchId, rows));
-                rows.clear();
-                prevBatchId = batchId;
-            }
-            rows.emplace_back(rowId);
-        }
-
-        output.emplace_back(std::make_pair(prevBatchId, rows));
     }
 
 private:
@@ -168,6 +138,7 @@ private:
             }
         }
     }
+
     std::vector<DataTypePtr> leftTableOutputTypes;
     int32_t *leftTableOutputCols;
     int32_t leftTableOutputColsCount;

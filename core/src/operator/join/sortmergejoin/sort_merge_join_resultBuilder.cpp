@@ -104,75 +104,10 @@ void AddValueToVector(BaseVector *inputVector, int32_t inputRowId, BaseVector *o
     }
 }
 
-void AddStringValuesToBuildVector(BaseVector *inputVector, const int32_t* inputRowIds, int32_t inputSize,
-    BaseVector *outputVector, int32_t outputRowId)
-{
-    using Vector = vec::Vector<vec::LargeStringContainer<std::string_view>>;
-    using Type = std::string_view;
-    auto stringOutputVector = reinterpret_cast<Vector *>(outputVector);
-    std::vector<Type> values;
-    values.reserve(inputSize >> 1);
-    int32_t valuesSize = 0;
-    for (int32_t i = 0; i < inputSize; i++) {
-        auto inputRowId = inputRowIds[i];
-        if (inputVector->IsNull(inputRowId)) {
-            auto valuesCount = values.size();
-            if (valuesCount > 0) {
-                stringOutputVector->SetStringValues(outputRowId, values, valuesCount, valuesSize);
-            }
-            stringOutputVector->SetNull(outputRowId);
-            outputRowId += valuesCount + 1;
-            values.clear();
-            valuesSize = 0;
-        } else {
-            // no dictionary input for smj
-            Type value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
-            valuesSize += value.size();
-            values.push_back(value);
-        }
-    }
-    if (!values.empty()) {
-        stringOutputVector->SetStringValues(outputRowId, values, values.size(), valuesSize);
-    }
-}
-
-template <type::DataTypeId typeId>
-void AddValuesToVector(BaseVector *inputVector, const int32_t* inputRowIds, int32_t inputSize,
-    BaseVector *outputVector, int32_t outputRowId)
-{
-    if constexpr (typeId == type::OMNI_VARCHAR || typeId == OMNI_CHAR) {
-        AddStringValuesToBuildVector(inputVector, inputRowIds, inputSize, outputVector, outputRowId);
-    } else {
-        using Type = typename NativeAndVectorType<typeId>::type;
-        using Vector = typename NativeAndVectorType<typeId>::vector;
-        for (int32_t i = 0; i < inputSize; i++) {
-            auto inputRowId = inputRowIds[i];
-            if (UNLIKELY(inputVector->IsNull(inputRowId))) {
-                reinterpret_cast<Vector *>(outputVector)->SetNull(outputRowId);
-            } else {
-                // no dictionary input for smj
-                Type value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
-                reinterpret_cast<Vector *>(outputVector)->SetValue(outputRowId, value);
-            }
-            ++outputRowId;
-        }
-    }
-}
-
-
 void AddValueToBuildVector(BaseVector *inputVector, const DataTypePtr &inputDataType, int32_t inputRowId,
     BaseVector *outputVector, int32_t outputRowId)
 {
     DYNAMIC_TYPE_DISPATCH(AddValueToVector, inputDataType->GetId(), inputVector, inputRowId, outputVector, outputRowId);
-}
-
-void AddValuesToBuildVector(BaseVector *inputVector, const DataTypePtr &inputDataType, const std::vector<int32_t> &rows,
-    BaseVector *outputVector, int32_t outputRowId)
-{
-    auto rowIds = rows.data();
-    auto rowIdsCount = rows.size();
-    DYNAMIC_TYPE_DISPATCH(AddValuesToVector, inputDataType->GetId(), inputVector, rowIds, rowIdsCount, outputVector,
-                          outputRowId);
 }
 
 void AddValueNullToBuildVector(const DataTypePtr &dataType, BaseVector *vector, int32_t rowId)
@@ -246,9 +181,9 @@ void JoinResultBuilder::UpdateLeftAntiJoinHandler(int32_t addressPosition,
     }
 }
 
-int32_t JoinResultBuilder::CollectRowsInfo(std::vector<std::pair<int32_t, int32_t>> &leftMeta,
-    std::vector<std::pair<int32_t, int32_t>> &rightMeta, int32_t inputSize, int32_t &counter)
+int32_t JoinResultBuilder::ConstructInnerJoinOutput()
 {
+    auto inputSize = static_cast<int32_t>(streamedTableValueAddresses.size());
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
@@ -256,76 +191,33 @@ int32_t JoinResultBuilder::CollectRowsInfo(std::vector<std::pair<int32_t, int32_
         int32_t leftRowId = DecodePosition(streamedRowAddress);
         int32_t rightBatchId = DecodeSliceIndex(bufferedRowAddress);
         int32_t rightRowId = DecodePosition(bufferedRowAddress);
-        bool isEligible = IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId);
-        if (isEligible) {
-            leftMeta.emplace_back(std::make_pair(leftBatchId, leftRowId));
-            rightMeta.emplace_back(std::make_pair(rightBatchId, rightRowId));
-            ++counter;
+        FreeVectorBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
+
+        if (IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId)) {
+            for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
+                AddValueToBuildVector(leftTablePagesIndex->GetColumn(leftBatchId, leftTableOutputCols[columnIdx]),
+                    leftTableOutputTypes[columnIdx], leftRowId, buildVectorBatch->Get(columnIdx), buildRowCount);
+            }
+            for (int32_t columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
+                int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
+                AddValueToBuildVector(rightTablePagesIndex->GetColumn(rightBatchId, rightTableOutputCols[columnIdx]),
+                    rightTableOutputTypes[columnIdx], rightRowId, buildVectorBatch->Get(buildColumnIdx), buildRowCount);
+            }
+            buildRowCount++;
         }
-        ++addressOffset;
-        if (counter >= maxRowCount) {
+
+        addressOffset++;
+        if (buildRowCount >= maxRowCount) {
+            buildVectorBatchRowCount = buildRowCount;
             return 1;
         }
     }
-    return 0;
-}
 
-int32_t JoinResultBuilder::ConstructInnerJoinOutput()
-{
-    auto inputSize = static_cast<int32_t>(streamedTableValueAddresses.size());
-    if (addressOffset >= inputSize) {
-        buildVectorBatchRowCount = buildRowCount;
-        return 0;
-    }
-    auto initialBuildRowCount = buildRowCount;
-    auto initialAddressOffset = addressOffset;
-    std::vector<std::pair<int32_t, int32_t>> leftMeta;
-    leftMeta.reserve(inputSize - initialAddressOffset);
-    std::vector<std::pair<int32_t, int32_t>> rightMeta;
-    rightMeta.reserve(inputSize - initialAddressOffset);
-    int32_t counter = buildRowCount;
-    auto result = CollectRowsInfo(leftMeta, rightMeta, inputSize, counter);
-
-    // put all the positions belonging to the same batch together
-    auto leftGroupedRowsPerBatchId = std::vector<std::pair<int32_t, std::vector<int32_t>>>();
-    GroupByMeta(leftGroupedRowsPerBatchId, leftMeta);
-    auto rightGroupedRowsPerBatchId = std::vector<std::pair<int32_t, std::vector<int32_t>>>();
-    GroupByMeta(rightGroupedRowsPerBatchId, rightMeta);
-
-    // get the vectors of each batch
-    for (auto &batchRows: leftGroupedRowsPerBatchId) { // go over the different batches
-        auto batchId = batchRows.first;
-        auto rowIds = batchRows.second;
-        for (int32_t columnIdx = 0; columnIdx < leftTableOutputColsCount; columnIdx++) {
-            auto columnIndex = leftTableOutputCols[columnIdx];
-            auto inputDataType = leftTableOutputTypes[columnIdx];
-            auto outputVector = buildVectorBatch->Get(columnIdx);
-            auto inputVector = leftTablePagesIndex->GetColumn(batchId, columnIndex);
-            AddValuesToBuildVector(inputVector, inputDataType, rowIds, outputVector, buildRowCount);
-        }
-        buildRowCount+= rowIds.size();
-    }
-    if (rightTableOutputColsCount > 0) {
-        buildRowCount = initialBuildRowCount;
-    }
-
-    for (auto &batchRows: rightGroupedRowsPerBatchId) { // go over the different batches
-        auto batchId = batchRows.first;
-        auto rowIds = batchRows.second;
-        for (int32_t columnIdx = 0; columnIdx < rightTableOutputColsCount; columnIdx++) {
-            int32_t buildColumnIdx = leftTableOutputColsCount + columnIdx;
-            auto columnIndex = rightTableOutputCols[columnIdx];
-            auto inputDataType = rightTableOutputTypes[columnIdx];
-            auto outputVector = buildVectorBatch->Get(buildColumnIdx);
-            auto inputVector = rightTablePagesIndex->GetColumn(batchId, columnIndex);
-            AddValuesToBuildVector(inputVector, inputDataType, rowIds, outputVector, buildRowCount);
-        }
-        buildRowCount+= rowIds.size();
-    }
-    buildRowCount = counter;
     buildVectorBatchRowCount = buildRowCount;
-
-    return result;
+    if (buildRowCount >= maxRowCount) {
+        return 1;
+    }
+    return 0;
 }
 
 int32_t JoinResultBuilder::ConstructLeftJoinOutput()

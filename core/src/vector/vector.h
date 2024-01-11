@@ -553,18 +553,6 @@ public:
     }
 
     /* *
-     * Set the value at the indicated index
-     * @param index
-     * @param value
-     * @param length
-     */
-    void ALWAYS_INLINE SetStringValues(int index, std::vector<std::string_view> &values, size_t length,
-                                       int32_t valuesSize)
-    {
-        container->SetValues(index, values, length, valuesSize);
-    }
-
-    /* *
      * Gets the value of the vector at the indicated index
      * @param index
      * @return
