@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
  * @Description: join result builder implementations
  */
 
@@ -94,40 +94,10 @@ public:
     ~JoinResultBuilder();
 
     bool IsJoinPositionEligible(int32_t leftBatchId, int32_t leftRowId, int32_t rightBatchId, int32_t rightRowId) const;
-    int32_t CollectRowsInfo(std::vector<std::pair<int32_t, int32_t>> &leftMeta,
-                            std::vector<std::pair<int32_t, int32_t>> &rightMeta,
-                            std::vector<bool> &canFreeRightBatches, int32_t inputSize, int32_t &counter);
 
     ALWAYS_INLINE bool NeedDoFilter() const
     {
         return simpleFilter != nullptr;
-    }
-
-    void GroupByMeta(std::vector<std::pair<int32_t, std::vector<int32_t>>> &output,
-        const std::vector<std::pair<int32_t, int32_t>> &meta)
-    {
-        auto metaSize = meta.size();
-        if (metaSize == 0) {
-            return;
-        }
-        auto &pair = meta[0];
-        auto prevBatchId = pair.first;
-        std::vector<int32_t> rows;
-        rows.emplace_back(pair.second);
-
-        for (size_t i = 1; i < metaSize; i++) {
-            auto &tmpPair = meta[i];
-            auto batchId = tmpPair.first;
-            auto rowId = tmpPair.second;
-            if (prevBatchId != batchId) {
-                output.emplace_back(std::make_pair(prevBatchId, rows));
-                rows.clear();
-                prevBatchId = batchId;
-            }
-            rows.emplace_back(rowId);
-        }
-
-        output.emplace_back(std::make_pair(prevBatchId, rows));
     }
 
 private:
@@ -138,8 +108,6 @@ private:
 
     void JoinFilterCodeGen(OverflowConfig *overflowConfig);
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
-    void SetCanFreeRightBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId,
-                                std::vector<bool> &canFreeRightBatches);
     VectorBatch *NewEmptyVectorBatch() const;
     void UpdateLeftAntiJoinHandler(int32_t addressPosition, std::vector<int8_t> &isSameBufferedKeyMatched,
         int32_t inputSize);
@@ -170,6 +138,7 @@ private:
             }
         }
     }
+
     std::vector<DataTypePtr> leftTableOutputTypes;
     int32_t *leftTableOutputCols;
     int32_t leftTableOutputColsCount;

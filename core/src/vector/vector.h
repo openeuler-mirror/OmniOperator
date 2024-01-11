@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  * Description: vector  implementation
  */
 #ifndef OMNI_RUNTIME_VECTOR_H
@@ -550,18 +550,6 @@ public:
     void ALWAYS_INLINE SetValue(int index, std::string_view &value)
     {
         container->SetValue(index, value);
-    }
-
-    /* *
-     * Set the value at the indicated index
-     * @param index
-     * @param value
-     * @param length
-     */
-    void ALWAYS_INLINE SetStringValues(int index, std::vector<std::string_view> &values, size_t length,
-                                       int32_t valuesSize)
-    {
-        container->SetValues(index, values, length, valuesSize);
     }
 
     /* *
