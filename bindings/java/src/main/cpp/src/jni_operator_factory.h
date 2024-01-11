@@ -234,6 +234,14 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     jstring jOperatorConfig);
 
 /*
+ * Class:     nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory
+ * Method:    createLimitOperatorFactory
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory_createLimitOperatorFactory(
+    JNIEnv *env, jclass jObj, jlong jLimit);
+
+/*
  * Class:     nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory
  * Method:    createDistinctLimitOperatorFactory
  * Signature: (Ljava/lang/String;[IIJ)J
