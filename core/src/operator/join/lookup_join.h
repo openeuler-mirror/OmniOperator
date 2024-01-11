@@ -1,14 +1,14 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * @Description: lookup join implementations
  */
 #ifndef __LOOKUP_JOIN_H__
 #define __LOOKUP_JOIN_H__
 
 #include <memory>
-#include "join_hash_table.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
+#include "operator/filter/filter_and_project.h"
 #include "type/data_types.h"
 #include "type/data_type.h"
 #include "hash_builder.h"
@@ -21,7 +21,7 @@ public:
     LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, const int32_t *probeOutputTypes,
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const int32_t *buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
-    void AppendRow(int32_t probePosition, const JoinHashTable *hashtable, uint32_t joinPosition);
+    void AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address);
     void BuildOutput(BaseVector **probeOutputColumns, VectorBatch **outputVecBatch);
     void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns);
     void ConstructBuildColumns(VectorBatch *vectorBatch);
@@ -34,6 +34,22 @@ public:
     ALWAYS_INLINE bool IsEmpty()
     {
         return probeRowCount == 0;
+    }
+
+    static const uint32_t SHIFT_SIZE_32 = 32;
+    static ALWAYS_INLINE uint64_t EncodeAddress(uint32_t rowId, uint32_t vectorBatchId)
+    {
+        return (static_cast<uint64_t>(rowId) << SHIFT_SIZE_32) | vectorBatchId;
+    }
+
+    static ALWAYS_INLINE uint32_t DecodeRowId(uint64_t sliceAddress)
+    {
+        return static_cast<uint32_t>(sliceAddress >> SHIFT_SIZE_32);
+    }
+
+    static ALWAYS_INLINE uint32_t DecodeVectorBatchId(uint64_t sliceAddress)
+    {
+        return static_cast<uint32_t>(sliceAddress);
     }
 
 private:
@@ -89,11 +105,11 @@ class LookupJoinOperatorFactory : public OperatorFactory {
 public:
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
-        const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
+        const type::DataTypes &buildOutputTypes, JoinType joinType, HashTableVariants *hashTables,
         omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
-        const type::DataTypes &buildOutputTypes, JoinType joinType, JoinHashTables *hashTables,
+        const type::DataTypes &buildOutputTypes, JoinType joinType, HashTableVariants *hashTables,
         omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig);
     ~LookupJoinOperatorFactory() override;
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
@@ -121,8 +137,8 @@ private:
     std::vector<int32_t> buildOutputCols; // output columns for build
     DataTypes buildOutputTypes;           // output column types for build
     JoinType joinType;
-    JoinHashTables *hashTables;
-    int32_t rowSize;
+    HashTableVariants *hashTables;
+    int32_t rowSize; // estimation of rowSize
     SimpleFilter *simpleFilter = nullptr;
     // this is for lookup join with expression operator when join key and join filter both are expressions
     int32_t originalProbeColsCount;
@@ -133,26 +149,34 @@ public:
     LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
         std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
-        JoinHashTables *hashTables, SimpleFilter *simpleFilter, int32_t originalProbeColsCount, int32_t outputRowSize);
+        HashTableVariants *hashTables, SimpleFilter *simpleFilter, int32_t originalProbeColsCount,
+        int32_t outputRowSize);
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
 private:
-    template <bool hasJoinFilter> void ProbeBatchForInnerJoin();
-    template <bool hasJoinFilter> void ProbeBatchForLeftJoin();
-    template <bool hasJoinFilter> void ProbeBatchForRightJoin();
-    template <bool hasJoinFilter> void ProbeBatchForFullJoin();
-    template <bool hasJoinFilter> void ProbeBatchForLeftSemiJoin();
-    template <bool hasJoinFilter> void ProbeBatchForLeftAntiJoin();
-    bool IsJoinPositionEligible(uint32_t partition, uint32_t joinPosition, uint32_t probeRow);
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForInnerJoin();
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftJoin();
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForRightJoin();
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForFullJoin();
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftSemiJoin();
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftAntiJoin();
+    bool IsJoinPositionEligible(uint32_t partition, uint64_t address, uint32_t probeRow);
     void PrepareCurrentProbe();
+    void PrepareSerializers();
     void PopulateProbeHashes();
-    void ProcessProbe(bool hasFilter);
+    void PopulateProbeNulls();
+    void ProcessProbe(bool hasFilter, bool singleHT);
 
     ALWAYS_INLINE std::vector<BaseVector **> &GetBuildFilterColPtrs(uint32_t partition)
     {
         return tableBuildFilterColPtrs[partition];
+    }
+
+    void PushBackProbeSerializer(VectorSerializerIgnoreNull &serializer)
+    {
+        probeSerializers.push_back(serializer);
     }
 
     JoinType joinType;
@@ -163,7 +187,7 @@ private:
     std::vector<int32_t> buildOutputCols;
     DataTypes probeOutputTypes;
     DataTypes buildOutputTypes;
-    JoinHashTables *hashTables;
+    HashTableVariants *hashTables;
 
     omniruntime::vec::BaseVector **probeHashColumns = nullptr; // Vector *[join column count]
     omniruntime::vec::BaseVector **probeOutputColumns = nullptr;
@@ -189,6 +213,7 @@ private:
     int32_t *lengths = nullptr;
     std::vector<std::vector<BaseVector **>> tableBuildFilterColPtrs;
     bool firstVecBatch = false;
+    std::vector<VectorSerializerIgnoreNull> probeSerializers;
 };
 } // end of op
 } // end of omniruntime

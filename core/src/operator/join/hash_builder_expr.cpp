@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * @Description: sort implementations
  */
 
@@ -14,23 +14,23 @@ namespace op {
 using namespace omniruntime::vec;
 
 HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
-    const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
-    int32_t buildHashKeysCount, int32_t hashTableCount, OverflowConfig *overflowConfig)
+    JoinType joinType, const type::DataTypes &buildTypes,
+    const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t hashTableCount,
+    OverflowConfig *overflowConfig)
 {
-    return new HashBuilderWithExprOperatorFactory(buildTypes, buildHashKeys, buildHashKeysCount, hashTableCount,
-        overflowConfig);
+    return new HashBuilderWithExprOperatorFactory(joinType, buildTypes, buildHashKeys, hashTableCount, overflowConfig);
 }
 
-HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(const type::DataTypes &buildTypes,
-    const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t buildHashKeysCount,
+HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType,
+    const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
     int32_t hashTableCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newBuildTypes;
-    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeysCount, newBuildTypes, this->projections,
+    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeys.size(), newBuildTypes, this->projections,
         this->buildHashCols, this->projectFuncs, overflowConfig);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
-    this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(*(this->buildTypes),
-        this->buildHashCols.data(), buildHashKeysCount, hashTableCount);
+    this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinType, *(this->buildTypes),
+        this->buildHashCols.data(), buildHashKeys.size(), hashTableCount);
 }
 
 HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
