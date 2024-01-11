@@ -116,6 +116,11 @@ public:
         return columns[partitionIndex];
     }
 
+    ALWAYS_INLINE JoinType GetJoinType() const
+    {
+        return joinType;
+    }
+
     void BuildHashTable(int32_t partitionIndex);
 
     void Prepare(int32_t partitionIndex);
