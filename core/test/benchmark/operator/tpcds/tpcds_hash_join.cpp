@@ -37,7 +37,7 @@ protected:
         auto buildHashKeys = GetExprsFromJson(buildMetaData["buildHashKeys"].get<std::vector<std::string>>());
         hashBuilderOperatorFactory =
             new HashBuilderWithExprOperatorFactory(JoinType(buildMetaData["joinType"]["value"].get<int>()),
-            DataTypes(buildTypes), buildHashKeys, (int32_t)buildHashKeys.size(), hashTableCount, new OverflowConfig());
+            DataTypes(buildTypes), buildHashKeys, hashTableCount, new OverflowConfig());
         hashBuilderOperator = hashBuilderOperatorFactory->CreateOperator();
 
         for (const auto &vb : LoadVectorBatchFromPath(dependentDataPath, buildTypes)) {
