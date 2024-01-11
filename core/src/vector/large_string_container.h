@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  */
 #ifndef OMNI_RUNTIME_LARGE_STRING_CONTAINER_H
 #define OMNI_RUNTIME_LARGE_STRING_CONTAINER_H
@@ -52,6 +52,28 @@ public:
 
         offsets[index + 1] = needCapacityInBytes;
         lastOffsetPosition = index;
+    }
+
+    ALWAYS_INLINE void SetValues(int index, std::vector<std::string_view> &values, size_t length, int32_t valuesSize)
+    {
+        FillSlots(index + length - 1);
+        int32_t needCapacityInBytes = offsets[index] + valuesSize; // start offset, and then value size
+        char *charBuffer = GetBufferWithSpace(needCapacityInBytes);
+
+        for (auto &value : values) {
+            auto valueSize = value.size();
+            // src len can be 0, but dest len can not be 0 when empty strings, otherwise the memcpy_s return errno 34
+            errno_t result = memcpy_sp(charBuffer + offsets[index], valueSize + 1, value.data(), valueSize);
+            if (UNLIKELY(result != EOK)) {
+                std::string omniExceptionInfo = "In function SetValue, memcpy faild, ret is：" + std::to_string(result) +
+                        ", reason is: " + std::string(strerror(errno));
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", omniExceptionInfo);
+            }
+
+            offsets[index + 1] = offsets[index] + valueSize;
+            lastOffsetPosition = index;
+            ++index;
+        }
     }
 
     /* *
