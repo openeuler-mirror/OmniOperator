@@ -37,14 +37,13 @@ private:
     std::unique_ptr<DataTypes> buildTypes;
     std::vector<int32_t> buildHashCols;
     std::vector<std::unique_ptr<Projection>> projections;
-    std::vector<ProjFunc> projectFuncs;
     HashBuilderOperatorFactory *operatorFactory;
 };
 
 class HashBuilderWithExprOperator : public Operator {
 public:
-    HashBuilderWithExprOperator(const DataTypes &buildTypes, const std::vector<int32_t> &buildHashCols,
-        const std::vector<ProjFunc> &projectFuncs, HashBuilderOperator *hashBuilderOperator);
+    HashBuilderWithExprOperator(const DataTypes &buildTypes, std::vector<std::unique_ptr<Projection>> &projections,
+        HashBuilderOperator *hashBuilderOperator);
 
     ~HashBuilderWithExprOperator() override;
 
@@ -56,9 +55,9 @@ public:
 
 private:
     const DataTypes buildTypes;
-    std::vector<int32_t> buildHashCols;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> &projections;
     HashBuilderOperator *hashBuilderOperator;
+    ExecutionContext *executionContext;
 };
 }
 }

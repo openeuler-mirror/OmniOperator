@@ -26,8 +26,8 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType 
     int32_t hashTableCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newBuildTypes;
-    OperatorUtil::CreateProjectFuncs(buildTypes, buildHashKeys, buildHashKeys.size(), newBuildTypes, this->projections,
-        this->buildHashCols, this->projectFuncs, overflowConfig);
+    OperatorUtil::CreateProjections(buildTypes, buildHashKeys, newBuildTypes, this->projections, this->buildHashCols,
+        overflowConfig);
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinType, *(this->buildTypes),
         this->buildHashCols.data(), buildHashKeys.size(), hashTableCount);
@@ -41,32 +41,29 @@ HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
 Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 {
     auto hashBuilderOperator = static_cast<HashBuilderOperator *>(operatorFactory->CreateOperator());
-    return new HashBuilderWithExprOperator(*buildTypes, buildHashCols, projectFuncs, hashBuilderOperator);
+    return new HashBuilderWithExprOperator(*buildTypes, projections, hashBuilderOperator);
 }
 
 HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,
-    const std::vector<int32_t> &buildHashCols, const std::vector<ProjFunc> &projectFuncs,
-    HashBuilderOperator *hashBuilderOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, HashBuilderOperator *hashBuilderOperator)
     : buildTypes(buildTypes),
-      buildHashCols(buildHashCols),
-      projectFuncs(projectFuncs),
-      hashBuilderOperator(hashBuilderOperator)
+      projections(projections),
+      hashBuilderOperator(hashBuilderOperator),
+      executionContext(new ExecutionContext())
 {}
 
 HashBuilderWithExprOperator::~HashBuilderWithExprOperator()
 {
     delete this->hashBuilderOperator;
+    delete this->executionContext;
 }
 
 int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, buildTypes, projectFuncs, buildHashCols);
-    if (newInputVecBatch != nullptr) {
-        hashBuilderOperator->AddInput(newInputVecBatch);
-        VectorHelper::FreeVecBatch(vecBatch);
-    } else {
-        hashBuilderOperator->AddInput(vecBatch);
-    }
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, buildTypes, projections, executionContext);
+    hashBuilderOperator->AddInput(newInputVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
+    SetStatus(hashBuilderOperator->GetStatus());
     return 0;
 }
 

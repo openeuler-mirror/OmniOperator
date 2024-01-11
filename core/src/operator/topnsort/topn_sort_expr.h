@@ -25,14 +25,14 @@ private:
     std::vector<int32_t> partitionCols;
     std::vector<int32_t> sortCols;
     std::vector<std::unique_ptr<Projection>> projections;
-    std::vector<ProjFunc> projectFuncs;
     std::unique_ptr<TopNSortOperatorFactory> topNSortOperatorFactory;
 };
 
 class TopNSortWithExprOperator : public Operator {
 public:
     TopNSortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &partitionCols,
-        std::vector<int32_t> &sortCols, std::vector<ProjFunc> &projectFuncs, TopNSortOperator *topNSortOperator);
+        std::vector<int32_t> &sortCols, std::vector<std::unique_ptr<Projection>> &projections,
+        TopNSortOperator *topNSortOperator);
 
     ~TopNSortWithExprOperator() override;
 
@@ -46,9 +46,9 @@ private:
     omniruntime::type::DataTypes sourceTypes;
     std::vector<int32_t> partitionCols;
     std::vector<int32_t> sortCols;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> &projections;
     TopNSortOperator *topNSortOperator;
-    std::vector<vec::VectorBatch *> inputVecBatches;
+    ExecutionContext *executionContext;
 };
 }
 #endif // OMNI_RUNTIME_TOPN_SORT_EXPR_H

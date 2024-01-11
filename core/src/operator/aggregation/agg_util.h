@@ -39,60 +39,40 @@ public:
     }
 
     static VectorBatch *AggFilterRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &originTypes,
-        const DataTypes &inputTypes, const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
+        const DataTypes &inputTypes, const std::vector<std::unique_ptr<Projection>> &projections,
+        ExecutionContext *executionContext)
     {
-        int32_t vecCount = projectCols.size();
         int32_t rowCount = inputVecBatch->GetRowCount();
         auto newInputVecBatch = new VectorBatch(rowCount);
-        // short-circuit logic for column projections
-        // no need to go through codegen
         if (rowCount == 0) {
             VectorHelper::AppendVectors(newInputVecBatch, inputTypes, rowCount);
             return newInputVecBatch;
         }
 
-        auto projectFuncsCount = projectFuncs.size();
-
         int32_t originVecCount = inputVecBatch->GetVectorCount();
-        int64_t valueAddresses[originVecCount];
-        int64_t valueNulls[originVecCount];
-        int64_t valueOffsets[originVecCount];
-        int64_t dictVectorAddrs[originVecCount];
+        int64_t valueAddrs[originVecCount];
+        int64_t nullAddrs[originVecCount];
+        int64_t offsetAddrs[originVecCount];
+        int64_t dictionaryVectors[originVecCount];
+        GetAddr(*inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaryVectors, originTypes);
 
-        for (int32_t i = 0; i < originVecCount; i++) {
-            auto inputVector = inputVecBatch->Get(i);
-            if (inputVector->GetEncoding() != OMNI_DICTIONARY) {
-                valueAddresses[i] =
-                    DYNAMIC_TYPE_DISPATCH(OperatorUtil::GetRawAddr, originTypes.GetType(i)->GetId(), inputVector);
-                dictVectorAddrs[i] = 0;
-            } else {
-                valueAddresses[i] = 0;
-                dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(inputVector));
+        for (auto &projection : projections) {
+            auto projectVec = projection->Project(inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, executionContext,
+                dictionaryVectors, originTypes.GetIds());
+            if (executionContext->HasError()) {
+                VectorHelper::FreeVecBatch(newInputVecBatch);
+                VectorHelper::FreeVecBatch(inputVecBatch);
+                executionContext->GetArena()->Reset();
+                std::string errorMessage = executionContext->GetError();
+                throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
             }
-            valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(inputVector));
-            valueOffsets[i] = reinterpret_cast<int64_t>(VectorHelper::UnsafeGetOffsetsAddr(inputVector));
-        }
-
-        for (int32_t i = 0, projectFuncsIndex = 0; i < vecCount; i++) {
-            int32_t sourceColId = projectCols[i];
-            if (sourceColId >= 0) {
-                // source col append project colmun
-                auto inputVector = inputVecBatch->Get(sourceColId);
-                BaseVector *newInputVec = VectorHelper::SliceVector(inputVector, 0, rowCount);
-                newInputVecBatch->Append(newInputVec);
-            } else if (sourceColId == -1 && projectFuncsCount > 0) {
-                // append withexpr colmun
-                newInputVecBatch->Append(DYNAMIC_TYPE_DISPATCH(OperatorUtil::ProjectVector,
-                    inputTypes.GetType(i)->GetId(), projectFuncs[projectFuncsIndex++], valueAddresses, valueNulls,
-                    valueOffsets, dictVectorAddrs, rowCount));
-            }
+            newInputVecBatch->Append(projectVec);
         }
         return newInputVecBatch;
     }
 
     static void AddFilterColumn(VectorBatch *inputVecBatch, VectorBatch *newInputVecBatch,
-        std::vector<int32_t> &projectCols, std::vector<SimpleFilter *> &aggSimpleFilters, ExecutionContext *context,
-        DataTypes &originTypes)
+        std::vector<SimpleFilter *> &aggSimpleFilters, ExecutionContext *context, DataTypes &originTypes)
     {
         auto aggFilterNum = aggSimpleFilters.size();
         auto rowCount = inputVecBatch->GetRowCount();

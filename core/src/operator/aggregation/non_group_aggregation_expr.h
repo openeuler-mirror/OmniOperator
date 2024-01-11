@@ -40,8 +40,8 @@ private:
 class AggregationWithExprOperator : public Operator {
 public:
     AggregationWithExprOperator(const DataTypes &originSourceTypes, const type::DataTypes &sourceTypes,
-        std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs,
-        std::vector<SimpleFilter *> &aggSimpleFilters, AggregationOperator *AggOperator);
+        std::vector<std::unique_ptr<Projection>> &projections, std::vector<SimpleFilter *> &aggSimpleFilters,
+        AggregationOperator *AggOperator);
 
     ~AggregationWithExprOperator() override;
 
@@ -54,11 +54,10 @@ public:
 private:
     DataTypes originTypes;
     DataTypes sourceTypes;
-    std::vector<int32_t> projectCols;
-    std::vector<ProjFunc> projectFuncs;
-    int32_t aggFilterNum;
+    std::vector<std::unique_ptr<Projection>> &projections;
     std::vector<SimpleFilter *> aggSimpleFilters;
     AggregationOperator *aggOperator;
+    ExecutionContext *executionContext;
 };
 }
 }

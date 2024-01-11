@@ -25,25 +25,24 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
         aggColNum += aggKeys.size();
     }
 
-    this->aggFilterNum = aggFilters.size();
-
     // do groupByKeys and aggsKeys expression handle, and get new sourceTypes, groupby and agg columnar index
     uint32_t projectColNum = groupByNum + aggColNum;
-    omniruntime::expressions::Expr *projectKeys[projectColNum];
+    std::vector<omniruntime::expressions::Expr *> projectKeys(projectColNum);
     for (uint32_t i = 0; i < groupByNum; i++) {
-        projectKeys[i] = groupByKeys.at(i);
+        projectKeys[i] = groupByKeys[i];
     }
-    uint32_t projectColIdx = groupByNum;
 
+    uint32_t projectColIdx = groupByNum;
     for (auto &aggKeys : aggsKeys) {
-        for (uint32_t i = 0; i < aggKeys.size(); i++) {
-            projectKeys[projectColIdx] = aggKeys.at(i);
+        for (auto & aggKey : aggKeys) {
+            projectKeys[projectColIdx] = aggKey;
             projectColIdx++;
         }
     }
 
     // do aggSimpleFilters
-    for (int i = 0; i < aggFilterNum; ++i) {
+    this->aggFilterNum = static_cast<int32_t>(aggFilters.size());
+    for (int32_t i = 0; i < aggFilterNum; ++i) {
         if (aggFilters[i] == nullptr) {
             aggSimpleFilters.push_back(nullptr);
             continue;
@@ -55,8 +54,8 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
-        this->projections, this->projectCols, groupByAndAggColumnarIdx, this->projectFuncs, *overflowConfig);
+    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
+        groupByAndAggColumnarIdx, *overflowConfig);
     uint32_t groupByCols[groupByNum];
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[i]);
@@ -108,7 +107,6 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
     delete hashAggOperatorFactory;
     for (auto it : aggSimpleFilters) {
         delete it;
-        it = nullptr;
     }
     aggSimpleFilters.clear();
 }
@@ -116,8 +114,8 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
-    auto *op = new HashAggregationWithExprOperator(*originSourceTypes, *sourceTypes, projectCols, projectFuncs,
-        aggSimpleFilters, hashAggOperator);
+    auto *op = new HashAggregationWithExprOperator(*originSourceTypes, *sourceTypes, projections, aggSimpleFilters,
+        hashAggOperator);
     std::vector<type::DataTypeId> dataTypeIds;
     for (int32_t i = 0; i < originSourceTypes->GetSize(); ++i) {
         dataTypeIds.push_back(originSourceTypes->GetType(i)->GetId());
@@ -127,28 +125,29 @@ Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 }
 
 HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes &originSourceTypes,
-    const DataTypes &sourceTypes, std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs,
+    const DataTypes &sourceTypes, std::vector<std::unique_ptr<Projection>> &projections,
     std::vector<SimpleFilter *> &aggSimpleFilters, HashAggregationOperator *hashAggOperator)
     : originTypes(originSourceTypes),
       sourceTypes(sourceTypes),
-      projectCols(projectCols),
-      projectFuncs(projectFuncs),
+      projections(projections),
       aggSimpleFilters(aggSimpleFilters),
-      hashAggOperator(hashAggOperator)
+      hashAggOperator(hashAggOperator),
+      executionContext(new ExecutionContext())
 {}
 
 HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 {
     delete hashAggOperator;
+    delete executionContext;
 }
 
 int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
-        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projectFuncs, projectCols);
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext);
     // do filter and update newInputVecBatch
     // if is true not filter
-    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, aggSimpleFilters, context, originTypes);
+    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
     hashAggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;
@@ -158,7 +157,7 @@ void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t 
 {
     auto inputVecBatch = oneRowAdaptor.Trans2VectorBatch(rowValues, lens);
     VectorBatch *newInputVecBatch =
-        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projectFuncs, projectCols);
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext);
     hashAggOperator->AddInput(newInputVecBatch);
     // no need to delete inputVecBatch, it will be reused when this interface call again
 }

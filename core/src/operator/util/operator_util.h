@@ -114,10 +114,10 @@ public:
         return GetMaxRowCount(rowSize);
     }
 
-    static int32_t GetVecBatchCount(int32_t positionCount, int32_t maxRowCount)
+    static int32_t GetVecBatchCount(int64_t positionCount, int64_t maxRowCount)
     {
         ASSERT(maxRowCount != 0);
-        return ((positionCount + maxRowCount - 1) / maxRowCount);
+        return static_cast<int32_t>((positionCount + maxRowCount - 1) / maxRowCount);
     }
 
     static int32_t CompareVectorAtPosition(int32_t colTypeId, vec::BaseVector *leftColumn, int32_t leftColumnPosition,
@@ -280,166 +280,109 @@ public:
         }
     }
 
-    static void CreateProjectFuncs(const DataTypes &inputTypes,
-        std::vector<omniruntime::expressions::Expr *> projectKeys, int32_t projectKeysCount,
+    static int32_t CreateProjections(const DataTypes &inputTypes,
+        const std::vector<omniruntime::expressions::Expr *> &projectKeys,
         std::vector<omniruntime::type::DataTypePtr> &newInputTypes,
         std::vector<std::unique_ptr<Projection>> &projections, std::vector<int32_t> &projectCols,
-        std::vector<ProjFunc> &projectFuncs, OverflowConfig *overflowConfig)
+        OverflowConfig *overflowConfig)
     {
         newInputTypes.insert(newInputTypes.end(), inputTypes.Get().begin(), inputTypes.Get().end());
         int32_t inputTypesCount = inputTypes.GetSize();
-        for (int32_t i = 0; i < projectKeysCount; i++) {
-            std::unique_ptr<Projection> proj;
-            if (projectKeys[i] && projectKeys[i]->GetType() == ExprType::FIELD_E) {
-                projectCols.push_back(static_cast<const FieldExpr *>(projectKeys[i])->colVal);
+        int32_t projectOutIdx = 0;
+        auto projectKeysCount = projectKeys.size();
+        for (size_t i = 0; i < projectKeysCount; i++) {
+            auto projectKey = projectKeys[i];
+            auto projectRetType = projectKey->GetReturnType();
+            auto proj = std::make_unique<Projection>(*projectKey, false, projectRetType, inputTypes, overflowConfig);
+            if (proj->IsColumnProjection()) {
+                projectCols.emplace_back(proj->GetColumnProjectionIndex());
             } else {
-                proj = std::make_unique<Projection>(*(projectKeys[i]), false, projectKeys[i]->GetReturnType(),
-                    inputTypes, overflowConfig);
-                projectCols.emplace_back(inputTypesCount + projectFuncs.size());
-                ProjFunc func = proj->GetProjector();
-                projectFuncs.emplace_back(func);
-                DataTypePtr returnType = projectKeys[i]->GetReturnType();
-                newInputTypes.emplace_back(returnType);
+                projectCols.emplace_back(inputTypesCount + projectOutIdx);
+                newInputTypes.emplace_back(projectRetType);
+                projectOutIdx++;
             }
             projections.emplace_back(std::move(proj));
         }
+        return projectOutIdx;
     }
 
-    static void CreateRequiredProjectFuncs(const DataTypes &inputTypes, omniruntime::expressions::Expr *projectKeys[],
-        int32_t projectKeysCount, std::vector<DataTypePtr> &newInputTypes,
-        std::vector<std::unique_ptr<Projection>> &projections, std::vector<int32_t> &projectCols,
-        std::vector<int32_t> &allCols, std::vector<ProjFunc> &projectFuncs, OverflowConfig &overflowConfig)
+    static void CreateRequiredProjectFuncs(const DataTypes &inputTypes,
+        const std::vector<omniruntime::expressions::Expr *> &projectKeys, std::vector<DataTypePtr> &newInputTypes,
+        std::vector<std::unique_ptr<Projection>> &projections, std::vector<int32_t> &allCols,
+        OverflowConfig &overflowConfig)
     {
         auto &inputTypeVec = inputTypes.Get();
         int32_t newProjectCol = 0;
         std::map<int32_t, int32_t> colIdMap;
-        for (int32_t i = 0; i < projectKeysCount; i++) {
-            std::unique_ptr<Projection> proj;
-            int32_t projectCol;
-            if (projectKeys[i] && projectKeys[i]->GetType() == ExprType::FIELD_E) {
-                projectCol = static_cast<const FieldExpr *>(projectKeys[i])->colVal;
-            } else {
-                projectCol = -1;
-            }
-
-            if (projectCol != -1) {
+        auto projectKeysCount = projectKeys.size();
+        for (size_t i = 0; i < projectKeysCount; i++) {
+            auto projectKey = projectKeys[i];
+            auto projectRetType = projectKey->GetReturnType();
+            auto proj = std::make_unique<Projection>(*projectKey, false, projectRetType, inputTypes, &overflowConfig);
+            if (proj->IsColumnProjection()) {
+                auto projectCol = proj->GetColumnProjectionIndex();
                 if (colIdMap.find(projectCol) != colIdMap.end()) {
                     // already exists
                     allCols.push_back(colIdMap[projectCol]);
                 } else {
-                    projectCols.push_back(projectCol);
                     allCols.push_back(newProjectCol);
                     colIdMap[projectCol] = newProjectCol++;
                     newInputTypes.push_back(inputTypeVec[projectCol]);
                 }
             } else {
                 // expr col
-                projectCols.push_back(projectCol);
                 allCols.push_back(newProjectCol++);
-                proj = std::make_unique<Projection>(*(projectKeys[i]), false, projectKeys[i]->GetReturnType(),
-                    inputTypes, const_cast<OverflowConfig *>(&overflowConfig));
-                ProjFunc func = proj->GetProjector();
-                projectFuncs.push_back(func);
-                DataTypePtr returnType = projectKeys[i]->GetReturnType();
-                newInputTypes.push_back(returnType);
+                newInputTypes.push_back(projectRetType);
             }
+
             projections.push_back(std::move(proj));
         }
     }
 
-    template <DataTypeId typeId> static int64_t GetRawAddr(BaseVector *vector)
-    {
-        using T = typename NativeType<typeId>::type;
-        if constexpr (std::is_same_v<T, std::string_view>) {
-            return reinterpret_cast<int64_t>(unsafe::UnsafeStringVector::GetValues(
-                reinterpret_cast<vec::Vector<LargeStringContainer<std::string_view>> *>(vector)));
-        } else {
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<vec::Vector<T> *>(vector)));
-        }
-    }
-
-    template <DataTypeId typeId>
-    static BaseVector *ProjectVector(ProjFunc func, int64_t *valuesAddresses, int64_t *valueNulls,
-        int64_t *valueOffsets, int64_t *dictVectorAddrs, int32_t rowCount)
-    {
-        using Type = typename omniruntime::op::NativeAndVectorType<typeId>::type;
-        using Vector = typename omniruntime::op::NativeAndVectorType<typeId>::vector;
-
-        auto outputVec = new Vector(rowCount);
-        ExecutionContext context;
-        bool *outNull = unsafe::UnsafeBaseVector::GetNulls(outputVec);
-        int32_t *outOffset = reinterpret_cast<int32_t *>(vec::VectorHelper::UnsafeGetOffsetsAddr(outputVec));
-
-        if constexpr (std::is_same_v<Type, std::string_view>) {
-            func(valuesAddresses, rowCount, reinterpret_cast<int64_t>(outputVec), nullptr, rowCount, valueNulls,
-                valueOffsets, outNull, outOffset, reinterpret_cast<int64_t>(&context), dictVectorAddrs);
-        } else {
-            auto outData = reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(outputVec));
-            func(valuesAddresses, rowCount, outData, nullptr, rowCount, valueNulls, valueOffsets, outNull, outOffset,
-                reinterpret_cast<int64_t>(&context), dictVectorAddrs);
-        }
-
-        return outputVec;
-    }
-
-    static void ProjectVectors(const DataTypes &newInputTypes, const std::vector<ProjFunc> &projectFuncs,
-        const std::vector<int32_t> &projectCols, int64_t *values, int64_t *valueNulls, int64_t *valueOffsets,
-        int64_t *dictVectorAddrs, int32_t rowCount, vec::VectorBatch *newVecBatch)
-    {
-        auto projectColsCount = projectCols.size();
-        int32_t projectFuncsIndex = 0;
-        for (size_t i = 0; i < projectColsCount; i++) {
-            int32_t projectCol = projectCols[i];
-            // skip the project key which is not expression
-            if (projectCol < static_cast<int32_t>(newInputTypes.GetSize() - projectFuncs.size())) {
-                continue;
-            }
-            newVecBatch->Append(DYNAMIC_TYPE_DISPATCH(ProjectVector, newInputTypes.GetType(projectCol)->GetId(),
-                projectFuncs[projectFuncsIndex++], values, valueNulls, valueOffsets, dictVectorAddrs, rowCount));
-        }
-    }
-
     static vec::VectorBatch *ProjectVectors(vec::VectorBatch *inputVecBatch, const DataTypes &inputTypes,
-        const std::vector<ProjFunc> &projectFuncs, const std::vector<int32_t> &projectCols)
+        const std::vector<std::unique_ptr<Projection>> &projections, ExecutionContext *executionContext)
     {
-        if (projectFuncs.size() == 0) {
-            return nullptr;
-        }
-
         int32_t vecCount = inputVecBatch->GetVectorCount();
         int32_t rowCount = inputVecBatch->GetRowCount();
         auto newInputVecBatch = new vec::VectorBatch(rowCount);
-        // short-circuit logic for column projections
-        // no need to go through codegen
         if (rowCount == 0) {
             vec::VectorHelper::AppendVectors(newInputVecBatch, inputTypes, rowCount);
             return newInputVecBatch;
         }
 
-        int64_t valueAddresses[vecCount];
-        int64_t valueNulls[vecCount];
-        int64_t valueOffsets[vecCount];
-        int64_t dictVectorAddrs[vecCount];
         for (int32_t i = 0; i < vecCount; i++) {
             auto inputVector = inputVecBatch->Get(i);
             auto newInputVec = vec::VectorHelper::SliceVector(inputVector, 0, rowCount);
-            if (newInputVec->GetEncoding() != vec::OMNI_DICTIONARY) {
-                valueAddresses[i] =
-                    reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetValues(newInputVec));
-                dictVectorAddrs[i] = 0;
-            } else {
-                valueAddresses[i] = 0;
-                dictVectorAddrs[i] = reinterpret_cast<int64_t>(reinterpret_cast<void *>(newInputVec));
-            }
-            valueNulls[i] = reinterpret_cast<int64_t>(unsafe::UnsafeBaseVector::GetNulls(newInputVec));
-            valueOffsets[i] =
-                reinterpret_cast<int64_t>(vec::VectorHelper::UnsafeGetOffsetsAddr(newInputVec));
             newInputVecBatch->Append(newInputVec);
         }
 
-        ProjectVectors(inputTypes, projectFuncs, projectCols, valueAddresses, valueNulls, valueOffsets, dictVectorAddrs,
-            rowCount, newInputVecBatch);
+        int64_t valueAddrs[vecCount];
+        int64_t nullAddrs[vecCount];
+        int64_t offsetAddrs[vecCount];
+        int64_t dictionaryVectors[vecCount];
+        bool hasSetAddr = false;
+
+        auto projectionCount = projections.size();
+        for (size_t i = 0; i < projectionCount; i++) {
+            if (!projections[i]->IsColumnProjection()) {
+                if (!hasSetAddr) {
+                    GetAddr(*inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaryVectors, inputTypes);
+                    hasSetAddr = true;
+                }
+                auto projectVec = projections[i]->Project(inputVecBatch, valueAddrs, nullAddrs, offsetAddrs,
+                    executionContext, dictionaryVectors, inputTypes.GetIds());
+                if (executionContext->HasError()) {
+                    VectorHelper::FreeVecBatch(newInputVecBatch);
+                    VectorHelper::FreeVecBatch(inputVecBatch);
+                    executionContext->GetArena()->Reset();
+                    std::string errorMessage = executionContext->GetError();
+                    throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
+                }
+                newInputVecBatch->Append(projectVec);
+            }
+            // short-circuit logic for column projections
+            // no need to go through codegen
+        }
         return newInputVecBatch;
     }
 

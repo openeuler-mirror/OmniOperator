@@ -92,6 +92,50 @@ Filter::Filter(const Expr &expression, const DataTypes &inputDataTypes, Overflow
     }
 }
 
+bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
+{
+    switch (outType->GetId()) {
+        case OMNI_INT:
+        case OMNI_DATE32: {
+            literalVal.intVal = literalExpr->intVal;
+            break;
+        }
+        case OMNI_SHORT: {
+            literalVal.shortVal = literalExpr->shortVal;
+            break;
+        }
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+        case OMNI_TIMESTAMP: {
+            literalVal.longVal = literalExpr->longVal;
+            break;
+        }
+        case OMNI_DOUBLE: {
+            literalVal.doubleVal = literalExpr->doubleVal;
+            break;
+        }
+        case OMNI_BOOLEAN: {
+            literalVal.boolVal = literalExpr->boolVal;
+            break;
+        }
+        case OMNI_DECIMAL128: {
+            std::string dec128String = *literalExpr->stringVal;
+            __uint128_t dec128 = Decimal128Utils::StrToUint128_t(dec128String.c_str());
+            literalVal.decimal128Val.SetValue(static_cast<int128_t>(dec128));
+            break;
+        }
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
+            literalVal.stringVal = std::string_view(*(literalExpr->stringVal));
+            break;
+        }
+        default:
+            LogError("Do not support such vector type %d", outType->GetId());
+            return false;
+    }
+    return true;
+}
+
 bool Projection::Initialize(bool filter, const DataTypes &inputDataTypes, OverflowConfig *overflowConfig)
 {
     // short-circuit logic for column projections
@@ -103,9 +147,15 @@ bool Projection::Initialize(bool filter, const DataTypes &inputDataTypes, Overfl
         return true;
     }
 
-    // short-circuit logic for null as col_name
-    if (expr->GetType() == ExprType::LITERAL_E && static_cast<const LiteralExpr *>(expr)->isNull) {
-        return true;
+    // short-circuit logic for literal expression
+    if (expr->GetType() == ExprType::LITERAL_E) {
+        auto literalExpr = static_cast<const LiteralExpr *>(expr);
+        this->isConstantProjection = true;
+        if (literalExpr->isNull) {
+            this->isConstantNull = true;
+        } else {
+            return SetLiteralValue(literalExpr);
+        }
     }
 
     intptr_t f;
@@ -145,21 +195,79 @@ Projection::Projection(const Expr &expr, bool filter, DataTypePtr outType, const
 }
 
 /* for supporting cast(null as string) or NULL as col_name */
-bool Projection::NullColumnProjection(BaseVector *outVec) const
+bool Projection::NullColumnProjection(ExecutionContext *context, BaseVector *outVec)
 {
     auto outNulls = unsafe::UnsafeBaseVector::GetNulls(outVec);
     auto rowCount = outVec->GetSize();
     auto result = memset_s(outNulls, rowCount, true, rowCount);
     if (result != EOK) {
-        LogError("Memset failed, ret %d destMax %d count %d", result, rowCount, rowCount);
+        std::string errorMessage = "Memset failed, ret " + std::to_string(result) + " destMax " +
+            std::to_string(rowCount) + " count " + std::to_string(rowCount);
+        context->SetError(errorMessage);
         return false;
+    }
+    return true;
+}
+
+template <typename T> void Projection::SetConstantValues(T &value, BaseVector *outVec)
+{
+    auto rowCount = outVec->GetSize();
+    if constexpr (std::is_same_v<T, std::string_view>) {
+        auto outputVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(outVec);
+        for (int32_t i = 0; i < rowCount; i++) {
+            outputVector->SetValue(i, value);
+        }
+    } else {
+        auto outputVector = static_cast<Vector<T> *>(outVec);
+        for (int32_t i = 0; i < rowCount; i++) {
+            outputVector->SetValue(i, value);
+        }
+    }
+}
+
+bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec)
+{
+    if (this->isConstantNull) {
+        return NullColumnProjection(context, outVec);
+    }
+    auto outputTypeId = this->outType->GetId();
+    switch (outputTypeId) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            SetConstantValues<int32_t>(literalVal.intVal, outVec);
+            break;
+        case OMNI_SHORT:
+            SetConstantValues<int16_t>(literalVal.shortVal, outVec);
+            break;
+        case OMNI_LONG:
+        case OMNI_DECIMAL64:
+        case OMNI_TIMESTAMP:
+            SetConstantValues<int64_t>(literalVal.longVal, outVec);
+            break;
+        case OMNI_DOUBLE:
+            SetConstantValues<double>(literalVal.doubleVal, outVec);
+            break;
+        case OMNI_BOOLEAN:
+            SetConstantValues<bool>(literalVal.boolVal, outVec);
+            break;
+        case OMNI_DECIMAL128:
+            SetConstantValues<Decimal128>(literalVal.decimal128Val, outVec);
+            break;
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+            SetConstantValues<std::string_view>(literalVal.stringVal, outVec);
+            break;
+        default:
+            std::string errorMessage = "Do not support such vector type " + std::to_string(outputTypeId);
+            context->SetError(errorMessage);
+            return false;
     }
     return true;
 }
 
 BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows,
     int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs, ExecutionContext *context,
-    int64_t *dictionaryVectors, const int32_t *typeIds) const
+    int64_t *dictionaryVectors, const int32_t *typeIds)
 {
     if (this->isColumnProjection) {
         return ColumnProjectionProxy(vecBatch, selectedRows, numSelectedRows, typeIds);
@@ -167,24 +275,24 @@ BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], i
 
     DataTypeId outTypeId = this->GetOutputType().GetId();
     BaseVector *outVec = VectorHelper::CreateFlatVector(outTypeId, numSelectedRows);
-    if (expr->GetType() == ExprType::LITERAL_E && static_cast<const LiteralExpr *>(expr)->isNull) {
-        if (!NullColumnProjection(outVec)) {
+    if (!this->isConstantProjection) {
+        if (outTypeId == OMNI_VARCHAR || outTypeId == OMNI_CHAR) {
+            ProjectHelperVarWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, outVec, numSelectedRows, selectedRows,
+                context, dictionaryVectors, outTypeId);
+        } else {
+            ProjectHelperFixedWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, outVec, numSelectedRows,
+                selectedRows, context, dictionaryVectors, outTypeId);
+        }
+        context->GetArena()->Reset();
+        return outVec;
+    } else {
+        if (!ConstantColumnProjection(context, outVec)) {
             delete outVec;
             return nullptr;
         } else {
             return outVec;
         }
     }
-
-    if (outTypeId == OMNI_VARCHAR || outTypeId == OMNI_CHAR) {
-        ProjectHelperVarWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, outVec, numSelectedRows, selectedRows,
-            context, dictionaryVectors, outTypeId);
-    } else {
-        ProjectHelperFixedWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, outVec, numSelectedRows, selectedRows,
-            context, dictionaryVectors, outTypeId);
-    }
-    context->GetArena()->Reset();
-    return outVec;
 }
 
 template <typename T>
@@ -233,7 +341,7 @@ void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAd
 }
 
 BaseVector *Projection::Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
-    ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds) const
+    ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds)
 {
     return this->Project(vecBatch, nullptr, vecBatch->GetRowCount(), valueAddrs, nullAddrs, offsetAddrs, context,
         dictionaryVectors, typeIds);
