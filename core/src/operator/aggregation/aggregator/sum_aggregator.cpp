@@ -4,89 +4,9 @@
  */
 
 #include "sum_aggregator.h"
-#ifdef ENABLE_HMPP
-#include "HMPP/hmpps.h"
-#endif
 
 namespace omniruntime {
 namespace op {
-#ifdef ENABLE_HMPP
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    if constexpr (IN_ID != OMNI_LONG && IN_ID != OMNI_DECIMAL128) {
-        throw OmniException("NOT SUPPORT", "Unsupported input type for sum aggregate");
-    } else {
-        auto vector = vectorBatch->Get(this->channels[0]);
-
-        auto vectorValues = VectorHelper::UnsafeGetValues(vector);
-        auto rowCount = vector->GetSize();
-        auto nullAddr = reinterpret_cast<void *>(unsafe::UnsafeBaseVector::GetNulls(vector));
-        bool overflow = false;
-
-        HmppResult result = HMPP_STS_NO_ERR;
-
-        if constexpr (IN_ID == OMNI_LONG) {
-            LogDebug("HMPP-Agg-sum");
-            long sumVal = 0;
-            result = HMPPS_Sum_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)), rowCount,
-                static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal);
-            if (result != HMPP_STS_NO_ERR) {
-                throw OmniException("HMPP ERROR", "sum failed for hmpp error");
-            }
-
-            ResultType res = static_cast<ResultType>(sumVal);
-            if (state.val == nullptr) {
-                auto valPtr = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-                *reinterpret_cast<ResultType *>(valPtr) = res;
-                state.val = valPtr;
-            } else {
-                *(reinterpret_cast<ResultType *>(state.val)) += res;
-            }
-        } else {
-            // IN_ID == OMNI_DECIMAL128
-            LogDebug("HMPP-Agg-sum");
-            HmppDecimal128 sumVal{};
-            result = HMPPS_Sum_decimal128(static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)),
-                rowCount, static_cast<int8_t *>(static_cast<int8_t *>(nullAddr)), &overflow, &sumVal);
-            if (result != HMPP_STS_NO_ERR) {
-                throw OmniException("HMPP ERROR", "sum failed for hmpp error");
-            }
-
-            if (state.val == nullptr) {
-                state.val = this->executionContext->GetArena()->Allocate(sizeof(Decimal128));
-                *reinterpret_cast<Decimal128 *>(state.val) = Decimal128(sumVal.high, sumVal.low);
-            } else {
-                Decimal128Wrapper preSumVal(*(reinterpret_cast<Decimal128 *>(state.val)));
-                preSumVal = preSumVal.Add(Decimal128Wrapper(sumVal.high, sumVal.low));
-                *reinterpret_cast<Decimal128 *>(state.val) = preSumVal.ToDecimal128();
-                overflow |= (preSumVal.IsOverflow() != OpStatus::SUCCESS);
-            }
-        }
-
-        if (overflow) {
-            state.count = -1;
-        } else if (state.count >= 0) {
-            state.count++;
-        }
-    }
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool SumAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    // not accept dictionnary vector
-    if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
-        return false;
-    }
-
-    if (this->inputTypes.GetType(0)->GetId() == OMNI_LONG) {
-        return true;
-    }
-    return false;
-}
-#endif
-
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)

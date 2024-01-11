@@ -31,7 +31,7 @@ case "$1" in
     setup_dependencies package
 
     echo "-- Package without test"
-    cd ${CWD} && build release:java --exclude-test --enable-hmpp
+    cd ${CWD} && build release:java --exclude-test 
 
     cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
     cd $CWD/core/src/udf/java && mvn clean install -DskipTests
@@ -52,7 +52,7 @@ case "$1" in
     setup_dependencies release
 
     echo "-- Only build"
-    cd ${CWD} && build release:java --exclude-test --enable-hmpp
+    cd ${CWD} && build release:java --exclude-test 
 
     cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
     cd $CWD/core/src/udf/java && mvn clean install -DskipTests
@@ -61,7 +61,7 @@ case "$1" in
     setup_dependencies
 
     echo "-- Enable build and test"
-    cd ${CWD} && build release:java --enable-hmpp
+    cd ${CWD} && build release:java 
     $CWD/build/core/test/omtest --gtest_output=xml:test_detail.xml
 
     cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME
@@ -69,14 +69,14 @@ case "$1" in
     ;;
   coverage-java)
     echo "-- Enable coverage for java"
-    cd ${CWD} && build release:java --enable-hmpp
+    cd ${CWD} && build release:java 
 
     cd $CWD/bindings/java && mvn clean install devtestcov:atest -Domni.home=$OMNI_HOME -Dactive.devtest=true -Dmaven.test.failure.ignore=true -Djacoco-agent.destfile=target/jacoco.exec -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true
     cd $CWD/core/src/udf/java && mvn clean install
     ;;
   coverage-c++)
     echo "-- Enable coverage for c++"
-    cd ${CWD} && build coverage:java --enable-hmpp
+    cd ${CWD} && build coverage:java 
     $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
 
     lcov --d $CWD/build --c --output-file test.info --rc lcov_branch_coverage=1
@@ -88,7 +88,7 @@ case "$1" in
     setup_dependencies package
 
     echo "-- Package asan without test"
-    cd ${CWD} && build coverage:java --exclude-test --enable-hmpp
+    cd ${CWD} && build coverage:java --exclude-test 
 
     cd $CWD/bindings/java && mvn clean install -Domni.home=$OMNI_HOME -DskipTests
     cd $CWD/core/src/udf/java && mvn clean install -DskipTests
@@ -107,7 +107,7 @@ case "$1" in
     ;;
   *)
     echo "-- Enable default options"
-    cd ${CWD} && build release:java --enable-hmpp
+    cd ${CWD} && build release:java 
     $CWD/build/core/test/omtest --gtest_output=xml:${CWD}/core/build/test_detail.xml
 
     cd $CWD/bindings/java && mvn clean -Domni.home=$OMNI_HOME install

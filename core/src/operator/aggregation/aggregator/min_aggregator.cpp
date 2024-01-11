@@ -5,86 +5,9 @@
 
 #include "min_aggregator.h"
 #include "operator/aggregation/neon_aggregation/simd_aggregation_external.h"
-#ifdef ENABLE_HMPP
-#include "aggregator_util.h"
-#include "HMPP/hmpps.h"
-#endif
 
 namespace omniruntime {
 namespace op {
-#ifdef ENABLE_HMPP
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    auto vector = vectorBatch->Get(this->channels[0]);
-
-    auto vectorValues = VectorHelper::UnsafeGetValues(vector);
-    auto rowCount = vector->GetSize();
-
-    HmppResult result = HMPP_STS_NO_ERR;
-    auto minVal = reinterpret_cast<ResultType *>(this->executionContext->GetArena()->Allocate(sizeof(ResultType)));
-    memset_sp((void *)minVal, sizeof(ResultType), 0, sizeof(ResultType));
-
-    if constexpr (IN_ID == OMNI_SHORT) {
-        LogDebug("HMPP-Agg-min");
-        result = HMPPS_Min_16s(static_cast<int16_t *>(static_cast<int16_t *>(vectorValues)), rowCount,
-            reinterpret_cast<int16_t *>(minVal));
-        int16_t realVal = *reinterpret_cast<int16_t *>(minVal);
-        *minVal = static_cast<ResultType>(realVal);
-    } else if constexpr (IN_ID == OMNI_INT || IN_ID == OMNI_DATE32) {
-        LogDebug("HMPP-Agg-min");
-        result = HMPPS_Min_32s(static_cast<int32_t *>(static_cast<int32_t *>(vectorValues)), rowCount,
-            reinterpret_cast<int32_t *>(minVal));
-        int32_t realVal = *reinterpret_cast<int32_t *>(minVal);
-        *minVal = static_cast<ResultType>(realVal);
-    } else if constexpr (IN_ID == OMNI_LONG || IN_ID == OMNI_DECIMAL64) {
-        LogDebug("HMPP-Agg-min");
-        result = HMPPS_Min_64s(static_cast<int64_t *>(static_cast<int64_t *>(vectorValues)), rowCount,
-            reinterpret_cast<int64_t *>(minVal));
-    } else if constexpr (IN_ID == OMNI_DOUBLE) {
-        LogDebug("HMPP-Agg-min");
-        result = HMPPS_Min_64f(static_cast<double *>(static_cast<double *>(vectorValues)), rowCount,
-            reinterpret_cast<double *>(minVal));
-    } else {
-        LogDebug("HMPP-Agg-min");
-        result = HMPPS_Min_decimal(static_cast<HmppDecimal128 *>(static_cast<HmppDecimal128 *>(vectorValues)), rowCount,
-            reinterpret_cast<HmppDecimal128 *>(minVal));
-    }
-
-    if (result != HMPP_STS_NO_ERR) {
-        throw OmniException("HMPP ERROR", "min failed for hmpp error");
-    }
-    if (state.val == nullptr) {
-        state.val = minVal;
-    } else {
-        auto preMinVal = static_cast<ResultType *>(state.val);
-        *static_cast<ResultType *>(state.val) = (Compare(*preMinVal, *minVal) == -1) ? *preMinVal : *minVal;
-    }
-    // hmpp only works on not nullable columns, so it always find min
-    state.count = 1;
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MinAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    // just support raw input data and must no null inpout
-    if (!inputRaw) {
-        return false;
-    } else {
-        if (vectorBatch->Get(this->channels[0])->HasNull()) {
-            return false;
-        }
-        // not accept dictionnary vector
-        if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
-            return false;
-        }
-        // type check with whitelist for min
-        auto inputTypeId = this->inputTypes.GetType(0)->GetId();
-        return AggregatorUtil::IsHMPPMaxMinSupportDataTypeId(inputTypeId);
-    }
-}
-#endif
-
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)

@@ -190,7 +190,7 @@ public class OmniAggregationOperatorTest {
     }
 
     @Test
-    public void testExecuteMinMaxWithHmpp() {
+    public void testExecuteMinMax() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE, new CharDataType(20),
                 new VarcharDataType(20), new Decimal128DataType(20, 5)};
         FunctionType minFn = OMNI_AGGREGATION_TYPE_MIN;
@@ -252,7 +252,7 @@ public class OmniAggregationOperatorTest {
     }
 
     @Test
-    public void testExecuteSumAvgWithHmppMultipleStage() {
+    public void testExecuteSumAvgMultipleStage() {
         DataType[] sourceTypes = {LongDataType.LONG, new Decimal128DataType(20, 5)};
         FunctionType sumFn = OMNI_AGGREGATION_TYPE_SUM;
         FunctionType avgFn = OMNI_AGGREGATION_TYPE_AVG;

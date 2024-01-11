@@ -10,10 +10,6 @@
 
 #include "typed_aggregator.h"
 #include "max_varchar_aggregator.h"
-#ifdef ENABLE_HMPP
-#include "aggregator_util.h"
-#include "HMPP/hmpps.h"
-#endif
 
 namespace omniruntime {
 namespace op {
@@ -75,12 +71,6 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxAggregator : public Type
 
 public:
     ~MaxAggregator() override = default;
-
-#ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-#endif
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 

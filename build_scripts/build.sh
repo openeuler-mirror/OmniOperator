@@ -76,9 +76,6 @@ else
       elif [ "$i" == '--enable-benchmark' ]; then
           echo "-- Enable benchmark"
           OPTIONS+=" -DENABLE_BENCHMARK=ON"
-      elif [ "$i" == '--enable-hmpp' ]; then
-          echo "-- Enable using hmpp library"
-          OPTIONS+=" -DENABLE_HMPP=ON"
       elif [ "$i" == '--enable-compile-time-report' ]; then
           echo " --Enable Compile Time Report"
           OPTIONS+=" -DENABLE_COMPILE_TIME_REPORT=ON"

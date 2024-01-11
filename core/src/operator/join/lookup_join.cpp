@@ -8,11 +8,6 @@
 #include "vector/vector_helper.h"
 #include "hash_builder.h"
 #include "lookup_join.h"
-#ifdef ENABLE_HMPP
-#include <HMPP/hmpp.h>
-#include "operator/hmpp_hash_util.h"
-#include "util/config_util.h"
-#endif
 
 using namespace omniruntime::vec;
 namespace omniruntime::op {
@@ -675,8 +670,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
         *hashTables);
 }
 
-NO_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition, uint64_t buildAddress,
-    uint32_t probeRow)
+NO_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition, uint64_t buildAddress, uint32_t probeRow)
 {
     auto probeFilterColsCount = probeFilterCols.size();
     for (uint32_t j = 0; j < probeFilterColsCount; ++j) {
@@ -700,169 +694,6 @@ NO_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition, ui
     }
     return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
 }
-#ifdef ENABLE_HMPP
-template <type::DataTypeId dataTypeId>
-void CalculateColHashesHMPP(BaseVector *vector, int32_t rowCount, int64_t *combinedHash, std::vector<int8_t> &nulls)
-{
-    using T = typename NativeType<dataTypeId>::type;
-    if (vector->GetEncoding() != OMNI_DICTIONARY) {
-        LogDebug("HMPP-Join-hash");
-        if (vector->HasNull()) {
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (vector->IsNull(i)) {
-                    nulls[i] = 1;
-                    continue;
-                }
-            }
-        }
-        HmppResult result = HmppHashUtil::ComputeHash<dataTypeId>(vector, combinedHash, 0, rowCount);
-        if (result != HMPP_STS_NO_ERR) {
-            throw OmniException("HMPP ERROR", "Join HMPPS_ComputeHash failed for hmpp error");
-        }
-    } else {
-        int64_t hash;
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (vector->IsNull(i)) {
-                nulls[i] = 1;
-                continue;
-            }
-            hash = HashUtil::HashValue(static_cast<Vector<DictionaryContainer<T>> *>(vector)->GetValue(i));
-            combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
-        }
-    }
-}
-
-void CalculateColDec64HashesHMPP(BaseVector *vector, int32_t rowCount, int64_t *combinedHash,
-    std::vector<int8_t> &nulls)
-{
-    if (vector->GetEncoding() != OMNI_DICTIONARY) {
-        LogDebug("HMPP-Join-hashDec64");
-        const auto *decimalAddr = reinterpret_cast<const int64_t *>(VectorHelper::UnsafeGetValues(vector));
-        auto *resultHash = new int64_t[rowCount]();
-        int8_t *nullAddr = nullptr;
-        if (vector->HasNull()) {
-            nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (vector->IsNull(i)) {
-                    nulls[i] = 1;
-                    continue;
-                }
-            }
-        }
-        HmppResult result = HMPPS_Hash_decimal64(decimalAddr, rowCount, nullAddr, resultHash);
-        if (result != HMPP_STS_NO_ERR) {
-            delete[] resultHash;
-            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_decimal64 failed for hmpp error");
-        }
-        result = HMPPS_CombineHash(combinedHash, resultHash, rowCount, combinedHash);
-        if (result != HMPP_STS_NO_ERR) {
-            delete[] resultHash;
-            throw OmniException("HMPP ERROR", "Join HMPPS_CombineHash_decimal64 failed for hmpp error");
-        }
-        delete[] resultHash;
-    } else {
-        int64_t hash;
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (vector->IsNull(i)) {
-                nulls[i] = 1;
-                continue;
-            }
-            hash = HashUtil::HashDecimal64Value(
-                reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)->GetValue(i));
-            combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
-        }
-    }
-}
-
-void CalculateColDec128HashesHMPP(BaseVector *vector, int32_t rowCount, int64_t *combinedHash,
-    std::vector<int8_t> &nulls)
-{
-    if (vector->GetEncoding() != OMNI_DICTIONARY) {
-        LogDebug("HMPP-Join-hashDec128");
-        auto *resultHash = new int64_t[rowCount]();
-        int8_t *nullAddr = nullptr;
-        auto *decimalAddr = reinterpret_cast<HmppDecimal128 *>(VectorHelper::UnsafeGetValues(vector));
-        if (vector->HasNull()) {
-            nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (vector->IsNull(static_cast<int32_t>(i))) {
-                    nulls[i] = 1;
-                    continue;
-                }
-            }
-        }
-        HmppResult result = HMPPS_Hash_decimal128(decimalAddr, rowCount, nullAddr, resultHash);
-        if (result != HMPP_STS_NO_ERR) {
-            delete[] resultHash;
-            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_decimal128 failed for hmpp error");
-        }
-        result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(combinedHash), resultHash, rowCount,
-            reinterpret_cast<int64_t *>(combinedHash));
-        if (result != HMPP_STS_NO_ERR) {
-            delete[] resultHash;
-            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_decimal128 failed for hmpp error");
-        }
-        delete[] resultHash;
-    } else {
-        int64_t hash;
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (vector->IsNull(i)) {
-                nulls[i] = 1;
-                continue;
-            }
-            Decimal128 decimal128Value =
-                reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(vector)->GetValue(i);
-            hash = HashUtil::HashValue(static_cast<int64_t>(decimal128Value.LowBits()), decimal128Value.HighBits());
-            combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
-        }
-    }
-}
-
-void CalculateColVarcharHashesHMPP(BaseVector *vector, int32_t rowCount, int64_t *combinedHash,
-    std::vector<int8_t> &nulls)
-{
-    if (vector->GetEncoding() != OMNI_DICTIONARY) {
-        LogDebug("HMPP-Join-hashVarchar");
-        int8_t *nullAddr = nullptr;
-        auto *resultHash = new int64_t[rowCount]();
-        auto *varcharVectorAddr = reinterpret_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector));
-        auto *offset = static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
-        if (vector->HasNull()) {
-            nullAddr = reinterpret_cast<int8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
-            for (int32_t i = 0; i < rowCount; ++i) {
-                if (vector->IsNull(i)) {
-                    nulls[i] = 1;
-                    continue;
-                }
-            }
-        }
-        HmppResult result = HMPPS_Hash_varchar(varcharVectorAddr, offset, rowCount, nullAddr, resultHash);
-        if (result != HMPP_STS_NO_ERR) {
-            delete[] resultHash;
-            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_varchar failed for hmpp error");
-        }
-        result = HMPPS_CombineHash(reinterpret_cast<int64_t *>(combinedHash), resultHash, rowCount, combinedHash);
-        if (result != HMPP_STS_NO_ERR) {
-            delete[] resultHash;
-            throw OmniException("HMPP ERROR", "Join HMPPS_Hash_varchar failed for hmpp error");
-        }
-        delete[] resultHash;
-    } else {
-        int64_t hash;
-        for (int32_t i = 0; i < rowCount; ++i) {
-            if (vector->IsNull(i)) {
-                nulls[i] = 1;
-                continue;
-            }
-            std::string_view varcharValue =
-                reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector)->GetValue(i);
-            hash = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(varcharValue.data())),
-                varcharValue.length());
-            combinedHash[i] = HashUtil::CombineHash(combinedHash[i], hash);
-        }
-    }
-}
-#endif
 
 template <typename T>
 void CalculateColHashes(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
@@ -968,60 +799,6 @@ void CalculateColVarcharHashes(BaseVector *vec, int32_t rowCount, int64_t *hashe
     }
 }
 
-template <type::DataTypeId dataTypeId>
-void CalculateColHashesProxy(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
-{
-    using T = typename NativeType<dataTypeId>::type;
-#ifdef ENABLE_HMPP
-    if (ConfigUtil::IsEnableHMPP()) {
-        CalculateColHashesHMPP<dataTypeId>(vec, rowCount, hashes, nulls);
-    } else {
-        CalculateColHashes<T>(vec, rowCount, hashes, nulls);
-    }
-#else
-    CalculateColHashes<T>(vec, rowCount, hashes, nulls);
-#endif
-}
-
-void CalculateColDec64HashesProxy(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
-{
-#ifdef ENABLE_HMPP
-    if (ConfigUtil::IsEnableHMPP()) {
-        CalculateColDec64HashesHMPP(vec, rowCount, hashes, nulls);
-    } else {
-        CalculateColDec64Hashes(vec, rowCount, hashes, nulls);
-    }
-#else
-    CalculateColDec64Hashes(vec, rowCount, hashes, nulls);
-#endif
-}
-
-void CalculateColDec128HashesProxy(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
-{
-#ifdef ENABLE_HMPP
-    if (ConfigUtil::IsEnableHMPP()) {
-        CalculateColDec128HashesHMPP(vec, rowCount, hashes, nulls);
-    } else {
-        CalculateColDec128Hashes(vec, rowCount, hashes, nulls);
-    }
-#else
-    CalculateColDec128Hashes(vec, rowCount, hashes, nulls);
-#endif
-}
-
-void CalculateColVarcharHashesProxy(BaseVector *vec, int32_t rowCount, int64_t *hashes, std::vector<int8_t> &nulls)
-{
-#ifdef ENABLE_HMPP
-    if (ConfigUtil::IsEnableHMPP()) {
-        CalculateColVarcharHashesHMPP(vec, rowCount, hashes, nulls);
-    } else {
-        CalculateColVarcharHashes(vec, rowCount, hashes, nulls);
-    }
-#else
-    CalculateColVarcharHashes(vec, rowCount, hashes, nulls);
-#endif
-}
-
 void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
 {
     int32_t rowCount = curInputBatch->GetRowCount();
@@ -1033,29 +810,29 @@ void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
         switch (probeHashColTypes[j]) {
             case omniruntime::type::OMNI_INT:
             case omniruntime::type::OMNI_DATE32:
-                CalculateColHashesProxy<OMNI_INT>(hashCol, rowCount, hashes, curProbeNulls);
+                CalculateColHashes<int32_t>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             case omniruntime::type::OMNI_SHORT:
-                CalculateColHashesProxy<OMNI_SHORT>(hashCol, rowCount, hashes, curProbeNulls);
+                CalculateColHashes<int16_t>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             case omniruntime::type::OMNI_LONG:
-                CalculateColHashesProxy<OMNI_LONG>(hashCol, rowCount, hashes, curProbeNulls);
+                CalculateColHashes<int64_t>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             case omniruntime::type::OMNI_DOUBLE:
-                CalculateColHashesProxy<OMNI_DOUBLE>(hashCol, rowCount, hashes, curProbeNulls);
+                CalculateColHashes<double>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             case omniruntime::type::OMNI_BOOLEAN:
-                CalculateColHashesProxy<OMNI_BOOLEAN>(hashCol, rowCount, hashes, curProbeNulls);
+                CalculateColHashes<bool>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             case omniruntime::type::OMNI_DECIMAL64:
-                CalculateColDec64HashesProxy(hashCol, rowCount, hashes, curProbeNulls);
+                CalculateColDec64Hashes(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             case omniruntime::type::OMNI_DECIMAL128:
-                CalculateColDec128HashesProxy(hashCol, rowCount, hashes, curProbeNulls);
+                CalculateColDec128Hashes(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             case omniruntime::type::OMNI_VARCHAR:
             case omniruntime::type::OMNI_CHAR:
-                CalculateColVarcharHashesProxy(hashCol, rowCount, hashes, curProbeNulls);
+                CalculateColVarcharHashes(hashCol, rowCount, hashes, curProbeNulls);
                 break;
             default:
                 break;

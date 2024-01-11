@@ -6,60 +6,9 @@
 #include "max_varchar_aggregator.h"
 
 #include "min_varchar_aggregator.h"
-#ifdef ENABLE_HMPP
-#include "HMPP/hmpps.h"
-#endif
 
 namespace omniruntime {
 namespace op {
-#ifdef ENABLE_HMPP
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    auto vector = vectorBatch->Get(this->channels[0]);
-
-    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector)));
-    auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
-    int32_t maxLen = 0;
-    uint8_t *maxVal = this->executionContext->GetArena()->Allocate(3 * width);
-
-    LogDebug("HMPP-Agg-max");
-    auto result = HMPPS_Max_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector)), offsets,
-        vector->GetSize(), maxVal, &maxLen);
-    if (result != HMPP_STS_NO_ERR) {
-        throw OmniException("HMPP ERROR", "max failed for hmpp error");
-    }
-
-    if (state.val == nullptr) {
-        state.val = maxVal;
-        state.count = maxLen;
-    } else {
-        auto preMaxVal = reinterpret_cast<char *>(state.val);
-
-        int32_t result =
-            memcmp(preMaxVal, reinterpret_cast<char *>(maxVal), std::min(state.count, static_cast<int64_t>(maxLen)));
-        if (result < 0 || (result == 0 && state.count < maxLen)) {
-            state.val = maxVal;
-            state.count = maxLen;
-        }
-    }
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MaxVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    // must no null inpout
-    if (vectorBatch->Get(this->channels[0])->HasNull()) {
-        return false;
-    }
-    // not accept dictionnary vector
-    if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
-        return false;
-    }
-    return true;
-}
-#endif
-
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)

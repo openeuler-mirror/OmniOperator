@@ -4,61 +4,10 @@
  */
 
 #include "min_varchar_aggregator.h"
-#ifdef ENABLE_HMPP
-#include "HMPP/hmpps.h"
-#endif
 #include "operator/aggregation/definitions.h"
 
 namespace omniruntime {
 namespace op {
-#ifdef ENABLE_HMPP
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    auto vector = vectorBatch->Get(this->channels[0]);
-
-    auto offsets = static_cast<int32_t *>(static_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector)));
-    auto width = static_cast<VarcharDataType *>(this->inputTypes.GetType(0).get())->GetWidth();
-    int32_t minLen = 3 * width;
-    uint8_t *minVal = this->executionContext->GetArena()->Allocate(3 * width);
-
-    LogDebug("HMPP-Agg-min");
-    auto result = HMPPS_Min_varchar(static_cast<uint8_t *>(VectorHelper::UnsafeGetValues(vector)), offsets,
-        vector->GetSize(), minVal, &minLen);
-    if (result != HMPP_STS_NO_ERR) {
-        throw OmniException("HMPP ERROR", "min failed for hmpp error");
-    }
-
-    if (state.val == nullptr) {
-        state.val = minVal;
-        state.count = minLen;
-    } else {
-        auto preMinVal = reinterpret_cast<char *>(state.val);
-
-        int32_t result =
-            memcmp(preMinVal, reinterpret_cast<char *>(minVal), std::min(state.count, static_cast<int64_t>(minLen)));
-        if (result > 0 || (result == 0 && state.count > minLen)) {
-            state.val = minVal;
-            state.count = minLen;
-        }
-    }
-}
-
-template <DataTypeId IN_ID, DataTypeId OUT_ID>
-bool MinVarcharAggregator<IN_ID, OUT_ID>::CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch)
-{
-    // must no null inpout
-    if (vectorBatch->Get(this->channels[0])->HasNull()) {
-        return false;
-    }
-    // not accept dictionnary vector
-    if (vectorBatch->Get(this->channels[0])->GetEncoding() == OMNI_DICTIONARY) {
-        return false;
-    }
-    return true;
-}
-#endif
-
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)

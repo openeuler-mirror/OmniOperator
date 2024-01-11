@@ -310,16 +310,16 @@ Clone code from the preceding repositories to the local host. The compilation se
 
     ```
     RELEASE:
-    sh build.sh release [--enable-hmpp] [--disable-cpuchecker] [--enable-dt]
+    sh build.sh release [--disable-cpuchecker] [--enable-dt]
   
     DEBUG:
-    sh build.sh debug [op/vec/llvm/all] [--enable-hmpp] [--disable-cpuchecker] [--enable-dt]
+    sh build.sh debug [op/vec/llvm/all] [--disable-cpuchecker] [--enable-dt]
   
     TRACE:
-    sh build.sh trace [op/vec/llvm/all] [--enable-hmpp] [--disable-cpuchecker] [--enable-dt]
+    sh build.sh trace [op/vec/llvm/all] [--disable-cpuchecker] [--enable-dt]
   
     COVERAGE:
-    sh build.sh coverage [op/vec/llvm/all] [--enable-hmpp] [--disable-cpuchecker] [--enable-dt]
+    sh build.sh coverage [op/vec/llvm/all] [--disable-cpuchecker] [--enable-dt]
     ```
 
     Notice: run the following command to download the jar package before compilation:

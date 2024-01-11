@@ -59,12 +59,6 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class AverageAggregator : public 
 public:
     ~AverageAggregator() override = default;
 
-#ifdef ENABLE_HMPP
-    void ProcessGroupWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-
-    bool CanProcessWithHMPP(AggregateState &state, VectorBatch *vectorBatch) override;
-#endif
-
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 
     template <bool PARTIAL_OUT>
