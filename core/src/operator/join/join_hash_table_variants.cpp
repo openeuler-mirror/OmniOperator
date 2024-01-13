@@ -566,6 +566,10 @@ bool JoinHashTableVariants<KeyType, RowRefListType>::TryToBuildArrayTable(uint32
             return false;
         }
     }
+
+    if (max < min) { // vecBatchCount might be 0, so max and min stay unchanged.
+        return false;
+    }
     if (min < 0 && std::numeric_limits<T>::max() + min < max) {
         return false;
     }
