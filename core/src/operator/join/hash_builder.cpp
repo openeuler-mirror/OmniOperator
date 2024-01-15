@@ -18,9 +18,7 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, const 
     if (operatorCount <= 0 || operatorCount > 10000) {
         throw OmniException("OPERATOR_RUNTIME_ERROR", "operatorCount is not in the acceptable range [1, 10000].");
     }
-    bool useRowRefList = (joinType == OMNI_JOIN_TYPE_INNER || joinType == OMNI_JOIN_TYPE_LEFT ||
-        joinType == OMNI_JOIN_TYPE_LEFT_SEMI || joinType == OMNI_JOIN_TYPE_LEFT_ANTI);
-    if (useRowRefList) {
+    if (joinType != OMNI_JOIN_TYPE_FULL) {
         hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType);
     } else {
         hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType);
