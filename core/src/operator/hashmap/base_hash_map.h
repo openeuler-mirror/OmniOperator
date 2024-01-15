@@ -212,14 +212,14 @@ public:
     {
         CalculateThreshold();
     }
-    
+
     uint64_t GrowSize()
     {
         degree += (degree >= enlargeThreshold ? expandFactoryOne : expandFactoryTwo);
         CalculateThreshold();
         return 1ULL << degree;
     }
-    
+
     uint64_t GetCurrentSize()
     {
         return 1ULL << degree;
@@ -482,6 +482,11 @@ public:
         index_ += Width;
         offset_ += index_;
         offset_ &= mask_;
+    }
+
+    ALWAYS_INLINE size_t GetIndex() const
+    {
+        return index_;
     }
 
 private:
@@ -840,6 +845,9 @@ private:
                 return seq.GetOffset((size_t)mask.LowestBitSet());
             }
             seq.GetNext();
+            if (seq.GetIndex() > capacity) {
+                break;
+            }
         }
         inserted = true;
         return seq.GetOffset();
