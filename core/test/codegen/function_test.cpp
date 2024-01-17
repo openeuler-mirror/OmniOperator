@@ -1583,7 +1583,7 @@ TEST(FunctionTest, CastStringToInt)
     auto context = new ExecutionContext();
     auto contextPtr = reinterpret_cast<int64_t>(context);
 
-    std::string s = "23423";
+    std::string s = " 23423 ";
     int32_t result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, 23423);
     s = "100123";
@@ -1599,7 +1599,7 @@ TEST(FunctionTest, CastStringToInt)
     result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_TRUE(context->HasError());
     context->ResetError();
-    s = "-10078";
+    s = " -10078 ";
     result = CastStringToInt(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, -10078);
     EXPECT_FALSE(context->HasError());

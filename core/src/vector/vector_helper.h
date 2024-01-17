@@ -586,6 +586,9 @@ public:
 
     static ALWAYS_INLINE void FreeVecBatch(VectorBatch *vecBatch)
     {
+        if (vecBatch == nullptr) {
+            return;
+        }
         vecBatch->FreeAllVectors();
         delete vecBatch;
     }

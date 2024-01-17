@@ -92,35 +92,35 @@ TEST(Decimal128Vector, CopyPositions)
 
 class Decimal128VectorTest {
 public:
-    Decimal128VectorTest() : values(new long[100000000]) {}
+    Decimal128VectorTest(int32_t size) : values(new int64_t[size]) {}
 
     ~Decimal128VectorTest()
     {
-        delete[](long *) values;
+        delete[] values;
     }
 
     void SetValue(int32_t index, int64_t value)
     {
-        ((int64_t *)values)[index] = value;
+        values[index] = value;
     }
 
     int64_t GetValue(int32_t index)
     {
-        return ((int64_t *)values)[index];
+        return values[index];
     }
 
 private:
-    void *values;
+    int64_t *values;
 };
 
 // Performance test
 TEST(Decimal128Vector, PerformanceCompare)
 {
-    int32_t rowCount = 100000000;
+    int32_t rowCount = 1000;
     Timer timer;
 
     // test long vector set value
-    auto *vectorTest2 = new Decimal128VectorTest();
+    auto *vectorTest2 = new Decimal128VectorTest(rowCount);
     timer.Start("point test vector set value");
     for (int32_t i = 0; i < rowCount; ++i) {
         vectorTest2->SetValue(i, i);
@@ -128,7 +128,7 @@ TEST(Decimal128Vector, PerformanceCompare)
     timer.End();
 
     // test long vector set value
-    Decimal128VectorTest vectorTest1;
+    Decimal128VectorTest vectorTest1(rowCount);
     timer.Start("stack test vector set value");
     for (int32_t i = 0; i < rowCount; ++i) {
         vectorTest1.SetValue(i, i);
@@ -159,30 +159,36 @@ TEST(Decimal128Vector, PerformanceCompare)
     timer.End();
 
     // original set value
-    void *decimal128Vector2 = new long[rowCount];
+    int64_t *decimal128Vector2 = new int64_t[rowCount];
     timer.Start("original set value");
     for (int32_t i = 0; i < rowCount; ++i) {
-        ((long *)decimal128Vector2)[i] = i;
+        decimal128Vector2[i] = i;
     }
     timer.End();
 
     // vector get value
+    Decimal128 *result = new Decimal128[rowCount];
     timer.Start("vector get value");
     for (int32_t i = 0; i < rowCount; ++i) {
-        Decimal128 value = decimal128Vector->GetValue(i);
+        result[i] = decimal128Vector->GetValue(i);
     }
     timer.End();
+    for (int32_t i = 0; i < rowCount; ++i) {
+        Decimal128 expect(i);
+        ASSERT_TRUE(result[i] == expect);
+    }
 
     // original get value
     long value = 0;
     timer.Start("original get value");
     for (int32_t i = 0; i < rowCount; ++i) {
-        value = *((int64_t *)(decimal128Vector2) + i);
+        value = *(decimal128Vector2 + i);
     }
     timer.End();
     value = value + 1;
 
-    delete[](long *) decimal128Vector2;
+    delete[] decimal128Vector2;
     delete vectorTest2;
+    delete[] result;
 }
 }

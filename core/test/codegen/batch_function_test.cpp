@@ -1046,7 +1046,6 @@ TEST(BatchFunctionTest, DecimalModulus)
     auto contextPtr = reinterpret_cast<int64_t>(context);
     bool isAnyNull[2] = { false, false };
     int64_t output64[2];
-    Decimal128 output128[2];
 
     int64_t decimal64Val1[2] = { -1234567, 3141592 };
     int64_t decimal64Val2[2] = { 100000, 10101 };
@@ -1100,7 +1099,6 @@ TEST(BatchFunctionTest, DecimalModulusRetNull)
     int32_t rowCnt = 2;
     bool overflowNull[2] = { false, false };
     int64_t output64[2];
-    Decimal128 output128[2];
 
     int64_t decimal64Val1[2] = { -1234567, 3141592 };
     int64_t decimal64Val2[2] = { 100000, 10101 };

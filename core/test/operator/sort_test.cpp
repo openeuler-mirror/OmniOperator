@@ -2821,13 +2821,13 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase5)
 TEST(NativeOmniSortTest, TestSortRadixSort)
 {
     std::vector<std::pair<int64_t, int64_t>> dataRanges { { -126, 126 } };
-    for (int ir = 0; ir < dataRanges.size(); ir++) {
+    for (size_t ir = 0; ir < dataRanges.size(); ir++) {
         const int32_t dataSize = 10;
         int32_t data1[dataSize];
         int64_t data2[dataSize];
         std::vector<std::pair<int32_t, int64_t>> dataCombo(dataSize);
         int64_t step = (dataRanges[ir].second - dataRanges[ir].first) / dataSize;
-        for (int i = 0; i < dataSize; i++) {
+        for (int32_t i = 0; i < dataSize; i++) {
             data1[i] = i;
             data2[i] = dataRanges[ir].first + step * i;
             dataCombo[i] = {data1[i], data2[i]};

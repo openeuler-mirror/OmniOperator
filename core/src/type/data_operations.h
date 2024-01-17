@@ -8,6 +8,7 @@
 
 #include <string>
 #include <regex>
+#include "util/compiler_util.h"
 
 namespace omniruntime {
 namespace type {
@@ -16,35 +17,63 @@ static std::regex g_doubleRegex(
     "[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
 static std::regex g_dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
 
+// if the string is empty or all characters are spaces then return false, other cases return true
+static ALWAYS_INLINE bool DoSkipSpaces(const char *str, int32_t strLen, int32_t &strStart, int32_t &strEnd)
+{
+    int32_t strIdx = 0;
+    while (strIdx < strLen && str[strIdx] == ' ') {
+        // skip leading space characters
+        strIdx++;
+    }
+    if (strIdx == strLen) {
+        // there is no character or all characters are spaces
+        return false;
+    }
+    strStart = strIdx;
+
+    strIdx = strLen - 1;
+    while (strIdx > strStart && str[strIdx] == ' ') {
+        // skip tail space characters
+        strIdx--;
+    }
+    strEnd = strIdx;
+    return true;
+}
+
 template <typename T>
 static T ConvertStringToInteger(const char *str, int32_t strLen, bool &isInvalid, bool &isOverflow)
 {
     T result = 0;
-    if (strLen <= 0) {
-        isInvalid = true;
+    int32_t strStart = 0;
+    int32_t strEnd = 0;
+    isInvalid = !DoSkipSpaces(str, strLen, strStart, strEnd);
+    if (isInvalid) {
         return result;
     }
 
-    int32_t strIdx = 0;
+    int32_t strIdx = strStart;
     bool isNegative = false;
     auto firstChar = str[strIdx];
     if (firstChar == '-' || firstChar == '+') {
         isNegative = firstChar == '-';
-        if (++strIdx == strLen) {
+        if (strIdx == strEnd) {
             // the string is + or -
             isInvalid = true;
+            result = 0;
             return result;
         }
+        strIdx++;
     }
 
     if (isNegative) {
-        for (; strIdx < strLen; strIdx++) {
+        for (; strIdx <= strEnd; strIdx++) {
             auto c = str[strIdx];
             if (std::isdigit(c) == 0) {
                 isInvalid = true;
                 result = 0;
                 break;
             }
+
             result = result * 10 - (c - '0');
             if (result > 0) {
                 // overflow check
@@ -54,13 +83,14 @@ static T ConvertStringToInteger(const char *str, int32_t strLen, bool &isInvalid
             }
         }
     } else {
-        for (; strIdx < strLen; strIdx++) {
+        for (; strIdx <= strEnd; strIdx++) {
             auto c = str[strIdx];
             if (std::isdigit(c) == 0) {
                 isInvalid = true;
                 result = 0;
                 break;
             }
+
             result = result * 10 + (c - '0');
             if (result < 0) {
                 // overflow check
@@ -77,24 +107,14 @@ template <typename T>
 static T ConvertStringToIntegerWithTruncate(const char *str, int32_t strLen, bool &isInvalid, bool &isOverflow)
 {
     T result = 0;
-    int32_t strIdx = 0;
-    while (strIdx < strLen && str[strIdx] == ' ') {
-        // skip leading space characters
-        strIdx++;
-    }
-
-    if (strIdx == strLen) {
-        // there is no character or all characters are spaces
-        isInvalid = true;
+    int32_t strStart = 0;
+    int32_t strEnd = 0;
+    isInvalid = !DoSkipSpaces(str, strLen, strStart, strEnd);
+    if (isInvalid) {
         return result;
     }
 
-    int32_t strEnd = strLen - 1;
-    while (strEnd > strIdx && str[strEnd] == ' ') {
-        // skip tail space characters
-        strEnd--;
-    }
-
+    int32_t strIdx = strStart;
     bool isNegative = false;
     auto firstChar = str[strIdx];
     if (firstChar == '-' || firstChar == '+') {
