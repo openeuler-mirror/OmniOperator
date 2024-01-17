@@ -1,11 +1,8 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.constants;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * The type Status.
@@ -16,17 +13,17 @@ public class Status extends Constant {
     /**
      * The constant OMNI_STATUS_NORMAL.
      */
-    public static Status OMNI_STATUS_NORMAL;
+    public static Status OMNI_STATUS_NORMAL = new Status(0);
 
     /**
      * The constant OMNI_STATUS_ERROR.
      */
-    public static Status OMNI_STATUS_ERROR;
+    public static Status OMNI_STATUS_ERROR = new Status(-1);
 
     /**
      * The constant OMNI_STATUS_FINISHED.
      */
-    public static Status OMNI_STATUS_FINISHED;
+    public static Status OMNI_STATUS_FINISHED = new Status(1);
 
     private static final long serialVersionUID = -3424552555224669902L;
 
@@ -35,8 +32,7 @@ public class Status extends Constant {
      *
      * @param value the value
      */
-    @JsonCreator
-    public Status(@JsonProperty("value") int value) {
+    public Status(int value) {
         super(value);
     }
 }

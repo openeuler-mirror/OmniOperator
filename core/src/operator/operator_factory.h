@@ -22,7 +22,7 @@ public:
 };
 
 using OperatorType = enum OperatorType {
-    OMNI_FILTER_AND_PROJECT,
+    OMNI_FILTER_AND_PROJECT = 0,
     OMNI_PROJECT,
     OMNI_LIMIT,
     OMNI_DISTINCT_LIMIT,

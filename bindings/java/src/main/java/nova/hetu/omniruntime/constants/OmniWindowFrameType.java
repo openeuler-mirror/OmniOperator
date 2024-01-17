@@ -1,11 +1,8 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.constants;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * The type window frame type.
@@ -16,12 +13,12 @@ public class OmniWindowFrameType extends Constant {
     /**
      * The constant OMNI_FRAME_TYPE_RANGE.
      */
-    public static OmniWindowFrameType OMNI_FRAME_TYPE_RANGE;
+    public static OmniWindowFrameType OMNI_FRAME_TYPE_RANGE = new OmniWindowFrameType(0);
 
     /**
      * The constant OMNI_FRAME_TYPE_ROWS.
      */
-    public static OmniWindowFrameType OMNI_FRAME_TYPE_ROWS;
+    public static OmniWindowFrameType OMNI_FRAME_TYPE_ROWS = new OmniWindowFrameType(1);
 
     private static final long serialVersionUID = -3453499979001168717L;
 
@@ -30,8 +27,7 @@ public class OmniWindowFrameType extends Constant {
      *
      * @param value the value
      */
-    @JsonCreator
-    public OmniWindowFrameType(@JsonProperty("value") int value) {
+    public OmniWindowFrameType(int value) {
         super(value);
     }
 }
