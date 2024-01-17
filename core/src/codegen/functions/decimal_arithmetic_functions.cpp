@@ -14,8 +14,18 @@ const std::string DIVIDE_ZERO { "Division by zero" };      /* NOLINT */
 extern "C" DLLEXPORT int32_t Decimal128Compare(int64_t xHigh, uint64_t xLow, int32_t xPrecision, int32_t xScale,
     int64_t yHigh, uint64_t yLow, int32_t yPrecision, int32_t yScale, bool isNull)
 {
-    Decimal128Wrapper x(xHigh, xLow);
-    Decimal128Wrapper y(yHigh, yLow);
+    int128_t xValue = Decimal128(xHigh, xLow).ToInt128();
+    int128_t yValue = Decimal128(yHigh, yLow).ToInt128();
+    if (xScale == yScale) {
+        if (xValue == yValue) {
+            return 0;
+        } else {
+            return xValue > yValue ? 1 : -1;
+        }
+    }
+
+    Decimal128Wrapper x(xValue);
+    Decimal128Wrapper y(yValue);
     return x.SetScale(xScale).Compare(y.SetScale(yScale));
 }
 

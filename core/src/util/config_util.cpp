@@ -238,6 +238,16 @@ SupportExprFilterRule ConfigUtil::GetSupportExprFilterRule()
     return g_properties.GetPolicy()->GetSupportExprFilterRule();
 }
 
+void ConfigUtil::SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule rule)
+{
+    g_properties.GetPolicy()->SetSupportDecimalPrecisionImprovementRule(rule);
+}
+
+SupportDecimalPrecisionImprovementRule ConfigUtil::GetSupportDecimalPrecisionImprovementRule()
+{
+    return g_properties.GetPolicy()->GetSupportDecimalPrecisionImprovementRule();
+}
+
 Policy *ConfigUtil::GetPolicy()
 {
     return g_properties.GetPolicy();
@@ -246,7 +256,7 @@ Policy *ConfigUtil::GetPolicy()
 Policy *ConfigUtil::InitializePolicy()
 {
     static Policy policy;
-    std::map<const char *, std::function<void(Policy *, std::string)>> initFunctionMap = { { "RoundingRule",
+    std::map<const char *, std::function<void(Policy *, std::string) >> initFunctionMap = { { "RoundingRule",
         InitRoundingRule },
         { "CheckReScaleRule", InitCheckReScaleRule },
         { "EmptySearchStrReplaceRule", InitEmptySearchStrReplaceRule },
@@ -255,7 +265,8 @@ Policy *ConfigUtil::InitializePolicy()
         { "ZeroStartIndexSupportRule", InitZeroStartIndexSupportRule},
         { "SupportContainerVecRule", InitSupportContainerVecRule },
         { "StringToDateFormatRule", InitStringToDateFormatRule },
-        { "SupportExprFilterRule", InitSupportExprFilterRule } };
+        { "SupportExprFilterRule", InitSupportExprFilterRule },
+        { "SupportDecimalPrecisionImprovementRule", InitSupportDecimalPrecisionImprovementRule } };
     std::string ruleValueStr;
     for (const auto &item : initFunctionMap) {
         const char *ruleKeyStr = item.first;
@@ -327,5 +338,12 @@ void ConfigUtil::InitSupportExprFilterRule(Policy *policy, const std::string &ru
 {
     if (ruleValueStr == "EXPR_FILTER") {
         policy->SetSupportExprFilterRule(SupportExprFilterRule::EXPR_FILTER);
+    }
+}
+
+void ConfigUtil::InitSupportDecimalPrecisionImprovementRule(Policy *policy, const std::string &ruleValueStr)
+{
+    if (ruleValueStr == "IS_SUPPORT") {
+        policy->SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_SUPPORT);
     }
 }

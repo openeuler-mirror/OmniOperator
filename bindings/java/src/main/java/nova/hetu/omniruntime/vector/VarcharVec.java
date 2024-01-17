@@ -172,5 +172,16 @@ public class VarcharVec extends VariableWidthVec {
         }
     }
 
+    /**
+     * set offsets buffer.
+     *
+     * @param offsets offset of buf
+     * @param length the number of element
+     */
+    public void setOffsetBuf(int[] offsets, int length) {
+        offsetsBuf.setIntArray(Integer.BYTES, offsets, Integer.BYTES, length * Integer.BYTES);
+        lastOffsetPosition = length - 1;
+    }
+
     private static native long expandDataCapacity(long nativeVector, int toCapacityInBytes);
 }

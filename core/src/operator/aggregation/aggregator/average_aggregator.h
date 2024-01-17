@@ -61,7 +61,7 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
 
-    template <bool PARTIAL_OUT>
+    template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT>
     void ExtractValuesFunction(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex);
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
@@ -129,6 +129,9 @@ protected:
 private:
     void (AverageAggregator<IN_ID, OUT_ID>::*extractValuesFuncPointer)(const AggregateState &state,
         std::vector<BaseVector *> &vectors, int32_t rowIndex) = nullptr;
+
+    template <bool DECIMAL_PRECISION_IMPROVEMENT>
+    void DivideWithOverflow(const AggregateState &state, OutType &result, bool &overflow);
 };
 }
 }

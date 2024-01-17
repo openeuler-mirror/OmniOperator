@@ -109,6 +109,17 @@ enum class SupportContainerVecRule {
 };
 
 /**
+ * Defines whether the engine supports decimal process improvement.
+ * If the engine supports decimal process improvement, it will improve precision based on the output type in avg
+ * operations.
+ * Currently, this configuration needs to be enabled for Hive.
+ */
+enum class SupportDecimalPrecisionImprovementRule {
+    IS_NOT_SUPPORT = 0,
+    IS_SUPPORT
+};
+
+/**
  * Defines the string format when the engine cast string to date.
  */
 enum class StringToDateFormatRule {
@@ -134,13 +145,15 @@ public:
         : Policy(RoundingRule::HALF_UP, CheckReScaleRule::NOT_CHECK_RESCALE, EmptySearchStrReplaceRule::REPLACE,
         CastDecimalToDoubleRule::CAST, NegativeStartIndexOutOfBoundsRule::EMPTY_STRING,
         ZeroStartIndexSupportRule::IS_NOT_SUPPORT, SupportContainerVecRule::SUPPORT,
-        StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION, SupportExprFilterRule::NO_EXPR) {};
+        StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION, SupportExprFilterRule::NO_EXPR,
+        SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
         NegativeStartIndexOutOfBoundsRule negativeStartIndexOutOfBoundsRule,
         ZeroStartIndexSupportRule zeroStartIndexSupportRule, SupportContainerVecRule supportContainerVecRule,
-        StringToDateFormatRule stringToDateFormatRule, SupportExprFilterRule supportExprFilterRule)
+        StringToDateFormatRule stringToDateFormatRule, SupportExprFilterRule supportExprFilterRule,
+        SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule)
         : roundingRule(roundingRule),
           checkReScaleRule(checkReScaleRule),
           emptySearchStrReplaceRule(emptySearchStrReplaceRule),
@@ -149,7 +162,8 @@ public:
           zeroStartIndexSupportRule(zeroStartIndexSupportRule),
           supportContainerVecRule(supportContainerVecRule),
           stringToDateFormatRule(stringToDateFormatRule),
-          supportExprFilterRule(supportExprFilterRule) {};
+          supportExprFilterRule(supportExprFilterRule),
+          supportDecimalPrecisionImprovementRule(supportDecimalPrecisionImprovementRule) {};
 
     RoundingRule GetRoundingRule()
     {
@@ -236,12 +250,20 @@ public:
         return supportExprFilterRule;
     }
 
-
     void SetSupportExprFilterRule(SupportExprFilterRule rule)
     {
         supportExprFilterRule = rule;
     }
 
+    void SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule rule)
+    {
+        supportDecimalPrecisionImprovementRule = rule;
+    }
+
+    SupportDecimalPrecisionImprovementRule GetSupportDecimalPrecisionImprovementRule() const
+    {
+        return supportDecimalPrecisionImprovementRule;
+    }
 
 protected:
     RoundingRule roundingRule;
@@ -253,6 +275,7 @@ protected:
     SupportContainerVecRule supportContainerVecRule;
     StringToDateFormatRule stringToDateFormatRule;
     SupportExprFilterRule supportExprFilterRule;
+    SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule;
 };
 
 #endif // OMNI_RUNTIME_POLICY_H

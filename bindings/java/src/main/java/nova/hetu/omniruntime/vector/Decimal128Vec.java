@@ -4,10 +4,7 @@
 
 package nova.hetu.omniruntime.vector;
 
-import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_INNER_ERROR;
-
 import nova.hetu.omniruntime.type.Decimal128DataType;
-import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -99,24 +96,7 @@ public class Decimal128Vec extends DecimalVec {
      * @return new long array
      */
     public static long[] putDecimal(BigInteger bigInteger) {
-        ByteBuffer d128Buffer = ByteBuffer.allocate(Long.BYTES * 2);
-        byte[] bytes = bigInteger.toByteArray();
-        int byteArrayLength = bytes.length;
-        for (int i = 0; i < byteArrayLength; i++) {
-            d128Buffer.put(bytes[byteArrayLength - i - 1]);
-        }
-        if (bigInteger.compareTo(BigInteger.ZERO) == -1) {
-            for (int i = byteArrayLength; i < 2 * Long.BYTES; i++) {
-                d128Buffer.put((byte) -1);
-            }
-        }
-
-        d128Buffer.clear();
-        d128Buffer.order(ByteOrder.LITTLE_ENDIAN);
-        long[] result = new long[2];
-        result[0] = d128Buffer.getLong();
-        result[1] = d128Buffer.getLong();
-        return result;
+        return putDecimal(bigInteger.toByteArray(), bigInteger.compareTo(BigInteger.ZERO) == -1);
     }
 
     /**
@@ -127,14 +107,22 @@ public class Decimal128Vec extends DecimalVec {
      * @return new long array
      */
     public static long[] putDecimal(byte[] bytes, boolean isNegative) {
-        if (bytes.length > 2 * Long.BYTES) {
-            throw new OmniRuntimeException(OMNI_INNER_ERROR, "Decimal overflow.");
+        ByteBuffer d128Buffer = ByteBuffer.allocate(Long.BYTES * 2);
+        int byteArrayLength = bytes.length;
+        for (int i = 0; i < byteArrayLength; i++) {
+            d128Buffer.put(bytes[byteArrayLength - i - 1]);
         }
-        BigInteger temp = new BigInteger(bytes);
         if (isNegative) {
-            temp = temp.abs().negate();
+            for (int i = byteArrayLength; i < 2 * Long.BYTES; i++) {
+                d128Buffer.put((byte) -1);
+            }
         }
-        return putDecimal(temp);
+        d128Buffer.clear();
+        d128Buffer.order(ByteOrder.LITTLE_ENDIAN);
+        long[] result = new long[2];
+        result[0] = d128Buffer.getLong();
+        result[1] = d128Buffer.getLong();
+        return result;
     }
 
     /**
@@ -163,6 +151,17 @@ public class Decimal128Vec extends DecimalVec {
     }
 
     /**
+     * set BigInteger bytes to Decimal128Vec
+     *
+     * @param index row index
+     * @param bigIntegerBytes BigInteger bytes
+     * @param isNegative isNegative
+     */
+    public void setBigInteger(int index, byte[] bigIntegerBytes, boolean isNegative) {
+        super.set(index, putDecimal(bigIntegerBytes, isNegative));
+    }
+
+    /**
      * please use this method to get jdk BigInteger from Decimal128Vec
      *
      * @param index row index
@@ -170,5 +169,21 @@ public class Decimal128Vec extends DecimalVec {
      */
     public BigInteger getBigInteger(int index) {
         return getDecimal(super.get(index));
+    }
+
+    /**
+     * use this method to get jdk BigInteger bytes and isNegative from Decimal128Vec
+     *
+     * @param index row index
+     * @return isNegative and BigInteger bytes
+     */
+    public byte[] getBytes(int index) {
+        long[] longs = super.get(index);
+        byte[] bytes = new byte[Long.BYTES * 2];
+        byte[] highBytes = longToBytes(longs[1]);
+        byte[] lowBytes = longToBytes(longs[0]);
+        System.arraycopy(highBytes, 0, bytes, 0, Long.BYTES);
+        System.arraycopy(lowBytes, 0, bytes, 8, Long.BYTES);
+        return bytes;
     }
 }
