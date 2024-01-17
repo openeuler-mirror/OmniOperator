@@ -12,37 +12,156 @@
 namespace omniruntime {
 namespace type {
 static std::regex g_decimalRegex("[+-]?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?");
-static std::regex g_intRegex("[[:blank:]]*([+-])?[[:digit:]]+[[:blank:]]*");
 static std::regex g_doubleRegex(
     "[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
 static std::regex g_dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
 
-inline int StringToInt(const std::string &s, int32_t &result)
+template <typename T>
+static T ConvertStringToInteger(const char *str, int32_t strLen, bool &isInvalid, bool &isOverflow)
 {
-    if (!regex_match(s, g_intRegex)) {
-        return -1;
+    T result = 0;
+    if (strLen <= 0) {
+        isInvalid = true;
+        return result;
     }
-    int status = 0;
-    try {
-        result = stoi(s);
-    } catch (std::exception &e) {
-        status = 1;
+
+    int32_t strIdx = 0;
+    bool isNegative = false;
+    auto firstChar = str[strIdx];
+    if (firstChar == '-' || firstChar == '+') {
+        isNegative = firstChar == '-';
+        if (++strIdx == strLen) {
+            // the string is + or -
+            isInvalid = true;
+            return result;
+        }
     }
-    return status;
+
+    if (isNegative) {
+        for (; strIdx < strLen; strIdx++) {
+            auto c = str[strIdx];
+            if (std::isdigit(c) == 0) {
+                isInvalid = true;
+                result = 0;
+                break;
+            }
+            result = result * 10 - (c - '0');
+            if (result > 0) {
+                // overflow check
+                isOverflow = true;
+                result = 0;
+                break;
+            }
+        }
+    } else {
+        for (; strIdx < strLen; strIdx++) {
+            auto c = str[strIdx];
+            if (std::isdigit(c) == 0) {
+                isInvalid = true;
+                result = 0;
+                break;
+            }
+            result = result * 10 + (c - '0');
+            if (result < 0) {
+                // overflow check
+                isOverflow = true;
+                result = 0;
+                break;
+            }
+        }
+    }
+    return result;
 }
 
-inline int StringToLong(const std::string &s, int64_t &result)
+template <typename T>
+static T ConvertStringToIntegerWithTruncate(const char *str, int32_t strLen, bool &isInvalid, bool &isOverflow)
 {
-    if (!regex_match(s, g_intRegex)) {
-        return -1;
+    T result = 0;
+    int32_t strIdx = 0;
+    while (strIdx < strLen && str[strIdx] == ' ') {
+        // skip leading space characters
+        strIdx++;
     }
-    int status = 0;
-    try {
-        result = stol(s);
-    } catch (std::exception &e) {
-        status = 1;
+
+    if (strIdx == strLen) {
+        // there is no character or all characters are spaces
+        isInvalid = true;
+        return result;
     }
-    return status;
+
+    int32_t strEnd = strLen - 1;
+    while (strEnd > strIdx && str[strEnd] == ' ') {
+        // skip tail space characters
+        strEnd--;
+    }
+
+    bool isNegative = false;
+    auto firstChar = str[strIdx];
+    if (firstChar == '-' || firstChar == '+') {
+        isNegative = firstChar == '-';
+        if (strIdx == strEnd) {
+            // the string is + or -
+            isInvalid = true;
+            result = 0;
+            return result;
+        }
+        strIdx++;
+    }
+
+    bool hasDecimalPoint = false;
+    if (isNegative) {
+        for (; strIdx <= strEnd; strIdx++) {
+            auto c = str[strIdx];
+            if (!hasDecimalPoint && c == '.') {
+                hasDecimalPoint = true;
+                if (++strIdx > strEnd) {
+                    break;
+                }
+                c = str[strIdx];
+            }
+            if (std::isdigit(c) == 0) {
+                isInvalid = true;
+                result = 0;
+                break;
+            }
+            if (!hasDecimalPoint) {
+                result = result * 10 - (c - '0');
+            }
+
+            if (result > 0) {
+                // overflow check
+                isOverflow = true;
+                result = 0;
+                break;
+            }
+        }
+    } else {
+        for (; strIdx <= strEnd; strIdx++) {
+            auto c = str[strIdx];
+            if (!hasDecimalPoint && c == '.') {
+                hasDecimalPoint = true;
+                if (++strIdx > strEnd) {
+                    break;
+                }
+                c = str[strIdx];
+            }
+            if (std::isdigit(c) == 0) {
+                isInvalid = true;
+                result = 0;
+                break;
+            }
+            if (!hasDecimalPoint) {
+                result = result * 10 + (c - '0');
+            }
+            if (result < 0) {
+                // overflow check
+                isOverflow = true;
+                result = 0;
+                break;
+            }
+        }
+    }
+    return result;
 }
 
 inline int StringToDouble(const std::string &s, double &result)

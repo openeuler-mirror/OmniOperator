@@ -2218,6 +2218,207 @@ TEST(BatchFunctionTest, BatchCastStringToDate)
     delete context;
 }
 
+TEST(BatchFunctionTest, BatchCastStringToInt)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    std::vector<std::string> srcStr = { "2147483648",
+        "2123123123147483648",
+        "-2123123123147483648",
+        "-2123123123147-483648",
+        "+45",
+        "-45",
+        "3.14159",
+        "31337 a",
+        "+12345678901",
+        "-12345678901",
+        "2147483647.2",
+        "2147483648.2",
+        "     2147483647.2    ",
+        "    a 2147483647.2    ",
+        "     2147483647.2   a ",
+        ".",
+        ".2",
+        "0.",
+        "2.3e3",
+        "-1e+2",
+        "+.",
+        "-.",
+        "- .",
+        "",
+        "    ",
+        "  +   ",
+        "-",
+        "-123.a",
+        "-123." };
+    bool isAnyNull[] = { false, false, false, false, false, false, false, false, false, false, false, false, false,
+                        false, false, false, false, false, false, false, false, false, false, false, false, false,
+                        false, false, false };
+
+    std::vector<int32_t> expected { 0, 0, 0, 0, 45, -45, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,  0,   0, 0, 0, 0, 0, 0, 0, 0 };
+    int32_t rowCnt = static_cast<int32_t>(srcStr.size());
+    std::vector<int32_t> output(rowCnt);
+
+    std::vector<int32_t> strLen(rowCnt);
+    std::vector<uint8_t *> srcAddr(rowCnt);
+    for (int32_t row = 0; row < rowCnt; row++) {
+        strLen[row] = static_cast<int32_t>(srcStr[row].length());
+        srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[row].c_str()));
+    }
+    BatchCastStringToInt(contextPtr, srcAddr.data(), strLen.data(), isAnyNull, output.data(), rowCnt);
+    AssertIntEquals(expected, output);
+    EXPECT_TRUE(context->HasError());
+    delete context;
+}
+
+TEST(BatchFunctionTest, BatchCastStringToLong)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
+    std::vector<std::string> srcStr { "23423",
+        "100123",
+        "-10078",
+        "123.123",
+        "9223372036854775807",
+        "9223372036854775808",
+        "-9223372036854775808",
+        "-9223372036854775809" };
+    bool isAnyNull[] = { false, false, false, false, false, false, false, false };
+    std::vector<int64_t> expected { 23423, 100123, -10078, 0, INT64_MAX, 0, INT64_MIN, 0 };
+    int32_t rowCnt = 8;
+    std::vector<int64_t> output(rowCnt);
+
+    std::vector<int32_t> strLen(rowCnt);
+    std::vector<uint8_t *> srcAddr(rowCnt);
+    for (int32_t row = 0; row < rowCnt; row++) {
+        strLen[row] = static_cast<int32_t>(srcStr[row].length());
+        srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[row].c_str()));
+    }
+    BatchCastStringToLong(contextPtr, srcAddr.data(), strLen.data(), isAnyNull, output.data(), rowCnt);
+    AssertLongEquals(expected, output);
+    delete context;
+}
+
+
+TEST(BatchFunctionTest, BatchCastStringToIntRetNull)
+{
+    std::vector<std::string> srcStr = { "2147483648",
+        "2123123123147483648",
+        "-2123123123147483648",
+        "-2123123123147-483648",
+        "+45",
+        "-45",
+        "3.14159",
+        "31337 a",
+        "+12345678901",
+        "-12345678901",
+        "2147483647.2",
+        "2147483648.2",
+        "     2147483647.2    ",
+        "    a 2147483647.2    ",
+        "     2147483647.2   a ",
+        ".",
+        ".2",
+        "0.",
+        "2.3e3",
+        "-1e+2",
+        "+.",
+        "-.",
+        "- .",
+        "",
+        "    ",
+        "  +   ",
+        "-",
+        "-123.a",
+        "-123." };
+    int32_t rowCnt = static_cast<int32_t>(srcStr.size());
+    std::vector<int32_t> strLen(rowCnt);
+    std::vector<uint8_t *> srcAddr(rowCnt);
+    for (int32_t row = 0; row < rowCnt; row++) {
+        strLen[row] = static_cast<int32_t>(srcStr[row].length());
+        srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[row].c_str()));
+    }
+
+    bool isNull[rowCnt];
+    std::vector<int32_t> output(rowCnt);
+    BatchCastStringToIntRetNull(isNull, srcAddr.data(), strLen.data(), output.data(), rowCnt);
+
+    std::vector<int32_t> expected { 0, 0, 0, 0, 45, -45, 3, 0, 0, 0, 2147483647, 0, 2147483647, 0,   0,
+        0, 0, 0, 0, 0,  0,   0, 0, 0, 0, 0,          0, 0,          -123 };
+    std::vector<bool> expectedNulls { true,  true,  true,  true, false, false, false, true,  true, true,
+        false, true,  false, true, true,  false, false, false, true, true,
+        false, false, true,  true, true,  true,  true,  true,  false };
+
+    AssertIntEquals(expected, output);
+    AssertBoolEquals(expectedNulls, isNull);
+}
+
+TEST(BatchFunctionTest, BatchCastStringToLongRetNull)
+{
+    std::vector<std::string> srcStr = { "23423",
+        "123.123",
+        "2147483648",
+        "2a147483648",
+        "-10078",
+        std::to_string(std::numeric_limits<int64_t>::min()),
+        std::to_string(std::numeric_limits<int64_t>::max()),
+        std::to_string(std::numeric_limits<uint64_t>::max()),
+        "-9223372036854775808",
+        "9223372036854775807",
+        "-9223372036854775818",
+        "9223372036854775817",
+        "-2123123123147-483648",
+        "     2147483647.2    ",
+        "    a 2147483647.2    ",
+        "     2147483647.2   a ",
+        ".",
+        ".2",
+        "0.",
+        "2.3e3",
+        "-1e+2" };
+
+
+    int32_t rowCnt = static_cast<int32_t>(srcStr.size());
+    std::vector<int32_t> strLen(rowCnt);
+    std::vector<uint8_t *> srcAddr(rowCnt);
+    for (int32_t row = 0; row < rowCnt; row++) {
+        strLen[row] = static_cast<int32_t>(srcStr[row].length());
+        srcAddr[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(srcStr[row].c_str()));
+    }
+
+    bool isNull[rowCnt];
+    std::vector<int64_t> output(rowCnt);
+    BatchCastStringToLongRetNull(isNull, srcAddr.data(), strLen.data(), output.data(), rowCnt);
+
+    std::vector<int64_t> expected { 23423,
+        123,
+        2147483648,
+        0,
+        -10078,
+        std::numeric_limits<int64_t>::min(),
+        std::numeric_limits<int64_t>::max(),
+        0,
+        INT64_MIN,
+        INT64_MAX,
+        0,
+        0,
+        0,
+        2147483647,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0 };
+    std::vector<bool> expectedNulls { false, false, false, true, false, false, false, true,  false, false, true,
+        true,  true,  false, true, true,  false, false, false, true,  true };
+    AssertLongEquals(expected, output);
+    AssertBoolEquals(expectedNulls, isNull);
+}
+
 // date time functions
 TEST(BatchFunctionTest, BatchUnixTimestampFromStr)
 {

@@ -359,58 +359,47 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_
 extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     int32_t *output, int32_t rowCnt)
 {
-    int32_t result = 0;
-    std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 0;
             continue;
         }
-        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
-        StringUtil::TrimString(s);
-        int status = StringToInt(s, result);
-        if (status == -1) {
+        bool isInvalid = false;
+        bool isOverflow = false;
+        auto chars = reinterpret_cast<const char *>(str[i]);
+        output[i] = ConvertStringToInteger<int32_t>(chars, strLen[i], isInvalid, isOverflow);
+        if (isInvalid || isOverflow) {
+            std::string s(chars, strLen[i]);
+            std::string reason = isInvalid ? "Value is not a number." : "Value too large or too small.";
             std::ostringstream errorMessage;
-            errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
+            errorMessage << "Cannot cast '" << s << "' to INTEGER. " << reason;
             SetError(contextPtr, errorMessage.str());
             continue;
         }
-        if (status == 1) {
-            std::ostringstream errorMessage;
-            errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large.";
-            SetError(contextPtr, errorMessage.str());
-            continue;
-        }
-        output[i] = result;
     }
 }
 
 extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     int64_t *output, int32_t rowCnt)
 {
-    int64_t result = 0;
-    std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 0;
             continue;
         }
-        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
-        StringUtil::TrimString(s);
-        int status = StringToLong(s, result);
-        if (status == -1) {
+
+        bool isInvalid = false;
+        bool isOverflow = false;
+        auto chars = reinterpret_cast<const char *>(str[i]);
+        output[i] = ConvertStringToInteger<int64_t>(chars, strLen[i], isInvalid, isOverflow);
+        if (isInvalid || isOverflow) {
+            std::string s(chars, strLen[i]);
+            std::string reason = isInvalid ? "Value is not a number." : "Value too large or too small.";
             std::ostringstream errorMessage;
-            errorMessage << "Cannot cast '" << s << "' to BIGINT. Value is not a number.";
+            errorMessage << "Cannot cast '" << s << "' to INTEGER. " << reason;
             SetError(contextPtr, errorMessage.str());
             continue;
         }
-        if (status == 1) {
-            std::ostringstream errorMessage;
-            errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large.";
-            SetError(contextPtr, errorMessage.str());
-            continue;
-        }
-        output[i] = result;
     }
 }
 
@@ -651,36 +640,32 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8
 extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,
     int32_t rowCnt)
 {
-    int32_t result = 0;
-    std::string s;
-    for (int i = 0; i < rowCnt; ++i) {
-        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
-        StringUtil::TrimString(s);
-        if (StringToInt(s, result) != 0) {
-            output[i] = 0;
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        bool isInvalid = false;
+        bool isOverflow = false;
+        output[i] = ConvertStringToIntegerWithTruncate<int32_t>(reinterpret_cast<const char *>(str[i]), strLen[i],
+            isInvalid, isOverflow);
+        if (isInvalid || isOverflow) {
             isNull[i] = true;
-            continue;
+        } else {
+            isNull[i] = false;
         }
-        isNull[i] = false;
-        output[i] = result;
     }
 }
 
 extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int64_t *output,
     int32_t rowCnt)
 {
-    int64_t result = 0;
-    std::string s;
-    for (int i = 0; i < rowCnt; ++i) {
-        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
-        StringUtil::TrimString(s);
-        if (StringToLong(s, result) != 0) {
-            output[i] = 0;
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        bool isInvalid = false;
+        bool isOverflow = false;
+        output[i] = ConvertStringToIntegerWithTruncate<int64_t>(reinterpret_cast<const char *>(str[i]), strLen[i],
+            isInvalid, isOverflow);
+        if (isInvalid || isOverflow) {
             isNull[i] = true;
-            continue;
+        } else {
+            isNull[i] = false;
         }
-        isNull[i] = false;
-        output[i] = result;
     }
 }
 
