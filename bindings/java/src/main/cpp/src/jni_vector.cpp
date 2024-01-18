@@ -17,10 +17,9 @@
 using namespace omniruntime::vec;
 using namespace omniruntime::mem;
 
-static BaseVector *TransformVector(long vectorAddr)
+static ALWAYS_INLINE BaseVector *TransformVector(long vectorAddr)
 {
-    BaseVector *nativeVector = reinterpret_cast<BaseVector *>(vectorAddr);
-    return nativeVector;
+    return reinterpret_cast<BaseVector *>(vectorAddr);
 }
 
 #ifdef TRACE
@@ -50,7 +49,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
 #ifdef TRACE
     RecordStack(vector, env);
 #endif
-    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
+    return reinterpret_cast<uintptr_t>(vector);
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVectorNative(JNIEnv *env, jclass jcls,
@@ -102,7 +101,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
 #ifdef TRACE
     RecordStack(copyVector, env);
 #endif
-    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(copyVector));
+    return reinterpret_cast<uintptr_t>(copyVector);
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative(JNIEnv *env, jclass jcls,
@@ -158,8 +157,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNativ
     jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(
-        reinterpret_cast<void *>(omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(nativeVector)));
+    return reinterpret_cast<uintptr_t>(omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(nativeVector));
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositionNative(JNIEnv *env, jclass jcls,
@@ -239,12 +237,12 @@ jlong Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *en
         vecBatch->Append(reinterpret_cast<BaseVector *>(vecAddresses[i]));
     }
     env->ReleaseLongArrayElements(jVectorAddresses, vecAddresses, JNI_ABORT);
-    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vecBatch));
+    return reinterpret_cast<uintptr_t>(vecBatch);
 }
 
 void Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative(JNIEnv *env, jclass jcls, jlong jVecBatchAddress)
 {
-    VectorBatch *vecBatch = (VectorBatch *)jVecBatchAddress;
+    VectorBatch *vecBatch = reinterpret_cast<VectorBatch *>(jVecBatchAddress);
     delete vecBatch;
 }
 
@@ -273,7 +271,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataC
     auto nativeVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(jNativeVector);
     char *newBuffAddress =
         omniruntime::vec::unsafe::UnsafeStringVector::ExpandStringBuffer(nativeVector, jToCapacityInBytes);
-    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(newBuffAddress));
+    return reinterpret_cast<uintptr_t>(newBuffAddress);
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_setNullFlagNative(JNIEnv *env, jclass jcls,
