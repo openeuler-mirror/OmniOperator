@@ -9,13 +9,11 @@ jclass bufCls;
 jclass vecBatchCls;
 jclass omniResultsCls;
 jclass traceUtilCls;
-jclass lazyVectorCls;
 jclass omniRuntimeExceptionClass;
 
 jmethodID vecBatchInitMethodId;
 jmethodID omniResultsInitMethodId;
 jmethodID traceUtilStackMethodId;
-jmethodID lazyVectorLoaderMethodId;
 
 static const jint JNI_VERSION = JNI_VERSION_1_6;
 
@@ -53,6 +51,5 @@ void JNI_OnUnload(JavaVM *vm, const void *reserved)
     env->DeleteGlobalRef(bufCls);
     env->DeleteGlobalRef(omniResultsCls);
     env->DeleteGlobalRef(traceUtilCls);
-    env->DeleteGlobalRef(lazyVectorCls);
     env->DeleteGlobalRef(omniRuntimeExceptionClass);
 }

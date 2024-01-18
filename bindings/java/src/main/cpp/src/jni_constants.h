@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: JNI Constants
  */
 #ifndef JNI_CONSTANTS_H
@@ -10,8 +10,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_constants_Constant_loadConstants(JNIEnv *env, jclass ignore);
 
 /*
  * Class:     nova_hetu_omniruntime_OmniLibs

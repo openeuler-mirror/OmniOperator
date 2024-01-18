@@ -104,12 +104,10 @@ extern jclass bufCls;
 extern jclass vecBatchCls;
 extern jclass omniResultsCls;
 extern jclass traceUtilCls;
-extern jclass lazyVectorCls;
 extern jclass omniRuntimeExceptionClass;
 extern jmethodID vecBatchInitMethodId;
 extern jmethodID omniResultsInitMethodId;
 extern jmethodID traceUtilStackMethodId;
-extern jmethodID lazyVectorLoaderMethodId;
 
 #ifdef __cplusplus
 }

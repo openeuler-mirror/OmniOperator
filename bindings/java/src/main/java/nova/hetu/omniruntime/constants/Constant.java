@@ -1,14 +1,8 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.constants;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import nova.hetu.omniruntime.OmniLibs;
-import nova.hetu.omniruntime.utils.NativeLog;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -21,12 +15,6 @@ import java.util.Objects;
 public abstract class Constant implements Serializable {
     private static final long serialVersionUID = -2589766491699675794L;
 
-    static {
-        OmniLibs.load();
-        loadConstants();
-        NativeLog.getInstance();
-    }
-
     private final int value;
 
     /**
@@ -34,12 +22,9 @@ public abstract class Constant implements Serializable {
      *
      * @param value the value
      */
-    @JsonCreator
-    public Constant(@JsonProperty("value") int value) {
+    public Constant(int value) {
         this.value = value;
     }
-
-    private static native void loadConstants();
 
     /**
      * Gets value.
