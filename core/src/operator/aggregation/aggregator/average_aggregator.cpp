@@ -83,6 +83,32 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state
     (this->*extractValuesFuncPointer)(state, vectors, rowIndex);
 }
 
+template <DataTypeId IN_ID, DataTypeId OUT_ID> DataTypeId AverageAggregator<IN_ID, OUT_ID>::GetSpillType()
+{
+    if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
+        return OMNI_LONG;
+    } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
+        return OMNI_DOUBLE;
+    } else {
+        return OMNI_DECIMAL128;
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void AverageAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
+    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+{
+    auto v = static_cast<Vector<ResultType> *>(vectors[0]);
+    auto v1 = reinterpret_cast<Vector<int64_t> *>(vectors[1]);
+    if (state.count <= 0 || state.val == nullptr) {
+        v->SetNull(rowIndex);
+        v1->SetValue(rowIndex, state.count);
+        return;
+    }
+    v->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+    v1->SetValue(rowIndex, state.count);
+}
+
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void AverageAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)

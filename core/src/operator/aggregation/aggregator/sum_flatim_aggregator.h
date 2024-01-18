@@ -120,7 +120,29 @@ public:
         *reinterpret_cast<ResultType *>(state.val) = ResultType {};
         state.count = 0;
     }
+    DataTypeId GetSpillType() override {
+        if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
+            return OMNI_LONG;
+        } else {
+            return OMNI_DOUBLE;
+        }
+    }
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        auto v = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto v1 = static_cast<Vector<long> *>(vectors[1]);
+        // state.count == 0 means all data is null or no data be accumulated,
+        // we will set null
+        if (state.count <= 0) {
+            v->SetNull(rowIndex);
+            v1->SetValue(rowIndex, state.count);
+            return;
+        }
 
+        // we can not distinguish whether value is overflow when stage.val is null
+        v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        v1->SetValue(rowIndex, state.count);
+    }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         auto v = static_cast<Vector<ResultType> *>(vectors[0]);

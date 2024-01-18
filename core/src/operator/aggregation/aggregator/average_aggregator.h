@@ -54,13 +54,14 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class AverageAggregator : public 
     using OutVector = typename AggNativeAndVectorType<OUT_ID>::vector;
     using OutType = typename AggNativeAndVectorType<OUT_ID>::type;
     using ResultType = typename std::conditional_t<IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG,
-        int64_t, std::conditional_t<IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER, double, Decimal128>>;
+            int64_t, std::conditional_t<IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER, double, Decimal128>>;
 
 public:
     ~AverageAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-
+    DataTypeId GetSpillType() override;
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT>
     void ExtractValuesFunction(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex);
 

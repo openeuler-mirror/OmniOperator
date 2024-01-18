@@ -30,6 +30,25 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
         v->SetNull(rowIndex);
     }
 }
+template <DataTypeId IN_ID, DataTypeId OUT_ID> DataTypeId MaxAggregator<IN_ID, OUT_ID>::GetSpillType()
+{
+    if constexpr (IN_ID == OMNI_SHORT) {
+        return OMNI_INT;
+    } else {
+        return IN_ID;
+    }
+}
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+    int32_t rowIndex)
+{
+    auto v = static_cast<Vector<ResultType> *>(vectors[0]);
+    if (state.count <= 0 || state.val == nullptr) {
+        v->SetNull(rowIndex);
+        return;
+    }
+    v->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+}
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {

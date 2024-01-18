@@ -80,7 +80,25 @@ public:
             }
         }
     }
-
+    DataTypeId GetSpillType() override
+    {
+        if constexpr (InDecimalId == OMNI_DECIMAL64) {
+            return OutDecimalId;
+        } else {
+            return OMNI_DECIMAL128;
+        }
+    }
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
+        if (state.count < 0 || state.val == nullptr) {
+            avgValVector->SetNull(rowIndex);
+            avgCountVector->SetValue(rowIndex, state.count);
+        }
+        avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        avgCountVector->SetValue(rowIndex, state.count);
+    }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         BaseVector *vector = vectors[0];

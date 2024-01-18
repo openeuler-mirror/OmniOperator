@@ -26,7 +26,6 @@ public:
     {}
 
     ~AverageFlatIMAggregator() override {}
-
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
@@ -88,7 +87,25 @@ public:
             }
         }
     }
+    DataTypeId GetSpillType() override
+    {
+        return OMNI_DOUBLE;
+    }
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
 
+        if (state.count <= 0 || state.val == nullptr) {
+            // all input are nulls, return 0
+            avgValVector->SetValue(rowIndex, 0);
+            avgCountVector->SetValue(rowIndex, 0);
+            return;
+        }
+
+        avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        avgCountVector->SetValue(rowIndex, state.count);
+    }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         if (SumFlatIMAggregator<IN_ID, OUT_ID>::outputPartial) {

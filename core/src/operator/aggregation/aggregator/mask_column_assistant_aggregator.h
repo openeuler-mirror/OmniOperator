@@ -44,7 +44,10 @@ public:
             realAggregator->InitiateGroup(state, vectorBatch, rowIndex);
         }
     }
-
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        realAggregator->ExtractValues(state, vectors, rowIndex);
+    }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);

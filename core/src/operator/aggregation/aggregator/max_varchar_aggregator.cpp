@@ -24,6 +24,13 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
+    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+{
+    this->ExtractValues(state, vectors, rowIndex);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {

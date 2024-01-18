@@ -71,9 +71,9 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxAggregator : public Type
 
 public:
     ~MaxAggregator() override = default;
-
+    DataTypeId GetSpillType() override;
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     void InitState(AggregateState &state) override;
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
@@ -109,6 +109,7 @@ protected:
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap) override;
+
 };
 }
 }

@@ -130,6 +130,11 @@ public:
             std::to_string(as_integer(type)));
     }
 
+    virtual DataTypeId GetSpillType()
+    {
+        throw OmniException("Not implemented", "GetSpillType not implemented for " + std::to_string(as_integer(type)));
+    }
+
     // for no groupby aggregation
     virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount)
@@ -231,6 +236,8 @@ public:
 
     // set result to output vector
     virtual void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+        const int32_t rowIndex) = 0;
+    virtual void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
         const int32_t rowIndex) = 0;
 
     virtual bool IsTypedAggregator()

@@ -512,6 +512,7 @@ public:
     using HashKey = KeyType;
     using ResultType = InsertResult<ValueType>;
     using Keys = KeyType;
+    using Values = ValueType;
 
 public:
     BaseHashMap(uint8_t initDegree = defaultDegreeSize) : grower(initDegree)

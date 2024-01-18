@@ -203,7 +203,7 @@ OmniStatus HashAggregationOperator::Init()
 
     int32_t rowByteSize = InitMaxRowCountAndOutputTypes();
     rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
-
+    InitSpillTypes();
     return OMNI_STATUS_NORMAL;
 }
 
@@ -234,8 +234,8 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         LogError("can not support groupByColumnsHandleType : %d.", groupByColumnsHandleType);
         throw OmniException("no t supported operation", "groupByColumnsHandleType error");
     }
-
-    VectorHelper::FreeVecBatch(vecBatch);
+    SpillHashMap();
+    //VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
 
@@ -260,6 +260,44 @@ int32_t HashAggregationOperator::InitMaxRowCountAndOutputTypes()
         }
     }
     return rowSize;
+}
+
+void HashAggregationOperator::InitSpillTypes()
+{
+    for (auto &i : groupByCols) {
+        spillTypes.push_back(i.input);
+        spillTypes1.push_back(i.input);
+    }
+    for (uint64_t i = 0; i < aggOutputTypes.size(); i++) {
+        auto currentAggType = aggregators[i]->GetType();
+        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG ||
+            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
+            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_MAX ||
+            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_MIN) {
+            spillTypes.push_back(std::make_shared<DataType>(aggregators[i]->GetSpillType()));
+            spillTypes1.push_back(std::make_shared<DataType>(aggregators[i]->GetSpillType()));
+        } else {
+            spillTypes.push_back(aggOutputTypes[i].Get()[0]);
+            spillTypes1.push_back(aggOutputTypes[i].Get()[0]);
+        }
+        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
+            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG) {
+            spillTypes.push_back(std::make_shared<DataType>(DataType(OMNI_LONG)));
+            spillTypes1.push_back(std::make_shared<DataType>(DataType(OMNI_LONG)));
+        }
+        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL ||
+            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
+            spillTypes.push_back(std::make_shared<DataType>(DataType(OMNI_BOOLEAN)));
+            spillTypes1.push_back(std::make_shared<DataType>(DataType(OMNI_BOOLEAN)));
+        }
+    }
+    size_t groupNum = groupByCols.size();
+    for (size_t i = 0; i < groupNum; i++) {
+        sortCols[i] = static_cast<int32_t>(i);
+        ascendings[i] = true;
+        nullsFirst[i] = true;
+        sortOrders.push_back(sortOrder);
+    }
 }
 
 void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount)
@@ -342,6 +380,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
 
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         auto ret = emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
+
         if (ret.IsInsert()) {
             currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
             for (size_t j = 0; j < aggNum; ++j) {
@@ -420,6 +459,99 @@ void HashAggregationOperator::TraverseHashmapToGetOneResult(Deserialize &deseria
         }
     }
     outputState.UpdateState(curOutputState);
+}
+
+void HashAggregationOperator::ConvertHashMap2VectorBatch(VectorBatch **outputVectorBatch)
+{
+    auto &currentHashmap = serialize->hashmap;
+    uint64_t totalRowCount = currentHashmap.GetElementsSize();
+    int32_t groupColNum = static_cast<int32_t>(this->groupByCols.size());
+    int32_t aggSpillColNum = static_cast<int32_t>(this->aggOutputTypes.size() * 2);
+    std::vector<BaseVector *> groupOutputVectors(groupColNum);
+    std::vector<BaseVector *> aggNeedSpillVectors(aggSpillColNum);
+    auto output = new VectorBatch(totalRowCount);
+    auto output1 = new VectorBatch(totalRowCount);
+    SetVectors(output, spillTypes, totalRowCount);
+    for (int32_t i = 0; i < groupColNum; i++) {
+        groupOutputVectors[i] = output->Get(i);
+    }
+    int32_t lambdaRowIndex = 0;
+    currentHashmap.ForEachKV([&](auto &key, auto &value) mutable {
+        // convert key to vector batch
+        serialize->ParseKeyToCols(key, groupOutputVectors, groupColNum, lambdaRowIndex);
+        lambdaRowIndex++;
+    });
+    for(int k = 0; k< groupColNum;k++) {
+        output1->Append(groupOutputVectors[k]);
+    }
+    auto aggOutputStartIndex = groupColNum;
+    // convert value to vector batch
+    for(int32_t aggIdx = 0; aggIdx < aggregators.size(); aggIdx++) {
+        lambdaRowIndex = 0;
+        auto &aggregator = aggregators[aggIdx];
+        auto currentAggType = aggregator->GetType();
+        auto oneAggOutputCols = aggOutputTypes[aggIdx].GetSize();
+        std::vector<BaseVector *> adaptAggVectors(oneAggOutputCols);
+        if(currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM) {
+            oneAggOutputCols+=1;
+        }
+        for (auto j = 0; j < oneAggOutputCols; j++) {
+            adaptAggVectors[j] = output->Get(aggOutputStartIndex + j);
+        }
+        aggOutputStartIndex += oneAggOutputCols;
+        {
+            currentHashmap.ForEachValue([&](auto &mapped) {
+                auto &state = mapped[aggIdx];
+                aggregator->ExtractSpillValues(state, adaptAggVectors, lambdaRowIndex);
+                lambdaRowIndex++;
+            });
+        }
+        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG) {
+            auto containerVec = reinterpret_cast<ContainerVector *>(adaptAggVectors[0]);
+            output1->Append(reinterpret_cast<Vector<double> *>(containerVec->GetValue(0)));
+            output1->Append(reinterpret_cast<Vector<int64_t> *>(containerVec->GetValue(1)));
+        } else if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL ||
+            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
+            auto containerVec = reinterpret_cast<ContainerVector *>(adaptAggVectors[0]);
+            output1->Append(
+                reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(containerVec->GetValue(0)));
+            output1->Append(reinterpret_cast<Vector<bool> *>(containerVec->GetValue(1)));
+        } else if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM) {
+            output1->Append(adaptAggVectors[0]);
+            output1->Append(adaptAggVectors[1]);
+        } else {
+            output1->Append(adaptAggVectors[0]);
+        }
+    }
+    SortOperator* sortOperator = CreateSortOperatorForSpill();
+    sortOperator->AddInput(output1);
+    sortOperator->GetOutput(outputVectorBatch);
+    delete sortOperator;
+}
+
+SortOperator* HashAggregationOperator::CreateSortOperatorForSpill()
+{
+    DataTypes sourceTypes(spillTypes1);
+    size_t outPutColSize = this->spillTypes1.size();
+    int32_t outputCols[outPutColSize];
+    for(uint64_t i = 0; i < outPutColSize; i++) {
+        outputCols[i] = static_cast<int32_t>(i);
+    }
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, outPutColSize,
+        sortCols, ascendings, nullsFirst, groupByCols.size());
+    auto sortOperator = dynamic_cast<SortOperator *>(operatorFactory->CreateOperator());
+    return sortOperator;
+}
+
+void HashAggregationOperator::SpillHashMap()
+{
+    auto &hashmap = this->serialize->hashmap;
+    uint64_t totalRowCount = hashmap.GetElementsSize();
+    auto *toBeSpilled = new VectorBatch(totalRowCount);
+    ConvertHashMap2VectorBatch(&toBeSpilled);
+    spillWriter = new SpillWriter(DataTypes(spillTypes1), spillDirPath);
+    spillWriter->WriteVecBatch(toBeSpilled);
+    VectorHelper::FreeVecBatch(toBeSpilled);
 }
 
 template <typename Deserialize>

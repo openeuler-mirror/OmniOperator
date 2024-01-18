@@ -188,7 +188,34 @@ public:
             }
         }
     }
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        if constexpr (std::is_same_v<InputType, std::string_view>) {
+            auto firstVarcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
+            auto firstState = static_cast<FirstState *>(state.val);
+            if (firstState->valIsNull) {
+                firstVarcharVector->SetNull(rowIndex);
+            } else {
+                firstVarcharVector->SetNotNull(rowIndex);
+                std::string_view firstValue(reinterpret_cast<char *>(firstState->val), state.count);
+                firstVarcharVector->SetValue(rowIndex, firstValue);
+            }
 
+            auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
+            valueSetVector->SetValue(rowIndex, firstState->valueSet);
+        } else {
+            auto firstVector = reinterpret_cast<Vector<InputType> *>(vectors[0]);
+            auto firstState = static_cast<FirstState *>(state.val);
+            if (firstState->valIsNull) {
+                firstVector->SetNull(rowIndex);
+            } else {
+                firstVector->SetNotNull(rowIndex);
+                firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
+            }
+            auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
+            valueSetVector->SetValue(rowIndex, firstState->valueSet);
+        }
+    }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         if constexpr (std::is_same_v<InputType, std::string_view>) {

@@ -16,6 +16,7 @@
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "operator/config/operator_config.h"
 #include "operator/filter/filter_and_project.h"
+#include "operator/sort/sort.h"
 
 namespace omniruntime {
 namespace op {
@@ -231,9 +232,18 @@ public:
           aggInputColsSize(aggInputColsSize),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes)
-    {}
+    {
+        sortCols = new int32_t [groupByCols.size()];
+        nullsFirst = new int32_t [groupByCols.size()];
+        ascendings = new int32_t [groupByCols.size()];
+    }
 
-    ~HashAggregationOperator() override = default;
+    ~HashAggregationOperator() override
+    {
+        delete[] sortCols;
+        delete[] nullsFirst;
+        delete[] ascendings;
+    }
 
     int32_t AddInput(VectorBatch *data) override;
 
@@ -247,8 +257,19 @@ public:
     void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, BaseVector **groupVectors, int32_t groupColNum);
 
 private:
+    SpillWriter *spillWriter = nullptr;
+    std::vector<SpillFileInfo> spillFiles;
+    SortOrder sortOrder;
+    std::vector<SortOrder> sortOrders;
+    int32_t *sortCols;
+    int32_t *ascendings;
+    int32_t *nullsFirst;
+    const std::string spillDirPath = "/opt/aggregation";
     int32_t InitMaxRowCountAndOutputTypes();
-
+    void InitSpillTypes();
+    void SpillHashMap();
+    void ConvertHashMap2VectorBatch(VectorBatch** outputVectorBatch);
+    SortOperator* CreateSortOperatorForSpill();
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
@@ -265,6 +286,8 @@ private:
     std::vector<DataTypes> aggInputTypes;
     std::vector<DataTypes> aggOutputTypes;
     std::vector<type::DataTypePtr> outputTypes;
+    std::vector<type::DataTypePtr> spillTypes;
+    std::vector<type::DataTypePtr> spillTypes1;
     std::unique_ptr<ExecutionContext> executionContext;
     HandleType groupByColumnsHandleType = HandleType::serialize;
     std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;

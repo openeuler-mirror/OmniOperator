@@ -23,6 +23,20 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState& state, std::vector<BaseVector *> &vectors,
+    int32_t rowIndex)
+{
+    auto v = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
+    if (state.val == nullptr || state.count == 0) {
+        // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
+        v->SetNull(rowIndex);
+    } else {
+        std::string_view val(reinterpret_cast<char *>(state.val), state.count);
+        v->SetValue(rowIndex, val);
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
