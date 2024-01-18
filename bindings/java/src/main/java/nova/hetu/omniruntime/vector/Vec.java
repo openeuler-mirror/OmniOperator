@@ -6,6 +6,7 @@ package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.utils.NativeLog;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
@@ -30,6 +31,7 @@ public abstract class Vec implements Closeable {
 
     static {
         OmniLibs.load();
+        NativeLog.getInstance();
     }
 
     /**
