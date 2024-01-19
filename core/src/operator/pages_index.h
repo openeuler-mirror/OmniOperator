@@ -64,14 +64,13 @@ public:
         int32_t sortColCount, int32_t from, int32_t to);
 
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
-        const int32_t *sourceTypes, int32_t offset, int32_t len) const;
+        const int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
     void GetOutputInplaceSort(int32_t *outputCols, int32_t outputColsCount,
         omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset,
         int32_t length) const;
 
-    void GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount,
-        omniruntime::vec::VectorBatch *outputVecBatch,
+    void GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
         const int32_t *sourceTypes, int32_t offset, int32_t length) const;
 
     void GetSortedVecBatches(std::vector<int32_t> &outputCols,
@@ -162,7 +161,7 @@ private:
         int32_t nullIndex = 0;
         for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
             VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
-            auto rowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
+            auto rowCount = vecBatch->GetRowCount();
             auto *col = reinterpret_cast<Vector<T> *>(vecBatch->Get(0));
             if (!col->HasNull()) {
                 for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
@@ -201,19 +200,15 @@ private:
     std::vector<uint8_t> radixComboRow;
     uint32_t radixValueWidth;
     uint32_t radixRowWidth;
-    uint32_t radixSortingSize;
 };
 
 constexpr uint32_t SHIFT_SIZE_32 = 32;
+
 static ALWAYS_INLINE uint64_t EncodeSyntheticAddress(uint32_t sliceIndex, uint32_t sliceOffset)
 {
     return (static_cast<uint64_t>(sliceIndex) << SHIFT_SIZE_32) | sliceOffset;
 }
 
-static ALWAYS_INLINE std::tuple<uint16_t, uint32_t> CompactDecodeSytheticAddress(const uint8_t *address)
-{
-    return { *reinterpret_cast<const uint16_t *>(address), *reinterpret_cast<const uint32_t *>(address + 2) };
-}
 static ALWAYS_INLINE uint32_t DecodeSliceIndex(uint64_t sliceAddress)
 {
     return static_cast<uint32_t>(sliceAddress >> SHIFT_SIZE_32);

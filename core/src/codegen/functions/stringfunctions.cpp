@@ -429,21 +429,21 @@ extern "C" DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str
     if (isNull) {
         return 0;
     }
-    int32_t result;
-    std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
-    if (!regex_match(s, g_intRegex)) {
+    bool isInvalid = false;
+    bool isOverflow = false;
+    int32_t result = ConvertStringToInteger<int32_t>(str, strLen, isInvalid, isOverflow);
+    if (isInvalid) {
+        std::string s(str, strLen);
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
 
-    try {
-        result = stoi(s);
-    } catch (std::exception &e) {
+    if (isOverflow) {
+        std::string s(str, strLen);
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large.";
+        errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large or too small.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
@@ -456,21 +456,21 @@ extern "C" DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *st
     if (isNull) {
         return 0;
     }
-    int64_t result;
-    std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
-    if (!regex_match(s, g_intRegex)) {
+    bool isInvalid = false;
+    bool isOverflow = false;
+    int64_t result = ConvertStringToInteger<int64_t>(str, strLen, isInvalid, isOverflow);
+    if (isInvalid) {
+        std::string s = std::string(str, strLen);
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
 
-    try {
-        result = stol(s);
-    } catch (std::exception &e) {
+    if (isOverflow) {
+        std::string s = std::string(str, strLen);
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large.";
+        errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large or too small.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
@@ -705,41 +705,19 @@ extern "C" DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPt
 
 extern "C" DLLEXPORT int32_t CastStringToIntRetNull(bool *isNull, const char *str, int32_t strLen)
 {
-    int32_t result;
-    std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
-    if (!regex_match(s, g_intRegex)) {
-        *isNull = true;
-        return 0;
-    }
-
-    try {
-        result = stoi(s);
-    } catch (std::exception &e) {
-        *isNull = true;
-        return 0;
-    }
-
+    bool isNotDigit = false;
+    bool isOverflow = false;
+    auto result = ConvertStringToIntegerWithTruncate<int32_t>(str, strLen, isNotDigit, isOverflow);
+    *isNull = (isNotDigit || isOverflow);
     return result;
 }
 
 extern "C" DLLEXPORT int64_t CastStringToLongRetNull(bool *isNull, const char *str, int32_t strLen)
 {
-    int64_t result;
-    std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
-    if (!regex_match(s, g_intRegex)) {
-        *isNull = true;
-        return 0;
-    }
-
-    try {
-        result = stol(s);
-    } catch (std::exception &e) {
-        *isNull = true;
-        return 0;
-    }
-
+    bool isNotDigit = false;
+    bool isOverflow = false;
+    auto result = ConvertStringToIntegerWithTruncate<int64_t>(str, strLen, isNotDigit, isOverflow);
+    *isNull = (isNotDigit || isOverflow);
     return result;
 }
 

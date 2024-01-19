@@ -66,14 +66,16 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
     maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputCols.size());
     maxRowCountPerBatch = maxRowCountPerBatch == 0 ? 1 : maxRowCountPerBatch;
-    if (sourceTypes.GetSize() == 1 && sourceTypes.GetType(0)->GetId() != OMNI_VARCHAR &&
-        sourceTypes.GetType(0)->GetId() != OMNI_CHAR && sourceTypes.GetType(0)->GetId() != OMNI_BOOLEAN) {
-        canInplaceSort = true;
+    if (sourceTypes.GetSize() == 1) {
+        auto typeId = sourceTypes.GetType(0)->GetId();
+        if (typeId != OMNI_VARCHAR && typeId != OMNI_CHAR && typeId != OMNI_BOOLEAN) {
+            canInplaceSort = true;
+        }
     }
 
-    this->radixSortSizeThreshold = operatorConfig.GetAdaptivityThreshold();
     if (not canInplaceSort) {
-        useRadixSort = this->CanUseRadixSort();
+        this->radixSortSizeThreshold = operatorConfig.GetAdaptivityThreshold();
+        canRadixSort = this->CanUseRadixSort();
     }
 }
 
@@ -164,7 +166,7 @@ void SortOperator::Sort()
     if (canInplaceSort) {
         pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
             positionCount);
-    } else if (useRadixSort) {
+    } else if (canRadixSort) {
         pagesIndex->SortWithRadixSort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
             positionCount);
     } else {
@@ -185,7 +187,7 @@ void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesF
 
 bool SortOperator::CanUseRadixSort()
 {
-    bool canUseRadixSort = (radixSortSizeThreshold != -1 && sortCols.size() == 1);
+    bool canUseRadixSort = (sortCols.size() == 1 && radixSortSizeThreshold != -1);
     if (not canUseRadixSort) {
         return false;
     }
@@ -207,15 +209,16 @@ void SortOperator::PrepareOutput()
         return;
     }
     // update radix sort state
-    if (useRadixSort) {
-        useRadixSort = CanUseRadixSortByRuntimeInfo();
+    if (canRadixSort) {
+        canRadixSort = CanUseRadixSortByRuntimeInfo();
     }
 
     if (canInplaceSort) {
         DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(), sortNullFirsts[0]);
-    } else if (useRadixSort) {
+    } else if (canRadixSort) {
         LogDebug("radix Sort size threshold is %d\n", radixSortSizeThreshold);
-        switch (sourceTypes.GetType(sortCols[0])->GetId()) {
+        auto typeId = sourceTypes.GetType(sortCols[0])->GetId();
+        switch (typeId) {
             case OMNI_LONG:
                 pagesIndex->PrepareRadixSort<OMNI_LONG>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
                 break;
@@ -233,9 +236,8 @@ void SortOperator::PrepareOutput()
                 pagesIndex->PrepareRadixSort<OMNI_DECIMAL64>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
                 break;
             default:
-                useRadixSort = false;
-                pagesIndex->Prepare();
-                break;
+                std::string errStr = "Do not support the data type" + std::to_string(typeId) + " in radix sort.";
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errStr);
         }
     } else {
         pagesIndex->Prepare();
@@ -254,13 +256,15 @@ void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
         static_cast<int32_t>(std::min(static_cast<size_t>(maxRowCountPerBatch), (totalRowCount - rowCountOutputted)));
 
     auto *result = new VectorBatch(rowCountToOutput);
-    if (!canInplaceSort) {
-        // This includes both radix sort and normal quick sort
-        pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
-            rowCountToOutput);
-    } else {
+    if (canInplaceSort) {
         pagesIndex->GetOutputInplaceSort(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(),
             rowCountOutputted, rowCountToOutput);
+    } else if (canRadixSort) {
+        pagesIndex->GetOutputRadixSort(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(),
+            rowCountOutputted, rowCountToOutput);
+    } else {
+        pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
+            rowCountToOutput);
     }
     rowCountOutputted += rowCountToOutput;
     *outputVecBatch = result;

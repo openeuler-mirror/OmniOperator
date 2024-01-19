@@ -155,14 +155,15 @@ private:
     size_t rowCountOutputted = 0;
     bool hasSorted = false;
 
+    bool canInplaceSort = false;
+    bool canRadixSort = false;
+    int32_t radixSortSizeThreshold = -1;
+
     // for spill
     OperatorConfig operatorConfig;
     VecBatchWithPositionComparator *comparator = nullptr;
     Spiller *spiller = nullptr;
     bool hasNext = true;
-    bool canInplaceSort = false;
-    bool useRadixSort = false;
-    int32_t radixSortSizeThreshold = -1;
 };
 } // end of namespace op
 } // end of namespace omniruntime
