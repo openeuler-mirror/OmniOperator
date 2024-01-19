@@ -111,8 +111,8 @@ public final class JvmUtils {
                     "DirectByteBuffer.<ini>(long, int) not available");
         }
         try {
-            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuffer.getAddress(), omniBuffer.getCapacity()))
-                    .order(ByteOrder.LITTLE_ENDIAN);
+            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuffer.getAddress(),
+                omniBuffer.getCapacity())).order(ByteOrder.LITTLE_ENDIAN);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, e);
         }

@@ -4,15 +4,12 @@
 
 package nova.hetu.omniruntime;
 
-import nova.hetu.omniruntime.utils.NativeLog;
-
 /**
  * common static load logic
  *
  * @since 2023-01-18
  */
 public class CommonStaticLoad {
-
     /**
      * static load
      */
