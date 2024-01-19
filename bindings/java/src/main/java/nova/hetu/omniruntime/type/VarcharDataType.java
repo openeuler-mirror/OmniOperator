@@ -39,11 +39,7 @@ public class VarcharDataType extends DataType {
      */
     public VarcharDataType(@JsonProperty("width") int width) {
         super(DataTypeId.OMNI_VARCHAR);
-        if (width > MAX_WIDTH) {
-            this.width = MAX_WIDTH;
-        } else {
-            this.width = width;
-        }
+        this.width = Math.min(MAX_WIDTH, width);
     }
 
     /**

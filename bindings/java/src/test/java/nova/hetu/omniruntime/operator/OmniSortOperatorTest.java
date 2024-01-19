@@ -9,7 +9,7 @@ import static nova.hetu.omniruntime.util.TestUtils.assertVecEquals;
 import static nova.hetu.omniruntime.util.TestUtils.createVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVecBatch;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
-import static nova.hetu.omniruntime.memory.MemoryManager.memoryClear;
+import static nova.hetu.omniruntime.memory.MemoryManager.clearMemory;
 import static nova.hetu.omniruntime.memory.MemoryManager.setGlobalMemoryLimit;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotEquals;
@@ -558,7 +558,7 @@ public class OmniSortOperatorTest {
     @Test
     public void testSortMultiThreadsAllocatorStatisticsBasic() {
         long limit = 1 << 30;
-        memoryClear();
+        clearMemory();
         setGlobalMemoryLimit(limit);
 
         int[] outputCols = {0, 1};

@@ -9,7 +9,7 @@ package nova.hetu.omniruntime.vector;
  *
  * @since 2021-08-02
  */
-public interface OmniBuf {
+public interface OmniBuffer {
     /**
      * set byte.
      *

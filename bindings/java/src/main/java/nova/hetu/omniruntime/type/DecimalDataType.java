@@ -13,7 +13,7 @@ import java.util.Objects;
  *
  * @since 2022-03-10
  */
-public class DecimalDataType extends DataType {
+public abstract class DecimalDataType extends DataType {
     private static final long serialVersionUID = -3389964658615782592L;
 
     @JsonProperty

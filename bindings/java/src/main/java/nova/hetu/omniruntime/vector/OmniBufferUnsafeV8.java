@@ -11,12 +11,12 @@ import sun.misc.Unsafe;
  *
  * @since 2021-08-10
  */
-public class OmniBufUnsafeV8 implements OmniBuf {
+public class OmniBufferUnsafeV8 implements OmniBuffer {
     private final long address;
 
     private final int capacity;
 
-    public OmniBufUnsafeV8(long address, int capacity) {
+    public OmniBufferUnsafeV8(long address, int capacity) {
         this.address = address;
         this.capacity = capacity;
     }

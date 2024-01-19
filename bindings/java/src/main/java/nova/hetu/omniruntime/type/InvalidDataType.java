@@ -5,7 +5,7 @@
 package nova.hetu.omniruntime.type;
 
 /**
- * invalid data type.
+ * invalid data type. The data type of unsupported/invalid data.
  *
  * @since 2022-04-01
  */

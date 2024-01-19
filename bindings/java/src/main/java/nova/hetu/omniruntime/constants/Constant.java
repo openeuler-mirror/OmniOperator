@@ -8,7 +8,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * The type Constant.
+ * The type Constant. The abstract class of all enum constant class
  *
  * @since 2021-06-30
  */
