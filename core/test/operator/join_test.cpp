@@ -3115,15 +3115,18 @@ TEST(NativeOmniJoinTest, TestRightEqualityJoin)
     VectorBatch *outputVecBatch = nullptr;
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
-    const int32_t expectedDataSize = 7;
-    int64_t expectedData0[expectedDataSize] = {0, 0, 0, 2, 2, 1, 1};
-    std::string expectedData1[expectedDataSize] = {"11", "11", "11", "22", "22", "44", "44"};
-    int64_t expectedData2[expectedDataSize] = {0, 0, 0, 2, 2, 1, 1};
-    std::string expectedData3[expectedDataSize] = {"11", "33", "11", "ccc", "33", "aaa", "aa"};
+    const int32_t expectedDataSize = 8;
+    int64_t expectedData0[expectedDataSize] = {0, 0, 0, 2, 2, 0, 1, 1};
+    std::string expectedData1[expectedDataSize] = {"11", "11", "11", "22", "22", "33", "44", "44"};
+    int64_t expectedData2[expectedDataSize] = {0, 0, 0, 2, 2, 0, 1, 1};
+    std::string expectedData3[expectedDataSize] = {"11", "33", "11", "ccc", "33", "", "aaa", "aa"};
     auto expectedVector0 = CreateVector<int64_t>(expectedDataSize, expectedData0);
+    expectedVector0->SetNull(5);
     auto expectedVector1 = CreateVarcharVector(expectedData1, expectedDataSize);
     auto expectedVector2 = CreateVector<int64_t>(expectedDataSize, expectedData2);
+    expectedVector2->SetNull(5);
     auto expectedVector3 = CreateVarcharVector(expectedData3, expectedDataSize);
+    expectedVector3->SetNull(5);
     auto expectedVecBatch = new VectorBatch(expectedDataSize);
     expectedVecBatch->Append(expectedVector0);
     expectedVecBatch->Append(expectedVector1);
@@ -3186,16 +3189,24 @@ TEST(NativeOmniJoinTest, TestRightEqualityJoinWithCharFilter)
     VectorBatch *outputVecBatch = nullptr;
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
-    const int32_t expectDataSize = 6;
-    int32_t expectData0[expectDataSize] = {20, 16, 20, 19, 20, 20};
-    std::string expectData1[expectDataSize] = {"35709", "35709", "31904", "35709", "88371", "88371"};
-    int32_t expectData2[expectDataSize] = {20, 16, 20, 19, 20, 20};
-    std::string expectData3[expectDataSize] = {"31904", "31904", "35709", "31904", "31904", "35709"};
+    const int32_t expectDataSize = 11;
+    int32_t expectData0[expectDataSize] = {20, 16, 13, 4, 20, 4, 22, 19, 20, 20, 7};
+    std::string expectData1[expectDataSize] = {"35709", "35709", "31904", "12477", "31904", "38721", "90419", "35709",
+                                               "88371", "88371"};
+    int32_t expectData2[expectDataSize] = {20, 16, 0, 0, 20, 0, 0, 19, 20, 20, 0};
+    std::string expectData3[expectDataSize] = {"31904", "31904", "", "", "35709", "", "", "31904", "31904", "35709",
+                                               ""};
     auto expectVecBatch = new VectorBatch(expectDataSize);
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData0));
     expectVecBatch->Append(CreateVarcharVector(expectData1, expectDataSize));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
     expectVecBatch->Append(CreateVarcharVector(expectData3, expectDataSize));
+    static_cast<Vector<std::string_view> *>(expectVecBatch->Get(1))->SetNull(expectDataSize - 1);
+    auto nullIndex = {2, 3, 5, 6, 10};
+    for (auto idx : nullIndex) {
+        expectVecBatch->Get(2)->SetNull(idx);
+        static_cast<Vector<std::string_view> *>(expectVecBatch->Get(3))->SetNull(idx);
+    }
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({ joinFilter });

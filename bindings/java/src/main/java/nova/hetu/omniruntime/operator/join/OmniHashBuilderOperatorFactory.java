@@ -50,13 +50,14 @@ public class OmniHashBuilderOperatorFactory extends OmniOperatorFactory<OmniHash
         this(joinType, buildTypes, buildHashCols, operatorCount, new OperatorConfig());
     }
 
-    private static native long createHashBuilderOperatorFactory(JoinType joinType, String buildTypes,
-            int[] buildHashCols, int operatorCount, String operatorConfig);
+    private static native long createHashBuilderOperatorFactory(int joinType, String buildTypes, int[] buildHashCols,
+            int operatorCount, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
-        return createHashBuilderOperatorFactory(context.joinType, DataTypeSerializer.serialize(context.buildTypes),
-                context.buildHashCols, context.operatorCount, OperatorConfig.serialize(context.operatorConfig));
+        return createHashBuilderOperatorFactory(context.joinType.getValue(),
+                DataTypeSerializer.serialize(context.buildTypes), context.buildHashCols, context.operatorCount,
+                OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**
