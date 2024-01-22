@@ -46,6 +46,7 @@ OperatorConfig::OperatorConfig(const OperatorConfig &operatorConfig)
             break;
         }
     }
+    this->adaptivityThreshold = operatorConfig.GetAdaptivityThreshold();
 }
 
 OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &configString)

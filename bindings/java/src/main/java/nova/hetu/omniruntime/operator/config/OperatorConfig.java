@@ -32,7 +32,7 @@ public class OperatorConfig {
 
     private boolean isSkipExpressionVerify;
 
-    private int adaptivityThreshold;
+    private int adaptivityThreshold = -1;
 
     /**
      * Operator config default constructor.
