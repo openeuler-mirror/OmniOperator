@@ -797,7 +797,8 @@ extern "C" DLLEXPORT int32_t InStr(const char *srcStr, int32_t srcLen, const cha
     int32_t cmpLen = subLen - 1;
     for (int32_t pos = 0; pos <= tailPos; ++pos) {
         if (srcStr[pos] == subStr[0] && memcmp(srcStr + pos + 1, subStr + 1, cmpLen) == 0) {
-            return (pos + 1);
+            auto result = omniruntime::Utf8Util::CountCodePoints(srcStr, pos);
+            return (result + 1);
         }
     }
     return 0;

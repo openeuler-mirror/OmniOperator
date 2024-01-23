@@ -1113,6 +1113,16 @@ TEST(FunctionTest, Instr)
     EXPECT_EQ(result, 1);
     result = InStr("", 0, "", 0, false);
     EXPECT_EQ(result, 1);
+    std::string srcStr = "一丁丂七丄丅丆万丈三上下丌不与丏";
+    std::string subStr = "万丈";
+    result = InStr(srcStr.c_str(), static_cast<int32_t>(srcStr.length()), subStr.c_str(),
+        static_cast<int32_t>(subStr.length()), false);
+    EXPECT_EQ(result, 8);
+    srcStr = "壹貳叁肆伍";
+    subStr = "叁肆";
+    result = InStr(srcStr.c_str(), static_cast<int32_t>(srcStr.length()), subStr.c_str(),
+        static_cast<int32_t>(subStr.length()), false);
+    EXPECT_EQ(result, 3);
 }
 
 TEST(FunctionTest, StartsWithStr)
