@@ -107,7 +107,8 @@ std::vector<omniruntime::expressions::Expr *> Parser::ParseExpressions(const str
     for (int32_t i = 0; i < numberOfExpressions; i++) {
         Expr *expr = ParseRowExpression(expressions[i], inputTypes, inputTypes.GetSize());
         if (expr == nullptr) {
-            return { nullptr };
+            Expr::DeleteExprs(vExprs);
+            return {};
         }
         vExprs.push_back(expr);
     }

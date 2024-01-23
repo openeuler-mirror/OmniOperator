@@ -43,14 +43,13 @@ private:
     JoinType joinType;
     std::string filter;
     SortMergeJoinOperator *smjOperator;
-    std::vector<std::unique_ptr<Projection>> Projections;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> projections;
 };
 
 class StreamedTableWithExprOperator : public Operator {
 public:
-    StreamedTableWithExprOperator(const type::DataTypes &streamedTypes, const std::vector<int32_t> &streamedKeyCols,
-        const std::vector<ProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
+    StreamedTableWithExprOperator(const type::DataTypes &streamedTypes,
+        std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperator *smjOperator);
 
     ~StreamedTableWithExprOperator() override;
 
@@ -62,10 +61,10 @@ public:
     OmniStatus Close() override;
 
 private:
-    SortMergeJoinOperator *smjOperator;
     const DataTypes &streamedTypes;
-    std::vector<int32_t> streamedKeyCols;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> &projections;
+    SortMergeJoinOperator *smjOperator;
+    ExecutionContext *executionContext;
 };
 
 class BufferedTableWithExprOperatorFactory : public OperatorFactory {
@@ -88,15 +87,14 @@ private:
     std::unique_ptr<DataTypes> bufferedTypes;
     std::vector<int32_t> bufferedKeyCols;
     std::vector<int32_t> bufferedOutputCols;
-    std::vector<std::unique_ptr<Projection>> Projections;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> projections;
     StreamedTableWithExprOperatorFactory *streamTblWithExprOperatorFactory;
 };
 
 class BufferedTableWithExprOperator : public Operator {
 public:
-    BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes, const std::vector<int32_t> &bufferedKeyCols,
-        const std::vector<ProjFunc> &projectFuncs, SortMergeJoinOperator *smjOperator);
+    BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes,
+        std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperator *smjOperator);
 
     ~BufferedTableWithExprOperator() override;
 
@@ -108,10 +106,10 @@ public:
     OmniStatus Close() override;
 
 private:
-    SortMergeJoinOperator *smjOperator;
     DataTypes bufferedTypes;
-    std::vector<int32_t> bufferedKeyCols;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> &projections;
+    SortMergeJoinOperator *smjOperator;
+    ExecutionContext *executionContext;
 };
 }
 }

@@ -33,8 +33,8 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     int64_t hashBuilderFactoryAddr, Expr *filterExpr, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newProbeTypes;
-    OperatorUtil::CreateProjectFuncs(probeTypes, probeHashKeys, probeHashKeysCount, newProbeTypes, this->projections,
-        this->probeHashCols, this->projectFuncs, overflowConfig);
+    OperatorUtil::CreateProjections(probeTypes, probeHashKeys, newProbeTypes, this->projections, this->probeHashCols,
+        overflowConfig);
     this->probeTypes = std::make_unique<DataTypes>(newProbeTypes);
     auto hashBuilderWithExprOperatorFactory =
         reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
@@ -53,31 +53,28 @@ LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()
 Operator *LookupJoinWithExprOperatorFactory::CreateOperator()
 {
     auto lookupJoinOperator = static_cast<LookupJoinOperator *>(operatorFactory->CreateOperator());
-    return new LookupJoinWithExprOperator(*probeTypes, probeHashCols, projectFuncs, lookupJoinOperator);
+    return new LookupJoinWithExprOperator(*probeTypes, projections, lookupJoinOperator);
 }
 
 LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &probeTypes,
-    std::vector<int32_t> &probeHashCols, std::vector<ProjFunc> &projectFuncs, LookupJoinOperator *lookupJoinOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, LookupJoinOperator *lookupJoinOperator)
     : probeTypes(probeTypes),
-      probeHashCols(probeHashCols),
-      projectFuncs(projectFuncs),
-      lookupJoinOperator(lookupJoinOperator)
+      projections(projections),
+      lookupJoinOperator(lookupJoinOperator),
+      executionContext(new ExecutionContext())
 {}
 
 LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 {
     delete lookupJoinOperator;
+    delete executionContext;
 }
 
 int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, probeTypes, projectFuncs, probeHashCols);
-    if (newInputVecBatch != nullptr) {
-        lookupJoinOperator->AddInput(newInputVecBatch);
-        VectorHelper::FreeVecBatch(vecBatch);
-    } else {
-        lookupJoinOperator->AddInput(vecBatch);
-    }
+    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, probeTypes, projections, executionContext);
+    lookupJoinOperator->AddInput(newInputVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
     SetStatus(lookupJoinOperator->GetStatus());
     return 0;
 }

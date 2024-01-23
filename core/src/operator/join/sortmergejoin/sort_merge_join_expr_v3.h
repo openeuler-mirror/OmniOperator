@@ -51,13 +51,12 @@ private:
     std::string filter;
     SortMergeJoinOperatorV3 *smjOperator;
     std::vector<std::unique_ptr<Projection>> projections;
-    std::vector<ProjFunc> projectFuncs;
 };
 
 class StreamedTableWithExprOperatorV3 : public Operator {
 public:
-    StreamedTableWithExprOperatorV3(const type::DataTypes &streamTypes, const std::vector<int32_t> &streamJoinCols,
-        const std::vector<ProjFunc> &projectFuncs, SortMergeJoinOperatorV3 *smjOperator);
+    StreamedTableWithExprOperatorV3(const type::DataTypes &streamTypes,
+        std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperatorV3 *smjOperator);
 
     ~StreamedTableWithExprOperatorV3() override;
 
@@ -69,9 +68,9 @@ public:
 
 private:
     DataTypes streamTypes;
-    std::vector<int32_t> streamJoinCols;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> &projections;
     SortMergeJoinOperatorV3 *smjOperator;
+    ExecutionContext *executionContext;
 };
 
 class BufferedTableWithExprOperatorFactoryV3 : public OperatorFactory {
@@ -95,14 +94,13 @@ private:
     std::vector<int32_t> bufferJoinCols;
     std::vector<int32_t> bufferOutputCols;
     std::vector<std::unique_ptr<Projection>> projections;
-    std::vector<ProjFunc> projectFuncs;
     SortMergeJoinOperatorV3 *smjOperator;
 };
 
 class BufferedTableWithExprOperatorV3 : public Operator {
 public:
-    BufferedTableWithExprOperatorV3(const type::DataTypes &bufferTypes, const std::vector<int32_t> &bufferJoinCols,
-        const std::vector<ProjFunc> &projectFuncs, SortMergeJoinOperatorV3 *smjOperator);
+    BufferedTableWithExprOperatorV3(const type::DataTypes &bufferTypes,
+        std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperatorV3 *smjOperator);
 
     ~BufferedTableWithExprOperatorV3() override;
 
@@ -114,9 +112,9 @@ public:
 
 private:
     DataTypes bufferTypes;
-    std::vector<int32_t> bufferJoinCols;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> &projections;
     SortMergeJoinOperatorV3 *smjOperator;
+    ExecutionContext *executionContext;
 };
 }
 }

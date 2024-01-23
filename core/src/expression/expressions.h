@@ -106,6 +106,7 @@ class LiteralExpr : public Expr {
 public:
     bool isNull = false;
     bool boolVal = false;
+    int16_t shortVal = 0;
     int32_t intVal = 0;
     int64_t longVal = 0;
     double doubleVal = 0;

@@ -21,8 +21,8 @@ StreamedTableWithExprOperatorFactoryV3::StreamedTableWithExprOperatorFactoryV3(c
     : streamOutputCols(streamOutputCols), joinType(joinType), smjOperator(new SortMergeJoinOperatorV3(joinType, filter))
 {
     std::vector<DataTypePtr> newStreamTypes;
-    OperatorUtil::CreateProjectFuncs(streamTypes, streamJoinKeys, streamJoinKeys.size(), newStreamTypes, projections,
-        streamJoinCols, projectFuncs, operatorConfig.GetOverflowConfig());
+    OperatorUtil::CreateProjections(streamTypes, streamJoinKeys, newStreamTypes, projections, streamJoinCols,
+        operatorConfig.GetOverflowConfig());
     this->streamTypes = std::make_unique<DataTypes>(newStreamTypes);
     smjOperator->ConfigStreamInfo(*this->streamTypes, streamJoinCols, this->streamOutputCols, streamTypes.GetSize());
 }
@@ -34,7 +34,7 @@ StreamedTableWithExprOperatorFactoryV3::~StreamedTableWithExprOperatorFactoryV3(
 
 omniruntime::op::Operator *StreamedTableWithExprOperatorFactoryV3::CreateOperator()
 {
-    return new StreamedTableWithExprOperatorV3(*streamTypes, streamJoinCols, projectFuncs, smjOperator);
+    return new StreamedTableWithExprOperatorV3(*streamTypes, projections, smjOperator);
 }
 
 SortMergeJoinOperatorV3 *StreamedTableWithExprOperatorFactoryV3::GetSmjOperator()
@@ -43,12 +43,17 @@ SortMergeJoinOperatorV3 *StreamedTableWithExprOperatorFactoryV3::GetSmjOperator(
 }
 
 StreamedTableWithExprOperatorV3::StreamedTableWithExprOperatorV3(const type::DataTypes &streamTypes,
-    const std::vector<int32_t> &streamJoinCols, const std::vector<ProjFunc> &projectFuncs,
-    SortMergeJoinOperatorV3 *smjOperator)
-    : streamTypes(streamTypes), streamJoinCols(streamJoinCols), projectFuncs(projectFuncs), smjOperator(smjOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperatorV3 *smjOperator)
+    : streamTypes(streamTypes),
+      projections(projections),
+      smjOperator(smjOperator),
+      executionContext(new ExecutionContext())
 {}
 
-StreamedTableWithExprOperatorV3::~StreamedTableWithExprOperatorV3() {}
+StreamedTableWithExprOperatorV3::~StreamedTableWithExprOperatorV3()
+{
+    delete executionContext;
+}
 
 int32_t StreamedTableWithExprOperatorV3::AddInput(VectorBatch *vecBatch)
 {
@@ -57,13 +62,9 @@ int32_t StreamedTableWithExprOperatorV3::AddInput(VectorBatch *vecBatch)
         return 0;
     }
 
-    auto newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, streamTypes, projectFuncs, streamJoinCols);
-    if (newInputVecBatch != nullptr) {
-        smjOperator->AddStreamInput(newInputVecBatch);
-        VectorHelper::FreeVecBatch(vecBatch);
-    } else {
-        smjOperator->AddStreamInput(vecBatch);
-    }
+    auto newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, streamTypes, projections, executionContext);
+    smjOperator->AddStreamInput(newInputVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
 
@@ -93,8 +94,8 @@ BufferedTableWithExprOperatorFactoryV3::BufferedTableWithExprOperatorFactoryV3(c
     : bufferOutputCols(bufferOutputCols), smjOperator(streamTableFactory->GetSmjOperator())
 {
     std::vector<DataTypePtr> newBufferTypes;
-    OperatorUtil::CreateProjectFuncs(bufferTypes, bufferJoinKeys, bufferJoinKeys.size(), newBufferTypes, projections,
-        bufferJoinCols, projectFuncs, operatorConfig.GetOverflowConfig());
+    OperatorUtil::CreateProjections(bufferTypes, bufferJoinKeys, newBufferTypes, projections, bufferJoinCols,
+        operatorConfig.GetOverflowConfig());
     this->bufferTypes = std::make_unique<DataTypes>(newBufferTypes);
     smjOperator->ConfigBufferInfo(*this->bufferTypes, this->bufferJoinCols, this->bufferOutputCols,
         bufferTypes.GetSize());
@@ -105,16 +106,21 @@ BufferedTableWithExprOperatorFactoryV3::~BufferedTableWithExprOperatorFactoryV3(
 
 omniruntime::op::Operator *BufferedTableWithExprOperatorFactoryV3::CreateOperator()
 {
-    return new BufferedTableWithExprOperatorV3(*bufferTypes, bufferJoinCols, projectFuncs, smjOperator);
+    return new BufferedTableWithExprOperatorV3(*bufferTypes, projections, smjOperator);
 }
 
 BufferedTableWithExprOperatorV3::BufferedTableWithExprOperatorV3(const type::DataTypes &bufferTypes,
-    const std::vector<int32_t> &bufferJoinCols, const std::vector<ProjFunc> &projectFuncs,
-    SortMergeJoinOperatorV3 *smjOperator)
-    : bufferTypes(bufferTypes), bufferJoinCols(bufferJoinCols), projectFuncs(projectFuncs), smjOperator(smjOperator)
+    std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperatorV3 *smjOperator)
+    : bufferTypes(bufferTypes),
+      projections(projections),
+      smjOperator(smjOperator),
+      executionContext(new ExecutionContext())
 {}
 
-BufferedTableWithExprOperatorV3::~BufferedTableWithExprOperatorV3() {}
+BufferedTableWithExprOperatorV3::~BufferedTableWithExprOperatorV3()
+{
+    delete executionContext;
+}
 
 int32_t BufferedTableWithExprOperatorV3::AddInput(VectorBatch *vecBatch)
 {
@@ -123,13 +129,9 @@ int32_t BufferedTableWithExprOperatorV3::AddInput(VectorBatch *vecBatch)
         return 0;
     }
 
-    auto newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, bufferTypes, projectFuncs, bufferJoinCols);
-    if (newInputVecBatch != nullptr) {
-        smjOperator->AddBufferInput(newInputVecBatch);
-        VectorHelper::FreeVecBatch(vecBatch);
-    } else {
-        smjOperator->AddBufferInput(vecBatch);
-    }
+    auto newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, bufferTypes, projections, executionContext);
+    smjOperator->AddBufferInput(newInputVecBatch);
+    VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }
 

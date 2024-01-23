@@ -28,8 +28,8 @@ SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &
     int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateProjectFuncs(sourceTypes, sortKeys, sortKeysCount, newSourceTypes, this->projections,
-        this->sortCols, this->projectFuncs, operatorConfig.GetOverflowConfig());
+    OperatorUtil::CreateProjections(sourceTypes, sortKeys, newSourceTypes, this->projections, this->sortCols,
+        operatorConfig.GetOverflowConfig());
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->sortOperatorFactory = SortOperatorFactory::CreateSortOperatorFactory(*(this->sourceTypes), outputCols,
         outputColsCount, sortCols.data(), sortAscendings, sortNullFirsts, sortKeysCount, operatorConfig);
@@ -53,29 +53,30 @@ SortWithExprOperatorFactory::~SortWithExprOperatorFactory()
 Operator *SortWithExprOperatorFactory::CreateOperator()
 {
     auto sortOperator = static_cast<SortOperator *>(sortOperatorFactory->CreateOperator());
-    auto pOperator = new SortWithExprOperator(*sourceTypes, sortCols, projectFuncs, sortOperator);
+    auto pOperator = new SortWithExprOperator(*sourceTypes, projections, sortOperator);
     return pOperator;
 }
 
-SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
-    std::vector<ProjFunc> &projectFuncs, SortOperator *sortOperator)
-    : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), sortOperator(sortOperator)
+SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes,
+    std::vector<std::unique_ptr<Projection>> &projections, SortOperator *sortOperator)
+    : sourceTypes(sourceTypes),
+      projections(projections),
+      sortOperator(sortOperator),
+      executionContext(new ExecutionContext())
 {}
 
 SortWithExprOperator::~SortWithExprOperator()
 {
     delete sortOperator;
+    delete executionContext;
 }
 
 int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
-    if (newInputVecBatch != nullptr) {
-        sortOperator->AddInput(newInputVecBatch);
-        VectorHelper::FreeVecBatch(inputVecBatch);
-    } else {
-        sortOperator->AddInput(inputVecBatch);
-    }
+    VectorBatch *newInputVecBatch =
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
+    sortOperator->AddInput(newInputVecBatch);
+    VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;
 }
 

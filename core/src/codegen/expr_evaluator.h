@@ -24,6 +24,21 @@ using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t
 using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, int64_t const *,
     bool *, int32_t *, int64_t, int64_t *);
 
+typedef union LiteralValue {
+    bool boolVal;
+    int16_t shortVal;
+    int32_t intVal;
+    int64_t longVal;
+    double doubleVal;
+    Decimal128 decimal128Val;
+    std::string_view stringVal;
+
+    LiteralValue() : stringVal(nullptr, 0) {}
+} LiteralValue;
+
+void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[], intptr_t offsetAddrs[],
+    intptr_t dictionaries[], const DataTypes &types);
+
 class Filter {
 public:
     explicit Filter(const Expr &expression, const DataTypes &inputDataTypes, OverflowConfig *overflowConfig);
@@ -64,10 +79,10 @@ public:
 
     BaseVector *Project(VectorBatch *vecBatch, int32_t selectedRows[], int32_t numSelectedRows, int64_t *valueAddrs,
         int64_t *nullAddrs, int64_t *offsetAddrs, ExecutionContext *context, int64_t *dictionaryVectors,
-        const int32_t *typeIds) const;
+        const int32_t *typeIds);
 
     BaseVector *Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
-        ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds) const;
+        ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds);
 
     omniruntime::type::DataType &GetOutputType() const
     {
@@ -101,6 +116,9 @@ private:
     bool isSupported = true;
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;
+    bool isConstantProjection = false;
+    bool isConstantNull = false;
+    LiteralValue literalVal;
     DataTypePtr outType;
     ProjFunc projector;
 
@@ -130,7 +148,13 @@ private:
     BaseVector *ColumnProjectionFlatVectorCopyPositionsHelper(const int32_t *selectedRows, int32_t numSelectedRows,
         BaseVector *colVec) const;
 
-    bool NullColumnProjection(BaseVector *outVec) const;
+    bool SetLiteralValue(const LiteralExpr *literalExpr);
+
+    bool NullColumnProjection(ExecutionContext *context, BaseVector *outVec);
+
+    bool ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec);
+
+    template <typename T> void SetConstantValues(T &value, BaseVector *outVec);
 };
 
 class ExpressionEvaluator {

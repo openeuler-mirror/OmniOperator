@@ -23,14 +23,13 @@ private:
     std::unique_ptr<DataTypes> sourceTypes;
     std::vector<int32_t> sortCols;
     std::vector<std::unique_ptr<Projection>> projections;
-    std::vector<ProjFunc> projectFuncs;
     std::unique_ptr<TopNOperatorFactory> topNOperatorFactory;
 };
 
 class TopNWithExprOperator : public Operator {
 public:
-    TopNWithExprOperator(const type::DataTypes& sourceTypes, std::vector<int32_t> &sortCols,
-        std::vector<ProjFunc> &projectFuncs, TopNOperator *topNOperator);
+    TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<std::unique_ptr<Projection>> &projections,
+        TopNOperator *topNOperator);
 
     ~TopNWithExprOperator() override;
 
@@ -42,10 +41,9 @@ public:
 
 private:
     omniruntime::type::DataTypes sourceTypes;
-    std::vector<int32_t> sortCols;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> &projections;
     TopNOperator *topNOperator;
-    std::vector<VectorBatch *> inputVecBatches;
+    ExecutionContext *executionContext;
 };
 }
 #endif // OMNI_RUNTIME_TOPN_EXPR_H

@@ -23,20 +23,21 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
     for (auto &aggKeys : aggsKeys) {
         aggColNum += aggKeys.size();
     }
-    this->aggFilterNum = aggFilters.size();
+
     // do  aggsKeys expression handle, and get new sourceTypes,  and agg columnar index
     uint32_t projectColNum = aggColNum;
-    omniruntime::expressions::Expr *projectKeys[projectColNum];
+    std::vector<omniruntime::expressions::Expr *> projectKeys(projectColNum);
     uint32_t projectColIdx = 0;
     for (auto &aggKeys : aggsKeys) {
-        for (uint32_t i = 0; i < aggKeys.size(); i++) {
-            projectKeys[projectColIdx] = aggKeys.at(i);
+        for (auto &aggKey : aggKeys) {
+            projectKeys[projectColIdx] = aggKey;
             projectColIdx++;
         }
     }
 
     // do aggSimpleFilters
-    for (int i = 0; i < aggFilterNum; ++i) {
+    this->aggFilterNum = static_cast<int32_t>(aggFilters.size());
+    for (int32_t i = 0; i < aggFilterNum; ++i) {
         if (aggFilters[i] == nullptr) {
             aggSimpleFilters.push_back(nullptr);
             continue;
@@ -48,8 +49,8 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
 
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, projectColNum, newSourceTypes,
-        this->projections, this->projectCols, groupByAndAggColumnarIdx, this->projectFuncs, *overflowConfig);
+    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
+        groupByAndAggColumnarIdx, *overflowConfig);
     uint32_t aggCols[aggColNum];
     for (uint32_t i = 0, j = groupByNum; i < aggColNum; i++, j++) {
         aggCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[j]);
@@ -84,7 +85,6 @@ AggregationWithExprOperatorFactory::~AggregationWithExprOperatorFactory()
     delete aggOperatorFactory;
     for (auto it : aggSimpleFilters) {
         delete it;
-        it = nullptr;
     }
     aggSimpleFilters.clear();
 }
@@ -92,33 +92,34 @@ AggregationWithExprOperatorFactory::~AggregationWithExprOperatorFactory()
 Operator *AggregationWithExprOperatorFactory::CreateOperator()
 {
     auto aggOperator = static_cast<AggregationOperator *>(aggOperatorFactory->CreateOperator());
-    return new AggregationWithExprOperator(*originSourceTypes, *sourceTypes, projectCols, projectFuncs,
-        aggSimpleFilters, aggOperator);
+    return new AggregationWithExprOperator(*originSourceTypes, *sourceTypes, projections, aggSimpleFilters,
+        aggOperator);
 }
 
 AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &originSourceTypes,
-    const DataTypes &sourceTypes, std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs,
+    const DataTypes &sourceTypes, std::vector<std::unique_ptr<Projection>> &projections,
     std::vector<SimpleFilter *> &aggSimpleFilters, AggregationOperator *aggOperator)
     : originTypes(originSourceTypes),
       sourceTypes(sourceTypes),
-      projectCols(projectCols),
-      projectFuncs(projectFuncs),
+      projections(projections),
       aggSimpleFilters(aggSimpleFilters),
-      aggOperator(aggOperator)
+      aggOperator(aggOperator),
+      executionContext(new ExecutionContext())
 {}
 
 AggregationWithExprOperator::~AggregationWithExprOperator()
 {
     delete aggOperator;
+    delete executionContext;
 }
 
 int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
-        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projectFuncs, projectCols);
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext);
     // do filter and update newInputVecBatch
     // if is true not filter
-    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, projectCols, aggSimpleFilters, context, originTypes);
+    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
     aggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;

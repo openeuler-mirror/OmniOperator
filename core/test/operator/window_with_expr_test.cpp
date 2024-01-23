@@ -114,7 +114,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     int32_t expectedPositions = 10000;
 
     DataTypes outputTypes(std::vector<DataTypePtr>({ LongType() }));
-    string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
     auto overflowConfig = new OverflowConfig();
     // dealing data with the operator
@@ -175,7 +174,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     int32_t expectedPositions = 10000;
 
     DataTypes outputTypes(std::vector<DataTypePtr>({ LongType() }));
-    string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
     auto overflowConfig = new OverflowConfig();
     // dealing data with the operator
@@ -234,7 +232,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     int32_t expectedPositions = 10000;
 
     DataTypes outputTypes(std::vector<DataTypePtr>({ LongType() }));
-    string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
     auto overflowConfig = new OverflowConfig();
     // dealing data with the operator
@@ -294,7 +291,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     int32_t expectedPositions = 10000;
 
     DataTypes outputTypes(std::vector<DataTypePtr>({ LongType() }));
-    string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
     auto overflowConfig = new OverflowConfig();
     // dealing data with the operator
@@ -511,7 +507,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
 
     DataTypes outputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType(), LongType(),
         LongType(), LongType(), LongType(), LongType() }));
-    string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
     auto overflowConfig = new OverflowConfig();
     // dealing data with the operator
@@ -614,7 +609,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
 
     DataTypes outputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType(), LongType(),
         LongType(), LongType(), LongType(), LongType() }));
-    string argumentChannels[0] = {};
     std::vector<Expr *> argumentChannelsExprs = {};
     auto overflowConfig = new OverflowConfig();
     // dealing data with the operator

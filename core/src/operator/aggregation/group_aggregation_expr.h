@@ -33,9 +33,7 @@ private:
     std::unique_ptr<DataTypes> sourceTypes;
     std::unique_ptr<DataTypes> groupByTypes;
     std::vector<std::unique_ptr<DataTypes>> aggTypes;
-    std::vector<int32_t> projectCols;
     std::vector<std::unique_ptr<Projection>> projections;
-    std::vector<ProjFunc> projectFuncs;
     int32_t aggFilterNum;
     std::vector<SimpleFilter *> aggSimpleFilters;
     HashAggregationOperatorFactory *hashAggOperatorFactory;
@@ -44,8 +42,8 @@ private:
 class HashAggregationWithExprOperator : public Operator {
 public:
     HashAggregationWithExprOperator(const DataTypes &originSourceTypes, const type::DataTypes &sourceTypes,
-        std::vector<int32_t> &projectCols, std::vector<ProjFunc> &projectFuncs,
-        std::vector<SimpleFilter *> &aggSimpleFilters, HashAggregationOperator *hashAggOperator);
+        std::vector<std::unique_ptr<Projection>> &projections, std::vector<SimpleFilter *> &aggSimpleFilters,
+        HashAggregationOperator *hashAggOperator);
 
     ~HashAggregationWithExprOperator() override;
 
@@ -63,11 +61,10 @@ private:
     OneRowAdaptor oneRowAdaptor;
     DataTypes originTypes;
     DataTypes sourceTypes;
-    std::vector<int32_t> projectCols;
-    std::vector<ProjFunc> projectFuncs;
-    int32_t aggFilterNum;
+    std::vector<std::unique_ptr<Projection>> &projections;
     std::vector<SimpleFilter *> aggSimpleFilters;
     HashAggregationOperator *hashAggOperator;
+    ExecutionContext *executionContext;
 };
 }
 }

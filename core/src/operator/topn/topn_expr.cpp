@@ -11,8 +11,8 @@ TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &
     int32_t sortKeyCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateProjectFuncs(sourceDataTypes, sortKeys, sortKeyCount, newSourceTypes, this->projections,
-        this->sortCols, this->projectFuncs, overflowConfig);
+    OperatorUtil::CreateProjections(sourceDataTypes, sortKeys, newSourceTypes, this->projections, this->sortCols,
+        overflowConfig);
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(*sourceTypes, n, this->sortCols.data(), sortAsc,
@@ -24,29 +24,30 @@ TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;
 Operator *TopNWithExprOperatorFactory::CreateOperator()
 {
     auto topNOperator = static_cast<TopNOperator *>(topNOperatorFactory->CreateOperator());
-    auto pOperator = new TopNWithExprOperator(*sourceTypes, sortCols, projectFuncs, topNOperator);
+    auto pOperator = new TopNWithExprOperator(*sourceTypes, projections, topNOperator);
     return pOperator;
 }
 
-TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &sortCols,
-    std::vector<ProjFunc> &projectFuncs, TopNOperator *topNOperator)
-    : sourceTypes(sourceTypes), sortCols(sortCols), projectFuncs(projectFuncs), topNOperator(topNOperator)
+TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes,
+    std::vector<std::unique_ptr<Projection>> &projections, TopNOperator *topNOperator)
+    : sourceTypes(sourceTypes),
+      projections(projections),
+      topNOperator(topNOperator),
+      executionContext(new ExecutionContext())
 {}
 
 TopNWithExprOperator::~TopNWithExprOperator()
 {
     delete topNOperator;
+    delete executionContext;
 }
 
 int32_t TopNWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, sortCols);
-    if (newInputVecBatch != nullptr) {
-        topNOperator->AddInput(newInputVecBatch);
-        VectorHelper::FreeVecBatch(inputVecBatch);
-    } else {
-        topNOperator->AddInput(inputVecBatch);
-    }
+    VectorBatch *newInputVecBatch =
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
+    topNOperator->AddInput(newInputVecBatch);
+    VectorHelper::FreeVecBatch(inputVecBatch);
     SetStatus(topNOperator->GetStatus());
     return 0;
 }

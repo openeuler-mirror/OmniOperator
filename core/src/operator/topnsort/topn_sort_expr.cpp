@@ -12,13 +12,13 @@ TopNSortWithExprOperatorFactory::TopNSortWithExprOperatorFactory(const type::Dat
     std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> sourceTypesForPartition;
-    OperatorUtil::CreateProjectFuncs(sourceDataTypes, partitionKeys, partitionKeys.size(), sourceTypesForPartition,
-        this->projections, this->partitionCols, this->projectFuncs, overflowConfig);
+    OperatorUtil::CreateProjections(sourceDataTypes, partitionKeys, sourceTypesForPartition, this->projections,
+        this->partitionCols, overflowConfig);
 
     DataTypes newSourceDataTypes(sourceTypesForPartition);
     std::vector<DataTypePtr> sourceTypesForSort;
-    OperatorUtil::CreateProjectFuncs(newSourceDataTypes, sortKeys, sortKeys.size(), sourceTypesForSort,
-        this->projections, this->sortCols, this->projectFuncs, overflowConfig);
+    OperatorUtil::CreateProjections(newSourceDataTypes, sortKeys, sourceTypesForSort, this->projections, this->sortCols,
+        overflowConfig);
 
     this->sourceTypes = std::make_unique<DataTypes>(sourceTypesForSort);
     this->topNSortOperatorFactory = std::make_unique<TopNSortOperatorFactory>(*sourceTypes, n, isStrictTopN,
@@ -30,38 +30,31 @@ TopNSortWithExprOperatorFactory::~TopNSortWithExprOperatorFactory() = default;
 Operator *TopNSortWithExprOperatorFactory::CreateOperator()
 {
     auto topNSortOperator = static_cast<TopNSortOperator *>(topNSortOperatorFactory->CreateOperator());
-    auto pOperator =
-        new TopNSortWithExprOperator(*sourceTypes, partitionCols, sortCols, projectFuncs, topNSortOperator);
+    auto pOperator = new TopNSortWithExprOperator(*sourceTypes, partitionCols, sortCols, projections, topNSortOperator);
     return pOperator;
 }
 
 TopNSortWithExprOperator::TopNSortWithExprOperator(const type::DataTypes &sourceTypes,
-    std::vector<int32_t> &partitionCols, std::vector<int32_t> &sortCols, std::vector<ProjFunc> &projectFuncs,
-    TopNSortOperator *topNSortOperator)
+    std::vector<int32_t> &partitionCols, std::vector<int32_t> &sortCols,
+    std::vector<std::unique_ptr<Projection>> &projections, TopNSortOperator *topNSortOperator)
     : sourceTypes(sourceTypes),
-      partitionCols(partitionCols),
-      sortCols(sortCols),
-      projectFuncs(projectFuncs),
-      topNSortOperator(topNSortOperator)
+      projections(projections),
+      topNSortOperator(topNSortOperator),
+      executionContext(new ExecutionContext())
 {}
 
 TopNSortWithExprOperator::~TopNSortWithExprOperator()
 {
     delete topNSortOperator;
+    delete executionContext;
 }
 
 int32_t TopNSortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    if (!projectFuncs.empty()) {
-        std::vector<int32_t> projectCols(partitionCols);
-        projectCols.insert(projectCols.end(), sortCols.begin(), sortCols.end());
-        VectorBatch *newInputVecBatch =
-            OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projectFuncs, projectCols);
-        VectorHelper::FreeVecBatch(inputVecBatch);
-        topNSortOperator->AddInput(newInputVecBatch);
-    } else {
-        topNSortOperator->AddInput(inputVecBatch);
-    }
+    VectorBatch *newInputVecBatch =
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    topNSortOperator->AddInput(newInputVecBatch);
     SetStatus(topNSortOperator->GetStatus());
     return 0;
 }

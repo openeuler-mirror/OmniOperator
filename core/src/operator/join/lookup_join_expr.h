@@ -43,8 +43,8 @@ private:
 
 class LookupJoinWithExprOperator : public Operator {
 public:
-    LookupJoinWithExprOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeHashCols,
-        std::vector<ProjFunc> &projectFuncs, LookupJoinOperator *lookupJoinOperator);
+    LookupJoinWithExprOperator(const type::DataTypes &probeTypes, std::vector<std::unique_ptr<Projection>> &projections,
+        LookupJoinOperator *lookupJoinOperator);
 
     ~LookupJoinWithExprOperator() override;
 
@@ -56,9 +56,9 @@ public:
 
 private:
     DataTypes probeTypes;
-    std::vector<int32_t> probeHashCols;
-    std::vector<ProjFunc> projectFuncs;
+    std::vector<std::unique_ptr<Projection>> &projections;
     LookupJoinOperator *lookupJoinOperator;
+    ExecutionContext *executionContext;
 };
 }
 }
