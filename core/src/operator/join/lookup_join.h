@@ -105,23 +105,23 @@ class LookupJoinOperatorFactory : public OperatorFactory {
 public:
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
-        const type::DataTypes &buildOutputTypes, JoinType joinType, HashTableVariants *hashTables,
+        const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
         omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
-        const type::DataTypes &buildOutputTypes, JoinType joinType, HashTableVariants *hashTables,
+        const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
         omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig);
     ~LookupJoinOperatorFactory() override;
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
-        int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType joinType,
+        int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
         int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
     // this is only for LookupJoinWithExprOperator
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
-        JoinType inputJoinType, int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr,
-        int32_t originalProbeColsCount, OverflowConfig *overflowConfig);
+        int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount,
+        OverflowConfig *overflowConfig);
     Operator *CreateOperator() override;
 
 private:
@@ -136,7 +136,6 @@ private:
     std::vector<int32_t> probeHashColTypes;
     std::vector<int32_t> buildOutputCols; // output columns for build
     DataTypes buildOutputTypes;           // output column types for build
-    JoinType joinType;
     HashTableVariants *hashTables;
     int32_t rowSize; // estimation of rowSize
     SimpleFilter *simpleFilter = nullptr;
@@ -148,9 +147,8 @@ class LookupJoinOperator : public Operator {
 public:
     LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
         std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
-        std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, JoinType joinType,
-        HashTableVariants *hashTables, SimpleFilter *simpleFilter, int32_t originalProbeColsCount,
-        int32_t outputRowSize);
+        std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
+        SimpleFilter *simpleFilter, int32_t originalProbeColsCount, int32_t outputRowSize);
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
@@ -179,7 +177,6 @@ private:
         probeSerializers.push_back(serializer);
     }
 
-    JoinType joinType;
     DataTypes probeTypes;
     std::vector<int32_t> probeOutputCols;
     std::vector<int32_t> probeHashCols;

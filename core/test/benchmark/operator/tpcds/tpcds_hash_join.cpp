@@ -63,8 +63,7 @@ protected:
 
         auto factory = new LookupJoinWithExprOperatorFactory(DataTypes(probeTypes), probeOutputCols.data(),
             (int32_t)probeOutputCols.size(), probeHashKeys, (int32_t)probeHashKeys.size(), buildOutputCols.data(),
-            (int32_t)buildOutputCols.size(), DataTypes(buildOutputTypes),
-            JoinType(probeMetaData["joinType"]["value"].get<int>()), (int64_t)hashBuilderOperatorFactory, nullptr,
+            (int32_t)buildOutputCols.size(), DataTypes(buildOutputTypes), (int64_t)hashBuilderOperatorFactory, nullptr,
             new OverflowConfig());
 
         Expr::DeleteExprs(probeHashKeys);

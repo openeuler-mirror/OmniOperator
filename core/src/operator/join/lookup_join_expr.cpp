@@ -17,11 +17,11 @@ using namespace omniruntime::vec;
 LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
     const DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
-    int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType joinType,
-    int64_t hashBuilderFactoryAddr, Expr *filterExpr, OverflowConfig *overflowConfig)
+    int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
+    int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig)
 {
     auto operatorFactory = new LookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
-        probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount, buildOutputTypes, joinType,
+        probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount, buildOutputTypes,
         hashBuilderFactoryAddr, filterExpr, overflowConfig);
     return operatorFactory;
 }
@@ -29,7 +29,7 @@ LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLook
 LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
-    int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes, JoinType joinType,
+    int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
     int64_t hashBuilderFactoryAddr, Expr *filterExpr, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newProbeTypes;
@@ -38,11 +38,11 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     this->probeTypes = std::make_unique<DataTypes>(newProbeTypes);
     auto hashBuilderWithExprOperatorFactory =
         reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
-    this->operatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes),
-        probeOutputCols, probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols,
-        buildOutputColsCount, std::move(buildOutputTypes), joinType,
-        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()), filterExpr,
-        probeTypes.GetSize(), overflowConfig);
+    this->operatorFactory =
+        LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes), probeOutputCols,
+        probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols, buildOutputColsCount,
+        std::move(buildOutputTypes), (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()),
+        filterExpr, probeTypes.GetSize(), overflowConfig);
 }
 
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()

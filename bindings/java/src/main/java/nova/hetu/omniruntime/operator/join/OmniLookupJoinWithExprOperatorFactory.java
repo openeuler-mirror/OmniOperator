@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.operator.join;
 
 import static java.util.Objects.requireNonNull;
 
-import nova.hetu.omniruntime.constants.JoinType;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
@@ -32,17 +31,16 @@ public class OmniLookupJoinWithExprOperatorFactory
      * @param probeHashKeys the probe hash keys
      * @param buildOutputCols the build output columns
      * @param buildOutputTypes the build output column types
-     * @param joinType the join type
      * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
      * @param filterExpression the join filter expression
      * @param operatorConfig the operator config
      */
     public OmniLookupJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
-            int[] buildOutputCols, DataType[] buildOutputTypes, JoinType joinType,
+            int[] buildOutputCols, DataType[] buildOutputTypes,
             OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
             Optional<String> filterExpression, OperatorConfig operatorConfig) {
         super(new FactoryContext(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
-                joinType, hashBuilderWithExprOperatorFactory, filterExpression, operatorConfig));
+                hashBuilderWithExprOperatorFactory, filterExpression, operatorConfig));
     }
 
     /**
@@ -54,15 +52,14 @@ public class OmniLookupJoinWithExprOperatorFactory
      * @param probeHashKeys the probe hash keys
      * @param buildOutputCols the build output columns
      * @param buildOutputTypes the build output column types
-     * @param joinType the join type
      * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
      * @param filterExpression the join filter expression
      */
     public OmniLookupJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
-            int[] buildOutputCols, DataType[] buildOutputTypes, JoinType joinType,
+            int[] buildOutputCols, DataType[] buildOutputTypes,
             OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
             Optional<String> filterExpression) {
-        this(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes, joinType,
+        this(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
                 hashBuilderWithExprOperatorFactory, filterExpression, new OperatorConfig());
     }
 
@@ -75,27 +72,25 @@ public class OmniLookupJoinWithExprOperatorFactory
      * @param probeHashKeys the probe hash keys
      * @param buildOutputCols the build output columns
      * @param buildOutputTypes the build output column types
-     * @param joinType the join type
      * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
      */
     public OmniLookupJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
-            int[] buildOutputCols, DataType[] buildOutputTypes, JoinType joinType,
+            int[] buildOutputCols, DataType[] buildOutputTypes,
             OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory) {
-        this(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes, joinType,
+        this(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
                 hashBuilderWithExprOperatorFactory, Optional.empty(), new OperatorConfig());
     }
 
     private static native long createLookupJoinWithExprOperatorFactory(String probeTypes, int[] probeOutputCols,
-            String[] probeHashKeys, int[] buildOutputCols, String buildOutputTypes, int joinType,
+            String[] probeHashKeys, int[] buildOutputCols, String buildOutputTypes,
             long hashBuilderWithExprOperatorFactory, String filterExpression, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createLookupJoinWithExprOperatorFactory(DataTypeSerializer.serialize(context.probeTypes),
                 context.probeOutputCols, context.probeHashKeys, context.buildOutputCols,
-                DataTypeSerializer.serialize(context.buildOutputTypes), context.joinType.getValue(),
-                context.getHashBuilderWithExprOperatorFactory(), context.filterExpression,
-                OperatorConfig.serialize(context.operatorConfig));
+                DataTypeSerializer.serialize(context.buildOutputTypes), context.getHashBuilderWithExprOperatorFactory(),
+                context.filterExpression, OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**
@@ -114,8 +109,6 @@ public class OmniLookupJoinWithExprOperatorFactory
 
         private final DataType[] buildOutputTypes;
 
-        private final JoinType joinType;
-
         private final long hashBuilderWithExprOperatorFactory;
 
         private final String filterExpression;
@@ -130,13 +123,12 @@ public class OmniLookupJoinWithExprOperatorFactory
          * @param probeHashKeys the probe hash keys
          * @param buildOutputCols the build output cols
          * @param buildOutputTypes the build output types
-         * @param joinType the join type
          * @param hashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory
          * @param filterExpression the join filter expression
          * @param operatorConfig the operator config
          */
         public FactoryContext(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
-                int[] buildOutputCols, DataType[] buildOutputTypes, JoinType joinType,
+                int[] buildOutputCols, DataType[] buildOutputTypes,
                 OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
                 Optional<String> filterExpression, OperatorConfig operatorConfig) {
             this.probeTypes = requireNonNull(probeTypes, "probeTypes");
@@ -144,7 +136,6 @@ public class OmniLookupJoinWithExprOperatorFactory
             this.probeHashKeys = requireNonNull(probeHashKeys, "probeHashKeys");
             this.buildOutputCols = requireNonNull(buildOutputCols, "buildOutputCols");
             this.buildOutputTypes = requireNonNull(buildOutputTypes, "buildOutputTypes");
-            this.joinType = requireNonNull(joinType, "joinType");
             this.hashBuilderWithExprOperatorFactory = hashBuilderWithExprOperatorFactory.getNativeOperatorFactory();
             this.filterExpression = filterExpression.isPresent() ? filterExpression.get() : "";
             this.operatorConfig = operatorConfig;
@@ -155,7 +146,7 @@ public class OmniLookupJoinWithExprOperatorFactory
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
                     Arrays.hashCode(probeHashKeys), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
-                    joinType, hashBuilderWithExprOperatorFactory, filterExpression, operatorConfig);
+                    hashBuilderWithExprOperatorFactory, filterExpression, operatorConfig);
         }
 
         @Override
@@ -170,7 +161,7 @@ public class OmniLookupJoinWithExprOperatorFactory
             return Arrays.equals(probeTypes, that.probeTypes) && Arrays.equals(probeOutputCols, that.probeOutputCols)
                     && Arrays.equals(probeHashKeys, that.probeHashKeys)
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
-                    && Arrays.equals(buildOutputTypes, that.buildOutputTypes) && joinType.equals(that.joinType)
+                    && Arrays.equals(buildOutputTypes, that.buildOutputTypes)
                     && (hashBuilderWithExprOperatorFactory == that.hashBuilderWithExprOperatorFactory)
                     && filterExpression.equals(that.filterExpression) && operatorConfig.equals(that.operatorConfig);
         }

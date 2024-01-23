@@ -92,10 +92,9 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithExpr)
     DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     auto overflowConfig = new OverflowConfig();
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
-    auto lookupJoinWithExprOperatorFactory =
-        LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr, overflowConfig);
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, overflowConfig);
     auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
     lookupJoinWithExprOperator->AddInput(probeVecBatch);
     VectorBatch *lookupJoinOutputVecBatch = nullptr;
@@ -160,10 +159,9 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinOnKeyWithoutExpr)
     int32_t buildOutputColsCount = 2;
     DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
-    auto lookupJoinWithExprOperatorFactory =
-        LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr, overflowConfig);
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, overflowConfig);
     auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
     lookupJoinWithExprOperator->AddInput(probeVecBatch);
     VectorBatch *lookupJoinOutputVecBatch = nullptr;
@@ -225,10 +223,9 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithExpr)
     int32_t buildOutputColsCount = 2;
     DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
-    auto lookupJoinWithExprOperatorFactory =
-        LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr, nullptr);
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, nullptr);
     auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
     auto lookupOuterJoinFactory = LookupOuterJoinWithExprOperatorFactory::CreateLookupOuterJoinWithExprOperatorFactory(
         probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
@@ -322,10 +319,9 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
     int32_t buildOutputColsCount = 2;
     DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
-    auto lookupJoinWithExprOperatorFactory =
-        LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_FULL, hashBuilderFactoryAddr, nullptr, nullptr);
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, nullptr);
     auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
     auto lookupOuterJoinWithExprFactory =
         LookupOuterJoinWithExprOperatorFactory::CreateLookupOuterJoinWithExprOperatorFactory(probeTypes,
@@ -421,10 +417,9 @@ TEST(JoinWithExprTest, TestInnerEqualityJoinAddInputTwoVecBatch)
     DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), VarcharType(500000) }));
     auto overflowConfig = new OverflowConfig();
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
-    auto lookupJoinWithExprOperatorFactory =
-        LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_INNER, hashBuilderFactoryAddr, nullptr, overflowConfig);
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, nullptr, overflowConfig);
     auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
 
     std::vector<VectorBatch *> lookupJoinOutput;
@@ -521,10 +516,9 @@ TEST(JoinWithExprTest, TestBothJoinKeyAndFilterWithExpr)
     DataTypes buildOutputTypes(std::vector<DataTypePtr>({ Decimal64Type(18, 2) }));
     auto overflowConfig = new OverflowConfig();
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderWithExprOperatorFactory;
-    auto lookupJoinWithExprOperatorFactory =
-        LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeTypes, probeOutputCols,
-        probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, JoinType::OMNI_JOIN_TYPE_LEFT, hashBuilderFactoryAddr, filterExpr, overflowConfig);
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+        probeTypes, probeOutputCols, probeOutputColsCount, probeHashKeys, probeHashKeysCount, buildOutputCols,
+        buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr, filterExpr, overflowConfig);
     auto lookupJoinWithExprOperator = CreateTestOperator(lookupJoinWithExprOperatorFactory);
 
     int64_t probeData[] = {111, 112};

@@ -612,21 +612,21 @@ TEST(RandomJoinTest, TestHashBuilderForArrayTable)
     for (auto &joinType : joinTypes) {
         for (auto start : starts) {
             for (auto time : repeatTimes) {
-                StressTestSingleHashBuilderForArrayTable<int16_t>(
-                    DataTypes(std::vector<DataTypePtr>({ ShortType() })), joinType, start, time);
-                StressTestSingleHashBuilderForArrayTable<int32_t>(
-                    DataTypes(std::vector<DataTypePtr>({ IntType() })), joinType, start, time);
-                StressTestSingleHashBuilderForArrayTable<int32_t>(
-                    DataTypes(std::vector<DataTypePtr>({ Date32Type() })), joinType, start, time);
-                StressTestSingleHashBuilderForArrayTable<int64_t>(
-                    DataTypes(std::vector<DataTypePtr>({ LongType() })), joinType, start, time);
+                StressTestSingleHashBuilderForArrayTable<int16_t>(DataTypes(std::vector<DataTypePtr>({ ShortType() })),
+                    joinType, start, time);
+                StressTestSingleHashBuilderForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ IntType() })),
+                    joinType, start, time);
+                StressTestSingleHashBuilderForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ Date32Type() })),
+                    joinType, start, time);
+                StressTestSingleHashBuilderForArrayTable<int64_t>(DataTypes(std::vector<DataTypePtr>({ LongType() })),
+                    joinType, start, time);
                 // ----------------------Two build-------------------------------
                 StressTestTwoHashBuilderForArrayTable<int16_t>(DataTypes(std::vector<DataTypePtr>({ ShortType() })),
                     joinType, start, time);
                 StressTestTwoHashBuilderForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ IntType() })),
                     joinType, start, time);
-                StressTestTwoHashBuilderForArrayTable<int32_t>(
-                    DataTypes(std::vector<DataTypePtr>({ Date32Type() })), joinType, start, time);
+                StressTestTwoHashBuilderForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ Date32Type() })),
+                    joinType, start, time);
                 StressTestTwoHashBuilderForArrayTable<int64_t>(DataTypes(std::vector<DataTypePtr>({ LongType() })),
                     joinType, start, time);
             }
@@ -723,8 +723,8 @@ void StressTestSingleLookupJoinForArrayTable(DataTypes buildTypes, JoinType join
     VectorBatch *probeVecBatch = CreateSingleColumnSequenceDataFromStart<T>(buildTypes, dataSize, start + 100);
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
-        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, joinType,
-        hashBuilderFactoryAddr, filter, nullptr);
+        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
+        filter, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -789,8 +789,8 @@ void StressTestTwoLookupJoinForArrayTable(DataTypes buildTypes, JoinType joinTyp
     VectorBatch *probeVecBatch = CreateSingleColumnSequenceDataFromStart<T>(buildTypes, dataSize, start + 100);
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
-        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, joinType,
-        hashBuilderFactoryAddr, filter, nullptr);
+        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
+        filter, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -839,12 +839,12 @@ TEST(RandomJoinTest, TestLookupJoinForArrayTable)
             // ----------------------Two build-------------------------------
             StressTestTwoLookupJoinForArrayTable<int16_t>(DataTypes(std::vector<DataTypePtr>({ ShortType() })),
                 joinType, false, start);
-            StressTestTwoLookupJoinForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ IntType() })),
-                joinType, false, start);
+            StressTestTwoLookupJoinForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ IntType() })), joinType,
+                false, start);
             StressTestTwoLookupJoinForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ Date32Type() })),
                 joinType, false, start);
-            StressTestTwoLookupJoinForArrayTable<int64_t>(DataTypes(std::vector<DataTypePtr>({ LongType() })),
-                joinType, false, start);
+            StressTestTwoLookupJoinForArrayTable<int64_t>(DataTypes(std::vector<DataTypePtr>({ LongType() })), joinType,
+                false, start);
         }
     }
 }
@@ -863,12 +863,12 @@ TEST(RandomJoinTest, TestLookupJoinForArrayTableWithFilter)
             StressTestSingleLookupJoinForArrayTable<int64_t>(DataTypes(std::vector<DataTypePtr>({ LongType() })),
                 joinType, true, start);
             // ----------------------Two build-------------------------------
-            StressTestTwoLookupJoinForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ IntType() })),
-                joinType, true, start);
+            StressTestTwoLookupJoinForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ IntType() })), joinType,
+                true, start);
             StressTestTwoLookupJoinForArrayTable<int32_t>(DataTypes(std::vector<DataTypePtr>({ Date32Type() })),
                 joinType, true, start);
-            StressTestTwoLookupJoinForArrayTable<int64_t>(DataTypes(std::vector<DataTypePtr>({ LongType() })),
-                joinType, true, start);
+            StressTestTwoLookupJoinForArrayTable<int64_t>(DataTypes(std::vector<DataTypePtr>({ LongType() })), joinType,
+                true, start);
         }
     }
 }
@@ -941,8 +941,8 @@ void StressTestSingleLookupJoinForSingleKey(DataTypes buildTypes, JoinType joinT
     VectorBatch *probeVecBatch2 = CreateSingleColumnSequenceDataFromStart<T>(buildTypes, dataSize, true, 100);
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
-        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, joinType,
-        hashBuilderFactoryAddr, filter, nullptr);
+        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
+        filter, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1057,8 +1057,8 @@ void StressTestSingleLookupJoinForVariableKey(DataTypes buildTypes, JoinType joi
     VectorBatch *probeVecBatch2 = CreateVariableSizeSequenceData(buildTypes, dataSize, true, 100);
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
-        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, joinType,
-        hashBuilderFactoryAddr, filter, nullptr);
+        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
+        filter, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1134,8 +1134,8 @@ void StressTestTwoLookupJoinForVariableKey(DataTypes buildTypes, JoinType joinTy
     VectorBatch *probeVecBatch2 = CreateVariableSizeSequenceData(buildTypes, dataSize, true, 100);
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
-        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, joinType,
-        hashBuilderFactoryAddr, filter, nullptr);
+        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
+        filter, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1213,8 +1213,8 @@ void StressTestTwoLookupJoinForSingleKey(DataTypes buildTypes, JoinType joinType
     VectorBatch *probeVecBatch2 = CreateSingleColumnSequenceDataFromStart<T>(buildTypes, dataSize, true, 100);
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
-        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, joinType,
-        hashBuilderFactoryAddr, filter, nullptr);
+        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
+        filter, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1330,8 +1330,8 @@ void StressTestSingleLookupJoinForTwoFixedKey(DataTypes buildTypes, JoinType joi
     VectorBatch *probeVecBatch2 = CreateTwoColumnSequenceDataFromStart<T>(buildTypes, dataSize, true, 100);
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
-        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, joinType,
-        hashBuilderFactoryAddr, filter, nullptr);
+        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
+        filter, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1408,8 +1408,8 @@ void StressTestTwoLookupJoinForTwoFixedKey(DataTypes buildTypes, JoinType joinTy
     VectorBatch *probeVecBatch2 = CreateTwoColumnSequenceDataFromStart<T>(buildTypes, dataSize, true, 100);
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
-        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, joinType,
-        hashBuilderFactoryAddr, filter, nullptr);
+        joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
+        filter, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
