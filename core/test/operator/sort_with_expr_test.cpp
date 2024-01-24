@@ -383,4 +383,40 @@ TEST(SortWithExprTest, TestSortSpillWithOneRecord)
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     delete operatorFactory;
 }
+
+TEST(SortWithExprTest, TestSortWithDuplicatedCols)
+{
+    const int32_t dataSize = 5;
+    int32_t data0[dataSize] = {23, 32, 89, 12, 15};
+    int32_t data1[dataSize] = {3, -1, 0, 3, 6};
+    int32_t data2[dataSize] = {21, 31, 41, 51, 61};
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), IntType(), IntType() }));
+    auto vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2);
+
+    int32_t outputCols[1] = {2};
+    std::vector<Expr *> sortExprs { new FieldExpr(1, IntType()), new FieldExpr(1, IntType()),
+        new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(1, IntType()) }, LongType()),
+        new FieldExpr(0, IntType()) };
+    int32_t ascendings[4] = {true, true, true, true};
+    int32_t nullFirsts[4] = {true, true, true, true};
+
+    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 1,
+        sortExprs, ascendings, nullFirsts, 4, OperatorConfig());
+    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
+
+    sortOperator->AddInput(vecBatch1);
+    VectorBatch *outputVecBatch = nullptr;
+    sortOperator->GetOutput(&outputVecBatch);
+
+    DataTypes expectTypes(std::vector<DataTypePtr>({ IntType() }));
+    int32_t expectData[] = {31, 41, 51, 21, 61};
+    auto expectVecBatch = CreateVectorBatch(expectTypes, dataSize, expectData);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    Expr::DeleteExprs(sortExprs);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    omniruntime::op::Operator::DeleteOperator(sortOperator);
+    delete operatorFactory;
+}
 }
