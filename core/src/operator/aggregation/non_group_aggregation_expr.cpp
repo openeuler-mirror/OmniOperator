@@ -49,7 +49,7 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
 
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
+    OperatorUtil::CreateRequiredProjections(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
         groupByAndAggColumnarIdx, *overflowConfig);
     uint32_t aggCols[aggColNum];
     for (uint32_t i = 0, j = groupByNum; i < aggColNum; i++, j++) {

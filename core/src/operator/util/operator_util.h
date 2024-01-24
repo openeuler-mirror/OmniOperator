@@ -280,6 +280,8 @@ public:
         }
     }
 
+    // add the non-raw-field expression result based on the original input cols
+    // if the raw field has Projection object, then the same raw field could not have Projection object
     static int32_t CreateProjections(const DataTypes &inputTypes,
         const std::vector<omniruntime::expressions::Expr *> &projectKeys,
         std::vector<omniruntime::type::DataTypePtr> &newInputTypes,
@@ -289,38 +291,56 @@ public:
         newInputTypes.insert(newInputTypes.end(), inputTypes.Get().begin(), inputTypes.Get().end());
         int32_t inputTypesCount = inputTypes.GetSize();
         int32_t projectOutIdx = 0;
+        std::unordered_set<int32_t> colIdSet;
         auto projectKeysCount = projectKeys.size();
         for (size_t i = 0; i < projectKeysCount; i++) {
             auto projectKey = projectKeys[i];
             auto projectRetType = projectKey->GetReturnType();
-            auto proj = std::make_unique<Projection>(*projectKey, false, projectRetType, inputTypes, overflowConfig);
-            if (proj->IsColumnProjection()) {
-                projectCols.emplace_back(proj->GetColumnProjectionIndex());
+            if (projectKey->GetType() == ExprType::FIELD_E) {
+                auto projectCol = static_cast<const FieldExpr *>(projectKey)->colVal;
+                projectCols.emplace_back(projectCol);
+                if (colIdSet.find(projectCol) == colIdSet.end()) {
+                    colIdSet.emplace(projectCol);
+                    auto proj =
+                        std::make_unique<Projection>(*projectKey, false, projectRetType, inputTypes, overflowConfig);
+                    projections.emplace_back(std::move(proj));
+                }
             } else {
                 projectCols.emplace_back(inputTypesCount + projectOutIdx);
                 newInputTypes.emplace_back(projectRetType);
                 projectOutIdx++;
+                auto proj =
+                    std::make_unique<Projection>(*projectKey, false, projectRetType, inputTypes, overflowConfig);
+                projections.emplace_back(std::move(proj));
             }
-            projections.emplace_back(std::move(proj));
         }
         return projectOutIdx;
     }
 
-    static void CreateRequiredProjectFuncs(const DataTypes &inputTypes,
+    /* the projectKeys is organized by group by keys + agg input keys
+     * this function will change the allCols according to group by cols, agg input cols
+     * if the raw field has Projection object, then the same raw field could not have Projection object
+     * for example:
+     * intTypes char,char,char,int,int,int
+     * input 0,1,2,3,4,5
+     * group by 4,1,0,3,2,5, min(3),max(3),avg(cast(3 as long)),min(4),max(4),avg(cast(4 as
+     * long)),min(5),max(5),avg(cast(5 as long))
+     * the allCols could be 0,1,2,3,4,5  +  3,3,6,4,4,7,5,5,8 the
+     * newInputTypes could be char,char,char,int,int,int,long,long,long */
+    static void CreateRequiredProjections(const DataTypes &inputTypes,
         const std::vector<omniruntime::expressions::Expr *> &projectKeys, std::vector<DataTypePtr> &newInputTypes,
         std::vector<std::unique_ptr<Projection>> &projections, std::vector<int32_t> &allCols,
         OverflowConfig &overflowConfig)
     {
         auto &inputTypeVec = inputTypes.Get();
         int32_t newProjectCol = 0;
-        std::map<int32_t, int32_t> colIdMap;
+        std::unordered_map<int32_t, int32_t> colIdMap;
         auto projectKeysCount = projectKeys.size();
         for (size_t i = 0; i < projectKeysCount; i++) {
             auto projectKey = projectKeys[i];
             auto projectRetType = projectKey->GetReturnType();
-            auto proj = std::make_unique<Projection>(*projectKey, false, projectRetType, inputTypes, &overflowConfig);
-            if (proj->IsColumnProjection()) {
-                auto projectCol = proj->GetColumnProjectionIndex();
+            if (projectKey->GetType() == ExprType::FIELD_E) {
+                auto projectCol = static_cast<const FieldExpr *>(projectKey)->colVal;
                 if (colIdMap.find(projectCol) != colIdMap.end()) {
                     // already exists
                     allCols.push_back(colIdMap[projectCol]);
@@ -328,14 +348,18 @@ public:
                     allCols.push_back(newProjectCol);
                     colIdMap[projectCol] = newProjectCol++;
                     newInputTypes.push_back(inputTypeVec[projectCol]);
+                    auto proj =
+                        std::make_unique<Projection>(*projectKey, false, projectRetType, inputTypes, &overflowConfig);
+                    projections.push_back(std::move(proj));
                 }
             } else {
                 // expr col
                 allCols.push_back(newProjectCol++);
                 newInputTypes.push_back(projectRetType);
+                auto proj =
+                    std::make_unique<Projection>(*projectKey, false, projectRetType, inputTypes, &overflowConfig);
+                projections.push_back(std::move(proj));
             }
-
-            projections.push_back(std::move(proj));
         }
     }
 

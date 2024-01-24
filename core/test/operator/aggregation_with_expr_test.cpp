@@ -818,6 +818,116 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_filter)
     Expr::DeleteExprs(aggFilters);
 }
 
+TEST(HashAggregationWithExprOperatorTest, test_agg_min_max_avg)
+{
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
+    const int32_t dataSize = 8;
+    std::string data0[] = {"IN", "IL", "FL", "TX", "IN", "IL", "FL", "TX"};
+    std::string data1[] = {"F", "M", "F", "M", "F", "M", "F", "M"};
+    std::string data2[] = {"W", "U", "U", "M", "W", "U", "U", "M"};
+    int32_t data3[] = {0, 2, 5, 7, 0, 2, 5, 7};
+    int32_t data4[] = {5, 3, 2, 6, 5, 3, 2, 6};
+    int32_t data5[] = {1, 2, 3, 4, 1, 2, 3, 4};
+    DataTypes sourceTypes(
+        std::vector<DataTypePtr>({ VarcharType(2), VarcharType(2), VarcharType(2), IntType(), IntType(), IntType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2, data3, data4, data5);
+
+    std::vector<Expr *> groupByKeys = { new FieldExpr(0, VarcharType(2)), new FieldExpr(1, VarcharType(2)),
+        new FieldExpr(2, VarcharType(2)), new FieldExpr(3, IntType()),
+        new FieldExpr(4, IntType()),      new FieldExpr(5, IntType()) };
+    uint32_t groupByNum = 6;
+
+    // aggKeys
+    std::vector<Expr *> aggKeys0 = { new FieldExpr(3, IntType()) };
+    std::vector<Expr *> aggKeys1 = { new FieldExpr(3, IntType()) };
+    std::vector<Expr *> aggKeys2 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(3, IntType()) },
+        LongType()) };
+    std::vector<Expr *> aggKeys3 = { new FieldExpr(4, IntType()) };
+    std::vector<Expr *> aggKeys4 = { new FieldExpr(4, IntType()) };
+    std::vector<Expr *> aggKeys5 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(4, IntType()) },
+        LongType()) };
+    std::vector<Expr *> aggKeys6 = { new FieldExpr(5, IntType()) };
+    std::vector<Expr *> aggKeys7 = { new FieldExpr(5, IntType()) };
+    std::vector<Expr *> aggKeys8 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(5, IntType()) },
+        LongType()) };
+    std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys0, aggKeys1, aggKeys2,
+        aggKeys3, aggKeys4, aggKeys5,
+        aggKeys6, aggKeys7, aggKeys8 };
+
+    std::vector<omniruntime::expressions::Expr *> aggFilters {};
+    DataTypes aggOutputTypes0(std::vector<DataTypePtr>({ IntType() }));
+    DataTypes aggOutputTypes1(std::vector<DataTypePtr>({ IntType() }));
+    DataTypes aggOutputTypes2(std::vector<DataTypePtr>({ DoubleType(), LongType() }));
+    DataTypes aggOutputTypes3(std::vector<DataTypePtr>({ IntType() }));
+    DataTypes aggOutputTypes4(std::vector<DataTypePtr>({ IntType() }));
+    DataTypes aggOutputTypes5(std::vector<DataTypePtr>({ DoubleType(), LongType() }));
+    DataTypes aggOutputTypes6(std::vector<DataTypePtr>({ IntType() }));
+    DataTypes aggOutputTypes7(std::vector<DataTypePtr>({ IntType() }));
+    DataTypes aggOutputTypes8(std::vector<DataTypePtr>({ DoubleType(), LongType() }));
+    std::vector<DataTypes> aggOutputTypesWrap = { aggOutputTypes0, aggOutputTypes1, aggOutputTypes2,
+        aggOutputTypes3, aggOutputTypes4, aggOutputTypes5,
+        aggOutputTypes6, aggOutputTypes7, aggOutputTypes8 };
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MIN,
+        OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_AVG,
+        OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_AVG };
+    auto maskCol = static_cast<uint32_t>(-1);
+    std::vector<uint32_t> maskCols = {
+        maskCol, maskCol, maskCol, maskCol, maskCol, maskCol, maskCol, maskCol, maskCol
+    };
+    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
+    auto outputPartialWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
+    auto overflowConfig = new OverflowConfig();
+
+    auto hashAggWithExprOperatorFactory =
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, overflowConfig);
+    auto *hashAggWithExprOperator =
+        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
+
+    hashAggWithExprOperator->AddInput(vecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    hashAggWithExprOperator->GetOutput(&outputVecBatch);
+
+    const int32_t expectDataSize = 4;
+    std::string expData0[] = { "FL", "IN", "IL", "TX" };
+    std::string expData1[] = { "F", "F", "M", "M" };
+    std::string expData2[] = { "U", "W", "U", "M" };
+    int32_t expData3[] = {5, 0, 2, 7};
+    int32_t expData4[] = {2, 5, 3, 6};
+    int32_t expData5[] = {3, 1, 2, 4};
+    int32_t expData6[] = {5, 0, 2, 7};
+    int32_t expData7[] = {5, 0, 2, 7};
+    double expData8[] = {10, 0, 4, 14};
+    int64_t expData9[] = {2, 2, 2, 2};
+    int32_t expData10[] = {2, 5, 3, 6};
+    int32_t expData11[] = {2, 5, 3, 6};
+    double expData12[] = {4, 10, 6, 12};
+    int64_t expData13[] = {2, 2, 2, 2};
+    int32_t expData14[] = {3, 1, 2, 4};
+    int32_t expData15[] = {3, 1, 2, 4};
+    double expData16[] = {6, 2, 4, 8};
+    int64_t expData17[] = {2, 2, 2, 2};
+    DataTypes expectTypes(std::vector<DataTypePtr>({ VarcharType(2), VarcharType(2), VarcharType(2), IntType(),
+        IntType(), IntType(), IntType(), IntType(), DoubleType(), LongType(), IntType(), IntType(), DoubleType(),
+        LongType(), IntType(), IntType(), DoubleType(), LongType() }));
+    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
+        expData3, expData4, expData5, expData6, expData7, expData8, expData9, expData10, expData11, expData12,
+        expData13, expData14, expData15, expData16, expData17);
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
+    Expr::DeleteExprs(aggFilters);
+    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
+    delete hashAggWithExprOperatorFactory;
+    VectorHelper::FreeVecBatch(expectVecorBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete overflowConfig;
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+}
+
 TEST(AggregationWithExprOperatorTest, test_agg_sum_literal)
 {
     const int32_t dataSize = 8;
