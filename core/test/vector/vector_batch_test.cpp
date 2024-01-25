@@ -51,4 +51,31 @@ TEST(vector2, vec_batch)
     delete[] values;
     vectorBatch.FreeAllVectors();
 }
+
+TEST(vector2, vec_batch_resize)
+{
+    int rowCount = 100;
+    int resizeCount = 50;
+    auto *pVec1 = new Vector<NativeType<OMNI_LONG>::type>(rowCount, OMNI_LONG);
+    auto *pVec2= new Vector<NativeType<OMNI_DOUBLE>::type>(rowCount, OMNI_DOUBLE);
+    auto *pVec3= new Vector<NativeType<OMNI_DOUBLE>::type>(rowCount, OMNI_DOUBLE);
+
+    auto *pVb = new VectorBatch(rowCount);
+    pVb->Append(pVec1);
+    pVb->Append(pVec2);
+    pVb->Append(pVec3);
+
+    ASSERT_EQ(pVb->GetRowCount(), rowCount);
+    ASSERT_EQ(pVb->GetRowCount(), pVec1->GetSize());
+    ASSERT_EQ(pVb->GetRowCount(), pVec2->GetSize());
+    ASSERT_EQ(pVb->GetRowCount(), pVec3->GetSize());
+
+    pVb->Resize(resizeCount);
+    ASSERT_EQ(pVb->GetRowCount(), resizeCount);
+    ASSERT_EQ(pVb->GetRowCount(), pVec1->GetSize());
+    ASSERT_EQ(pVb->GetRowCount(), pVec2->GetSize());
+    ASSERT_EQ(pVb->GetRowCount(), pVec3->GetSize());
+
+    VectorHelper::FreeVecBatch(pVb);
+}
 }
