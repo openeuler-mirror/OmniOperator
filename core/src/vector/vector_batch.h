@@ -41,6 +41,8 @@ public:
 
     int32_t GetVectorCount();
 
+    void Resize(size_t rowCount);
+
     /* *
      * @param vectorCnt
      */

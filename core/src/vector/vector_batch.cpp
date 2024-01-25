@@ -2,7 +2,7 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
  */
 
-#include <cstdint>
+#include "unsafe_vector.h"
 #include "vector_batch.h"
 
 namespace omniruntime::vec {
@@ -61,5 +61,22 @@ void VectorBatch::FreeAllVectors()
         vectors[vecIndex] = nullptr;
     }
     vectors.clear();
+}
+
+void VectorBatch::Resize(size_t rowCount)
+{
+    if (rowCnt == rowCount) {
+        return;
+    }
+
+    if (rowCnt < rowCount) {
+        throw OmniException("UNSUPPORTED_ERROR", "Can only resize vector batch to a smaller value.");
+    }
+
+    for (auto *vector: vectors) {
+        unsafe::UnsafeBaseVector::SetSize(vector, static_cast<int>(rowCount));
+    }
+
+    rowCnt = rowCount;
 }
 }
