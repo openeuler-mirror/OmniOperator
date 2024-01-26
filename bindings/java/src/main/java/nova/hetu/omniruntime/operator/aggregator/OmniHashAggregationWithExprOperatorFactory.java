@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator.aggregator;
@@ -155,8 +155,8 @@ public class OmniHashAggregationWithExprOperatorFactory
             this.aggFunctionTypes = requireNonNull(aggFunctionTypes, "aggFunctionTypes");
             this.maskChannels = requireNonNull(maskChannels, "maskChannels is null");
             this.aggOutputTypes = requireNonNull(aggOutputTypes, "aggOutputTypes");
-            this.isInputRaws = requireNonNull(isInputRaws, "isInputRaws");;
-            this.isOutputPartials = requireNonNull(isOutputPartials, "isInputRaws");;
+            this.isInputRaws = requireNonNull(isInputRaws, "isInputRaws");
+            this.isOutputPartials = requireNonNull(isOutputPartials, "isInputRaws");
             this.operatorConfig = operatorConfig;
         }
 

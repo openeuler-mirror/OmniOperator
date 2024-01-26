@@ -1,18 +1,19 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.memory;
 
 import static nova.hetu.omniruntime.memory.MemoryManager.memoryClear;
 import static nova.hetu.omniruntime.memory.MemoryManager.setGlobalMemoryLimit;
+
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
-
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
+
 import org.testng.annotations.Test;
 
 /**

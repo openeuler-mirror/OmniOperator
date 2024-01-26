@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: sort implementations
  */
 #ifndef __SORT_H__
@@ -94,40 +94,7 @@ public:
 
     OmniStatus Close() override;
 
-    int32_t GetTypescount()
-    {
-        return sourceTypes.GetSize();
-    }
-
-    int32_t *GetOutputCols()
-    {
-        return outputCols.data();
-    }
-
-    int32_t GetOutputColsCount()
-    {
-        return outputCols.size();
-    }
-
-    int32_t *GetSortCols()
-    {
-        return sortCols.data();
-    }
-
-    int32_t *GetSortAscendings()
-    {
-        return sortAscendings.data();
-    }
-
-    int32_t *GetSortNullFirsts()
-    {
-        return sortNullFirsts.data();
-    }
-
-    int32_t GetSortColCount()
-    {
-        return sortCols.size();
-    }
+    uint64_t GetSpilledBytes() override;
 
     PagesIndex *GetPagesIndex() const
     {

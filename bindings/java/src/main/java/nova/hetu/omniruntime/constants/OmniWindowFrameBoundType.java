@@ -13,27 +13,27 @@ public class OmniWindowFrameBoundType extends Constant {
     /**
      * The constant OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING.
      */
-    public static OmniWindowFrameBoundType OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING = new OmniWindowFrameBoundType(0);
+    public static final OmniWindowFrameBoundType OMNI_FRAME_BOUND_UNBOUNDED_PRECEDING = new OmniWindowFrameBoundType(0);
 
     /**
      * The constant OMNI_FRAME_BOUND_PRECEDING.
      */
-    public static OmniWindowFrameBoundType OMNI_FRAME_BOUND_PRECEDING = new OmniWindowFrameBoundType(1);
+    public static final OmniWindowFrameBoundType OMNI_FRAME_BOUND_PRECEDING = new OmniWindowFrameBoundType(1);
 
     /**
      * The constant OMNI_FRAME_BOUND_CURRENT_ROW.
      */
-    public static OmniWindowFrameBoundType OMNI_FRAME_BOUND_CURRENT_ROW = new OmniWindowFrameBoundType(2);
+    public static final OmniWindowFrameBoundType OMNI_FRAME_BOUND_CURRENT_ROW = new OmniWindowFrameBoundType(2);
 
     /**
      * The constant OMNI_FRAME_BOUND_FOLLOWING.
      */
-    public static OmniWindowFrameBoundType OMNI_FRAME_BOUND_FOLLOWING = new OmniWindowFrameBoundType(3);
+    public static final OmniWindowFrameBoundType OMNI_FRAME_BOUND_FOLLOWING = new OmniWindowFrameBoundType(3);
 
     /**
      * The constant OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING.
      */
-    public static OmniWindowFrameBoundType OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING = new OmniWindowFrameBoundType(4);
+    public static final OmniWindowFrameBoundType OMNI_FRAME_BOUND_UNBOUNDED_FOLLOWING = new OmniWindowFrameBoundType(4);
 
     private static final long serialVersionUID = 3646147886114670835L;
 

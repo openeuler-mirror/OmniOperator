@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 #ifndef __OMNI_OPERATOR_H__
 #define __OMNI_OPERATOR_H__
@@ -53,6 +53,11 @@ public:
     virtual OmniStatus Close()
     {
         return OMNI_STATUS_NORMAL;
+    }
+
+    virtual uint64_t GetSpilledBytes()
+    {
+        return 0;
     }
 
 protected:

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * @Description: abstract class spiller
  */
 
@@ -27,6 +27,8 @@ public:
     virtual bool HasNext() = 0;
 
     virtual SpillUnit *Next() = 0;
+
+    virtual uint64_t GetSpilledBytes() = 0;
 };
 }
 }

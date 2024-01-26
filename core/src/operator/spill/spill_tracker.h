@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * @Description: spill unit iterator
  */
 #ifndef OMNI_RUNTIME_SPILL_TRACKER_H
@@ -20,6 +20,8 @@ public:
     virtual bool CheckIfExceedAndReserve(uint64_t bytes) = 0;
 
     virtual void Free(uint64_t bytes) = 0;
+
+    virtual uint64_t GetSpilledBytes() = 0;
 };
 
 class ChildSpillTracker : public SpillTracker {
@@ -45,7 +47,7 @@ public:
         parentSpillTracker->Free(bytes);
     }
 
-    uint64_t GetSpilledBytes() const
+    uint64_t GetSpilledBytes() override
     {
         return spilledBytes;
     }
@@ -57,7 +59,7 @@ private:
 
 class RootSpillTracker : public SpillTracker {
 public:
-    RootSpillTracker() noexcept : maxBytes(UINT64_MAX), spilledBytes(0) {}
+    RootSpillTracker() noexcept : maxBytes(UINT64_MAX), spilledBytes(0), totalSpilledBytes(0) {}
 
     ~RootSpillTracker() override;
 
@@ -66,9 +68,9 @@ public:
         maxBytes = maxSize;
     }
 
-    uint64_t GetMaxBytes() const
+    uint64_t GetSpilledBytes() override
     {
-        return maxBytes;
+        return spilledBytes;
     }
 
     bool CheckIfExceedAndReserve(uint64_t bytes) override;
@@ -96,6 +98,7 @@ public:
 private:
     uint64_t maxBytes;
     std::atomic<uint64_t> spilledBytes;
+    uint64_t totalSpilledBytes;
     std::set<std::string> spillPaths;
 };
 

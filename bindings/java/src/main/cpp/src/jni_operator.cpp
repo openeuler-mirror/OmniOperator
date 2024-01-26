@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: JNI Operator Operations Source File
  */
 
@@ -138,4 +138,16 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
 {
     auto *nativeOperator = (Operator *)jOperatorAddr;
     Operator::DeleteOperator(nativeOperator);
+}
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    getSpilledBytesNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpilledBytesNative(JNIEnv *env,
+    jobject jObj, jlong jOperatorAddr)
+{
+    auto *nativeOperator = (Operator *)jOperatorAddr;
+    return static_cast<jlong>(nativeOperator->GetSpilledBytes());
 }

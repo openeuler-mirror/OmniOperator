@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * @Description: spill unit iterator
  */
 #include "spill_tracker.h"
@@ -23,6 +23,7 @@ bool RootSpillTracker::CheckIfExceedAndReserve(uint64_t bytes)
     }
 
     spilledBytes.fetch_add(bytes);
+    totalSpilledBytes += bytes;
     return false;
 }
 

@@ -13,12 +13,12 @@ public class OmniWindowFrameType extends Constant {
     /**
      * The constant OMNI_FRAME_TYPE_RANGE.
      */
-    public static OmniWindowFrameType OMNI_FRAME_TYPE_RANGE = new OmniWindowFrameType(0);
+    public static final OmniWindowFrameType OMNI_FRAME_TYPE_RANGE = new OmniWindowFrameType(0);
 
     /**
      * The constant OMNI_FRAME_TYPE_ROWS.
      */
-    public static OmniWindowFrameType OMNI_FRAME_TYPE_ROWS = new OmniWindowFrameType(1);
+    public static final OmniWindowFrameType OMNI_FRAME_TYPE_ROWS = new OmniWindowFrameType(1);
 
     private static final long serialVersionUID = -3453499979001168717L;
 

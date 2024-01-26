@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator;
@@ -181,6 +181,9 @@ public class OmniSortWithExprOperatorTest {
         sortWithExprOperatorFactory.close();
     }
 
+    /**
+     * Test factory context equal
+     */
     @Test
     public void testFactoryContextEquals() {
         DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER};
@@ -447,6 +450,9 @@ public class OmniSortWithExprOperatorTest {
         sortWithExprOperatorFactory.close();
     }
 
+    /**
+     * Test sort spill with empty path
+     */
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = "Enable spill but do not config spill path.")
     public void testSortSpillWithEmptyPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
@@ -461,7 +467,10 @@ public class OmniSortWithExprOperatorTest {
                 outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("", 1)));
     }
 
-    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*PATH_EXIST.*")
+    /**
+     * Test Sort spill with existed path
+     */
+    @Test
     public void testSortSpillWithExistedPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
@@ -470,8 +479,12 @@ public class OmniSortWithExprOperatorTest {
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("/opt", 1)));
+        sortWithExprOperatorFactory.close();
     }
 
+    /**
+     * Test sort spill with invalid path
+     */
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*DISK_STAT_FAILED.*")
     public void testSortSpillWithInvalidPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
@@ -483,6 +496,9 @@ public class OmniSortWithExprOperatorTest {
                 outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("+-ab23", 1)));
     }
 
+    /**
+     * Test sort spill with invalid keys
+     */
     @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*EXPRESSION_NOT_SUPPORT.*")
     public void testSortWithInvalidKeys() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
@@ -494,6 +510,9 @@ public class OmniSortWithExprOperatorTest {
                 outputCols, sortKeys, ascendings, nullFirsts);
     }
 
+    /**
+     * Test sort multi threads
+     */
     @Test
     public void testSortWithExprOperatorFactoryMultiThreads() {
         final int threadNum = 100;

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: sort implementations
  */
 
@@ -91,6 +91,11 @@ OmniStatus SortWithExprOperator::Close()
 {
     sortOperator->Close();
     return OMNI_STATUS_NORMAL;
+}
+
+uint64_t SortWithExprOperator::GetSpilledBytes()
+{
+    return sortOperator->GetSpilledBytes();
 }
 }
 }

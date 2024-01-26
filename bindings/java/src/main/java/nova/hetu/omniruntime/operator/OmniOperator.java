@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator;
@@ -49,8 +49,11 @@ public final class OmniOperator implements AutoCloseable {
     // close
     private static native void closeNative(long nativeOperator);
 
+    // getSpilledBytes
+    private static native long getSpilledBytesNative(long nativeOperator);
+
     /**
-     * Add input int.
+     * Add input.
      *
      * @param vecBatch the vec batch
      * @return the int
@@ -77,6 +80,15 @@ public final class OmniOperator implements AutoCloseable {
      */
     public void close() {
         closeNative(nativeOperator);
+    }
+
+    /**
+     * Get spill size.
+     *
+     * @return the spilled size
+     */
+    public long getSpilledBytes() {
+        return getSpilledBytesNative(nativeOperator);
     }
 
     private class VecBatchIterator implements Iterator<VecBatch> {
