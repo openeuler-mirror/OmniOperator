@@ -8,6 +8,7 @@
 
 #include <string>
 #include <regex>
+#include <limits>
 #include "util/compiler_util.h"
 
 namespace omniruntime {
@@ -17,171 +18,78 @@ static std::regex g_doubleRegex(
     "[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
 static std::regex g_dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
 
-// if the string is empty or all characters are spaces then return false, other cases return true
-static ALWAYS_INLINE bool DoSkipSpaces(const char *str, int32_t strLen, int32_t &strStart, int32_t &strEnd)
+enum Status {
+    SUCCESS,
+    OVERFLOW,
+    IS_NOT_A_NUMBER
+};
+
+template<typename T, bool allowTruncate = true>
+inline Status ConvertStringToInteger(T &result, const char *bytes, int length)
 {
-    int32_t strIdx = 0;
-    while (strIdx < strLen && str[strIdx] == ' ') {
-        // skip leading space characters
-        strIdx++;
-    }
-    if (strIdx == strLen) {
-        // there is no character or all characters are spaces
-        return false;
-    }
-    strStart = strIdx;
+    static_assert(std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t> || std::is_same_v<T, int32_t> ||
+        std::is_same_v<T, int64_t>, "Only integer type is allowed");
+    int offset = 0;
+    while (offset < length && bytes[offset] == ' ') offset++;
+    if (offset == length) return Status::IS_NOT_A_NUMBER;
 
-    strIdx = strLen - 1;
-    while (strIdx > strStart && str[strIdx] == ' ') {
-        // skip tail space characters
-        strIdx--;
-    }
-    strEnd = strIdx;
-    return true;
-}
+    int end = length - 1;
+    while (end > offset && bytes[end] == ' ') end--;
 
-template <typename T>
-static T ConvertStringToInteger(const char *str, int32_t strLen, bool &isInvalid, bool &isOverflow)
-{
-    T result = 0;
-    int32_t strStart = 0;
-    int32_t strEnd = 0;
-    isInvalid = !DoSkipSpaces(str, strLen, strStart, strEnd);
-    if (isInvalid) {
-        return result;
-    }
-
-    int32_t strIdx = strStart;
-    bool isNegative = false;
-    auto firstChar = str[strIdx];
-    if (firstChar == '-' || firstChar == '+') {
-        isNegative = firstChar == '-';
-        if (strIdx == strEnd) {
-            // the string is + or -
-            isInvalid = true;
-            result = 0;
-            return result;
+    char b = bytes[offset];
+    bool negative = b == '-';
+    if (negative || b == '+') {
+        if (end - offset == 0) {
+            return Status::IS_NOT_A_NUMBER;
         }
-        strIdx++;
+        offset++;
     }
 
-    if (isNegative) {
-        for (; strIdx <= strEnd; strIdx++) {
-            auto c = str[strIdx];
-            if (std::isdigit(c) == 0) {
-                isInvalid = true;
-                result = 0;
-                break;
-            }
+    char separator = '.';
+    constexpr int radix = 10;
+    constexpr T minValue = std::is_same_v<T, int8_t> ? INT8_MIN : std::is_same_v<T, int16_t> ? INT16_MIN
+        : std::is_same_v<T, int32_t> ? INT32_MIN : INT64_MIN;
+    constexpr T stopValue = minValue / radix;
 
-            result = result * 10 - (c - '0');
-            if (result > 0) {
-                // overflow check
-                isOverflow = true;
-                result = 0;
+    result = 0;
+    while (offset <= end) {
+        b = bytes[offset];
+        offset++;
+        if constexpr (allowTruncate) {
+            if (b == separator) {
                 break;
             }
         }
-    } else {
-        for (; strIdx <= strEnd; strIdx++) {
-            auto c = str[strIdx];
-            if (std::isdigit(c) == 0) {
-                isInvalid = true;
-                result = 0;
-                break;
-            }
 
-            result = result * 10 + (c - '0');
-            if (result < 0) {
-                // overflow check
-                isOverflow = true;
-                result = 0;
-                break;
-            }
+        int digit;
+        if (b >= '0' && b <= '9') {
+            digit = b - '0';
+        } else {
+            return Status::IS_NOT_A_NUMBER;
         }
-    }
-    return result;
-}
 
-template <typename T>
-static T ConvertStringToIntegerWithTruncate(const char *str, int32_t strLen, bool &isInvalid, bool &isOverflow)
-{
-    T result = 0;
-    int32_t strStart = 0;
-    int32_t strEnd = 0;
-    isInvalid = !DoSkipSpaces(str, strLen, strStart, strEnd);
-    if (isInvalid) {
-        return result;
+        if ((result < stopValue) || (result == stopValue && digit > 8)) {
+            return Status::OVERFLOW;
+        }
+
+        result = result * radix - digit;
     }
 
-    int32_t strIdx = strStart;
-    bool isNegative = false;
-    auto firstChar = str[strIdx];
-    if (firstChar == '-' || firstChar == '+') {
-        isNegative = firstChar == '-';
-        if (strIdx == strEnd) {
-            // the string is + or -
-            isInvalid = true;
-            result = 0;
-            return result;
+    while (offset <= end) {
+        char currentByte = bytes[offset];
+        if (currentByte < '0' || currentByte > '9') {
+            return Status::IS_NOT_A_NUMBER;
         }
-        strIdx++;
+        offset++;
     }
 
-    bool hasDecimalPoint = false;
-    if (isNegative) {
-        for (; strIdx <= strEnd; strIdx++) {
-            auto c = str[strIdx];
-            if (!hasDecimalPoint && c == '.') {
-                hasDecimalPoint = true;
-                if (++strIdx > strEnd) {
-                    break;
-                }
-                c = str[strIdx];
-            }
-            if (std::isdigit(c) == 0) {
-                isInvalid = true;
-                result = 0;
-                break;
-            }
-            if (!hasDecimalPoint) {
-                result = result * 10 - (c - '0');
-            }
-
-            if (result > 0) {
-                // overflow check
-                isOverflow = true;
-                result = 0;
-                break;
-            }
+    if (!negative) {
+        if (result == minValue) {
+            return Status::OVERFLOW;
         }
-    } else {
-        for (; strIdx <= strEnd; strIdx++) {
-            auto c = str[strIdx];
-            if (!hasDecimalPoint && c == '.') {
-                hasDecimalPoint = true;
-                if (++strIdx > strEnd) {
-                    break;
-                }
-                c = str[strIdx];
-            }
-            if (std::isdigit(c) == 0) {
-                isInvalid = true;
-                result = 0;
-                break;
-            }
-            if (!hasDecimalPoint) {
-                result = result * 10 + (c - '0');
-            }
-            if (result < 0) {
-                // overflow check
-                isOverflow = true;
-                result = 0;
-                break;
-            }
-        }
+        result = -result;
     }
-    return result;
+    return Status::SUCCESS;
 }
 
 inline int StringToDouble(const std::string &s, double &result)
