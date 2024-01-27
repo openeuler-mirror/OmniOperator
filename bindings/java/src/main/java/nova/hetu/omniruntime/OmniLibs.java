@@ -1,8 +1,10 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime;
+
+import nova.hetu.omniruntime.utils.NativeLog;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +56,7 @@ public class OmniLibs {
             synchronized (OmniLibs.class) {
                 if (instance == null) {
                     instance = new OmniLibs();
+                    NativeLog.getInstance();
                 }
             }
         }

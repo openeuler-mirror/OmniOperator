@@ -1,11 +1,10 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.OmniLibs;
-import nova.hetu.omniruntime.utils.NativeLog;
 
 /**
  * To verify if expr is supported before codegen
@@ -15,7 +14,6 @@ import nova.hetu.omniruntime.utils.NativeLog;
 public class OmniExprVerify {
     static {
         OmniLibs.load();
-        NativeLog.getInstance();
     }
 
     private static native long exprVerify(String inputTypes, int inputLength, String expression, Object[] projections,

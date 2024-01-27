@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator;
@@ -9,7 +9,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 
 import nova.hetu.omniruntime.OmniLibs;
-import nova.hetu.omniruntime.utils.NativeLog;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 import java.util.concurrent.ExecutionException;
@@ -27,7 +26,6 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
 
     static {
         OmniLibs.load();
-        NativeLog.getInstance();
     }
 
     private final long nativeOperatorFactory;

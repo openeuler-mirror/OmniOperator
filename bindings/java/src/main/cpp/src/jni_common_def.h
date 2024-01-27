@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: JNI common functions
  */
 #ifndef JNI_COMMON_DEF_H
@@ -101,13 +101,11 @@ extern "C" {
 #endif
 
 extern jclass bufCls;
-extern jclass vecBatchCls;
-extern jclass omniResultsCls;
 extern jclass traceUtilCls;
 extern jclass omniRuntimeExceptionClass;
-extern jmethodID vecBatchInitMethodId;
-extern jmethodID omniResultsInitMethodId;
 extern jmethodID traceUtilStackMethodId;
+
+jclass CreateGlobalClassRef(JNIEnv *env, const char *className);
 
 #ifdef __cplusplus
 }

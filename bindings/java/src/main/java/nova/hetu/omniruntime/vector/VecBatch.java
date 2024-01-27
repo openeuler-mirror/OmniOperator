@@ -1,12 +1,11 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.utils.NativeLog;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
@@ -23,7 +22,6 @@ public class VecBatch implements Closeable {
     // 加载jni所需动态库
     static {
         OmniLibs.load();
-        NativeLog.getInstance();
     }
 
     private final Vec[] vectors;

@@ -1,28 +1,24 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: JNI common functions
  */
 
 #include "jni_common_def.h"
 
 jclass bufCls;
-jclass vecBatchCls;
-jclass omniResultsCls;
 jclass traceUtilCls;
 jclass omniRuntimeExceptionClass;
 
-jmethodID vecBatchInitMethodId;
-jmethodID omniResultsInitMethodId;
 jmethodID traceUtilStackMethodId;
 
 static const jint JNI_VERSION = JNI_VERSION_1_6;
 
-static jclass createGlobalClassRef(JNIEnv *env, const char *className)
+jclass CreateGlobalClassRef(JNIEnv *env, const char *className)
 {
-    jclass local_class = env->FindClass(className);
-    jclass global_class = (jclass)env->NewGlobalRef(local_class);
-    env->DeleteLocalRef(local_class);
-    return global_class;
+    jclass localClass = env->FindClass(className);
+    jclass globalClass = (jclass)env->NewGlobalRef(localClass);
+    env->DeleteLocalRef(localClass);
+    return globalClass;
 }
 
 jint JNI_OnLoad(JavaVM *vm, void *reserved)
@@ -31,15 +27,10 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
     if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION) != JNI_OK) {
         return JNI_ERR;
     }
-    bufCls = createGlobalClassRef(env, "java/nio/ByteBuffer");
-    vecBatchCls = createGlobalClassRef(env, "nova/hetu/omniruntime/vector/VecBatch");
-    vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "(J[J[J[J[J[I[II)V");
-    omniResultsCls = createGlobalClassRef(env, "nova/hetu/omniruntime/operator/OmniResults");
-    omniResultsInitMethodId =
-        env->GetMethodID(omniResultsCls, "<init>", "(Lnova/hetu/omniruntime/vector/VecBatch;I)V");
-    traceUtilCls = createGlobalClassRef(env, "nova/hetu/omniruntime/utils/TraceUtil");
+    bufCls = CreateGlobalClassRef(env, "java/nio/ByteBuffer");
+    traceUtilCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/utils/TraceUtil");
     traceUtilStackMethodId = env->GetStaticMethodID(traceUtilCls, "stack", "()Ljava/lang/String;");
-    omniRuntimeExceptionClass = createGlobalClassRef(env, "nova/hetu/omniruntime/utils/OmniRuntimeException");
+    omniRuntimeExceptionClass = CreateGlobalClassRef(env, "nova/hetu/omniruntime/utils/OmniRuntimeException");
     return JNI_VERSION;
 }
 
@@ -47,9 +38,7 @@ void JNI_OnUnload(JavaVM *vm, const void *reserved)
 {
     JNIEnv *env = nullptr;
     vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-    env->DeleteGlobalRef(vecBatchCls);
     env->DeleteGlobalRef(bufCls);
-    env->DeleteGlobalRef(omniResultsCls);
     env->DeleteGlobalRef(traceUtilCls);
     env->DeleteGlobalRef(omniRuntimeExceptionClass);
 }
