@@ -375,7 +375,7 @@ protected:
 
         auto factory = std::make_unique<HashAggregationOperatorFactory>(groupByCol, groupInputTypes, aggInputColsWrap,
             aggInputTypesWrap, aggOutputTypesWrap, aggFuncVec, aggMaskVec, inputRawWrap, outputPartialWrap,
-            this->nullWhenOverflow);
+            OperatorConfig());
 
         if (factory == nullptr) {
             return nullptr;

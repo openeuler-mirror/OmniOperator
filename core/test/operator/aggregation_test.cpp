@@ -385,7 +385,8 @@ uintptr_t CreateHashFactoryWithoutJit(HAFactoryParameters &parameters)
     auto outputPartialWraps = AggregatorUtil::WrapWithVector(parameters.outputPartial, aggColVector.size());
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes, aggColVectorWrap,
-        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawWraps, outputPartialWraps);
+        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawWraps, outputPartialWraps,
+        OperatorConfig());
     nativeOperatorFactory->Init();
     return reinterpret_cast<uintptr_t>(nativeOperatorFactory);
 }
@@ -468,7 +469,8 @@ std::unique_ptr<HashAggregationOperatorFactory> CreateHashAggregationOperatorFac
     const std::vector<uint32_t> &groupByColumns_, const std::vector<DataTypePtr> &groupTypes,
     const std::vector<uint32_t> &aggFuncTypes_, const std::vector<uint32_t> &aggInputCols,
     const std::vector<DataTypePtr> &aggInputTypes, const std::vector<DataTypePtr> &aggOutputTypes,
-    const std::vector<uint32_t> &aggMask_, const bool inputRaw, const bool outputPartial, const bool nullWhenOverflow)
+    const std::vector<uint32_t> &aggMask_, const bool inputRaw, const bool outputPartial,
+    const OperatorConfig &operatorConfig)
 {
     EXPECT_EQ(groupByColumns_.size(), groupTypes.size());
     auto numAgg = aggFuncTypes_.size();
@@ -498,7 +500,7 @@ std::unique_ptr<HashAggregationOperatorFactory> CreateHashAggregationOperatorFac
     auto aggFuncTypes = std::vector<uint32_t>(aggFuncTypes_);
     auto hashAggOpFactory = std::make_unique<HashAggregationOperatorFactory>(groupByColumns, DataTypes(groupTypes),
         aggInputColsWrap, aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypes, aggMask, inputRawWrap, outputPartialWrap,
-        nullWhenOverflow);
+        operatorConfig);
     hashAggOpFactory->Init();
     return hashAggOpFactory;
 }
@@ -556,7 +558,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
         std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType(), LongType() }),
         std::vector<DataTypePtr>({ LongType(), ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }),
         LongType(), LongType(), LongType() }),
-        std::vector<uint32_t>(), true, true, false);
+        std::vector<uint32_t>(), true, true, OperatorConfig());
 
     // operator 1 (partial)
     auto aggPartial1 = aggPartialFactory->CreateOperator();
@@ -590,7 +592,7 @@ TEST(HashAggregationOperatorTest, verify_correctness)
         std::vector<DataTypePtr>({ LongType(), ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }),
         LongType(), LongType(), LongType() }),
         std::vector<DataTypePtr>({ LongType(), DoubleType(), LongType(), LongType(), LongType() }),
-        std::vector<uint32_t>(), false, false, false);
+        std::vector<uint32_t>(), false, false, OperatorConfig());
 
     auto aggFinal = aggFinalFactory->CreateOperator();
     aggFinal->Init();
@@ -644,7 +646,7 @@ TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
         std::vector<DataTypePtr>({ VarcharType(1) }), aggFuncTypes, std::vector<uint32_t>({ 1, 2, 3 }),
         std::vector<DataTypePtr>({ VarcharType(1), VarcharType(1), VarcharType(4) }),
         std::vector<DataTypePtr>({ LongType(), VarcharType(1), VarcharType(4) }), std::vector<uint32_t>(), true, false,
-        false);
+        OperatorConfig());
     auto resultTypes = std::vector<DataTypePtr>({ LongType(), VarcharType(1), VarcharType(4) });
     auto groupByVarChar = aggFactory->CreateOperator();
     groupByVarChar->Init();
@@ -692,7 +694,7 @@ TEST(HashAggregationOperatorTest, verify_char_vector_correctness)
         std::vector<DataTypePtr>({ CharType(1) }), aggFuncTypes, std::vector<uint32_t>({ 1, 2, 3 }),
         std::vector<DataTypePtr>({ CharType(1), CharType(1), CharType(4) }),
         std::vector<DataTypePtr>({ LongType(), CharType(1), CharType(4) }), std::vector<uint32_t>(), true, false,
-        false);
+        OperatorConfig());
 
     auto groupByVarChar = aggFactory->CreateOperator();
     groupByVarChar->Init();
@@ -749,7 +751,7 @@ TEST(HashAggregationOperatorTest, verify_null_correctness)
         std::vector<DataTypePtr>({ LongType() }), aggFuncTypes, std::vector<uint32_t>({ 1, 2, 3, 4, 5 }),
         std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType(), LongType() }),
         std::vector<DataTypePtr>({ LongType(), DoubleType(), LongType(), LongType(), LongType() }),
-        std::vector<uint32_t>(), true, false, false);
+        std::vector<uint32_t>(), true, false, OperatorConfig());
     auto groupByNULL = aggFactory->CreateOperator();
     groupByNULL->Init();
 
@@ -793,7 +795,7 @@ TEST(HashAggregationOperatorTest, verfify_correctness_group_by_agg_same_cols)
         std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), ShortType(), DoubleType() }),
         std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM }),
         std::vector<uint32_t>({ 0, 1 }), std::vector<DataTypePtr>({ LongType(), LongType() }),
-        std::vector<DataTypePtr>({ LongType(), LongType() }), std::vector<uint32_t>(), true, false, false);
+        std::vector<DataTypePtr>({ LongType(), LongType() }), std::vector<uint32_t>(), true, false, OperatorConfig());
     auto groupBy = aggFactory->CreateOperator();
     groupBy->Init();
 
@@ -852,7 +854,7 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
         std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType(), LongType() }),
         std::vector<DataTypePtr>({ LongType(), LongType(),
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), LongType(), LongType() }),
-        std::vector<uint32_t>({ 6, 7, 8, 9, 10 }), true, true, false);
+        std::vector<uint32_t>({ 6, 7, 8, 9, 10 }), true, true, OperatorConfig());
     auto aggregatePartial = aggPartialFactory->CreateOperator();
     aggregatePartial->Init();
     aggregatePartial->AddInput(vecBatch1);
@@ -867,7 +869,7 @@ TEST(HashAggregationOperatorTest, verify_distinct_correctness)
         std::vector<DataTypePtr>({ LongType(), LongType(),
         ContainerType(std::vector<DataTypePtr> { DoubleType(), LongType() }), LongType(), LongType() }),
         std::vector<DataTypePtr>({ LongType(), LongType(), DoubleType(), LongType(), LongType() }),
-        std::vector<uint32_t>(), false, false, false);
+        std::vector<uint32_t>(), false, false, OperatorConfig());
     auto aggregateFinal = aggFinalFactory->CreateOperator();
     aggregateFinal->Init();
     aggregateFinal->AddInput(outputVecBatch);
@@ -922,7 +924,7 @@ TEST(HashAggregationOperatorTest, verify_first_val)
     std::vector<bool> inputRaws0({ true, true });
     std::vector<bool> outputPartials0({ true, true });
     auto aggPartialFactory = new HashAggregationOperatorFactory(groupByCol0, groupInputTypes0, aggsCols0,
-        aggInputTypes0, aggOutputTypes0, aggFuncTypes, maskColsVector0, inputRaws0, outputPartials0);
+        aggInputTypes0, aggOutputTypes0, aggFuncTypes, maskColsVector0, inputRaws0, outputPartials0, OperatorConfig());
     aggPartialFactory->Init();
 
     // operator 1 (partial)
@@ -963,7 +965,7 @@ TEST(HashAggregationOperatorTest, verify_first_val)
     std::vector<bool> inputRaws1({ false, false });
     std::vector<bool> outputPartials1({ false, false });
     auto aggFinalFactory = new HashAggregationOperatorFactory(groupByCol1, groupInputTypes1, aggsCols1, aggInputTypes1,
-        aggOutputTypes1, aggFuncTypes, maskColsVector1, inputRaws1, outputPartials1);
+        aggOutputTypes1, aggFuncTypes, maskColsVector1, inputRaws1, outputPartials1, OperatorConfig());
     aggFinalFactory->Init();
 
     auto aggFinal = aggFinalFactory->CreateOperator();
@@ -1386,7 +1388,7 @@ TEST(HashAggregationOperatorTest, group_by_agg_same_cols)
         std::vector<DataTypePtr>({ LongType(), LongType(), IntType(), ShortType(), DoubleType() }),
         std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM }),
         std::vector<uint32_t>({ 0, 1 }), std::vector<DataTypePtr>({ LongType(), LongType() }),
-        std::vector<DataTypePtr>({ LongType(), LongType() }), std::vector<uint32_t>(), true, false, false);
+        std::vector<DataTypePtr>({ LongType(), LongType() }), std::vector<uint32_t>(), true, false, OperatorConfig());
     auto groupBy = aggFactory->CreateOperator();
     groupBy->Init();
 
@@ -1420,7 +1422,8 @@ TEST(HashAggregationOperatorTest, varchar_vector_correctness)
     auto aggFactory = CreateHashAggregationOperatorFactory(std::vector<uint32_t>({ 0 }), groupTypes,
         std::vector<uint32_t>(
         { OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX }),
-        std::vector<uint32_t>({ 1, 2, 3 }), aggTypes, outputTypes, std::vector<uint32_t>(), true, false, false);
+        std::vector<uint32_t>({ 1, 2, 3 }), aggTypes, outputTypes, std::vector<uint32_t>(), true, false,
+        OperatorConfig());
     auto groupByVarChar = aggFactory->CreateOperator();
     groupByVarChar->Init();
 
@@ -1797,7 +1800,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto outputPartialsWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeVector.size());
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVectorWrap,
-        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawsWrap, outputPartialsWrap);
+        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawsWrap, outputPartialsWrap,
+        OperatorConfig());
     nativeOperatorFactory->Init();
     std::cout << "after create factory" << std::endl;
     // create operator
@@ -1840,7 +1844,7 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto outputPartial2Wrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeVector.size());
     HashAggregationOperatorFactory *nativeOperatorFactory2 =
         new HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVector2Wrap, aggInputTypes2Wrap,
-        aggOutputTypes2Wrap, aggFuncTypeVector, maskColsVector, inputRaw2Wrap, outputPartial2Wrap);
+        aggOutputTypes2Wrap, aggFuncTypeVector, maskColsVector, inputRaw2Wrap, outputPartial2Wrap, OperatorConfig());
     nativeOperatorFactory2->Init();
     std::cout << "after create factory" << std::endl;
     auto groupBy = nativeOperatorFactory2->CreateOperator();
@@ -1999,7 +2003,8 @@ TEST(HashAggregationOperatorTest, supported_type_test)
         std::vector<DataTypePtr>({ LongType(), LongType() }),
         std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM }),
         std::vector<uint32_t>({ 2, 3 }), std::vector<DataTypePtr>({ LongType(), LongType() }),
-        std::vector<DataTypePtr>({ LongType(), DoubleType() }), std::vector<uint32_t>(), true, false, false);
+        std::vector<DataTypePtr>({ LongType(), DoubleType() }), std::vector<uint32_t>(), true, false,
+        OperatorConfig());
     auto groupBy = aggFactory->CreateOperator();
     groupBy->Init();
 
@@ -2025,7 +2030,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
         std::vector<uint32_t>({ 2, 3 }),
         std::vector<DataTypePtr>({ Date32DataType::Instance(), Date32DataType::Instance() }),
         std::vector<DataTypePtr>({ Date32DataType::Instance(), Date32DataType::Instance() }), std::vector<uint32_t>(),
-        true, false, false);
+        true, false, OperatorConfig());
     groupBy = aggFactory->CreateOperator();
     groupBy->Init();
 
@@ -2057,7 +2062,7 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     aggFactory = CreateHashAggregationOperatorFactory(std::vector<uint32_t>({ 0 }),
         std::vector<DataTypePtr>({ IntType() }), std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_SUM }),
         std::vector<uint32_t>({ 1 }), std::vector<DataTypePtr>({ LongType() }),
-        std::vector<DataTypePtr>({ LongType() }), std::vector<uint32_t>(), true, false, false);
+        std::vector<DataTypePtr>({ LongType() }), std::vector<uint32_t>(), true, false, OperatorConfig());
     groupBy = aggFactory->CreateOperator();
     groupBy->Init();
 

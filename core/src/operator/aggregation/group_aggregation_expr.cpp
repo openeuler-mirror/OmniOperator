@@ -56,7 +56,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
 
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
+    OperatorUtil::CreateRequiredProjections(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
         groupByAndAggColumnarIdx, *(operatorConfig.GetOverflowConfig()));
     uint32_t groupByCols[groupByNum];
     for (uint32_t i = 0; i < groupByNum; i++) {

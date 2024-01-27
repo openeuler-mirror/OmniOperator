@@ -106,7 +106,7 @@ OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sour
 
     auto operatorFactory =
         new HashAggregationOperatorFactory(groupByColContext, groupTypes, aggColContextWrap, aggInputTypesWrap,
-        aggOutputTypesWrap, aggFuncTypeContext, maskColsContext, inputRawsWrap, outputPartialsWrap, true);
+        aggOutputTypesWrap, aggFuncTypeContext, maskColsContext, inputRawsWrap, outputPartialsWrap, OperatorConfig());
     return operatorFactory;
 }
 
