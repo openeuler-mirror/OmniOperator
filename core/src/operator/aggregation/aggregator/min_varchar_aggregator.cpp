@@ -81,6 +81,27 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
+    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+{
+    auto vectorPtr = vectorBatch->Get(vectorIndex++);
+    if (!vectorPtr->IsNull(rowIdx)) {
+        auto dataPtr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
+        if (state.val == nullptr || state.count == 0) {
+            auto strView = dataPtr->GetValue(rowIdx);
+            auto *res = strView.data();
+            state.count = strView.size();
+            state.count |= UPDATE_FLAG;
+            state.val = const_cast<char *>(res);
+            SaveState(state);
+        } else {
+            state.val = const_cast<char *>(MinCharOp(reinterpret_cast<char *>(state.val), state.count, dataPtr,
+                rowIdx));
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 ALWAYS_INLINE void MinVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState &state)
 {
     if ((state.count & UPDATE_FLAG) == 0) {

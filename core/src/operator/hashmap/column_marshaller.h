@@ -173,6 +173,11 @@ public:
         return hashmap.GetElementsSize();
     }
 
+    void ResetHashmap()
+    {
+        hashmap.Reset();
+    };
+
 private:
     std::vector<VectorSerializer> serializers;
     std::vector<VectorDeSerializer> deserializers;

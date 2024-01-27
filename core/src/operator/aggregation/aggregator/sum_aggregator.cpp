@@ -135,6 +135,39 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
+    int32_t &vectorIndex, int32_t rowIdx)
+{
+    auto vectorPtr = vectorBatch->Get(vectorIndex++);
+    auto vectorCnt = vectorBatch->Get(vectorIndex++);
+    auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
+    cnt = (int64_t *)__builtin_assume_aligned(cnt, ARRAY_ALIGNMENT);
+
+    int64_t sumCnt = cnt[rowIdx];
+    if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
+        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
+            auto dataPtr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
+            Decimal128 data = Decimal128(dataPtr->GetValue(rowIdx));
+            SumOp<Decimal128, Decimal128>(reinterpret_cast<Decimal128 *>(state.val), state.count, data, sumCnt);
+        } else if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
+            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_LONG>(vectorPtr));
+            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], sumCnt);
+        } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
+            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DOUBLE>(vectorPtr));
+            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], sumCnt);
+        } else {
+            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DECIMAL128>(vectorPtr));
+            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], sumCnt);
+        }
+    } else {
+        state.count = sumCnt;
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 SumAggregator<IN_ID, OUT_ID>::SumAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
     std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
     : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial,

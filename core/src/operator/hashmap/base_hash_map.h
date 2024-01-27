@@ -704,12 +704,21 @@ public:
             nullSlot->~Slot();
             allocator.Release(reinterpret_cast<uint8_t *>(nullSlot), sizeof(Slot));
         }
+        elementsSize = 0;
     }
 
     void ReleaseSlots(uint64_t newCapacity) noexcept
     {
         allocator.Release(slotsAddress, sizeof(Slot) * newCapacity);
         allocator.Release(ctrlAddress, sizeof(ctrl_t) * (newCapacity + Group::kWidth));
+    }
+
+    void Reset()
+    {
+        elementsSize = 0;
+        memset_sp(identifiers, sizeof(ctrl_t) * capacity, kEmpty, sizeof(ctrl_t) * capacity);
+        memset_sp(identifiers + capacity, sizeof(ctrl_t) * Group::kWidth, kSentinel, sizeof(ctrl_t) * Group::kWidth);
+        memset_sp(slotsAddress, sizeof(Slot) * capacity, 0, sizeof(Slot) * capacity);
     }
 
     class HashmapIteratorOutput {

@@ -29,6 +29,19 @@ bool SparkSpillConfig::NeedSpill(MemoryBuilder *memoryBuilder)
     }
 }
 
+bool SparkSpillConfig::NeedSpill(size_t elementsSize)
+{
+    auto usedMemorySize = mem::MemoryManager::GetGlobalAccountedMemory();
+    if (IsSpillEnabled() &&
+        (usedMemorySize >= GetSpillMemThreshold() || elementsSize >= GetSpillRowThreshold())) {
+        LogDebug("spill get row count %d, row threshold %d, and get memory usage %lld, memory threshold %lld.",
+                 elementsSize, GetSpillRowThreshold(), usedMemorySize, GetSpillMemThreshold());
+        return true;
+    } else {
+        return false;
+    }
+}
+
 OperatorConfig::OperatorConfig(const OperatorConfig &operatorConfig)
 {
     auto inputSpillConfig = operatorConfig.GetSpillConfig();

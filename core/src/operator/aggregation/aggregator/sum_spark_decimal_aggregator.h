@@ -62,6 +62,40 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
     }
 }
 
+template <typename InDecimalType, typename OutDecimalType, typename ResultIntType>
+VECTORIZE_LOOP NO_INLINE void AddDecimalRowIndex(AggregateState &state, const InDecimalType *__restrict dataPtr,
+    int64_t cnt, int32_t rowIdx)
+{
+    bool isOverflow = false;
+    if (state.count < 0) {
+        // cur state overflow, so no need to aggregate
+        return;
+    }
+    auto res = reinterpret_cast<OutDecimalType *>(state.val);
+    ResultIntType tmpResult = 0;
+
+    if constexpr (std::is_same_v<OutDecimalType, Decimal128>) {
+        tmpResult = res->ToInt128();
+        if constexpr (std::is_same_v<InDecimalType, Decimal128>) {
+            // decimal128 + decimal128 = decimal128
+            isOverflow = AddCheckedOverflow(tmpResult, dataPtr[rowIdx].ToInt128(), tmpResult);
+        } else {
+            // decimal64 + decimal64 = decimal128
+            isOverflow = AddCheckedOverflow(tmpResult, int128_t(dataPtr[rowIdx]), tmpResult);
+        }
+    } else {
+        // decimal64 + decimal64 = decimal64
+        tmpResult = *res;
+        isOverflow = __builtin_add_overflow(tmpResult, dataPtr[rowIdx], &tmpResult);
+    }
+    state.count += cnt;
+    *res = OutDecimalType(tmpResult);
+
+    if (isOverflow) {
+        state.count = -1;
+    }
+}
+
 /**
  * SUM agg data type
  * input: decimal
@@ -191,6 +225,22 @@ public:
             AddDecimalUseRowIndex<InRawType, ResultType, false>(rowStates, aggIdx, dataPtr, emptyPtr);
         } else {
             AddDecimalUseRowIndex<InRawType, ResultType, true>(rowStates, aggIdx, dataPtr, emptyPtr, nullMap);
+        }
+    }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
+    {
+        auto vectorPtr = vectorBatch->Get(vectorIndex++);
+        auto dataPtr = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(vectorPtr));
+        auto vectorCnt = vectorBatch->Get(vectorIndex++);
+        auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
+
+        int64_t sumCnt = cnt[rowIdx];
+        if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
+            AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, dataPtr, sumCnt, rowIdx);
+        } else {
+            state.count = sumCnt;
         }
     }
 

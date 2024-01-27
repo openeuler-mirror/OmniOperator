@@ -70,6 +70,25 @@ public:
         }
     }
 
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
+    {
+        auto vectorPtr = vectorBatch->Get(vectorIndex++);
+        auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vectorPtr));
+        auto vectorCnt = vectorBatch->Get(vectorIndex++);
+        auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
+        ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        cnt = (int64_t *)__builtin_assume_aligned(cnt, ARRAY_ALIGNMENT);
+
+        int64_t sumCnt = cnt[rowIdx];
+        if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
+            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx],
+                sumCnt);
+        } else {
+            state.count = sumCnt;
+        }
+    }
+
     void ProcessSingleInternalFinal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {

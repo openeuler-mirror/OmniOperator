@@ -188,6 +188,58 @@ public:
             }
         }
     }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx) override
+    {
+        auto firstVector = vectorBatch->Get(vectorIndex++);
+        auto valueSetVector = vectorBatch->Get(vectorIndex++);
+        auto firstState = static_cast<FirstState *>(state.val);
+
+        if constexpr (std::is_same_v<InputType, std::string_view>) {
+            if constexpr (IGNORE_NULL) {
+                if (!firstState->valueSet && !firstVector->IsNull(rowIdx)) {
+                    firstState->valueSet = true;
+                    firstState->valIsNull = false;
+                    auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(firstVector);
+                    auto varcharVal = varcharVector->GetValue(rowIdx);
+                    state.count = UpdateFirstStateVarcharVal(firstState, state.count, varcharVal);
+                }
+            } else {
+                if (!firstState->valueSet) {
+                    firstState->valIsNull = firstVector->IsNull(rowIdx);
+                    firstState->valueSet = true;
+                    if (firstState->valIsNull) {
+                        state.count = 0;
+                    } else {
+                        auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(firstVector);
+                        auto varcharVal = varcharVector->GetValue(rowIdx);
+                        state.count = UpdateFirstStateVarcharVal(firstState, state.count, varcharVal);
+                    }
+                }
+            }
+        } else {
+            if constexpr (IGNORE_NULL) {
+                if (!firstState->valueSet && !firstVector->IsNull(rowIdx)) {
+                    firstState->valueSet = true;
+                    firstState->valIsNull = false;
+                    *reinterpret_cast<InputType *>(firstState->val) =
+                        static_cast<Vector<InputType> *>(firstVector)->GetValue(rowIdx);
+                }
+            } else {
+                if (!firstState->valueSet) {
+                    firstState->valueSet = true;
+                    firstState->valIsNull = firstVector->IsNull(rowIdx);
+                    if (not firstState->valIsNull) {
+                        *reinterpret_cast<InputType *>(firstState->val) =
+                            static_cast<Vector<InputType> *>(firstVector)->GetValue(rowIdx);
+                    }
+                }
+            }
+        }
+        bool intermediateState = reinterpret_cast<Vector<bool> *>(valueSetVector)->GetValue(rowIdx);
+        firstState->valueSet = firstState->valueSet || intermediateState;
+    }
+
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         if constexpr (std::is_same_v<InputType, std::string_view>) {

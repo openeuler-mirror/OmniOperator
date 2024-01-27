@@ -131,6 +131,24 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
+    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+{
+    auto vectorPtr = vectorBatch->Get(vectorIndex++);
+    if (!vectorPtr->IsNull(rowIdx)) {
+        if constexpr (IN_ID == type::OMNI_SHORT) {
+            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_INT>(vectorPtr));
+            ptr = (ResultType *) __builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            MinOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
+        } else {
+            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<IN_ID>(vectorPtr));
+            ptr = (ResultType *) __builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            MinOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 MinAggregator<IN_ID, OUT_ID>::MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
     std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
     : TypedAggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels, inputRaw, outputPartial,

@@ -20,7 +20,7 @@ public:
         uint32_t groupByNum, std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys,
         std::vector<omniruntime::expressions::Expr *> &aggFilters, DataTypes &sourceDataTypes,
         std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
-        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig);
+        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OperatorConfig &operatorConfig);
 
     ~HashAggregationWithExprOperatorFactory() override;
 

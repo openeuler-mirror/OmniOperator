@@ -45,6 +45,11 @@ public:
         return false;
     }
 
+    virtual bool NeedSpill(size_t elementsSize)
+    {
+        return false;
+    }
+
     SpillConfigId GetSpillConfigId()
     {
         return spillConfigId;
@@ -124,6 +129,8 @@ public:
     ~SparkSpillConfig() override = default;
 
     bool NeedSpill(MemoryBuilder *memoryBuilder) override;
+
+    bool NeedSpill(size_t elementsSize) override;
 
     int32_t GetSpillRowThreshold() const
     {

@@ -225,17 +225,19 @@ public:
     HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<std::vector<int32_t>> &aggInputCols,
         uint32_t aggInputColsSize, std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &aggOutputTypes,
         std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws,
-        std::vector<bool> &outputPartials)
+        std::vector<bool> &outputPartialsm, const OperatorConfig &operatorConfig)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
           aggInputColsSize(aggInputColsSize),
           aggInputTypes(aggInputTypes),
-          aggOutputTypes(aggOutputTypes)
+          aggOutputTypes(aggOutputTypes),
+          operatorConfig(operatorConfig)
     {
         sortCols = new int32_t [groupByCols.size()];
         nullsFirst = new int32_t [groupByCols.size()];
         ascendings = new int32_t [groupByCols.size()];
+        spillDirPath = operatorConfig.GetSpillConfig()->GetSpillPath();
     }
 
     ~HashAggregationOperator() override
@@ -257,14 +259,14 @@ public:
     void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, BaseVector **groupVectors, int32_t groupColNum);
 
 private:
-    SpillWriter *spillWriter = nullptr;
+    SpillMerger *spillMerger = nullptr;
     std::vector<SpillFileInfo> spillFiles;
     SortOrder sortOrder;
     std::vector<SortOrder> sortOrders;
     int32_t *sortCols;
     int32_t *ascendings;
     int32_t *nullsFirst;
-    const std::string spillDirPath = "/opt/aggregation";
+    std::string spillDirPath;
     int32_t InitMaxRowCountAndOutputTypes();
     void InitSpillTypes();
     void SpillHashMap();
@@ -299,6 +301,24 @@ private:
     void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, VectorBatch *output);
 
     int32_t rowsPerBatch;
+
+    // for spill
+    OperatorConfig operatorConfig;
+    int64_t spillTotalRowCount = 0;
+    std::vector<vec::VectorBatch *> batches;
+    std::vector<int32_t> rowIdxes;
+    std::vector<AggregateState *> rowStates;
+    bool isSpill = false;
+
+    template <typename Deserialize>
+    void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
+
+    void SetSpillOutputVecBatch(VectorBatch *outputVecBatch,int32_t rowCount, int32_t groupColNum);
+
+    void SetStateOutputVecBatch(VectorBatch *outputVecBatch,int32_t rowCount, int32_t groupColNum, int32_t aggNum);
+
+    template <typename T>
+    void SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowCount, int32_t outputCol);
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
@@ -314,20 +334,22 @@ public:
      * @param maskColsVector  mask col index in VectorBatch
      * @param inputRaws       whether the input VectorBatch is raw, the input raw is true in the first stage
      * @param outputPartials  whether the output VectorBatch is paritial result
-     * @param overflowAsNull  determine throw exception or set null when catch overflow result
+     * @param operatorConfig  the operator config
      */
     HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
         std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,
         std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
         std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
-        bool overflowAsNull = false)
-        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull),
+        const OperatorConfig &operatorConfig)
+        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector,
+          operatorConfig.GetOverflowConfig()->IsOverflowAsNull()),
           groupByColsVector(groupByCol),
           groupByTypes(groupInputTypes),
           aggsInputColsVector(aggsCols),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes),
-          aggFuncTypesVector(aggFuncTypes)
+          aggFuncTypesVector(aggFuncTypes),
+          operatorConfig(operatorConfig)
     {}
 
     ~HashAggregationOperatorFactory() override {}
@@ -346,6 +368,7 @@ private:
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
     HandleType handleType;
+    OperatorConfig operatorConfig;
     void ChooseGroupByType();
 };
 } // end of namespace op

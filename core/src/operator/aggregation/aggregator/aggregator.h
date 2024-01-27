@@ -194,6 +194,13 @@ public:
         }
     }
 
+    virtual void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx)
+    {
+        throw OmniException("Not implemented", "ProcessGroupAfterSpill not implemented for " +
+            std::to_string(as_integer(type)));
+    }
+
     // for groupby hash aggregation
     virtual void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
         VectorBatch *vectorBatch, const int32_t filterStart, const int32_t rowOffset)

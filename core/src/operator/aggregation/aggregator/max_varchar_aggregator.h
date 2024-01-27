@@ -78,6 +78,9 @@ public:
         }
     }
 
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override;
+
 protected:
     MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)

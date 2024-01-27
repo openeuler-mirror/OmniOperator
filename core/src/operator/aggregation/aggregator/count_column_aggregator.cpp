@@ -147,6 +147,18 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggr
     return (this->*processGroupInternalPtr)(rowStates, aggIdx, vector, rowOffset, nullMap);
 }
 
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
+    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+{
+    auto vectorPtr = vectorBatch->Get(vectorIndex++);
+    auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorPtr));
+    if (!vectorPtr->IsNull(rowIdx)) {
+        int64_t unsedFlag = 0;
+        CountAllOp(&(state.count), unsedFlag, ptr[rowIdx], 0LL);
+    }
+}
+
 // Explicit template instantiation
 // Defining templated aggregators in header file consume a lot of memory during compilation
 // since, compiler needs to generate each individual template instance wherever aggregator header is include

@@ -18,8 +18,10 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys,
     std::vector<omniruntime::expressions::Expr *> &aggFilters, DataTypes &sourceDataTypes,
     std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes, std::vector<uint32_t> &maskColumns,
-    std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig)
+    std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, const OperatorConfig &operatorConfig)
 {
+    OperatorConfig::CheckOperatorConfig(operatorConfig);
+
     uint32_t aggColNum = 0;
     for (auto &aggKeys : aggsKeys) {
         aggColNum += aggKeys.size();
@@ -48,14 +50,14 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
             continue;
         }
         auto simpleFilter = new SimpleFilter(*aggFilters[i]);
-        simpleFilter->Initialize(overflowConfig);
+        simpleFilter->Initialize(operatorConfig.GetOverflowConfig());
         aggSimpleFilters.push_back(simpleFilter);
     }
 
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
-    OperatorUtil::CreateRequiredProjections(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
-        groupByAndAggColumnarIdx, *overflowConfig);
+    OperatorUtil::CreateRequiredProjectFuncs(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
+        groupByAndAggColumnarIdx, *(operatorConfig.GetOverflowConfig()));
     uint32_t groupByCols[groupByNum];
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[i]);
@@ -98,7 +100,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->hashAggOperatorFactory =
         new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggColIdx, aggInputDataTypes, aggOutputTypes,
-        aggFuncTypes, maskColumns, inputRaws, outputPartial, overflowConfig->IsOverflowAsNull());
+        aggFuncTypes, maskColumns, inputRaws, outputPartial, operatorConfig);
     this->hashAggOperatorFactory->Init();
 }
 
