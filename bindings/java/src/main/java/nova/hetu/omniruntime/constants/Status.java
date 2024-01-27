@@ -13,17 +13,17 @@ public class Status extends Constant {
     /**
      * The constant OMNI_STATUS_NORMAL.
      */
-    public static Status OMNI_STATUS_NORMAL = new Status(0);
+    public static final Status OMNI_STATUS_NORMAL = new Status(0);
 
     /**
      * The constant OMNI_STATUS_ERROR.
      */
-    public static Status OMNI_STATUS_ERROR = new Status(-1);
+    public static final Status OMNI_STATUS_ERROR = new Status(-1);
 
     /**
      * The constant OMNI_STATUS_FINISHED.
      */
-    public static Status OMNI_STATUS_FINISHED = new Status(1);
+    public static final Status OMNI_STATUS_FINISHED = new Status(1);
 
     private static final long serialVersionUID = -3424552555224669902L;
 

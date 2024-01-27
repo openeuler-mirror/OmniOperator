@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: sort implementations
  */
 #include "sort.h"
@@ -130,6 +130,15 @@ OmniStatus SortOperator::Close()
     // ensure free pagesIndex if exception occurs
     pagesIndex->Clear();
     return OMNI_STATUS_NORMAL;
+}
+
+uint64_t SortOperator::GetSpilledBytes()
+{
+    if (spiller != nullptr) {
+        return spiller->GetSpilledBytes();
+    } else {
+        return 0;
+    }
 }
 
 ErrorCode SortOperator::SpillToDisk()

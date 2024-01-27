@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: sort operator test implementations
  */
 #include <thread>
@@ -1497,11 +1497,17 @@ TEST(NativeOmniSortTest, TestSortSpillWithInvalidConfig)
         ascendings, nullFirsts, sourceTypesSize, operatorConfig1),
         omniruntime::exception::OmniException);
 
-    SpillConfig spillConfig2(SPILL_CONFIG_NONE, true, "/", 5);
+    SpillConfig spillConfig2(SPILL_CONFIG_NONE, true, "/", UINT64_MAX);
     OperatorConfig operatorConfig2(spillConfig2);
     EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
         ascendings, nullFirsts, sourceTypesSize, operatorConfig2),
         omniruntime::exception::OmniException);
+
+    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, "/", 5);
+    OperatorConfig operatorConfig3(spillConfig3);
+    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
+        sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig3);
+    DeleteSortOperatorFactory(operatorFactory);
 
     SpillConfig spillConfig4(SPILL_CONFIG_NONE, true, "+-ab23", 5);
     OperatorConfig operatorConfig4(spillConfig4);
@@ -2865,4 +2871,4 @@ TEST(NativeOmniSortTest, TestSortRadixSort)
         DeleteSortOperatorFactory(operatorFactory);
     }
 }
-}  // namespace SortTest
+} // namespace SortTest

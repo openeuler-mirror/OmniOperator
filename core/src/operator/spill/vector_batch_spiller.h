@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * @Description: vector batch spiller
  */
 
@@ -80,6 +80,11 @@ public:
     bool HasNext() override;
 
     VectorBatchUnit *Next() override;
+
+    uint64_t GetSpilledBytes() override
+    {
+        return tracker->GetSpilledBytes();
+    }
 
 private:
     std::string path;

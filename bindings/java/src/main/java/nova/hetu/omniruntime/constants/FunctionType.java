@@ -13,57 +13,57 @@ public class FunctionType extends Constant {
     /**
      * The constant OMNI_AGGREGATION_TYPE_SUM.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_SUM = new FunctionType(0);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_SUM = new FunctionType(0);
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_COUNT_COLUMN.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_COUNT_COLUMN = new FunctionType(1);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_COUNT_COLUMN = new FunctionType(1);
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_COUNT_ALL.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_COUNT_ALL = new FunctionType(2);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_COUNT_ALL = new FunctionType(2);
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_AVG.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_AVG = new FunctionType(3);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_AVG = new FunctionType(3);
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_MAX.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_MAX = new FunctionType(4);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_MAX = new FunctionType(4);
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_MIN.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_MIN = new FunctionType(5);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_MIN = new FunctionType(5);
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_DNV.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_DNV = new FunctionType(6);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_DNV = new FunctionType(6);
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL = new FunctionType(7);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL = new FunctionType(7);
 
     /**
      * The constant OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL.
      */
-    public static FunctionType OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL = new FunctionType(8);
+    public static final FunctionType OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL = new FunctionType(8);
 
     /**
      * The constant OMNI_WINDOW_TYPE_ROW_NUMBER.
      */
-    public static FunctionType OMNI_WINDOW_TYPE_ROW_NUMBER = new FunctionType(10);
+    public static final FunctionType OMNI_WINDOW_TYPE_ROW_NUMBER = new FunctionType(10);
 
     /**
      * The constant OMNI_WINDOW_TYPE_RANK.
      */
-    public static FunctionType OMNI_WINDOW_TYPE_RANK = new FunctionType(11);
+    public static final FunctionType OMNI_WINDOW_TYPE_RANK = new FunctionType(11);
 
     private static final long serialVersionUID = 5337378607473315604L;
 

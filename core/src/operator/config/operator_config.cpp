@@ -1,6 +1,6 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
- * @Description: spill unit iterator
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
+ * @Description: operator config
  */
 #include <sys/stat.h>
 #include <sys/vfs.h>
@@ -99,7 +99,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
         adaptThreshold = result.at("adaptivityThreshold").get<int>();
     }
 
-    return OperatorConfig{ resultSpillConfig, resultOverflowConfig, needSkipVerify, adaptThreshold };
+    return OperatorConfig { resultSpillConfig, resultOverflowConfig, needSkipVerify, adaptThreshold };
 }
 
 void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)
@@ -120,7 +120,7 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
         std::string message = GetErrorMessage(ErrorCode::DISK_SPACE_NOT_ENOUGH) +
             "The disk available size:" + std::to_string(availableDiskSize / GB_UNIT) +
             "GB and the max spill size:" + std::to_string(maxSpillBytes / GB_UNIT) + "GB.";
-        LogWarn("%s", message.c_str());
+        throw exception::OmniException(GetErrorCode(ErrorCode::DISK_SPACE_NOT_ENOUGH), message);
     }
 }
 
@@ -165,18 +165,14 @@ void OperatorConfig::CheckOperatorConfig(const OperatorConfig &operatorConfig)
     }
 
     auto spillPathChars = spillPath.c_str();
-    if (access(spillPathChars, 0) == 0) {
-        // the path has existed
-        throw exception::OmniException(GetErrorCode(ErrorCode::PATH_EXIST), GetErrorMessage(ErrorCode::PATH_EXIST));
+    if (access(spillPathChars, 0) != 0) {
+        // the path does not exist, create directory
+        CreateSpillDirectories(spillPathChars);
     }
-
-    // create directory
-    CreateSpillDirectories(spillPathChars);
 
     CheckHasEnoughDiskSpace(spillPathChars, *inputSpillConfig);
 
     InitRootSpillTracker(spillPath, inputSpillConfig->GetMaxSpillBytes());
 }
-
 }
 }
