@@ -239,7 +239,11 @@ public:
         bool intermediateState = reinterpret_cast<Vector<bool> *>(valueSetVector)->GetValue(rowIdx);
         firstState->valueSet = firstState->valueSet || intermediateState;
     }
-
+    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
+    {
+        spillTypes.push_back(static_cast<DataTypeId>(this->inputTypes.GetIds()[0]));
+        spillTypes.push_back(OMNI_BOOLEAN);
+    }
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         if constexpr (std::is_same_v<InputType, std::string_view>) {

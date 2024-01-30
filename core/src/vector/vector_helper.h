@@ -572,7 +572,8 @@ public:
     {
         const std::vector<omniruntime::type::DataTypePtr> &types = sourceTypes.Get();
         for (int i = 0; i < sourceTypes.GetSize(); i++) {
-            vectorBatch->Append(CreateVector(OMNI_FLAT, types[i]->GetId(), positionCount));
+            auto temp = CreateVector(OMNI_FLAT, types[i]->GetId(), positionCount);
+            vectorBatch->Append(temp);
         }
     }
 

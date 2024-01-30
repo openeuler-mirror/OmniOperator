@@ -88,9 +88,10 @@ public:
         }
     }
 
-    DataTypeId GetSpillType() override
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
     {
-        return OMNI_DOUBLE;
+        spillTypes.push_back(OMNI_DOUBLE);
+        spillTypes.push_back(OMNI_LONG);
     }
 
     void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx) override

@@ -130,7 +130,7 @@ public:
             std::to_string(as_integer(type)));
     }
 
-    virtual DataTypeId GetSpillType()
+    virtual void GetSpillType(std::vector<DataTypeId>& spillTypes)
     {
         throw OmniException("Not implemented", "GetSpillType not implemented for " + std::to_string(as_integer(type)));
     }

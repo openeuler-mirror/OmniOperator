@@ -83,15 +83,18 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state
     (this->*extractValuesFuncPointer)(state, vectors, rowIndex);
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID> DataTypeId AverageAggregator<IN_ID, OUT_ID>::GetSpillType()
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void AverageAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId> &spillTypes)
 {
+    spillTypes.clear();
     if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
-        return OMNI_LONG;
+        spillTypes.push_back(OMNI_LONG);
     } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
-        return OMNI_DOUBLE;
+        spillTypes.push_back(OMNI_DOUBLE);
     } else {
-        return OMNI_DECIMAL128;
+        spillTypes.push_back(OMNI_DECIMAL128);
     }
+    spillTypes.push_back(OMNI_LONG);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>

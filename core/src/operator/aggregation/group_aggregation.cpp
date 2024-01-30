@@ -270,37 +270,23 @@ void HashAggregationOperator::InitSpillTypes()
 {
     for (auto &i : groupByCols) {
         spillTypes.push_back(i.input);
-        spillTypes1.push_back(i.input);
     }
-    for (uint64_t i = 0; i < aggOutputTypes.size(); i++) {
-        auto currentAggType = aggregators[i]->GetType();
-        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG ||
-            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
-            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_MAX ||
-            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_MIN) {
-            spillTypes.push_back(std::make_shared<DataType>(aggregators[i]->GetSpillType()));
-            spillTypes1.push_back(std::make_shared<DataType>(aggregators[i]->GetSpillType()));
-        } else {
-            spillTypes.push_back(aggOutputTypes[i].Get()[0]);
-            spillTypes1.push_back(aggOutputTypes[i].Get()[0]);
-        }
-        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
-            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG) {
-            spillTypes.push_back(std::make_shared<DataType>(DataType(OMNI_LONG)));
-            spillTypes1.push_back(std::make_shared<DataType>(DataType(OMNI_LONG)));
-        }
-        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL ||
-            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
-            spillTypes.push_back(std::make_shared<DataType>(DataType(OMNI_BOOLEAN)));
-            spillTypes1.push_back(std::make_shared<DataType>(DataType(OMNI_BOOLEAN)));
+    std::vector<DataTypeId> currentSpillType;
+    for (uint64_t i = 0; i < aggregators.size(); i++) {
+        currentSpillType.clear();
+        aggregators[i]->GetSpillType(currentSpillType);
+        for (auto &type : currentSpillType) {
+            spillTypes.push_back(std::make_shared<DataType>(type));
         }
     }
     size_t groupNum = groupByCols.size();
+    nullsFirst.resize(groupByCols.size(), true);
+    ascendings.resize(groupByCols.size(), true);
+    SortOrder sortOrder;
+    sortOrders.resize(groupByCols.size(), sortOrder);
+    groupByClomIdx.resize(groupNum);
     for (size_t i = 0; i < groupNum; i++) {
-        sortCols[i] = static_cast<int32_t>(i);
-        ascendings[i] = true;
-        nullsFirst[i] = true;
-        sortOrders.push_back(sortOrder);
+        groupByClomIdx[i] = groupByCols[i].idx;
     }
 }
 
@@ -350,7 +336,7 @@ void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount)
     std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
-    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
+    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
     auto containerVector = new ContainerVector(rowCount, vectorAddresses, dataTypes);
     vecBatch->Append(containerVector);
 }
@@ -468,19 +454,16 @@ void HashAggregationOperator::TraverseHashmapToGetOneResult(Deserialize &deseria
     outputState.UpdateState(curOutputState);
 }
 
-void HashAggregationOperator::ConvertHashMap2VectorBatch(VectorBatch **outputVectorBatch)
+PagesIndex *HashAggregationOperator::ConvertHashMap2PageIndex()
 {
     auto &currentHashmap = serialize->hashmap;
     uint64_t totalRowCount = currentHashmap.GetElementsSize();
-    int32_t groupColNum = static_cast<int32_t>(this->groupByCols.size());
-    int32_t aggSpillColNum = static_cast<int32_t>(this->aggOutputTypes.size() * 2);
+    auto groupColNum = static_cast<int32_t>(this->groupByCols.size());
     std::vector<BaseVector *> groupOutputVectors(groupColNum);
-    std::vector<BaseVector *> aggNeedSpillVectors(aggSpillColNum);
-    auto output = new VectorBatch(totalRowCount);
-    auto output1 = new VectorBatch(totalRowCount);
-    SetVectors(output, spillTypes, totalRowCount);
+    auto hashmapInVector = new VectorBatch(totalRowCount);
+    SetVectors(hashmapInVector, spillTypes, totalRowCount);
     for (int32_t i = 0; i < groupColNum; i++) {
-        groupOutputVectors[i] = output->Get(i);
+        groupOutputVectors[i] = hashmapInVector->Get(i);
     }
     int32_t lambdaRowIndex = 0;
     currentHashmap.ForEachKV([&](auto &key, auto &value) mutable {
@@ -488,17 +471,14 @@ void HashAggregationOperator::ConvertHashMap2VectorBatch(VectorBatch **outputVec
         serialize->ParseKeyToCols(key, groupOutputVectors, groupColNum, lambdaRowIndex);
         lambdaRowIndex++;
     });
-    for(int k = 0; k< groupColNum;k++) {
-        output1->Append(groupOutputVectors[k]);
-    }
     auto aggOutputStartIndex = groupColNum;
     // convert value to vector batch
-    for(int32_t aggIdx = 0; aggIdx < aggregators.size(); aggIdx++) {
+    for (int32_t aggIdx = 0; aggIdx < aggregators.size(); aggIdx++) {
         lambdaRowIndex = 0;
         auto &aggregator = aggregators[aggIdx];
         auto currentAggType = aggregator->GetType();
         int32_t oneAggOutputCols = 1;
-        if(currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
+        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
             currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG ||
             currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL ||
             currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
@@ -507,7 +487,7 @@ void HashAggregationOperator::ConvertHashMap2VectorBatch(VectorBatch **outputVec
         std::vector<BaseVector *> adaptAggVectors(oneAggOutputCols);
 
         for (auto j = 0; j < oneAggOutputCols; j++) {
-            adaptAggVectors[j] = output->Get(aggOutputStartIndex + j);
+            adaptAggVectors[j] = hashmapInVector->Get(aggOutputStartIndex + j);
         }
         aggOutputStartIndex += oneAggOutputCols;
         {
@@ -517,66 +497,30 @@ void HashAggregationOperator::ConvertHashMap2VectorBatch(VectorBatch **outputVec
                 lambdaRowIndex++;
             });
         }
-        if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG) {
-            if (aggOutputTypes[aggIdx].Get()[0]->GetId() == DataTypeId::OMNI_CONTAINER) {
-                auto containerVec = reinterpret_cast<ContainerVector *>(adaptAggVectors[0]);
-                output1->Append(reinterpret_cast<Vector<double> *>(containerVec->GetValue(0)));
-                output1->Append(reinterpret_cast<Vector<int64_t> *>(containerVec->GetValue(1)));
-            } else {
-                output1->Append(adaptAggVectors[0]);
-                output1->Append(adaptAggVectors[1]);
-            }
-        } else if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL ||
-            currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
-            if (aggOutputTypes[aggIdx].Get()[0]->GetId() == DataTypeId::OMNI_CONTAINER) {
-                auto containerVec = reinterpret_cast<ContainerVector *>(adaptAggVectors[0]);
-                output1->Append(
-                    reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(containerVec->GetValue(0)));
-                output1->Append(reinterpret_cast<Vector<bool> *>(containerVec->GetValue(1)));
-            } else {
-                output1->Append(adaptAggVectors[0]);
-                output1->Append(adaptAggVectors[1]);
-            }
-        } else if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM) {
-            output1->Append(adaptAggVectors[0]);
-            output1->Append(adaptAggVectors[1]);
-        } else {
-            output1->Append(adaptAggVectors[0]);
-        }
     }
-    SortOperator* sortOperator = CreateSortOperatorForSpill();
-    sortOperator->AddInput(output1);
-    sortOperator->GetOutput(outputVectorBatch);
-    delete sortOperator;
-}
-
-SortOperator* HashAggregationOperator::CreateSortOperatorForSpill()
-{
-    DataTypes sourceTypes(spillTypes1);
-    size_t outPutColSize = this->spillTypes1.size();
-    int32_t outputCols[outPutColSize];
-    for(uint64_t i = 0; i < outPutColSize; i++) {
-        outputCols[i] = static_cast<int32_t>(i);
-    }
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, outPutColSize,
-        sortCols, ascendings, nullsFirst, groupByCols.size());
-    auto sortOperator = dynamic_cast<SortOperator *>(operatorFactory->CreateOperator());
-    return sortOperator;
+    PagesIndex *pagesIndex = new PagesIndex(DataTypes(spillTypes));
+    pagesIndex->AddVecBatch(hashmapInVector);
+    pagesIndex->Prepare();
+    pagesIndex->Sort(groupByClomIdx.data(), ascendings.data(), nullsFirst.data(), groupColNum, 0, totalRowCount);
+    return pagesIndex;
 }
 
 void HashAggregationOperator::SpillHashMap()
 {
-    auto &hashmap = this->serialize->hashmap;
-    uint64_t totalRowCount = hashmap.GetElementsSize();
-    auto *toBeSpilled = new VectorBatch(totalRowCount);
-    ConvertHashMap2VectorBatch(&toBeSpilled);
-    VectorHelper::PrintVecBatch(toBeSpilled);
-    SpillWriter *spillWriter = new SpillWriter(DataTypes(spillTypes), spillDirPath);
-    spillWriter->WriteVecBatch(toBeSpilled);
-    spillFiles.push_back(spillWriter->GetSpillFileInfo());
+    PagesIndex *pagesIndex = ConvertHashMap2PageIndex();
+    if (spiller == nullptr) {
+        spiller = new Spiller(DataTypes(spillTypes), groupByClomIdx, sortOrders, spillDirPath);
+    }
+    bool canInplaceSort = false;
+    if (spillTypes.size() == 1) {
+        auto typeId = spillTypes[0]->GetId();
+        if (typeId != OMNI_VARCHAR && typeId != OMNI_CHAR && typeId != OMNI_BOOLEAN) {
+            canInplaceSort = true;
+        }
+    }
+    spiller->Spill(pagesIndex, canInplaceSort);
+    delete pagesIndex;
     isSpill = true;
-    VectorHelper::FreeVecBatch(toBeSpilled);
-    delete spillWriter;
 }
 
 template <typename T>
@@ -642,8 +586,8 @@ void HashAggregationOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch
     }
 }
 
-void HashAggregationOperator::SetStateOutputVecBatch(VectorBatch *outputVecBatch,
-    int32_t rowCount, int32_t groupColNum, int32_t aggNum)
+void HashAggregationOperator::SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum,
+    int32_t aggNum)
 {
     auto aggOutputStartIndex = groupColNum;
     for (int32_t aggIndex = 0; aggIndex < aggNum; aggIndex++) {
@@ -677,8 +621,8 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
             serialize->ResetHashmap();
         }
 
-        std::vector<int32_t> sortColsVec(sortCols, sortCols + groupByCols.size());
-        spillMerger = SpillMerger::Create(DataTypes(spillTypes), sortColsVec, sortOrders, spillFiles);
+        auto temp = spiller->FinishSpill();
+        spillMerger = spiller->CreateSpillMerger(temp);
         if (spillMerger == nullptr) {
             throw omniruntime::exception::OmniException("SPILL_FAILED", "Create spill merger failed.");
         }
@@ -701,12 +645,13 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
             rowIdxes[rowIdx] = spillMerger->CurrentRowIndex();
             rowIdx++;
             spillTotalRowCount--;
-
+            spillMerger->Pop();
             // process the same key
             while (isEqual) {
                 spillMerger->CurrentBatchWithEqual(isEqual);
                 spillMerger->CurrentRowIndex();
                 spillTotalRowCount--;
+                spillMerger->Pop();
             }
         }
         auto output = new VectorBatch(rowIdx);
@@ -720,7 +665,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
         batches[rowIdx] = spillMerger->CurrentBatchWithEqual(isEqual);
         rowIdxes[rowIdx] = spillMerger->CurrentRowIndex();
         spillTotalRowCount--;
-
+        spillMerger->Pop();
         // init AggregateState
         int32_t vectorIndex = groupColNum;
         auto currentGroupStateSize = static_cast<int64_t>(aggNum * sizeof(AggregateState));
@@ -743,6 +688,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
                     currentRowIdx);
             }
             spillTotalRowCount--;
+            spillMerger->Pop();
         }
         rowStates[rowIdx] = currentGroupStates;
         rowIdx++;

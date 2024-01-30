@@ -234,17 +234,12 @@ public:
           aggOutputTypes(aggOutputTypes),
           operatorConfig(operatorConfig)
     {
-        sortCols = new int32_t [groupByCols.size()];
-        nullsFirst = new int32_t [groupByCols.size()];
-        ascendings = new int32_t [groupByCols.size()];
         spillDirPath = operatorConfig.GetSpillConfig()->GetSpillPath();
     }
 
     ~HashAggregationOperator() override
     {
-        delete[] sortCols;
-        delete[] nullsFirst;
-        delete[] ascendings;
+        delete spiller;
     }
 
     int32_t AddInput(VectorBatch *data) override;
@@ -260,18 +255,16 @@ public:
 
 private:
     SpillMerger *spillMerger = nullptr;
-    std::vector<SpillFileInfo> spillFiles;
-    SortOrder sortOrder;
+    Spiller *spiller = nullptr;
     std::vector<SortOrder> sortOrders;
-    int32_t *sortCols;
-    int32_t *ascendings;
-    int32_t *nullsFirst;
+    std::vector<int32_t> ascendings;
+    std::vector<int32_t> nullsFirst;
+    std::vector<int32_t> groupByClomIdx;
     std::string spillDirPath;
     int32_t InitMaxRowCountAndOutputTypes();
     void InitSpillTypes();
     void SpillHashMap();
-    void ConvertHashMap2VectorBatch(VectorBatch** outputVectorBatch);
-    SortOperator* CreateSortOperatorForSpill();
+    PagesIndex* ConvertHashMap2PageIndex();
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
@@ -289,7 +282,6 @@ private:
     std::vector<DataTypes> aggOutputTypes;
     std::vector<type::DataTypePtr> outputTypes;
     std::vector<type::DataTypePtr> spillTypes;
-    std::vector<type::DataTypePtr> spillTypes1;
     std::unique_ptr<ExecutionContext> executionContext;
     HandleType groupByColumnsHandleType = HandleType::serialize;
     std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;

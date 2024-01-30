@@ -60,7 +60,7 @@ public:
     ~AverageAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    DataTypeId GetSpillType() override;
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override;
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT>
     void ExtractValuesFunction(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex);
