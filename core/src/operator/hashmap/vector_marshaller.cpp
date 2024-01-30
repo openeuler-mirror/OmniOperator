@@ -11,8 +11,8 @@ namespace op {
 template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
 {
     using RealVector = typename NativeAndVectorType<id>::vector;
-    auto realVector = reinterpret_cast<RealVector *>(baseVector);
-    auto stringSize = *reinterpret_cast<const int32_t *>(pos);
+    auto realVector = static_cast<RealVector *>(baseVector);
+    const auto stringSize = *reinterpret_cast<const int32_t *>(pos);
     pos += sizeof(int32_t);
 
     if (stringSize < 0) {
@@ -26,7 +26,7 @@ template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVe
     }
 }
 
-void ALWAYS_INLINE VariableTypeSerializer(std::string_view &inValue, mem::SimpleArenaAllocator &arenaAllocator,
+void ALWAYS_INLINE VariableTypeSerializer(const std::string_view &inValue, mem::SimpleArenaAllocator &arenaAllocator,
     StringRef &result)
 {
     auto stringLen = static_cast<int32_t>(inValue.size());
@@ -51,9 +51,9 @@ template <DataTypeId id> const char *FixedLenTypeDeserializer(BaseVector *baseVe
     using RawDataType = typename NativeAndVectorType<id>::type;
     using RealVector = typename NativeAndVectorType<id>::vector;
     static constexpr uint8_t RawDataSize = sizeof(RawDataType);
-    auto realVector = reinterpret_cast<RealVector *>(baseVector);
+    auto realVector = static_cast<RealVector *>(baseVector);
     bool isNull = *(reinterpret_cast<const bool *>(pos));
-    if (not isNull) {
+    if (!isNull) {
         // must copy value
         auto *copyPointer = reinterpret_cast<const RawDataType *>(pos + 1);
         auto value = *copyPointer;
@@ -120,7 +120,7 @@ void SerializeValueIntoArena(BaseVector *baseVector, int32_t rowIdx, mem::Simple
         using RawVectorType = typename NativeAndVectorType<id>::vector;
 
         // not dictionary,just use cast to RawVector
-        auto rawVector = reinterpret_cast<RawVectorType *>(baseVector);
+        auto rawVector = static_cast<RawVectorType *>(baseVector);
         auto value = rawVector->GetValue(rowIdx);
 
         // the analysis of const expr  will be in compile stage
@@ -148,7 +148,7 @@ void SerializeDictionaryValueIntoArena(BaseVector *baseVector, int32_t rowIdx,
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
     if (!baseVector->IsNull(rowIdx)) {
-        auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
+        auto dictionaryVector = static_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
 
         auto value = dictionaryVector->GetValue(rowIdx);
         // the analysis of const expr  will be in compile stage

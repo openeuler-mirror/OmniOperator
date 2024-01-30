@@ -74,8 +74,8 @@ OperatorFactory *CreateAggregationFactory(omniruntime::type::DataTypes &sourceTy
 
     auto aggInputColsContextWrap = AggregatorUtil::WrapWithVector(aggInputColsContext);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawsWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypeContext.size());
-    auto outputPartialsWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeContext.size());
+    auto inputRawsWrap = std::vector<bool>(aggFuncTypeContext.size(), true);
+    auto outputPartialsWrap = std::vector<bool>(aggFuncTypeContext.size(), false);
 
     auto operatorFactory = new AggregationOperatorFactory(sourceTypes, aggFuncTypeContext, aggInputColsContextWrap,
         maskColsContext, aggOutputTypesWrap, inputRawsWrap, outputPartialsWrap, true);
@@ -101,8 +101,8 @@ OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sour
     auto aggColContextWrap = AggregatorUtil::WrapWithVector(aggColContext);
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawsWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypeContext.size());
-    auto outputPartialsWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeContext.size());
+    auto inputRawsWrap = std::vector<bool>(aggFuncTypeContext.size(), true);
+    auto outputPartialsWrap = std::vector<bool>(aggFuncTypeContext.size(), false);
 
     auto operatorFactory =
         new HashAggregationOperatorFactory(groupByColContext, groupTypes, aggColContextWrap, aggInputTypesWrap,

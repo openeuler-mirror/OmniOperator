@@ -40,9 +40,7 @@ template <typename IN, typename OUT>
 SIMD_ALWAYS_INLINE void MaxOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed)
 {
     const OUT cur = static_cast<OUT>(in);
-    if (*res < cur) {
-        *res = cur;
-    }
+    *res = std::max(*res, cur);
     flag |= 1;
 }
 
@@ -52,9 +50,7 @@ SIMD_ALWAYS_INLINE void MaxConditionalOp(OUT *res, int64_t &flag, const IN &in, 
 {
     if (condition == addIf) {
         const OUT cur = static_cast<OUT>(in);
-        if (*res < cur) {
-            *res = cur;
-        }
+        *res = std::max(*res, cur);
         flag |= 1;
     }
 }

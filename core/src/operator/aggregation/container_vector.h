@@ -102,11 +102,11 @@ public:
     {
         switch (dataTypeId) {
             case type::OMNI_LONG: {
-                reinterpret_cast<Vector<int64_t> *>(destVector)->Append(srcVector, offset, length);
+                static_cast<Vector<int64_t> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
             case type::OMNI_DOUBLE: {
-                reinterpret_cast<Vector<double> *>(destVector)->Append(srcVector, offset, length);
+                static_cast<Vector<double> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
             default: {
@@ -125,7 +125,7 @@ public:
      */
     void Append(BaseVector *other, int positionOffset, int length)
     {
-        auto *otherContainer = reinterpret_cast<ContainerVector *>(other);
+        auto *otherContainer = static_cast<ContainerVector *>(other);
         if (otherContainer->GetVectorCount() != this->GetVectorCount()) {
             LogError("this vec count %d is not equal other vec count %d, container vec append failed.",
                 this->GetVectorCount(), otherContainer->GetVectorCount());

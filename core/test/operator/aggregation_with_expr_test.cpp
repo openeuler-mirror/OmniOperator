@@ -56,8 +56,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_expr)
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     auto *hashAggWithExprOperatorFactory =
         new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
@@ -130,8 +130,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr)
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     aggFilters.reserve(0);
 
@@ -193,8 +193,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_no_expr)
         static_cast<uint32_t>(-1) };
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     aggFilters.reserve(0);
 
@@ -266,8 +266,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_partial_flat_output_expr)
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
     std::vector<DataTypes> aggsOutputTypes = { aggOutputTypes1, aggOutputTypes2 };
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), true);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     aggFilters.reserve(2);
     aggFilters.push_back(nullptr);
@@ -339,8 +339,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_final_flat_input_expr)
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
     std::vector<DataTypes> aggsOutputTypes = { aggOutputTypes1, aggOutputTypes2 };
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), false);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     aggFilters.reserve(2);
     aggFilters.push_back(nullptr);
@@ -409,8 +409,8 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_expr)
     auto overflowConfig = new OverflowConfig();
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
 
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     aggFilters.reserve(2);
@@ -470,8 +470,8 @@ TEST(AggregationWithExprOperatorTest, test_agg_first_expr)
     auto overflowConfig = new OverflowConfig();
     std::vector<Expr *> groupByKeys = {};
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     aggFilters.reserve(2);
     aggFilters.push_back(nullptr);
@@ -607,8 +607,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_by_proces_row)
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     aggFilters.reserve(0);
 
@@ -680,8 +680,8 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_exprFilter)
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1) };
     auto overflowConfig = new OverflowConfig();
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
         new LiteralExpr(2000, IntType()), BooleanType());
@@ -754,8 +754,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_filter)
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
 
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, IntType()),
@@ -850,8 +850,8 @@ TEST(HashAggregationWithExprOperatorTest, test_agg_min_max_avg)
     std::vector<uint32_t> maskCols = {
         maskCol, maskCol, maskCol, maskCol, maskCol, maskCol, maskCol, maskCol, maskCol
     };
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), true);
 
     auto hashAggWithExprOperatorFactory =
         new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
@@ -930,8 +930,8 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_literal)
         static_cast<uint32_t>(-1) };
     auto overflowConfig = new OverflowConfig();
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters(3, nullptr);
 
     auto *aggWithExprOperatorFactory =

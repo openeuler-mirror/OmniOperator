@@ -214,8 +214,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggDataTypes);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(outDataTypes);
-    auto inputRawsWrap = AggregatorUtil::WrapWithVector(inputRaw, aggFuncTypeVector.size());
-    auto outputPartialsWrap = AggregatorUtil::WrapWithVector(outputPartial, aggFuncTypeVector.size());
+    auto inputRawsWrap = std::vector<bool>(aggFuncTypeVector.size(), inputRaw);
+    auto outputPartialsWrap = std::vector<bool>(aggFuncTypeVector.size(), outputPartial);
 
     HashAggregationOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
@@ -260,8 +260,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
 
     auto aggInputColsVectorWrap = AggregatorUtil::WrapWithVector(aggInputColsVector);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(inputRaw, aggFuncTypesVector.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(outputPartial, aggFuncTypesVector.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypesVector.size(), inputRaw);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypesVector.size(), outputPartial);
 
     AggregationOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START

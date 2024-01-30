@@ -80,8 +80,8 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
 
 OmniStatus HashAggregationOperatorFactory::Init()
 {
-    for (uint32_t i = 0; i < groupByColsVector.size(); ++i) {
-        groupByColIdx.push_back(groupByColsVector[i]);
+    for (auto groupByCol : groupByColsVector) {
+        groupByColIndices.push_back(groupByCol);
     }
     for (auto aggInputColsVector : aggsInputColsVector) {
         std::vector<int32_t> aggInputCols;
@@ -103,19 +103,18 @@ OmniStatus HashAggregationOperatorFactory::Close()
 
 Operator *HashAggregationOperatorFactory::CreateOperator()
 {
-    std::vector<ColumnIndex> groupByIndex(groupByColIdx.size(), ColumnIndex());
+    std::vector<ColumnIndex> groupByIndex(groupByColIndices.size(), ColumnIndex());
     std::vector<std::unique_ptr<Aggregator>> aggs;
 
-    for (uint32_t i = 0; i < this->groupByColIdx.size(); ++i) {
+    for (uint32_t i = 0; i < this->groupByColIndices.size(); ++i) {
         auto &type = this->groupByTypes.GetType(i);
-        ColumnIndex c = { this->groupByColIdx[i], type, type };
-        groupByIndex[i] = c;
+        groupByIndex[i] = { this->groupByColIndices[i], type, type };
     }
 
     // refresh inputDateTypes and inputColumnar index for OMNI_AGGREGATION_TYPE_COUNT_ALL type aggregator
     uint32_t aggInputColsSize = 0;
     uint32_t aggCountAllSkipCnt = 0;
-    uint32_t aggregateType = OMNI_AGGREGATION_TYPE_INVALIDE;
+    uint32_t aggregateType = OMNI_AGGREGATION_TYPE_INVALID;
     for (uint32_t i = 0; i < this->aggregatorFactories.size(); i++) {
         std::vector<int32_t> aggInputColIdxVec;
         std::vector<DataTypePtr> inputDataTypesPtr;
@@ -140,7 +139,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
         auto outputTypes = aggOutputTypes[i].Instance();
         auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
             inputRaws[i], outputPartials[i], isOverflowAsNull);
-        if (aggregator == nullptr) {
+        if (UNLIKELY(aggregator == nullptr)) {
             throw OmniException("OPERATOR_RUNTIME_ERROR", "Unable to create aggregator " + std::to_string(i) + " / " +
                 std::to_string(this->aggregatorFactories.size()));
         }
@@ -185,11 +184,10 @@ OmniStatus HashAggregationOperator::Init()
         throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
     }
 
-    auto groupByColsSize = groupByCols.size();
-    auto colSize = groupByColsSize + aggInputColsSize;
+    auto colSize = groupByCols.size() + aggInputColsSize;
     sourceTypes = new int32_t[colSize];
     // group by source types
-    for (auto &c : groupByCols) {
+    for (const auto &c : groupByCols) {
         sourceTypes[c.idx] = static_cast<int32_t>(c.input->GetId());
     }
 
@@ -225,7 +223,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         groupVectors[i] = curVector;
     }
 
-    if (groupByColumnsHandleType == HandleType::serialize) {
+    if (LIKELY(groupByColumnsHandleType == HandleType::serialize)) {
         Emplace(serialize, vecBatch, groupVectors, groupColNum);
     } else {
         // only serialize method are used now
@@ -307,7 +305,7 @@ void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<
 int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t expectedBatchSize = 0;
-    if (groupByColumnsHandleType == HandleType::serialize) {
+    if (LIKELY(groupByColumnsHandleType == HandleType::serialize)) {
         expectedBatchSize = Output(serialize, outputVecBatch);
     } else {
         SetStatus(OMNI_STATUS_ERROR);
@@ -319,10 +317,8 @@ int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 
 OmniStatus HashAggregationOperator::Close()
 {
-    if (sourceTypes != nullptr) {
-        delete[] sourceTypes;
-        sourceTypes = nullptr;
-    }
+    delete[] sourceTypes;
+    sourceTypes = nullptr;
     delete spillMerger;
     delete spiller;
     delete pagesIndex;
