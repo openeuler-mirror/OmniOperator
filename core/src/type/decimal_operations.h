@@ -89,7 +89,7 @@ static constexpr uint128_t TenOfScaleMultipliers[39] = {
     uint128_t(__uint128_t(1000000000000000000LL) * 100000000000000000LL),
     uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL),
     uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 10),
-    uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 100) };
+    uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 100)};
 
 static constexpr uint128_t HalfTenOfScaleMultipliers[39] = {
     uint128_t(0LL),
@@ -130,7 +130,7 @@ static constexpr uint128_t HalfTenOfScaleMultipliers[39] = {
     uint128_t(__uint128_t(1000000000000000000LL) * 50000000000000000LL),
     uint128_t(__uint128_t(1000000000000000000LL) * 500000000000000000LL),
     uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 5),
-    uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 50) };
+    uint128_t(__uint128_t(1000000000000000000LL) * 1000000000000000000LL * 50)};
 
 static constexpr double DOUBLE_10_POW[] = {
     1.0e0, 1.0e1, 1.0e2, 1.0e3, 1.0e4, 1.0e5,
@@ -242,25 +242,40 @@ inline std::string ToStringWithScale(std::string inputString, int scale)
         unscaledValueString = unscaledValueString.substr(1);
     }
     auto unscaledValueLength = unscaledValueString.length();
-    if (unscaledValueLength <= scale) {
-        resultBuilder.append("0");
-    } else {
-        resultBuilder.append(unscaledValueString.substr(0, unscaledValueLength - scale));
-    }
 
-    if (scale > 0) {
-        resultBuilder.append(".");
-        if (unscaledValueLength < scale) {
-            auto subScaleLength = scale - unscaledValueLength;
-            for (int i = 0; i < subScaleLength; ++i) {
-                resultBuilder.append("0");
-            }
-            resultBuilder.append(unscaledValueString);
+    int adjusted = unscaledValueLength - 1 - scale;
+    if (adjusted >= -6) {
+        if (unscaledValueLength <= scale) {
+            resultBuilder.append("0");
         } else {
-            resultBuilder.append(unscaledValueString.substr(unscaledValueLength - scale));
+            resultBuilder.append(unscaledValueString.substr(0, unscaledValueLength - scale));
         }
+
+        if (scale > 0) {
+            resultBuilder.append(".");
+            if (unscaledValueLength < scale) {
+                auto subScaleLength = scale - unscaledValueLength;
+                for (int i = 0; i < subScaleLength; ++i) {
+                    resultBuilder.append("0");
+                }
+                resultBuilder.append(unscaledValueString);
+            } else {
+                resultBuilder.append(unscaledValueString.substr(unscaledValueLength - scale));
+            }
+        }
+        return resultBuilder;
+    } else {
+        resultBuilder.append(unscaledValueString.substr(0, 1));
+        if (unscaledValueLength > 1) {
+            resultBuilder.append(".");
+            resultBuilder.append(unscaledValueString.substr(1));
+        }
+        if (adjusted != 0) {
+            resultBuilder.append("E");
+            resultBuilder.append(std::to_string(adjusted));
+        }
+        return resultBuilder;
     }
-    return resultBuilder;
 }
 
 inline int32_t GetResultScale(int32_t x, int32_t y, Op op)
@@ -1006,8 +1021,8 @@ static inline int32_t MaxBitsRequiredIncreaseAfterScaling(int32_t scale_by)
     // bits_required(x * 10^y) <= bits_required(x) + floor(log2(10^y)) + 1
     // We precompute floor(log2(10^x)) + 1 for x = 0, 1, 2...75, 76
     static const int32_t floor_log2_plus_one[] = {
-        0,   4,   7,   10,  14,  17,  20,  24,  27,  30,  34,  37,  40,  44,  47,  50,
-        54,  57,  60,  64,  67,  70,  74,  77,  80,  84,  87,  90,  94,  97,  100, 103,
+        0, 4, 7, 10, 14, 17, 20, 24, 27, 30, 34, 37, 40, 44, 47, 50,
+        54, 57, 60, 64, 67, 70, 74, 77, 80, 84, 87, 90, 94, 97, 100, 103,
         107, 110, 113, 117, 120, 123, 127, 130, 133, 137, 140, 143, 147, 150, 153, 157,
         160, 163, 167, 170, 173, 177, 180, 183, 187, 190, 193, 196, 200, 203, 206, 210,
         213, 216, 220, 223, 226, 230, 233, 236, 240, 243, 246, 250, 253};

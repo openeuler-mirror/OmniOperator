@@ -364,16 +364,16 @@ extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str
             output[i] = 0;
             continue;
         }
-        bool isInvalid = false;
-        bool isOverflow = false;
         auto chars = reinterpret_cast<const char *>(str[i]);
-        output[i] = ConvertStringToInteger<int32_t>(chars, strLen[i], isInvalid, isOverflow);
-        if (isInvalid || isOverflow) {
+        Status status = ConvertStringToInteger<int32_t, false>(output[i], chars, strLen[i]);
+        if (status != Status::SUCCESS) {
             std::string s(chars, strLen[i]);
-            std::string reason = isInvalid ? "Value is not a number." : "Value too large or too small.";
+            std::string reason =
+                status == Status::IS_NOT_A_NUMBER ? "Value is not a number." : "Value too large or too small.";
             std::ostringstream errorMessage;
             errorMessage << "Cannot cast '" << s << "' to INTEGER. " << reason;
             SetError(contextPtr, errorMessage.str());
+            output[i] = 0;
             continue;
         }
     }
@@ -388,16 +388,16 @@ extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **st
             continue;
         }
 
-        bool isInvalid = false;
-        bool isOverflow = false;
         auto chars = reinterpret_cast<const char *>(str[i]);
-        output[i] = ConvertStringToInteger<int64_t>(chars, strLen[i], isInvalid, isOverflow);
-        if (isInvalid || isOverflow) {
+        Status status = ConvertStringToInteger<int64_t, false>(output[i], chars, strLen[i]);
+        if (status != Status::SUCCESS) {
             std::string s(chars, strLen[i]);
-            std::string reason = isInvalid ? "Value is not a number." : "Value too large or too small.";
+            std::string reason =
+                status == Status::IS_NOT_A_NUMBER ? "Value is not a number." : "Value too large or too small.";
             std::ostringstream errorMessage;
             errorMessage << "Cannot cast '" << s << "' to INTEGER. " << reason;
             SetError(contextPtr, errorMessage.str());
+            output[i] = 0;
             continue;
         }
     }
@@ -641,14 +641,11 @@ extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **st
     int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; ++i) {
-        bool isInvalid = false;
-        bool isOverflow = false;
-        output[i] = ConvertStringToIntegerWithTruncate<int32_t>(reinterpret_cast<const char *>(str[i]), strLen[i],
-            isInvalid, isOverflow);
-        if (isInvalid || isOverflow) {
-            isNull[i] = true;
-        } else {
-            isNull[i] = false;
+        Status status = ConvertStringToInteger<int32_t>(output[i], reinterpret_cast<const char *>(str[i]),
+            strLen[i]);
+        isNull[i] = status != Status::SUCCESS;
+        if (isNull[i]) {
+            output[i] = 0;
         }
     }
 }
@@ -657,14 +654,11 @@ extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **s
     int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; ++i) {
-        bool isInvalid = false;
-        bool isOverflow = false;
-        output[i] = ConvertStringToIntegerWithTruncate<int64_t>(reinterpret_cast<const char *>(str[i]), strLen[i],
-            isInvalid, isOverflow);
-        if (isInvalid || isOverflow) {
-            isNull[i] = true;
-        } else {
-            isNull[i] = false;
+        Status status = ConvertStringToInteger<int64_t>(output[i], reinterpret_cast<const char *>(str[i]),
+            strLen[i]);
+        isNull[i] = status != Status::SUCCESS;
+        if (isNull[i]) {
+            output[i] = 0;
         }
     }
 }
