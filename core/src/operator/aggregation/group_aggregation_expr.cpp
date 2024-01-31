@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: Hash Aggregation WithExpr Source File
  */
 
@@ -175,6 +175,11 @@ OmniStatus HashAggregationWithExprOperator::Close()
 {
     hashAggOperator->Close();
     return OMNI_STATUS_NORMAL;
+}
+
+uint64_t HashAggregationWithExprOperator::GetSpilledBytes()
+{
+    return hashAggOperator->GetSpilledBytes();
 }
 
 OmniStatus HashAggregationWithExprOperator::Init(const std::vector<type::DataTypeId> &dataTypeIds)

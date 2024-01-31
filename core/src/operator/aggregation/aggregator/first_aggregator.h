@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Returns the first value of `child` for a group of rows.
  * Caution: The function is non-deterministic.
  * Returns the first value of `child` for a group of rows.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Hash Aggregation Header
  */
 #ifndef GROUP_AGGREGATION_H
@@ -233,14 +233,9 @@ public:
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes),
           operatorConfig(operatorConfig)
-    {
-        spillDirPath = operatorConfig.GetSpillConfig()->GetSpillPath();
-    }
+    {}
 
-    ~HashAggregationOperator() override
-    {
-        delete spiller;
-    }
+    ~HashAggregationOperator() override = default;
 
     int32_t AddInput(VectorBatch *data) override;
 
@@ -252,6 +247,8 @@ public:
 
     template <typename Serialize>
     void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, BaseVector **groupVectors, int32_t groupColNum);
+
+    uint64_t GetSpilledBytes() override;
 
 private:
     SpillMerger *spillMerger = nullptr;
@@ -300,7 +297,7 @@ private:
     std::vector<vec::VectorBatch *> batches;
     std::vector<int32_t> rowIdxes;
     std::vector<AggregateState *> rowStates;
-    bool isSpill = false;
+    uint64_t spilledBytes = 0;
 
     template <typename Deserialize>
     void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);

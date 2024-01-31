@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Hash Aggregation Source File
  */
 #include "group_aggregation.h"
@@ -318,7 +318,8 @@ OmniStatus HashAggregationOperator::Close()
         delete[] sourceTypes;
         sourceTypes = nullptr;
     }
-    if (isSpill) {
+    if (spiller != nullptr) {
+        delete spiller;
         delete spillMerger;
     }
     return OMNI_STATUS_NORMAL;
@@ -509,6 +510,7 @@ void HashAggregationOperator::SpillHashMap()
 {
     PagesIndex *pagesIndex = ConvertHashMap2PageIndex();
     if (spiller == nullptr) {
+        spillDirPath = operatorConfig.GetSpillConfig()->GetSpillPath();
         spiller = new Spiller(DataTypes(spillTypes), groupByClomIdx, sortOrders, spillDirPath);
     }
     bool canInplaceSort = false;
@@ -520,7 +522,11 @@ void HashAggregationOperator::SpillHashMap()
     }
     spiller->Spill(pagesIndex, canInplaceSort);
     delete pagesIndex;
-    isSpill = true;
+}
+
+uint64_t HashAggregationOperator::GetSpilledBytes()
+{
+    return spilledBytes;
 }
 
 template <typename T>
@@ -621,8 +627,9 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
             serialize->ResetHashmap();
         }
 
-        auto temp = spiller->FinishSpill();
-        spillMerger = spiller->CreateSpillMerger(temp);
+        spilledBytes = spiller->GetSpilledBytes();
+        auto spillFiles = spiller->FinishSpill();
+        spillMerger = spiller->CreateSpillMerger(spillFiles);
         if (spillMerger == nullptr) {
             throw omniruntime::exception::OmniException("SPILL_FAILED", "Create spill merger failed.");
         }
@@ -703,7 +710,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
 template <typename Deserialize>
 int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch)
 {
-    if (isSpill) {
+    if (spiller != nullptr) {
         GetOutputFromDisk(deserializeHashmap, outputVecBatch);
         if (spillTotalRowCount == 0) {
             SetStatus(OmniStatus::OMNI_STATUS_FINISHED);

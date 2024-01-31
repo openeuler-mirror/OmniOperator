@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Max aggregate
  */
 #ifndef OMNI_RUNTIME_MAX_AGGREGATOR_H

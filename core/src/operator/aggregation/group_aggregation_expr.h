@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: Hash Aggregation WithExpr Header
  */
 
@@ -56,6 +56,8 @@ public:
     void ProcessRow(uintptr_t rowValues[], int32_t lens[]);
 
     OmniStatus Init(const std::vector<type::DataTypeId> &dataTypeIds);
+
+    uint64_t GetSpilledBytes() override;
 
 private:
     OneRowAdaptor oneRowAdaptor;

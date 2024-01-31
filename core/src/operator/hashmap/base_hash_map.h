@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  */
 #ifndef OMNI_RUNTIME_BASE_HASH_MAP_H
 #define OMNI_RUNTIME_BASE_HASH_MAP_H
@@ -704,7 +704,6 @@ public:
             nullSlot->~Slot();
             allocator.Release(reinterpret_cast<uint8_t *>(nullSlot), sizeof(Slot));
         }
-        elementsSize = 0;
     }
 
     void ReleaseSlots(uint64_t newCapacity) noexcept

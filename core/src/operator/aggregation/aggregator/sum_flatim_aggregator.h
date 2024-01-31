@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: For non-decimal type
  */
 #ifndef OMNI_RUNTIME_SUM_FLAT_IM_AGGREGATOR_H

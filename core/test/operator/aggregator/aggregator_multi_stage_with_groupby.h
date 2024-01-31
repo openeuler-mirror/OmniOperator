@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 #pragma once
 #include "aggregator_multi_stage_no_groupby.h"
