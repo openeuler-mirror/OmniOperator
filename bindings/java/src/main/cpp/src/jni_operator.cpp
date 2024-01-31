@@ -14,6 +14,8 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 
+static std::once_flag loadVecBatchClsFlag;
+
 static jclass vecBatchCls = nullptr;
 static jmethodID vecBatchInitMethodId = nullptr;
 
@@ -59,7 +61,7 @@ static void LoadVecBatchAndOmniResults(JNIEnv *env)
         vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "(J[J[J[J[J[I[II)V");
         omniResultsCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/operator/OmniResults");
         omniResultsInitMethodId =
-                env->GetMethodID(omniResultsCls, "<init>", "(Lnova/hetu/omniruntime/vector/VecBatch;I)V");
+            env->GetMethodID(omniResultsCls, "<init>", "(Lnova/hetu/omniruntime/vector/VecBatch;I)V");
     }
 }
 
@@ -135,7 +137,11 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOutputNative(JNIEnv *env, jobject jObj,
     jlong jOperatorAddr)
 {
-    LoadVecBatchAndOmniResults(env);
+    std::call_once(loadVecBatchClsFlag, LoadVecBatchAndOmniResults, env);
+    if (vecBatchCls == nullptr || omniResultsCls == nullptr) {
+        throw omniruntime::exception::OmniException("LOAD_CLASS_FAILED",
+            "The class VecBatch or OmniResult has not load yet.");
+    }
 
     auto *nativeOperator = (Operator *)jOperatorAddr;
     VectorBatch *outputVecBatch = nullptr;
