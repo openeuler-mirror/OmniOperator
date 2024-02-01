@@ -34,7 +34,7 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
         executionContexts.emplace_back(std::make_unique<ExecutionContext>());
     }
 
-    for (int buildHashCol : buildHashCols) {
+    for (const int& buildHashCol : buildHashCols) {
         auto type = buildTypes->GetIds()[buildHashCol];
         if (type == OMNI_VARCHAR || type == OMNI_CHAR) {
             isFixedKeys = false;
@@ -43,7 +43,7 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
     }
 
     if (isFixedKeys) {
-        for (int buildHashCol : buildHashCols) {
+        for (const int& buildHashCol : buildHashCols) {
             auto type = buildTypes->GetIds()[buildHashCol];
             switch (type) {
                 case OMNI_INT:
@@ -86,8 +86,8 @@ JoinHashTableVariants<KeyType, RowRefListType>::~JoinHashTableVariants()
     }
     columns.clear();
 
-    for (auto &inputVecBatche : inputVecBatches) {
-        VectorHelper::FreeVecBatches(inputVecBatche);
+    for (auto &inputVecBatch : inputVecBatches) {
+        VectorHelper::FreeVecBatches(inputVecBatch);
     }
     inputVecBatches.clear();
 }

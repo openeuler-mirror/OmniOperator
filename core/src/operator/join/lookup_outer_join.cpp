@@ -36,7 +36,7 @@ LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOute
 Operator *LookupOuterJoinOperatorFactory::CreateOperator()
 {
     auto probeOutputType = std::vector<type::DataTypePtr>();
-    for (auto col : probeOutputCols) {
+    for (const auto& col : probeOutputCols) {
         probeOutputType.push_back(probeTypes.Get()[col]);
     }
     auto probeOutputTypes = DataTypes(probeOutputType);

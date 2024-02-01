@@ -18,8 +18,8 @@ namespace omniruntime {
 namespace op {
 class LookupJoinOutputBuilder {
 public:
-    LookupJoinOutputBuilder(int32_t *probeOutputCols, int32_t probeOutputColsCount, const int32_t *probeOutputTypes,
-        int32_t *buildOutputCols, int32_t buildOutputColsCount, const int32_t *buildOutputTypes, int32_t outputRowSize);
+    LookupJoinOutputBuilder(std::vector<int32_t> &probeOutputCols, const int32_t *probeOutputTypes,
+        std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address);
     void BuildOutput(BaseVector **probeOutputColumns, VectorBatch **outputVecBatch);
@@ -57,7 +57,7 @@ private:
     {
         BaseVector *probeColumn = nullptr;
         auto probePositions = probeIndex.data();
-        for (int32_t j = 0; j < probeOutputColsCount; ++j) {
+        for (size_t j = 0; j < probeOutputCols.size(); ++j) {
             auto column = probeOutputColumns[j];
             auto type = probeOutputTypes[j];
             // we want to keep only one level dictionary vector here
@@ -73,7 +73,7 @@ private:
 
     ALWAYS_INLINE void ConstructProbeColumnsFromReuse(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
     {
-        for (int32_t j = 0; j < probeOutputColsCount; ++j) {
+        for (size_t j = 0; j < probeOutputCols.size(); ++j) {
             auto column = probeOutputColumns[j];
             auto resultColumn = VectorHelper::SliceVector(column, 0, column->GetSize());
             vectorBatch->Append(resultColumn);
@@ -82,7 +82,7 @@ private:
 
     ALWAYS_INLINE void ConstructProbeColumnsFromSlice(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
     {
-        for (int32_t j = 0; j < probeOutputColsCount; ++j) {
+        for (size_t j = 0; j < probeOutputCols.size(); ++j) {
             auto column = probeOutputColumns[j];
             auto resultColumn = VectorHelper::SliceVector(column, probeIndex[0], probeRowCount);
             vectorBatch->Append(resultColumn);
@@ -90,11 +90,9 @@ private:
     }
 
     int32_t maxRowCount = 0;
-    int32_t *probeOutputCols;
-    int32_t probeOutputColsCount;
+    std::vector<int32_t> probeOutputCols;
     const int32_t *probeOutputTypes;
-    int32_t *buildOutputCols;
-    int32_t buildOutputColsCount;
+    std::vector<int32_t> buildOutputCols;
     const int32_t *buildOutputTypes;
     int32_t probeRowCount = 0;
     std::vector<int32_t> probeIndex;

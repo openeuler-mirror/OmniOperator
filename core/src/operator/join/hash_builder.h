@@ -35,7 +35,6 @@ private:
     DataTypes buildTypes;
     std::vector<int32_t> buildHashCols;
     HashTableVariants *hashTablesVariants;
-    int32_t hashTableCount;
     std::atomic<int32_t> operatorIndex;
 
     template <class RowRefListType>
