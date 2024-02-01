@@ -117,6 +117,7 @@ public:
         if (state.count < 0 || state.val == nullptr) {
             avgValVector->SetNull(rowIndex);
             avgCountVector->SetValue(rowIndex, state.count);
+            return;
         }
         avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
         avgCountVector->SetValue(rowIndex, state.count);

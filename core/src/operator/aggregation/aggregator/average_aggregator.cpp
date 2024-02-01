@@ -101,15 +101,15 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void AverageAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
     std::vector<BaseVector *> &vectors, int32_t rowIndex)
 {
-    auto v = static_cast<Vector<ResultType> *>(vectors[0]);
-    auto v1 = reinterpret_cast<Vector<int64_t> *>(vectors[1]);
+    auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
+    auto spillCount = reinterpret_cast<Vector<int64_t> *>(vectors[1]);
     if (state.count <= 0 || state.val == nullptr) {
-        v->SetNull(rowIndex);
-        v1->SetValue(rowIndex, state.count);
+        spillValue->SetNull(rowIndex);
+        spillCount->SetValue(rowIndex, state.count);
         return;
     }
-    v->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-    v1->SetValue(rowIndex, state.count);
+    spillValue->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+    spillCount->SetValue(rowIndex, state.count);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>

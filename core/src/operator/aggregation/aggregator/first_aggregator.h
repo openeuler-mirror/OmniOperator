@@ -252,7 +252,6 @@ public:
             if (firstState->valIsNull) {
                 firstVarcharVector->SetNull(rowIndex);
             } else {
-                firstVarcharVector->SetNotNull(rowIndex);
                 std::string_view firstValue(reinterpret_cast<char *>(firstState->val), state.count);
                 firstVarcharVector->SetValue(rowIndex, firstValue);
             }
@@ -265,7 +264,6 @@ public:
             if (firstState->valIsNull) {
                 firstVector->SetNull(rowIndex);
             } else {
-                firstVector->SetNotNull(rowIndex);
                 firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
             }
             auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);

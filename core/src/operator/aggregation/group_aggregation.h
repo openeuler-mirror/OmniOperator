@@ -253,15 +253,15 @@ public:
 private:
     SpillMerger *spillMerger = nullptr;
     Spiller *spiller = nullptr;
+    PagesIndex *pagesIndex = nullptr;
     std::vector<SortOrder> sortOrders;
     std::vector<int32_t> ascendings;
     std::vector<int32_t> nullsFirst;
     std::vector<int32_t> groupByClomIdx;
-    std::string spillDirPath;
     int32_t InitMaxRowCountAndOutputTypes();
     void InitSpillTypes();
     void SpillHashMap();
-    PagesIndex* ConvertHashMap2PageIndex();
+    void ConvertHashMap2PageIndex();
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
@@ -279,13 +279,14 @@ private:
     std::vector<DataTypes> aggOutputTypes;
     std::vector<type::DataTypePtr> outputTypes;
     std::vector<type::DataTypePtr> spillTypes;
+    int32_t spillRowsPerPagesIndexs;
     std::unique_ptr<ExecutionContext> executionContext;
     HandleType groupByColumnsHandleType = HandleType::serialize;
     std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
     bool isInited = false;
 
     OutputState outputState;
-
+    OutputState spillOutputState;
     template <typename Deserialize>
     void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, VectorBatch *output);
 

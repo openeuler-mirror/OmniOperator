@@ -120,10 +120,8 @@ public:
     {
         auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
         auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
-
-        if (state.count <= 0 || state.val == nullptr) {
-            // all input are nulls, return 0
-            avgValVector->SetValue(rowIndex, 0);
+        if (state.count == 0) {
+            avgValVector->SetNull(rowIndex);
             avgCountVector->SetValue(rowIndex, 0);
             return;
         }
