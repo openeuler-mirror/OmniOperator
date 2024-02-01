@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <memory>
+#include <optional>
 #include "util/error_code.h"
 #include "operator/operator_factory.h"
 #include "operator/config/operator_config.h"
@@ -114,21 +115,24 @@ private:
     void SetSpillOutputVector(vec::BaseVector *outputVector, int32_t outputRowIdx, int32_t outputRowCount,
         int32_t outputCol);
 
+    bool hasSorted = false;
+    bool hasNext = true;
+    bool canInplaceSort = false;
+    bool canRadixSort = false;
+
+    int32_t radixSortSizeThreshold = -1;
+    int32_t maxRowCountPerBatch = 0;
+    size_t totalRowCount = 0;
+    size_t rowCountOutputted = 0;
+
     type::DataTypes sourceTypes;
     std::vector<int32_t> outputCols;
     std::vector<int32_t> sortCols;
     std::vector<int32_t> sortAscendings;
     std::vector<int32_t> sortNullFirsts;
-    std::unique_ptr<PagesIndex> pagesIndex;
     std::vector<DataTypePtr> outputTypes;
-    int32_t maxRowCountPerBatch = 0;
-    size_t totalRowCount = 0;
-    size_t rowCountOutputted = 0;
-    bool hasSorted = false;
 
-    bool canInplaceSort = false;
-    bool canRadixSort = false;
-    int32_t radixSortSizeThreshold = -1;
+    std::unique_ptr<PagesIndex> pagesIndex;
 
     // for spill
     OperatorConfig operatorConfig;

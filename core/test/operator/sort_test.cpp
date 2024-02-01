@@ -127,7 +127,7 @@ TEST(NativeOmniSortTest, TestSortPerformance)
 TEST(NativeOmniSortTest, TestSortLongColumn)
 {
     // construct input data
-    const int32_t dataSize = 5;
+    constexpr int32_t dataSize = 5;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4};
 
@@ -163,7 +163,7 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
 TEST(NativeOmniSortTest, TestSortWithNullFirst)
 {
     // construct input data
-    const int32_t dataSize = 6;
+    constexpr int32_t dataSize = 6;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0, -1};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4, -1};
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
@@ -216,7 +216,7 @@ TEST(NativeOmniSortTest, TestQuickSortInternalSIMD)
 TEST(NativeOmniSortTest, TestSortWithNullLast)
 {
     // construct input data
-    const int32_t dataSize = 6;
+    constexpr int32_t dataSize = 6;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0, -1};
     int64_t data2[dataSize] = {0, 1, 2, 3, 4, -1};
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
@@ -250,7 +250,7 @@ TEST(NativeOmniSortTest, TestSortWithNullLast)
 TEST(NativeOmniSortTest, TestSortWithMultiNulls)
 {
     // construct input data
-    const int32_t dataSize = 6;
+    constexpr int32_t dataSize = 6;
     int32_t data1[dataSize] = {4, 3, 2, 1, 0, -1};
     int64_t data2[dataSize] = {0, 1, -1, -1, -1, -1};
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
@@ -285,7 +285,7 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
 
 TEST(NativeOmniSortTest, TestSortIntColumnAscSIMD)
 {
-    const int32_t dataSize = 24;
+    constexpr int32_t dataSize = 24;
     int32_t data0[] = {38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49};
     int32_t data1[] = {33, 24, 96, 16, 64, 2, 6, 47, 34, 25, 97, 17, 65, 3, 7, 48, 35, 26, 98, 18, 66, 4, 8, 49};
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), IntType() }));
@@ -315,7 +315,7 @@ TEST(NativeOmniSortTest, TestSortIntColumnAscSIMD)
 
 TEST(NativeOmniSortTest, TestSortIntColumnDescSIMD)
 {
-    const int32_t dataSize = 24;
+    constexpr int32_t dataSize = 24;
     int32_t data0[] = {38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49, 38, 26, 97, 19, 66, 1, 5, 49};
     int32_t data1[] = {33, 24, 96, 16, 64, 2, 6, 47, 34, 25, 97, 17, 65, 3, 7, 48, 35, 26, 98, 18, 66, 4, 8, 49};
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), IntType() }));
@@ -346,7 +346,7 @@ TEST(NativeOmniSortTest, TestSortIntColumnDescSIMD)
 TEST(NativeOmniSortTest, TestSortLongColumnAscSIMD)
 {
     // construct input data
-    const int32_t dataSize = 37;
+    constexpr int32_t dataSize = 37;
     int32_t data1[dataSize];
     int64_t data2[dataSize];
     const int32_t lastData = dataSize - 1;
@@ -391,7 +391,7 @@ TEST(NativeOmniSortTest, TestSortLongColumnAscSIMD)
 TEST(NativeOmniSortTest, TestSortLongColumnDescSIMD)
 {
     // construct input data
-    const int32_t dataSize = 37;
+    constexpr int32_t dataSize = 37;
     int32_t data1[dataSize];
     int64_t data2[dataSize];
     const int32_t lastData = dataSize - 1;
@@ -2892,8 +2892,8 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase5)
 TEST(NativeOmniSortTest, TestSortRadixSort)
 {
     std::vector<std::pair<int64_t, int64_t>> dataRanges { { -126, 126 } };
-    for (size_t ir = 0; ir < dataRanges.size(); ir++) {
-        const int32_t dataSize = 10;
+    static constexpr int32_t dataSize = 10;
+    for (size_t ir = 0; ir < dataRanges.size(); ++ir) {
         int32_t data1[dataSize];
         int64_t data2[dataSize];
         std::vector<std::pair<int32_t, int64_t>> dataCombo(dataSize);
@@ -2936,4 +2936,5 @@ TEST(NativeOmniSortTest, TestSortRadixSort)
         DeleteSortOperatorFactory(operatorFactory);
     }
 }
+
 } // namespace SortTest

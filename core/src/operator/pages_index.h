@@ -27,7 +27,7 @@ public:
     void Prepare();
 
     template <DataTypeId typeId>
-    void PrepareRadixSort(const bool ascending, const bool nullFirst, const int32_t sortCol);
+    void PrepareRadixSort(const bool ascending, const bool nullFirst, const uint32_t sortCol);
 
     template <DataTypeId typeId> void PrepareInplaceSort(int32_t nullFirst)
     {
@@ -43,7 +43,7 @@ public:
             }
         }
 
-        inplaceSortColumn = VectorHelper::CreateFlatVector<typeId>(positionCount);
+        inplaceSortColumn = VectorHelper::CreateFlatVector<typeId>(rowCount);
         if (totalNullCount == 0) {
             // all batches have no null value
             PartitionNonNull<typeId>();
@@ -95,7 +95,7 @@ public:
 
     ALWAYS_INLINE int64_t GetRowCount() override
     {
-        return this->positionCount;
+        return this->rowCount;
     }
 
     ALWAYS_INLINE omniruntime::vec::BaseVector ***GetColumns() const
@@ -136,7 +136,7 @@ private:
             VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
             auto rowCount = vecBatch->GetRowCount();
             auto *col = reinterpret_cast<Vector<T> *>(vecBatch->Get(0));
-            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
                 reinterpret_cast<Vector<T> *>(inplaceSortColumn)->SetValue(valueIndex++, col->GetValue(rowIdx));
             }
             VectorHelper::FreeVecBatch(vecBatch);
@@ -154,7 +154,7 @@ private:
         if (nullFirst) {
             values += totalNullCount;
         } else {
-            nulls += positionCount - totalNullCount;
+            nulls += rowCount - totalNullCount;
         }
 
         int32_t valueIndex = 0;
@@ -164,11 +164,11 @@ private:
             auto rowCount = vecBatch->GetRowCount();
             auto *col = reinterpret_cast<Vector<T> *>(vecBatch->Get(0));
             if (!col->HasNull()) {
-                for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
                     values[valueIndex++] = col->GetValue(rowIdx);
                 }
             } else {
-                for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
                     if (col->IsNull(rowIdx)) {
                         nulls[nullIndex++] = true;
                     } else {
@@ -186,20 +186,25 @@ private:
     template <DataTypeId dataTypeId>
     void SortInplace(int32_t sortAscending, int32_t sortNullFirst, int32_t from, int32_t to);
 
-    const DataTypes dataTypes;
     uint32_t typesCount;
-    omniruntime::vec::BaseVector ***columns; // Vector* [columnIndex][tableIndex]
-    uint64_t *valueAddresses;
-    uint32_t positionCount;
-    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
-    std::vector<bool> hasDictionaries;
-    std::vector<bool> hasNulls;
-    int64_t totalNullCount = 0;
-    omniruntime::vec::BaseVector *inplaceSortColumn = nullptr;
-
-    std::vector<uint8_t> radixComboRow;
+    uint32_t rowCount = 0;
     uint32_t radixValueWidth;
     uint32_t radixRowWidth;
+
+    uint32_t radixSortingSize;
+
+    int64_t totalNullCount = 0;
+
+    uint64_t *valueAddresses = nullptr;
+
+    std::vector<bool> hasDictionaries;
+    std::vector<bool> hasNulls;
+    std::vector<uint8_t> radixComboRow;
+    std::vector<omniruntime::vec::VectorBatch *> inputVecBatches;
+
+    const DataTypes dataTypes;
+    omniruntime::vec::BaseVector ***columns = nullptr; // Vector* [columnIndex][tableIndex]
+    omniruntime::vec::BaseVector *inplaceSortColumn = nullptr;
 };
 
 constexpr uint32_t SHIFT_SIZE_32 = 32;
