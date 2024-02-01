@@ -101,12 +101,7 @@ public:
     static ALWAYS_INLINE char *ExpandStringBuffer(Vector<LargeStringContainer<std::string_view>> *vector,
         size_t toCapacityInBytes)
     {
-        auto container = vector->container.get();
-        if (container->GetCapacityInBytes() >= toCapacityInBytes) {
-            return UnsafeStringContainer::GetValues(container);
-        } else {
-            return UnsafeStringContainer::ExpandBufferToCapacity(container, toCapacityInBytes);
-        }
+        return UnsafeStringContainer::ExpandBufferToCapacity(vector->container.get(), toCapacityInBytes);
     }
 
     static ALWAYS_INLINE size_t GetCapacityInBytes(Vector<LargeStringContainer<std::string_view>> *vector)

@@ -1,132 +1,36 @@
 /*
  * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
- * @Description: spiller implementation
+ * @Description: abstract class spiller
  */
 
 #ifndef OMNI_RUNTIME_SPILLER_H
 #define OMNI_RUNTIME_SPILLER_H
 
-#include "type/data_types.h"
-#include "spill_merger.h"
-#include "operator/pages_index.h"
+#include "util/error_code.h"
+#include "spill_iterator.h"
+#include "spill_tracker.h"
 
 namespace omniruntime {
 namespace op {
-class SpillWriter {
-public:
-    SpillWriter(const type::DataTypes &dataTypes, const std::string &dirPath, uint64_t writeBufferSize = 0)
-        : dataTypes(dataTypes), dirPath(dirPath), writeBufferSize(writeBufferSize), writeBufferOffset(0)
-    {
-        if (writeBufferSize != 0) {
-            writeBuffer = new char[writeBufferSize];
-        }
-    }
-
-    ~SpillWriter()
-    {
-        delete[] writeBuffer;
-    }
-
-    ErrorCode WriteVecBatch(vec::VectorBatch *vectorBatch, uint64_t vectorBatchSize);
-
-    SpillFileInfo GetSpillFileInfo()
-    {
-        SpillFileInfo file { filePath, fileLength, totalRowCount };
-        return file;
-    }
-
-    void Close();
-
-private:
-    ErrorCode CreateTempFile();
-
-    ErrorCode WriteVecBatchToBuffer(vec::VectorBatch *vectorBatch);
-
-    template <typename T>
-    ErrorCode WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset);
-
-    ErrorCode WriteVecBatchToFile(vec::VectorBatch *vectorBatch);
-
-    template <typename T> ErrorCode WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount);
-
-    type::DataTypes dataTypes;
-    std::string dirPath;
-    int32_t fd = -1;
-    std::string filePath;
-    uint64_t writeBufferSize = 0;
-    uint64_t writeBufferOffset = 0;
-    char *writeBuffer = nullptr;
-    uint64_t fileLength = 0;
-    uint64_t totalRowCount = 0;
-};
-
 class Spiller {
 public:
-    Spiller(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-        const std::vector<SortOrder> &sortOrders, const std::string &spillPath)
-        : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders)
-    {
-        dirPaths.emplace_back(spillPath);
-        int32_t dataTypeCount = dataTypes.GetSize();
-        for (int32_t i = 0; i < dataTypeCount; i++) {
-            outputCols.emplace_back(i);
-        }
+    Spiller() = default;
 
-        maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), dataTypeCount);
-        spillTracker = GetRootSpillTracker().CreateSpillTracker();
-    }
+    virtual ~Spiller() = default;
 
-    ~Spiller()
-    {
-        VectorHelper::FreeVecBatch(spillVecBatch);
-        for (auto writer : writers) {
-            delete writer;
-        }
-        writers.clear();
-    }
+    virtual void SetSpillTracker(SpillTracker *tracker) = 0;
 
-    ErrorCode Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort);
+    virtual ErrorCode Spill(SpillUnitIter &iterator) = 0;
 
-    std::vector<SpillFileInfo> FinishSpill()
-    {
-        std::vector<SpillFileInfo> spillFiles;
-        for (auto writer : writers) {
-            spillFiles.emplace_back(writer->GetSpillFileInfo());
-        }
-        return spillFiles;
-    }
+    virtual void MergeFromDiskAndMemory(SpillUnitIter &memoryIter) = 0;
 
-    SpillMerger *CreateSpillMerger(const std::vector<SpillFileInfo> &spillFiles)
-    {
-        auto merger = SpillMerger::Create(dataTypes, sortCols, sortOrders, spillTracker, spillFiles);
-        return merger;
-    }
+    virtual bool HasNext() = 0;
 
-    uint64_t GetSpilledBytes()
-    {
-        return spillTracker->GetSpilledBytes();
-    }
+    virtual SpillUnit *Next() = 0;
 
-    SpillTracker *GetSpillTracker() const
-    {
-        return spillTracker;
-    }
-
-private:
-    uint64_t CollectVecBatchSize(vec::VectorBatch *vectorBatch);
-
-    template <typename T> uint64_t CollectVectorSize(vec::BaseVector *vector);
-
-    DataTypes dataTypes;
-    std::vector<int32_t> sortCols;
-    std::vector<SortOrder> sortOrders;
-    std::vector<std::string> dirPaths;
-    std::vector<int32_t> outputCols;
-    int32_t maxRowCountPerBatch;
-    vec::VectorBatch *spillVecBatch = nullptr;
-    std::vector<SpillWriter *> writers;
-    SpillTracker *spillTracker = nullptr;
+    virtual uint64_t GetSpilledBytes() = 0;
 };
 }
 }
+
 #endif // OMNI_RUNTIME_SPILLER_H

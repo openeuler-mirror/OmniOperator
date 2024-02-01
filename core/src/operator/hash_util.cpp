@@ -8,7 +8,7 @@
 
 namespace omniruntime {
 namespace op {
-uint64_t HashUtil::NextPowerOfTwo(uint64_t x)
+uint64_t NextPowerOfTwo(uint64_t x)
 {
     if (x == 0) {
         return 1;
