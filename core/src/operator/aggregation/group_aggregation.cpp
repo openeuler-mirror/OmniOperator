@@ -535,7 +535,7 @@ void HashAggregationOperator::SpillHashMap()
             spiller = new Spiller(DataTypes(spillTypes), groupByClomIdx, sortOrders,
                 operatorConfig.GetSpillConfig()->GetSpillPath());
         }
-        spiller->Spill(pagesIndex, false);
+        spiller->Spill(pagesIndex, false, false);
         pagesIndex->Clear();
     }
     spillOutputState.hasBeenOutputNum = 0;
@@ -640,8 +640,10 @@ template <typename Deserialize>
 void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch)
 {
     if (spillMerger == nullptr) {
-        SpillHashMap();
-        serialize->ResetHashmap();
+        if (serialize->GetElementsSize() > 0) {
+            SpillHashMap();
+            serialize->ResetHashmap();
+        }
 
         spilledBytes = spiller->GetSpilledBytes();
         auto spillFiles = spiller->FinishSpill();
@@ -726,18 +728,19 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
 template <typename Deserialize>
 int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch)
 {
-    auto &hashmap = deserializeHashmap->hashmap;
-    int32_t totalRowCount = hashmap.GetElementsSize();
-    if (totalRowCount == 0) {
-        SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
-        return 0;
-    }
     if (spiller != nullptr) {
         GetOutputFromDisk(deserializeHashmap, outputVecBatch);
         if (spillTotalRowCount == 0) {
             SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
         }
         return 1;
+    }
+
+    auto &hashmap = deserializeHashmap->hashmap;
+    int32_t totalRowCount = hashmap.GetElementsSize();
+    if (totalRowCount == 0) {
+        SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
+        return 0;
     }
 
     // The iteration output only contains one result, create only one output vector batches

@@ -303,9 +303,9 @@ private:
     template <typename Deserialize>
     void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
 
-    void SetSpillOutputVecBatch(VectorBatch *outputVecBatch,int32_t rowCount, int32_t groupColNum);
+    void SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum);
 
-    void SetStateOutputVecBatch(VectorBatch *outputVecBatch,int32_t rowCount, int32_t groupColNum, int32_t aggNum);
+    void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
 
     template <typename T>
     void SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowCount, int32_t outputCol);
@@ -332,7 +332,7 @@ public:
         std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
         const OperatorConfig &operatorConfig)
         : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector,
-          operatorConfig.GetOverflowConfig()->IsOverflowAsNull()),
+        operatorConfig.GetOverflowConfig()->IsOverflowAsNull()),
           groupByColsVector(groupByCol),
           groupByTypes(groupInputTypes),
           aggsInputColsVector(aggsCols),
@@ -340,6 +340,20 @@ public:
           aggOutputTypes(aggOutputTypes),
           aggFuncTypesVector(aggFuncTypes),
           operatorConfig(operatorConfig)
+    {}
+
+    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
+        std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,
+        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
+        std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
+        bool overflowAsNull = false)
+        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull),
+          groupByColsVector(groupByCol),
+          groupByTypes(groupInputTypes),
+          aggsInputColsVector(aggsCols),
+          aggInputTypes(aggInputTypes),
+          aggOutputTypes(aggOutputTypes),
+          aggFuncTypesVector(aggFuncTypes)
     {}
 
     ~HashAggregationOperatorFactory() override {}
