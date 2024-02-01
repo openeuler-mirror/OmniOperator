@@ -122,7 +122,7 @@ ErrorCode SpillWriter::CreateTempFile()
     if (stat(dirPathChars, &st) == -1) {
         // create the directory when the dir path not exist
         if (mkdir(dirPathChars, 0750) == -1) {
-            LogError("Mkdir %s failed.", dirPathChars);
+            LogError("Mkdir %s failed since %s.", dirPathChars, strerror(errno));
             return ErrorCode::MKDIR_FAILED;
         }
     }
@@ -166,7 +166,7 @@ ErrorCode SpillWriter::WriteVecBatch(vec::VectorBatch *vectorBatch, uint64_t vec
     if (writeBufferSize != 0) {
         if (writeBufferOffset + vectorBatchSize > writeBufferSize) {
             if (write(fd, writeBuffer, writeBufferOffset) < static_cast<ssize_t>(writeBufferOffset)) {
-                LogError("Write buffer to file failed.");
+                LogError("Write buffer to file failed since %s.", strerror(errno));
                 return ErrorCode::WRITE_FAILED;
             }
             fileLength += writeBufferOffset;
@@ -201,7 +201,7 @@ ErrorCode SpillWriter::WriteVecBatchToBuffer(vec::VectorBatch *vectorBatch)
     auto writeBufferStart = writeBuffer + writeOffset;
     errno_t ret = memcpy_s(writeBufferStart, sizeof(rowCount), &rowCount, sizeof(rowCount));
     if (ret != EOK) {
-        LogError("Write row count to buffer failed..");
+        LogError("Write row count to buffer failed since %s.", strerror(errno));
         return ErrorCode::WRITE_FAILED;
     }
     writeOffset += sizeof(rowCount);
@@ -255,7 +255,7 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
     bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
     errno_t ret = memcpy_s(writeBuffer + writeOffset, rowCount, nulls, rowCount);
     if (ret != EOK) {
-        LogError("Write value nulls to buffer failed.");
+        LogError("Write value nulls to buffer failed since %s.", strerror(errno));
         return ErrorCode::WRITE_FAILED;
     }
     writeOffset += rowCount;
@@ -266,7 +266,7 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
         auto offsetLength = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
         ret = memcpy_s(writeBuffer + writeOffset, offsetLength, valueOffsets, offsetLength);
         if (ret != EOK) {
-            LogError("Write value offsets to buffer failed.");
+            LogError("Write value offsets to buffer failed since %s.", strerror(errno));
             return op::ErrorCode::WRITE_FAILED;
         }
         writeOffset += offsetLength;
@@ -276,7 +276,7 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
         auto valueLength = static_cast<ssize_t>(valueOffsets[rowCount] - valueOffsets[0]);
         ret = memcpy_s(writeBuffer + writeOffset, valueLength, values, valueLength);
         if (ret != EOK) {
-            LogError("Write values to buffer failed.");
+            LogError("Write values to buffer failed since %s.", strerror(errno));
             return op::ErrorCode::WRITE_FAILED;
         }
         writeOffset += valueLength;
@@ -286,7 +286,7 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
         T *values = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
         ret = memcpy_s(writeBuffer + writeOffset, length, values, length);
         if (ret != EOK) {
-            LogError("Write values to buffer failed.");
+            LogError("Write values to buffer failed since %s.", strerror(errno));
             return ErrorCode::WRITE_FAILED;
         }
         writeOffset += length;
@@ -298,7 +298,7 @@ ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
 {
     int32_t rowCount = vectorBatch->GetRowCount();
     if (write(fd, &rowCount, sizeof(rowCount)) < static_cast<ssize_t>(sizeof(rowCount))) {
-        LogError("Write row count failed.");
+        LogError("Write row count failed since %s.", strerror(errno));
         return ErrorCode::WRITE_FAILED;
     }
 
@@ -359,7 +359,7 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
 {
     bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
     if (write(fd, nulls, rowCount) < rowCount) {
-        LogError("Write value nulls failed.");
+        LogError("Write value nulls failed since %s.", strerror(errno));
         return ErrorCode::WRITE_FAILED;
     }
 
@@ -368,7 +368,7 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
         auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
         auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
         if (write(fd, offsets, offsetSize) < offsetSize) {
-            LogError("Write value offsets failed.");
+            LogError("Write value offsets failed since %s.", strerror(errno));
             return op::ErrorCode::WRITE_FAILED;
         }
 
@@ -377,7 +377,7 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
             // write values
             char *values = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector));
             if (write(fd, values, valueLength) < valueLength) {
-                LogError("Write values failed.");
+                LogError("Write values failed since %s.", strerror(errno));
                 return op::ErrorCode::WRITE_FAILED;
             }
         }
@@ -386,7 +386,7 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
         auto length = static_cast<ssize_t>(rowCount * sizeof(T));
         T *values = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
         if (write(fd, values, length) < length) {
-            LogError("Write values failed.");
+            LogError("Write values failed since %s.", strerror(errno));
             return ErrorCode::WRITE_FAILED;
         }
         return ErrorCode::SUCCESS;
@@ -397,7 +397,7 @@ void SpillWriter::Close()
 {
     if (writeBufferOffset != 0) {
         if (write(fd, writeBuffer, writeBufferOffset) < static_cast<ssize_t>(writeBufferOffset)) {
-            LogError("Write buffer to file failed.");
+            LogError("Write buffer to file failed since %s.", strerror(errno));
         }
         fileLength += writeBufferOffset;
         writeBufferOffset = 0;
