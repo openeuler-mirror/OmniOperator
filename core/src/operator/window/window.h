@@ -256,6 +256,8 @@ private:
 
     void ProcessData(omniruntime::vec::VectorBatch *&outputVecBatch, int32_t rowCount);
 
+    void InitResultVectors(VectorBatch *&vecBatchField, const int32_t &rowCountField) const;
+
     // for output single vecBatch
     void PrepareOutput();
     bool hasPrepare = false;

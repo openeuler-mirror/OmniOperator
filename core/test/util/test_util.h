@@ -43,7 +43,8 @@ template <typename T> vec::BaseVector *CreateVector(int32_t length, T *values)
     return vector;
 }
 
-template <omniruntime::type::DataTypeId typeId> vec::BaseVector *CreateFlatVector(int32_t length, va_list &args)
+template <omniruntime::type::DataTypeId typeId>
+vec::BaseVector *CreateFlatVector(int32_t length, va_list &args)
 {
     using namespace omniruntime::type;
     using T = typename NativeType<typeId>::type;
@@ -108,8 +109,8 @@ void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t ex
 void AssertDoubleVectorEquals(omniruntime::vec::BaseVector *vector, double *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::BaseVector *vector, std::string *expectedValues);
 
-vec::BaseVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount, int32_t *ids,
-    int32_t idsCount, ...);
+vec::BaseVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount,
+    int32_t *ids, int32_t idsCount, ...);
 
 template <type::DataTypeId typeId>
 vec::BaseVector *CreateDictionary(vec::BaseVector *vector, int32_t *ids, int32_t size)
@@ -160,8 +161,6 @@ void AssertStringEquals(std::vector<std::string> &expected, int32_t offset, int3
 void AssertIntEquals(std::vector<int32_t> &expected, std::vector<int32_t> &result);
 
 void AssertLongEquals(std::vector<int64_t> &expected, std::vector<int64_t> &result);
-
-void AssertDoubleEquals(std::vector<double> &expected, std::vector<double> &result);
 
 void AssertBoolEquals(std::vector<bool> &expected, bool *result);
 

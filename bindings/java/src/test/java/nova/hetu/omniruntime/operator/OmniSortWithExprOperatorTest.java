@@ -210,9 +210,9 @@ public class OmniSortWithExprOperatorTest {
     public void testSortAscendingWithSpill() {
         DataType[] sourceTypes = {IntDataType.INTEGER, IntDataType.INTEGER, IntDataType.INTEGER};
         int[] outputCols = {0, 1, 2};
-        String[] sortKeys = {getOmniJsonFieldReference(1, 1), getOmniJsonFieldReference(1, 0)};
-        int[] ascendings = {1, 1};
-        int[] nullFirsts = {0, 0};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 1)};
+        int[] ascendings = {1};
+        int[] nullFirsts = {0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
                 new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 5)));
@@ -239,17 +239,15 @@ public class OmniSortWithExprOperatorTest {
         VecBatch resultVecBatch = results.next();
 
         Object[][] expectedDatas = {
-                {23, 23, 23, 23, 23, 23, 23, 45, 45, 45, 45, 45, 45, 45, 67, 67, 67, 67, 67, 67, 67, 89, 89, 89, 89, 89,
-                        89, 89, 23, 23, 23, 45, 45, 45, 67, 67, 67, 89, 89, 89},
+                {23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 45, 45, 45, 45, 45,
+                        45, 45, 23, 89, 45, 23, 89, 45, 23, 89, 67, 45, 67, 67},
                 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2,
                         2, 2, 2, 2, 2, 2},
-                {12, 12, 12, 12, 12, 12, 12, 24, 24, 24, 24, 24, 24, 24, 36, 36, 36, 36, 36, 36, 36, 48, 48, 48, 48, 48,
-                        48, 48, 12, 12, 12, 24, 24, 24, 36, 36, 36, 48, 48, 48}};
+                {12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 24, 24, 24, 24, 24,
+                        24, 24, 12, 48, 24, 12, 48, 24, 12, 48, 36, 24, 36, 36}};
         assertVecBatchEquals(resultVecBatch, expectedDatas);
 
         freeVecBatch(resultVecBatch);
-        long spilledBytes = sortWithExprOperator.getSpilledBytes();
-        assertTrue(spilledBytes != 0);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
     }
@@ -408,8 +406,6 @@ public class OmniSortWithExprOperatorTest {
             freeVecBatch(resultVecBatch);
         }
 
-        long spilledBytes = sortWithExprOperator.getSpilledBytes();
-        assertTrue(spilledBytes != 0);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
     }

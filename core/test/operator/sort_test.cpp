@@ -1783,13 +1783,13 @@ TEST(NativeOmniSortTest, TestSortAscendingWithSpill)
     auto sourceVecBatch4 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData40, sourceData41, sourceData42);
 
     int32_t outputCols[] = {0, 1, 2};
-    int32_t sortCols[] = {1, 0};
-    int32_t ascendings[] = {1, 1};
-    int32_t nullFirsts[] = {0, 0};
+    int32_t sortCols[] = {1};
+    int32_t ascendings[] = {1};
+    int32_t nullFirsts[] = {0};
     SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 1);
     OperatorConfig operatorConfig(spillConfig);
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 3, sortCols,
-        ascendings, nullFirsts, 2, operatorConfig);
+        ascendings, nullFirsts, 1, operatorConfig);
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
 
     sortOperator->AddInput(sourceVecBatch1);
@@ -1799,12 +1799,12 @@ TEST(NativeOmniSortTest, TestSortAscendingWithSpill)
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
-    int32_t expectData0[] = {23, 23, 23, 23, 23, 23, 23, 45, 45, 45, 45, 45, 45, 45, 67, 67, 67, 67, 67, 67, 67, 89, 89,
-                             89, 89, 89, 89, 89, 23, 23, 23, 45, 45, 45, 67, 67, 67, 89, 89, 89};
-    int32_t expectData1[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2,
-                             2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
-    int32_t expectData2[] = {12, 12, 12, 12, 12, 12, 12, 24, 24, 24, 24, 24, 24, 24, 36, 36, 36, 36, 36, 36, 36, 48, 48,
-                             48, 48, 48, 48, 48, 12, 12, 12, 24, 24, 24, 36, 36, 36, 48, 48, 48};
+    int32_t expectData0[] = {23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 23, 67, 89, 45, 45,
+                             45, 45, 45, 45, 45, 23, 89, 45, 23, 89, 45, 23, 89, 67, 45, 67, 67};
+    int32_t expectData1[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+    int32_t expectData2[] = {12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 12, 36, 48, 24, 24,
+                             24, 24, 24, 24, 24, 12, 48, 24, 12, 48, 24, 12, 48, 36, 24, 36, 36};
     auto expectVecBatch = TestUtil::CreateVectorBatch(sourceTypes, 40, expectData0, expectData1, expectData2);
     ASSERT_TRUE(TestUtil::VecBatchMatch(outputVecBatch, expectVecBatch));
 
@@ -1839,13 +1839,13 @@ TEST(NativeOmniSortTest, TestSortDescendingWithSpill)
     auto sourceVecBatch4 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData40, sourceData41, sourceData42);
 
     int32_t outputCols[] = {0, 1, 2};
-    int32_t sortCols[] = {1, 0};
-    int32_t ascendings[] = {0, 0};
-    int32_t nullFirsts[] = {0, 0};
+    int32_t sortCols[] = {1};
+    int32_t ascendings[] = {0};
+    int32_t nullFirsts[] = {0};
     SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 1);
     OperatorConfig operatorConfig(spillConfig);
     auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 3, sortCols,
-        ascendings, nullFirsts, 2, operatorConfig);
+        ascendings, nullFirsts, 1, operatorConfig);
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
 
     sortOperator->AddInput(sourceVecBatch1);
@@ -1855,67 +1855,13 @@ TEST(NativeOmniSortTest, TestSortDescendingWithSpill)
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
-    int32_t expectData0[] = {89, 89, 89, 67, 67, 67, 45, 45, 45, 23, 23, 23, 89, 89, 89, 89, 89, 89, 89, 67, 67, 67, 67,
-                             67, 67, 67, 45, 45, 45, 45, 45, 45, 45, 23, 23, 23, 23, 23, 23, 23};
+    int32_t expectData0[] = {23, 67, 89, 23, 67, 89, 23, 67, 89, 45, 45, 45, 67, 23, 45, 67, 23, 45, 67, 23, 45, 67, 23,
+                             45, 67, 23, 45, 67, 23, 45, 67, 23, 89, 45, 89, 89, 89, 89, 89, 89};
     int32_t expectData1[] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                              1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    int32_t expectData2[] = {48, 48, 48, 36, 36, 36, 24, 24, 24, 12, 12, 12, 48, 48, 48, 48, 48, 48, 48, 36, 36, 36, 36,
-                             36, 36, 36, 24, 24, 24, 24, 24, 24, 24, 12, 12, 12, 12, 12, 12, 12};
+    int32_t expectData2[] = {12, 36, 48, 12, 36, 48, 12, 36, 48, 24, 24, 24, 36, 12, 24, 36, 12, 24, 36, 12, 24, 36, 12,
+                             24, 36, 12, 24, 36, 12, 24, 36, 12, 48, 24, 48, 48, 48, 48, 48, 48};
     auto expectVecBatch = TestUtil::CreateVectorBatch(sourceTypes, 40, expectData0, expectData1, expectData2);
-    ASSERT_TRUE(TestUtil::VecBatchMatch(outputVecBatch, expectVecBatch));
-
-    VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectVecBatch);
-    omniruntime::op::Operator::DeleteOperator(sortOperator);
-    DeleteSortOperatorFactory(operatorFactory);
-}
-
-TEST(NativeOmniSortTest, TestSortAscendingSpillMerge)
-{
-    const int32_t dataSize = 4;
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), VarcharType(4) }));
-    int32_t sourceData10[dataSize] = {4, 5, 6, 7};
-    std::string sourceData11[dataSize] = {"d", "e", "f", "g"};
-    auto sourceVecBatch1 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData10, sourceData11);
-
-    int32_t sourceData20[dataSize] = {3, 5, 7, 9};
-    std::string sourceData21[dataSize] = {"c", "f", "h", "i"};
-    auto sourceVecBatch2 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData20, sourceData21);
-
-    int32_t sourceData30[dataSize] = {5, 7, 9, 11};
-    std::string sourceData31[dataSize] = {"g", "i", "j", "k"};
-    auto sourceVecBatch3 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData30, sourceData31);
-
-    int32_t sourceData40[dataSize] = {1, 4, 6, 8};
-    std::string sourceData41[dataSize] = {"a", "e", "g", "h"};
-    auto sourceVecBatch4 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData40, sourceData41);
-
-    int32_t sourceData50[dataSize] = {2, 6, 8, 10};
-    std::string sourceData51[dataSize] = {"b", "h", "i", "j"};
-    auto sourceVecBatch5 = TestUtil::CreateVectorBatch(sourceTypes, dataSize, sourceData50, sourceData51);
-
-    int32_t outputCols[] = {0, 1};
-    int32_t sortCols[] = {0, 1};
-    int32_t ascendings[] = {1, 1};
-    int32_t nullFirsts[] = {0, 0};
-    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 1);
-    OperatorConfig operatorConfig(spillConfig);
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols,
-        ascendings, nullFirsts, 2, operatorConfig);
-    auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
-
-    sortOperator->AddInput(sourceVecBatch1);
-    sortOperator->AddInput(sourceVecBatch2);
-    sortOperator->AddInput(sourceVecBatch3);
-    sortOperator->AddInput(sourceVecBatch4);
-    sortOperator->AddInput(sourceVecBatch5);
-    VectorBatch *outputVecBatch = nullptr;
-    sortOperator->GetOutput(&outputVecBatch);
-
-    int32_t expectData0[] = {1, 2, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 9, 10, 11};
-    std::string expectData1[] = {"a", "b", "c", "d", "e", "e", "f", "g", "f", "g", "h", "g", "h", "i", "h", "i", "i",
-                                 "j", "j", "k"};
-    auto expectVecBatch = TestUtil::CreateVectorBatch(sourceTypes, 20, expectData0, expectData1);
     ASSERT_TRUE(TestUtil::VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);

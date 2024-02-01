@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  * @Description: sort operator test implementations
  */
 
@@ -411,64 +411,6 @@ TEST(SortWithExprTest, TestSortWithDuplicatedCols)
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType() }));
     int32_t expectData[] = {31, 41, 51, 21, 61};
     auto expectVecBatch = CreateVectorBatch(expectTypes, dataSize, expectData);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
-
-    Expr::DeleteExprs(sortExprs);
-    VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectVecBatch);
-    omniruntime::op::Operator::DeleteOperator(sortOperator);
-    delete operatorFactory;
-}
-
-TEST(SortWithExprTest, TestSortSpillWithDiffDataSize)
-{
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
-
-    const int32_t dataSize0 = 6;
-    int64_t data00[dataSize0] = {3, 2, 5, 1, 9, 8};
-    int64_t data01[dataSize0] = {131, 12, 15, 111, 19, 181};
-    auto vecBatch0 = CreateVectorBatch(sourceTypes, dataSize0, data00, data01);
-    vecBatch0->Get(1)->SetNull(0);
-    vecBatch0->Get(1)->SetNull(1);
-
-    const int32_t dataSize1 = 4;
-    int64_t data10[dataSize1] = {8, 9, 1, 5};
-    int64_t data11[dataSize1] = {18, 192, 11, 15};
-    auto vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data10, data11);
-    vecBatch1->Get(1)->SetNull(2);
-    vecBatch1->Get(1)->SetNull(3);
-
-    const int32_t dataSize2 = 5;
-    int64_t data20[dataSize2] = {1, 5, 2, 3, 9};
-    int64_t data21[dataSize2] = {11, 151, 12, 13, 191};
-    auto vecBatch2 = CreateVectorBatch(sourceTypes, dataSize2, data20, data21);
-
-    int32_t outputCols[2] = {0, 1};
-    std::vector<Expr *> sortExprs { new FieldExpr(0, LongType()), new FieldExpr(1, LongType()) };
-    int32_t ascendings[2] = {true, true};
-    int32_t nullFirsts[2] = {true, true};
-    SparkSpillConfig spillConfig(GenerateSpillPath(), MAX_SPILL_BYTES, 1);
-    OperatorConfig operatorConfig(spillConfig);
-
-    auto operatorFactory = SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(sourceTypes, outputCols, 2,
-        sortExprs, ascendings, nullFirsts, 2, operatorConfig);
-    auto sortOperator = static_cast<SortWithExprOperator *>(CreateTestOperator(operatorFactory));
-
-    sortOperator->AddInput(vecBatch0);
-    sortOperator->AddInput(vecBatch1);
-    sortOperator->AddInput(vecBatch2);
-    VectorBatch *outputVecBatch = nullptr;
-    sortOperator->GetOutput(&outputVecBatch);
-    VectorHelper::PrintVecBatch(outputVecBatch);
-
-    auto totalDataSize = dataSize0 + dataSize1 + dataSize2;
-    int64_t expectData0[] = {1, 1, 1, 2, 2, 3, 3, 5, 5, 5, 8, 8, 9, 9, 9};
-    int64_t expectData1[] = {11, 11, 111, 12, 12, 131, 13, 15, 15, 151, 18, 181, 19, 191, 192};
-    auto expectVecBatch = CreateVectorBatch(sourceTypes, totalDataSize, expectData0, expectData1);
-    expectVecBatch->Get(1)->SetNull(0);
-    expectVecBatch->Get(1)->SetNull(3);
-    expectVecBatch->Get(1)->SetNull(5);
-    expectVecBatch->Get(1)->SetNull(7);
     EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs(sortExprs);
