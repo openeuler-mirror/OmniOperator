@@ -1327,7 +1327,7 @@ void PagesIndex::GetOutputInplaceSort(int32_t *outputCols, int32_t outputColsCou
     omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset, int32_t length) const
 {
     auto outputVector = outputVecBatch->Get(0);
-    VectorHelper::CopyFlatVector(outputVector, inplaceSortColumn);
+    VectorHelper::CopyFlatVector(outputVector, inplaceSortColumn, offset, length);
 }
 
 PagesIndex::~PagesIndex()
