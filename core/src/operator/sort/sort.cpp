@@ -7,8 +7,6 @@
 #include "util/debug.h"
 #include "vector/vector_helper.h"
 #include "operator/util/operator_util.h"
-#include "operator/spill/vector_batch_spiller.h"
-#include "operator/spill/spill_iterator.h"
 #include "util/omni_exception.h"
 
 using namespace std;
@@ -64,6 +62,10 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     this->sortAscendings = sortAscendings;
     this->sortNullFirsts = sortNullFirsts;
     this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
+
+    for (auto outputCol : outputCols) {
+        outputTypes.emplace_back(dataTypes.GetType(outputCol));
+    }
     maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputCols.size());
     maxRowCountPerBatch = maxRowCountPerBatch == 0 ? 1 : maxRowCountPerBatch;
     if (sourceTypes.GetSize() == 1) {
@@ -83,11 +85,17 @@ SortOperator::~SortOperator() = default;
 
 int32_t SortOperator::AddInput(VectorBatch *vecBatch)
 {
+    auto rowCount = vecBatch->GetRowCount();
+    if (rowCount <= 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        return 0;
+    }
     totalRowCount += vecBatch->GetRowCount();
     pagesIndex->AddVecBatch(vecBatch);
     if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
+        hasSorted = false;
         if (UNLIKELY(result != ErrorCode::SUCCESS)) {
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
@@ -104,10 +112,10 @@ int32_t SortOperator::GetOutput(VectorBatch **outputVecBatch)
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
-    if (spiller == nullptr) {
+    if (!hasSpill) {
         GetOutputFromMemory(outputVecBatch);
     } else {
-        MergeFromDiskAndMemory(outputVecBatch);
+        GetOutputFromDisk(outputVecBatch);
     }
 
     // through the reference counting mechanism, can vecBatch be released early?
@@ -121,12 +129,10 @@ int32_t SortOperator::GetOutput(VectorBatch **outputVecBatch)
 
 OmniStatus SortOperator::Close()
 {
-    if (comparator) {
-        delete comparator;
-    }
-    if (spiller) {
-        delete spiller;
-    }
+    // delete spiller object when exception occurs
+    delete spiller;
+    delete spillMerger;
+
     // ensure free pagesIndex if exception occurs
     pagesIndex->Clear();
     return OMNI_STATUS_NORMAL;
@@ -134,38 +140,33 @@ OmniStatus SortOperator::Close()
 
 uint64_t SortOperator::GetSpilledBytes()
 {
-    if (spiller != nullptr) {
-        return spiller->GetSpilledBytes();
-    } else {
-        return 0;
-    }
+    return spilledBytes;
 }
 
 ErrorCode SortOperator::SpillToDisk()
 {
-    if (!canInplaceSort) {
-        pagesIndex->Prepare();
-    } else {
-        DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(), sortNullFirsts[0]);
+    if (pagesIndex->GetRowCount() <= 0) {
+        return ErrorCode::SUCCESS;
     }
 
+    // first step prepare for sort
+    PrepareSort();
+
+    // second step sort
     Sort();
 
     if (spiller == nullptr) {
-        comparator = new VecBatchWithPositionComparator(sourceTypes, sortCols, sortAscendings, sortNullFirsts);
-        spiller = new VectorBatchSpiller(operatorConfig.GetSpillConfig()->GetSpillPath(), sourceTypes, outputCols,
-            comparator);
-        spiller->SetSpillTracker(GetRootSpillTracker().CreateSpillTracker());
+        size_t sortColsCount = sortCols.size();
+        std::vector<SortOrder> sortOrders;
+        for (size_t i = 0; i < sortColsCount; i++) {
+            SortOrder sortOrder { sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
+            sortOrders.emplace_back(sortOrder);
+        }
+        spiller = new Spiller(sourceTypes, sortCols, sortOrders, operatorConfig.GetSpillConfig()->GetSpillPath());
+        hasSpill = true;
     }
 
-    // spill data from memory to disk
-    std::vector<VectorBatch *> vecBatchesForSpill;
-    GetVecBatchesForSpill(vecBatchesForSpill);
-
-    VectorBatchUnitIter iter(vecBatchesForSpill);
-    auto result = spiller->Spill(iter);
-    VectorHelper::FreeVecBatches(vecBatchesForSpill);
-    return result;
+    return spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort);
 }
 
 void SortOperator::Sort()
@@ -181,17 +182,7 @@ void SortOperator::Sort()
     } else {
         pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0, positionCount);
     }
-}
-
-void SortOperator::GetVecBatchesForSpill(std::vector<VectorBatch *> &vecBatchesForSpill)
-{
-    int32_t typesCount = sourceTypes.GetSize();
-    std::vector<int32_t> outputCols(typesCount);
-    for (int32_t i = 0; i < typesCount; i++) {
-        outputCols[i] = i;
-    }
-    // This call GetOutput, which will decide whether to use radix sort
-    pagesIndex->GetSortedVecBatches(outputCols, vecBatchesForSpill, canInplaceSort);
+    hasSorted = true;
 }
 
 bool SortOperator::CanUseRadixSort()
@@ -212,11 +203,12 @@ bool SortOperator::CanUseRadixSortByRuntimeInfo()
         !pagesIndex->HasDictionary(sortCols[0]);
 }
 
-void SortOperator::PrepareOutput()
+void SortOperator::PrepareSort()
 {
-    if (pagesIndex->GetRowCount() <= 0 || hasSorted) {
+    if (hasSorted) {
         return;
     }
+
     // update radix sort state
     if (canRadixSort) {
         canRadixSort = CanUseRadixSortByRuntimeInfo();
@@ -251,20 +243,23 @@ void SortOperator::PrepareOutput()
     } else {
         pagesIndex->Prepare();
     }
-    // first step, sort
-    Sort();
-    hasSorted = true;
 }
 
 void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
 {
-    // first if has not sorted,need to sort first.
-    PrepareOutput();
-    // second step, get sorted vector batches
+    // first step prepare for sort
+    PrepareSort();
+
+    // second step sort
+    Sort();
+
+    // third step, get sorted vector batches
     int32_t rowCountToOutput =
         static_cast<int32_t>(std::min(static_cast<size_t>(maxRowCountPerBatch), (totalRowCount - rowCountOutputted)));
 
     auto *result = new VectorBatch(rowCountToOutput);
+    DataTypes outputDataTypes(outputTypes);
+    VectorHelper::AppendVectors(result, outputDataTypes, rowCountToOutput);
     if (canInplaceSort) {
         pagesIndex->GetOutputInplaceSort(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(),
             rowCountOutputted, rowCountToOutput);
@@ -275,41 +270,132 @@ void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
         pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
             rowCountToOutput);
     }
+
     rowCountOutputted += rowCountToOutput;
     *outputVecBatch = result;
 }
 
-void SortOperator::MergeFromDiskAndMemory(VectorBatch **outputVecBatch)
+void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
 {
-    if (!hasSorted) {
-        std::vector<VectorBatch *> vecBatchesForSpill;
-        if (pagesIndex->GetRowCount() > 0) {
-            if (!canInplaceSort) {
-                pagesIndex->Prepare();
-            } else {
-                DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(),
-                    sortNullFirsts[0]);
-            }
-            // first step, sort
-            Sort();
-            // second step, get sorted vector batches
-            GetVecBatchesForSpill(vecBatchesForSpill);
+    if (spillMerger == nullptr) {
+        auto result = SpillToDisk();
+        pagesIndex->Clear();
+        hasSorted = false;
+        spilledBytes = spiller->GetSpilledBytes();
+        if (result != ErrorCode::SUCCESS) {
+            throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
+        auto spillFiles = spiller->FinishSpill();
+        spillMerger = spiller->CreateSpillMerger(spillFiles);
+        // when the spill completed, the spiller object can be released in advance
+        if (spillMerger == nullptr) {
+            delete spiller;
+            spiller = nullptr;
+            throw omniruntime::exception::OmniException("SPILL_FAILED", "Create spill merger failed.");
+        }
+        delete spiller;
+        spiller = nullptr;
+    }
+    int32_t rowCount = std::min(maxRowCountPerBatch, static_cast<int32_t>(totalRowCount - rowCountOutputted));
+    batches.resize(rowCount);
+    rowIdxes.resize(rowCount);
 
-        // third step, merge data from disk and memory
-        VectorBatchUnitIter memoryIter(vecBatchesForSpill);
-        spiller->MergeFromDiskAndMemory(memoryIter);
-        hasSorted = true;
-        hasNext = spiller->HasNext();
+    // create a empty vector batch, and copy data
+    auto *resultVecBatch = new VectorBatch(rowCount);
+    VectorHelper::AppendVectors(resultVecBatch, sourceTypes, rowCount);
+
+    int32_t rowOffset = 0;
+    int32_t resultRowOffset = 0;
+    int32_t rowIdx = 0;
+    while (rowOffset < rowCount) {
+        bool isLastRow = false;
+        batches[rowIdx] = spillMerger->CurrentBatch();
+        rowIdxes[rowIdx] = spillMerger->CurrentRowIndex(isLastRow);
+        rowIdx++;
+        rowOffset++;
+        if (isLastRow) {
+            SetSpillOutputVecBatch(resultVecBatch, resultRowOffset, rowIdx);
+            rowIdx = 0;
+        }
+        spillMerger->Pop();
     }
-    if (hasNext) {
-        auto *vectorBatchUnit = static_cast<VectorBatchUnit *>(spiller->Next());
-        auto *result = vectorBatchUnit->GetVectorBatch();
-        *outputVecBatch = result;
-        rowCountOutputted += result->GetRowCount();
-        delete vectorBatchUnit;
+    int32_t remainingCount = rowCount - resultRowOffset;
+    if (remainingCount > 0) {
+        SetSpillOutputVecBatch(resultVecBatch, resultRowOffset, rowIdx);
     }
-    hasNext = spiller->HasNext();
+
+    rowCountOutputted += rowCount;
+    *outputVecBatch = resultVecBatch;
+}
+
+void SortOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t &rowOffset, int32_t rowCount)
+{
+    int32_t offset = rowOffset;
+    auto outputColSize = static_cast<int32_t>(outputCols.size());
+    for (int32_t i = 0; i < outputColSize; i++) {
+        auto outputVector = outputVecBatch->Get(i);
+        auto outputCol = outputCols[i];
+        auto outputTypeId = sourceTypes.GetType(outputCol)->GetId();
+        switch (outputTypeId) {
+            case OMNI_INT:
+            case OMNI_DATE32:
+                SetSpillOutputVector<int32_t>(outputVector, offset, rowCount, outputCol);
+                break;
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
+            case OMNI_TIMESTAMP:
+                SetSpillOutputVector<int64_t>(outputVector, offset, rowCount, outputCol);
+                break;
+            case OMNI_DOUBLE:
+                SetSpillOutputVector<double>(outputVector, offset, rowCount, outputCol);
+                break;
+            case OMNI_BOOLEAN:
+                SetSpillOutputVector<bool>(outputVector, offset, rowCount, outputCol);
+                break;
+            case OMNI_SHORT:
+                SetSpillOutputVector<int16_t>(outputVector, offset, rowCount, outputCol);
+                break;
+            case OMNI_DECIMAL128:
+                SetSpillOutputVector<Decimal128>(outputVector, offset, rowCount, outputCol);
+                break;
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                SetSpillOutputVector<std::string_view>(outputVector, offset, rowCount, outputCol);
+                break;
+            default:
+                break;
+        }
+    }
+
+    rowOffset += rowCount;
+}
+
+template <typename T>
+void SortOperator::SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowIdx, int32_t outputRowCount,
+    int32_t outputCol)
+{
+    for (int32_t i = 0; i < outputRowCount; i++) {
+        auto batch = batches[i];
+        auto inputRowIdx = rowIdxes[i];
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+            auto inputVector = static_cast<VarcharVector *>(batch->Get(outputCol));
+            if (inputVector->IsNull(inputRowIdx)) {
+                static_cast<VarcharVector *>(outputVector)->SetNull(outputRowIdx);
+            } else {
+                auto value = inputVector->GetValue(inputRowIdx);
+                static_cast<VarcharVector *>(outputVector)->SetValue(outputRowIdx, value);
+            }
+        } else {
+            auto inputVector = static_cast<Vector<T> *>(batch->Get(outputCol));
+            if (inputVector->IsNull(inputRowIdx)) {
+                static_cast<Vector<T> *>(outputVector)->SetNull(outputRowIdx);
+            } else {
+                static_cast<Vector<T> *>(outputVector)->SetValue(outputRowIdx, inputVector->GetValue(inputRowIdx));
+            }
+        }
+        outputRowIdx++;
+    }
 }
 } // end of namespace op
 } // end of namespace omniruntime

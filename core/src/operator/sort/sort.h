@@ -12,7 +12,7 @@
 #include "operator/config/operator_config.h"
 #include "operator/pages_index.h"
 #include "operator/spill/spiller.h"
-#include "operator/spill/vector_batch_merger.h"
+#include "operator/spill/spill_merger.h"
 #include "type/data_types.h"
 #include "type/data_type.h"
 
@@ -102,14 +102,17 @@ public:
     }
 
 private:
-    void PrepareOutput();
+    void PrepareSort();
     ErrorCode SpillToDisk();
     void Sort();
-    void GetVecBatchesForSpill(std::vector<omniruntime::vec::VectorBatch *> &vecBatchesForSpill);
-    void GetOutputFromMemory(VectorBatch **outputVecBatch);
-    void MergeFromDiskAndMemory(VectorBatch **outputVecBatch);
     bool CanUseRadixSort();
     bool CanUseRadixSortByRuntimeInfo();
+    void GetOutputFromMemory(VectorBatch **outputVecBatch);
+    void GetOutputFromDisk(vec::VectorBatch **outputVecBatch);
+    void SetSpillOutputVecBatch(vec::VectorBatch *outputVecBatch, int32_t &rowOffset, int32_t rowCount);
+    template <typename T>
+    void SetSpillOutputVector(vec::BaseVector *outputVector, int32_t outputRowIdx, int32_t outputRowCount,
+        int32_t outputCol);
 
     type::DataTypes sourceTypes;
     std::vector<int32_t> outputCols;
@@ -117,6 +120,7 @@ private:
     std::vector<int32_t> sortAscendings;
     std::vector<int32_t> sortNullFirsts;
     std::unique_ptr<PagesIndex> pagesIndex;
+    std::vector<DataTypePtr> outputTypes;
     int32_t maxRowCountPerBatch = 0;
     size_t totalRowCount = 0;
     size_t rowCountOutputted = 0;
@@ -128,9 +132,12 @@ private:
 
     // for spill
     OperatorConfig operatorConfig;
-    VecBatchWithPositionComparator *comparator = nullptr;
     Spiller *spiller = nullptr;
-    bool hasNext = true;
+    SpillMerger *spillMerger = nullptr;
+    std::vector<vec::VectorBatch *> batches;
+    std::vector<int32_t> rowIdxes;
+    bool hasSpill = false;
+    uint64_t spilledBytes = 0;
 };
 } // end of namespace op
 } // end of namespace omniruntime
