@@ -90,12 +90,11 @@ int32_t SortOperator::AddInput(VectorBatch *vecBatch)
         VectorHelper::FreeVecBatch(vecBatch);
         return 0;
     }
-    totalRowCount += vecBatch->GetRowCount();
+    totalRowCount += rowCount;
     pagesIndex->AddVecBatch(vecBatch);
     if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
-        hasSorted = false;
         if (UNLIKELY(result != ErrorCode::SUCCESS)) {
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
@@ -182,7 +181,6 @@ void SortOperator::Sort()
     } else {
         pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0, positionCount);
     }
-    hasSorted = true;
 }
 
 bool SortOperator::CanUseRadixSort()
@@ -205,10 +203,6 @@ bool SortOperator::CanUseRadixSortByRuntimeInfo()
 
 void SortOperator::PrepareSort()
 {
-    if (hasSorted) {
-        return;
-    }
-
     // update radix sort state
     if (canRadixSort) {
         canRadixSort = CanUseRadixSortByRuntimeInfo();
@@ -247,11 +241,14 @@ void SortOperator::PrepareSort()
 
 void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
 {
-    // first step prepare for sort
-    PrepareSort();
+    if (!hasSorted) {
+        // first step prepare for sort
+        PrepareSort();
 
-    // second step sort
-    Sort();
+        // second step sort
+        Sort();
+        hasSorted = true;
+    }
 
     // third step, get sorted vector batches
     int32_t rowCountToOutput =
@@ -280,7 +277,6 @@ void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
     if (spillMerger == nullptr) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
-        hasSorted = false;
         spilledBytes = spiller->GetSpilledBytes();
         if (result != ErrorCode::SUCCESS) {
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
