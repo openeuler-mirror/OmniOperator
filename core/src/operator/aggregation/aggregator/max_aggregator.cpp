@@ -43,7 +43,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &stat
     int32_t rowIndex)
 {
     auto v = static_cast<Vector<ResultType> *>(vectors[0]);
-    if (state.count <= 0 || state.val == nullptr) {
+    if (state.count == 0 || state.val == nullptr) {
         v->SetNull(rowIndex);
         return;
     }

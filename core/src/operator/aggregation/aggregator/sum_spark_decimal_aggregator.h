@@ -131,27 +131,16 @@ public:
 
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        BaseVector *vector = vectors[0];
+        auto v = static_cast<Vector<ResultType> *>(vectors[0]);
         auto v1 = static_cast<Vector<long> *>(vectors[1]);
-        int128_t decodedDec = 0;
-        if constexpr (std::is_same_v<ResultType, Decimal128>) {
-            decodedDec = static_cast<Decimal128 *>(state.val)->ToInt128();
-        } else {
-            decodedDec = *(static_cast<int64_t *>(state.val));
+        if (state.count == 0) {
+            v->SetNull(rowIndex);
+            v1->SetValue(rowIndex, state.count);
+            return;
         }
-        bool isOverflow = (state.count < 0);
 
-        int128_t resultDec;
-        int32_t scaleDiff = static_cast<DecimalDataType *>(outputTypes.GetType(0).get())->GetScale() -
-                            static_cast<DecimalDataType *>(inputTypes.GetType(0).get())->GetScale();
-        isOverflow = isOverflow || MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
-        int32_t outputType = outputTypes.GetIds()[0];
-        if (isOverflow) {
-            vector->SetNull(rowIndex);
-        } else {
-            SetValToVector(vector, rowIndex, outputType, resultDec);
-        }
-        v1->SetValue(rowIndex,state.count);
+        v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        v1->SetValue(rowIndex, state.count);
     }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {

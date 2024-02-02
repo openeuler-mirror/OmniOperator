@@ -153,10 +153,8 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState
 {
     auto vectorPtr = vectorBatch->Get(vectorIndex++);
     auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorPtr));
-    if (!vectorPtr->IsNull(rowIdx)) {
-        int64_t unsedFlag = 0;
-        CountAllOp(&(state.count), unsedFlag, ptr[rowIdx], 0LL);
-    }
+    int64_t unsedFlag = 0;
+    CountAllOp(&(state.count), unsedFlag, ptr[rowIdx], 0LL);
 }
 
 // Explicit template instantiation

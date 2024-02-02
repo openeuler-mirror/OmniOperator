@@ -203,7 +203,6 @@ OmniStatus HashAggregationOperator::Init()
 
     int32_t rowByteSize = InitMaxRowCountAndOutputTypes();
     rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
-    InitSpillTypes();
     return OMNI_STATUS_NORMAL;
 }
 
@@ -473,7 +472,6 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
     auto curRowCount = std::min(spillRowsPerPagesIndexs, curRemainHandleOutput);
     auto hashmapInVector = new VectorBatch(curRowCount);
     SetVectors(hashmapInVector, spillTypes, curRowCount);
-    const int32_t expectSize = hashmapInVector->GetRowCount();
     const size_t aggNum = this->aggregators.size();
     int32_t groupColNum = static_cast<int32_t>(this->groupByCols.size());
     std::vector<BaseVector *> groupOutputVectors(groupColNum);
@@ -487,7 +485,7 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
         auto statefulMachine =
             spillHashMap.GetOutputMachine(spillOutputState.outputHashmapPos, spillOutputState.hasBeenOutputNum);
 
-        curOutputState = statefulMachine.HandleElements(expectSize, [&](const auto &key, auto &mapped) mutable {
+        curOutputState = statefulMachine.HandleElements(curRowCount, [&](const auto &key, auto &mapped) mutable {
             serialize->ParseKeyToCols(key, groupOutputVectors, groupColNum, lambdaRowIndex);
             ++lambdaRowIndex;
         });
@@ -513,7 +511,7 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
         {
             auto statefulMachine =
                 spillHashMap.GetOutputMachine(spillOutputState.outputHashmapPos, spillOutputState.hasBeenOutputNum);
-            statefulMachine.HandleElements(expectSize, [&](const auto &key, auto &mapped) mutable {
+            statefulMachine.HandleElements(curRowCount, [&](const auto &key, auto &mapped) mutable {
                 auto &state = mapped[aggIndex];
                 aggregator->ExtractSpillValues(state, adaptAggVectors, lambdaRowIndex);
 
@@ -529,12 +527,13 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
 
 void HashAggregationOperator::SpillHashMap()
 {
-    while (spillOutputState.hasBeenOutputNum != this->serialize->hashmap.GetElementsSize()) {
+    if (spiller == nullptr) {
+        InitSpillTypes();
+        spiller = new Spiller(DataTypes(spillTypes), groupByClomIdx, sortOrders,
+            operatorConfig.GetSpillConfig()->GetSpillPath());
+    }
+    while (spillOutputState.hasBeenOutputNum != this->serialize->GetElementsSize()) {
         ConvertHashMap2PageIndex();
-        if (spiller == nullptr) {
-            spiller = new Spiller(DataTypes(spillTypes), groupByClomIdx, sortOrders,
-                operatorConfig.GetSpillConfig()->GetSpillPath());
-        }
         spiller->Spill(pagesIndex, false, false);
         pagesIndex->Clear();
     }

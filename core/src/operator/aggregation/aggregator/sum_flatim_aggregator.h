@@ -151,15 +151,12 @@ public:
     {
         auto v = static_cast<Vector<ResultType> *>(vectors[0]);
         auto v1 = static_cast<Vector<long> *>(vectors[1]);
-        // state.count == 0 means all data is null or no data be accumulated,
-        // we will set null
-        if (state.count <= 0) {
+        if (state.count == 0) {
             v->SetNull(rowIndex);
             v1->SetValue(rowIndex, state.count);
             return;
         }
 
-        // we can not distinguish whether value is overflow when stage.val is null
         v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
         v1->SetValue(rowIndex, state.count);
     }

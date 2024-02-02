@@ -59,7 +59,7 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const omniruntime::op::Agg
 {
     auto v = static_cast<Vector<ResultType> *>(vectors[0]);
     auto v1 = static_cast<Vector<long> *>(vectors[1]);
-    if (state.count <= 0 || state.val == nullptr) {
+    if (state.count == 0 || state.val == nullptr) {
         v->SetNull(rowIndex);
         v1->SetValue(rowIndex, state.count);
         return;
