@@ -52,6 +52,8 @@ constexpr int32_t PTR_STEP_4 = 4;
 
 class HashUtil {
 public:
+    static uint64_t NextPowerOfTwo(uint64_t x);
+
     static uint32_t HashArraySize(uint32_t expected, float f);
 
     static ALWAYS_INLINE int64_t HashValue(int32_t value)

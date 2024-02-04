@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  */
 
 #ifndef OMNI_RUNTIME_VECTOR_BATCH_H
@@ -51,6 +51,7 @@ public:
     void FreeAllVectors();
 
 private:
+    size_t capacity; // max row count that can be held
     size_t rowCnt;
     std::vector<BaseVector *> vectors;
 };
