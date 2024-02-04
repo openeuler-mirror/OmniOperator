@@ -149,6 +149,29 @@ public:
         }
     }
 
+    static bool DoNeedHandleAggFilter(Vector<bool> *filterVec, const int32_t rowOffset, const int size)
+    {
+        auto filterValues = unsafe::UnsafeVector::GetRawValues(filterVec);
+        const bool *p = filterValues + rowOffset;
+        // Check if first bool differs from expected.
+        if (*p) {
+            return true;
+        }
+        uint32_t nearHalf;
+        uint32_t farHalf;
+        uint64_t bytesStream = sizeof(bool) * size;
+        while (bytesStream > 1) {
+            nearHalf = bytesStream / 2;
+            farHalf = bytesStream - nearHalf;
+            if (memcmp(p, p + farHalf, nearHalf)) {
+                // first half and last half differ, so null exist.
+                return true;
+            }
+            bytesStream = farHalf; // for odd length, new size should be farHalf
+        }
+        return false;
+    }
+
     // for no groupby aggregation  with filter
     virtual void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t filterIndex)
@@ -158,17 +181,11 @@ public:
 #endif
 
         int32_t rowEnd = rowOffset + vectorBatch->GetRowCount();
-        auto booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
-        bool needFilterJude = false;
-        for (int32_t start = 0, end = rowEnd - 1; start <= end; ++start, --end) {
-            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
-                needFilterJude = true;
-                break;
-            }
-        }
+        auto filterVec = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
+        bool needFilterJude = DoNeedHandleAggFilter(filterVec, rowOffset, vectorBatch->GetRowCount());
         if (needFilterJude) {
             for (int32_t i = rowOffset; i < rowEnd; ++i) {
-                if (booleanVector->GetValue(i)) {
+                if (filterVec->GetValue(i)) {
                     ProcessGroup(state, vectorBatch, i);
                 }
             }
@@ -204,26 +221,20 @@ public:
 
     // for groupby hash aggregation
     virtual void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-        VectorBatch *vectorBatch, const int32_t filterStart, const int32_t rowOffset)
+        VectorBatch *vectorBatch, const int32_t filterOffset, const int32_t rowOffset)
     {
 #ifdef DEBUG
         LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
 #endif
-        int32_t rowIndex = rowOffset;
+        auto filterVecIdx = static_cast<int32_t>(filterOffset + aggIdx);
+        auto filterVec = static_cast<Vector<bool> *>(vectorBatch->Get(filterVecIdx));
         auto rowCount = static_cast<int32_t>(rowStates.size());
-        bool needFilterJude = false;
+        bool needFilterJude = DoNeedHandleAggFilter(filterVec, rowOffset, rowCount);
 
-        auto booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
-        for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
-            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
-                needFilterJude = true;
-                break;
-            }
-        }
-
+        int32_t rowIndex = rowOffset;
         if (needFilterJude) {
             for (int32_t i = 0; i < rowCount; ++i) {
-                if (booleanVector->GetValue(i)) {
+                if (filterVec->GetValue(i)) {
                     ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
                     continue;
                 }

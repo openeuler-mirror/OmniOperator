@@ -41,21 +41,29 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     }
 
     // do aggSimpleFilters
+    auto overflowConfig = operatorConfig.GetOverflowConfig();
     this->aggFilterNum = static_cast<int32_t>(aggFilters.size());
+    aggSimpleFilters.resize(aggFilterNum, nullptr);
+    std::vector<int8_t> hasAggFilters(aggFilterNum, 0);
     for (int32_t i = 0; i < aggFilterNum; ++i) {
-        if (aggFilters[i] == nullptr) {
-            aggSimpleFilters.push_back(nullptr);
-            continue;
+        auto aggFilter = aggFilters[i];
+        if (aggFilter != nullptr) {
+            auto simpleFilter = new SimpleFilter(*aggFilter);
+            if (simpleFilter->Initialize(overflowConfig)) {
+                aggSimpleFilters[i] = simpleFilter;
+                hasAggFilters[i] = 1;
+            } else {
+                delete simpleFilter;
+                throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT",
+                    "The expression is not supported yet.");
+            }
         }
-        auto simpleFilter = new SimpleFilter(*aggFilters[i]);
-        simpleFilter->Initialize(operatorConfig.GetOverflowConfig());
-        aggSimpleFilters.push_back(simpleFilter);
     }
 
     std::vector<int32_t> groupByAndAggColumnarIdx;
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateRequiredProjections(sourceDataTypes, projectKeys, newSourceTypes, this->projections,
-        groupByAndAggColumnarIdx, *(operatorConfig.GetOverflowConfig()));
+        groupByAndAggColumnarIdx, *overflowConfig);
     uint32_t groupByCols[groupByNum];
     for (uint32_t i = 0; i < groupByNum; i++) {
         groupByCols[i] = static_cast<uint32_t>(groupByAndAggColumnarIdx[i]);
@@ -98,7 +106,7 @@ HashAggregationWithExprOperatorFactory::HashAggregationWithExprOperatorFactory(
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     this->hashAggOperatorFactory =
         new HashAggregationOperatorFactory(groupByCol, *groupByTypes, aggColIdx, aggInputDataTypes, aggOutputTypes,
-        aggFuncTypes, maskColumns, inputRaws, outputPartial, operatorConfig);
+        aggFuncTypes, maskColumns, inputRaws, outputPartial, hasAggFilters, operatorConfig);
     this->hashAggOperatorFactory->Init();
 }
 
@@ -133,7 +141,14 @@ HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes
       aggSimpleFilters(aggSimpleFilters),
       hashAggOperator(hashAggOperator),
       executionContext(new ExecutionContext())
-{}
+{
+    for (auto simpleFilter : aggSimpleFilters) {
+        if (simpleFilter != nullptr) {
+            hasAggFilter = true;
+            break;
+        }
+    }
+}
 
 HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 {
@@ -145,9 +160,12 @@ int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
         AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext);
-    // do filter and update newInputVecBatch
-    // if is true not filter
-    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
+
+    // if hasAggFilter is false, then skip AddFilterColumn
+    if (hasAggFilter) {
+        // do filter and update newInputVecBatch
+        AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
+    }
     hashAggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;

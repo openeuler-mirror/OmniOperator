@@ -148,7 +148,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
     }
 
     auto groupByOperator = new HashAggregationOperator(groupByIndex, aggsInputCols, aggInputColsSize, aggInputTypes,
-        aggOutputTypes, std::move(aggs), inputRaws, outputPartials, operatorConfig);
+        aggOutputTypes, std::move(aggs), inputRaws, outputPartials, hasAggFilters, operatorConfig);
     groupByOperator->SetGroupByColumnsHandleType(handleType);
 
     groupByOperator->Init();
@@ -393,9 +393,20 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
     }
 
     if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
-        int32_t filterStart = vecBatch->GetVectorCount() - static_cast<int32_t>(aggNum);
-        for (size_t i = 0; i < aggNum; ++i) {
-            aggregators[i]->ProcessGroupFilter(rowStates, i, vecBatch, filterStart, 0);
+        if (aggFiltersCount > 0) {
+            int32_t filterOffset = vecBatch->GetVectorCount() - aggFiltersCount;
+            for (size_t i = 0; i < aggNum; ++i) {
+                if (hasAggFilters[i] == 1) {
+                    aggregators[i]->ProcessGroupFilter(rowStates, i, vecBatch, filterOffset, 0);
+                    filterOffset++;
+                } else {
+                    aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
+                }
+            }
+        } else {
+            for (size_t i = 0; i < aggNum; ++i) {
+                aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
+            }
         }
     } else {
         for (size_t i = 0; i < aggNum; ++i) {

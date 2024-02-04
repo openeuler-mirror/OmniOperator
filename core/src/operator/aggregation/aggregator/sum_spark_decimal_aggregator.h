@@ -119,7 +119,7 @@ public:
     {}
 
     ~SumSparkDecimalAggregator() override = default;
-    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
     {
         if constexpr (InDecimalId == OMNI_DECIMAL64) {
             spillTypes.push_back(OutDecimalId);
