@@ -14,7 +14,15 @@
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
 
-void RecordInputVectorsStack(VectorBatch *vectorBatch, JNIEnv *env)
+static std::once_flag loadVecBatchClsFlag;
+
+static jclass vecBatchCls = nullptr;
+static jmethodID vecBatchInitMethodId = nullptr;
+
+static jclass omniResultsCls = nullptr;
+static jmethodID omniResultsInitMethodId = nullptr;
+
+static void RecordInputVectorsStack(VectorBatch *vectorBatch, JNIEnv *env)
 {
 #ifdef DEBUG_VECTOR
     jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId);
@@ -29,7 +37,7 @@ void RecordInputVectorsStack(VectorBatch *vectorBatch, JNIEnv *env)
 #endif
 }
 
-void RecordOutputVectorsStack(VectorBatch &outputVecBatch, JNIEnv *env)
+static void RecordOutputVectorsStack(VectorBatch &outputVecBatch, JNIEnv *env)
 {
 #ifdef DEBUG_VECTOR
     jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId);
@@ -43,16 +51,30 @@ void RecordOutputVectorsStack(VectorBatch &outputVecBatch, JNIEnv *env)
 #endif
 }
 
-jobject transform(JNIEnv *env, VectorBatch &result)
+static void LoadVecBatchAndOmniResults(JNIEnv *env)
+{
+    if (vecBatchCls == nullptr) {
+        // the java adaptor maybe only use VecBatch or Vec like ColumnarBroadcastExchangeExec
+        // it will load VecBatch class, and then will call System.load to load so
+        // so load VecBatch class on demand to avoid deadlock
+        vecBatchCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/vector/VecBatch");
+        vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "(J[J[J[J[J[I[II)V");
+        omniResultsCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/operator/OmniResults");
+        omniResultsInitMethodId =
+            env->GetMethodID(omniResultsCls, "<init>", "(Lnova/hetu/omniruntime/vector/VecBatch;I)V");
+    }
+}
+
+static jobject transform(JNIEnv *env, VectorBatch &result)
 {
     int32_t vecCount = result.GetVectorCount();
-    long vecAddresses[vecCount];
+    int64_t vecAddresses[vecCount];
     int32_t encodings[vecCount];
     int32_t dataTypeIds[vecCount];
-    long valueBufAddrs[vecCount];
-    long nullBufAddrs[vecCount];
-    long offsetsBufAddrs[vecCount];
-    for (int i = 0; i < vecCount; ++i) {
+    int64_t valueBufAddrs[vecCount];
+    int64_t nullBufAddrs[vecCount];
+    int64_t offsetsBufAddrs[vecCount];
+    for (int32_t i = 0; i < vecCount; ++i) {
         BaseVector *vector = result.Get(i);
         vecAddresses[i] = reinterpret_cast<uintptr_t>(vector);
         dataTypeIds[i] = vector->GetTypeId();
@@ -115,6 +137,12 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOutputNative(JNIEnv *env, jobject jObj,
     jlong jOperatorAddr)
 {
+    std::call_once(loadVecBatchClsFlag, LoadVecBatchAndOmniResults, env);
+    if (vecBatchCls == nullptr || omniResultsCls == nullptr) {
+        throw omniruntime::exception::OmniException("LOAD_CLASS_FAILED",
+            "The class VecBatch or OmniResult has not load yet.");
+    }
+
     auto *nativeOperator = (Operator *)jOperatorAddr;
     VectorBatch *outputVecBatch = nullptr;
     JNI_METHOD_START

@@ -6,8 +6,6 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
-import nova.hetu.omniruntime.OmniLibs;
-import nova.hetu.omniruntime.utils.NativeLog;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
@@ -18,12 +16,6 @@ import java.util.Iterator;
  * @since 2021-06-30
  */
 public final class OmniOperator implements AutoCloseable {
-    // 加载jni所需动态库
-    static {
-        OmniLibs.load();
-        NativeLog.getInstance();
-    }
-
     /**
      * The Native operator.
      */
