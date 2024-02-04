@@ -40,7 +40,8 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
         }
     }
 }
-template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId>& spillTypes)
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId>& spillTypes)
 {
     if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
         spillTypes.push_back(OMNI_LONG);
@@ -139,32 +140,32 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
     int32_t &vectorIndex, int32_t rowIdx)
 {
-    auto vectorPtr = vectorBatch->Get(vectorIndex++);
-    auto vectorCnt = vectorBatch->Get(vectorIndex++);
-    auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
-    cnt = (int64_t *)__builtin_assume_aligned(cnt, ARRAY_ALIGNMENT);
+    auto sumVector = vectorBatch->Get(vectorIndex++);
+    auto countVector = vectorBatch->Get(vectorIndex++);
+    auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+    cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
 
-    int64_t sumCnt = cnt[rowIdx];
-    if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
-        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
-            auto dataPtr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
-            Decimal128 data = Decimal128(dataPtr->GetValue(rowIdx));
-            SumOp<Decimal128, Decimal128>(reinterpret_cast<Decimal128 *>(state.val), state.count, data, sumCnt);
-        } else if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
-            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_LONG>(vectorPtr));
-            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], sumCnt);
-        } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
-            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DOUBLE>(vectorPtr));
-            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], sumCnt);
-        } else {
-            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DECIMAL128>(vectorPtr));
-            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], sumCnt);
-        }
+    int64_t cnt = cntPtr[rowIdx];
+    if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+        return;
     } else {
-        state.count = sumCnt;
+        if constexpr (IN_ID == OMNI_VARCHAR || IN_ID == OMNI_CHAR) {
+            auto sum = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(sumVector);
+            Decimal128 data = Decimal128(sum->GetValue(rowIdx));
+            SumOp<Decimal128, Decimal128>(reinterpret_cast<Decimal128 *>(state.val), state.count, data, cnt);
+        } else if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
+            auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_LONG>(sumVector));
+            sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+        } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
+            auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
+            sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+        } else {
+            auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DECIMAL128>(sumVector));
+            sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+        }
     }
 }
 

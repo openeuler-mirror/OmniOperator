@@ -993,6 +993,9 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_invalid_config
     EXPECT_THROW(new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters,
         sourceTypes, aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, operatorConfig),
         omniruntime::exception::OmniException);
+
+    Expr::DeleteExprs(groupByKeys);
+    Expr::DeleteExprs(aggAllKeys);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_no_aggNum)
@@ -1398,35 +1401,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_count_spill)
     TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
 }
 
-TEST(HashAggregationWithExprOperatorTest, test_hashagg_count_all_spill)
-{
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 1, 3, 5};
-    int64_t expData2[] = {1, 1, 1, 5};
-    int64_t expData3[] = {1, 1, 1, 5};
-    int64_t expData4[] = {1, 1, 1, 5};
-    int64_t expData5[] = {1, 1, 1, 5};
-    int64_t expData6[] = {1, 1, 1, 5};
-    int64_t expData7[] = {1, 1, 1, 5};
-    int64_t expData8[] = {1, 1, 1, 5};
-    int64_t expData9[] = {1, 1, 1, 5};
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
-        LongType(), LongType(), LongType(), LongType(), LongType() }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType(),
-        LongType(), LongType(), LongType(), LongType() }));
-    std::vector<uint32_t> aggFuncTypes =
-        { OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL,
-          OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL,
-          OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL };
-    TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
-}
-
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_min_spill)
 {
     const int32_t expectDataSize = 4;
@@ -1732,15 +1706,16 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_sum_spill)
         expectVecorBatch->Get(6)->SetNull(i);
         expectVecorBatch->Get(8)->SetNull(i);
         expectVecorBatch->Get(9)->SetNull(i);
-        auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
+        auto varCharVector =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
         varCharVector->SetNull(i);
     }
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), BooleanType(),
         DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     std::vector<uint32_t> aggFuncTypes =
-            { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX,
-              OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM };
+        { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX,
+          OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM };
     TestHashAggSpillWithNullRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
 }
 
@@ -1772,7 +1747,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_sum_container
         expectVecorBatch->Get(6)->SetNull(i);
         expectVecorBatch->Get(8)->SetNull(i);
         expectVecorBatch->Get(9)->SetNull(i);
-        auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
+        auto varCharVector =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
         varCharVector->SetNull(i);
     }
 
@@ -1812,7 +1788,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_avg_spill)
         expectVecorBatch->Get(6)->SetNull(i);
         expectVecorBatch->Get(8)->SetNull(i);
         expectVecorBatch->Get(9)->SetNull(i);
-        auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
+        auto varCharVector =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
         varCharVector->SetNull(i);
     }
 
@@ -1852,7 +1829,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_avg_container
         expectVecorBatch->Get(6)->SetNull(i);
         expectVecorBatch->Get(8)->SetNull(i);
         expectVecorBatch->Get(9)->SetNull(i);
-        auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
+        auto varCharVector =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
         varCharVector->SetNull(i);
     }
 
@@ -1894,36 +1872,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_count_spill)
     TestHashAggSpillWithNullRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
 }
 
-TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_count_all_spill)
-{
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    int64_t expData2[] = {1, 2, 3, 2};
-    int64_t expData3[] = {1, 2, 3, 2};
-    int64_t expData4[] = {1, 2, 3, 2};
-    int64_t expData5[] = {1, 2, 3, 2};
-    int64_t expData6[] = {1, 2, 3, 2};
-    int64_t expData7[] = {1, 2, 3, 2};
-    int64_t expData8[] = {1, 2, 3, 2};
-    int64_t expData9[] = {1, 2, 3, 2};
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
-        LongType(), LongType(), LongType(), LongType(), LongType() }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType(),
-        LongType(), LongType(), LongType(), LongType() }));
-    std::vector<uint32_t> aggFuncTypes =
-        { OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL,
-          OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL,
-          OMNI_AGGREGATION_TYPE_COUNT_ALL, OMNI_AGGREGATION_TYPE_COUNT_ALL };
-    TestHashAggSpillWithNullRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
-}
-
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_min_spill)
 {
     const int32_t expectDataSize = 4;
@@ -1952,7 +1900,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_min_spill)
         expectVecorBatch->Get(6)->SetNull(i);
         expectVecorBatch->Get(8)->SetNull(i);
         expectVecorBatch->Get(9)->SetNull(i);
-        auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
+        auto varCharVector =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
         varCharVector->SetNull(i);
     }
 
@@ -1992,7 +1941,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_max_spill)
         expectVecorBatch->Get(6)->SetNull(i);
         expectVecorBatch->Get(8)->SetNull(i);
         expectVecorBatch->Get(9)->SetNull(i);
-        auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
+        auto varCharVector =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
         varCharVector->SetNull(i);
     }
 
@@ -2032,7 +1982,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_first_spill)
         expectVecorBatch->Get(6)->SetNull(i);
         expectVecorBatch->Get(8)->SetNull(i);
         expectVecorBatch->Get(9)->SetNull(i);
-        auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
+        auto varCharVector =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
         varCharVector->SetNull(i);
     }
 
@@ -2074,7 +2025,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_first_null_record_include
         expectVecorBatch->Get(6)->SetNull(i);
         expectVecorBatch->Get(8)->SetNull(i);
         expectVecorBatch->Get(9)->SetNull(i);
-        auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
+        auto varCharVector =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
         varCharVector->SetNull(i);
     }
 

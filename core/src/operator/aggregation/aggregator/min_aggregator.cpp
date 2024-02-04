@@ -29,7 +29,8 @@ void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID> void MinAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId>& spillTypes)
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId>& spillTypes)
 {
     if constexpr (IN_ID == OMNI_SHORT) {
         spillTypes.push_back(OMNI_INT);
@@ -43,7 +44,7 @@ void MinAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &stat
     int32_t rowIndex)
 {
     auto v = static_cast<Vector<ResultType> *>(vectors[0]);
-    if(state.count == 0 || state.val == nullptr) {
+    if (state.count == 0 || state.val == nullptr) {
         v->SetNull(rowIndex);
         return;
     }

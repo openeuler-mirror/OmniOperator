@@ -151,10 +151,10 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
     VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
 {
-    auto vectorPtr = vectorBatch->Get(vectorIndex++);
-    auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorPtr));
+    auto countVector = vectorBatch->Get(vectorIndex++);
+    auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
     int64_t unsedFlag = 0;
-    CountAllOp(&(state.count), unsedFlag, ptr[rowIdx], 0LL);
+    CountAllOp(&(state.count), unsedFlag, cnt[rowIdx], 0LL);
 }
 
 // Explicit template instantiation

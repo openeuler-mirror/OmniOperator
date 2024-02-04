@@ -54,24 +54,22 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx) override
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
     {
-        if (state.count >= 0) {
-            auto vectorPtr = vectorBatch->Get(vectorIndex++);
-            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(vectorPtr));
-            auto vectorCnt = vectorBatch->Get(vectorIndex++);
-            auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
-            cnt = (int64_t *)__builtin_assume_aligned(cnt, ARRAY_ALIGNMENT);
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
 
-            int64_t sumCnt = cnt[rowIdx];
-            if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
-                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx],
-                    sumCnt);
-            } else {
-                state.count = sumCnt;
-            }
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
+        } else if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
         } else {
-            state.count = -1;
+            AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, sum, cnt, rowIdx);
         }
     }
 

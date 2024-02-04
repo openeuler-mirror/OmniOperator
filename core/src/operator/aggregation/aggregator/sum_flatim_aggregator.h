@@ -73,19 +73,19 @@ public:
     void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
         int32_t rowIdx) override
     {
-        auto vectorPtr = vectorBatch->Get(vectorIndex++);
-        auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vectorPtr));
-        auto vectorCnt = vectorBatch->Get(vectorIndex++);
-        auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
-        ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-        cnt = (int64_t *)__builtin_assume_aligned(cnt, ARRAY_ALIGNMENT);
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
 
-        int64_t sumCnt = cnt[rowIdx];
-        if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
-            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx],
-                sumCnt);
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
         } else {
-            state.count = sumCnt;
+            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx],
+                cnt);
         }
     }
 
@@ -139,7 +139,9 @@ public:
         *reinterpret_cast<ResultType *>(state.val) = ResultType {};
         state.count = 0;
     }
-    void GetSpillType(std::vector<DataTypeId>& spillTypes) override {
+
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    {
         if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
             spillTypes.push_back(OMNI_LONG);
         } else {
@@ -147,6 +149,7 @@ public:
         }
         spillTypes.push_back(OMNI_LONG);
     }
+
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         auto v = static_cast<Vector<ResultType> *>(vectors[0]);

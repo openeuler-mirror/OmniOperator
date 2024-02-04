@@ -225,7 +225,7 @@ public:
     HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<std::vector<int32_t>> &aggInputCols,
         uint32_t aggInputColsSize, std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &aggOutputTypes,
         std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws,
-        std::vector<bool> &outputPartialsm, const OperatorConfig &operatorConfig)
+        std::vector<bool> &outputPartials, const OperatorConfig &operatorConfig)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
@@ -251,15 +251,8 @@ public:
     uint64_t GetSpilledBytes() override;
 
 private:
-    SpillMerger *spillMerger = nullptr;
-    Spiller *spiller = nullptr;
-    PagesIndex *pagesIndex = nullptr;
-    std::vector<SortOrder> sortOrders;
-    std::vector<int32_t> ascendings;
-    std::vector<int32_t> nullsFirst;
-    std::vector<int32_t> groupByClomIdx;
     int32_t InitMaxRowCountAndOutputTypes();
-    void InitSpillTypes();
+    void InitSpillInfos();
     void SpillHashMap();
     void ConvertHashMap2PageIndex();
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
@@ -272,21 +265,25 @@ private:
     friend void FillValueImpl(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
     friend void FillVarcharValue(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
 
+    template <typename Deserialize>
+    void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
+    void SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum);
+    void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
+    template <typename T>
+    void SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowCount, int32_t outputCol);
+
     std::vector<ColumnIndex> groupByCols;
     std::vector<std::vector<int32_t>> aggInputCols;
     uint32_t aggInputColsSize;
     std::vector<DataTypes> aggInputTypes;
     std::vector<DataTypes> aggOutputTypes;
     std::vector<type::DataTypePtr> outputTypes;
-    std::vector<type::DataTypePtr> spillTypes;
-    int32_t spillRowsPerPagesIndexs;
     std::unique_ptr<ExecutionContext> executionContext;
     HandleType groupByColumnsHandleType = HandleType::serialize;
     std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
     bool isInited = false;
 
     OutputState outputState;
-    OutputState spillOutputState;
     template <typename Deserialize>
     void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, VectorBatch *output);
 
@@ -294,21 +291,22 @@ private:
 
     // for spill
     OperatorConfig operatorConfig;
+    SpillMerger *spillMerger = nullptr;
+    Spiller *spiller = nullptr;
+    PagesIndex *pagesIndex = nullptr;
+    std::vector<SortOrder> sortOrders;
+    std::vector<int32_t> ascendings;
+    std::vector<int32_t> nullsFirst;
+    std::vector<int32_t> groupByClomIdx;
     int64_t spillTotalRowCount = 0;
     std::vector<vec::VectorBatch *> batches;
     std::vector<int32_t> rowIdxes;
     std::vector<AggregateState *> rowStates;
     uint64_t spilledBytes = 0;
-
-    template <typename Deserialize>
-    void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
-
-    void SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum);
-
-    void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
-
-    template <typename T>
-    void SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowCount, int32_t outputCol);
+    std::vector<type::DataTypePtr> spillTypes;
+    int32_t spillRowsPerPagesIndexs;
+    OutputState spillOutputState;
+    bool hasSpill = false;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
@@ -340,7 +338,9 @@ public:
           aggOutputTypes(aggOutputTypes),
           aggFuncTypesVector(aggFuncTypes),
           operatorConfig(operatorConfig)
-    {}
+    {
+        OperatorConfig::CheckOperatorConfig(operatorConfig);
+    }
 
     HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
         std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,

@@ -57,7 +57,6 @@ public:
         }
     }
 
-
     void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
         int32_t rowIdx) override;
 

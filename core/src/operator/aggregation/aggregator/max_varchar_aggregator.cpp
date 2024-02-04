@@ -79,16 +79,16 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState 
 {
     auto vectorPtr = vectorBatch->Get(vectorIndex++);
     if (!vectorPtr->IsNull(rowIdx)) {
-        auto dataPtr = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
+        auto varcharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
         if (state.val == nullptr || state.count == 0) {
-            auto strView = dataPtr->GetValue(rowIdx);
+            auto strView = varcharVec->GetValue(rowIdx);
             auto *res = strView.data();
             state.count = strView.size();
             state.count |= UPDATE_FLAG;
             state.val = const_cast<char *>(res);
             SaveState(state);
         } else {
-            state.val = const_cast<char *>(MaxCharOp(reinterpret_cast<char *>(state.val), state.count, dataPtr,
+            state.val = const_cast<char *>(MaxCharOp(reinterpret_cast<char *>(state.val), state.count, varcharVec,
                 rowIdx));
         }
     }

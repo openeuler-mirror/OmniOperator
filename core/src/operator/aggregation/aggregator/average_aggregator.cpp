@@ -205,34 +205,32 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &st
     int32_t &vectorIndex, int32_t rowIdx)
 {
     if constexpr (IN_ID == OMNI_CONTAINER || IN_ID == OMNI_DOUBLE) {
-        auto vectorPtr = vectorBatch->Get(vectorIndex++);
-        auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DOUBLE>(vectorPtr));
-        auto vectorCnt = vectorBatch->Get(vectorIndex++);
-        auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
-        ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-        cnt = (int64_t *)__builtin_assume_aligned(cnt, ARRAY_ALIGNMENT);
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
 
-        int64_t sumCnt = cnt[rowIdx];
-        if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
-            bool isNull = vectorPtr->IsNull(rowIdx);
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], sumCnt);
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
         } else {
-            state.count = sumCnt;
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
         }
     } else if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
-        auto vectorPtr = vectorBatch->Get(vectorIndex++);
-        auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_LONG>(vectorPtr));
-        auto vectorCnt = vectorBatch->Get(vectorIndex++);
-        auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
-        ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-        cnt = (int64_t *)__builtin_assume_aligned(cnt, ARRAY_ALIGNMENT);
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_LONG>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
 
-        int64_t sumCnt = cnt[rowIdx];
-        if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
-            bool isNull = vectorPtr->IsNull(rowIdx);
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], sumCnt);
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
         } else {
-            state.count = sumCnt;
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
         }
     } else {
         SumAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(state, vectorBatch, vectorIndex, rowIdx);

@@ -221,16 +221,19 @@ public:
     void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
         int32_t rowIdx) override
     {
-        auto vectorPtr = vectorBatch->Get(vectorIndex++);
-        auto dataPtr = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(vectorPtr));
-        auto vectorCnt = vectorBatch->Get(vectorIndex++);
-        auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vectorCnt));
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
 
-        int64_t sumCnt = cnt[rowIdx];
-        if (sumCnt > 0 && !vectorPtr->IsNull(rowIdx)) {
-            AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, dataPtr, sumCnt, rowIdx);
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
+        } else if (inputRaw) {
+            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx],
+                cnt);
         } else {
-            state.count = sumCnt;
+            AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, sum, cnt, rowIdx);
         }
     }
 

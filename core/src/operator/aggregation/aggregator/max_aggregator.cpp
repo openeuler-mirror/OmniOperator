@@ -30,7 +30,9 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
         v->SetNull(rowIndex);
     }
 }
-template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId>& spillTypes)
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId>& spillTypes)
 {
     if constexpr (IN_ID == OMNI_SHORT) {
         spillTypes.push_back(OMNI_INT);
@@ -38,6 +40,7 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>
         spillTypes.push_back(IN_ID);
     }
 }
+
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)

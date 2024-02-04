@@ -296,7 +296,8 @@ public:
     ~MinVarcharAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void GetSpillType(std::vector<DataTypeId>& spillTypes) override {
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    {
         spillTypes.push_back(OMNI_VARCHAR);
     }
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;

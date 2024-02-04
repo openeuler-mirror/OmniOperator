@@ -189,7 +189,8 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx) override
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
     {
         auto firstVector = vectorBatch->Get(vectorIndex++);
         auto valueSetVector = vectorBatch->Get(vectorIndex++);

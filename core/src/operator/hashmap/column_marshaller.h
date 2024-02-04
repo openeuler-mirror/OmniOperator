@@ -107,19 +107,6 @@ public:
             pos = deserializeFunc(curVectorPtr, rowIdx, pos);
         }
     }
-    void PraseValueToCols(const ValueType &value, std::vector<vec::BaseVector *> &aggSpillVectors, int32_t aggColNum,
-        const std::vector<type::DataTypePtr> &spillTypes , const int rowIdx)
-    {
-        // if constexpr (AggType == OMNI_AGGREGATION_TYPE_SUM || AggType == OMNI_AGGREGATION_TYPE_COUNT_COLUMN ||
-        //    AggType == OMNI_AGGREGATION_TYPE_COUNT_ALL || AggType == OMNI_AGGREGATION_TYPE_AVG ||
-        //    AggType == OMNI_AGGREGATION_TYPE_MAX || OMNI_AGGREGATION_TYPE_MIN) {
-        // }
-        //for (uint32_t i = 0; i < aggColNum; i++) {
-        //    if(spillTypes[i]->GetId() == DataTypeId::OMNI_CHAR) {
-        //       auto BaseVector = VectorHelper::CreateStringVector(vectorSize);
-        //    }
-        //}
-    }
 
     ALWAYS_INLINE Result FindValueFromHashmap(KeyType &key)
     {

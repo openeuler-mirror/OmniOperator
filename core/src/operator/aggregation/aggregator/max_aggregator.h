@@ -112,7 +112,6 @@ protected:
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap) override;
-
 };
 }
 }

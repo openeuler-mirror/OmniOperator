@@ -265,7 +265,7 @@ int32_t HashAggregationOperator::InitMaxRowCountAndOutputTypes()
     return rowSize;
 }
 
-void HashAggregationOperator::InitSpillTypes()
+void HashAggregationOperator::InitSpillInfos()
 {
     int32_t spillRowSize = 0;
     for (auto &i : groupByCols) {
@@ -285,10 +285,10 @@ void HashAggregationOperator::InitSpillTypes()
     spillRowsPerPagesIndexs = OperatorUtil::GetMaxRowCount(spillRowSize);
     pagesIndex = new PagesIndex(DataTypes(spillTypes));
     size_t groupNum = groupByCols.size();
-    nullsFirst.resize(groupByCols.size(), true);
-    ascendings.resize(groupByCols.size(), true);
+    nullsFirst.resize(groupNum, true);
+    ascendings.resize(groupNum, true);
     SortOrder sortOrder;
-    sortOrders.resize(groupByCols.size(), sortOrder);
+    sortOrders.resize(groupNum, sortOrder);
     groupByClomIdx.resize(groupNum);
     for (size_t i = 0; i < groupNum; i++) {
         groupByClomIdx[i] = groupByCols[i].idx;
@@ -323,14 +323,9 @@ OmniStatus HashAggregationOperator::Close()
         delete[] sourceTypes;
         sourceTypes = nullptr;
     }
-    if (spiller != nullptr) {
-        delete spiller;
-        spiller = nullptr;
-        delete spillMerger;
-        spillMerger = nullptr;
-        delete pagesIndex;
-        pagesIndex = nullptr;
-    }
+    delete spillMerger;
+    delete spiller;
+    delete pagesIndex;
     return OMNI_STATUS_NORMAL;
 }
 
@@ -383,7 +378,6 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
 
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         auto ret = emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
-
         if (ret.IsInsert()) {
             currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
             for (size_t j = 0; j < aggNum; ++j) {
@@ -528,9 +522,10 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
 void HashAggregationOperator::SpillHashMap()
 {
     if (spiller == nullptr) {
-        InitSpillTypes();
+        InitSpillInfos();
         spiller = new Spiller(DataTypes(spillTypes), groupByClomIdx, sortOrders,
             operatorConfig.GetSpillConfig()->GetSpillPath());
+        hasSpill = true;
     }
     while (spillOutputState.hasBeenOutputNum != this->serialize->GetElementsSize()) {
         ConvertHashMap2PageIndex();
@@ -647,6 +642,10 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
         spilledBytes = spiller->GetSpilledBytes();
         auto spillFiles = spiller->FinishSpill();
         spillMerger = spiller->CreateSpillMerger(spillFiles);
+        delete spiller;
+        spiller = nullptr;
+        delete pagesIndex;
+        pagesIndex = nullptr;
         if (spillMerger == nullptr) {
             throw omniruntime::exception::OmniException("SPILL_FAILED", "Create spill merger failed.");
         }
@@ -656,7 +655,6 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
     auto rowCount = std::min(static_cast<int64_t>(rowsPerBatch), spillTotalRowCount);
     batches.resize(rowCount);
     rowIdxes.resize(rowCount);
-    rowStates.resize(rowCount);
     auto &arenaAllocator = *(executionContext->GetArena());
     int32_t aggNum = aggregators.size();
     int32_t groupColNum = static_cast<int32_t>(this->groupByCols.size());
@@ -664,7 +662,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
 
     bool isEqual = false;
     if (aggNum == 0) {
-        while (rowIdx < rowCount && spillTotalRowCount > 0) {
+        do {
             batches[rowIdx] = spillMerger->CurrentBatchWithEqual(isEqual);
             rowIdxes[rowIdx] = spillMerger->CurrentRowIndex();
             rowIdx++;
@@ -677,7 +675,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
                 spillTotalRowCount--;
                 spillMerger->Pop();
             }
-        }
+        } while (rowIdx < rowCount && spillTotalRowCount > 0);
         auto output = new VectorBatch(rowIdx);
         SetVectors(output, outputTypes, rowIdx);
         SetSpillOutputVecBatch(output, rowIdx, groupColNum);
@@ -685,7 +683,8 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
         return;
     }
 
-    while (rowIdx < rowCount && spillTotalRowCount > 0) {
+    rowStates.resize(rowCount);
+    do {
         batches[rowIdx] = spillMerger->CurrentBatchWithEqual(isEqual);
         rowIdxes[rowIdx] = spillMerger->CurrentRowIndex();
         spillTotalRowCount--;
@@ -716,7 +715,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
         }
         rowStates[rowIdx] = currentGroupStates;
         rowIdx++;
-    }
+    } while (rowIdx < rowCount && spillTotalRowCount > 0);
     auto output = new VectorBatch(rowIdx);
     SetVectors(output, outputTypes, rowIdx);
     SetSpillOutputVecBatch(output, rowIdx, groupColNum);
@@ -727,7 +726,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
 template <typename Deserialize>
 int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch)
 {
-    if (spiller != nullptr) {
+    if (hasSpill) {
         GetOutputFromDisk(deserializeHashmap, outputVecBatch);
         if (spillTotalRowCount == 0) {
             SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
