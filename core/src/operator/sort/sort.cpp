@@ -144,7 +144,8 @@ uint64_t SortOperator::GetSpilledBytes()
 
 ErrorCode SortOperator::SpillToDisk()
 {
-    if (pagesIndex->GetRowCount() <= 0) {
+    auto rowCount = pagesIndex->GetRowCount();
+    if (rowCount <= 0) {
         return ErrorCode::SUCCESS;
     }
 
@@ -165,7 +166,10 @@ ErrorCode SortOperator::SpillToDisk()
         hasSpill = true;
     }
 
-    return spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort);
+    LogDebug("Spill data to disk starting in sort operator, rowCount=%lld\n", rowCount);
+    auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort);
+    LogDebug("Spill data to disk finished in sort operator, rowCount=%lld\n", rowCount);
+    return result;
 }
 
 void SortOperator::Sort()
