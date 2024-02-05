@@ -270,11 +270,6 @@ void WindowOperator::PrepareOutput()
 
 int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    if (!hasPrepare) {
-        PrepareOutput();
-        hasPrepare = true;
-    }
-
     // check whether the output is completed
     if (totalRowCount == 0 || totalRowCount == rowCountOutputted) {
         totalRowCount = 0;
@@ -284,6 +279,11 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         pagesIndex->Clear();
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
+    }
+
+    if (!hasPrepare) {
+        PrepareOutput();
+        hasPrepare = true;
     }
 
     if (hasSpill) {
@@ -451,7 +451,6 @@ void WindowOperator::Sort()
     }
 
     int32_t positionCount = pagesIndex->GetRowCount();
-    int32_t sortColCount = sortCols.size();
 
     if (canInplaceSort) {
         pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
@@ -619,7 +618,7 @@ static ALWAYS_INLINE bool ValueEqualsLastValue(vec::VectorBatch *partitionVecBat
         double lastValue = static_cast<Vector<double> *>(partitionVector)->GetValue(lastIdx);
         double nextValue = static_cast<Vector<double> *>(currentVector)->GetValue(nextIdx);
 
-         if (std::abs(lastValue - nextValue) < __DBL_EPSILON__) {
+        if (std::abs(lastValue - nextValue) < __DBL_EPSILON__) {
             return true;
         } else {
             return false;

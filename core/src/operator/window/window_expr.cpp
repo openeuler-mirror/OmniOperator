@@ -151,6 +151,7 @@ int32_t WindowWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 
 OmniStatus WindowWithExprOperator::Close()
 {
+    windowOperator->Close();
     return OMNI_STATUS_NORMAL;
 }
 
