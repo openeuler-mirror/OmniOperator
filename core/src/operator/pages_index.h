@@ -64,7 +64,7 @@ public:
         int32_t sortColCount, int32_t from, int32_t to);
 
     void GetOutput(int32_t *outputCols, int32_t outputColsCount, omniruntime::vec::VectorBatch *outputVecBatch,
-        const int32_t *sourceTypes, int32_t offset, int32_t length) const;
+        const int32_t *sourceTypes, int32_t offset, int32_t length, int32_t outputIndex = 0) const;
 
     void GetOutputInplaceSort(int32_t *outputCols, int32_t outputColsCount,
         omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset,
