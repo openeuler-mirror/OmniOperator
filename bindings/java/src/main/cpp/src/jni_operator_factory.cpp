@@ -345,7 +345,6 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
 
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
-    auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
@@ -367,7 +366,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
         outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount, preGroupedChannels,
         preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, preSortedChannelPrefix,
         expectedPositions, allTypes, argumentChannels, argumentChannelsCount, windowFrameTypes, windowFrameStartTypes,
-        windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, overflowConfig->IsOverflowAsNull());
+        windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig);
     JNI_METHOD_END(0L)
     windowOperatorFactory->Init();
 
@@ -902,7 +901,6 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
 
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
-    auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
     jint outputColsCount = env->GetArrayLength(jOutputChannels);
@@ -925,7 +923,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
         outputColsCount, windowFunction, windowFunctionCount, partitionChannels, partitionCount, preGroupedChannels,
         preGroupedCount, sortChannels, sortOrder, sortNullFirsts, sortColCount, preSortedChannelPrefix,
         expectedPositions, outputDataTypes, argumentKeysArrExprs, argumentKeysCount, windowFrameTypes,
-        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, overflowConfig);
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig);
     JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, argumentKeysArrExprs)
     Expr::DeleteExprs(argumentKeysArrExprs);
 

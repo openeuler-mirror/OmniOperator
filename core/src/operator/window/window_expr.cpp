@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: window implementations
  */
 #include "window_expr.h"
@@ -33,12 +33,12 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
     int32_t expectedPositions, const type::DataTypes &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, OverflowConfig *overflowConfig)
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig)
 {
     std::vector<DataTypePtr> newTypes;
     std::vector<int32_t> fullArgumentChannels;
     int32_t nonFieldProjectCount = OperatorUtil::CreateProjections(sourceTypes, argumentKeys, newTypes,
-        this->projections, this->argumentChannels, overflowConfig);
+        this->projections, this->argumentChannels, operatorConfig.GetOverflowConfig());
     this->sourceTypes = std::make_unique<DataTypes>(newTypes);
 
     int position = 0;
@@ -71,7 +71,7 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
         preGroupedCount, sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix,
         expectedPositions, allTypes, fullArgumentChannels.data(), fullArgumentChannels.size(), windowFrameTypesField,
         windowFrameStartTypesField, windowFrameStartChannelsField, windowFrameEndTypesField,
-        windowFrameEndChannelsField, overflowConfig->IsOverflowAsNull());
+        windowFrameEndChannelsField, operatorConfig);
 }
 
 WindowWithExprOperatorFactory::~WindowWithExprOperatorFactory()
@@ -86,13 +86,30 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
     const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
     int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, OverflowConfig *overflowConfig)
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
 {
     auto factory = new WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,
         windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeys,
         argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-        windowFrameEndTypesField, windowFrameEndChannelsField, overflowConfig);
+        windowFrameEndTypesField, windowFrameEndChannelsField, OperatorConfig());
+    return factory;
+}
+
+WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+    const type::DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount, int32_t *windowFunctionTypes,
+    int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount, int32_t *preGroupedCols,
+    int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
+    int32_t preSortedChannelPrefix, int32_t expectedPositions, const type::DataTypes &outputDataTypes,
+    const std::vector<omniruntime::expressions::Expr *> &argumentKeys, int32_t argumentChannelsCount,
+    int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
+    int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig)
+{
+    auto factory = new WindowWithExprOperatorFactory(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,
+        windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
+        sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, outputDataTypes, argumentKeys,
+        argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
+        windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig);
     return factory;
 }
 
@@ -135,6 +152,11 @@ int32_t WindowWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 OmniStatus WindowWithExprOperator::Close()
 {
     return OMNI_STATUS_NORMAL;
+}
+
+uint64_t WindowWithExprOperator::GetSpilledBytes()
+{
+    return windowOperator->GetSpilledBytes();
 }
 }
 }

@@ -24,7 +24,7 @@ const int32_t QUICK_SORT_MIDDLE = 2;
 
 template <type::DataTypeId dataTypeId>
 void ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBatch, bool hasNull, bool hasDictionary,
-    BaseVector *outputVector);
+    BaseVector *outputVector, int32_t outputIndex);
 
 template <type::DataTypeId dataTypeId>
 void ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length, BaseVector **inputVecBatch, bool hasNull,
@@ -1226,7 +1226,7 @@ void PagesIndex::Sort(const int32_t *sortCols, const int32_t *sortAscendings, co
 }
 
 void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorBatch *outputVecBatch,
-    const int32_t *sourceTypes, int32_t offset, int32_t length) const
+    const int32_t *sourceTypes, int32_t offset, int32_t length, int32_t outputIndex) const
 {
     BaseVector ***inputVecBatches = this->columns;
     uint64_t *vaStart = valueAddresses + offset;
@@ -1241,29 +1241,36 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
         switch (colTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
-                ConstructVector<OMNI_INT>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector);
+                ConstructVector<OMNI_INT>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
                 break;
             case OMNI_SHORT:
-                ConstructVector<OMNI_SHORT>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector);
+                ConstructVector<OMNI_SHORT>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
             case OMNI_TIMESTAMP:
-                ConstructVector<OMNI_LONG>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector);
+                ConstructVector<OMNI_LONG>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
                 break;
             case OMNI_DOUBLE:
-                ConstructVector<OMNI_DOUBLE>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector);
+                ConstructVector<OMNI_DOUBLE>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
                 break;
             case OMNI_BOOLEAN:
-                ConstructVector<OMNI_BOOLEAN>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector);
+                ConstructVector<OMNI_BOOLEAN>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                ConstructVector<OMNI_VARCHAR>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector);
+                ConstructVector<OMNI_VARCHAR>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
                 break;
             }
             case OMNI_DECIMAL128: {
-                ConstructVector<OMNI_DECIMAL128>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector);
+                ConstructVector<OMNI_DECIMAL128>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
                 break;
             }
             default:
@@ -1379,9 +1386,8 @@ static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, 
 
 template <type::DataTypeId dataTypeId>
 NO_INLINE void ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBatch, bool hasNull,
-    bool hasDictionary, BaseVector *outputVector)
+    bool hasDictionary, BaseVector *outputVector, int32_t outputIndex)
 {
-    int32_t outputIndex = 0;
     uint64_t *vaEnd = vaStart + length;
     if (hasNull && hasDictionary) {
         while (vaStart < vaEnd) { // here unroll is almost useless due to the excessive checks in SetValue

@@ -46,6 +46,7 @@ OperatorConfig::OperatorConfig(const OperatorConfig &operatorConfig)
             break;
         }
     }
+    this->overflowConfig = new OverflowConfig(operatorConfig.GetOverflowConfig()->GetOverflowConfigId());
     this->adaptivityThreshold = operatorConfig.GetAdaptivityThreshold();
 }
 

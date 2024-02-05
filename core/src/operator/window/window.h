@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: window implementations
  */
 #ifndef __WINDOW_H__
@@ -9,6 +9,8 @@
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "operator/pages_index.h"
+#include "operator/spill/spiller.h"
+#include "operator/spill/spill_merger.h"
 #include "type/data_types.h"
 #include "window_partition.h"
 
@@ -22,7 +24,7 @@ public:
         int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
         const type::DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount,
         int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
-        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, bool isOverflowAsNullField = false);
+        int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
 
     ~WindowOperatorFactory() override;
 
@@ -34,7 +36,17 @@ public:
         int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, const type::DataTypes &allTypesField,
         int32_t *argumentChannelsField, int32_t argumentChannelsCountField, int32_t *windowFrameTypesField,
         int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
-        int32_t *windowFrameEndChannelsField, bool isOverflowAsNullField = false);
+        int32_t *windowFrameEndChannelsField);
+
+    static WindowOperatorFactory *CreateWindowOperatorFactory(const type::DataTypes &sourceTypesField,
+        int32_t *outputColsField, int32_t outputColsCountField, int32_t *windowFunctionTypesField,
+        int32_t windowFunctionCountField, int32_t *partitionColsField, int32_t partitionCountField,
+        int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField,
+        int32_t *sortAscendingsField, int32_t *sortNullFirstsField, int32_t sortColCountField,
+        int32_t preSortedChannelPrefixField, int32_t expectedPositionsField, const type::DataTypes &allTypesField,
+        int32_t *argumentChannelsField, int32_t argumentChannelsCountField, int32_t *windowFrameTypesField,
+        int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
+        int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
 
     Operator *CreateOperator() override;
 
@@ -189,7 +201,7 @@ private:
     std::vector<int32_t> windowFrameStartChannels;
     std::vector<int32_t> windowFrameEndTypes;
     std::vector<int32_t> windowFrameEndChannels;
-    bool isOverflowAsNull;
+    OperatorConfig operatorConfig;
 };
 
 class WindowOperator : public Operator {
@@ -202,12 +214,16 @@ public:
         const type::DataTypes &allTypes, std::vector<int32_t> &argumentChannels, int32_t argumentChannelsCount,
         const std::vector<int32_t> &windowFrameTypes, const std::vector<int32_t> &windowFrameStartTypes,
         const std::vector<int32_t> &windowFrameStartChannels, const std::vector<int32_t> &windowFrameEndTypes,
-        const std::vector<int32_t> &windowFrameEndChannels, bool isOverflowAsNull = false);
+        const std::vector<int32_t> &windowFrameEndChannels, const OperatorConfig &operatorConfig);
 
     ~WindowOperator() override;
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
+
+    OmniStatus Close() override;
+
+    uint64_t GetSpilledBytes() override;
 
     void SortPagesIndexIfNecessary();
     void FinishPagesIndex();
@@ -241,6 +257,7 @@ private:
     std::unique_ptr<PagesHashStrategy> unGroupedPartitionHashStrategy = nullptr;
     std::unique_ptr<PagesHashStrategy> preSortedPartitionHashStrategy = nullptr;
     std::unique_ptr<PagesHashStrategy> peerGroupHashStrategy = nullptr;
+    std::unique_ptr<VectorBatch> inputVecBatchForAgg = nullptr;
     std::unique_ptr<WindowPartition> partition;
     std::vector<std::unique_ptr<WindowFunction>> windowFunctions;
     std::vector<int32_t> argumentChannels;
@@ -250,21 +267,40 @@ private:
     const std::vector<int32_t> &windowFrameStartChannels;
     const std::vector<int32_t> &windowFrameEndTypes;
     const std::vector<int32_t> &windowFrameEndChannels;
+    OperatorConfig operatorConfig;
     bool isOverflowAsNull;
 
     void Initialization();
-
     void ProcessData(omniruntime::vec::VectorBatch *&outputVecBatch, int32_t rowCount);
-
-    // for output single vecBatch
+    void ProcessDataFromDisk(omniruntime::vec::VectorBatch *&outputVecBatch, int32_t rowCount);
     void PrepareOutput();
+    ErrorCode SpillToDisk();
+    void GetOutputFromMemory(VectorBatch **outputVecBatch);
+    void GetOutputFromDisk(VectorBatch **outputVecBatch);
+    void Sort();
+    void PaddingPartitionVecBatch(vec::VectorBatch *partitionVecBatch, int32_t rowIdx);
+    template <typename T>
+    void PaddingPartitionVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx);
+    bool ProcessNextWindowPartition();
+    bool IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx);
+
     bool hasPrepare = false;
     size_t totalRowCount = 0;
     size_t rowCountOutputted = 0;
     size_t maxRowCount;
     int finalOutputColsCount = 0;
-    VectorBatch *inputVecBatchForAgg = nullptr;
-    std::vector<DataTypePtr> finalOutputTypes;
+
+    // for spill
+    bool hasSpill = false;
+    Spiller *spiller = nullptr;
+    SpillMerger *spillMerger = nullptr;
+    bool canInplaceSort = false;
+    vec::VectorBatch *currentBatch = nullptr;
+    int32_t currentRowIdx = 0;
+    int32_t partitionRowCount = 0;
+    int32_t partitionOutputted = 0;
+    size_t maxRowCountPerVecBatch = 0;
+    uint64_t spilledBytes = 0;
 };
 
 int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrategy, int32_t startPosition);

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: window implementations
  */
 
@@ -16,7 +16,7 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
     int32_t *sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix, int32_t expectedPositions,
     const DataTypes &allTypes, int32_t *argumentChannels, int32_t argumentChannelsCount, int32_t *windowFrameTypesField,
     int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
-    int32_t *windowFrameEndChannelsField, bool isOverflowAsNullField)
+    int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig)
     : sourceTypes(sourceTypes),
       outputColsCount(outputColsCount),
       windowFunctionCount(windowFunctionCount),
@@ -27,7 +27,7 @@ WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32
       expectedPositions(expectedPositions),
       allTypes(allTypes),
       argumentChannelsCount(argumentChannelsCount),
-      isOverflowAsNull(isOverflowAsNullField)
+      operatorConfig(operatorConfig)
 {
     this->outputCols.insert(this->outputCols.begin(), outputCols, outputCols + outputColsCount);
     this->windowFunctionTypes.insert(this->windowFunctionTypes.begin(), windowFunctionTypes,
@@ -65,15 +65,36 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
     int32_t *sortNullFirstsField, int32_t sortColCountField, int32_t preSortedChannelPrefixField,
     int32_t expectedPositionsField, const DataTypes &allTypesField, int32_t *argumentChannelsField,
     int32_t argumentChannelsCountField, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
-    int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
-    bool isOverflowAsNullField)
+    int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField)
 {
+    OperatorConfig defaultConfig;
     auto operatorFactory = new WindowOperatorFactory(sourceTypesField, outputColsField, outputColsCountField,
         windowFunctionTypesField, windowFunctionCountField, partitionColsField, partitionCountField,
         preGroupedColsField, preGroupedCountField, sortColsField, sortAscendingsField, sortNullFirstsField,
         sortColCountField, preSortedChannelPrefixField, expectedPositionsField, allTypesField, argumentChannelsField,
         argumentChannelsCountField, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
-        windowFrameEndTypesField, windowFrameEndChannelsField, isOverflowAsNullField);
+        windowFrameEndTypesField, windowFrameEndChannelsField, defaultConfig);
+    operatorFactory->Init();
+    return operatorFactory;
+}
+
+WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const DataTypes &sourceTypesField,
+    int32_t *outputColsField, int32_t outputColsCountField, int32_t *windowFunctionTypesField,
+    int32_t windowFunctionCountField, int32_t *partitionColsField, int32_t partitionCountField,
+    int32_t *preGroupedColsField, int32_t preGroupedCountField, int32_t *sortColsField, int32_t *sortAscendingsField,
+    int32_t *sortNullFirstsField, int32_t sortColCountField, int32_t preSortedChannelPrefixField,
+    int32_t expectedPositionsField, const DataTypes &allTypesField, int32_t *argumentChannelsField,
+    int32_t argumentChannelsCountField, int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField,
+    int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
+    const OperatorConfig &operatorConfig)
+{
+    OperatorConfig::CheckOperatorConfig(operatorConfig);
+    auto operatorFactory = new WindowOperatorFactory(sourceTypesField, outputColsField, outputColsCountField,
+        windowFunctionTypesField, windowFunctionCountField, partitionColsField, partitionCountField,
+        preGroupedColsField, preGroupedCountField, sortColsField, sortAscendingsField, sortNullFirstsField,
+        sortColCountField, preSortedChannelPrefixField, expectedPositionsField, allTypesField, argumentChannelsField,
+        argumentChannelsCountField, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
+        windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig);
     operatorFactory->Init();
     return operatorFactory;
 }
@@ -84,7 +105,7 @@ Operator *WindowOperatorFactory::CreateOperator()
         windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels,
         argumentChannelsCount, windowFrameTypes, windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes,
-        windowFrameEndChannels, isOverflowAsNull);
+        windowFrameEndChannels, operatorConfig);
     windowOperator->Init();
     return windowOperator;
 }
@@ -98,7 +119,7 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
     int32_t argumentChannelsCount, const std::vector<int32_t> &windowFrameTypes,
     const std::vector<int32_t> &windowFrameStartTypes, const std::vector<int32_t> &windowFrameStartChannels,
     const std::vector<int32_t> &windowFrameEndTypes, const std::vector<int32_t> &windowFrameEndChannels,
-    bool isOverflowAsNull)
+    const OperatorConfig &operatorConfig)
     : sourceTypes(sourceTypes),
       typesCount(sourceTypes.GetSize()),
       outputCols(outputCols),
@@ -124,7 +145,7 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
       windowFrameStartChannels(windowFrameStartChannels),
       windowFrameEndTypes(windowFrameEndTypes),
       windowFrameEndChannels(windowFrameEndChannels),
-      isOverflowAsNull(isOverflowAsNull)
+      operatorConfig(operatorConfig)
 {
     for (int32_t i = 0; i < partitionCount; i++) {
         this->sortCols.push_back(partitionCols[i]);
@@ -136,6 +157,12 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
         this->sortAscendings.push_back(sortAscendings[i - partitionCount]);
         this->sortNullFirsts.push_back(sortNullFirsts[i - partitionCount]);
     }
+
+    if (sourceTypes.GetSize() == 1 && sourceTypes.GetType(0)->GetId() != OMNI_VARCHAR &&
+        sourceTypes.GetType(0)->GetId() != OMNI_CHAR && sourceTypes.GetType(0)->GetId() != OMNI_BOOLEAN) {
+        canInplaceSort = true;
+    }
+    isOverflowAsNull = operatorConfig.GetOverflowConfig()->IsOverflowAsNull();
 }
 
 OmniStatus WindowOperator::Init()
@@ -188,19 +215,25 @@ WindowOperator::~WindowOperator()
 
 int32_t WindowOperator::AddInput(VectorBatch *vecBatch)
 {
+    auto rowCount = vecBatch->GetRowCount();
+    if (rowCount <= 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        return 0;
+    }
+    totalRowCount += rowCount;
     pagesIndex->AddVecBatch(vecBatch);
+    if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
+        auto result = SpillToDisk();
+        pagesIndex->Clear();
+        if (result != ErrorCode::SUCCESS) {
+            throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
+        }
+    }
     return 0;
 }
 
 void WindowOperator::PrepareOutput()
 {
-    Initialization();
-    totalRowCount = pagesIndex->GetRowCount();
-    if (totalRowCount == 0) {
-        return;
-    }
-    FinishPagesIndex();
-
     // first, build the final output col number according to the outputCols and additional cols created by the window
     int32_t allCount = allTypes.GetSize();
     int finalOutputCols[allCount];
@@ -220,15 +253,26 @@ void WindowOperator::PrepareOutput()
     for (int colIdx = 0; colIdx < finalOutputColsCount; ++colIdx) {
         outputTypes.push_back(allTypes.GetType(finalOutputCols[colIdx]));
     }
-    inputVecBatchForAgg = new VectorBatch(totalRowCount);
-    inputVecBatchForAgg->ResizeVectorCount(1);
-    hasPrepare = true;
+
+    if (spiller == nullptr) {
+        Initialization();
+        if (totalRowCount == 0) {
+            return;
+        }
+        FinishPagesIndex();
+
+        inputVecBatchForAgg = make_unique<VectorBatch>(totalRowCount);
+        inputVecBatchForAgg->ResizeVectorCount(1);
+    } else {
+        maxRowCountPerVecBatch = OperatorUtil::GetMaxRowCount(sourceTypes.GetSize());
+    }
 }
 
 int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (!hasPrepare) {
         PrepareOutput();
+        hasPrepare = true;
     }
 
     // check whether the output is completed
@@ -236,13 +280,32 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         rowCountOutputted = 0;
         hasPrepare = false;
-        delete inputVecBatchForAgg;
         inputVecBatchForAgg = nullptr;
         pagesIndex->Clear();
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
 
+    if (hasSpill) {
+        GetOutputFromDisk(outputVecBatch);
+    } else {
+        GetOutputFromMemory(outputVecBatch);
+    }
+
+    if (totalRowCount == rowCountOutputted) {
+        totalRowCount = 0;
+        rowCountOutputted = 0;
+        hasPrepare = false;
+        inputVecBatchForAgg = nullptr;
+        pagesIndex->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
+    }
+
+    return 0;
+}
+
+void WindowOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
+{
     /*
      * First, new a vectorBatch dedicated to calling the agg interface with a single column;
      * Second, the vector in the vectorBatch is obtained from the AggregateWindowFunction::Accumulate with
@@ -263,7 +326,6 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         rowCountOutputted = 0;
         hasPrepare = false;
-        delete inputVecBatchForAgg;
         inputVecBatchForAgg = nullptr;
         pagesIndex->Clear();
         throw e;
@@ -271,18 +333,6 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
 
     *outputVecBatch = output;
     rowCountOutputted += rowCount;
-
-    if (totalRowCount == rowCountOutputted) {
-        totalRowCount = 0;
-        rowCountOutputted = 0;
-        hasPrepare = false;
-        delete inputVecBatchForAgg;
-        inputVecBatchForAgg = nullptr;
-        pagesIndex->Clear();
-        SetStatus(OMNI_STATUS_FINISHED);
-    }
-
-    return 0;
 }
 
 void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
@@ -303,7 +353,7 @@ void WindowOperator::ProcessData(VectorBatch *&outputVecBatch, int32_t rowCount)
             partition = make_unique<WindowPartition>(sourceTypes, pagesIndex.get(), partitionStart, partitionEnd,
                 outputCols.data(), outputColsCount, windowFunctions, peerGroupHashStrategy.get());
         }
-        partition->ProcessNextRow(inputVecBatchForAgg, outputVecBatch, j);
+        partition->ProcessNextRow(inputVecBatchForAgg.get(), outputVecBatch, j);
     }
 }
 
@@ -357,6 +407,342 @@ int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrateg
     }
 
     return right;
+}
+
+OmniStatus WindowOperator::Close()
+{
+    delete spiller;
+    delete spillMerger;
+
+    // ensure free pagesIndex if exception occurs
+    pagesIndex->Clear();
+    return OMNI_STATUS_NORMAL;
+}
+
+uint64_t WindowOperator::GetSpilledBytes()
+{
+    return spilledBytes;
+}
+
+ErrorCode WindowOperator::SpillToDisk()
+{
+    Sort();
+
+    if (spiller == nullptr) {
+        size_t sortColsCount = sortCols.size();
+        std::vector<SortOrder> sortOrders;
+        for (size_t i = 0; i < sortColsCount; i++) {
+            SortOrder sortOrder{ sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
+            sortOrders.emplace_back(sortOrder);
+        }
+        spiller = new Spiller(sourceTypes, sortCols, sortOrders, operatorConfig.GetSpillConfig()->GetSpillPath());
+        hasSpill = true;
+    }
+
+    return spiller->Spill(pagesIndex.get(), canInplaceSort, false);
+}
+
+void WindowOperator::Sort()
+{
+    if (canInplaceSort) {
+        DYNAMIC_TYPE_DISPATCH(pagesIndex->PrepareInplaceSort, sourceTypes.GetType(0)->GetId(), sortNullFirsts[0]);
+    } else {
+        pagesIndex->Prepare();
+    }
+
+    int32_t positionCount = pagesIndex->GetRowCount();
+    int32_t sortColCount = sortCols.size();
+
+    if (canInplaceSort) {
+        pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
+            positionCount);
+    } else {
+        pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
+            positionCount);
+    }
+}
+
+void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
+{
+    if (spillMerger == nullptr) {
+        auto result = SpillToDisk();
+        pagesIndex->Clear();
+        spilledBytes = spiller->GetSpilledBytes();
+        if (result != ErrorCode::SUCCESS) {
+            throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
+        }
+        auto spillFiles = spiller->FinishSpill();
+        spillMerger = spiller->CreateSpillMerger(spillFiles);
+        if (spillMerger == nullptr) {
+            delete spiller;
+            spiller = nullptr;
+            throw omniruntime::exception::OmniException("SPILL_FAILED", "Create spill merger failed.");
+        }
+        delete spiller;
+        spiller = nullptr;
+
+        currentBatch = spillMerger->CurrentBatch();
+        currentRowIdx = spillMerger->CurrentRowIndex();
+        spillMerger->Pop();
+    }
+
+    int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
+    auto *output = new VectorBatch(rowCount);
+    DataTypes dataTypes(outputTypes);
+    VectorHelper::AppendVectors(output, dataTypes, rowCount);
+
+    try {
+        ProcessDataFromDisk(output, rowCount);
+    } catch (const OmniException &e) {
+        // in ProcessData, WindowFunction may be throw exception:
+        // when spark sum/avg decimal overflow, it will throw exception when
+        // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
+        totalRowCount = 0;
+        rowCountOutputted = 0;
+        hasPrepare = false;
+        inputVecBatchForAgg = nullptr;
+        pagesIndex->Clear();
+        throw e;
+    }
+
+    *outputVecBatch = output;
+}
+
+void WindowOperator::ProcessDataFromDisk(VectorBatch *&outputVecBatch, int32_t rowCount)
+{
+    if (partition != nullptr && partition->HasNext()) {
+        int32_t outputCount = min(partitionRowCount - partitionOutputted, rowCount);
+        pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(),
+            partitionOutputted, outputCount);
+    }
+
+    for (int32_t i = 0; i < rowCount; i++) {
+        if (partition == nullptr || !partition->HasNext()) {
+            if (!ProcessNextWindowPartition()) {
+                partition = nullptr;
+                break;
+            }
+            inputVecBatchForAgg = make_unique<VectorBatch>(partitionRowCount);
+            inputVecBatchForAgg->ResizeVectorCount(1);
+            int32_t outputCount = min(partitionRowCount, rowCount - i);
+            pagesIndex->GetOutput(outputCols.data(), outputColsCount, outputVecBatch, sourceTypes.GetIds(), 0,
+                outputCount, i);
+        }
+        partition->ProcessNextRow(inputVecBatchForAgg.get(), outputVecBatch, i);
+        rowCountOutputted++;
+        partitionOutputted++;
+    }
+}
+
+bool WindowOperator::ProcessNextWindowPartition()
+{
+    if (rowCountOutputted == totalRowCount) {
+        return false;
+    }
+
+    pagesIndex->Clear();
+    partitionRowCount = 0;
+    partitionOutputted = 0;
+
+    int32_t vecBatchRowCount = min(maxRowCountPerVecBatch, totalRowCount - rowCountOutputted);
+
+    auto *vecBatch = new VectorBatch(vecBatchRowCount);
+    DataTypes dataTypes(sourceTypes);
+    VectorHelper::AppendVectors(vecBatch, dataTypes, vecBatchRowCount);
+
+    int32_t rowIdx = 0;
+    VectorBatch *lastVecBatch = nullptr;
+    int32_t lastRowIdx = 0;
+    bool isFirstRow = true;
+
+    while (isFirstRow || IsSamePartition(lastVecBatch, lastRowIdx)) {
+        PaddingPartitionVecBatch(vecBatch, rowIdx);
+        isFirstRow = false;
+        lastVecBatch = vecBatch;
+        lastRowIdx = rowIdx;
+        rowIdx++;
+        partitionRowCount++;
+
+        if (rowIdx == vecBatchRowCount) {
+            pagesIndex->AddVecBatch(vecBatch);
+            vecBatch = new VectorBatch(vecBatchRowCount);
+            DataTypes groupedDataType(sourceTypes);
+            VectorHelper::AppendVectors(vecBatch, groupedDataType, vecBatchRowCount);
+            rowIdx = 0;
+        }
+
+        if (rowCountOutputted + partitionRowCount == totalRowCount) {
+            break;
+        }
+
+        currentBatch = spillMerger->CurrentBatch();
+        currentRowIdx = spillMerger->CurrentRowIndex();
+        spillMerger->Pop();
+    }
+
+    pagesIndex->AddVecBatch(vecBatch);
+    pagesIndex->Prepare();
+    peerGroupHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
+        originSortCols.data(), originSortColCount);
+
+    inputVecBatchForAgg = make_unique<VectorBatch>(totalRowCount);
+    inputVecBatchForAgg->ResizeVectorCount(1);
+
+    partition = make_unique<WindowPartition>(sourceTypes, pagesIndex.get(), 0, partitionRowCount,
+        outputCols.data(), outputColsCount, windowFunctions, peerGroupHashStrategy.get());
+
+    return true;
+}
+
+template<typename T>
+static ALWAYS_INLINE bool ValueEqualsLastValue(vec::VectorBatch *partitionVecBatch, vec::VectorBatch *currentVecBatch,
+    int32_t columnId, int32_t lastIdx, int32_t nextIdx)
+{
+    auto partitionVector = partitionVecBatch->Get(columnId);
+    auto currentVector = currentVecBatch->Get(columnId);
+
+    if constexpr (std::is_same_v<T, std::string_view>) {
+        std::string_view lastValue;
+        std::string_view nextValue;
+        lastValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(partitionVector)->GetValue(lastIdx);
+        nextValue = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVector)->GetValue(nextIdx);
+        auto lastValueLength = lastValue.length();
+        if (lastValueLength != nextValue.length()) {
+            return false;
+        }
+        if (memcmp(lastValue.data(), nextValue.data(), lastValueLength) == 0) {
+            return true;
+        } else {
+            return false;
+        }
+    } else if constexpr (std::is_same_v<T, double>) {
+        double lastValue = static_cast<Vector<double> *>(partitionVector)->GetValue(lastIdx);
+        double nextValue = static_cast<Vector<double> *>(currentVector)->GetValue(nextIdx);
+
+         if (std::abs(lastValue - nextValue) < __DBL_EPSILON__) {
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        T lastValue = static_cast<Vector<T> *>(partitionVector)->GetValue(lastIdx);
+        T nextValue = static_cast<Vector<T> *>(currentVector)->GetValue(nextIdx);
+        return lastValue == nextValue;
+    }
+}
+
+bool WindowOperator::IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx)
+{
+    for (int32_t i = 0; i < partitionCount; i++) {
+        int32_t columnId = partitionCols.data()[i];
+        auto lastVector = lastBatch->Get(columnId);
+        auto currentVector = currentBatch->Get(columnId);
+        auto lastIsNull = lastVector->IsNull(lastIdx);
+        auto currentIsNull = currentVector->IsNull(currentRowIdx);
+        if (lastIsNull && currentIsNull) {
+            continue;
+        }
+        if (lastIsNull || currentIsNull) {
+            return false;
+        }
+
+        bool isSame;
+        auto columnTypeId = sourceTypes.GetType(columnId)->GetId();
+        switch (columnTypeId) {
+            case OMNI_INT:
+            case OMNI_DATE32:
+                isSame = ValueEqualsLastValue<int32_t>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
+                break;
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
+            case OMNI_TIMESTAMP:
+                isSame = ValueEqualsLastValue<int64_t>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
+                break;
+            case OMNI_DOUBLE:
+                isSame = ValueEqualsLastValue<double>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
+                break;
+            case OMNI_BOOLEAN:
+                isSame = ValueEqualsLastValue<bool>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
+                break;
+            case OMNI_SHORT:
+                isSame = ValueEqualsLastValue<int16_t>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
+                break;
+            case OMNI_DECIMAL128:
+                isSame = ValueEqualsLastValue<Decimal128>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
+                break;
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                isSame = ValueEqualsLastValue<string_view>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
+                break;
+            default:
+                break;
+        }
+        if (!isSame) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void WindowOperator::PaddingPartitionVecBatch(vec::VectorBatch *partitionVecBatch, int32_t rowIdx)
+{
+    auto outputColSize = static_cast<int32_t>(sourceTypes.GetSize());
+    for (int32_t i = 0; i < outputColSize; i++) {
+        auto partitionVector = partitionVecBatch->Get(i);
+        auto typeId = sourceTypes.GetType(i)->GetId();
+        switch (typeId) {
+            case OMNI_INT:
+            case OMNI_DATE32:
+                PaddingPartitionVector<int32_t>(partitionVector, rowIdx, i);
+                break;
+            case OMNI_LONG:
+            case OMNI_DECIMAL64:
+            case OMNI_TIMESTAMP:
+                PaddingPartitionVector<int64_t>(partitionVector, rowIdx, i);
+                break;
+            case OMNI_DOUBLE:
+                PaddingPartitionVector<double>(partitionVector, rowIdx, i);
+                break;
+            case OMNI_BOOLEAN:
+                PaddingPartitionVector<bool>(partitionVector, rowIdx, i);
+                break;
+            case OMNI_SHORT:
+                PaddingPartitionVector<int16_t>(partitionVector, rowIdx, i);
+                break;
+            case OMNI_DECIMAL128:
+                PaddingPartitionVector<Decimal128>(partitionVector, rowIdx, i);
+                break;
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                PaddingPartitionVector<std::string_view>(partitionVector, rowIdx, i);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+template <typename T>
+void WindowOperator::PaddingPartitionVector(vec::BaseVector *groupedVector, int32_t rowIdx, int32_t colIdx)
+{
+    if constexpr (std::is_same_v<T, std::string_view>) {
+        using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+        auto currentVector = static_cast<VarcharVector *>(currentBatch->Get(colIdx));
+        if (currentVector->IsNull(currentRowIdx)) {
+            static_cast<VarcharVector *>(groupedVector)->SetNull(rowIdx);
+        } else {
+            auto value = currentVector->GetValue(currentRowIdx);
+            static_cast<VarcharVector *>(groupedVector)->SetValue(rowIdx, value);
+        }
+    } else {
+        auto currentVector = static_cast<Vector<T> *>(currentBatch->Get(colIdx));
+        if (currentVector->IsNull(currentRowIdx)) {
+            static_cast<Vector<T> *>(groupedVector)->SetNull(rowIdx);
+        } else {
+            static_cast<Vector<T> *>(groupedVector)->SetValue(rowIdx, currentVector->GetValue(currentRowIdx));
+        }
+    }
 }
 }
 }
