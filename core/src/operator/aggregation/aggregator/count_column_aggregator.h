@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Count aggregate
  */
 #ifndef OMNI_RUNTIME_COUNT_COLUMN_AGGREGATOR_H
@@ -29,7 +29,11 @@ public:
     ~CountColumnAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
+    {
+        spillTypes.push_back(OMNI_LONG);
+    }
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inRaw, bool outPartial, bool isOverflowAsNull)
     {
@@ -52,6 +56,9 @@ public:
                 new CountColumnAggregator<IN_ID, OUT_ID>(outputTypes, channels, inRaw, outPartial, isOverflowAsNull));
         }
     }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override;
 
 protected:
     CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels, const bool inputRaw,

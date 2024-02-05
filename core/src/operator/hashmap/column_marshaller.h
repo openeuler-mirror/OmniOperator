@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  */
 
 #ifndef OMNI_RUNTIME_COLUMN_MARSHALLER_H
@@ -24,6 +24,7 @@ template <typename Hashmap> class ColumnSerializeHandler {
 public:
     Hashmap hashmap;
     using KeyType = typename Hashmap::Keys;
+    using ValueType = typename Hashmap::Values;
     using Result = typename Hashmap::ResultType;
     ColumnSerializeHandler(uint8_t initDegree = 16) : hashmap(initDegree) {}
 
@@ -158,6 +159,11 @@ public:
     {
         return hashmap.GetElementsSize();
     }
+
+    void ResetHashmap()
+    {
+        hashmap.Reset();
+    };
 
 private:
     std::vector<VectorSerializer> serializers;

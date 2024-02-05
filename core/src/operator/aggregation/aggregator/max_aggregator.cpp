@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Max aggregate
  */
 
@@ -29,6 +29,28 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
     } else if (state.count == 0 || state.val == nullptr) {
         v->SetNull(rowIndex);
     }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId>& spillTypes)
+{
+    if constexpr (IN_ID == OMNI_SHORT) {
+        spillTypes.push_back(OMNI_INT);
+    } else {
+        spillTypes.push_back(IN_ID);
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+    int32_t rowIndex)
+{
+    auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
+    if (state.count == 0 || state.val == nullptr) {
+        spillValue->SetNull(rowIndex);
+        return;
+    }
+    spillValue->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
@@ -107,6 +129,24 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
         } else {
             AddDictConditionalUseRowIndex<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(rowStates,
                 aggIdx, ptr, nullMap, indexMap);
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
+    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+{
+    auto vectorPtr = vectorBatch->Get(vectorIndex++);
+    if (!vectorPtr->IsNull(rowIdx)) {
+        if constexpr (IN_ID == type::OMNI_SHORT) {
+            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_INT>(vectorPtr));
+            ptr = (ResultType *) __builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
+        } else {
+            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<IN_ID>(vectorPtr));
+            ptr = (ResultType *) __builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
         }
     }
 }

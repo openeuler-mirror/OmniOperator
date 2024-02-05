@@ -42,6 +42,9 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) override
     {}
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+        const int32_t rowIndex) override
+    {}
 
     template <typename InType, typename OutType> OutType TestCastWithOverflow(const InType val, bool &overflow)
     {

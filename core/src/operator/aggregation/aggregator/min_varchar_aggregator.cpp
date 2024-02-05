@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Min aggregate for varchar
  */
 
@@ -20,6 +20,13 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
         std::string_view val(reinterpret_cast<char *>(state.val), state.count);
         v->SetValue(rowIndex, val);
     }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
+    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+{
+    this->ExtractValues(state, vectors, rowIndex);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
@@ -63,6 +70,27 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
 
     for (AggregateState *states : rowStates) {
         SaveState(states[aggIdx]);
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
+    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+{
+    auto vectorPtr = vectorBatch->Get(vectorIndex++);
+    if (!vectorPtr->IsNull(rowIdx)) {
+        auto varcharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
+        if (state.val == nullptr || state.count == 0) {
+            auto strView = varcharVec->GetValue(rowIdx);
+            auto *res = strView.data();
+            state.count = strView.size();
+            state.count |= UPDATE_FLAG;
+            state.val = const_cast<char *>(res);
+            SaveState(state);
+        } else {
+            state.val = const_cast<char *>(MinCharOp(reinterpret_cast<char *>(state.val), state.count, varcharVec,
+                rowIdx));
+        }
     }
 }
 

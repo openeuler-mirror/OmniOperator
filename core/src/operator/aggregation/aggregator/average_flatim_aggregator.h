@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: average aggregate for intermedia data vector are multi vectors
  *
  *
@@ -26,7 +26,6 @@ public:
     {}
 
     ~AverageFlatIMAggregator() override {}
-
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
@@ -87,6 +86,45 @@ public:
                     rowStates, aggIdx, ptr, cntPtr, nullMap);
             }
         }
+    }
+
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    {
+        spillTypes.push_back(OMNI_DOUBLE);
+        spillTypes.push_back(OMNI_LONG);
+    }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
+    {
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
+        } else {
+            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count,
+                sum[rowIdx], cnt);
+        }
+    }
+
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
+        if (state.count == 0 || state.val == nullptr) {
+            avgValVector->SetNull(rowIndex);
+            avgCountVector->SetValue(rowIndex, 0);
+            return;
+        }
+
+        avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        avgCountVector->SetValue(rowIndex, state.count);
     }
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override

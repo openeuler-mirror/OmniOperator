@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Max aggregate for varchar
  */
 #ifndef OMNI_RUNTIME_MAX_VARCHAR_AGGREGATOR_H
@@ -48,7 +48,11 @@ public:
     ~MaxVarcharAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    {
+        spillTypes.push_back(OMNI_VARCHAR);
+    }
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
@@ -74,6 +78,9 @@ public:
                 inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
         }
     }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override;
 
 protected:
     MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,

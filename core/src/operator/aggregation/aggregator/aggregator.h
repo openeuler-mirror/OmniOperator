@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Inner supported aggregators header
  */
 #ifndef AGGREGATOR_H
@@ -130,6 +130,12 @@ public:
             std::to_string(as_integer(type)));
     }
 
+    virtual void GetSpillType(std::vector<DataTypeId> &spillTypes)
+    {
+        throw OmniException("UNSUPPORTED_ERROR",
+            "GetSpillType not implemented for " + std::to_string(as_integer(type)));
+    }
+
     // for no groupby aggregation
     virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount)
@@ -189,6 +195,13 @@ public:
         }
     }
 
+    virtual void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx)
+    {
+        throw OmniException("UNSUPPORTED_ERROR",
+            "ProcessGroupAfterSpill not implemented for " + std::to_string(as_integer(type)));
+    }
+
     // for groupby hash aggregation
     virtual void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
         VectorBatch *vectorBatch, const int32_t filterStart, const int32_t rowOffset)
@@ -231,6 +244,8 @@ public:
 
     // set result to output vector
     virtual void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+        const int32_t rowIndex) = 0;
+    virtual void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
         const int32_t rowIndex) = 0;
 
     virtual bool IsTypedAggregator()

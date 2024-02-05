@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: JNI Operator Factory Source File
  */
 
@@ -200,7 +200,6 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
-    auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
     auto aggNum = static_cast<size_t>(env->GetArrayLength(jAggFuncType));
@@ -220,7 +219,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
     JNI_METHOD_START
     nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColVector, groupByDataTypes, aggColVectorWrap,
         aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColumnVector, inputRawsWrap, outputPartialsWrap,
-        overflowConfig->IsOverflowAsNull());
+        operatorConfig);
     JNI_METHOD_END(0L)
     nativeOperatorFactory->Init();
 
@@ -989,7 +988,6 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
 
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
-    auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
     vector<omniruntime::expressions::Expr *> groupByKeysExprs;
@@ -1020,7 +1018,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     JNI_METHOD_START
     nativeOperatorFactory =
         new HashAggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprsVector, aggFilterExprs,
-        sourceDataTypes, outDataTypes, aggFuncTypes, maskColumns, inputRaws, outputPartials, overflowConfig);
+        sourceDataTypes, outDataTypes, aggFuncTypes, maskColumns, inputRaws, outputPartials, operatorConfig);
     JNI_METHOD_END_WITH_THREE_EXPRS(0L, groupByKeysExprs, aggKeysExprsVector, aggFilterExprs)
 
     Expr::DeleteExprs(groupByKeysExprs);

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * @Description: spill unit iterator
  */
 #ifndef OMNI_RUNTIME_OPERATOR_CONFIG_H
@@ -41,6 +41,11 @@ public:
     virtual ~SpillConfig() = default;
 
     virtual bool NeedSpill(MemoryBuilder *memoryBuilder)
+    {
+        return false;
+    }
+
+    virtual bool NeedSpill(size_t elementsSize)
     {
         return false;
     }
@@ -124,6 +129,8 @@ public:
     ~SparkSpillConfig() override = default;
 
     bool NeedSpill(MemoryBuilder *memoryBuilder) override;
+
+    bool NeedSpill(size_t elementsSize) override;
 
     int32_t GetSpillRowThreshold() const
     {

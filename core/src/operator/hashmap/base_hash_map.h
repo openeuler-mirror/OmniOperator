@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  */
 #ifndef OMNI_RUNTIME_BASE_HASH_MAP_H
 #define OMNI_RUNTIME_BASE_HASH_MAP_H
@@ -512,6 +512,7 @@ public:
     using HashKey = KeyType;
     using ResultType = InsertResult<ValueType>;
     using Keys = KeyType;
+    using Values = ValueType;
 
 public:
     BaseHashMap(uint8_t initDegree = defaultDegreeSize) : grower(initDegree)
@@ -709,6 +710,14 @@ public:
     {
         allocator.Release(slotsAddress, sizeof(Slot) * newCapacity);
         allocator.Release(ctrlAddress, sizeof(ctrl_t) * (newCapacity + Group::kWidth));
+    }
+
+    void Reset()
+    {
+        elementsSize = 0;
+        memset_sp(identifiers, sizeof(ctrl_t) * capacity, kEmpty, sizeof(ctrl_t) * capacity);
+        memset_sp(identifiers + capacity, sizeof(ctrl_t) * Group::kWidth, kSentinel, sizeof(ctrl_t) * Group::kWidth);
+        memset_sp(slotsAddress, sizeof(Slot) * capacity, 0, sizeof(Slot) * capacity);
     }
 
     class HashmapIteratorOutput {

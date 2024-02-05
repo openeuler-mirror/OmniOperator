@@ -3846,6 +3846,11 @@ TEST(AggregatorTest, typed_aggregator_test)
             return;
         }
 
+        void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex)
+        {
+            return;
+        }
+
         virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
             const int32_t rowCount, const uint8_t *nullMap)
         {

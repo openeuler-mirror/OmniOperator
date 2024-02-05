@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Returns the first value of `child` for a group of rows.
  * Caution: The function is non-deterministic.
  * Returns the first value of `child` for a group of rows.
@@ -186,6 +186,91 @@ public:
                 bool intermediateState = reinterpret_cast<Vector<bool> *>(valueSetVector)->GetValue(rowIndex);
                 firstState->valueSet = firstState->valueSet || intermediateState;
             }
+        }
+    }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
+    {
+        auto firstVector = vectorBatch->Get(vectorIndex++);
+        auto valueSetVector = vectorBatch->Get(vectorIndex++);
+        auto firstState = static_cast<FirstState *>(state.val);
+
+        if constexpr (std::is_same_v<InputType, std::string_view>) {
+            if constexpr (IGNORE_NULL) {
+                if (!firstState->valueSet && !firstVector->IsNull(rowIdx)) {
+                    firstState->valueSet = true;
+                    firstState->valIsNull = false;
+                    auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(firstVector);
+                    auto varcharVal = varcharVector->GetValue(rowIdx);
+                    state.count = UpdateFirstStateVarcharVal(firstState, state.count, varcharVal);
+                }
+            } else {
+                if (!firstState->valueSet) {
+                    firstState->valIsNull = firstVector->IsNull(rowIdx);
+                    firstState->valueSet = true;
+                    if (firstState->valIsNull) {
+                        state.count = 0;
+                    } else {
+                        auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(firstVector);
+                        auto varcharVal = varcharVector->GetValue(rowIdx);
+                        state.count = UpdateFirstStateVarcharVal(firstState, state.count, varcharVal);
+                    }
+                }
+            }
+        } else {
+            if constexpr (IGNORE_NULL) {
+                if (!firstState->valueSet && !firstVector->IsNull(rowIdx)) {
+                    firstState->valueSet = true;
+                    firstState->valIsNull = false;
+                    *reinterpret_cast<InputType *>(firstState->val) =
+                        static_cast<Vector<InputType> *>(firstVector)->GetValue(rowIdx);
+                }
+            } else {
+                if (!firstState->valueSet) {
+                    firstState->valueSet = true;
+                    firstState->valIsNull = firstVector->IsNull(rowIdx);
+                    if (not firstState->valIsNull) {
+                        *reinterpret_cast<InputType *>(firstState->val) =
+                            static_cast<Vector<InputType> *>(firstVector)->GetValue(rowIdx);
+                    }
+                }
+            }
+        }
+        bool intermediateState = reinterpret_cast<Vector<bool> *>(valueSetVector)->GetValue(rowIdx);
+        firstState->valueSet = firstState->valueSet || intermediateState;
+    }
+
+    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
+    {
+        spillTypes.push_back(static_cast<DataTypeId>(this->inputTypes.GetIds()[0]));
+        spillTypes.push_back(OMNI_BOOLEAN);
+    }
+
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        if constexpr (std::is_same_v<InputType, std::string_view>) {
+            auto firstVarcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
+            auto firstState = static_cast<FirstState *>(state.val);
+            if (firstState->valIsNull) {
+                firstVarcharVector->SetNull(rowIndex);
+            } else {
+                std::string_view firstValue(reinterpret_cast<char *>(firstState->val), state.count);
+                firstVarcharVector->SetValue(rowIndex, firstValue);
+            }
+
+            auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
+            valueSetVector->SetValue(rowIndex, firstState->valueSet);
+        } else {
+            auto firstVector = reinterpret_cast<Vector<InputType> *>(vectors[0]);
+            auto firstState = static_cast<FirstState *>(state.val);
+            if (firstState->valIsNull) {
+                firstVector->SetNull(rowIndex);
+            } else {
+                firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
+            }
+            auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
+            valueSetVector->SetValue(rowIndex, firstState->valueSet);
         }
     }
 

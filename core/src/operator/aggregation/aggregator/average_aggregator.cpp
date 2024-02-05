@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Average aggregate
  */
 
@@ -81,6 +81,35 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state
     int32_t rowIndex)
 {
     (this->*extractValuesFuncPointer)(state, vectors, rowIndex);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void AverageAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId> &spillTypes)
+{
+    spillTypes.clear();
+    if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
+        spillTypes.push_back(OMNI_LONG);
+    } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
+        spillTypes.push_back(OMNI_DOUBLE);
+    } else {
+        spillTypes.push_back(OMNI_DECIMAL128);
+    }
+    spillTypes.push_back(OMNI_LONG);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void AverageAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
+    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+{
+    auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
+    auto spillCount = reinterpret_cast<Vector<int64_t> *>(vectors[1]);
+    if (state.count == 0 || state.val == nullptr) {
+        spillValue->SetNull(rowIndex);
+        spillCount->SetValue(rowIndex, state.count);
+        return;
+    }
+    spillValue->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+    spillCount->SetValue(rowIndex, state.count);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
@@ -168,6 +197,43 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
         }
     } else {
         SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
+    int32_t &vectorIndex, int32_t rowIdx)
+{
+    if constexpr (IN_ID == OMNI_CONTAINER || IN_ID == OMNI_DOUBLE) {
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
+        } else {
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+        }
+    } else if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_LONG>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
+        } else {
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+        }
+    } else {
+        SumAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(state, vectorBatch, vectorIndex, rowIdx);
     }
 }
 

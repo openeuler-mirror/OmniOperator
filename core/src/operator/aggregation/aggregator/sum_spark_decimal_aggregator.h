@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Aggregate factories
  */
 
@@ -62,6 +62,40 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
     }
 }
 
+template <typename InDecimalType, typename OutDecimalType, typename ResultIntType>
+VECTORIZE_LOOP NO_INLINE void AddDecimalRowIndex(AggregateState &state, const InDecimalType *__restrict dataPtr,
+    int64_t cnt, int32_t rowIdx)
+{
+    bool isOverflow = false;
+    if (state.count < 0) {
+        // cur state overflow, so no need to aggregate
+        return;
+    }
+    auto res = reinterpret_cast<OutDecimalType *>(state.val);
+    ResultIntType tmpResult = 0;
+
+    if constexpr (std::is_same_v<OutDecimalType, Decimal128>) {
+        tmpResult = res->ToInt128();
+        if constexpr (std::is_same_v<InDecimalType, Decimal128>) {
+            // decimal128 + decimal128 = decimal128
+            isOverflow = AddCheckedOverflow(tmpResult, dataPtr[rowIdx].ToInt128(), tmpResult);
+        } else {
+            // decimal64 + decimal64 = decimal128
+            isOverflow = AddCheckedOverflow(tmpResult, int128_t(dataPtr[rowIdx]), tmpResult);
+        }
+    } else {
+        // decimal64 + decimal64 = decimal64
+        tmpResult = *res;
+        isOverflow = __builtin_add_overflow(tmpResult, dataPtr[rowIdx], &tmpResult);
+    }
+    state.count += cnt;
+    *res = OutDecimalType(tmpResult);
+
+    if (isOverflow) {
+        state.count = -1;
+    }
+}
+
 /**
  * SUM agg data type
  * input: decimal
@@ -85,7 +119,29 @@ public:
     {}
 
     ~SumSparkDecimalAggregator() override = default;
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    {
+        if constexpr (InDecimalId == OMNI_DECIMAL64) {
+            spillTypes.push_back(OutDecimalId);
+        } else {
+            spillTypes.push_back(OMNI_DECIMAL128);
+        }
+        spillTypes.push_back(OMNI_LONG);
+    }
 
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto spillCount = static_cast<Vector<long> *>(vectors[1]);
+        if (state.count == 0) {
+            spillValue->SetNull(rowIndex);
+            spillCount->SetValue(rowIndex, state.count);
+            return;
+        }
+
+        spillValue->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        spillCount->SetValue(rowIndex, state.count);
+    }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         BaseVector *vector = vectors[0];
@@ -159,6 +215,25 @@ public:
             AddDecimalUseRowIndex<InRawType, ResultType, false>(rowStates, aggIdx, dataPtr, emptyPtr);
         } else {
             AddDecimalUseRowIndex<InRawType, ResultType, true>(rowStates, aggIdx, dataPtr, emptyPtr, nullMap);
+        }
+    }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
+    {
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
+        } else if (inputRaw) {
+            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx],
+                cnt);
+        } else {
+            AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, sum, cnt, rowIdx);
         }
     }
 

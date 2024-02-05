@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Min aggregate for varchar
  */
 #ifndef OMNI_RUNTIME_MIN_VARCHAR_AGGREGATOR_H
@@ -296,7 +296,11 @@ public:
     ~MinVarcharAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    {
+        spillTypes.push_back(OMNI_VARCHAR);
+    }
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
@@ -322,6 +326,9 @@ public:
                 inputTypes, outputTypes, channels, rawIn, partialOut, isOverflowAsNull));
         }
     }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override;
 
 protected:
     MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,

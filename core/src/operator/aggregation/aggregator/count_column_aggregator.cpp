@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Count aggregate
  */
 
@@ -30,6 +30,13 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &s
     std::vector<BaseVector *> &vectors, int32_t rowIndex)
 {
     static_cast<Vector<int64_t> *>(vectors[0])->SetValue(rowIndex, state.count);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CountColumnAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
+    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+{
+    this->ExtractValues(state, vectors, rowIndex);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
@@ -138,6 +145,16 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggr
     const size_t aggIdx, BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
 {
     return (this->*processGroupInternalPtr)(rowStates, aggIdx, vector, rowOffset, nullMap);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
+    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+{
+    auto countVector = vectorBatch->Get(vectorIndex++);
+    auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+    int64_t unsedFlag = 0;
+    CountAllOp(&(state.count), unsedFlag, cnt[rowIdx], 0LL);
 }
 
 // Explicit template instantiation

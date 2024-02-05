@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Average aggregate
  */
 #ifndef OMNI_RUNTIME_AVERAGE_AGGREGATOR_H
@@ -60,7 +60,8 @@ public:
     ~AverageAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-
+    void GetSpillType(std::vector<DataTypeId> &spillTypes) override;
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT>
     void ExtractValuesFunction(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex);
 
@@ -115,6 +116,9 @@ public:
                 outputTypes, channels, inRaw, outPartial, isOverflowAsNull));
         }
     }
+
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override;
 
 protected:
     AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,

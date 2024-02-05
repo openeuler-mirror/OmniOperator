@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: For non-decimal type
  */
 #ifndef OMNI_RUNTIME_SUM_FLAT_IM_AGGREGATOR_H
@@ -70,6 +70,25 @@ public:
         }
     }
 
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
+    {
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
+        } else {
+            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx],
+                cnt);
+        }
+    }
+
     void ProcessSingleInternalFinal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
@@ -121,6 +140,29 @@ public:
         state.count = 0;
     }
 
+    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    {
+        if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
+            spillTypes.push_back(OMNI_LONG);
+        } else {
+            spillTypes.push_back(OMNI_DOUBLE);
+        }
+        spillTypes.push_back(OMNI_LONG);
+    }
+
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto spillCount = static_cast<Vector<long> *>(vectors[1]);
+        if (state.count == 0) {
+            spillValue->SetNull(rowIndex);
+            spillCount->SetValue(rowIndex, state.count);
+            return;
+        }
+
+        spillValue->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        spillCount->SetValue(rowIndex, state.count);
+    }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         auto v = static_cast<Vector<ResultType> *>(vectors[0]);

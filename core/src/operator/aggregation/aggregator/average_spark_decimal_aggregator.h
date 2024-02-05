@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Average aggregate for short decimal
  */
 #ifndef OMNI_RUNTIME_AVERAGE_SPARK_DECIMAL_AGGREGATOR_H
@@ -54,6 +54,25 @@ public:
         }
     }
 
+    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
+        int32_t rowIdx) override
+    {
+        auto sumVector = vectorBatch->Get(vectorIndex++);
+        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(sumVector));
+        auto countVector = vectorBatch->Get(vectorIndex++);
+        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
+
+        int64_t cnt = cntPtr[rowIdx];
+        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
+            return;
+        } else if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+        } else {
+            AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, sum, cnt, rowIdx);
+        }
+    }
+
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
@@ -80,7 +99,27 @@ public:
             }
         }
     }
-
+    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
+    {
+        if constexpr (InDecimalId == OMNI_DECIMAL64) {
+            spillTypes.push_back(OutDecimalId);
+        } else {
+            spillTypes.push_back(OMNI_DECIMAL128);
+        }
+        spillTypes.push_back(OMNI_LONG);
+    }
+    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    {
+        auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
+        if (state.count == 0 || state.val == nullptr) {
+            avgValVector->SetNull(rowIndex);
+            avgCountVector->SetValue(rowIndex, state.count);
+            return;
+        }
+        avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        avgCountVector->SetValue(rowIndex, state.count);
+    }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         BaseVector *vector = vectors[0];
