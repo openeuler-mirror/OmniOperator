@@ -130,9 +130,10 @@ public:
             std::to_string(as_integer(type)));
     }
 
-    virtual void GetSpillType(std::vector<DataTypeId>& spillTypes)
+    virtual void GetSpillType(std::vector<DataTypeId> &spillTypes)
     {
-        throw OmniException("Not implemented", "GetSpillType not implemented for " + std::to_string(as_integer(type)));
+        throw OmniException("UNSUPPORTED_ERROR",
+            "GetSpillType not implemented for " + std::to_string(as_integer(type)));
     }
 
     // for no groupby aggregation
@@ -197,8 +198,8 @@ public:
     virtual void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
         int32_t rowIdx)
     {
-        throw OmniException("Not implemented", "ProcessGroupAfterSpill not implemented for " +
-            std::to_string(as_integer(type)));
+        throw OmniException("UNSUPPORTED_ERROR",
+            "ProcessGroupAfterSpill not implemented for " + std::to_string(as_integer(type)));
     }
 
     // for groupby hash aggregation

@@ -131,16 +131,16 @@ public:
 
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        auto v = static_cast<Vector<ResultType> *>(vectors[0]);
-        auto v1 = static_cast<Vector<long> *>(vectors[1]);
+        auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto spillCount = static_cast<Vector<long> *>(vectors[1]);
         if (state.count == 0) {
-            v->SetNull(rowIndex);
-            v1->SetValue(rowIndex, state.count);
+            spillValue->SetNull(rowIndex);
+            spillCount->SetValue(rowIndex, state.count);
             return;
         }
 
-        v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
-        v1->SetValue(rowIndex, state.count);
+        spillValue->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        spillCount->SetValue(rowIndex, state.count);
     }
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {

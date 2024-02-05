@@ -495,6 +495,7 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
             currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG ||
             currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL ||
             currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
+            // Among these types, there will be two columns of arrays to store spill data.
             oneAggOutputCols = 2;
         }
         std::vector<BaseVector *> adaptAggVectors(oneAggOutputCols);
