@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  * @Description: dt fuzz factory create utils implementations
  */
 
@@ -257,11 +257,13 @@ OperatorFactory *CreateWindowFactory(omniruntime::type::DataTypes &sourceTypes)
         Date32Type(DAY), Decimal64Type(SHORT_DECIMAL_SIZE, 0), Decimal128Type(LONG_DECIMAL_SIZE, 0),
         VarcharType(CHAR_SIZE), CharType(CHAR_SIZE), DoubleType() }));
 
+    OverflowConfig overflowConfig(OVERFLOW_CONFIG_NULL);
+    OperatorConfig operatorConfig(overflowConfig);
     // dealing data with the operator
     auto operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 9,
         windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 1, windowFrameTypes,
-        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, true);
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig);
     return operatorFactory;
 }
 
