@@ -139,7 +139,7 @@ protected:
             PROBE_OUTPUT_COLS[TestGroup(state)].data(), (int32_t)PROBE_OUTPUT_COLS[TestGroup(state)].size(),
             PROBE_HASH_COLS[TestGroup(state)].data(), (int32_t)PROBE_HASH_COLS[TestGroup(state)].size(),
             BUILD_OUTPUT_COLS[TestGroup(state)].data(), (int32_t)BUILD_OUTPUT_COLS[TestGroup(state)].size(),
-            DataTypes(buildOutputTypes), JoinType::OMNI_JOIN_TYPE_INNER,
+            DataTypes(buildOutputTypes),
             hashBuilderOperatorFactory->GetHashTablesVariants(), nullptr, new OverflowConfig());
     }
 
