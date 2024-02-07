@@ -983,8 +983,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_invalid_config
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
 
     SparkSpillConfig spillConfig("", UINT64_MAX, 5);
@@ -1200,8 +1200,8 @@ void TestHashAggSpillWithMultiRecords(std::vector<uint32_t> aggFuncTypes, DataTy
     OperatorConfig operatorConfig(spillConfig);
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     auto *hashAggWithExprOperatorFactory =
         new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
@@ -1671,8 +1671,8 @@ void TestHashAggSpillWithNullRecords(std::vector<uint32_t> aggFuncTypes, DataTyp
     OperatorConfig operatorConfig(spillConfig);
 
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypes.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
     std::vector<omniruntime::expressions::Expr *> aggFilters;
     auto *hashAggWithExprOperatorFactory =
         new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
