@@ -19,8 +19,7 @@
 #include "operator/pages_index.h"
 #include "operator/spill/spiller.h"
 
-namespace omniruntime {
-namespace op {
+namespace omniruntime::op {
 using namespace vec;
 class HashAggregationOperatorFactory;
 class HashAggregationOperator;
@@ -331,7 +330,7 @@ public:
      * @param aggFuncTypes    func types of aggregators
      * @param maskColsVector  mask col index in VectorBatch
      * @param inputRaws       whether the input VectorBatch is raw, the input raw is true in the first stage
-     * @param outputPartials  whether the output VectorBatch is paritial result
+     * @param outputPartials  whether the output VectorBatch is partial result
      * @param operatorConfig  the operator config
      */
     HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
@@ -375,7 +374,7 @@ public:
      * @param aggFuncTypes    func types of aggregators
      * @param maskColsVector  mask col index in VectorBatch
      * @param inputRaws       whether the input VectorBatch is raw, the input raw is true in the first stage
-     * @param outputPartials  whether the output VectorBatch is paritial result
+     * @param outputPartials  whether the output VectorBatch is partial result
      * @param hasAggFilters   whether handle the agg filter when AddInput
      * @param operatorConfig  the operator config
      * this is for HashAggregationWithExprOperatorFactory
@@ -393,7 +392,8 @@ public:
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes),
           aggFuncTypesVector(aggFuncTypes),
-          hasAggFilters(hasAggFilters)
+          hasAggFilters(hasAggFilters),
+          operatorConfig(operatorConfig)
     {
         OperatorConfig::CheckOperatorConfig(operatorConfig);
     }
@@ -415,11 +415,10 @@ private:
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
     HandleType handleType;
-    OperatorConfig operatorConfig;
     std::vector<int8_t> hasAggFilters;
+    OperatorConfig operatorConfig;
 
     void ChooseGroupByType();
 };
-} // end of namespace op
-} // end of namespace omniruntimef
+} // end of namespace omniruntime::op
 #endif

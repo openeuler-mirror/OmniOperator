@@ -17,22 +17,13 @@ enum class RoundingRule {
     DOWN
 };
 
-
-enum class SupportExprFilterRule {
-    // NO_EXPR means vectorbach does not contain a filter column
-    NO_EXPR = 0,
-
-    // EXPR_FILTER means vectorbach contain a filter column
-    EXPR_FILTER
-};
-
 /**
  * Defines the differences in Decimal math function between different engines.
  */
 enum class CheckReScaleRule {
     /**
-    * Whether to Check Overflow when decimal operations result is return.
-    */
+     * Whether to Check Overflow when decimal operations result is return.
+     */
     NOT_CHECK_RESCALE = 0,
     CHECK_RESCALE
 };
@@ -162,15 +153,14 @@ public:
         : Policy(RoundingRule::HALF_UP, CheckReScaleRule::NOT_CHECK_RESCALE, EmptySearchStrReplaceRule::REPLACE,
         CastDecimalToDoubleRule::CAST, NegativeStartIndexOutOfBoundsRule::EMPTY_STRING,
         ZeroStartIndexSupportRule::IS_NOT_SUPPORT, SupportContainerVecRule::SUPPORT,
-        StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION, SupportExprFilterRule::NO_EXPR,
-        SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT, StringToDecimalRule::OVERFLOW_AS_NULL)
-    {};
+        StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION, SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT,
+        StringToDecimalRule::OVERFLOW_AS_NULL) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
         NegativeStartIndexOutOfBoundsRule negativeStartIndexOutOfBoundsRule,
         ZeroStartIndexSupportRule zeroStartIndexSupportRule, SupportContainerVecRule supportContainerVecRule,
-        StringToDateFormatRule stringToDateFormatRule, SupportExprFilterRule supportExprFilterRule,
+        StringToDateFormatRule stringToDateFormatRule,
         SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule,
         StringToDecimalRule stringToDecimalRule)
         : roundingRule(roundingRule),
@@ -181,7 +171,6 @@ public:
           zeroStartIndexSupportRule(zeroStartIndexSupportRule),
           supportContainerVecRule(supportContainerVecRule),
           stringToDateFormatRule(stringToDateFormatRule),
-          supportExprFilterRule(supportExprFilterRule),
           supportDecimalPrecisionImprovementRule(supportDecimalPrecisionImprovementRule),
           stringToDecimalRule(stringToDecimalRule) {};
 
@@ -265,16 +254,6 @@ public:
         stringToDateFormatRule = rule;
     }
 
-    SupportExprFilterRule GetSupportExprFilterRule() const
-    {
-        return supportExprFilterRule;
-    }
-
-    void SetSupportExprFilterRule(SupportExprFilterRule rule)
-    {
-        supportExprFilterRule = rule;
-    }
-
     void SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule rule)
     {
         supportDecimalPrecisionImprovementRule = rule;
@@ -304,7 +283,6 @@ protected:
     ZeroStartIndexSupportRule zeroStartIndexSupportRule;
     SupportContainerVecRule supportContainerVecRule;
     StringToDateFormatRule stringToDateFormatRule;
-    SupportExprFilterRule supportExprFilterRule;
     SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule;
     StringToDecimalRule stringToDecimalRule;
 };

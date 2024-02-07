@@ -392,19 +392,13 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
         rowStates[rowIdx] = currentGroupStates;
     }
 
-    if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
-        if (aggFiltersCount > 0) {
-            int32_t filterOffset = vecBatch->GetVectorCount() - aggFiltersCount;
-            for (size_t i = 0; i < aggNum; ++i) {
-                if (hasAggFilters[i] == 1) {
-                    aggregators[i]->ProcessGroupFilter(rowStates, i, vecBatch, filterOffset, 0);
-                    filterOffset++;
-                } else {
-                    aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
-                }
-            }
-        } else {
-            for (size_t i = 0; i < aggNum; ++i) {
+    if (aggFiltersCount > 0) {
+        int32_t filterOffset = vecBatch->GetVectorCount() - aggFiltersCount;
+        for (size_t i = 0; i < aggNum; ++i) {
+            if (hasAggFilters[i] == 1) {
+                aggregators[i]->ProcessGroupFilter(rowStates, i, vecBatch, filterOffset, 0);
+                filterOffset++;
+            } else {
                 aggregators[i]->ProcessGroup(rowStates, i, vecBatch, 0);
             }
         }

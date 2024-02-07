@@ -1491,7 +1491,7 @@ TEST(NativeOmniSortTest, TestSortSpillWithInvalidConfig)
     int32_t ascendings[] = {1, 1};
     int32_t nullFirsts[] = {0, 0};
 
-    SpillConfig spillConfig1(SPILL_CONFIG_NONE, true, "", 5);
+    SpillConfig spillConfig1(SPILL_CONFIG_NONE, true, "", UINT64_MAX);
     OperatorConfig operatorConfig1(spillConfig1);
     EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
         ascendings, nullFirsts, sourceTypesSize, operatorConfig1),
@@ -1503,16 +1503,10 @@ TEST(NativeOmniSortTest, TestSortSpillWithInvalidConfig)
         ascendings, nullFirsts, sourceTypesSize, operatorConfig2),
         omniruntime::exception::OmniException);
 
-    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, "/", 5);
+    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, "+-ab23", UINT64_MAX);
     OperatorConfig operatorConfig3(spillConfig3);
-    auto operatorFactory = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
-        sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig3);
-    DeleteSortOperatorFactory(operatorFactory);
-
-    SpillConfig spillConfig4(SPILL_CONFIG_NONE, true, "+-ab23", 5);
-    OperatorConfig operatorConfig4(spillConfig4);
     EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
-        ascendings, nullFirsts, sourceTypesSize, operatorConfig4),
+        ascendings, nullFirsts, sourceTypesSize, operatorConfig3),
         omniruntime::exception::OmniException);
 }
 

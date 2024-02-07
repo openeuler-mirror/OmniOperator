@@ -280,75 +280,7 @@ omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *
     return operatorFactory->CreateOperator();
 }
 
-template <typename D, typename V> bool CompareUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector)
-{
-    std::multiset<D> resRows;
-    std::multiset<D> expectedRows;
-    size_t resNullCount = 0;
-    size_t expNullCount = 0;
-    for (int32_t i = 0; i < resultVector->GetSize(); ++i) {
-        auto leftVector = static_cast<V *>(resultVector);
-        auto rightVector = static_cast<V *>(expectedVector);
-        if (leftVector->IsNull(i)) {
-            resNullCount++;
-        } else {
-            resRows.emplace(leftVector->GetValue(i));
-        }
-        if (rightVector->IsNull(i)) {
-            expNullCount++;
-        } else {
-            expectedRows.emplace(rightVector->GetValue(i));
-        }
-    }
-
-    return resRows == expectedRows && resNullCount == expNullCount;
-}
-
-
-bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector)
-{
-    bool isMatched = true;
-    switch (expectedVector->GetTypeId()) {
-        case OMNI_INT:
-        case OMNI_DATE32: {
-            isMatched = CompareUnorderedRows<int32_t, Vector<int32_t>>(resultVector, expectedVector);
-            break;
-        }
-        case OMNI_SHORT: {
-            isMatched = CompareUnorderedRows<int16_t, Vector<int16_t>>(resultVector, expectedVector);
-            break;
-        }
-        case OMNI_DOUBLE: {
-            isMatched = CompareUnorderedRows<double, Vector<double>>(resultVector, expectedVector);
-            break;
-        }
-        case OMNI_LONG:
-        case OMNI_DECIMAL64: {
-            isMatched = CompareUnorderedRows<int64_t, Vector<int64_t>>(resultVector, expectedVector);
-            break;
-        }
-        case OMNI_BOOLEAN: {
-            isMatched = CompareUnorderedRows<bool, Vector<bool>>(resultVector, expectedVector);
-            break;
-        }
-        case OMNI_DECIMAL128: {
-            isMatched = CompareUnorderedRows<Decimal128, Vector<type::Decimal128>>(resultVector, expectedVector);
-            break;
-        }
-        case OMNI_CHAR:
-        case OMNI_VARCHAR: {
-            isMatched = CompareUnorderedRows<std::string_view, Vector<LargeStringContainer<std::string_view>>>(
-                (resultVector), (expectedVector));
-            break;
-        }
-        default: {
-            return false;
-        }
-    }
-    return isMatched;
-}
-
-bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch)
+bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch, const double error)
 {
     if (resultBatch->GetRowCount() != expectedBatch->GetRowCount()) {
         printf("Invalid row count. Expected=%d, actual=%d\n", expectedBatch->GetRowCount(), resultBatch->GetRowCount());
@@ -371,7 +303,7 @@ bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *e
         }
     }
     for (int32_t i = 0; i < columnNumber; ++i) {
-        if (!ColumnMatchIgnoreOrder(resultBatch->Get(i), expectedBatch->Get(i))) {
+        if (!ColumnMatchIgnoreOrder(resultBatch->Get(i), expectedBatch->Get(i), error)) {
             printf("Vector %d not matched\n", i);
             PrintNotMatchBatches(resultBatch, expectedBatch);
             return false;
@@ -806,45 +738,5 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
         }
     }
     return isMatched;
-}
-
-bool VecBatchMatchIgnoreOrder(VectorBatch *resultBatch, VectorBatch *expectedBatch, const double error)
-{
-    if (resultBatch->GetRowCount() != expectedBatch->GetRowCount()) {
-        printf("Invalid row count. Expected=%d, actual=%d\n", expectedBatch->GetRowCount(), resultBatch->GetRowCount());
-        PrintNotMatchBatches(resultBatch, expectedBatch);
-        return false;
-    }
-
-    auto columnNumber = resultBatch->GetVectorCount();
-    if (columnNumber != expectedBatch->GetVectorCount()) {
-        printf("Invalid vector count. Expected=%d, actual=%d\n", expectedBatch->GetVectorCount(),
-            resultBatch->GetVectorCount());
-        PrintNotMatchBatches(resultBatch, expectedBatch);
-        return false;
-    }
-    for (int32_t i = 0; i < columnNumber; ++i) {
-        if (resultBatch->Get(i)->GetEncoding() != expectedBatch->Get(i)->GetEncoding()) {
-            printf("Encoding of column %d not match\n", i);
-            PrintNotMatchBatches(resultBatch, expectedBatch);
-            return false;
-        }
-    }
-
-    // validate data
-    if (!ColumnMatchIgnoreOrder(resultBatch->Get(0), expectedBatch->Get(0), error)) {
-        printf("Vector 0 (data vector) not matched\n");
-        PrintNotMatchBatches(resultBatch, expectedBatch);
-        return false;
-    }
-
-    // validate count
-    if (!ColumnMatchIgnoreOrder(resultBatch->Get(1), expectedBatch->Get(1), 0)) {
-        printf("Vector 1 (count vector) not matched\n");
-        PrintNotMatchBatches(resultBatch, expectedBatch);
-        return false;
-    }
-
-    return true;
 }
 }

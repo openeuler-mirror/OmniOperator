@@ -52,10 +52,6 @@ public:
 
     static StringToDateFormatRule GetStringToDateFormatRule();
 
-    static void SetSupportExprFilterRule(SupportExprFilterRule rule);
-
-    static SupportExprFilterRule GetSupportExprFilterRule();
-
     static void SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule rule);
 
     static SupportDecimalPrecisionImprovementRule GetSupportDecimalPrecisionImprovementRule();

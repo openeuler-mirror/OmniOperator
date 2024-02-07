@@ -7,8 +7,6 @@
 #define OMNI_RUNTIME_SPILL_TRACKER_H
 
 #include <atomic>
-#include <set>
-#include <string>
 
 namespace omniruntime {
 namespace op {
@@ -86,24 +84,13 @@ public:
         return new ChildSpillTracker(this);
     }
 
-    bool IsSpillPathPresent(const std::string &spillPath)
-    {
-        return spillPaths.find(spillPath) != spillPaths.end();
-    }
-
-    void AddSpillPath(const std::string &spillPath)
-    {
-        spillPaths.insert(spillPath);
-    }
-
 private:
     uint64_t maxBytes;
     std::atomic<uint64_t> spilledBytes;
     uint64_t totalSpilledBytes;
-    std::set<std::string> spillPaths;
 };
 
-void InitRootSpillTracker(std::string &spillPath, uint64_t maxSize);
+void InitRootSpillTracker(uint64_t maxSize);
 RootSpillTracker &GetRootSpillTracker();
 }
 }
