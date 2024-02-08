@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: batch decimal functions implementation
  */
 
@@ -320,7 +320,8 @@ extern "C" DLLEXPORT void BatchCastDecimal128To64(int64_t contextPtr, Decimal128
         if (isAnyNull[i]) {
             continue;
         }
-        Decimal64 result(Decimal128Wrapper(x[i]).SetScale(scale).ReScale(newScale));
+        Decimal128Wrapper decimal128 = Decimal128Wrapper(x[i]).SetScale(scale).ReScale(newScale);
+        Decimal64 result(decimal128);
         if (result.IsOverflow(newPrecision) != OpStatus::SUCCESS) {
             SetError(contextPtr, CastErrorMessage(OMNI_DECIMAL128, OMNI_DECIMAL64, x[i].ToInt128(), OpStatus::SUCCESS,
                 precision, scale, newPrecision, newScale));
@@ -487,7 +488,8 @@ extern "C" DLLEXPORT void BatchCastDecimal128To64RetNull(bool *isNull, Decimal12
     int64_t *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; ++i) {
-        Decimal64 result(Decimal128Wrapper(x[i]).SetScale(scale).ReScale(newScale));
+        auto decimal128 = Decimal128Wrapper(x[i]).SetScale(scale).ReScale(newScale);
+        Decimal64 result(decimal128);
         CHECK_OVERFLOW_CONTINUE_NULL(result, newPrecision);
         output[i] = result.GetValue();
     }

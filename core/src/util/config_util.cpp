@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Omni config util source file.
  */
 
@@ -266,6 +266,7 @@ Policy *ConfigUtil::InitializePolicy()
         { "SupportContainerVecRule", InitSupportContainerVecRule },
         { "StringToDateFormatRule", InitStringToDateFormatRule },
         { "SupportExprFilterRule", InitSupportExprFilterRule },
+        { "StringToDecimalRule", InitStringToDecimalRule },
         { "SupportDecimalPrecisionImprovementRule", InitSupportDecimalPrecisionImprovementRule } };
     std::string ruleValueStr;
     for (const auto &item : initFunctionMap) {
@@ -345,5 +346,12 @@ void ConfigUtil::InitSupportDecimalPrecisionImprovementRule(Policy *policy, cons
 {
     if (ruleValueStr == "IS_SUPPORT") {
         policy->SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_SUPPORT);
+    }
+}
+
+void ConfigUtil::InitStringToDecimalRule(Policy *policy, const std::string &ruleValueStr)
+{
+    if (ruleValueStr == "OVERFLOW_AS_ROUND_UP") {
+        policy->SetStringToDecimalRule(StringToDecimalRule::OVERFLOW_AS_ROUND_UP);
     }
 }

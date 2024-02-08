@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: function test
  */
 #include <string>
@@ -702,6 +702,54 @@ TEST(FunctionTest, CastStringToDecimal128)
     context->ResetError();
     CastStringToDecimal128RetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 17, 0, &high, &low);
     EXPECT_TRUE(isNull);
+    delete context;
+    delete isNull;
+}
+
+TEST(FunctionTest, CastStringToDecimal128RoundUp)
+{
+    int64_t high = 0;
+    uint64_t low = 0;
+    auto context = new ExecutionContext();
+    bool *isNull = new bool(false);
+    std::string s = "312423423423542352333243423423.123412342";
+    CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
+    EXPECT_FALSE(*isNull);
+    EXPECT_EQ(ToString((int128_t(high) << 64) + low), "31242342342354235233324342342312341234");
+    *isNull = false;
+
+    s = "312423423423542352333243423423.123412349";
+    CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
+    EXPECT_FALSE(*isNull);
+    EXPECT_EQ(ToString((int128_t(high) << 64) + low), "31242342342354235233324342342312341235");
+    *isNull = false;
+
+    s = "312423423423542352333243423423.123412349123324123";
+    CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
+    EXPECT_FALSE(*isNull);
+    EXPECT_EQ(ToString((int128_t(high) << 64) + low), "31242342342354235233324342342312341235");
+    *isNull = false;
+
+    s = "312423423423542352333243423123124431243.123412349";
+    CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
+    EXPECT_TRUE(*isNull);
+    *isNull = false;
+
+    s = "312423423423542352333243423423.123412349123324123a";
+    CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
+    EXPECT_TRUE(*isNull);
+    *isNull = false;
+
+    s = "2.34e-39";
+    CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
+    EXPECT_FALSE(*isNull);
+    *isNull = false;
+
+    s = "2.34e39";
+    CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
+    EXPECT_TRUE(*isNull);
+    *isNull = false;
+
     delete context;
     delete isNull;
 }

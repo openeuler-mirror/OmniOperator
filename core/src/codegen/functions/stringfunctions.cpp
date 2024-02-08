@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: registry  function  implementation
  */
 #include "stringfunctions.h"
@@ -529,6 +529,33 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const cha
     return result.GetValue();
 }
 
+extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUp(int64_t contextPtr, const char *str, int32_t strLen,
+    bool isNull, int32_t outPrecision, int32_t outScale)
+{
+    if (isNull) {
+        return 0;
+    }
+    std::string s = std::string(str, strLen);
+    StringUtil::TrimString(s);
+    if (!regex_match(s, g_decimalRegex)) {
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
+                     "). Value is not a number.";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+    Decimal64<true> result(s);
+    result.ReScale(outScale);
+    if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast VARCHAR '" << std::string(str, strLen) << "' to DECIMAL(" << outPrecision <<
+                     ", " << outScale << "). Value too large.";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+    return result.GetValue();
+}
+
 extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
@@ -545,6 +572,33 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
         return;
     }
     Decimal128Wrapper result(s.c_str());
+    result.ReScale(outScale);
+    OpStatus status = result.IsOverflow(outPrecision);
+    if (status != OpStatus::SUCCESS) {
+        SetError(contextPtr, CastErrorMessage(OMNI_VARCHAR, OMNI_DECIMAL128, std::string(str, strLen).c_str(), status,
+            outPrecision, outScale));
+        return;
+    }
+    *outHighPtr = result.HighBits();
+    *outLowPtr = result.LowBits();
+}
+
+extern "C" DLLEXPORT void CastStringToDecimal128RoundUp(int64_t contextPtr, const char *str, int32_t strLen,
+    bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+{
+    if (isNull) {
+        return;
+    }
+    std::string s = std::string(str, strLen);
+    StringUtil::TrimString(s);
+    if (!regex_match(s, g_decimalRegex)) {
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
+                     "). Value is not a number.";
+        SetError(contextPtr, errorMessage.str());
+        return;
+    }
+    Decimal128Wrapper<true> result(s.c_str());
     result.ReScale(outScale);
     OpStatus status = result.IsOverflow(outPrecision);
     if (status != OpStatus::SUCCESS) {
@@ -754,6 +808,24 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RetNull(bool *isNull, const ch
     return result.GetValue();
 }
 
+extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUpRetNull(bool *isNull, const char *str, int32_t strLen,
+    int32_t outPrecision, int32_t outScale)
+{
+    std::string s = std::string(str, strLen);
+    StringUtil::TrimString(s);
+    if (!regex_match(s, g_decimalRegex)) {
+        *isNull = true;
+        return 0;
+    }
+    Decimal64<true> result(std::string(str, strLen));
+    result.ReScale(outScale);
+    if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+        *isNull = true;
+        return 0;
+    }
+    return result.GetValue();
+}
+
 extern "C" DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char *str, int32_t strLen,
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
@@ -764,6 +836,25 @@ extern "C" DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char
         return;
     }
     Decimal128Wrapper result(s.c_str());
+    result.ReScale(outScale);
+    if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+        *isNull = true;
+        return;
+    }
+    *outHighPtr = result.HighBits();
+    *outLowPtr = result.LowBits();
+}
+
+extern "C" DLLEXPORT void CastStringToDecimal128RoundUpRetNull(bool *isNull, const char *str, int32_t strLen,
+    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
+{
+    std::string s = std::string(str, strLen);
+    StringUtil::TrimString(s);
+    if (!regex_match(s, g_decimalRegex)) {
+        *isNull = true;
+        return;
+    }
+    Decimal128Wrapper<true> result(s.c_str());
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
         *isNull = true;

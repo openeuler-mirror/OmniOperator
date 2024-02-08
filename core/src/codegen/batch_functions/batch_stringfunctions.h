@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: batch string functions implementation
  */
 #ifndef OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H
@@ -96,6 +96,12 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64(int64_t contextPtr, uint8_t
 extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_t **str, int32_t *strLen,
     bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
+extern "C" DLLEXPORT void BatchCastStringToDecimal64RoundUp(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal128RoundUp(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
 extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     int32_t *output, int32_t rowCnt);
 
@@ -109,6 +115,12 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal64RetNull(bool *isNull, uint8_
     int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8_t **str, int32_t *strLen,
+    Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal64RoundUpRetNull(bool *isNull, uint8_t **str, int32_t *strLen,
+    int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal128RoundUpRetNull(bool *isNull, uint8_t **str, int32_t *strLen,
     Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **str, int32_t *strLen, int32_t *output,

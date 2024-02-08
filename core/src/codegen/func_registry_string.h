@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: String Function Registry
  */
 #ifndef OMNI_RUNTIME_FUNC_REGISTRY_STRING_H
@@ -19,6 +19,16 @@ public:
 };
 
 class StringFunctionRegistryNotAllowReducePrecison : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringToDecimalFunctionRegistryAllowRoundUp : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class StringToDecimalFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };

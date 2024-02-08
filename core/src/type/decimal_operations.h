@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: DecimalOperations
  */
 
@@ -139,6 +139,7 @@ static constexpr double DOUBLE_10_POW[] = {
     1.0e18, 1.0e19, 1.0e20, 1.0e21, 1.0e22
 };
 
+template<bool allowDecimalRoundUp = false>
 inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_t &scale, int32_t &precision)
 {
     result = 0;
@@ -146,6 +147,7 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
     bool isNeg = false;
     bool isExp = false;
     bool isSpace = false;
+    const int roundChecked = 5;
     int32_t exponent = 0;
     uint64_t len = s.size();
     int32_t offset = 0;
@@ -165,11 +167,17 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
     if (!isdigit(s[offset])) {
         return OpStatus::FAIL;
     }
+    bool isOverflow = false;
     for (; offset < len; offset++) {
         if (isdigit(s[offset])) {
             precision++;
             if (precision > 38) {
-                return OpStatus::OP_OVERFLOW;
+                if constexpr (allowDecimalRoundUp) {
+                    isOverflow = true;
+                    break;
+                } else {
+                    return OpStatus::OP_OVERFLOW;
+                }
             }
             result *= 10;
             result += int(s[offset]) - 48;
@@ -191,14 +199,39 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
         }
     }
 
+    if constexpr (allowDecimalRoundUp) {
+        if (isOverflow) {
+            if (!isDot) {
+                return OpStatus::OP_OVERFLOW;
+            }
+            int roundValue = int(s[offset]) - 48;
+            // the result following rounding rules
+            if (roundValue >= roundChecked) {
+                result++;
+            }
+            offset++;
+            for (; offset < len; offset++) {
+                if (isdigit(s[offset])) {
+                    offset++;
+                } else if (s[offset] == 'e' || s[offset] == 'E') {
+                    offset++;
+                    isExp = true;
+                    break;
+                } else {
+                    return OpStatus::FAIL;
+                }
+            }
+        }
+    }
+
+    bool isExpNeg = false;
     if (isExp) {
         for (; offset < len; offset++) {
             if (isdigit(s[offset])) {
                 exponent *= 10;
                 exponent += int(s[offset]) - 48;
-                if (exponent + precision - scale > 38) {
-                    return OpStatus::OP_OVERFLOW;
-                }
+            } else if (s[offset] == '-') {
+                isExpNeg = true;
             } else if (s[offset] == ' ') {
                 isSpace = true;
                 offset++;
@@ -210,6 +243,13 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
         if (exponent == 0) {
             return OpStatus::FAIL;
         }
+    }
+
+    if (isExpNeg) {
+        exponent = -exponent;
+    }
+    if (exponent + precision - scale > 38) {
+        return OpStatus::OP_OVERFLOW;
     }
 
     if (isSpace) {
@@ -300,6 +340,7 @@ inline int32_t GetResultScale(int32_t x, int32_t y, Op op)
 }
 
 // Decimal128Wrapper
+template<bool allowDecimalRoundUp = false>
 class Decimal128Wrapper {
 public:
     Decimal128Wrapper() : val(0), signum(0)
@@ -335,7 +376,7 @@ public:
         int32_t inputScale = 0;
         int32_t precision = 0;
         int128_t result = 0;
-        overflow = DecimalFromString(s, result, inputScale, precision);
+        overflow = DecimalFromString<allowDecimalRoundUp>(s, result, inputScale, precision);
         if (result == 0) {
             signum = 0;
             val = 0;
@@ -726,6 +767,9 @@ public:
 
     Decimal128Wrapper &ReScale(int32_t newScale, RoundingMode mode = RoundingMode::ROUND_UP)
     {
+        if (overflow != OpStatus::SUCCESS) {
+            return *this;
+        }
         switch (mode) {
             case RoundingMode::ROUND_UP:
                 *this = ReScaleRoundUp(newScale);
@@ -953,7 +997,12 @@ private:
             return *this;
         }
         if (scale > newScale) {
-            val = (val + HalfTenOfScaleMultipliers[scale - newScale]) / TenOfScaleMultipliers[scale - newScale];
+            int32_t refactorScale = scale - newScale;
+            if (refactorScale > MAX_SCALE) {
+                val = 0;
+                return *this;
+            }
+            val = (val + HalfTenOfScaleMultipliers[refactorScale]) / TenOfScaleMultipliers[refactorScale];
         } else {
             *this = Multiply(Decimal128Wrapper(TenOfScaleMultipliers[newScale - scale]));
         }
@@ -967,7 +1016,12 @@ private:
             return *this;
         }
         if (scale > newScale) {
-            val = val / TenOfScaleMultipliers[scale - newScale];
+            int32_t refactorScale = scale - newScale;
+            if (refactorScale > MAX_SCALE) {
+                val = 0;
+                return *this;
+            }
+            val = val / TenOfScaleMultipliers[refactorScale];
         } else {
             *this = Multiply(TenOfScaleMultipliers[newScale - scale]);
         }
@@ -1038,6 +1092,7 @@ static inline int32_t MaxBitsRequiredAfterScaling(int64_t value, int32_t scale_b
     return num_occupied + MaxBitsRequiredIncreaseAfterScaling(scale_by);
 }
 
+template<bool allowDecimalRoundUp = false>
 class Decimal64 : public BasicDecimal {
 public:
     Decimal64()
@@ -1069,7 +1124,7 @@ public:
         int32_t inputScale = 0;
         int32_t precision = 0;
         int128_t result = 0;
-        if (DecimalFromString(s, result, inputScale, precision) != OpStatus::SUCCESS) {
+        if (DecimalFromString<allowDecimalRoundUp>(s, result, inputScale, precision) != OpStatus::SUCCESS) {
             overflow = OpStatus::OP_OVERFLOW;
         }
         if (result > INT64_MAX || result < INT64_MIN) {
@@ -1084,7 +1139,7 @@ public:
         val = static_cast<int64_t>(input);
     }
 
-    Decimal64(const Decimal128Wrapper &decimal128)
+    Decimal64(const Decimal128Wrapper<allowDecimalRoundUp> &decimal128)
     {
         val = 0;
         if (decimal128.IsOverflow() != OpStatus::SUCCESS) {
@@ -1386,7 +1441,12 @@ private:
             return *this;
         }
         if (scale > newScale) {
-            int64_t scaleMultiplier = static_cast<int64_t>(TenOfScaleMultipliers[scale - newScale]);
+            int32_t refactorScale = scale - newScale;
+            if (refactorScale > MAX_SCALE) {
+                val = 0;
+                return *this;
+            }
+            int64_t scaleMultiplier = static_cast<int64_t>(TenOfScaleMultipliers[refactorScale]);
             auto result = val / scaleMultiplier;
             auto remainder = val % scaleMultiplier;
             if (abs(remainder) >= (scaleMultiplier >> 1)) {
@@ -1405,7 +1465,12 @@ private:
             return *this;
         }
         if (scale > newScale) {
-            val = val / static_cast<int64_t>(TenOfScaleMultipliers[scale - newScale]);
+            int32_t refactorScale = scale - newScale;
+            if (refactorScale > MAX_SCALE) {
+                val = 0;
+                return *this;
+            }
+            val = val / static_cast<int64_t>(TenOfScaleMultipliers[refactorScale]);
         } else {
             *this = Multiply(TenOfScaleMultipliers[newScale - scale]);
         }

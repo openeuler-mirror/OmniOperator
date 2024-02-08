@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: registry  function
  */
 #ifndef __STRINGFUNCTIONS_H__
@@ -82,8 +82,14 @@ extern "C" DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *s
 extern "C" DLLEXPORT int64_t CastStringToDecimal64(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
     int32_t precision, int32_t scale);
 
+extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUp(int64_t contextPtr, const char *str, int32_t strLen,
+    bool isNull, int32_t outPrecision, int32_t outScale);
+
 extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT void CastStringToDecimal128RoundUp(int64_t contextPtr, const char *str, int32_t strLen,
+    bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
 /**
  * If isSupportNegativeIndex is false,the result of substr is "" when start index is negative
@@ -285,7 +291,13 @@ extern "C" DLLEXPORT double CastStringToDoubleRetNull(bool *isNull, const char *
 extern "C" DLLEXPORT int64_t CastStringToDecimal64RetNull(bool *isNull, const char *str, int32_t strLen,
     int32_t outPrecision, int32_t outScale);
 
+extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUpRetNull(bool *isNull, const char *str, int32_t strLen,
+    int32_t outPrecision, int32_t outScale);
+
 extern "C" DLLEXPORT void CastStringToDecimal128RetNull(bool *isNull, const char *str, int32_t strLen,
+    int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
+
+extern "C" DLLEXPORT void CastStringToDecimal128RoundUpRetNull(bool *isNull, const char *str, int32_t strLen,
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
 extern "C" DLLEXPORT const char *CastStrWithDiffWidthsRetNull(int64_t contextPtr, bool *isNull, const char *srcStr,

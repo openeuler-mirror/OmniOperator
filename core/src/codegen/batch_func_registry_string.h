@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Batch String Function Registry
  */
 
@@ -51,6 +51,16 @@ public:
 };
 
 class BatchStringFunctionRegistrySupportNotNegativeAndNotZeroIndex : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchStringToDecimalFunctionRegistryAllowRoundUp : public BaseFunctionRegistry {
+public:
+    std::vector<Function> GetFunctions() override;
+};
+
+class BatchStringToDecimalFunctionRegistry : public BaseFunctionRegistry {
 public:
     std::vector<Function> GetFunctions() override;
 };
