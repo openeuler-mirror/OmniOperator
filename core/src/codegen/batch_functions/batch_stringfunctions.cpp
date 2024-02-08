@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: batch string functions implementation
  */
 #include "batch_stringfunctions.h"
@@ -356,6 +356,66 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128(int64_t contextPtr, uint8_
     }
 }
 
+extern "C" DLLEXPORT void BatchCastStringToDecimal64RoundUp(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i] = 0;
+            continue;
+        }
+        std::string s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
+        if (!regex_match(s, g_decimalRegex)) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
+                         "). Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        Decimal64<true> result(s);
+        if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
+                         "). Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            output[i] = 0;
+            continue;
+        }
+        output[i] = result.GetValue();
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal128RoundUp(int64_t contextPtr, uint8_t **str, int32_t *strLen,
+    bool *isAnyNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i].SetValue(0, 0);
+            continue;
+        }
+        std::string s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (!regex_match(s, g_decimalRegex)) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
+                         "). Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        StringUtil::TrimString(s);
+        Decimal128Wrapper<true> result(s.c_str());
+        result.ReScale(outScale);
+        if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+            std::ostringstream errorMessage;
+            errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
+                         "). Value too large.";
+            SetError(contextPtr, errorMessage.str());
+            continue;
+        }
+        output[i] = result.ToDecimal128();
+    }
+}
+
 extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     int32_t *output, int32_t rowCnt)
 {
@@ -627,6 +687,51 @@ extern "C" DLLEXPORT void BatchCastStringToDecimal128RetNull(bool *isNull, uint8
             continue;
         }
         Decimal128Wrapper result(s.c_str());
+        result.ReScale(outScale);
+        if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        output[i] = result.ToDecimal128();
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal64RoundUpRetNull(bool *isNull, uint8_t **str, int32_t *strLen,
+    int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        std::string s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
+        if (!regex_match(s, g_decimalRegex)) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        Decimal64<true> result(s);
+        result.ReScale(outScale);
+        if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        isNull[i] = false;
+        output[i] = result.GetValue();
+    }
+}
+
+extern "C" DLLEXPORT void BatchCastStringToDecimal128RoundUpRetNull(bool *isNull, uint8_t **str, int32_t *strLen,
+    Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        std::string s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        StringUtil::TrimString(s);
+        if (!regex_match(s, g_decimalRegex)) {
+            output[i] = 0;
+            isNull[i] = true;
+            continue;
+        }
+        Decimal128Wrapper<true> result(s.c_str());
         result.ReScale(outScale);
         if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
             output[i] = 0;

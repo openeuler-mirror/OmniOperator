@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Omni config util header file.
  */
 
@@ -91,6 +91,8 @@ private:
     static void InitSupportExprFilterRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitSupportDecimalPrecisionImprovementRule(Policy *policy, const std::string &ruleValueStr);
+
+    static void InitStringToDecimalRule(Policy *policy, const std::string &ruleValueStr);
 
     static Policy *InitializePolicy();
 };

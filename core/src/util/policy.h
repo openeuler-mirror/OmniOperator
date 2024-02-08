@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Policy Class and Enumeration Classes of various rules
  */
 
@@ -138,6 +138,23 @@ enum class StringToDateFormatRule {
     ALLOW_REDUCED_PRECISION
 };
 
+/**
+ * Defines the string format when the engine cast string to decimal.
+ */
+enum class StringToDecimalRule {
+    /**
+     * This means if precision > 38/18 when cast string to decimal128/64, the result will return null or throw a error.
+     * e.g. "312423423423542352333243423423.123412342" -> decimal(38,8) = null
+     */
+    OVERFLOW_AS_NULL = 0,
+
+    /**
+     * This means if fractional part is overflow when cast string to decimal128/64, the result will round up
+     * e.g. "312423423423542352333243423423.123412342" -> decimal(38,8) = 312423423423542352333243423423.12341234
+     */
+    OVERFLOW_AS_ROUND_UP
+};
+
 class Policy {
 public:
     // Default policy is OLK policy
@@ -146,14 +163,16 @@ public:
         CastDecimalToDoubleRule::CAST, NegativeStartIndexOutOfBoundsRule::EMPTY_STRING,
         ZeroStartIndexSupportRule::IS_NOT_SUPPORT, SupportContainerVecRule::SUPPORT,
         StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION, SupportExprFilterRule::NO_EXPR,
-        SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT) {};
+        SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT, StringToDecimalRule::OVERFLOW_AS_NULL)
+    {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
         NegativeStartIndexOutOfBoundsRule negativeStartIndexOutOfBoundsRule,
         ZeroStartIndexSupportRule zeroStartIndexSupportRule, SupportContainerVecRule supportContainerVecRule,
         StringToDateFormatRule stringToDateFormatRule, SupportExprFilterRule supportExprFilterRule,
-        SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule)
+        SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule,
+        StringToDecimalRule stringToDecimalRule)
         : roundingRule(roundingRule),
           checkReScaleRule(checkReScaleRule),
           emptySearchStrReplaceRule(emptySearchStrReplaceRule),
@@ -163,7 +182,8 @@ public:
           supportContainerVecRule(supportContainerVecRule),
           stringToDateFormatRule(stringToDateFormatRule),
           supportExprFilterRule(supportExprFilterRule),
-          supportDecimalPrecisionImprovementRule(supportDecimalPrecisionImprovementRule) {};
+          supportDecimalPrecisionImprovementRule(supportDecimalPrecisionImprovementRule),
+          stringToDecimalRule(stringToDecimalRule) {};
 
     RoundingRule GetRoundingRule()
     {
@@ -265,6 +285,16 @@ public:
         return supportDecimalPrecisionImprovementRule;
     }
 
+    StringToDecimalRule GetStringToDecimalRule() const
+    {
+        return stringToDecimalRule;
+    }
+
+    void SetStringToDecimalRule(StringToDecimalRule rule)
+    {
+        stringToDecimalRule = rule;
+    }
+
 protected:
     RoundingRule roundingRule;
     CheckReScaleRule checkReScaleRule;
@@ -276,6 +306,7 @@ protected:
     StringToDateFormatRule stringToDateFormatRule;
     SupportExprFilterRule supportExprFilterRule;
     SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule;
+    StringToDecimalRule stringToDecimalRule;
 };
 
 #endif // OMNI_RUNTIME_POLICY_H

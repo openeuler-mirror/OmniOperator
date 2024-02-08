@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: Batch String Function Registry
  */
 #include "batch_func_registry_string.h"
@@ -114,14 +114,6 @@ std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
         // cast string to
         Function(reinterpret_cast<void *>(BatchCastStrWithDiffWidths), CAST_FN_STR, {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchCastStringToDecimal64), CAST_FN_STR, {}, { OMNI_VARCHAR },
-            OMNI_DECIMAL64, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchCastStringToDecimal128), CAST_FN_STR, {}, { OMNI_VARCHAR },
-            OMNI_DECIMAL128, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(BatchCastStringToDecimal64RetNull), CAST_FN_STR_RETNULL, {}, { OMNI_VARCHAR },
-            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(BatchCastStringToDecimal128RetNull), CAST_FN_STR_RETNULL, {},
-            { OMNI_VARCHAR }, OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(BatchCastStringToIntRetNull), CAST_FN_STR_RETNULL, {}, { OMNI_VARCHAR },
             OMNI_INT, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(BatchCastStringToLongRetNull), CAST_FN_STR_RETNULL, {}, { OMNI_VARCHAR },
@@ -300,6 +292,39 @@ std::vector<Function> BatchStringFunctionRegistrySupportNotNegativeAndNotZeroInd
             { OMNI_VARCHAR, OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(BatchSubstrCharWithStart<int64_t, false, false>), SUBSTR_FN_STR, {},
             { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
+    };
+
+    return batchStringFnRegistry;
+}
+
+std::vector<Function> BatchStringToDecimalFunctionRegistryAllowRoundUp::GetFunctions()
+{
+    std::vector<Function> batchStringFnRegistry = {
+        Function(reinterpret_cast<void *>(BatchCastStringToDecimal64RoundUp), CAST_FN_STR, {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL64, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchCastStringToDecimal128RoundUp), CAST_FN_STR, {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL128, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchCastStringToDecimal64RoundUpRetNull), CAST_FN_STR_RETNULL, {},
+            {OMNI_VARCHAR},
+            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchCastStringToDecimal128RoundUpRetNull), CAST_FN_STR_RETNULL, {},
+            {OMNI_VARCHAR}, OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL)
+    };
+
+    return batchStringFnRegistry;
+}
+
+std::vector<Function> BatchStringToDecimalFunctionRegistry::GetFunctions()
+{
+    std::vector<Function> batchStringFnRegistry = {
+        Function(reinterpret_cast<void *>(BatchCastStringToDecimal64), CAST_FN_STR, {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL64, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchCastStringToDecimal128), CAST_FN_STR, {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL128, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchCastStringToDecimal64RetNull), CAST_FN_STR_RETNULL, {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(BatchCastStringToDecimal128RetNull), CAST_FN_STR_RETNULL, {},
+            {OMNI_VARCHAR}, OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL)
     };
 
     return batchStringFnRegistry;

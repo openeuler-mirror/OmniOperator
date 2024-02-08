@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: registry function
  */
 #include "func_registry.h"
@@ -60,6 +60,12 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
         functionRegistries.push_back(make_unique<StringFunctionRegistryAllowReducePrecison>());
     }
 
+    if (policy->GetStringToDecimalRule() == StringToDecimalRule::OVERFLOW_AS_ROUND_UP) {
+        functionRegistries.push_back(make_unique<StringToDecimalFunctionRegistryAllowRoundUp>());
+    } else {
+        functionRegistries.push_back(make_unique<StringToDecimalFunctionRegistry>());
+    }
+
     if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND &&
         policy->GetZeroStartIndexSupportRule() == ZeroStartIndexSupportRule::IS_SUPPORT) {
         functionRegistries.push_back(make_unique<StringFunctionRegistrySupportNegativeAndZeroIndex>());
@@ -115,6 +121,12 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetBatchFunctionRegis
         functionRegistries.push_back(make_unique<BatchStringFunctionRegistryReplace>());
     } else {
         functionRegistries.push_back(make_unique<BatchStringFunctionRegistryNotReplace>());
+    }
+
+    if (policy->GetStringToDecimalRule() == StringToDecimalRule::OVERFLOW_AS_ROUND_UP) {
+        functionRegistries.push_back(make_unique<BatchStringToDecimalFunctionRegistryAllowRoundUp>());
+    } else {
+        functionRegistries.push_back(make_unique<BatchStringToDecimalFunctionRegistry>());
     }
 
     if (policy->GetNegativeStartIndexOutOfBoundsRule() == NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND &&

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: String Function Registry
  */
 #include "func_registry_string.h"
@@ -139,10 +139,6 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastDecimal128ToString), CastFnStr(), {}, { OMNI_DECIMAL128 }, OMNI_VARCHAR,
             INPUT_DATA, true),
 
-        Function(reinterpret_cast<void *>(CastStringToDecimal64), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_DECIMAL64,
-            INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(CastStringToDecimal128), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_DECIMAL128,
-            INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStringToInt), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA,
             true),
 
@@ -183,10 +179,6 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastDecimal128ToStringRetNull), CastNullFnStr(), {}, { OMNI_DECIMAL128 },
             OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
 
-        Function(reinterpret_cast<void *>(CastStringToDecimal64RetNull), CastNullFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
-        Function(reinterpret_cast<void *>(CastStringToDecimal128RetNull), CastNullFnStr(), {}, { OMNI_VARCHAR },
-            OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToIntRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT,
             INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToLongRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_LONG,
@@ -362,6 +354,38 @@ std::vector<Function> StringFunctionRegistrySupportNotNegativeAndNotZeroIndex::G
             { OMNI_CHAR, OMNI_LONG }, OMNI_CHAR, INPUT_DATA, true),
     };
 
+    return stringFnRegistry;
+}
+
+std::vector<Function> StringToDecimalFunctionRegistryAllowRoundUp::GetFunctions()
+{
+    std::vector<Function> stringFnRegistry = {
+        Function(reinterpret_cast<void *>(CastStringToDecimal64RoundUpRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToDecimal128RoundUpRetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToDecimal64RoundUp), CastFnStr(), {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL64,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(CastStringToDecimal128RoundUp), CastFnStr(), {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL128,
+            INPUT_DATA, true)
+    };
+    return stringFnRegistry;
+}
+
+std::vector<Function> StringToDecimalFunctionRegistry::GetFunctions()
+{
+    std::vector<Function> stringFnRegistry = {
+        Function(reinterpret_cast<void *>(CastStringToDecimal64RetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToDecimal128RetNull), CastNullFnStr(), {}, {OMNI_VARCHAR},
+            OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToDecimal64), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_DECIMAL64,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(CastStringToDecimal128), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_DECIMAL128,
+            INPUT_DATA, true)
+    };
     return stringFnRegistry;
 }
 }
