@@ -16,10 +16,10 @@
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "operator/config/operator_config.h"
 #include "operator/filter/filter_and_project.h"
-#include "operator/sort/sort.h"
+#include "operator/pages_index.h"
+#include "operator/spill/spiller.h"
 
-namespace omniruntime {
-namespace op {
+namespace omniruntime::op {
 using namespace vec;
 class HashAggregationOperatorFactory;
 class HashAggregationOperator;
@@ -225,15 +225,23 @@ public:
     HashAggregationOperator(std::vector<ColumnIndex> &groupByCols, std::vector<std::vector<int32_t>> &aggInputCols,
         uint32_t aggInputColsSize, std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &aggOutputTypes,
         std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws,
-        std::vector<bool> &outputPartials, const OperatorConfig &operatorConfig)
+        std::vector<bool> &outputPartials, const std::vector<int8_t> &hasAggFilters,
+        const OperatorConfig &operatorConfig)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           groupByCols(groupByCols),
           aggInputCols(aggInputCols),
           aggInputColsSize(aggInputColsSize),
           aggInputTypes(aggInputTypes),
           aggOutputTypes(aggOutputTypes),
+          hasAggFilters(hasAggFilters),
           operatorConfig(operatorConfig)
-    {}
+    {
+        for (auto hasFilter : hasAggFilters) {
+            if (hasFilter == 1) {
+                aggFiltersCount++;
+            }
+        }
+    }
 
     ~HashAggregationOperator() override = default;
 
@@ -288,6 +296,8 @@ private:
     void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, VectorBatch *output);
 
     int32_t rowsPerBatch;
+    std::vector<int8_t> hasAggFilters;
+    int32_t aggFiltersCount = 0;
 
     // for spill
     OperatorConfig operatorConfig;
@@ -311,7 +321,6 @@ private:
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
 public:
-    Operator *CreateOperator() override;
     /*
      * @param groupByCol      the col index which is used as group column in VectorBatch
      * @param groupInputTypes all the group types
@@ -321,7 +330,7 @@ public:
      * @param aggFuncTypes    func types of aggregators
      * @param maskColsVector  mask col index in VectorBatch
      * @param inputRaws       whether the input VectorBatch is raw, the input raw is true in the first stage
-     * @param outputPartials  whether the output VectorBatch is paritial result
+     * @param outputPartials  whether the output VectorBatch is partial result
      * @param operatorConfig  the operator config
      */
     HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
@@ -356,7 +365,41 @@ public:
           aggFuncTypesVector(aggFuncTypes)
     {}
 
-    ~HashAggregationOperatorFactory() override {}
+    /*
+     * @param groupByCol      the col index which is used as group column in VectorBatch
+     * @param groupInputTypes all the group types
+     * @param aggsCols        aggsCols contains all aggregators 's all agg col index
+     * @param aggInputTypes   input types of all aggregators
+     * @param aggOutputTypes  output types of all aggregators
+     * @param aggFuncTypes    func types of aggregators
+     * @param maskColsVector  mask col index in VectorBatch
+     * @param inputRaws       whether the input VectorBatch is raw, the input raw is true in the first stage
+     * @param outputPartials  whether the output VectorBatch is partial result
+     * @param hasAggFilters   whether handle the agg filter when AddInput
+     * @param operatorConfig  the operator config
+     * this is for HashAggregationWithExprOperatorFactory
+     */
+    HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
+        std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,
+        std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
+        std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
+        const std::vector<int8_t> &hasAggFilters, const OperatorConfig &operatorConfig)
+        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector,
+        operatorConfig.GetOverflowConfig()->IsOverflowAsNull()),
+          groupByColsVector(groupByCol),
+          groupByTypes(groupInputTypes),
+          aggsInputColsVector(aggsCols),
+          aggInputTypes(aggInputTypes),
+          aggOutputTypes(aggOutputTypes),
+          aggFuncTypesVector(aggFuncTypes),
+          hasAggFilters(hasAggFilters),
+          operatorConfig(operatorConfig)
+    {
+        OperatorConfig::CheckOperatorConfig(operatorConfig);
+    }
+
+    ~HashAggregationOperatorFactory() override = default;
+    Operator *CreateOperator() override;
     OmniStatus Init() override;
     OmniStatus Close() override;
 
@@ -372,9 +415,10 @@ private:
     std::vector<uint32_t> aggFuncTypesVector;
     std::vector<std::unique_ptr<AggregatorFactory>> aggregatorFactories;
     HandleType handleType;
+    std::vector<int8_t> hasAggFilters;
     OperatorConfig operatorConfig;
+
     void ChooseGroupByType();
 };
-} // end of namespace op
-} // end of namespace omniruntimef
+} // end of namespace omniruntime::op
 #endif

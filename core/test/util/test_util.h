@@ -96,9 +96,6 @@ vec::BaseVector *SliceVector(vec::BaseVector *vector, int32_t offset, int32_t le
 
 omniruntime::op::Operator *CreateTestOperator(omniruntime::op::OperatorFactory *operatorFactory);
 
-bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector);
-
-bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch);
 omniruntime::vec::VectorBatch *DuplicateVectorBatch(omniruntime::vec::VectorBatch *input);
 
 void FreeVecBatches(vec::VectorBatch **vecBatches, int32_t vecBatchCount);
@@ -182,11 +179,14 @@ int32_t DecodeAddFlag(int32_t resultCode);
 int32_t DecodeFetchFlag(int32_t resultCode);
 
 template <typename D, typename V>
-bool CompareUnorderedRows(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, const double error);
+bool CompareUnorderedRows(vec::BaseVector *resultVector, vec::BaseVector *expectedVector,
+    const double error = DBL_EPSILON);
 
-bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector, const double error);
+bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector,
+    const double error = DBL_EPSILON);
 
-bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch, const double error);
+bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *expectedBatch,
+    const double error = DBL_EPSILON);
 
 class Timer {
 public:

@@ -140,7 +140,7 @@ public:
         state.count = 0;
     }
 
-    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
     {
         if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
             spillTypes.push_back(OMNI_LONG);

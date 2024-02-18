@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2021-10-16
  */
 public class OmniSortWithExprOperatorTest {
-    private final long MAX_SPILL_BYTES = 100 * 1024 * 1024;
+    private final long MAX_SPILL_BYTES = 20 * 1024 * 1024;
 
     private String generateSpillPath() {
         Path path = Paths.get("");
@@ -482,14 +482,14 @@ public class OmniSortWithExprOperatorTest {
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("/opt", 1)));
+                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig(true, "/opt",
+                MAX_SPILL_BYTES, 1)));
         sortWithExprOperatorFactory.close();
     }
 
     /**
      * Test sort spill with invalid path
      */
-    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = ".*DISK_STAT_FAILED.*")
     public void testSortSpillWithInvalidPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
@@ -497,7 +497,9 @@ public class OmniSortWithExprOperatorTest {
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("+-ab23", 1)));
+                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig(true, "+-ab23",
+                MAX_SPILL_BYTES, 1)));
+        sortWithExprOperatorFactory.close();
     }
 
     /**

@@ -248,7 +248,7 @@ AverageAggregator<IN_ID, OUT_ID>::AverageAggregator(const DataTypes &inputTypes,
         extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<true, false>;
     } else {
         if (ConfigUtil::GetSupportDecimalPrecisionImprovementRule() ==
-            SupportDecimalPrecisionImprovementRule::IS_SUPPORT)  {
+            SupportDecimalPrecisionImprovementRule::IS_SUPPORT) {
             extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false, true>;
         } else {
             extractValuesFuncPointer = &AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction<false, false>;

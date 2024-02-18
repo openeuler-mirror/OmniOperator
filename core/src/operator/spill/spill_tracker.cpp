@@ -4,17 +4,11 @@
  */
 
 #include "spill_tracker.h"
-#include <unistd.h>
 #include "util/debug.h"
 
 namespace omniruntime {
 namespace op {
-RootSpillTracker::~RootSpillTracker()
-{
-    for (const auto &spillPath : spillPaths) {
-        rmdir(spillPath.c_str());
-    }
-}
+RootSpillTracker::~RootSpillTracker() = default;
 
 bool RootSpillTracker::CheckIfExceedAndReserve(uint64_t bytes)
 {
@@ -28,9 +22,8 @@ bool RootSpillTracker::CheckIfExceedAndReserve(uint64_t bytes)
     return false;
 }
 
-void InitRootSpillTracker(std::string &spillPath, uint64_t maxSize)
+void InitRootSpillTracker(uint64_t maxSize)
 {
-    GetRootSpillTracker().AddSpillPath(spillPath);
     GetRootSpillTracker().SetMaxBytes(maxSize);
 }
 

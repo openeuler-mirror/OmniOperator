@@ -37,14 +37,21 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
 
     // do aggSimpleFilters
     this->aggFilterNum = static_cast<int32_t>(aggFilters.size());
+    aggSimpleFilters.resize(aggFilterNum, nullptr);
+    std::vector<int8_t> hasAggFilters(aggFilterNum, 0);
     for (int32_t i = 0; i < aggFilterNum; ++i) {
-        if (aggFilters[i] == nullptr) {
-            aggSimpleFilters.push_back(nullptr);
-            continue;
+        auto aggFilter = aggFilters[i];
+        if (aggFilter != nullptr) {
+            auto simpleFilter = new SimpleFilter(*aggFilter);
+            if (simpleFilter->Initialize(overflowConfig)) {
+                aggSimpleFilters[i] = simpleFilter;
+                hasAggFilters[i] = 1;
+            } else {
+                delete simpleFilter;
+                throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT",
+                    "The expression is not supported yet.");
+            }
         }
-        SimpleFilter *simpleFilter = new SimpleFilter(*aggFilters[i]);
-        simpleFilter->Initialize((overflowConfig));
-        aggSimpleFilters.push_back(simpleFilter);
     }
 
     std::vector<int32_t> groupByAndAggColumnarIdx;
@@ -76,7 +83,7 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
     originSourceTypes = std::make_unique<DataTypes>(sourceDataTypes);
     sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     aggOperatorFactory = new AggregationOperatorFactory(*sourceTypes, aggFuncTypes, aggColIdx, maskColumns,
-        aggOutputTypes, inputRaws, outputPartial, overflowConfig->IsOverflowAsNull());
+        aggOutputTypes, inputRaws, outputPartial, hasAggFilters, overflowConfig->IsOverflowAsNull());
     aggOperatorFactory->Init();
 }
 
@@ -105,7 +112,14 @@ AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &origin
       aggSimpleFilters(aggSimpleFilters),
       aggOperator(aggOperator),
       executionContext(new ExecutionContext())
-{}
+{
+    for (auto simpleFilter : aggSimpleFilters) {
+        if (simpleFilter != nullptr) {
+            hasAggFilter = true;
+            break;
+        }
+    }
+}
 
 AggregationWithExprOperator::~AggregationWithExprOperator()
 {
@@ -117,9 +131,12 @@ int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
         AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext);
-    // do filter and update newInputVecBatch
-    // if is true not filter
-    AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
+
+    // if hasAggFilter is false, then skip AddFilterColumn
+    if (hasAggFilter) {
+        // do filter and update newInputVecBatch
+        AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
+    }
     aggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
     return 0;

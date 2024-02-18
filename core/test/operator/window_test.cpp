@@ -22,7 +22,7 @@ using namespace TestUtil;
 namespace WindowTest {
 const int32_t DATA_SIZE = 6;
 const int32_t VEC_BATCH_NUM = 10;
-const int32_t ROW_PER_VEC_BATCH = 100000;
+const int32_t ROW_PER_VEC_BATCH = 100;
 const uint64_t MAX_SPILL_BYTES = (5L << 20);
 
 BaseVector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatch)
@@ -2455,7 +2455,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithInvalidConfig)
     DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), LongType() }));
     int32_t argumentChannels[0] = {};
 
-    SpillConfig spillConfig1(SPILL_CONFIG_NONE, true, "", 5);
+    SpillConfig spillConfig1(SPILL_CONFIG_NONE, true, "", MAX_SPILL_BYTES);
     OperatorConfig operatorConfig1(spillConfig1);
     EXPECT_THROW(WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4, windowFunctionTypes, 1,
         partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1, preSortedChannelPrefix,
@@ -2463,7 +2463,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithInvalidConfig)
         windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig1),
         omniruntime::exception::OmniException);
 
-    SpillConfig spillConfig2(SPILL_CONFIG_NONE, true, "+-ab23", 5);
+    SpillConfig spillConfig2(SPILL_CONFIG_NONE, true, "+-ab23", UINT64_MAX);
     OperatorConfig operatorConfig2(spillConfig2);
     EXPECT_THROW(WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4, windowFunctionTypes, 1,
         partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1, preSortedChannelPrefix,
@@ -2471,7 +2471,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithInvalidConfig)
         windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig2),
         omniruntime::exception::OmniException);
 
-    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, "/", 5);
+    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, "/", MAX_SPILL_BYTES);
     OperatorConfig operatorConfig3(spillConfig3);
     auto operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4,
         windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,

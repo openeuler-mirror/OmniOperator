@@ -655,8 +655,6 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_by_proces_row)
 
 TEST(AggregationWithExprOperatorTest, test_agg_sum_exprFilter)
 {
-    ConfigUtil::SetSupportExprFilterRule(SupportExprFilterRule::EXPR_FILTER);
-
     const int32_t dataSize = 8;
     const int32_t groupByNum = 0;
     const int32_t expectDataSize = 1;
@@ -711,9 +709,6 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_exprFilter)
     VectorHelper::FreeVecBatch(expectVecorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete overflowConfig;
-
-
-    ConfigUtil::SetSupportExprFilterRule(SupportExprFilterRule::NO_EXPR);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_full_expr_filter)
@@ -988,7 +983,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_invalid_config
     auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
     std::vector<omniruntime::expressions::Expr *> aggFilters;
 
-    SpillConfig spillConfig(SPILL_CONFIG_NONE, true, "", 5);
+    SpillConfig spillConfig(SPILL_CONFIG_NONE, true, "", INT64_MAX);
     OperatorConfig operatorConfig(spillConfig);
     EXPECT_THROW(new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters,
         sourceTypes, aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, operatorConfig),

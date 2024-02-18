@@ -33,9 +33,9 @@ bool SparkSpillConfig::NeedSpill(size_t elementsSize)
 {
     auto usedMemorySize = mem::MemoryManager::GetGlobalAccountedMemory();
     if (IsSpillEnabled() &&
-        (usedMemorySize >= GetSpillMemThreshold() || elementsSize >= GetSpillRowThreshold())) {
+        (usedMemorySize >= GetSpillMemThreshold() || static_cast<int32_t>(elementsSize) >= GetSpillRowThreshold())) {
         LogDebug("spill get row count %d, row threshold %d, and get memory usage %lld, memory threshold %lld.",
-                 elementsSize, GetSpillRowThreshold(), usedMemorySize, GetSpillMemThreshold());
+            elementsSize, GetSpillRowThreshold(), usedMemorySize, GetSpillMemThreshold());
         return true;
     } else {
         return false;
@@ -121,7 +121,6 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
     struct statfs diskInfo;
     auto result = statfs(spillPathChars, &diskInfo);
     if (result != 0) {
-        rmdir(spillPathChars);
         throw exception::OmniException(GetErrorCode(ErrorCode::DISK_STAT_FAILED),
             GetErrorMessage(ErrorCode::DISK_STAT_FAILED));
     }
@@ -130,7 +129,6 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
         static_cast<uint64_t>(static_cast<double>(diskInfo.f_bavail * diskInfo.f_bsize) * DEFAULT_AVAILABLE_THRESHOLD);
     auto maxSpillBytes = spillConfig.GetMaxSpillBytes();
     if (availableDiskSize < maxSpillBytes) {
-        spillConfig.SetMaxSpillBytes(availableDiskSize);
         std::string message = GetErrorMessage(ErrorCode::DISK_SPACE_NOT_ENOUGH) +
             "The disk available size:" + std::to_string(availableDiskSize / GB_UNIT) +
             "GB and the max spill size:" + std::to_string(maxSpillBytes / GB_UNIT) + "GB.";
@@ -140,22 +138,36 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
 
 static void CreateSpillDirectory(const char *spillPathChars)
 {
-    auto result = mkdir(spillPathChars, S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+    auto result = mkdir(spillPathChars, 0750);
     if (result != 0) {
         throw exception::OmniException(GetErrorCode(ErrorCode::MKDIR_FAILED), GetErrorMessage(ErrorCode::MKDIR_FAILED));
     }
 }
 
-static void CreateSpillDirectories(const char *spillPathChars)
+static void CreateSpillDirectories(char *spillPathChars)
 {
-    int32_t i = 0;
-    while (spillPathChars[i] != '\0') {
-        if (spillPathChars[i] == '/' || spillPathChars[i] == '\\') {
+    int32_t curPos = 0;
+    char c = spillPathChars[curPos];
+    while (c != '\0') {
+        // create parent directory if it does not exist
+        if (c == '/') {
+            int32_t nextPos = curPos + 1;
+            auto tmpChar = spillPathChars[nextPos];
+            spillPathChars[nextPos] = '\0';
             if (access(spillPathChars, 0) == -1) {
                 CreateSpillDirectory(spillPathChars);
             }
+            spillPathChars[nextPos] = tmpChar;
+            curPos = nextPos;
+        } else {
+            curPos++;
         }
-        i++;
+        c = spillPathChars[curPos];
+    }
+
+    // create spill directory if it does not exist
+    if (access(spillPathChars, 0) == -1) {
+        CreateSpillDirectory(spillPathChars);
     }
 }
 
@@ -173,20 +185,12 @@ void OperatorConfig::CheckOperatorConfig(const OperatorConfig &operatorConfig)
         throw exception::OmniException(GetErrorCode(ErrorCode::EMPTY_PATH), GetErrorMessage(ErrorCode::EMPTY_PATH));
     }
 
-    auto &rootSpillTracker = GetRootSpillTracker();
-    if (rootSpillTracker.IsSpillPathPresent(spillPath)) {
-        return;
-    }
-
     auto spillPathChars = spillPath.c_str();
-    if (access(spillPathChars, 0) != 0) {
-        // the path does not exist, create directory
-        CreateSpillDirectories(spillPathChars);
-    }
+    CreateSpillDirectories(const_cast<char *>(spillPathChars));
 
     CheckHasEnoughDiskSpace(spillPathChars, *inputSpillConfig);
 
-    InitRootSpillTracker(spillPath, inputSpillConfig->GetMaxSpillBytes());
+    InitRootSpillTracker(inputSpillConfig->GetMaxSpillBytes());
 }
 }
 }

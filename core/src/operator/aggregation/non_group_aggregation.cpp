@@ -71,24 +71,29 @@ Operator *AggregationOperatorFactory::CreateOperator()
         aggs.push_back(std::move(aggregator));
     }
 
-    return new AggregationOperator(std::move(aggs), aggsOutputTypes, inputRaws, outputPartials);
+    return new AggregationOperator(std::move(aggs), aggsOutputTypes, inputRaws, outputPartials, hasAggFilters);
 }
 
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
-    uint32_t aggCount = aggregators.size();
-    int32_t filterIndex = vecBatch->GetVectorCount() - aggCount; // rowCount-aggNum
-    for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
-        auto aggregator = aggregators[aggIdx].get();
-        auto &state = aggsStates[aggIdx];
-
-        if (ConfigUtil::GetSupportExprFilterRule() == SupportExprFilterRule::EXPR_FILTER) {
-            aggregator->ProcessGroupFilter(state, vecBatch, 0, filterIndex);
-            filterIndex++;
-        } else {
-            aggregator->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
+    auto rowCount = vecBatch->GetRowCount();
+    size_t aggCount = aggregators.size();
+    if (aggFiltersCount > 0) {
+        int32_t filterOffset = vecBatch->GetVectorCount() - aggFiltersCount;
+        for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
+            if (hasAggFilters[aggIdx] == 1) {
+                aggregators[aggIdx]->ProcessGroupFilter(aggsStates[aggIdx], vecBatch, 0, filterOffset);
+                filterOffset++;
+            } else {
+                aggregators[aggIdx]->ProcessGroup(aggsStates[aggIdx], vecBatch, 0, rowCount);
+            }
+        }
+    } else {
+        for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
+            aggregators[aggIdx]->ProcessGroup(aggsStates[aggIdx], vecBatch, 0, rowCount);
         }
     }
+
     VectorHelper::FreeVecBatch(vecBatch);
     return 0;
 }

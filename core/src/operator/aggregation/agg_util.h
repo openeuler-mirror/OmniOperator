@@ -16,26 +16,23 @@ namespace omniruntime {
 namespace op {
 class AggUtil {
 public:
-    static bool IsAggPositionEligible(int32_t rowId, VectorBatch *inputVecBatch, SimpleFilter *aggSimpleFilters,
+    static bool IsAggPositionEligible(int32_t rowId, VectorBatch *inputVecBatch, SimpleFilter *aggSimpleFilter,
         ExecutionContext *executionContext, DataTypes &originTypes)
     {
-        if (!aggSimpleFilters) {
-            return true;
-        }
         const int32_t allColsCount = inputVecBatch->GetVectorCount();
+        auto originTypeIds = originTypes.GetIds();
         int64_t values[allColsCount];
         bool nulls[allColsCount];
         int32_t lengths[allColsCount];
-        std::set<int32_t> &usedVectors = aggSimpleFilters->GetVectorIndexes();
+        std::set<int32_t> &usedVectors = aggSimpleFilter->GetVectorIndexes();
         for (auto iter = usedVectors.begin(); iter != usedVectors.end(); ++iter) {
             auto vecIdx = *iter;
             auto vector = inputVecBatch->Get(vecIdx);
             nulls[vecIdx] = vector->IsNull(rowId);
-            values[vecIdx] = OperatorUtil::GetValuePtrAndLength(vector, rowId, lengths + vecIdx,
-                originTypes.GetType(vecIdx)->GetId());
+            values[vecIdx] = OperatorUtil::GetValuePtrAndLength(vector, rowId, lengths + vecIdx, originTypeIds[vecIdx]);
         }
 
-        return aggSimpleFilters->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(&executionContext));
+        return aggSimpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(&executionContext));
     }
 
     static VectorBatch *AggFilterRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &originTypes,
@@ -78,15 +75,19 @@ public:
         auto rowCount = inputVecBatch->GetRowCount();
 
         for (size_t i = 0; i < aggFilterNum; ++i) {
-            auto *booleanVector = new Vector<bool>(rowCount);
-            for (int j = 0; j < rowCount; ++j) {
-                if (AggUtil::IsAggPositionEligible(j, inputVecBatch, aggSimpleFilters[i], context, originTypes)) {
-                    booleanVector->SetValue(j, true);
-                    continue;
+            auto aggSimpleFilter = aggSimpleFilters[i];
+            if (aggSimpleFilter != nullptr) {
+                // if the agg expression has filter, then append a boolean vector to vector batch
+                auto *booleanVector = new Vector<bool>(rowCount);
+                for (int32_t j = 0; j < rowCount; ++j) {
+                    if (AggUtil::IsAggPositionEligible(j, inputVecBatch, aggSimpleFilter, context, originTypes)) {
+                        booleanVector->SetValue(j, true);
+                    } else {
+                        booleanVector->SetValue(j, false);
+                    }
                 }
-                booleanVector->SetValue(j, false);
+                newInputVecBatch->Append(booleanVector);
             }
-            newInputVecBatch->Append(booleanVector);
         }
     }
 };

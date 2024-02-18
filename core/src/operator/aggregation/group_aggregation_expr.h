@@ -67,6 +67,7 @@ private:
     std::vector<SimpleFilter *> aggSimpleFilters;
     HashAggregationOperator *hashAggOperator;
     ExecutionContext *executionContext;
+    bool hasAggFilter = false;
 };
 }
 }

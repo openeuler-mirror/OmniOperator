@@ -88,7 +88,7 @@ public:
         }
     }
 
-    void GetSpillType(std::vector<DataTypeId>& spillTypes) override
+    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
     {
         spillTypes.push_back(OMNI_DOUBLE);
         spillTypes.push_back(OMNI_LONG);
@@ -108,8 +108,8 @@ public:
         if (cnt == 0 || sumVector->IsNull(rowIdx)) {
             return;
         } else {
-            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count,
-                sum[rowIdx], cnt);
+            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx],
+                cnt);
         }
     }
 

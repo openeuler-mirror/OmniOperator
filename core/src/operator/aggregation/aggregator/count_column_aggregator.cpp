@@ -148,8 +148,8 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggr
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
-    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
+    int32_t &vectorIndex, int32_t rowIdx)
 {
     auto countVector = vectorBatch->Get(vectorIndex++);
     auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));

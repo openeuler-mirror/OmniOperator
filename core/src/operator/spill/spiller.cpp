@@ -117,16 +117,8 @@ template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vecto
 
 ErrorCode SpillWriter::CreateTempFile()
 {
+    // the spill directory will be created when CheckOperatorConfig if it does not exist
     auto dirPathChars = dirPath.c_str();
-    struct stat st = { 0 };
-    if (stat(dirPathChars, &st) == -1) {
-        // create the directory when the dir path not exist
-        if (mkdir(dirPathChars, 0750) == -1) {
-            LogError("Mkdir %s failed since %s.", dirPathChars, strerror(errno));
-            return ErrorCode::MKDIR_FAILED;
-        }
-    }
-
     std::string spillFilePath(dirPath);
     const char templateName[] = "spill-XXXXXX";
     if (dirPathChars[spillFilePath.size() - 1] == '/') {

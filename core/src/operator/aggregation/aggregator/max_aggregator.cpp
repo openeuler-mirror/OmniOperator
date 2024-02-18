@@ -32,7 +32,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId>& spillTypes)
+void MaxAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId> &spillTypes)
 {
     if constexpr (IN_ID == OMNI_SHORT) {
         spillTypes.push_back(OMNI_INT);
@@ -134,18 +134,18 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
-    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
+    int32_t &vectorIndex, int32_t rowIdx)
 {
     auto vectorPtr = vectorBatch->Get(vectorIndex++);
     if (!vectorPtr->IsNull(rowIdx)) {
         if constexpr (IN_ID == type::OMNI_SHORT) {
             auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_INT>(vectorPtr));
-            ptr = (ResultType *) __builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
             MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
         } else {
             auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<IN_ID>(vectorPtr));
-            ptr = (ResultType *) __builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
             MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
         }
     }

@@ -72,7 +72,7 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
 
     std::string path = TestUtil::GenerateSpillPath();
     mkdir(path.c_str(), 0750);
-    InitRootSpillTracker(path, 50);
+    InitRootSpillTracker(50);
 
     std::vector<SortOrder> sortOrders;
     for (size_t i = 0; i < sortCols.size(); i++) {

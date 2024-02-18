@@ -74,8 +74,8 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
-    VectorBatch *vectorBatch, int32_t &vectorIndex, int32_t rowIdx)
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
+    int32_t &vectorIndex, int32_t rowIdx)
 {
     auto vectorPtr = vectorBatch->Get(vectorIndex++);
     if (!vectorPtr->IsNull(rowIdx)) {
