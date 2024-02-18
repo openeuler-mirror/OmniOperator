@@ -202,14 +202,14 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
     auto aggNum = static_cast<size_t>(env->GetArrayLength(jAggFuncType));
 
-    vector<uint32_t> groupByColVector = std::vector<uint32_t>((uint32_t *)groupByCols,
-        (uint32_t *)groupByCols + groupByNum);
-    vector<uint32_t> aggColVector = std::vector<uint32_t>((uint32_t *)aggCols,
-        (uint32_t *)aggCols + aggInputChannelNum);
-    vector<uint32_t> aggFuncTypeVector = std::vector<uint32_t>((uint32_t *)aggFuncTypes,
-        (uint32_t *)aggFuncTypes + aggNum);
-    vector<uint32_t> maskColumnVector = std::vector<uint32_t>((uint32_t *)maskColumns,
-        (uint32_t *)maskColumns + aggNum);
+    std::vector<uint32_t> groupByColVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(groupByCols),
+        reinterpret_cast<uint32_t *>(groupByCols) + groupByNum);
+    std::vector<uint32_t> aggColVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggCols),
+        reinterpret_cast<uint32_t *>(aggCols) + aggInputChannelNum);
+    std::vector<uint32_t> aggFuncTypeVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggFuncTypes),
+        reinterpret_cast<uint32_t *>(aggFuncTypes) + aggNum);
+    std::vector<uint32_t> maskColumnVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(maskColumns),
+        reinterpret_cast<uint32_t *>(maskColumns) + aggNum);
 
     auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggDataTypes);
@@ -252,11 +252,12 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     auto aggInputColsCount = static_cast<size_t>(env->GetArrayLength(jAggInputCols));
     auto aggCount = static_cast<size_t>(aggOutputTypes.GetSize());
 
-    std::vector<uint32_t> aggInputColsVector =
-        vector<uint32_t>((uint32_t *)aggInputCols, (uint32_t *)aggInputCols + aggInputColsCount);
-    std::vector<uint32_t> maskColsVector = std::vector<uint32_t>((uint32_t *)maskCols, (uint32_t *)maskCols + aggCount);
-    std::vector<uint32_t> aggFuncTypesVector =
-        std::vector<uint32_t>((uint32_t *)aggFuncTypes, (uint32_t *)aggFuncTypes + aggCount);
+    std::vector<uint32_t> aggInputColsVector = vector<uint32_t>(reinterpret_cast<uint32_t *>(aggInputCols),
+        reinterpret_cast<uint32_t *>(aggInputCols) + aggInputColsCount);
+    std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(maskCols),
+        reinterpret_cast<uint32_t *>(maskCols) + aggCount);
+    std::vector<uint32_t> aggFuncTypesVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggFuncTypes),
+        reinterpret_cast<uint32_t *>(aggFuncTypes) + aggCount);
 
     auto aggInputColsVectorWrap = AggregatorUtil::WrapWithVector(aggInputColsVector);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);

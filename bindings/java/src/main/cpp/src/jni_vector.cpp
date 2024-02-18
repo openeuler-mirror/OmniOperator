@@ -49,7 +49,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newVectorNative(JN
 #ifdef TRACE
     RecordStack(vector, env);
 #endif
-    return reinterpret_cast<uintptr_t>(vector);
+    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_newDictionaryVectorNative(JNIEnv *env, jclass jcls,
@@ -101,7 +101,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_copyPositionsNativ
 #ifdef TRACE
     RecordStack(copyVector, env);
 #endif
-    return reinterpret_cast<uintptr_t>(copyVector);
+    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(copyVector));
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_freeVectorNative(JNIEnv *env, jclass jcls,
@@ -237,7 +237,7 @@ jlong Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *en
         vecBatch->Append(reinterpret_cast<BaseVector *>(vecAddresses[i]));
     }
     env->ReleaseLongArrayElements(jVectorAddresses, vecAddresses, JNI_ABORT);
-    return reinterpret_cast<uintptr_t>(vecBatch);
+    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vecBatch));
 }
 
 void Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative(JNIEnv *env, jclass jcls, jlong jVecBatchAddress)
@@ -271,7 +271,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VarcharVec_expandDataC
     auto nativeVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(jNativeVector);
     char *newBuffAddress =
         omniruntime::vec::unsafe::UnsafeStringVector::ExpandStringBuffer(nativeVector, jToCapacityInBytes);
-    return reinterpret_cast<uintptr_t>(newBuffAddress);
+    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(newBuffAddress));
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_setNullFlagNative(JNIEnv *env, jclass jcls,

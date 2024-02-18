@@ -1,8 +1,8 @@
-#project name
-project(omni-runtime)
-
 # required cmake version
 cmake_minimum_required(VERSION 3.14.1)
+
+#project name
+project(omni-runtime)
 
 message(STATUS "Now processor is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 

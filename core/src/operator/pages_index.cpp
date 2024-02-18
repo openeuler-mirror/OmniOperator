@@ -44,9 +44,12 @@ PagesIndex::PagesIndex(const DataTypes &types)
 
 void ALWAYS_INLINE Swap(int64_t *values, uint64_t *addresses, int32_t a, int32_t b)
 {
-    using std::swap;
-    swap(values[a], values[b]);
-    swap(addresses[a], addresses[b]);
+    auto tmpValue = values[a];
+    auto tmpAddr = addresses[a];
+    values[a] = values[b];
+    addresses[a] = addresses[b];
+    values[b] = tmpValue;
+    addresses[b] = tmpAddr;
 }
 
 __attribute__((noinline)) void VectorSwap(int64_t *values, uint64_t *addresses, int32_t from, int32_t l, int32_t s)
@@ -110,11 +113,16 @@ void PagesIndex::Prepare()
     }
 }
 
-template void PagesIndex::PrepareRadixSort<type::OMNI_LONG>(const bool a, const bool n, const uint32_t s);
-template void PagesIndex::PrepareRadixSort<type::OMNI_INT>(const bool a, const bool n, const uint32_t s);
-template void PagesIndex::PrepareRadixSort<type::OMNI_SHORT>(const bool a, const bool n, const uint32_t s);
-template void PagesIndex::PrepareRadixSort<type::OMNI_BOOLEAN>(const bool a, const bool n, const uint32_t s);
-template void PagesIndex::PrepareRadixSort<type::OMNI_DECIMAL64>(const bool a, const bool n, const uint32_t s);
+template void PagesIndex::PrepareRadixSort<type::OMNI_LONG>(const bool ascending, const bool nullsFirst,
+    const uint32_t sortCol);
+template void PagesIndex::PrepareRadixSort<type::OMNI_INT>(const bool ascending, const bool nullsFirst,
+    const uint32_t sortCol);
+template void PagesIndex::PrepareRadixSort<type::OMNI_SHORT>(const bool ascending, const bool nullsFirst,
+    const uint32_t sortCol);
+template void PagesIndex::PrepareRadixSort<type::OMNI_BOOLEAN>(const bool ascending, const bool nullsFirst,
+    const uint32_t sortCol);
+template void PagesIndex::PrepareRadixSort<type::OMNI_DECIMAL64>(const bool ascending, const bool nullsFirst,
+    const uint32_t sortCol);
 
 template <DataTypeId typeId>
 void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, const uint32_t sortCol)
@@ -401,10 +409,15 @@ int32_t ALWAYS_INLINE GetNextCompareRightVarChar(int32_t *compareTmp, int32_t &k
 void ALWAYS_INLINE SwapVarchar(int64_t *values, std::vector<uint32_t> &varcharLength, uint64_t *addresses, int32_t a,
     int32_t b)
 {
-    using std::swap;
-    swap(values[a], values[b]);
-    swap(varcharLength[a], varcharLength[b]);
-    swap(addresses[a], addresses[b]);
+    auto tmpValuePtr = values[a];
+    auto tmpLength = varcharLength[a];
+    auto tmpAddress = addresses[a];
+    values[a] = values[b];
+    varcharLength[a] = varcharLength[b];
+    addresses[a] = addresses[b];
+    values[b] = tmpValuePtr;
+    varcharLength[b] = tmpLength;
+    addresses[b] = tmpAddress;
 }
 
 void NO_INLINE VectorSwapVarChar(int64_t *values, std::vector<uint32_t> &varcharLength, uint64_t *addresses,

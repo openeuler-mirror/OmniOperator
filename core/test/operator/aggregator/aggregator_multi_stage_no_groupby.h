@@ -831,7 +831,7 @@ protected:
         auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggColIdxVec);
         auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(DataTypes(outputTypeVec));
         auto inputRawWrap = std::vector<bool>(2, inputRaw);
-        auto outputPartialWrap = std::vector<bool>(2,  outputPartial);
+        auto outputPartialWrap = std::vector<bool>(2, outputPartial);
         auto factory = std::make_unique<AggregationOperatorFactory>(inputTypes, aggFuncVec, aggInputColsWrap,
             aggMaskVec, aggOutputTypesWrap, inputRawWrap, outputPartialWrap, this->nullWhenOverflow);
 

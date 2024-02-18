@@ -7,7 +7,6 @@
 
 #include <vector>
 #include <memory>
-#include <optional>
 #include "util/error_code.h"
 #include "operator/operator_factory.h"
 #include "operator/config/operator_config.h"
@@ -116,7 +115,6 @@ private:
         int32_t outputCol);
 
     bool hasSorted = false;
-    bool hasNext = true;
     bool canInplaceSort = false;
     bool canRadixSort = false;
 
