@@ -659,6 +659,24 @@ void HashAggregationOperator::SetStateOutputVecBatch(VectorBatch *outputVecBatch
     }
 }
 
+void HashAggregationOperator::SetSpillKeyOutputVector(VectorBatch *outputVecBatch, int32_t outputRowCount,
+    int32_t groupColNum)
+{
+    using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+    std::vector<BaseVector *> groupOutputVectors(groupColNum);
+    for (int32_t i = 0; i < groupColNum; i++) {
+        groupOutputVectors[i] = outputVecBatch->Get(i);
+    }
+    for (int32_t i = 0; i < outputRowCount; i++) {
+        auto batch = batches[i];
+        auto inputRowIdx = rowIdxes[i];
+        auto keyVector = static_cast<VarcharVector *>(batch->Get(0));
+        auto key = keyVector->GetValue(inputRowIdx);
+        StringRef keyRef = StringRef(key.data());
+        serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, i);
+    }
+}
+
 template <typename Deserialize>
 void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch)
 {
@@ -705,12 +723,10 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
                 spillMerger->Pop();
             }
         } while (rowIdx < rowCount && spillTotalRowCount > 0);
-
-        auto output = std::make_unique<VectorBatch>(rowIdx);
-        auto outputPtr = output.get();
-        SetVectors(outputPtr, outputTypes, rowIdx);
-        SetSpillOutputVecBatch(outputPtr, rowIdx, groupColNum);
-        *outputVecBatch = output.release();
+        auto output = new VectorBatch(rowIdx);
+        SetVectors(output, outputTypes, rowIdx);
+        SetSpillKeyOutputVector(output, rowIdx, groupColNum);
+        *outputVecBatch = output;
         return;
     }
 
@@ -746,13 +762,11 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
         rowStates[rowIdx] = currentGroupStates;
         rowIdx++;
     } while (rowIdx < rowCount && spillTotalRowCount > 0);
-
-    auto output = std::make_unique<VectorBatch>(rowIdx);
-    auto outputPtr = output.get();
-    SetVectors(outputPtr, outputTypes, rowIdx);
-    SetSpillOutputVecBatch(outputPtr, rowIdx, groupColNum);
-    SetStateOutputVecBatch(outputPtr, rowIdx, groupColNum, aggNum);
-    *outputVecBatch = output.release();
+    auto output = new VectorBatch(rowIdx);
+    SetVectors(output, outputTypes, rowIdx);
+    SetSpillKeyOutputVector(output, rowIdx, groupColNum);
+    SetStateOutputVecBatch(output, rowIdx, groupColNum, aggNum);
+    *outputVecBatch = output;
 }
 
 template <typename Deserialize>

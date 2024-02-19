@@ -276,6 +276,7 @@ private:
     void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
     template <typename T>
     void SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowCount, int32_t outputCol);
+    void SetSpillKeyOutputVector(VectorBatch *outputVecBatch, int32_t outputRowCount, int32_t groupColNum);
 
     std::vector<ColumnIndex> groupByCols;
     std::vector<std::vector<int32_t>> aggInputCols;
