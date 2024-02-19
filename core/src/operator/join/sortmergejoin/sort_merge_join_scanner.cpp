@@ -54,28 +54,28 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
         auto colTypeId = streamedTableKeysTypes.GetIds()[i];
         switch (colTypeId) {
             case OMNI_BOOLEAN:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<bool>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<bool, true, false, true>);
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<int32_t>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<int32_t, true, false, true>);
                 break;
             case OMNI_SHORT:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<int16_t>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<int16_t, true, false, true>);
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<int64_t>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<int64_t, true, false, true>);
                 break;
             case OMNI_DOUBLE:
-                keyCompareFuncs[i] = (OperatorUtil::CompareDouble);
+                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<double, true, false, true>);
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                keyCompareFuncs[i] = (OperatorUtil::CompareVarchar);
+                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<std::string_view, true, false, true>);
                 break;
             case OMNI_DECIMAL128:
-                keyCompareFuncs[i] = (OperatorUtil::CompareTemplate<Decimal128>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<Decimal128, true, false, true>);
                 break;
             default:
                 throw omniruntime::exception::OmniException("sort merge join scanner",
