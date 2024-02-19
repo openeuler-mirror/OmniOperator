@@ -272,7 +272,7 @@ void HashAggregationOperator::InitSpillInfos()
         spillRowSize += OperatorUtil::GetTypeSize(i.input);
     }
     std::vector<DataTypeId> currentSpillType;
-    finalTypes.push_back(std::make_shared<DataType>(OMNI_VARCHAR));
+    finalTypes.push_back(std::make_shared<VarcharDataType>());
     for (uint64_t i = 0; i < aggregators.size(); i++) {
         currentSpillType.clear();
         aggregators[i]->GetSpillType(currentSpillType);
@@ -297,6 +297,12 @@ void HashAggregationOperator::InitSpillInfos()
     sortOrders.resize(groupNum, sortOrder);
     sortOrders1.resize(1, sortOrder);
     groupByClomIdx.resize(1, 0);
+    sortCol.resize(1, 0);
+    sortColAscendings.resize(1, 1);
+    sortColnullsFirst.resize(1, 1);
+    for (int i = 0; i < aggregators.size() + 1; i++) {
+        outPutRows.push_back(i);
+    }
 }
 
 void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount)
@@ -498,10 +504,6 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
     spillOutputState.UpdateState(curOutputState);
     pagesIndex->AddVecBatch(hashmapVecBatch.release());
     pagesIndex->Prepare();
-    std::vector<int32_t> sortCol = { 0 };
-    std::vector<int32_t> outPutRows = { 0, 1 };
-    std::vector<int32_t> sortColAscendings = { 1 };
-    std::vector<int32_t> sortColnullsFirst = { 1 };
     pagesIndex->Sort(sortCol.data(), sortColAscendings.data(), sortColnullsFirst.data(), 1, 0, totalSpillCount);
     auto sortedVec = new VectorBatch(totalSpillCount);
     std::vector<type::DataTypePtr> sortTypes;
@@ -509,38 +511,42 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
     sortTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
     std::vector<int> sorceTypes = { OMNI_VARCHAR, OMNI_LONG };
     SetVectors(sortedVec, sortTypes, totalSpillCount);
-    pagesIndex->GetOutput(outPutRows.data(), 2, sortedVec, sorceTypes.data(), 0, totalSpillCount, 0);
-    auto currentValueRows = reinterpret_cast<Vector<int64_t> *>(sortedVec->Get(1));
+    pagesIndex->GetOutput(outPutRows.data(), aggregators.size() + 1, sortedVec, sorceTypes.data(), 0, totalSpillCount,
+        0);
     auto vectorToBeWrited = new VectorBatch(totalSpillCount);
     vectorToBeWrited->Append(sortedVec->Get(0));
-    auto aggVector = new VectorBatch(totalSpillCount);
-    SetVectors(aggVector, aggTypes, totalSpillCount);
-    for (int i = 0; i < totalSpillCount; i++) {
-        auto aggOutputStartIndex = 0;
-        for (size_t aggIndex = 0; aggIndex < aggNum; ++aggIndex) {
-            auto &aggregator = aggregators[aggIndex];
-            auto currentAggType = aggregator->GetType();
-            int32_t oneAggOutputCols = 1;
-            if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
-                currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG ||
-                currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL ||
-                currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
-                // Among these types, there will be two columns of arrays to store spill data.
-                oneAggOutputCols = 2;
+    if (aggregators.size() > 0) {
+        auto currentValueRows = reinterpret_cast<Vector<int64_t> *>(sortedVec->Get(1));
+        auto aggVector = new VectorBatch(totalSpillCount);
+        SetVectors(aggVector, aggTypes, totalSpillCount);
+        for (int i = 0; i < totalSpillCount; i++) {
+            auto aggOutputStartIndex = 0;
+            for (size_t aggIndex = 0; aggIndex < aggNum; ++aggIndex) {
+                auto &aggregator = aggregators[aggIndex];
+                auto currentAggType = aggregator->GetType();
+                int32_t oneAggOutputCols = 1;
+                if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
+                    currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG ||
+                    currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL ||
+                    currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL) {
+                    // Among these types, there will be two columns of arrays to store spill data.
+                    oneAggOutputCols = 2;
+                }
+                std::vector<BaseVector *> adaptAggVectors(oneAggOutputCols);
+                for (auto j = 0; j < oneAggOutputCols; j++) {
+                    adaptAggVectors[j] = aggVector->Get(aggOutputStartIndex + j);
+                }
+                aggOutputStartIndex += oneAggOutputCols;
+                auto state = (reinterpret_cast<AggregateState *>(currentValueRows->GetValue(i)))[aggIndex];
+                aggregator->ExtractSpillValues(state, adaptAggVectors, i);
             }
-            std::vector<BaseVector *> adaptAggVectors(oneAggOutputCols);
-            for (auto j = 0; j < oneAggOutputCols; j++) {
-                adaptAggVectors[j] = aggVector->Get(aggOutputStartIndex + j);
-            }
-            aggOutputStartIndex += oneAggOutputCols;
-            auto state = (reinterpret_cast<AggregateState *>(currentValueRows->GetValue(i)))[aggIndex];
-            aggregator->ExtractSpillValues(state, adaptAggVectors, i);
+        }
+        for (int i = 0; i < aggVector->GetVectorCount(); i++) {
+            vectorToBeWrited->Append(aggVector->Get(i));
         }
     }
-    for (int i = 0; i < aggVector->GetVectorCount(); i++) {
-        vectorToBeWrited->Append(aggVector->Get(i));
-    }
     finalPagesIndex->AddVecBatch(vectorToBeWrited);
+    finalPagesIndex->Prepare();
 }
 
 void HashAggregationOperator::SpillHashMap()
@@ -672,7 +678,7 @@ void HashAggregationOperator::SetSpillKeyOutputVector(VectorBatch *outputVecBatc
         auto inputRowIdx = rowIdxes[i];
         auto keyVector = static_cast<VarcharVector *>(batch->Get(0));
         auto key = keyVector->GetValue(inputRowIdx);
-        StringRef keyRef = StringRef(key.data());
+        StringRef keyRef = StringRef(std::string(key));
         serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, i);
     }
 }
@@ -737,7 +743,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
         spillTotalRowCount--;
         spillMerger->Pop();
         // init AggregateState
-        int32_t vectorIndex = groupColNum;
+        int32_t vectorIndex = 1;
         auto currentGroupStateSize = static_cast<int64_t>(aggNum * sizeof(AggregateState));
         auto *currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
         for (int32_t i = 0; i < aggNum; i++) {
@@ -751,7 +757,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
             int32_t currentRowIdx = spillMerger->CurrentRowIndex();
 
             // aggregation operation is performed for the same key
-            int32_t currentVectorIndex = groupColNum;
+            int32_t currentVectorIndex = 1;
             for (int32_t i = 0; i < aggNum; i++) {
                 aggregators[i]->ProcessGroupAfterSpill(currentGroupStates[i], currentVectorBatch, currentVectorIndex,
                     currentRowIdx);

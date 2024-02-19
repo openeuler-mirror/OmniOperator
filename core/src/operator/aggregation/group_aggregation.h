@@ -319,6 +319,10 @@ private:
     int32_t spillRowsPerPagesIndexs;
     OutputState spillOutputState;
     bool hasSpill = false;
+    std::vector<int32_t> sortCol;
+    std::vector<int32_t> outPutRows;
+    std::vector<int32_t> sortColAscendings;
+    std::vector<int32_t> sortColnullsFirst;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
