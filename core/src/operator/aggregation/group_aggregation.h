@@ -301,7 +301,9 @@ private:
     SpillMerger *spillMerger = nullptr;
     Spiller *spiller = nullptr;
     PagesIndex *pagesIndex = nullptr;
+    PagesIndex *finalPagesIndex = nullptr;
     std::vector<SortOrder> sortOrders;
+    std::vector<SortOrder> sortOrders1;
     std::vector<int32_t> ascendings;
     std::vector<int32_t> nullsFirst;
     std::vector<int32_t> groupByClomIdx;
@@ -311,6 +313,8 @@ private:
     std::vector<AggregateState *> rowStates;
     uint64_t spilledBytes = 0;
     std::vector<type::DataTypePtr> spillTypes;
+    std::vector<type::DataTypePtr> aggTypes;
+    std::vector<type::DataTypePtr> finalTypes;
     int32_t spillRowsPerPagesIndexs;
     OutputState spillOutputState;
     bool hasSpill = false;

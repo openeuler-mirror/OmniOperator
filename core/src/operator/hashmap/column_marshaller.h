@@ -96,6 +96,16 @@ public:
     {
         return hashmap.EmplaceNotNullKey(key, hashValue);
     }
+    void InsertKeyToVector(const omniruntime::type::StringRef &key, int64_t mapped, VectorBatch *groupOutputVectors,
+        int32_t groupColNum, const int rowIdx)
+    {
+        auto curVectorPtr1 =
+            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(groupOutputVectors->Get(0));
+        auto curVectorPtr2 = reinterpret_cast<Vector<int64_t> *>(groupOutputVectors->Get(1));
+        std::string_view keyStr = std::string_view(key.data, key.size);
+        curVectorPtr1->SetValue(rowIdx, keyStr);
+        curVectorPtr2->SetValue(rowIdx, mapped);
+    }
 
     void ParseKeyToCols(const KeyType &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
         const int rowIdx)
