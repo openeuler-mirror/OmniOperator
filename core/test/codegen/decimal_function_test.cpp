@@ -730,6 +730,12 @@ TEST(FunctionTest, CastStringToDecimal128RoundUp)
     EXPECT_EQ(ToString((int128_t(high) << 64) + low), "31242342342354235233324342342312341235");
     *isNull = false;
 
+    s = "-76519271657238389219223372036854775808.01";
+    CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 0, &high, &low);
+    EXPECT_FALSE(*isNull);
+    EXPECT_EQ(ToString((int128_t(high) << 64) + low), "-76519271657238389219223372036854775808");
+    *isNull = false;
+
     s = "312423423423542352333243423123124431243.123412349";
     CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
     EXPECT_TRUE(*isNull);
@@ -748,7 +754,41 @@ TEST(FunctionTest, CastStringToDecimal128RoundUp)
     s = "2.34e39";
     CastStringToDecimal128RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 38, 8, &high, &low);
     EXPECT_TRUE(*isNull);
+
+    delete context;
+    delete isNull;
+}
+
+TEST(FunctionTest, CastStringToDecimal64RoundUp)
+{
+    auto context = new ExecutionContext();
+    bool *isNull = new bool(false);
+    std::string s = "-97179.3541993373211719314416";
+    int64_t res = CastStringToDecimal64RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 7, 0);
+    EXPECT_EQ(res, -97179);
     *isNull = false;
+
+    s = "+97179.3541993373211719314416";
+    res = CastStringToDecimal64RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 7, 0);
+    EXPECT_EQ(res, 97179);
+    *isNull = false;
+
+    s = "865336.1947182416341553640412669021910285.80122768";
+    res = CastStringToDecimal64RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 7, 0);
+    EXPECT_EQ(res, 0);
+    EXPECT_TRUE(*isNull);
+    *isNull = false;
+
+    s = "  +2147483648";
+    res = CastStringToDecimal64RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 18, 2);
+    EXPECT_EQ(res, 214748364800);
+    EXPECT_FALSE(*isNull);
+    *isNull = false;
+
+    s = "  ";
+    res = CastStringToDecimal64RoundUpRetNull(isNull, s.c_str(), static_cast<int32_t>(s.size()), 18, 2);
+    EXPECT_EQ(res, 0);
+    EXPECT_TRUE(*isNull);
 
     delete context;
     delete isNull;
