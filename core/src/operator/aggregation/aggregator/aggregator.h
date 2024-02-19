@@ -226,7 +226,7 @@ public:
 #ifdef DEBUG
         LogWarn("Using not-optimized aggregator api for aggregator %d", as_integer(type));
 #endif
-        auto filterVecIdx = static_cast<int32_t>(filterOffset + aggIdx);
+        auto filterVecIdx = static_cast<int32_t>(filterOffset);
         auto filterVec = static_cast<Vector<bool> *>(vectorBatch->Get(filterVecIdx));
         auto rowCount = static_cast<int32_t>(rowStates.size());
         bool needFilterJude = DoNeedHandleAggFilter(filterVec, rowOffset, rowCount);

@@ -127,17 +127,10 @@ public:
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
 
         Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterIndex));
-
-        bool needFilterJude = false;
-        for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
-            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
-                needFilterJude = true;
-                break;
-            }
-        }
-        auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
-        filterPtr += rowOffset;
+        bool needFilterJude = DoNeedHandleAggFilter(booleanVector, rowOffset, rowCount);
         if (needFilterJude) {
+            auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
+            filterPtr += rowOffset;
             // notSatisfiedArray can filter row which no need to aggregate
             // the nullMap: true means null
             // booleanVector: false means one row has been filtered
@@ -181,21 +174,13 @@ public:
         uint8_t *nullMap = nullptr;
 
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, 0);
-        int32_t rowCount = rowStates.size();
+        auto rowCount = static_cast<int32_t>(rowStates.size());
 
-        Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart + aggIdx));
-        bool needFilterJude = false;
-
-        for (int32_t start = 0, end = rowCount - 1; start <= end; ++start, --end) {
-            if (!booleanVector->GetValue(start) || !booleanVector->GetValue(end)) {
-                needFilterJude = true;
-                break;
-            }
-        }
-
-        auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
-        filterPtr += rowOffset;
+        Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart));
+        bool needFilterJude = DoNeedHandleAggFilter(booleanVector, rowOffset, rowCount);
         if (needFilterJude) {
+            auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
+            filterPtr += rowOffset;
             // notSatisfiedArray can filter row which no need to aggregate
             // the nullMap: true means null
             // booleanVector: false means one row has been filtered
