@@ -96,6 +96,7 @@ public:
     {
         return hashmap.EmplaceNotNullKey(key, hashValue);
     }
+
     void InsertKeyToVector(const omniruntime::type::StringRef &key, int64_t mapped, VectorBatch *groupOutputVectors,
         int32_t groupColNum, const int rowIdx)
     {

@@ -577,69 +577,6 @@ uint64_t HashAggregationOperator::GetSpilledBytes()
     return spilledBytes;
 }
 
-template <typename T>
-void HashAggregationOperator::SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowCount, int32_t outputCol)
-{
-    for (int32_t i = 0; i < outputRowCount; i++) {
-        auto batch = batches[i];
-        auto inputRowIdx = rowIdxes[i];
-        if constexpr (std::is_same_v<T, std::string_view>) {
-            using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
-            auto inputVector = static_cast<VarcharVector *>(batch->Get(outputCol));
-            if (inputVector->IsNull(inputRowIdx)) {
-                static_cast<VarcharVector *>(outputVector)->SetNull(i);
-            } else {
-                auto value = inputVector->GetValue(inputRowIdx);
-                static_cast<VarcharVector *>(outputVector)->SetValue(i, value);
-            }
-        } else {
-            auto inputVector = static_cast<Vector<T> *>(batch->Get(outputCol));
-            if (inputVector->IsNull(inputRowIdx)) {
-                static_cast<Vector<T> *>(outputVector)->SetNull(i);
-            } else {
-                static_cast<Vector<T> *>(outputVector)->SetValue(i, inputVector->GetValue(inputRowIdx));
-            }
-        }
-    }
-}
-
-void HashAggregationOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum)
-{
-    for (int32_t i = 0; i < groupColNum; i++) {
-        auto outputVector = outputVecBatch->Get(i);
-        auto outputTypeId = outputTypes[i]->GetId();
-        switch (outputTypeId) {
-            case OMNI_INT:
-            case OMNI_DATE32:
-                SetSpillOutputVector<int32_t>(outputVector, rowCount, i);
-                break;
-            case OMNI_LONG:
-            case OMNI_DECIMAL64:
-            case OMNI_TIMESTAMP:
-                SetSpillOutputVector<int64_t>(outputVector, rowCount, i);
-                break;
-            case OMNI_DOUBLE:
-                SetSpillOutputVector<double>(outputVector, rowCount, i);
-                break;
-            case OMNI_BOOLEAN:
-                SetSpillOutputVector<bool>(outputVector, rowCount, i);
-                break;
-            case OMNI_SHORT:
-                SetSpillOutputVector<int16_t>(outputVector, rowCount, i);
-                break;
-            case OMNI_DECIMAL128:
-                SetSpillOutputVector<Decimal128>(outputVector, rowCount, i);
-                break;
-            case OMNI_VARCHAR:
-            case OMNI_CHAR:
-                SetSpillOutputVector<std::string_view>(outputVector, rowCount, i);
-                break;
-            default:
-                break;
-        }
-    }
-}
-
 void HashAggregationOperator::SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum,
     int32_t aggNum)
 {
@@ -678,7 +615,8 @@ void HashAggregationOperator::SetSpillKeyOutputVector(VectorBatch *outputVecBatc
         auto inputRowIdx = rowIdxes[i];
         auto keyVector = static_cast<VarcharVector *>(batch->Get(0));
         auto key = keyVector->GetValue(inputRowIdx);
-        StringRef keyRef = StringRef(std::string(key));
+        std::string groupbyKey(key.data(), key.size());
+        StringRef keyRef = StringRef(groupbyKey);
         serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, i);
     }
 }
@@ -699,6 +637,8 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
         spiller = nullptr;
         delete pagesIndex;
         pagesIndex = nullptr;
+        delete finalPagesIndex;
+        finalPagesIndex = nullptr;
         if (spillMerger == nullptr) {
             throw omniruntime::exception::OmniException("SPILL_FAILED", "Create spill merger failed.");
         }

@@ -272,10 +272,7 @@ private:
 
     template <typename Deserialize>
     void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
-    void SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum);
     void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
-    template <typename T>
-    void SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowCount, int32_t outputCol);
     void SetSpillKeyOutputVector(VectorBatch *outputVecBatch, int32_t outputRowCount, int32_t groupColNum);
 
     std::vector<ColumnIndex> groupByCols;
