@@ -18,6 +18,7 @@
 #include "operator/filter/filter_and_project.h"
 #include "operator/pages_index.h"
 #include "operator/spill/spiller.h"
+#include "group_aggregation_sort.h"
 
 namespace omniruntime::op {
 using namespace vec;
@@ -259,7 +260,7 @@ private:
     int32_t InitMaxRowCountAndOutputTypes();
     void InitSpillInfos();
     void SpillHashMap();
-    void ConvertHashMap2PageIndex();
+    void SpillToDisk();
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
@@ -298,28 +299,20 @@ private:
     OperatorConfig operatorConfig;
     SpillMerger *spillMerger = nullptr;
     Spiller *spiller = nullptr;
-    PagesIndex *pagesIndex = nullptr;
-    PagesIndex *finalPagesIndex = nullptr;
     std::vector<SortOrder> sortOrders;
-    std::vector<SortOrder> sortOrders1;
-    std::vector<int32_t> ascendings;
-    std::vector<int32_t> nullsFirst;
-    std::vector<int32_t> groupByClomIdx;
+    std::vector<int32_t> groupByCloIdx;
     int64_t spillTotalRowCount = 0;
     std::vector<vec::VectorBatch *> batches;
     std::vector<int32_t> rowIdxes;
     std::vector<AggregateState *> rowStates;
     uint64_t spilledBytes = 0;
-    std::vector<type::DataTypePtr> spillTypes;
     std::vector<type::DataTypePtr> aggTypes;
-    std::vector<type::DataTypePtr> finalTypes;
-    int32_t spillRowsPerPagesIndexs;
+    std::vector<type::DataTypePtr> spillTypes;
     OutputState spillOutputState;
     bool hasSpill = false;
-    std::vector<int32_t> sortCol;
-    std::vector<int32_t> outPutRows;
-    std::vector<int32_t> sortColAscendings;
-    std::vector<int32_t> sortColnullsFirst;
+    int32_t spillRowSize;
+    int32_t maxRowCountPerBatch;
+    AggregationSort aggregationSort;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {

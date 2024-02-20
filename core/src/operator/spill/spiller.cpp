@@ -18,6 +18,47 @@ static std::string SPILL_TEMPLATE("/spill-XXXXXX");
 static const char *SPILL_TEMPLATE_CHARS = SPILL_TEMPLATE.c_str();
 static int32_t SPILL_TEMPLATE_SIZE = static_cast<int32_t>(SPILL_TEMPLATE.size());
 
+ErrorCode Spiller::SpillAggregation(AggregationSort *aggregationSort,
+    std::vector<std::unique_ptr<Aggregator>> &aggregators)
+{
+    size_t totalRowCount = aggregationSort->GetRowCount();
+    if (totalRowCount <= 0) {
+        return ErrorCode::SUCCESS;
+    }
+    // create spill writer object
+    auto writer = new SpillWriter(dataTypes, dirPaths[0]);
+    writers.emplace_back(writer);
+
+    int64_t totalRowOffset = 0;
+    int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(totalRowCount, maxRowCountPerBatch);
+    int32_t maxRowCount = 0; // for reuse vector batch memory
+    for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; vecBatchIdx++) {
+        auto rowCount = std::min(maxRowCountPerBatch, static_cast<int32_t>(totalRowCount - totalRowOffset));
+        if (hashaggSpillVecBatch == nullptr || rowCount > maxRowCount) {
+            VectorHelper::FreeVecBatch(hashaggSpillVecBatch);
+            hashaggSpillVecBatch = new VectorBatch(rowCount);
+            VectorHelper::AppendVectors(hashaggSpillVecBatch, dataTypes, rowCount);
+            maxRowCount = rowCount;
+        } else {
+            hashaggSpillVecBatch->Resize(rowCount);
+        }
+        aggregationSort->SetSpillVectorBatch(hashaggSpillVecBatch, totalRowOffset, aggregators);
+        auto vecBatchSize = CollectVecBatchSize(hashaggSpillVecBatch);
+        if (spillTracker->CheckIfExceedAndReserve(vecBatchSize)) {
+            return ErrorCode::EXCEED_SPILL_THRESHOLD;
+        }
+
+        auto result = writer->WriteVecBatch(hashaggSpillVecBatch, vecBatchSize);
+        if (result != ErrorCode::SUCCESS) {
+            spillTracker->Free(vecBatchSize);
+            return result;
+        }
+        totalRowOffset += rowCount;
+    }
+    writer->Close();
+    return ErrorCode::SUCCESS;
+}
+
 ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort)
 {
     int64_t totalRowCount = pagesIndex->GetRowCount();

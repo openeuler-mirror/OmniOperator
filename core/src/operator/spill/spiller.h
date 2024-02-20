@@ -9,6 +9,7 @@
 #include "type/data_types.h"
 #include "spill_merger.h"
 #include "operator/pages_index.h"
+#include "operator/aggregation/group_aggregation_sort.h"
 
 namespace omniruntime {
 namespace op {
@@ -31,7 +32,7 @@ public:
 
     SpillFileInfo GetSpillFileInfo()
     {
-        SpillFileInfo file { filePath, fileLength, totalRowCount };
+        SpillFileInfo file{ filePath, fileLength, totalRowCount };
         return file;
     }
 
@@ -85,7 +86,7 @@ public:
     }
 
     ErrorCode Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort);
-
+    ErrorCode SpillAggregation(AggregationSort *aggregationSort, std::vector<std::unique_ptr<Aggregator>> &aggregators);
     std::vector<SpillFileInfo> FinishSpill()
     {
         std::vector<SpillFileInfo> spillFiles;

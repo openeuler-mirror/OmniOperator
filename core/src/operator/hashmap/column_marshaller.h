@@ -19,7 +19,11 @@ enum class HandleType {
     fixed256Bytes,
     onlyOneKey
 };
-
+struct KeyValue {
+    char *keyAddr;
+    size_t keyLen;
+    int64_t valAddr;
+};
 template <typename Hashmap> class ColumnSerializeHandler {
 public:
     Hashmap hashmap;
@@ -97,15 +101,14 @@ public:
         return hashmap.EmplaceNotNullKey(key, hashValue);
     }
 
-    void InsertKeyToVector(const omniruntime::type::StringRef &key, int64_t mapped, VectorBatch *groupOutputVectors,
-        int32_t groupColNum, const int rowIdx)
+    void PraseHashMapToVector(const omniruntime::type::StringRef &key, int64_t value,
+        std::vector<KeyValue> &groupOutputVectors)
     {
-        auto curVectorPtr1 =
-            reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(groupOutputVectors->Get(0));
-        auto curVectorPtr2 = reinterpret_cast<Vector<int64_t> *>(groupOutputVectors->Get(1));
-        std::string_view keyStr = std::string_view(key.data, key.size);
-        curVectorPtr1->SetValue(rowIdx, keyStr);
-        curVectorPtr2->SetValue(rowIdx, mapped);
+        KeyValue currentKv;
+        currentKv.keyAddr = const_cast<char *>(key.data);
+        currentKv.keyLen = key.size;
+        currentKv.valAddr = value;
+        groupOutputVectors.emplace_back(currentKv);
     }
 
     void ParseKeyToCols(const KeyType &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
