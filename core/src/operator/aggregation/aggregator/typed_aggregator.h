@@ -168,15 +168,15 @@ public:
 
     // for groupby hash aggregation with Filter
     void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
-        const int32_t filterStart, const int32_t rowOffset) override
+        const int32_t filterOffset, const int32_t rowOffset) override
     {
         curVectorBatch = vectorBatch;
         uint8_t *nullMap = nullptr;
 
-        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, 0);
         auto rowCount = static_cast<int32_t>(rowStates.size());
+        BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
 
-        Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterStart));
+        Vector<bool> *booleanVector = static_cast<Vector<bool> *>(vectorBatch->Get(filterOffset));
         bool needFilterJude = DoNeedHandleAggFilter(booleanVector, rowOffset, rowCount);
         if (needFilterJude) {
             auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
