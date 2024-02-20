@@ -149,25 +149,13 @@ public:
         }
     }
 
-    static bool DoNeedHandleAggFilter(Vector<bool> *filterVec, const int32_t rowOffset, const int size)
+    static bool DoNeedHandleAggFilter(Vector<bool> *filterVec, const int32_t rowOffset, const int32_t size)
     {
-        auto filterValues = unsafe::UnsafeVector::GetRawValues(filterVec);
-        const bool *p = filterValues + rowOffset;
-        // Check if first bool differs from expected.
-        if (*p) {
-            return true;
-        }
-        uint32_t nearHalf;
-        uint32_t farHalf;
-        uint64_t bytesStream = sizeof(bool) * size;
-        while (bytesStream > 1) {
-            nearHalf = bytesStream / 2;
-            farHalf = bytesStream - nearHalf;
-            if (memcmp(p, p + farHalf, nearHalf)) {
-                // first half and last half differ, so null exist.
+        int32_t rowEnd = rowOffset + size;
+        for (int32_t start = rowOffset, end = rowEnd - 1; start <= end; ++start, --end) {
+            if (!filterVec->GetValue(start) || !filterVec->GetValue(end)) {
                 return true;
             }
-            bytesStream = farHalf; // for odd length, new size should be farHalf
         }
         return false;
     }
