@@ -1484,6 +1484,10 @@ TEST(NativeOmniSortTest, TestSortZeroRowCountInMemory)
 
 TEST(NativeOmniSortTest, TestSortSpillWithInvalidConfig)
 {
+    const int32_t dataSize = 6;
+    int32_t data1[dataSize] = {5, 2, 4, 1, 3, 0};
+    int64_t data2[dataSize] = {11, 44, 22, 55, 33, 66};
+
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
     auto sourceTypesSize = sourceTypes.GetSize();
     int32_t outputCols[] = {0, 1};
@@ -1491,23 +1495,36 @@ TEST(NativeOmniSortTest, TestSortSpillWithInvalidConfig)
     int32_t ascendings[] = {1, 1};
     int32_t nullFirsts[] = {0, 0};
 
-    SpillConfig spillConfig1(SPILL_CONFIG_NONE, true, "", UINT64_MAX);
+    SparkSpillConfig spillConfig1("", UINT64_MAX, 5);
     OperatorConfig operatorConfig1(spillConfig1);
-    EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
-        ascendings, nullFirsts, sourceTypesSize, operatorConfig1),
-        omniruntime::exception::OmniException);
+    auto operatorFactory1 = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
+        sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig1);
+    auto operator1 = operatorFactory1->CreateOperator();
+    auto vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    EXPECT_THROW(operator1->AddInput(vecBatch1), omniruntime::exception::OmniException);
+    omniruntime::op::Operator::DeleteOperator(operator1);
+    DeleteSortOperatorFactory(operatorFactory1);
 
-    SpillConfig spillConfig2(SPILL_CONFIG_NONE, true, "/", UINT64_MAX);
+    SparkSpillConfig spillConfig2("/", UINT64_MAX, 5);
     OperatorConfig operatorConfig2(spillConfig2);
-    EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
-        ascendings, nullFirsts, sourceTypesSize, operatorConfig2),
-        omniruntime::exception::OmniException);
+    auto operatorFactory2 = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
+        sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig2);
+    auto operator2 = operatorFactory2->CreateOperator();
+    auto vecBatch2 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    EXPECT_THROW(operator2->AddInput(vecBatch2), omniruntime::exception::OmniException);
+    omniruntime::op::Operator::DeleteOperator(operator2);
+    DeleteSortOperatorFactory(operatorFactory2);
 
-    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, "+-ab23", UINT64_MAX);
+    SparkSpillConfig spillConfig3("/opt/+-ab23", UINT64_MAX, 5);
     OperatorConfig operatorConfig3(spillConfig3);
-    EXPECT_THROW(SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize, sortCols,
-        ascendings, nullFirsts, sourceTypesSize, operatorConfig3),
-        omniruntime::exception::OmniException);
+    auto operatorFactory3 = SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, sourceTypesSize,
+        sortCols, ascendings, nullFirsts, sourceTypesSize, operatorConfig3);
+    auto operator3 = operatorFactory3->CreateOperator();
+    auto vecBatch3 = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    EXPECT_THROW(operator3->AddInput(vecBatch3), omniruntime::exception::OmniException);
+    omniruntime::op::Operator::DeleteOperator(operator3);
+    DeleteSortOperatorFactory(operatorFactory3);
+    rmdir("/opt/+-ab23");
 }
 
 TEST(NativeOmniSortTest, TestSortSpillWithDictionaryAndNulls)

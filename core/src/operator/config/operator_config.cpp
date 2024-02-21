@@ -171,15 +171,9 @@ static void CreateSpillDirectories(char *spillPathChars)
     }
 }
 
-void OperatorConfig::CheckOperatorConfig(const OperatorConfig &operatorConfig)
+void OperatorConfig::CheckSpillConfig(SpillConfig *spillConfig)
 {
-    auto inputSpillConfig = operatorConfig.GetSpillConfig();
-    auto spillEnabled = inputSpillConfig->IsSpillEnabled();
-    if (!spillEnabled) {
-        return;
-    }
-
-    auto &spillPath = inputSpillConfig->GetSpillPath();
+    auto &spillPath = spillConfig->GetSpillPath();
     if (spillPath.empty()) {
         // enable spill but the spill path is invalid
         throw exception::OmniException(GetErrorCode(ErrorCode::EMPTY_PATH), GetErrorMessage(ErrorCode::EMPTY_PATH));
@@ -188,9 +182,7 @@ void OperatorConfig::CheckOperatorConfig(const OperatorConfig &operatorConfig)
     auto spillPathChars = spillPath.c_str();
     CreateSpillDirectories(const_cast<char *>(spillPathChars));
 
-    CheckHasEnoughDiskSpace(spillPathChars, *inputSpillConfig);
-
-    InitRootSpillTracker(inputSpillConfig->GetMaxSpillBytes());
+    CheckHasEnoughDiskSpace(spillPathChars, *spillConfig);
 }
 }
 }

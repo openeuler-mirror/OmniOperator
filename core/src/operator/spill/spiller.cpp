@@ -47,7 +47,6 @@ ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRa
 
         auto result = writer->WriteVecBatch(spillVecBatch, vecBatchSize);
         if (result != ErrorCode::SUCCESS) {
-            spillTracker->Free(vecBatchSize);
             return result;
         }
         totalRowOffset += rowCount;

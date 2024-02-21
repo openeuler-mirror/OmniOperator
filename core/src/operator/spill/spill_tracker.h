@@ -18,33 +18,18 @@ public:
 
     virtual bool CheckIfExceedAndReserve(uint64_t bytes) = 0;
 
-    virtual void Free(uint64_t bytes) = 0;
-
     virtual uint64_t GetSpilledBytes() = 0;
 };
 
 class ChildSpillTracker : public SpillTracker {
 public:
-    explicit ChildSpillTracker(SpillTracker *parentSpillTracker)
-        : parentSpillTracker(parentSpillTracker), spilledBytes(0)
+    explicit ChildSpillTracker(SpillTracker *parentSpillTracker, uint64_t maxSpillBytes)
+        : parentSpillTracker(parentSpillTracker), spilledBytes(0), maxSpillBytes(maxSpillBytes)
     {}
 
     ~ChildSpillTracker() override = default;
 
-    bool CheckIfExceedAndReserve(uint64_t bytes) override
-    {
-        if (parentSpillTracker->CheckIfExceedAndReserve(bytes)) {
-            return true;
-        } else {
-            spilledBytes += bytes;
-            return false;
-        }
-    }
-
-    void Free(uint64_t bytes) override
-    {
-        parentSpillTracker->Free(bytes);
-    }
+    bool CheckIfExceedAndReserve(uint64_t bytes) override;
 
     uint64_t GetSpilledBytes() override
     {
@@ -54,6 +39,7 @@ public:
 private:
     SpillTracker *parentSpillTracker;
     uint64_t spilledBytes;
+    uint64_t maxSpillBytes;
 };
 
 class RootSpillTracker : public SpillTracker {
@@ -74,14 +60,9 @@ public:
 
     bool CheckIfExceedAndReserve(uint64_t bytes) override;
 
-    void Free(uint64_t bytes) override
+    SpillTracker *CreateSpillTracker(uint64_t maxSpillBytes)
     {
-        spilledBytes.fetch_sub(bytes);
-    }
-
-    SpillTracker *CreateSpillTracker()
-    {
-        return new ChildSpillTracker(this);
+        return new ChildSpillTracker(this, maxSpillBytes);
     }
 
 private:

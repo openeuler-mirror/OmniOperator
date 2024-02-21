@@ -814,21 +814,21 @@ TEST(HashAggregationWithExprOperatorTest, test_agg_min_max_avg)
     // aggKeys
     std::vector<Expr *> aggKeys0 = { new FieldExpr(3, IntType()) };
     std::vector<Expr *> aggKeys1 = { new FieldExpr(3, IntType()) };
-    std::vector<Expr *> aggKeys2 = { new FuncExpr("CAST", std::vector<Expr *>{ new FieldExpr(3, IntType()) },
+    std::vector<Expr *> aggKeys2 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(3, IntType()) },
         LongType()) };
     std::vector<Expr *> aggKeys3 = { new FieldExpr(4, IntType()) };
     std::vector<Expr *> aggKeys4 = { new FieldExpr(4, IntType()) };
-    std::vector<Expr *> aggKeys5 = { new FuncExpr("CAST", std::vector<Expr *>{ new FieldExpr(4, IntType()) },
+    std::vector<Expr *> aggKeys5 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(4, IntType()) },
         LongType()) };
     std::vector<Expr *> aggKeys6 = { new FieldExpr(5, IntType()) };
     std::vector<Expr *> aggKeys7 = { new FieldExpr(5, IntType()) };
-    std::vector<Expr *> aggKeys8 = { new FuncExpr("CAST", std::vector<Expr *>{ new FieldExpr(5, IntType()) },
+    std::vector<Expr *> aggKeys8 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(5, IntType()) },
         LongType()) };
     std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys0, aggKeys1, aggKeys2,
         aggKeys3, aggKeys4, aggKeys5,
         aggKeys6, aggKeys7, aggKeys8 };
 
-    std::vector<omniruntime::expressions::Expr *> aggFilters{};
+    std::vector<omniruntime::expressions::Expr *> aggFilters {};
     DataTypes aggOutputTypes0(std::vector<DataTypePtr>({ IntType() }));
     DataTypes aggOutputTypes1(std::vector<DataTypePtr>({ IntType() }));
     DataTypes aggOutputTypes2(std::vector<DataTypePtr>({ DoubleType(), LongType() }));
@@ -964,6 +964,10 @@ TEST(AggregationWithExprOperatorTest, test_agg_sum_literal)
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_invalid_config)
 {
+    const int32_t dataSize = 8;
+    int64_t data1[] = {2L, 5L, 8L, 11L, 14L, 17L, 20L, 23L};
+    int64_t data2[] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
+
     const int32_t groupByNum = 1;
     DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
@@ -983,14 +987,19 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_invalid_config
     auto outputPartialWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypes.size());
     std::vector<omniruntime::expressions::Expr *> aggFilters;
 
-    SpillConfig spillConfig(SPILL_CONFIG_NONE, true, "", INT64_MAX);
+    SparkSpillConfig spillConfig("", UINT64_MAX, 5);
     OperatorConfig operatorConfig(spillConfig);
-    EXPECT_THROW(new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters,
-        sourceTypes, aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, operatorConfig),
-        omniruntime::exception::OmniException);
+    auto aggWithExprOperatorFactory =
+        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, operatorConfig);
+    auto aggWithExprOperator = aggWithExprOperatorFactory->CreateOperator();
+    auto vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+    EXPECT_THROW(aggWithExprOperator->AddInput(vecBatch), omniruntime::exception::OmniException);
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
+    omniruntime::op::Operator::DeleteOperator(aggWithExprOperator);
+    delete aggWithExprOperatorFactory;
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_no_aggNum)
@@ -1147,18 +1156,18 @@ void TestHashAggSpillWithMultiRecords(std::vector<uint32_t> aggFuncTypes, DataTy
     varCharVector->SetNull(4);
 
     // agg(c2*5), agg(c3), agg(c4), agg(c5), agg(c6), agg(c7), agg(c8), agg(c9) group by c0%3, c1
-    int64_t data02[] = {20, 23};                                      // c0
-    int32_t data12[] = {5, 5};                                        // c1
-    int64_t data22[] = {7, 8};                                        // c2
-    int32_t data32[] = {7, 8};                                        // c3
-    int16_t data42[] = {7, 8};                                        // c4
-    bool data52[] = {false, false};                                   // c5
-    double data62[] = {-1.2, -1.2};                                   // c6
-    std::string data72[] = {"-1.20", "-1.20"};                        // c7
-    int64_t data82[] = {-120, -120};                                  // c8
+    int64_t data02[] = {20, 23};                                       // c0
+    int32_t data12[] = {5, 5};                                         // c1
+    int64_t data22[] = {7, 8};                                         // c2
+    int32_t data32[] = {7, 8};                                         // c3
+    int16_t data42[] = {7, 8};                                         // c4
+    bool data52[] = {false, false};                                    // c5
+    double data62[] = {-1.2, -1.2};                                    // c6
+    std::string data72[] = {"-1.20", "-1.20"};                         // c7
+    int64_t data82[] = {-120, -120};                                   // c8
     Decimal128 data9_2[] = {Decimal128("-1.20"), Decimal128("-1.20")}; // c9
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52,
-        data62, data72, data82, data9_2);
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52, data62,
+        data72, data82, data9_2);
 
     // groupByKeys
     LiteralExpr *modRight = new LiteralExpr(3, LongType());
@@ -1616,9 +1625,9 @@ void TestHashAggSpillWithNullRecords(std::vector<uint32_t> aggFuncTypes, DataTyp
     double data62[] = {0, 0};        // c6
     std::string data72[] = {"", ""}; // c7
     int64_t data82[] = {0, 0};       // c8
-    Decimal128 data9_2[] = {0, 0};    // c9
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52,
-        data62, data72, data82, data9_2);
+    Decimal128 data9_2[] = {0, 0};   // c9
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52, data62,
+        data72, data82, data9_2);
     for (int i = 0; i < 2; i++) {
         vecBatch2->Get(2)->SetNull(i);
         vecBatch2->Get(3)->SetNull(i);

@@ -88,7 +88,6 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
     int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField,
     const OperatorConfig &operatorConfig)
 {
-    OperatorConfig::CheckOperatorConfig(operatorConfig);
     auto operatorFactory = new WindowOperatorFactory(sourceTypesField, outputColsField, outputColsCountField,
         windowFunctionTypesField, windowFunctionCountField, partitionColsField, partitionCountField,
         preGroupedColsField, preGroupedCountField, sortColsField, sortAscendingsField, sortNullFirstsField,
@@ -426,20 +425,31 @@ uint64_t WindowOperator::GetSpilledBytes()
 
 ErrorCode WindowOperator::SpillToDisk()
 {
-    Sort();
+    auto rowCount = pagesIndex->GetRowCount();
+    if (rowCount <= 0) {
+        return ErrorCode::SUCCESS;
+    }
 
     if (spiller == nullptr) {
+        auto spillConfig = operatorConfig.GetSpillConfig();
+        OperatorConfig::CheckSpillConfig(spillConfig);
         size_t sortColsCount = sortCols.size();
         std::vector<SortOrder> sortOrders;
         for (size_t i = 0; i < sortColsCount; i++) {
-            SortOrder sortOrder{ sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
+            SortOrder sortOrder { sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
             sortOrders.emplace_back(sortOrder);
         }
-        spiller = new Spiller(sourceTypes, sortCols, sortOrders, operatorConfig.GetSpillConfig()->GetSpillPath());
+        spiller = new Spiller(sourceTypes, sortCols, sortOrders, spillConfig->GetSpillPath(),
+            spillConfig->GetMaxSpillBytes());
         hasSpill = true;
     }
 
-    return spiller->Spill(pagesIndex.get(), canInplaceSort, false);
+    Sort();
+
+    LogDebug("Spill data to disk starting in window operator, rowCount=%lld\n", rowCount);
+    auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, false);
+    LogDebug("Spill data to disk finished in window operator, rowCount=%lld\n", rowCount);
+    return result;
 }
 
 void WindowOperator::Sort()
@@ -456,8 +466,7 @@ void WindowOperator::Sort()
         pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
             positionCount);
     } else {
-        pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
-            positionCount);
+        pagesIndex->Sort(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0, positionCount);
     }
 }
 
@@ -587,13 +596,13 @@ bool WindowOperator::ProcessNextWindowPartition()
     inputVecBatchForAgg = make_unique<VectorBatch>(totalRowCount);
     inputVecBatchForAgg->ResizeVectorCount(1);
 
-    partition = make_unique<WindowPartition>(sourceTypes, pagesIndex.get(), 0, partitionRowCount,
-        outputCols.data(), outputColsCount, windowFunctions, peerGroupHashStrategy.get());
+    partition = make_unique<WindowPartition>(sourceTypes, pagesIndex.get(), 0, partitionRowCount, outputCols.data(),
+        outputColsCount, windowFunctions, peerGroupHashStrategy.get());
 
     return true;
 }
 
-template<typename T>
+template <typename T>
 static ALWAYS_INLINE bool ValueEqualsLastValue(vec::VectorBatch *partitionVecBatch, vec::VectorBatch *currentVecBatch,
     int32_t columnId, int32_t lastIdx, int32_t nextIdx)
 {

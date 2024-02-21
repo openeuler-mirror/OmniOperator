@@ -39,7 +39,6 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTy
     int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
     const OperatorConfig &operatorConfig)
 {
-    OperatorConfig::CheckOperatorConfig(operatorConfig);
     auto pOperatorFactory = new SortOperatorFactory(dataTypes, outputCols, outputColCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, operatorConfig);
     return pOperatorFactory;
@@ -149,22 +148,25 @@ ErrorCode SortOperator::SpillToDisk()
         return ErrorCode::SUCCESS;
     }
 
-    // first step prepare for sort
-    PrepareSort();
-
-    // second step sort
-    Sort();
-
     if (spiller == nullptr) {
+        auto spillConfig = operatorConfig.GetSpillConfig();
+        OperatorConfig::CheckSpillConfig(spillConfig);
         size_t sortColsCount = sortCols.size();
         std::vector<SortOrder> sortOrders;
         for (size_t i = 0; i < sortColsCount; i++) {
             SortOrder sortOrder { sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
             sortOrders.emplace_back(sortOrder);
         }
-        spiller = new Spiller(sourceTypes, sortCols, sortOrders, operatorConfig.GetSpillConfig()->GetSpillPath());
+        spiller = new Spiller(sourceTypes, sortCols, sortOrders, spillConfig->GetSpillPath(),
+            spillConfig->GetMaxSpillBytes());
         hasSpill = true;
     }
+
+    // first step prepare for sort
+    PrepareSort();
+
+    // second step sort
+    Sort();
 
     LogDebug("Spill data to disk starting in sort operator, rowCount=%lld\n", rowCount);
     auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort);

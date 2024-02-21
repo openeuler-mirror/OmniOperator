@@ -166,8 +166,8 @@ int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
         // do filter and update newInputVecBatch
         AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
     }
-    hashAggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
+    hashAggOperator->AddInput(newInputVecBatch);
     return 0;
 }
 

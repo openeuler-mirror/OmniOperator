@@ -111,7 +111,6 @@ public:
         if (isEnd) {
             currentRowIdx = 0;
             currentRowCount = 0;
-            spillTracker->Free(reader->GetFileLength());
             return result;
         }
 
