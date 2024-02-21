@@ -212,8 +212,9 @@ void JoinResultBuilder::UpdateLeftAntiJoinHandler(int32_t addressPosition,
 
 int32_t JoinResultBuilder::CollectRowsInfo(std::vector<std::pair<int32_t, int32_t>> &leftMeta,
     std::vector<std::pair<int32_t, int32_t>> &rightMeta,
-    std::vector<bool> &canFreeRightBatches, int32_t inputSize, int32_t &counter)
+    std::vector<bool> &canFreeRights, int32_t inputSize, int32_t &counter)
 {
+    bool canFreeRight = false;
     for (int32_t addressPosition = addressOffset; addressPosition < inputSize; addressPosition++) {
         int64_t streamedRowAddress = streamedTableValueAddresses[addressPosition];
         int64_t bufferedRowAddress = bufferedTableValueAddresses[addressPosition];
@@ -221,11 +222,13 @@ int32_t JoinResultBuilder::CollectRowsInfo(std::vector<std::pair<int32_t, int32_
         int32_t leftRowId = DecodePosition(streamedRowAddress);
         int32_t rightBatchId = DecodeSliceIndex(bufferedRowAddress);
         int32_t rightRowId = DecodePosition(bufferedRowAddress);
+        canFreeRight = CanFreeRightBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId);
+
         bool isEligible = IsJoinPositionEligible(leftBatchId, leftRowId, rightBatchId, rightRowId);
         if (isEligible) {
             leftMeta.emplace_back(std::make_pair(leftBatchId, leftRowId));
             rightMeta.emplace_back(std::make_pair(rightBatchId, rightRowId));
-            SetCanFreeRightBatches(isPreKeyMatched[addressPosition], leftBatchId, rightBatchId, canFreeRightBatches);
+            canFreeRights.emplace_back(canFreeRight);
             ++counter;
         }
         ++addressOffset;
@@ -250,9 +253,9 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
     std::vector<std::pair<int32_t, int32_t>> rightMeta;
     rightMeta.reserve(inputSize - initialAddressOffset);
     int32_t counter = buildRowCount;
-    std::vector<bool> canFreeRightBatches;
-    canFreeRightBatches.reserve(inputSize - initialAddressOffset);
-    auto result = CollectRowsInfo(leftMeta, rightMeta, canFreeRightBatches, inputSize, counter);
+    std::vector<bool> canFreeRights;
+    canFreeRights.reserve(inputSize - initialAddressOffset);
+    auto result = CollectRowsInfo(leftMeta, rightMeta, canFreeRights, inputSize, counter);
 
     // put all the positions belonging to the same batch together
     auto leftGroupedRowsPerBatchId = std::vector<std::pair<int32_t, std::vector<int32_t>>>();
@@ -295,7 +298,7 @@ int32_t JoinResultBuilder::ConstructInnerJoinOutput()
         }
         auto rowsCount = rowIds.size();
         rightRowsCounter += rowsCount;
-        if (canFreeRightBatches[rightRowsCounter - 1]) {
+        if (canFreeRights[rightRowsCounter - 1]) {
             this->rightTablePagesIndex->FreeBeforeVecBatch(batchId);
         }
         buildRowCount+= rowsCount;
@@ -574,15 +577,13 @@ void JoinResultBuilder::FreeVectorBatches(bool isPreMatched, int32_t leftBatchId
     }
 }
 
-void JoinResultBuilder::SetCanFreeRightBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId,
-    std::vector<bool> &canFreeRightBatches)
+bool JoinResultBuilder::CanFreeRightBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId)
 {
     if (!isPreMatched && leftBatchId > lastUnMatchedStreamedBatchId) {
-        canFreeRightBatches.emplace_back(true);
         lastUnMatchedStreamedBatchId = leftBatchId;
-    } else {
-        canFreeRightBatches.emplace_back(false);
+        return true;
     }
+    return false;
 }
 
 VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, std::vector<DataTypePtr> &dataTypes, int32_t rowCount)

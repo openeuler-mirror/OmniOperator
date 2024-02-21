@@ -135,10 +135,13 @@ private:
     };
 
     void JoinFilterCodeGen(OverflowConfig *overflowConfig);
+
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
-    void SetCanFreeRightBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId,
-        std::vector<bool> &canFreeRightBatches);
+
+    bool CanFreeRightBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
+
     VectorBatch *NewEmptyVectorBatch() const;
+
     void UpdateLeftAntiJoinHandler(int32_t addressPosition, std::vector<int8_t> &isSameBufferedKeyMatched,
         int32_t inputSize);
 
