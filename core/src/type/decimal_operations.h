@@ -18,6 +18,7 @@
 #include "util/omni_exception.h"
 #include "decimal_base.h"
 #include "decimal128.h"
+#include "base_operations.h"
 
 namespace omniruntime {
 namespace type {
@@ -151,27 +152,33 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
     int32_t exponent = 0;
     uint64_t len = s.size();
     int32_t offset = 0;
-    while (s[offset] == ' ') {
-        offset += 1;
-    }
+    while (offset < len && s[offset] == ' ') offset++;
+    if (offset == len) return OpStatus::FAIL;
+    int end = len - 1;
+    while (end > offset && s[end] == ' ') end--;
+
     if (s[offset] == '-') {
         isNeg = true;
         offset++;
-    } else if (s[0] == '+') {
+    } else if (s[offset] == '+') {
         offset++;
     }
-    if (s[offset] == '0' && s[offset + 1] == '.') {
-        offset += 2;
+    while (offset < len && s[offset] == '0') offset++;
+    if (offset > end) {
+        precision++;
+        return OpStatus::SUCCESS;
+    }
+    if (s[offset] == '.') {
+        offset += 1;
         isDot = true;
     }
     if (!isdigit(s[offset])) {
         return OpStatus::FAIL;
     }
     bool isOverflow = false;
-    for (; offset < len; offset++) {
+    for (; offset <= end; offset++) {
         if (isdigit(s[offset])) {
-            precision++;
-            if (precision > 38) {
+            if (precision >= 38) {
                 if constexpr (allowDecimalRoundUp) {
                     isOverflow = true;
                     break;
@@ -179,6 +186,7 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
                     return OpStatus::OP_OVERFLOW;
                 }
             }
+            precision++;
             result *= 10;
             result += int(s[offset]) - 48;
             if (isDot) {
@@ -189,10 +197,6 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
         } else if (s[offset] == 'e' || s[offset] == 'E') {
             offset++;
             isExp = true;
-            break;
-        } else if (s[offset] == ' ') {
-            offset++;
-            isSpace = true;
             break;
         } else {
             return OpStatus::FAIL;
@@ -210,15 +214,12 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
                 result++;
             }
             offset++;
-            for (; offset < len; offset++) {
-                if (isdigit(s[offset])) {
-                    offset++;
+            for (; offset <= end; offset++) {
+                if (!isdigit(s[offset])) {
+                    return OpStatus::FAIL;
                 } else if (s[offset] == 'e' || s[offset] == 'E') {
-                    offset++;
                     isExp = true;
                     break;
-                } else {
-                    return OpStatus::FAIL;
                 }
             }
         }
@@ -226,7 +227,7 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
 
     bool isExpNeg = false;
     if (isExp) {
-        for (; offset < len; offset++) {
+        for (; offset <= end; offset++) {
             if (isdigit(s[offset])) {
                 exponent *= 10;
                 exponent += int(s[offset]) - 48;
@@ -250,14 +251,6 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
     }
     if (exponent + precision - scale > 38) {
         return OpStatus::OP_OVERFLOW;
-    }
-
-    if (isSpace) {
-        for (; offset < len; offset++) {
-            if (s[offset] != ' ') {
-                return OpStatus::FAIL;
-            }
-        }
     }
 
     scale -= exponent;
@@ -1127,9 +1120,15 @@ public:
         if (DecimalFromString<allowDecimalRoundUp>(s, result, inputScale, precision) != OpStatus::SUCCESS) {
             overflow = OpStatus::OP_OVERFLOW;
         }
-        if (result > INT64_MAX || result < INT64_MIN) {
+        if (precision - inputScale > 18) {
             overflow = OpStatus::OP_OVERFLOW;
         }
+        int32_t newPrecision = precision - 18;
+        if (newPrecision > 0) {
+            DivideRoundUp(result, static_cast<int128_t>(TenOfScaleMultipliers[newPrecision]), result);
+            inputScale -= newPrecision;
+        }
+
         scale = inputScale;
         val = static_cast<int64_t>(result);
     }

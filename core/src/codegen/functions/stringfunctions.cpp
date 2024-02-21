@@ -536,20 +536,19 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUp(int64_t contextPtr, co
         return 0;
     }
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
-    if (!regex_match(s, g_decimalRegex)) {
-        std::ostringstream errorMessage;
-        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
-                     "). Value is not a number.";
-        SetError(contextPtr, errorMessage.str());
-        return 0;
-    }
     Decimal64<true> result(s);
     result.ReScale(outScale);
-    if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
+    if (result.IsOverflow(outPrecision) == OpStatus::OP_OVERFLOW) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << std::string(str, strLen) << "' to DECIMAL(" << outPrecision <<
                      ", " << outScale << "). Value too large.";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+    if (result.IsOverflow(outPrecision) == OpStatus::FAIL) {
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
+                     "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
@@ -812,11 +811,6 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUpRetNull(bool *isNull, c
     int32_t outPrecision, int32_t outScale)
 {
     std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
-    if (!regex_match(s, g_decimalRegex)) {
-        *isNull = true;
-        return 0;
-    }
     Decimal64<true> result(std::string(str, strLen));
     result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
