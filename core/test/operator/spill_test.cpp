@@ -28,7 +28,7 @@ TEST(SpillTest, TestWriteRead)
 
     std::string path = TestUtil::GenerateSpillPath();
     mkdir(path.c_str(), 0750);
-    ChildSpillTracker spillTracker(&(GetRootSpillTracker()));
+    ChildSpillTracker spillTracker(&(GetRootSpillTracker()), UINT64_MAX);
 
     SpillWriter writer(sourceTypes, path);
     writer.WriteVecBatch(vecBatch, 100);
@@ -80,7 +80,7 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
         sortOrders.emplace_back(sortOrder);
     }
 
-    Spiller spiller(sourceTypes, sortCols, sortOrders, path);
+    Spiller spiller(sourceTypes, sortCols, sortOrders, path, 50);
     auto status = spiller.Spill(&pagesIndex, false, false);
     ASSERT_EQ(status, ErrorCode::EXCEED_SPILL_THRESHOLD);
     ASSERT_EQ(spiller.GetSpilledBytes(), 0);

@@ -341,7 +341,7 @@ void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount)
     std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
     vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
-    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
+    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
     auto containerVector = new ContainerVector(rowCount, vectorAddresses, dataTypes);
     vecBatch->Append(containerVector);
 }
@@ -528,14 +528,19 @@ void HashAggregationOperator::ConvertHashMap2PageIndex()
 void HashAggregationOperator::SpillHashMap()
 {
     if (spiller == nullptr) {
+        auto spillConfig = operatorConfig.GetSpillConfig();
+        OperatorConfig::CheckSpillConfig(spillConfig);
         InitSpillInfos();
-        spiller = new Spiller(DataTypes(spillTypes), groupByClomIdx, sortOrders,
-            operatorConfig.GetSpillConfig()->GetSpillPath());
+        spiller = new Spiller(DataTypes(spillTypes), groupByClomIdx, sortOrders, spillConfig->GetSpillPath(),
+            spillConfig->GetMaxSpillBytes());
         hasSpill = true;
     }
     while (spillOutputState.hasBeenOutputNum != this->serialize->GetElementsSize()) {
         ConvertHashMap2PageIndex();
+        auto rowCount = pagesIndex->GetRowCount();
+        LogDebug("Spill data to disk starting in hash aggregation operator, rowCount=%lld\n", rowCount);
         spiller->Spill(pagesIndex, false, false);
+        LogDebug("Spill data to disk finished in hash aggregation operator, rowCount=%lld\n", rowCount);
         pagesIndex->Clear();
     }
     spillOutputState.hasBeenOutputNum = 0;

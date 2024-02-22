@@ -254,7 +254,7 @@ public:
     }
     static OperatorConfig DeserializeOperatorConfig(const std::string &configString);
 
-    static void CheckOperatorConfig(const OperatorConfig &operatorConfig);
+    static void CheckSpillConfig(SpillConfig *spillConfig);
 
 private:
     SpillConfig *spillConfig = nullptr;

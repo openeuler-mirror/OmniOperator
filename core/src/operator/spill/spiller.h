@@ -63,7 +63,7 @@ private:
 class Spiller {
 public:
     Spiller(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-        const std::vector<SortOrder> &sortOrders, const std::string &spillPath)
+        const std::vector<SortOrder> &sortOrders, const std::string &spillPath, uint64_t maxSpillBytes)
         : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders)
     {
         dirPaths.emplace_back(spillPath);
@@ -73,7 +73,7 @@ public:
         }
 
         maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), dataTypeCount);
-        spillTracker = GetRootSpillTracker().CreateSpillTracker();
+        spillTracker = GetRootSpillTracker().CreateSpillTracker(maxSpillBytes);
     }
 
     ~Spiller()

@@ -8,12 +8,23 @@
 
 namespace omniruntime {
 namespace op {
+bool ChildSpillTracker::CheckIfExceedAndReserve(uint64_t bytes)
+{
+    if (spilledBytes + bytes >= maxSpillBytes) {
+        LogInfo("Spilled size exceeded the spill limit of %llu.", maxSpillBytes);
+        return true;
+    } else {
+        spilledBytes += bytes;
+        return false;
+    }
+}
+
 RootSpillTracker::~RootSpillTracker() = default;
 
 bool RootSpillTracker::CheckIfExceedAndReserve(uint64_t bytes)
 {
     if (spilledBytes + bytes >= maxBytes) {
-        LogInfo("Spilled size exceeded the spill limit of %lu.", maxBytes);
+        LogInfo("Spilled size exceeded the spill limit of %llu.", maxBytes);
         return true;
     }
 

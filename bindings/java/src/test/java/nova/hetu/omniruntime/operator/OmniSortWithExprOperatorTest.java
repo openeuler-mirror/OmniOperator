@@ -32,7 +32,6 @@ import nova.hetu.omniruntime.vector.VecBatch;
 import org.testng.annotations.Test;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.UUID;
@@ -51,8 +50,7 @@ public class OmniSortWithExprOperatorTest {
     private final long MAX_SPILL_BYTES = 20 * 1024 * 1024;
 
     private String generateSpillPath() {
-        Path path = Paths.get("");
-        return path.toAbsolutePath() + File.separator + System.currentTimeMillis();
+        return "/opt" + File.separator + System.currentTimeMillis();
     }
 
     /**
@@ -213,9 +211,10 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {getOmniJsonFieldReference(1, 1), getOmniJsonFieldReference(1, 0)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
+        String spillPath = generateSpillPath();
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 5)));
+                new OperatorConfig(new SparkSpillConfig(true, spillPath, MAX_SPILL_BYTES, 5)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceData1 = {{23, 23, 23, 23, 23, 23, 23, 23, 23, 23}, {1, 1, 1, 2, 1, 1, 1, 1, 2, 2},
@@ -252,6 +251,8 @@ public class OmniSortWithExprOperatorTest {
         assertTrue(spilledBytes != 0);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
+        File spillDir = new File(spillPath);
+        spillDir.delete();
     }
 
     /**
@@ -264,9 +265,10 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {getOmniJsonFieldReference(1, 2), getOmniJsonFieldReference(1, 1)};
         int[] ascendings = {0, 1};
         int[] nullFirsts = {0, 0};
+        String spillPath = generateSpillPath();
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 5)));
+                new OperatorConfig(new SparkSpillConfig(true, spillPath, MAX_SPILL_BYTES, 5)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceData1 = {{23, 23, 23, 23, 23, 23, 23, 23, 23, 23}, {1, 1, 1, 2, 1, 1, 1, 1, 2, 2},
@@ -301,6 +303,8 @@ public class OmniSortWithExprOperatorTest {
         freeVecBatch(resultVecBatch);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
+        File spillDir = new File(spillPath);
+        spillDir.delete();
     }
 
     /**
@@ -313,9 +317,10 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
+        String spillPath = generateSpillPath();
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 5)));
+                new OperatorConfig(new SparkSpillConfig(true, spillPath, MAX_SPILL_BYTES, 5)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceDatas1 = {{5, 3, 2, 6, 1}, {5L, 3L, 2L, 6L, 1L}};
@@ -341,6 +346,8 @@ public class OmniSortWithExprOperatorTest {
         freeVecBatch(resultVecBatch);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
+        File spillDir = new File(spillPath);
+        spillDir.delete();
     }
 
     /**
@@ -353,9 +360,10 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(1, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
+        String spillPath = generateSpillPath();
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 10000)));
+                new OperatorConfig(new SparkSpillConfig(true, spillPath, MAX_SPILL_BYTES, 10000)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         int maxRowCntPerBatch = 131072; // 1M / (4+4)
@@ -412,6 +420,8 @@ public class OmniSortWithExprOperatorTest {
         assertTrue(spilledBytes != 0);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
+        File spillDir = new File(spillPath);
+        spillDir.delete();
     }
 
     /**
@@ -424,9 +434,10 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
+        String spillPath = generateSpillPath();
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts,
-                new OperatorConfig(new SparkSpillConfig(true, generateSpillPath(), MAX_SPILL_BYTES, 1)));
+                new OperatorConfig(new SparkSpillConfig(true, spillPath, MAX_SPILL_BYTES, 1)));
         OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
 
         Object[][] sourceDatas1 = {{5}, {3L}};
@@ -452,6 +463,23 @@ public class OmniSortWithExprOperatorTest {
         freeVecBatch(resultVecBatch);
         sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
+        File spillDir = new File(spillPath);
+        spillDir.delete();
+    }
+
+    /**
+     * Test sort spill with null path
+     */
+    @Test(expectedExceptions = OmniRuntimeException.class, expectedExceptionsMessageRegExp = "Enable spill but do not config spill path.")
+    public void testSortSpillWithNullPath() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
+        int[] outputCols = {0, 1};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
+        int[] ascendings = {1, 1};
+        int[] nullFirsts = {0, 0};
+
+        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
+                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig(null, 1)));
     }
 
     /**
@@ -464,10 +492,8 @@ public class OmniSortWithExprOperatorTest {
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
-        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory1 = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig(null, 1)));
 
-        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory2 = new OmniSortWithExprOperatorFactory(sourceTypes,
+        OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
                 outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig("", 1)));
     }
 
@@ -482,24 +508,52 @@ public class OmniSortWithExprOperatorTest {
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig(true, "/opt",
-                MAX_SPILL_BYTES, 1)));
+                outputCols, sortKeys, ascendings, nullFirsts,
+                new OperatorConfig(new SparkSpillConfig(true, "/opt", MAX_SPILL_BYTES, 1)));
+        OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
+        Object[][] sourceDatas1 = {{5, 3}, {5L, 3L}};
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas1);
+        sortWithExprOperator.addInput(vecBatch);
+        Iterator<VecBatch> results = sortWithExprOperator.getOutput();
+
+        VecBatch resultVecBatch = results.next();
+        Object[][] expectedDatas = {{3, 5}, {3L, 5L}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+
+        freeVecBatch(resultVecBatch);
+        sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
     }
 
     /**
      * Test sort spill with invalid path
      */
+    @Test
     public void testSortSpillWithInvalidPath() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG};
         int[] outputCols = {0, 1};
         String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 1)};
         int[] ascendings = {1, 1};
         int[] nullFirsts = {0, 0};
+        String spillPath = "/opt/+-ab23";
         OmniSortWithExprOperatorFactory sortWithExprOperatorFactory = new OmniSortWithExprOperatorFactory(sourceTypes,
-                outputCols, sortKeys, ascendings, nullFirsts, new OperatorConfig(new SparkSpillConfig(true, "+-ab23",
-                MAX_SPILL_BYTES, 1)));
+                outputCols, sortKeys, ascendings, nullFirsts,
+                new OperatorConfig(new SparkSpillConfig(true, spillPath, MAX_SPILL_BYTES, 1)));
+        OmniOperator sortWithExprOperator = sortWithExprOperatorFactory.createOperator();
+        Object[][] sourceDatas1 = {{5, 3}, {5L, 3L}};
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas1);
+        sortWithExprOperator.addInput(vecBatch);
+        Iterator<VecBatch> results = sortWithExprOperator.getOutput();
+
+        VecBatch resultVecBatch = results.next();
+        Object[][] expectedDatas = {{3, 5}, {3L, 5L}};
+        assertVecBatchEquals(resultVecBatch, expectedDatas);
+
+        freeVecBatch(resultVecBatch);
+        sortWithExprOperator.close();
         sortWithExprOperatorFactory.close();
+        File spillDir = new File(spillPath);
+        spillDir.delete();
     }
 
     /**

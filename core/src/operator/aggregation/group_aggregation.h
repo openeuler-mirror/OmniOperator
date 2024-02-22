@@ -347,9 +347,7 @@ public:
           aggOutputTypes(aggOutputTypes),
           aggFuncTypesVector(aggFuncTypes),
           operatorConfig(operatorConfig)
-    {
-        OperatorConfig::CheckOperatorConfig(operatorConfig);
-    }
+    {}
 
     HashAggregationOperatorFactory(std::vector<uint32_t> &groupByCol, const DataTypes &groupInputTypes,
         std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,
@@ -394,9 +392,7 @@ public:
           aggFuncTypesVector(aggFuncTypes),
           hasAggFilters(hasAggFilters),
           operatorConfig(operatorConfig)
-    {
-        OperatorConfig::CheckOperatorConfig(operatorConfig);
-    }
+    {}
 
     ~HashAggregationOperatorFactory() override = default;
     Operator *CreateOperator() override;

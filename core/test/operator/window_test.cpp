@@ -2433,9 +2433,13 @@ TEST(NativeOmniWindowOperatorTest, testFrameUnBounded)
 
 TEST(NativeOmniWindowOperatorTest, testWindowSpillWithInvalidConfig)
 {
-    // construct the input data
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType() }));
+    const int32_t dataSize = 6;
+    int32_t data1[dataSize] = {5, 2, 4, 1, 3, 0};
+    int64_t data2[dataSize] = {11, 44, 22, 55, 33, 66};
+    double data3[dataSize] = {2.3, 5.666, 98.001, 23.0, 0.2, -0.2323};
+    int16_t data4[dataSize] = {0, 2, -2, 3, 9, 6};
 
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType() }));
     int32_t outputCols[4] = {0, 1, 2, 3};
     int32_t sortCols[1] = {1};
     int32_t ascendings[1] = {false};
@@ -2455,29 +2459,42 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithInvalidConfig)
     DataTypes allTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), LongType() }));
     int32_t argumentChannels[0] = {};
 
-    SpillConfig spillConfig1(SPILL_CONFIG_NONE, true, "", MAX_SPILL_BYTES);
+    SparkSpillConfig spillConfig1("", UINT64_MAX, 5);
     OperatorConfig operatorConfig1(spillConfig1);
-    EXPECT_THROW(WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4, windowFunctionTypes, 1,
-        partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1, preSortedChannelPrefix,
-        expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes, windowFrameStartTypes,
-        windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig1),
-        omniruntime::exception::OmniException);
+    auto operatorFactory1 = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4,
+        windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig1);
+    auto operator1 = operatorFactory1->CreateOperator();
+    auto vecBatch1 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+    EXPECT_THROW(operator1->AddInput(vecBatch1), omniruntime::exception::OmniException);
+    omniruntime::op::Operator::DeleteOperator(operator1);
+    delete operatorFactory1;
 
-    SpillConfig spillConfig2(SPILL_CONFIG_NONE, true, "+-ab23", UINT64_MAX);
+    SparkSpillConfig spillConfig2("/opt/+-ab23", UINT64_MAX, 5);
     OperatorConfig operatorConfig2(spillConfig2);
-    EXPECT_THROW(WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4, windowFunctionTypes, 1,
-        partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1, preSortedChannelPrefix,
-        expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes, windowFrameStartTypes,
-        windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig2),
-        omniruntime::exception::OmniException);
+    auto operatorFactory2 = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4,
+        windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
+        preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
+        windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig2);
+    auto operator2 = operatorFactory2->CreateOperator();
+    auto vecBatch2 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+    EXPECT_THROW(operator2->AddInput(vecBatch2), omniruntime::exception::OmniException);
+    omniruntime::op::Operator::DeleteOperator(operator2);
+    delete operatorFactory2;
+    rmdir("/opt/+-ab23");
 
-    SpillConfig spillConfig3(SPILL_CONFIG_NONE, true, "/", MAX_SPILL_BYTES);
+    SparkSpillConfig spillConfig3("/", UINT64_MAX, 5);
     OperatorConfig operatorConfig3(spillConfig3);
-    auto operatorFactory = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4,
+    auto operatorFactory3 = WindowOperatorFactory::CreateWindowOperatorFactory(sourceTypes, outputCols, 4,
         windowFunctionTypes, 1, partitionCols, 1, preGroupedCols, 0, sortCols, ascendings, nullFirsts, 1,
         preSortedChannelPrefix, expectedPositions, allTypes, argumentChannels, 0, windowFrameTypes,
         windowFrameStartTypes, windowFrameStartChannels, windowFrameEndTypes, windowFrameEndChannels, operatorConfig3);
-    delete operatorFactory;
+    auto operator3 = operatorFactory3->CreateOperator();
+    auto vecBatch3 = CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
+    EXPECT_THROW(operator3->AddInput(vecBatch3), omniruntime::exception::OmniException);
+    omniruntime::op::Operator::DeleteOperator(operator3);
+    delete operatorFactory3;
 }
 
 TEST(NativeOmniWindowOperatorTest, testWindowSpillWithRowNumberPartition)
@@ -2530,7 +2547,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithRowNumberPartition)
     int16_t expectData4[DATA_SIZE] = {2, 5, 1, 4, 0, 3};
     int64_t expectData5[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     VectorBatch *expectVecBatch =
-            CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
+        CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3, expectData4, expectData5);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
@@ -2601,7 +2618,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillRowNumber)
 
 TEST(NativeOmniWindowOperatorTest, testWindowSpillWithRankPartition)
 {
-// construct the input data
+    // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
@@ -2721,7 +2738,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithRank)
 
 TEST(NativeOmniWindowOperatorTest, testWindowSpillWithAggregationPartitionWithNull)
 {
-// construct input data
+    // construct input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType() }));
     int32_t data0[DATA_SIZE] = {0, 1, 2, 0, 1, 2};
     int64_t data1[DATA_SIZE] = {8, 1, 2, 8, 4, 5};
@@ -3080,7 +3097,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithAggregationPartitionWithNu
 
 TEST(NativeOmniWindowOperatorTest, testWindowSpillWithRankWithAllDataTypes)
 {
-// construct the input data
+    // construct the input data
     DataTypes sourceTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(omniruntime::type::DAY),
         Date32Type(omniruntime::type::MILLI), LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(),
         VarcharType(3), Decimal128Type(2, 2), CharType(3), ShortType() }));
@@ -4771,7 +4788,7 @@ TEST(NativeOmniWindowOperatorTest, testWindowSpillWithFrameBoundedN)
     int64_t expectData6[myDataSize] = {3, 4, 3, 2, 3, 4, 4, 4, 4, 3, 2, 1};
 
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, myDataSize, expectData1, expectData2, expectData3,
-                                                    expectData4, expectData5, expectData6);
+        expectData4, expectData5, expectData6);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
