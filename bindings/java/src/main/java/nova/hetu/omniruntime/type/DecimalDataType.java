@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.type;
@@ -13,7 +13,7 @@ import java.util.Objects;
  *
  * @since 2022-03-10
  */
-public class DecimalDataType extends DataType {
+public abstract class DecimalDataType extends DataType {
     private static final long serialVersionUID = -3389964658615782592L;
 
     @JsonProperty

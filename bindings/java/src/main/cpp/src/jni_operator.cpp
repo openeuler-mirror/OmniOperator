@@ -121,8 +121,8 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
 {
     int32_t errNo = 0;
     JNI_METHOD_START
-    auto *vecBatch = (VectorBatch *)jVecBatchAddress;
-    auto *nativeOperator = (Operator *)jOperatorAddress;
+    auto *vecBatch = reinterpret_cast<VectorBatch *>(jVecBatchAddress);
+    auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddress);
     RecordInputVectorsStack(vecBatch, env);
     errNo = nativeOperator->AddInput(vecBatch);
     JNI_METHOD_END(errNo)
@@ -143,7 +143,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
             "The class VecBatch or OmniResult has not load yet.");
     }
 
-    auto *nativeOperator = (Operator *)jOperatorAddr;
+    auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddr);
     VectorBatch *outputVecBatch = nullptr;
     JNI_METHOD_START
     nativeOperator->GetOutput(&outputVecBatch);
@@ -164,7 +164,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNative(JNIEnv *env, jobject jObj,
     jlong jOperatorAddr)
 {
-    auto *nativeOperator = (Operator *)jOperatorAddr;
+    auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddr);
     Operator::DeleteOperator(nativeOperator);
 }
 

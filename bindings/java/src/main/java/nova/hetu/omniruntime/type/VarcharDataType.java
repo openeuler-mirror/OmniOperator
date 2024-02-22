@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.type;
@@ -39,11 +39,7 @@ public class VarcharDataType extends DataType {
      */
     public VarcharDataType(@JsonProperty("width") int width) {
         super(DataTypeId.OMNI_VARCHAR);
-        if (width > MAX_WIDTH) {
-            this.width = MAX_WIDTH;
-        } else {
-            this.width = width;
-        }
+        this.width = Math.min(MAX_WIDTH, width);
     }
 
     /**

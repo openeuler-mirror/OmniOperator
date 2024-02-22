@@ -61,7 +61,7 @@ void GetExpressions(JNIEnv *env, jobjectArray jExpressions, std::string *express
     }
 }
 
-void GetExprsFromJson(const string *keysArr, jint keyCount, vector<omniruntime::expressions::Expr *> &expressions)
+void GetExprsFromJson(const string *keysArr, jint keyCount, std::vector<omniruntime::expressions::Expr *> &expressions)
 {
     for (int32_t i = 0; i < keyCount; i++) {
         auto jsonExpression = nlohmann::json::parse(keysArr[i]);
@@ -75,7 +75,8 @@ void GetExprsFromJson(const string *keysArr, jint keyCount, vector<omniruntime::
     }
 }
 
-void GetExprsFromJson(vector<string> &keysArr, jint keyCount, vector<omniruntime::expressions::Expr *> &expressions)
+void GetExprsFromJson(std::vector<string> &keysArr, jint keyCount,
+    std::vector<omniruntime::expressions::Expr *> &expressions)
 {
     for (int32_t i = 0; i < keyCount; i++) {
         auto jsonExpression = nlohmann::json::parse(keysArr.at(i));
@@ -89,7 +90,8 @@ void GetExprsFromJson(vector<string> &keysArr, jint keyCount, vector<omniruntime
     }
 }
 
-void GetFilterExprsFromJson(string *keysArr, jint keyCount, vector<omniruntime::expressions::Expr *> &expressions)
+void GetFilterExprsFromJson(std::string *keysArr, jint keyCount,
+    std::vector<omniruntime::expressions::Expr *> &expressions)
 {
     for (int32_t i = 0; i < keyCount; i++) {
         if (keysArr[i].empty()) {
@@ -98,10 +100,6 @@ void GetFilterExprsFromJson(string *keysArr, jint keyCount, vector<omniruntime::
         }
         auto jsonExpression = nlohmann::json::parse(keysArr[i]);
         auto expression = JSONParser::ParseJSON(jsonExpression);
-        if (expression == nullptr) {
-            expressions.push_back(nullptr);
-            continue;
-        }
         expressions.push_back(expression);
     }
 }
@@ -139,7 +137,7 @@ void GetDataTypesVector(JNIEnv *env, jobjectArray jSourceType, std::vector<DataT
     }
 }
 
-void DeserializeJsonToArray(const char *str, vector<string> &arr)
+void DeserializeJsonToArray(const char *str, std::vector<string> &arr)
 {
     auto result = nlohmann::json::parse(str);
     for (auto &json : result) {
@@ -204,16 +202,20 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
     auto aggNum = static_cast<size_t>(env->GetArrayLength(jAggFuncType));
 
-    vector<uint32_t> groupByColVector = vector<uint32_t>((uint32_t *)groupByCols, (uint32_t *)groupByCols + groupByNum);
-    vector<uint32_t> aggColVector = vector<uint32_t>((uint32_t *)aggCols, (uint32_t *)aggCols + aggInputChannelNum);
-    vector<uint32_t> aggFuncTypeVector = vector<uint32_t>((uint32_t *)aggFuncTypes, (uint32_t *)aggFuncTypes + aggNum);
-    vector<uint32_t> maskColumnVector = vector<uint32_t>((uint32_t *)maskColumns, (uint32_t *)maskColumns + aggNum);
+    std::vector<uint32_t> groupByColVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(groupByCols),
+        reinterpret_cast<uint32_t *>(groupByCols) + groupByNum);
+    std::vector<uint32_t> aggColVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggCols),
+        reinterpret_cast<uint32_t *>(aggCols) + aggInputChannelNum);
+    std::vector<uint32_t> aggFuncTypeVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggFuncTypes),
+        reinterpret_cast<uint32_t *>(aggFuncTypes) + aggNum);
+    std::vector<uint32_t> maskColumnVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(maskColumns),
+        reinterpret_cast<uint32_t *>(maskColumns) + aggNum);
 
     auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggDataTypes);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(outDataTypes);
-    auto inputRawsWrap = AggregatorUtil::WrapWithVector(inputRaw, aggFuncTypeVector.size());
-    auto outputPartialsWrap = AggregatorUtil::WrapWithVector(outputPartial, aggFuncTypeVector.size());
+    auto inputRawsWrap = std::vector<bool>(aggFuncTypeVector.size(), inputRaw);
+    auto outputPartialsWrap = std::vector<bool>(aggFuncTypeVector.size(), outputPartial);
 
     HashAggregationOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
@@ -250,16 +252,17 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationOperatorFactory_cr
     auto aggInputColsCount = static_cast<size_t>(env->GetArrayLength(jAggInputCols));
     auto aggCount = static_cast<size_t>(aggOutputTypes.GetSize());
 
-    std::vector<uint32_t> aggInputColsVector =
-        vector<uint32_t>((uint32_t *)aggInputCols, (uint32_t *)aggInputCols + aggInputColsCount);
-    std::vector<uint32_t> maskColsVector = vector<uint32_t>((uint32_t *)maskCols, (uint32_t *)maskCols + aggCount);
-    std::vector<uint32_t> aggFuncTypesVector =
-        vector<uint32_t>((uint32_t *)aggFuncTypes, (uint32_t *)aggFuncTypes + aggCount);
+    std::vector<uint32_t> aggInputColsVector = vector<uint32_t>(reinterpret_cast<uint32_t *>(aggInputCols),
+        reinterpret_cast<uint32_t *>(aggInputCols) + aggInputColsCount);
+    std::vector<uint32_t> maskColsVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(maskCols),
+        reinterpret_cast<uint32_t *>(maskCols) + aggCount);
+    std::vector<uint32_t> aggFuncTypesVector = std::vector<uint32_t>(reinterpret_cast<uint32_t *>(aggFuncTypes),
+        reinterpret_cast<uint32_t *>(aggFuncTypes) + aggCount);
 
     auto aggInputColsVectorWrap = AggregatorUtil::WrapWithVector(aggInputColsVector);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(inputRaw, aggFuncTypesVector.size());
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(outputPartial, aggFuncTypesVector.size());
+    auto inputRawWrap = std::vector<bool>(aggFuncTypesVector.size(), inputRaw);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypesVector.size(), outputPartial);
 
     AggregationOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
@@ -693,7 +696,7 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    vector<omniruntime::expressions::Expr *> sortKeyExprArr;
+    std::vector<omniruntime::expressions::Expr *> sortKeyExprArr;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(sortKeysArr, sortKeysCount, sortKeyExprArr);
@@ -729,7 +732,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    vector<omniruntime::expressions::Expr *> buildHashKeysArrExprs;
+    std::vector<omniruntime::expressions::Expr *> buildHashKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(buildHashKeysArr, buildHashKeysCount, buildHashKeysArrExprs);
@@ -780,7 +783,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs;
+    std::vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(probeHashKeysArr, probeHashKeysCount, probeHashKeysArrExprs);
@@ -819,7 +822,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinWithExprOperatorFact
     env->ReleaseStringUTFChars(jProbeTypes, probeTypesChars);
     env->ReleaseStringUTFChars(jBuildOutputTypes, buildOutputTypesChars);
 
-    vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs;
+    std::vector<omniruntime::expressions::Expr *> probeHashKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(probeHashKeysArr, probeHashKeysCount, probeHashKeysArrExprs);
@@ -909,7 +912,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowWithExprOperatorFactory_cre
     jint sortColCount = env->GetArrayLength(jSortChannels);
     jint argumentKeysCount = env->GetArrayLength(jArgumentKeys);
 
-    vector<omniruntime::expressions::Expr *> argumentKeysArrExprs;
+    std::vector<omniruntime::expressions::Expr *> argumentKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(argumentKeysArr, argumentKeysCount, argumentKeysArrExprs);
@@ -953,12 +956,12 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     GetExpressions(env, jGroupByChannel, groupByKeys, groupByNum);
 
     auto aggChannelsLength = static_cast<int32_t>(env->GetArrayLength(jAggChannels));
-    vector<vector<string>> aggKeysVector;
-    vector<int> aggColsNums;
+    std::vector<vector<string>> aggKeysVector;
+    std::vector<int> aggColsNums;
     for (int i = 0; i < aggChannelsLength; ++i) {
         auto jAggChannel = static_cast<jstring>(env->GetObjectArrayElement(jAggChannels, i));
         auto aggChannelCharPtr = env->GetStringUTFChars(jAggChannel, JNI_FALSE);
-        vector<string> expressions;
+        std::vector<string> expressions;
         DeserializeJsonToArray(aggChannelCharPtr, expressions);
         aggKeysVector.push_back(expressions);
         aggColsNums.push_back(expressions.size());
@@ -971,14 +974,14 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     std::vector<DataTypes> outDataTypes;
     GetDataTypesVector(env, jOutputType, outDataTypes);
 
-    vector<uint32_t> aggFuncTypes;
+    std::vector<uint32_t> aggFuncTypes;
     GetIntVector(env, jAggFuncType, aggFuncTypes);
 
     auto aggFilterCount = env->GetArrayLength(jAggChannelsFilter);
     std::string aggFilterArr[aggFilterCount];
     GetExpressions(env, jAggChannelsFilter, aggFilterArr, aggFilterCount);
 
-    vector<uint32_t> maskColumns;
+    std::vector<uint32_t> maskColumns;
     GetIntVector(env, jMaskCols, maskColumns);
 
     std::vector<bool> inputRaws;
@@ -990,15 +993,15 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    vector<omniruntime::expressions::Expr *> groupByKeysExprs;
+    std::vector<omniruntime::expressions::Expr *> groupByKeysExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(groupByKeys, groupByNum, groupByKeysExprs);
     JNI_METHOD_END(0L)
 
-    vector<vector<omniruntime::expressions::Expr *>> aggKeysExprsVector;
+    std::vector<std::vector<omniruntime::expressions::Expr *>> aggKeysExprsVector;
     for (int i = 0; i < aggChannelsLength; ++i) {
-        vector<omniruntime::expressions::Expr *> aggKeysExprs;
+        std::vector<omniruntime::expressions::Expr *> aggKeysExprs;
         JNI_METHOD_START
         // parse the expressions
         GetExprsFromJson(aggKeysVector.at(i), aggColsNums.at(i), aggKeysExprs);
@@ -1008,7 +1011,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationWithExprOperat
 
     // parse the filter expressions
     auto aggChannelsFilterLength = static_cast<int32_t>(env->GetArrayLength(jAggChannelsFilter));
-    vector<omniruntime::expressions::Expr *> aggFilterExprs;
+    std::vector<omniruntime::expressions::Expr *> aggFilterExprs;
     JNI_METHOD_START
     // parse the expressions
     GetFilterExprsFromJson(aggFilterArr, aggChannelsFilterLength, aggFilterExprs);
@@ -1040,12 +1043,12 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
     GetExpressions(env, jGroupByChannel, groupByKeys, groupByNum);
 
     auto aggChannelsLength = static_cast<int32_t>(env->GetArrayLength(jAggChannels));
-    vector<vector<string>> aggKeysVector;
-    vector<int> aggColsNums;
+    std::vector<std::vector<string>> aggKeysVector;
+    std::vector<int> aggColsNums;
     for (int i = 0; i < aggChannelsLength; ++i) {
         auto jAggChannel = static_cast<jstring>(env->GetObjectArrayElement(jAggChannels, i));
         auto aggChannelCharPtr = env->GetStringUTFChars(jAggChannel, JNI_FALSE);
-        vector<string> expressions;
+        std::vector<string> expressions;
         DeserializeJsonToArray(aggChannelCharPtr, expressions);
         aggKeysVector.push_back(expressions);
         aggColsNums.push_back(expressions.size());
@@ -1057,9 +1060,9 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
     std::vector<DataTypes> outDataTypes;
     GetDataTypesVector(env, jOutputType, outDataTypes);
 
-    vector<uint32_t> aggFuncTypes;
+    std::vector<uint32_t> aggFuncTypes;
     GetIntVector(env, jAggFuncType, aggFuncTypes);
-    vector<uint32_t> maskColumns;
+    std::vector<uint32_t> maskColumns;
     GetIntVector(env, jMaskCols, maskColumns);
 
     auto aggFilterCount = env->GetArrayLength(jAggChannelsFilter);
@@ -1076,15 +1079,15 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
     auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    vector<omniruntime::expressions::Expr *> groupByKeysExprs;
+    std::vector<omniruntime::expressions::Expr *> groupByKeysExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(groupByKeys, groupByNum, groupByKeysExprs);
     JNI_METHOD_END(0L)
 
-    vector<vector<omniruntime::expressions::Expr *>> aggKeysExprsVector;
+    std::vector<vector<omniruntime::expressions::Expr *>> aggKeysExprsVector;
     for (int i = 0; i < aggChannelsLength; ++i) {
-        vector<omniruntime::expressions::Expr *> aggKeysExprs;
+        std::vector<omniruntime::expressions::Expr *> aggKeysExprs;
         JNI_METHOD_START
         // parse the expressions
         GetExprsFromJson(aggKeysVector.at(i), aggColsNums.at(i), aggKeysExprs);
@@ -1093,7 +1096,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
     }
     // parse the filter expressions
     auto aggChannelsFilterLength = static_cast<int32_t>(env->GetArrayLength(jAggChannelsFilter));
-    vector<omniruntime::expressions::Expr *> aggFilterExprs;
+    std::vector<omniruntime::expressions::Expr *> aggFilterExprs;
     JNI_METHOD_START
     // parse the expressions
     GetFilterExprsFromJson(aggFilterArr, aggChannelsFilterLength, aggFilterExprs);
@@ -1134,7 +1137,7 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    vector<omniruntime::expressions::Expr *> sortKeyExprArr;
+    std::vector<omniruntime::expressions::Expr *> sortKeyExprArr;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(sortKeysArr, sortKeyCount, sortKeyExprArr);
@@ -1149,16 +1152,14 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
 
     env->ReleaseIntArrayElements(jSortAsc, sortAsc, 0);
     env->ReleaseIntArrayElements(jSortNullFirsts, sortNullFirsts, 0);
-    return reinterpret_cast<intptr_t>(static_cast<void *>(topNWithExprOperatorFactory));
+    return reinterpret_cast<intptr_t>(topNWithExprOperatorFactory);
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_closeNativeOperatorFactory(JNIEnv *env,
     jclass jclz, jlong jNativeOperatorFactory)
 {
     auto nativeOperatorFactory = reinterpret_cast<OperatorFactory *>(jNativeOperatorFactory);
-    if (nativeOperatorFactory != nullptr) {
-        delete nativeOperatorFactory;
-    }
+    delete nativeOperatorFactory;
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory_createLimitOperatorFactory(
@@ -1232,7 +1233,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
         env->ReleaseStringUTFChars(jFilter, filterChars);
     }
 
-    vector<omniruntime::expressions::Expr *> streamedKeysArrExprs;
+    std::vector<omniruntime::expressions::Expr *> streamedKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(streamedKeyExpsArr, streamedKeyExpsCount, streamedKeysArrExprs);
@@ -1271,7 +1272,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
     auto overflowConfig = operatorConfig.GetOverflowConfig();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    vector<omniruntime::expressions::Expr *> bufferedKeysArrExprs;
+    std::vector<omniruntime::expressions::Expr *> bufferedKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(bufferedKeyExpsArr, bufferedKeyExpsCnt, bufferedKeysArrExprs);
@@ -1331,7 +1332,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjStreamedTableWithExprOperatorFac
         env->ReleaseStringUTFChars(jFilter, filterChars);
     }
 
-    vector<omniruntime::expressions::Expr *> streamedKeysArrExprs;
+    std::vector<omniruntime::expressions::Expr *> streamedKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(streamedKeyExpsArr, streamedKeyExpsCount, streamedKeysArrExprs);
@@ -1370,7 +1371,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniSmjBufferedTableWithExprOperatorFac
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
-    vector<omniruntime::expressions::Expr *> bufferedKeysArrExprs;
+    std::vector<omniruntime::expressions::Expr *> bufferedKeysArrExprs;
     JNI_METHOD_START
     // parse the expressions
     GetExprsFromJson(bufferedKeyExpsArr, bufferedKeyExpsCnt, bufferedKeysArrExprs);

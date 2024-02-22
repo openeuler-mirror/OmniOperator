@@ -16,7 +16,6 @@ class AverageFlatIMAggregator : public SumFlatIMAggregator<IN_ID, OUT_ID> {
     using RawInputType = typename AggNativeAndVectorType<IN_ID>::type;
     using ResultType = typename AggNativeAndVectorType<OUT_ID>::type;
     using RawInputVectorType = Vector<RawInputType>;
-    using DicVector = Vector<DictionaryContainer<RawInputVectorType>>;
 
 public:
     AverageFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 #include <vector>
@@ -381,8 +381,9 @@ uintptr_t CreateHashFactoryWithoutJit(HAFactoryParameters &parameters)
     auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWraps = AggregatorUtil::WrapWithVector(parameters.inputRaw, aggColVector.size());
-    auto outputPartialWraps = AggregatorUtil::WrapWithVector(parameters.outputPartial, aggColVector.size());
+    auto inputRawWraps = std::vector<bool>(aggColVector.size(), parameters.inputRaw);
+    auto outputPartialWraps = std::vector<bool>(aggColVector.size(), parameters.outputPartial);
+
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupByTypes, aggColVectorWrap,
         aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawWraps, outputPartialWraps);
@@ -491,8 +492,8 @@ std::unique_ptr<HashAggregationOperatorFactory> CreateHashAggregationOperatorFac
     } else {
         aggMask = std::vector<uint32_t>(aggMask_);
     }
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(inputRaw, numAgg);
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(outputPartial, numAgg);
+    auto inputRawWrap = std::vector<bool>(numAgg, inputRaw);
+    auto outputPartialWrap = std::vector<bool>(numAgg, outputPartial);
 
     auto groupByColumns = std::vector<uint32_t>(groupByColumns_);
     auto aggFuncTypes = std::vector<uint32_t>(aggFuncTypes_);
@@ -526,8 +527,8 @@ std::unique_ptr<AggregationOperatorFactory> CreateAggregationOperatorFactory(con
     } else {
         aggMask = std::vector<uint32_t>(aggMask_);
     }
-    auto inputRawWrap = AggregatorUtil::WrapWithVector(inputRaw, numAgg);
-    auto outputPartialWrap = AggregatorUtil::WrapWithVector(outputPartial, numAgg);
+    auto inputRawWrap = std::vector<bool>(numAgg, inputRaw);
+    auto outputPartialWrap = std::vector<bool>(numAgg, outputPartial);
 
     auto aggFuncTypes = std::vector<uint32_t>(aggFuncTypes_);
     DataTypes inputTypes(aggInputTypes);
@@ -1793,8 +1794,9 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto aggColVectorWrap = AggregatorUtil::WrapWithVector(aggColVector);
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
     auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawsWrap = AggregatorUtil::WrapWithVector(true, aggFuncTypeVector.size());
-    auto outputPartialsWrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeVector.size());
+    auto inputRawsWrap = std::vector<bool>(aggFuncTypeVector.size(), true);
+    auto outputPartialsWrap = std::vector<bool>(aggFuncTypeVector.size(), false);
+
     omniruntime::op::HashAggregationOperatorFactory *nativeOperatorFactory =
         new omniruntime::op::HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVectorWrap,
         aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColsVector, inputRawsWrap, outputPartialsWrap);
@@ -1836,8 +1838,8 @@ TEST(HashAggregationOperatorTest, compare_perf)
     auto aggColVector2Wrap = AggregatorUtil::WrapWithVector(aggColVector);
     auto aggInputTypes2Wrap = AggregatorUtil::WrapWithVector(aggInputTypes);
     auto aggOutputTypes2Wrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRaw2Wrap = AggregatorUtil::WrapWithVector(true, aggFuncTypeVector.size());
-    auto outputPartial2Wrap = AggregatorUtil::WrapWithVector(false, aggFuncTypeVector.size());
+    auto inputRaw2Wrap = std::vector<bool>(aggFuncTypeVector.size(), true);
+    auto outputPartial2Wrap = std::vector<bool>(aggFuncTypeVector.size(), false);
     HashAggregationOperatorFactory *nativeOperatorFactory2 =
         new HashAggregationOperatorFactory(groupByColVector, groupInputTypes, aggColVector2Wrap, aggInputTypes2Wrap,
         aggOutputTypes2Wrap, aggFuncTypeVector, maskColsVector, inputRaw2Wrap, outputPartial2Wrap);

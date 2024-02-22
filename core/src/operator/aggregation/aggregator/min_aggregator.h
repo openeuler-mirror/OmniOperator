@@ -40,9 +40,7 @@ template <typename IN, typename OUT>
 SIMD_ALWAYS_INLINE void MinOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed)
 {
     const OUT cur = static_cast<OUT>(in);
-    if (*res > cur) {
-        *res = cur;
-    }
+    *res = std::min(*res, cur);
     flag |= 1;
 }
 
@@ -52,15 +50,12 @@ SIMD_ALWAYS_INLINE void MinConditionalOp(OUT *res, int64_t &flag, const IN &in, 
 {
     if (condition == addIf) {
         const OUT cur = static_cast<OUT>(in);
-        if (*res > cur) {
-            *res = cur;
-        }
+        *res = std::min(*res, cur);
         flag |= 1;
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> class MinAggregator : public TypedAggregator {
-    using InVector = typename AggNativeAndVectorType<IN_ID>::vector;
     using InType = typename AggNativeAndVectorType<IN_ID>::type;
     using OutVector = typename AggNativeAndVectorType<OUT_ID>::vector;
     using OutType = typename AggNativeAndVectorType<OUT_ID>::type;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -17,7 +17,7 @@ public abstract class VariableWidthVec extends Vec {
     /**
      * offsets buffer.
      */
-    protected OmniBuf offsetsBuf;
+    protected OmniBuffer offsetsBuf;
 
     /**
      * last set index.
@@ -34,7 +34,8 @@ public abstract class VariableWidthVec extends Vec {
      */
     public VariableWidthVec(int capacityInBytes, int size, DataType type) {
         super(capacityInBytes, size, OMNI_VEC_ENCODING_FLAT, type);
-        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
+                (size + 1) * Integer.BYTES);
     }
 
     /**
@@ -47,7 +48,7 @@ public abstract class VariableWidthVec extends Vec {
      */
     protected VariableWidthVec(Vec vec, int offset, int length) {
         super(vec, offset, length, vec.getCapacityInBytes());
-        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()),
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
                 (length + 1) * Integer.BYTES);
     }
 
@@ -61,7 +62,7 @@ public abstract class VariableWidthVec extends Vec {
      */
     protected VariableWidthVec(Vec vec, int[] positions, int offset, int length) {
         super(vec, positions, offset, length, vec.getCapacityInBytes());
-        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()),
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
                 (length + 1) * Integer.BYTES);
         this.capacityInBytes = getCapacityInBytesNative(nativeVector);
     }
@@ -74,7 +75,8 @@ public abstract class VariableWidthVec extends Vec {
      */
     protected VariableWidthVec(long nativeVector, DataType dataType) {
         super(nativeVector, dataType);
-        this.offsetsBuf = OmniBufFactory.create(getValueOffsetsNative(getNativeVector()), (size + 1) * Integer.BYTES);
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
+                (size + 1) * Integer.BYTES);
     }
 
     /**
@@ -91,7 +93,7 @@ public abstract class VariableWidthVec extends Vec {
     protected VariableWidthVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
             long nativeVectorOffsetBufAddress, int capacityInBytes, int size, DataType dataType) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, capacityInBytes, size, dataType);
-        this.offsetsBuf = OmniBufFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Integer.BYTES);
+        this.offsetsBuf = OmniBufferFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Integer.BYTES);
     }
 
     /**
@@ -166,7 +168,7 @@ public abstract class VariableWidthVec extends Vec {
      *
      * @return offsets byte buffer
      */
-    public OmniBuf getOffsetsBuf() {
+    public OmniBuffer getOffsetsBuf() {
         return offsetsBuf;
     }
 

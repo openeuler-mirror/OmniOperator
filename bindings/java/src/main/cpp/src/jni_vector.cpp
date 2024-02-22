@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: JNI Vector Operations Source File
  */
 #include "jni_vector.h"
@@ -17,10 +17,9 @@
 using namespace omniruntime::vec;
 using namespace omniruntime::mem;
 
-static BaseVector *TransformVector(long vectorAddr)
+static ALWAYS_INLINE BaseVector *TransformVector(long vectorAddr)
 {
-    BaseVector *nativeVector = reinterpret_cast<BaseVector *>(vectorAddr);
-    return nativeVector;
+    return reinterpret_cast<BaseVector *>(vectorAddr);
 }
 
 #ifdef TRACE
@@ -158,8 +157,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_Vec_getValueNullsNativ
     jlong jNativeVector)
 {
     BaseVector *nativeVector = TransformVector(jNativeVector);
-    return reinterpret_cast<uintptr_t>(
-        reinterpret_cast<void *>(omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(nativeVector)));
+    return reinterpret_cast<uintptr_t>(omniruntime::vec::unsafe::UnsafeBaseVector::GetNulls(nativeVector));
 }
 
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ContainerVec_getPositionNative(JNIEnv *env, jclass jcls,
@@ -244,7 +242,7 @@ jlong Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *en
 
 void Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative(JNIEnv *env, jclass jcls, jlong jVecBatchAddress)
 {
-    VectorBatch *vecBatch = (VectorBatch *)jVecBatchAddress;
+    VectorBatch *vecBatch = reinterpret_cast<VectorBatch *>(jVecBatchAddress);
     delete vecBatch;
 }
 

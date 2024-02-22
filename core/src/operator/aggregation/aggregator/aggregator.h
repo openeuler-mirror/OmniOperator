@@ -22,13 +22,13 @@ namespace op {
 using namespace omniruntime::exception;
 using namespace omniruntime::vec;
 
-using ColumnIndex = struct ColumnIndex {
+struct ColumnIndex {
     int32_t idx;
     type::DataTypePtr input;
     type::DataTypePtr output;
 };
 
-using AggregateState = struct AggregateState {
+struct AggregateState {
     // for sum/avg/min/max holds latest aggregatred value
     // for stringMin/stringMax holds pointer to latestes aggregated value
     void *val = nullptr;
@@ -45,18 +45,18 @@ using AggregateState = struct AggregateState {
     }
 };
 
-using DecimalAverageState = struct DecimalAverageState {
+struct DecimalAverageState {
     int64_t count;
     int64_t overflow;
     type::int128_t val;
 };
 
-using DecimalSumState = struct DecimalSumState {
+struct DecimalSumState {
     int64_t overflow;
     type::int128_t val;
 };
 
-using FirstState = struct FirstState {
+struct FirstState {
     void *val = nullptr;
     bool valIsNull = true;
     bool valueSet = false;
@@ -216,7 +216,7 @@ public:
 #endif
         auto filterVecIdx = static_cast<int32_t>(filterOffset);
         auto filterVec = static_cast<Vector<bool> *>(vectorBatch->Get(filterVecIdx));
-        auto rowCount = static_cast<int32_t>(rowStates.size());
+        size_t rowCount = rowStates.size();
         bool needFilterJude = DoNeedHandleAggFilter(filterVec, rowOffset, rowCount);
 
         int32_t rowIndex = rowOffset;
@@ -229,7 +229,7 @@ public:
                 rowIndex++;
             }
         } else {
-            for (int32_t i = 0; i < rowCount; ++i) {
+            for (size_t i = 0; i < rowCount; ++i) {
                 ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
             }
         }
@@ -288,8 +288,7 @@ public:
     }
 
 public:
-    static const int32_t INVALID_MASK_COL = -1;
-    static const int32_t INVALID_INPUT_COL = -1;
+    static constexpr int32_t INVALID_MASK_COL = -1;
 
 protected:
     const FunctionType type;

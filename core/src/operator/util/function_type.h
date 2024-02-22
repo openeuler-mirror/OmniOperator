@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: FunctionType enum
  */
 
@@ -18,7 +18,7 @@ using FunctionType = enum FunctionType {
     OMNI_AGGREGATION_TYPE_DNV,
     OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL,
     OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL,
-    OMNI_AGGREGATION_TYPE_INVALIDE,
+    OMNI_AGGREGATION_TYPE_INVALID,
     OMNI_WINDOW_TYPE_ROW_NUMBER,
     OMNI_WINDOW_TYPE_RANK
 };

@@ -35,12 +35,12 @@ public abstract class Vec implements Closeable {
     /**
      * The value buffer.
      */
-    protected OmniBuf valuesBuf;
+    protected OmniBuffer valuesBuf;
 
     /**
      * The nulls of vector, it is a bitmap.
      */
-    protected final OmniBuf nullsBuf;
+    protected final OmniBuffer nullsBuf;
 
     /**
      * The native vector address.
@@ -160,8 +160,8 @@ public abstract class Vec implements Closeable {
         this.size = size;
         this.dataType = dataType;
         this.nativeVector = nativeVector;
-        this.valuesBuf = OmniBufFactory.create(nativeVectorValueBufAddress, capacityInBytes);
-        this.nullsBuf = OmniBufFactory.create(nativeVectorNullBufAddress, size);
+        this.valuesBuf = OmniBufferFactory.create(nativeVectorValueBufAddress, capacityInBytes);
+        this.nullsBuf = OmniBufferFactory.create(nativeVectorNullBufAddress, size);
         this.isWritable = isWritable;
     }
 
@@ -285,7 +285,7 @@ public abstract class Vec implements Closeable {
      *
      * @return values buffer
      */
-    public OmniBuf getValuesBuf() {
+    public OmniBuffer getValuesBuf() {
         return valuesBuf;
     }
 
@@ -313,7 +313,7 @@ public abstract class Vec implements Closeable {
      *
      * @return nulls value buffer
      */
-    public OmniBuf getValueNullsBuf() {
+    public OmniBuffer getValueNullsBuf() {
         return nullsBuf;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: aggregator tool class
  */
 #include "aggregator_util.h"
@@ -7,12 +7,6 @@
 namespace omniruntime {
 namespace op {
 using namespace type;
-std::vector<int32_t> AggregatorUtil::WrapWithVector(int32_t value)
-{
-    std::vector<int32_t> retVector;
-    retVector.push_back(value);
-    return retVector;
-}
 //   DataTypes(LONG, INT) => vector(DataTypes(LONG),DataTypes(INT))
 std::vector<DataTypes> AggregatorUtil::WrapWithVector(const DataTypes &value)
 {
@@ -21,16 +15,6 @@ std::vector<DataTypes> AggregatorUtil::WrapWithVector(const DataTypes &value)
     for (int i = 0; i < value.GetSize(); ++i) {
         std::vector<DataTypePtr> vector{ value.GetType(i) };
         retVector.emplace_back(DataTypes(vector));
-    }
-    return retVector;
-}
-
-std::vector<bool> AggregatorUtil::WrapWithVector(bool value, int num)
-{
-    std::vector<bool> retVector;
-    retVector.reserve(num);
-    for (int i = 0; i < num; i++) {
-        retVector.push_back(value);
     }
     return retVector;
 }
@@ -58,9 +42,7 @@ std::vector<std::vector<int32_t>> AggregatorUtil::WrapWithVector(std::vector<int
 
 std::unique_ptr<DataTypes> AggregatorUtil::WrapWithDataTypes(const DataTypePtr &value)
 {
-    std::vector<DataTypePtr> vector;
-    vector.push_back(value);
-    return std::make_unique<DataTypes>(vector);
+    return std::make_unique<DataTypes>(std::vector<DataTypePtr>{value});
 }
 } // end of namespace op
 } // end of namespace omniruntime

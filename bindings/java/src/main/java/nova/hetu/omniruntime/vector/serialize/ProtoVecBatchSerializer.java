@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector.serialize;
@@ -23,8 +23,8 @@ import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.JvmUtils;
 import nova.hetu.omniruntime.vector.LongVec;
-import nova.hetu.omniruntime.vector.OmniBuf;
-import nova.hetu.omniruntime.vector.OmniBufFactory;
+import nova.hetu.omniruntime.vector.OmniBuffer;
+import nova.hetu.omniruntime.vector.OmniBufferFactory;
 import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
@@ -191,7 +191,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             protoVecBuilder.setOffsets(ByteString.copyFrom(offsetBuf));
 
             long valueBufAddress = varcharVec.getValuesBuf().getAddress() + startOffset;
-            OmniBuf omniValueBuf = OmniBufFactory.create(valueBufAddress, realValueBufCapacity);
+            OmniBuffer omniValueBuf = OmniBufferFactory.create(valueBufAddress, realValueBufCapacity);
             valueBuf = JvmUtils.directBuffer(omniValueBuf);
             // only serialize the data actually written
             valueBuf.limit(realValueBufCapacity);

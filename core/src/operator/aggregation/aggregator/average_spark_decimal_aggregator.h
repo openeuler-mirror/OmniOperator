@@ -281,9 +281,9 @@ private:
     }
 
 private:
-    inline static constexpr int32_t COUNT_PRECISION = 20;
-    inline static constexpr int32_t COUNT_SCALE = 0;
-    inline static constexpr int32_t MINIMUM_ADJUSTED_SCALE = 6;
+    static constexpr int32_t COUNT_PRECISION = 20;
+    static constexpr int32_t COUNT_SCALE = 0;
+    static constexpr int32_t MINIMUM_ADJUSTED_SCALE = 6;
 };
 }
 }

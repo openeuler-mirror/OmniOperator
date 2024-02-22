@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: Aggregation Source File
  */
 #include "non_group_aggregation.h"
@@ -64,7 +64,7 @@ Operator *AggregationOperatorFactory::CreateOperator()
         auto outputTypes = aggsOutputTypes[i].Instance();
         auto aggregator = aggregatorFactories[i]->CreateAggregator(*inputTypes, *outputTypes, aggInputColIdxVec,
             inputRaws[i], outputPartials[i], isOverflowAsNull);
-        if (aggregator == nullptr) {
+        if (UNLIKELY(aggregator == nullptr)) {
             throw OmniException("OPERATOR_RUNTIME_ERROR", "Unable to create aggregator " + std::to_string(i) + " / " +
                 std::to_string(this->aggregatorFactories.size()));
         }

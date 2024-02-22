@@ -1,11 +1,11 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.type;
 
 /**
- * invalid data type.
+ * invalid data type. The data type of unsupported/invalid data.
  *
  * @since 2022-04-01
  */

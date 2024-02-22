@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -97,11 +97,11 @@ public final class JvmUtils {
     /**
      * construct a director byte buffer by address and capacity.
      *
-     * @param omniBuf the address of byte buffer
+     * @param omniBuffer the address of byte buffer
      * @return director byte buffer
      */
-    public static ByteBuffer directBuffer(OmniBuf omniBuf) {
-        if (omniBuf.getCapacity() < 0) {
+    public static ByteBuffer directBuffer(OmniBuffer omniBuffer) {
+        if (omniBuffer.getCapacity() < 0) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR,
                     "Capacity is negative, has to be positive or 0");
         }
@@ -111,8 +111,8 @@ public final class JvmUtils {
                     "DirectByteBuffer.<ini>(long, int) not available");
         }
         try {
-            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuf.getAddress(), omniBuf.getCapacity()))
-                    .order(ByteOrder.LITTLE_ENDIAN);
+            return ((ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(omniBuffer.getAddress(),
+                omniBuffer.getCapacity())).order(ByteOrder.LITTLE_ENDIAN);
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new OmniRuntimeException(OmniErrorType.OMNI_NOSUPPORT, e);
         }

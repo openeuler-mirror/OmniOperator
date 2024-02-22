@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * @Description: lookup outer join implementations
  */
 #include <vector>
@@ -36,7 +36,7 @@ LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOute
 Operator *LookupOuterJoinOperatorFactory::CreateOperator()
 {
     auto probeOutputType = std::vector<type::DataTypePtr>();
-    for (auto col : probeOutputCols) {
+    for (const auto& col : probeOutputCols) {
         probeOutputType.push_back(probeTypes.Get()[col]);
     }
     auto probeOutputTypes = DataTypes(probeOutputType);

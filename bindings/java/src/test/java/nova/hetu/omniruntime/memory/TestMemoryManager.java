@@ -4,7 +4,7 @@
 
 package nova.hetu.omniruntime.memory;
 
-import static nova.hetu.omniruntime.memory.MemoryManager.memoryClear;
+import static nova.hetu.omniruntime.memory.MemoryManager.clearMemory;
 import static nova.hetu.omniruntime.memory.MemoryManager.setGlobalMemoryLimit;
 
 import static org.testng.Assert.assertEquals;
@@ -25,7 +25,7 @@ public class TestMemoryManager {
     @Test
     public void testAllocatorBasic() {
         long limit = -1;
-        memoryClear();
+        clearMemory();
         setGlobalMemoryLimit(limit);
 
         MemoryManager memoryManager = new MemoryManager();
@@ -58,7 +58,7 @@ public class TestMemoryManager {
             if (longVec != null) {
                 longVec.close();
             }
-            memoryClear();
+            clearMemory();
         }
     }
 }

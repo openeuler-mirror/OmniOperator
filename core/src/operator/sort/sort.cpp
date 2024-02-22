@@ -9,7 +9,7 @@
 #include "operator/util/operator_util.h"
 #include "util/omni_exception.h"
 
-using namespace std;
+
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
@@ -17,13 +17,12 @@ using namespace omniruntime::vec;
 SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols, int32_t outputColCount,
     int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
     const OperatorConfig &operatorConfig)
-    : sourceTypes(dataTypes), operatorConfig(operatorConfig)
-{
-    this->outputCols.insert(this->outputCols.end(), outputCols, outputCols + outputColCount);
-    this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
-    this->sortAscendings.insert(this->sortAscendings.end(), sortAscendings, sortAscendings + sortColCount);
-    this->sortNullFirsts.insert(this->sortNullFirsts.end(), sortNullFirsts, sortNullFirsts + sortColCount);
-}
+    : sourceTypes(dataTypes),
+      outputCols(outputCols, outputCols + outputColCount),
+      sortCols(sortCols, sortCols + sortColCount),
+      sortAscendings(sortAscendings, sortAscendings + sortColCount),
+      sortNullFirsts(sortNullFirsts, sortNullFirsts + sortColCount),
+      operatorConfig(operatorConfig) {}
 
 SortOperatorFactory::~SortOperatorFactory() = default;
 
@@ -54,27 +53,23 @@ Operator *SortOperatorFactory::CreateOperator()
 // function implements for class Sort
 SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, const OperatorConfig &operatorConfig)
-    : sourceTypes(dataTypes), operatorConfig(operatorConfig)
+    : sourceTypes(dataTypes), outputCols(outputCols), sortCols(sortCols),
+      sortAscendings(sortAscendings), sortNullFirsts(sortNullFirsts),
+      pagesIndex(std::make_unique<PagesIndex>(sourceTypes)), operatorConfig(operatorConfig)
 {
-    this->outputCols = outputCols;
-    this->sortCols = sortCols;
-    this->sortAscendings = sortAscendings;
-    this->sortNullFirsts = sortNullFirsts;
-    this->pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
-
     for (auto outputCol : outputCols) {
         outputTypes.emplace_back(dataTypes.GetType(outputCol));
     }
     maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputCols.size());
     maxRowCountPerBatch = maxRowCountPerBatch == 0 ? 1 : maxRowCountPerBatch;
     if (sourceTypes.GetSize() == 1) {
-        auto typeId = sourceTypes.GetType(0)->GetId();
-        if (typeId != OMNI_VARCHAR && typeId != OMNI_CHAR && typeId != OMNI_BOOLEAN) {
-            canInplaceSort = true;
-        }
+        const auto& firstSourceTypeId = sourceTypes.GetType(0)->GetId();
+        canInplaceSort = (firstSourceTypeId != OMNI_VARCHAR) &&
+                         (firstSourceTypeId != OMNI_CHAR) &&
+                         (firstSourceTypeId != OMNI_BOOLEAN);
     }
 
-    if (not canInplaceSort) {
+    if (!canInplaceSort) {
         this->radixSortSizeThreshold = operatorConfig.GetAdaptivityThreshold();
         canRadixSort = this->CanUseRadixSort();
     }
@@ -143,7 +138,7 @@ uint64_t SortOperator::GetSpilledBytes()
 
 ErrorCode SortOperator::SpillToDisk()
 {
-    auto rowCount = pagesIndex->GetRowCount();
+    const auto rowCount = pagesIndex->GetRowCount();
     if (rowCount <= 0) {
         return ErrorCode::SUCCESS;
     }
@@ -176,8 +171,8 @@ ErrorCode SortOperator::SpillToDisk()
 
 void SortOperator::Sort()
 {
-    int32_t positionCount = pagesIndex->GetRowCount();
-    int32_t sortColCount = sortCols.size();
+    const int32_t positionCount = pagesIndex->GetRowCount();
+    const int32_t sortColCount = sortCols.size();
     if (canInplaceSort) {
         pagesIndex->SortInplace(sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount, 0,
             positionCount);
@@ -191,11 +186,11 @@ void SortOperator::Sort()
 
 bool SortOperator::CanUseRadixSort()
 {
-    bool canUseRadixSort = (sortCols.size() == 1 && radixSortSizeThreshold != -1);
-    if (not canUseRadixSort) {
+    const bool canUseRadixSort = (radixSortSizeThreshold != -1 && sortCols.size() == 1);
+    if (!canUseRadixSort) {
         return false;
     }
-    auto sortDataType = sourceTypes.GetType(sortCols[0])->GetId();
+    const auto& sortDataType = sourceTypes.GetType(sortCols[0])->GetId();
     bool isAllowedDataType = (sortDataType == OMNI_LONG || sortDataType == OMNI_DATE32 || sortDataType == OMNI_INT ||
         sortDataType == OMNI_SHORT || sortDataType == OMNI_BOOLEAN || sortDataType == OMNI_DECIMAL64);
     return isAllowedDataType;

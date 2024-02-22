@@ -1,10 +1,10 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.utils;
 
-import static nova.hetu.omniruntime.memory.MemoryManager.UNLIMIT;
+import static nova.hetu.omniruntime.memory.MemoryManager.UNLIMITED;
 
 import com.sun.management.OperatingSystemMXBean;
 
@@ -43,7 +43,7 @@ public class ParseUtil {
             if (unit.getUnitString().equals(unitString)) {
                 long limit = value * unit.getFactor();
                 long systemFreeMemory = getOperatorSystemFreeMemorySize();
-                if (limit >= systemFreeMemory || limit < UNLIMIT) {
+                if (limit >= systemFreeMemory || limit < UNLIMITED) {
                     throw new OmniRuntimeException(OmniErrorType.OMNI_PARAM_ERROR,
                             "OMNI_OFFHEAP_MEMORY_SIZE exceeds system free memorySize:" + systemFreeMemory);
                 }

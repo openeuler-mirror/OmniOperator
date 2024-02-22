@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: hash builder implementations
  */
 #include "hash_builder.h"
@@ -12,7 +12,6 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, const 
     const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount)
     : buildTypes(buildTypes),
       buildHashCols(std::vector<int32_t>(buildHashCols, buildHashCols + buildHashColsCount)),
-      hashTableCount(operatorCount),
       operatorIndex(0)
 {
     if (operatorCount <= 0 || operatorCount > 10000) {
@@ -33,30 +32,30 @@ HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashCols
         auto type = buildTypes.GetIds()[buildHashCols[0]];
         switch (type) {
             case OMNI_BOOLEAN:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<int8_t, RowRefListType>>,
+                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int8_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
             case OMNI_INT:
             case OMNI_DATE32:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<int32_t, RowRefListType>>,
+                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int32_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
             case OMNI_LONG:
             case OMNI_DECIMAL64:
             case OMNI_DOUBLE:
             case OMNI_DATE64:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<int64_t, RowRefListType>>,
+                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int64_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
             case OMNI_SHORT:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<int16_t, RowRefListType>>,
+                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int16_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
             case OMNI_DECIMAL128:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<Decimal128, RowRefListType>>,
+                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<Decimal128, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
             default:
-                return new HashTableVariants { std::in_place_type<JoinHashTableVariants<StringRef, RowRefListType>>,
+                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<StringRef, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
         }
     } else {
-        return new HashTableVariants { std::in_place_type<JoinHashTableVariants<StringRef, RowRefListType>>,
+        return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<StringRef, RowRefListType>>,
             operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
     }
 }

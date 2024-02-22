@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -9,7 +9,7 @@ package nova.hetu.omniruntime.vector;
  *
  * @since 2021-08-02
  */
-public interface OmniBuf {
+public interface OmniBuffer {
     /**
      * set byte.
      *

@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: hash builder implementations
  */
 #ifndef __HASH_BUILDER_H__
@@ -35,7 +35,6 @@ private:
     DataTypes buildTypes;
     std::vector<int32_t> buildHashCols;
     HashTableVariants *hashTablesVariants;
-    int32_t hashTableCount;
     std::atomic<int32_t> operatorIndex;
 
     template <class RowRefListType>

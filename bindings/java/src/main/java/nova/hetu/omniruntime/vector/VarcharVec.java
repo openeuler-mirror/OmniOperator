@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -108,7 +108,7 @@ public class VarcharVec extends VariableWidthVec {
             long newValuesAddress = expandDataCapacity(getNativeVector(), toCapacityInBytes);
             capacityInBytes = toCapacityInBytes;
             // update data address
-            valuesBuf = OmniBufFactory.create(newValuesAddress, capacityInBytes);
+            valuesBuf = OmniBufferFactory.create(newValuesAddress, capacityInBytes);
         }
     }
 
@@ -168,7 +168,7 @@ public class VarcharVec extends VariableWidthVec {
         // check expand
         if (newCapacityInBytes != capacityInBytes) {
             capacityInBytes = newCapacityInBytes;
-            valuesBuf = OmniBufFactory.create(getValuesNative(nativeVector), capacityInBytes);
+            valuesBuf = OmniBufferFactory.create(getValuesNative(nativeVector), capacityInBytes);
         }
     }
 

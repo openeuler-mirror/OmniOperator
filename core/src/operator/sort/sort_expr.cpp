@@ -8,7 +8,6 @@
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
 
-using namespace std;
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;

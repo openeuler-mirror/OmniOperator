@@ -25,17 +25,17 @@ class HashAggregationOperatorFactory;
 class HashAggregationOperator;
 
 using HashFunc = void (*)(BaseVector *vector, const uint32_t r, const int32_t *ri, uint64_t *hashVal);
-using HashFuncVect = void (*)(BaseVector *vector, const uint32_t s, const uint32_t r, uint64_t *hashVal);
+using HashFuncVector = void (*)(BaseVector *vector, const uint32_t s, const uint32_t r, uint64_t *hashVal);
 using DuplicateKeyValue = void (*)(AggregateState &state, BaseVector *vector, const uint32_t offset,
     ExecutionContext *context);
 using IsSameNodeFunc = void (*)(BaseVector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame);
 using SetVector = void (*)(VectorBatch *vecBatch, int32_t rowCount);
 using FillValue = void (*)(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
 
-using FunctionByDataType = struct FunctionByDataType {
+struct FunctionByDataType {
     DataTypeId dataTypeId;
     HashFunc hashFunc;
-    HashFuncVect hashFuncVect;
+    HashFuncVector hashFuncVect;
     IsSameNodeFunc isSameNode;
     DuplicateKeyValue duplicateKey;
     SetVector setVector;
@@ -45,12 +45,12 @@ using FunctionByDataType = struct FunctionByDataType {
 template <typename V, typename D>
 void HashFuncImpl(BaseVector *vector, const uint32_t rowCount, const int32_t *rowIndexes, uint64_t *combinedHash)
 {
-    uint64_t hash;
+    int64_t hash;
     std::hash<D> hasher;
     for (uint32_t i = 0; i < rowCount; ++i) {
         auto idx = rowIndexes[i];
         hash = !vector->IsNull(idx) * hasher(static_cast<V *>(vector)->GetValue(idx));
-        combinedHash[i] = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]), static_cast<int64_t>(hash));
+        combinedHash[i] = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]), hash);
     }
 }
 
@@ -60,8 +60,7 @@ void HashVarcharFuncImpl(BaseVector *vector, const uint32_t rowCount, const int3
     for (uint32_t i = 0; i < rowCount; ++i) {
         auto idx = rowIndexes[i];
         std::string_view str = static_cast<V *>(vector)->GetValue(idx);
-        auto valLen = str.size();
-        auto val = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(str.data())), valLen);
+        auto val = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(str.data())), str.size());
         combinedHash[i] = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]), !vector->IsNull(idx) * val);
     }
 }
@@ -96,8 +95,7 @@ void HashVarcharVectFuncImpl(BaseVector *vector, const uint32_t start, const uin
     for (uint32_t i = 0; i < rowCount; ++i) {
         auto idx = i + start;
         std::string_view str = static_cast<V *>(vector)->GetValue(idx);
-        auto valLen = str.size();
-        auto val = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(str.data())), valLen);
+        auto val = HashUtil::HashValue(reinterpret_cast<int8_t *>(const_cast<char *>(str.data())), str.size());
         auto hash = HashUtil::CombineHash(static_cast<int64_t>(combinedHash[i]), !vector->IsNull(idx) * val);
         combinedHash[i] = static_cast<uint64_t>(hash);
     }
@@ -160,8 +158,7 @@ void IsSameNodeFuncVarcharImpl(BaseVector *vector, const uint32_t offset, const 
     if (!isInputNull && !isIntermediateNull) {
         std::string_view str = static_cast<V *>(vector)->GetValue(offset);
         auto valLen = str.size();
-        auto *data = reinterpret_cast<uint8_t *>(const_cast<char *>(str.data()));
-        isSame = (static_cast<int64_t>(valLen) == slot.count) && (memcmp(data, slot.val, valLen) == 0);
+        isSame = (static_cast<int64_t>(valLen) == slot.count) && (memcmp(str.data(), slot.val, valLen) == 0);
         return;
     }
     if (isInputNull != isIntermediateNull) {
@@ -178,7 +175,7 @@ void DuplicateKeyValueImpl(AggregateState &state, BaseVector *vector, const uint
     if (vector->IsNull(offset)) {
         return;
     }
-    auto len = sizeof(D);
+    constexpr auto len = sizeof(D);
     uint8_t *ptr = context->GetArena()->Allocate(len);
     D data = static_cast<V *>(vector)->GetValue(offset);
     memcpy_s(ptr, len, &data, len);
@@ -401,7 +398,7 @@ public:
 
 private:
     std::vector<uint32_t> groupByColsVector;
-    std::vector<int32_t> groupByColIdx;
+    std::vector<int32_t> groupByColIndices;
     DataTypes groupByTypes;
     std::vector<std::vector<uint32_t>> aggsInputColsVector;
     std::vector<std::vector<int32_t>> aggsInputCols;

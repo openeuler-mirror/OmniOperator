@@ -17,7 +17,7 @@ public class MemoryManager implements AutoCloseable {
     /**
      * -1 means no memory limit
      */
-    public static final long UNLIMIT = -1;
+    public static final long UNLIMITED = -1;
 
     static {
         OmniLibs.load();
@@ -56,7 +56,7 @@ public class MemoryManager implements AutoCloseable {
     /**
      * only for ut
      * */
-    public static void memoryClear() {
+    public static void clearMemory() {
         memoryClearNative();
     }
 

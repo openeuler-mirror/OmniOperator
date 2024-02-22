@@ -38,23 +38,23 @@ void RadixSortLSD(const DataPtr_type &dataPtr, const DataPtr_type &tempPtr, cons
         DataPtr_type offsetPtr = sourcePtr + offset;
         for (uint32_t i = 0; i < len; ++i) {
             if constexpr (sortAscending) {
-                counts[*offsetPtr]++;
+                ++counts[*offsetPtr];
             } else {
-                counts[VALUES_PER_RADIX - 1 - *offsetPtr]++;
+                ++counts[VALUES_PER_RADIX - 1 - *offsetPtr];
             }
             offsetPtr += rowWidth;
         }
         // Compute offsets from counts
         uint32_t maxCount = counts[0];
         for (uint32_t val = 1; val < VALUES_PER_RADIX; ++val) {
-            if (counts[val] > maxCount) {
-                maxCount = counts[val];
-            }
-            counts[val] = counts[val] + counts[val - 1];
+            maxCount = std::max(maxCount, counts[val]);
+            counts[val] += counts[val - 1];
         }
+
         if (maxCount == len) {
             continue;
         }
+
         // starting with the last row
         DataPtr_type rowPtr = sourcePtr + (len - 1) * rowWidth;
         if constexpr (sortAscending) {
@@ -92,12 +92,12 @@ void RadixSortMSD(const DataPtr_type origPtr, const DataPtr_type tempPtr, const 
     DataPtr_type offsetPtr = sourcePtr + msdOffset;
     if constexpr (sortAscending) {
         for (uint32_t i = 0; i < len; ++i) {
-            counts[*offsetPtr]++;
+            ++counts[*offsetPtr];
             offsetPtr += rowWidth;
         }
     } else {
         for (uint32_t i = 0; i < len; ++i) {
-            counts[VALUES_PER_RADIX - 1 - *offsetPtr]++;
+            ++counts[VALUES_PER_RADIX - 1 - *offsetPtr];
             offsetPtr += rowWidth;
         }
     }
@@ -107,6 +107,7 @@ void RadixSortMSD(const DataPtr_type origPtr, const DataPtr_type tempPtr, const 
         maxCount = std::max(maxCount, counts[radix]);
         counts[radix] += locations[radix];
     }
+
     if (maxCount != len) {
         // Re-order the data in temporary array
         DataPtr_type rowPtr = sourcePtr;

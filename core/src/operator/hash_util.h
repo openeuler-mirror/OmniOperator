@@ -1,5 +1,5 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * @Description: hash util implementations
  */
 #ifndef __HASH_UTIL_H__
@@ -12,28 +12,28 @@
 
 namespace omniruntime {
 namespace op {
-static const uint32_t ROTATE_DISTANCE_1 = 1;
-static const uint32_t ROTATE_DISTANCE_2 = 2;
-static const uint32_t ROTATE_DISTANCE_4 = 4;
-static const uint32_t ROTATE_DISTANCE_7 = 7;
-static const uint32_t ROTATE_DISTANCE_8 = 8;
-static const uint32_t ROTATE_DISTANCE_11 = 11;
-static const uint32_t ROTATE_DISTANCE_12 = 12;
-static const uint32_t ROTATE_DISTANCE_16 = 16;
-static const uint32_t ROTATE_DISTANCE_18 = 18;
-static const uint32_t ROTATE_DISTANCE_23 = 23;
-static const uint32_t ROTATE_DISTANCE_27 = 27;
-static const uint32_t ROTATE_DISTANCE_29 = 29;
-static const uint32_t ROTATE_DISTANCE_31 = 31;
-static const uint32_t ROTATE_DISTANCE_32 = 32;
-static const uint32_t ROTATE_DISTANCE_33 = 33;
-static const uint32_t ROTATE_DISTANCE_48 = 48;
-static const uint32_t MAX_ROTATE_DISTANCE = 64;
-static const int64_t DEFAULT_SEED = 0;
-static const int32_t SIZE_OF_LONG = 8;
-static const int64_t SIGN_LONG_MASK = 1L << 63;
-static const int64_t HASH_OF_TRUE = 1231;
-static const int64_t HASH_OF_FALSE = 1237;
+constexpr uint32_t ROTATE_DISTANCE_1 = 1;
+constexpr uint32_t ROTATE_DISTANCE_2 = 2;
+constexpr uint32_t ROTATE_DISTANCE_4 = 4;
+constexpr uint32_t ROTATE_DISTANCE_7 = 7;
+constexpr uint32_t ROTATE_DISTANCE_8 = 8;
+constexpr uint32_t ROTATE_DISTANCE_11 = 11;
+constexpr uint32_t ROTATE_DISTANCE_12 = 12;
+constexpr uint32_t ROTATE_DISTANCE_16 = 16;
+constexpr uint32_t ROTATE_DISTANCE_18 = 18;
+constexpr uint32_t ROTATE_DISTANCE_23 = 23;
+constexpr uint32_t ROTATE_DISTANCE_27 = 27;
+constexpr uint32_t ROTATE_DISTANCE_29 = 29;
+constexpr uint32_t ROTATE_DISTANCE_31 = 31;
+constexpr uint32_t ROTATE_DISTANCE_32 = 32;
+constexpr uint32_t ROTATE_DISTANCE_33 = 33;
+constexpr uint32_t ROTATE_DISTANCE_48 = 48;
+constexpr uint32_t MAX_ROTATE_DISTANCE = 64;
+constexpr int64_t DEFAULT_SEED = 0;
+constexpr int32_t SIZE_OF_LONG = 8;
+constexpr int64_t SIGN_LONG_MASK = 1L << 63;
+constexpr int64_t HASH_OF_TRUE = 1231;
+constexpr int64_t HASH_OF_FALSE = 1237;
 
 constexpr uint64_t PRIME64_1 = 0x9E3779B185EBCA87L;
 constexpr uint64_t PRIME64_2 = 0xC2B2AE3D27D4EB4FL;
@@ -184,7 +184,7 @@ public:
         while (index <= length - UINT8_STEP_8) {
             hash = XxHash64UpdateTail(hash, *ptr64);
             index += UINT8_STEP_8;
-            ptr64 = ptr64 + 1;
+            ptr64++;
         }
 
         auto ptr32 = reinterpret_cast<int32_t *>(address + index);
