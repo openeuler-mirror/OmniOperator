@@ -521,6 +521,8 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
     builder->CreateStore(llvmTypes->CreateConstantBool(false), inArray);
     auto isNull = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "res_null");
     builder->CreateStore(llvmTypes->CreateConstantBool(false), isNull);
+    auto hasnull = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "has_null");
+    builder->CreateStore(llvmTypes->CreateConstantBool(false), hasnull);
     Type *retType = llvmTypes->ToLLVMType(inExpr.GetReturnTypeId());
 
     std::vector<BasicBlock *> condBlockList;
@@ -535,6 +537,7 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
 
     Expr *toCompare = inExpr.arguments[0];
     auto valueToCompare = VisitExpr(*toCompare);
+    builder->CreateStore(valueToCompare->isNull, isNull);
     if (!valueToCompare->IsValidValue()) {
         this->value = CreateInvalidCodeGenValue();
         return;
@@ -603,17 +606,20 @@ void ExpressionCodeGen::Visit(const InExpr &inExpr)
                 return;
             }
         }
+        builder->CreateStore(builder->CreateOr(argiValue->isNull, builder->CreateLoad(llvmTypes->I1Type(), hasnull)),
+            hasnull);
         builder->CreateCondBr(builder->CreateAnd(builder->CreateNot(tmpCmpNull), tmpCmpData), trueBlock, elseBranch);
     }
 
     func->getBasicBlockList().push_back(trueBlock);
     builder->SetInsertPoint(trueBlock);
     builder->CreateStore(llvmTypes->CreateConstantBool(true), inArray);
-    builder->CreateStore(llvmTypes->CreateConstantBool(false), isNull);
     builder->CreateBr(mergeBlock);
 
     func->getBasicBlockList().push_back(falseBlock);
     builder->SetInsertPoint(falseBlock);
+    builder->CreateStore(builder->CreateOr(builder->CreateLoad(llvmTypes->I1Type(), hasnull),
+        builder->CreateLoad(llvmTypes->I1Type(), isNull)), isNull);
     builder->CreateBr(mergeBlock);
 
     func->getBasicBlockList().push_back(mergeBlock);
