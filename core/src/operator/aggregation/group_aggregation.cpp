@@ -480,7 +480,10 @@ void HashAggregationOperator::SpillToDisk()
     }
     spillOutputState.UpdateState(curOutputState);
     aggregationSort.SortKvVector();
+    auto rowCount = aggregationSort.GetRowCount();
+    LogDebug("Spill data to disk starting in hash aggregation operator, rowCount=%lld\n", rowCount);
     spiller->SpillAggregation(&aggregationSort, aggregators);
+    LogDebug("Spill data to disk finished in hash aggregation operator, rowCount=%lld\n", rowCount);
     aggregationSort.ClearVector();
 }
 
@@ -491,7 +494,7 @@ void HashAggregationOperator::SpillHashMap()
         OperatorConfig::CheckSpillConfig(spillConfig);
         InitSpillInfos();
         spiller = new Spiller(DataTypes(spillTypes), groupByCloIdx, sortOrders,
-                              operatorConfig.GetSpillConfig()->GetSpillPath(), spillConfig->GetMaxSpillBytes());
+            operatorConfig.GetSpillConfig()->GetSpillPath(), spillConfig->GetMaxSpillBytes());
         hasSpill = true;
     }
     SpillToDisk();

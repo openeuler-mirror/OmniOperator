@@ -50,7 +50,6 @@ ErrorCode Spiller::SpillAggregation(AggregationSort *aggregationSort,
 
         auto result = writer->WriteVecBatch(hashaggSpillVecBatch, vecBatchSize);
         if (result != ErrorCode::SUCCESS) {
-            spillTracker->Free(vecBatchSize);
             return result;
         }
         totalRowOffset += rowCount;
