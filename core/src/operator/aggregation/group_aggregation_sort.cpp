@@ -5,7 +5,7 @@
 
 #include "group_aggregation_sort.h"
 using namespace omniruntime::op;
-void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint64_t rowOffset, std::vector<std::unique_ptr<Aggregator>> &aggregators)
+void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint64_t rowOffset)
 {
     auto rowCount = spillVecBatch->GetRowCount();
     auto keyVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(spillVecBatch->Get(0));
@@ -17,8 +17,7 @@ void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint6
     if (aggNum > 0) {
         auto aggOutputStartIndex = 1;
         for (size_t aggIndex = 0; aggIndex < aggNum; ++aggIndex) {
-            auto &aggregator = aggregators[aggIndex];
-            auto currentAggType = aggregator->GetType();
+            auto currentAggType = (*aggregators[aggIndex])->GetType();
             int32_t oneAggOutputCols = 1;
             if (currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_SUM ||
                 currentAggType == FunctionType::OMNI_AGGREGATION_TYPE_AVG ||
@@ -34,7 +33,7 @@ void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint6
             aggOutputStartIndex += oneAggOutputCols;
             for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
                 auto state = (reinterpret_cast<AggregateState *>(kvVec[rowIndex + rowOffset].valAddr))[aggIndex];
-                aggregator->ExtractSpillValues(state, adaptAggVectors, rowIndex);
+                (*aggregators[aggIndex])->ExtractSpillValues(state, adaptAggVectors, rowIndex);
             }
         }
     }

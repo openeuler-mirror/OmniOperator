@@ -312,7 +312,7 @@ private:
     bool hasSpill = false;
     int32_t spillRowSize;
     int32_t maxRowCountPerBatch;
-    AggregationSort aggregationSort;
+    AggregationSort *aggregationSort = nullptr;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {

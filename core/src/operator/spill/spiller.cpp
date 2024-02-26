@@ -18,8 +18,7 @@ static std::string SPILL_TEMPLATE("/spill-XXXXXX");
 static const char *SPILL_TEMPLATE_CHARS = SPILL_TEMPLATE.c_str();
 static int32_t SPILL_TEMPLATE_SIZE = static_cast<int32_t>(SPILL_TEMPLATE.size());
 
-ErrorCode Spiller::SpillAggregation(AggregationSort *aggregationSort,
-    std::vector<std::unique_ptr<Aggregator>> &aggregators)
+ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
 {
     size_t totalRowCount = aggregationSort->GetRowCount();
     if (totalRowCount <= 0) {
@@ -34,21 +33,21 @@ ErrorCode Spiller::SpillAggregation(AggregationSort *aggregationSort,
     int32_t maxRowCount = 0; // for reuse vector batch memory
     for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; vecBatchIdx++) {
         auto rowCount = std::min(maxRowCountPerBatch, static_cast<int32_t>(totalRowCount - totalRowOffset));
-        if (hashaggSpillVecBatch == nullptr || rowCount > maxRowCount) {
-            VectorHelper::FreeVecBatch(hashaggSpillVecBatch);
-            hashaggSpillVecBatch = new VectorBatch(rowCount);
-            VectorHelper::AppendVectors(hashaggSpillVecBatch, dataTypes, rowCount);
+        if (spillVecBatch == nullptr || rowCount > maxRowCount) {
+            VectorHelper::FreeVecBatch(spillVecBatch);
+            spillVecBatch = new VectorBatch(rowCount);
+            VectorHelper::AppendVectors(spillVecBatch, dataTypes, rowCount);
             maxRowCount = rowCount;
         } else {
-            hashaggSpillVecBatch->Resize(rowCount);
+            spillVecBatch->Resize(rowCount);
         }
-        aggregationSort->SetSpillVectorBatch(hashaggSpillVecBatch, totalRowOffset, aggregators);
-        auto vecBatchSize = CollectVecBatchSize(hashaggSpillVecBatch);
+        aggregationSort->SetSpillVectorBatch(spillVecBatch, totalRowOffset);
+        auto vecBatchSize = CollectVecBatchSize(spillVecBatch);
         if (spillTracker->CheckIfExceedAndReserve(vecBatchSize)) {
             return ErrorCode::EXCEED_SPILL_THRESHOLD;
         }
 
-        auto result = writer->WriteVecBatch(hashaggSpillVecBatch, vecBatchSize);
+        auto result = writer->WriteVecBatch(spillVecBatch, vecBatchSize);
         if (result != ErrorCode::SUCCESS) {
             return result;
         }

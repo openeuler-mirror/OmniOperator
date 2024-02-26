@@ -102,13 +102,13 @@ public:
     }
 
     void PraseHashMapToVector(const omniruntime::type::StringRef &key, int64_t value,
-        std::vector<KeyValue> &groupOutputVectors)
+        std::vector<KeyValue> &groupOutputVector)
     {
         KeyValue currentKv;
         currentKv.keyAddr = const_cast<char *>(key.data);
         currentKv.keyLen = key.size;
         currentKv.valAddr = value;
-        groupOutputVectors.emplace_back(currentKv);
+        groupOutputVector.emplace_back(currentKv);
     }
 
     void ParseKeyToCols(const KeyType &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,

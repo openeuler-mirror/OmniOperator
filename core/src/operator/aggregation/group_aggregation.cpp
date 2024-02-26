@@ -289,6 +289,7 @@ void HashAggregationOperator::InitSpillInfos()
     sortOrders.resize(1, sortOrder);
     groupByCloIdx.resize(1, 0);
     maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(spillRowSize);
+    aggregationSort = new AggregationSort(aggregators);
 }
 
 void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount)
@@ -326,6 +327,7 @@ OmniStatus HashAggregationOperator::Close()
     delete spillMerger;
     spillMerger = nullptr;
     executionContext->GetArena()->Reset();
+    delete aggregationSort;
     return OMNI_STATUS_NORMAL;
 }
 
@@ -475,16 +477,16 @@ void HashAggregationOperator::SpillToDisk()
             spillHashMap.GetOutputMachine(spillOutputState.outputHashmapPos, spillOutputState.hasBeenOutputNum);
 
         curOutputState = statefulMachine.HandleElements(totalSpillCount, [&](const auto &key, auto &value) mutable {
-            serialize->PraseHashMapToVector(key, reinterpret_cast<int64_t>(value), aggregationSort.GetKvVector());
+            serialize->PraseHashMapToVector(key, reinterpret_cast<int64_t>(value), aggregationSort->GetKvVector());
         });
     }
     spillOutputState.UpdateState(curOutputState);
-    aggregationSort.SortKvVector();
-    auto rowCount = aggregationSort.GetRowCount();
+    aggregationSort->SortKvVector();
+    auto rowCount = aggregationSort->GetRowCount();
     LogDebug("Spill data to disk starting in hash aggregation operator, rowCount=%lld\n", rowCount);
-    spiller->SpillAggregation(&aggregationSort, aggregators);
+    spiller->Spill(aggregationSort);
     LogDebug("Spill data to disk finished in hash aggregation operator, rowCount=%lld\n", rowCount);
-    aggregationSort.ClearVector();
+    aggregationSort->ClearVector();
 }
 
 void HashAggregationOperator::SpillHashMap()
