@@ -426,7 +426,7 @@ extern "C" DLLEXPORT void BatchCastStringToInt(int64_t contextPtr, uint8_t **str
         }
         auto chars = reinterpret_cast<const char *>(str[i]);
         Status status = ConvertStringToInteger<int32_t, false>(output[i], chars, strLen[i]);
-        if (status != Status::SUCCESS) {
+        if (status != Status::CONVERT_SUCCESS) {
             std::string s(chars, strLen[i]);
             std::string reason =
                 status == Status::IS_NOT_A_NUMBER ? "Value is not a number." : "Value too large or too small.";
@@ -450,7 +450,7 @@ extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **st
 
         auto chars = reinterpret_cast<const char *>(str[i]);
         Status status = ConvertStringToInteger<int64_t, false>(output[i], chars, strLen[i]);
-        if (status != Status::SUCCESS) {
+        if (status != Status::CONVERT_SUCCESS) {
             std::string s(chars, strLen[i]);
             std::string reason =
                 status == Status::IS_NOT_A_NUMBER ? "Value is not a number." : "Value too large or too small.";
@@ -748,7 +748,7 @@ extern "C" DLLEXPORT void BatchCastStringToIntRetNull(bool *isNull, uint8_t **st
     for (int32_t i = 0; i < rowCnt; ++i) {
         Status status = ConvertStringToInteger<int32_t>(output[i], reinterpret_cast<const char *>(str[i]),
             strLen[i]);
-        isNull[i] = status != Status::SUCCESS;
+        isNull[i] = status != Status::CONVERT_SUCCESS;
         if (isNull[i]) {
             output[i] = 0;
         }
@@ -761,7 +761,7 @@ extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **s
     for (int32_t i = 0; i < rowCnt; ++i) {
         Status status = ConvertStringToInteger<int64_t>(output[i], reinterpret_cast<const char *>(str[i]),
             strLen[i]);
-        isNull[i] = status != Status::SUCCESS;
+        isNull[i] = status != Status::CONVERT_SUCCESS;
         if (isNull[i]) {
             output[i] = 0;
         }

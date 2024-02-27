@@ -19,8 +19,8 @@ static std::regex g_doubleRegex(
 static std::regex g_dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
 
 enum Status {
-    SUCCESS,
-    OVERFLOW,
+    CONVERT_SUCCESS,
+    CONVERT_OVERFLOW,
     IS_NOT_A_NUMBER
 };
 
@@ -69,7 +69,7 @@ inline Status ConvertStringToInteger(T &result, const char *bytes, int length)
         }
 
         if ((result < stopValue) || (result == stopValue && digit > 8)) {
-            return Status::OVERFLOW;
+            return Status::CONVERT_OVERFLOW;
         }
 
         result = result * radix - digit;
@@ -85,11 +85,11 @@ inline Status ConvertStringToInteger(T &result, const char *bytes, int length)
 
     if (!negative) {
         if (result == minValue) {
-            return Status::OVERFLOW;
+            return Status::CONVERT_OVERFLOW;
         }
         result = -result;
     }
-    return Status::SUCCESS;
+    return Status::CONVERT_SUCCESS;
 }
 
 inline int StringToDouble(const std::string &s, double &result)
