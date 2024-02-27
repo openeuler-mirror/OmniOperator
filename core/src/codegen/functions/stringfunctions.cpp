@@ -439,7 +439,7 @@ extern "C" DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str
         return 0;
     }
 
-    if (status == Status::OVERFLOW) {
+    if (status == Status::CONVERT_OVERFLOW) {
         std::string s(str, strLen);
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large or too small.";
@@ -465,7 +465,7 @@ extern "C" DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *st
         return 0;
     }
 
-    if (status == Status::OVERFLOW) {
+    if (status == Status::CONVERT_OVERFLOW) {
         std::string s = std::string(str, strLen);
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast '" << s << "' to BIGINT. Value too large or too small.";
@@ -758,7 +758,7 @@ extern "C" DLLEXPORT int32_t CastStringToIntRetNull(bool *isNull, const char *st
 {
     int32_t result;
     Status status = ConvertStringToInteger<int32_t>(result, str, strLen);
-    *isNull = status != Status::SUCCESS;
+    *isNull = status != Status::CONVERT_SUCCESS;
     return result;
 }
 
@@ -766,7 +766,7 @@ extern "C" DLLEXPORT int64_t CastStringToLongRetNull(bool *isNull, const char *s
 {
     long result;
     Status status = ConvertStringToInteger<int64_t>(result, str, strLen);
-    *isNull = status != Status::SUCCESS;
+    *isNull = status != Status::CONVERT_SUCCESS;
     return result;
 }
 
