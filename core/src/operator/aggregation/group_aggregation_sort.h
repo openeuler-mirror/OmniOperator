@@ -42,7 +42,7 @@ public:
 private:
     std::vector<omniruntime::op::KeyValue> kvVec;
     std::vector<std::unique_ptr<Aggregator> *> aggregators;
-    static bool HashKeyCompare(const omniruntime::op::KeyValue &a, omniruntime::op::KeyValue &b)
+    static ALWAYS_INLINE bool HashKeyCompare(const omniruntime::op::KeyValue &a, omniruntime::op::KeyValue &b)
     {
         int ret = memcmp(a.keyAddr, b.keyAddr, std::min(a.keyLen, b.keyLen));
         if (ret == 0) {

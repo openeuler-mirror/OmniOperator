@@ -274,7 +274,6 @@ private:
     template <typename Deserialize>
     void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
     void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
-    void SetSpillKeyOutputVector(VectorBatch *outputVecBatch, int32_t outputRowCount, int32_t groupColNum);
 
     std::vector<ColumnIndex> groupByCols;
     std::vector<std::vector<int32_t>> aggInputCols;
@@ -302,8 +301,7 @@ private:
     std::vector<SortOrder> sortOrders;
     std::vector<int32_t> groupByCloIdx;
     int64_t spillTotalRowCount = 0;
-    std::vector<vec::VectorBatch *> batches;
-    std::vector<int32_t> rowIdxes;
+    int64_t spillRowOffset = 0;
     std::vector<AggregateState *> rowStates;
     uint64_t spilledBytes = 0;
     std::vector<type::DataTypePtr> aggTypes;

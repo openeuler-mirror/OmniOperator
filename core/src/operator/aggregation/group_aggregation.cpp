@@ -534,22 +534,15 @@ void HashAggregationOperator::SetStateOutputVecBatch(VectorBatch *outputVecBatch
     }
 }
 
-void HashAggregationOperator::SetSpillKeyOutputVector(VectorBatch *outputVecBatch, int32_t outputRowCount,
-    int32_t groupColNum)
+static VectorBatch *GetVectorBatchFromSlice(VectorBatch *vectorBatch, int32_t rowCount)
 {
-    using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
-    std::vector<BaseVector *> groupOutputVectors(groupColNum);
-    for (int32_t i = 0; i < groupColNum; i++) {
-        groupOutputVectors[i] = outputVecBatch->Get(i);
+    auto outputColCount = vectorBatch->GetVectorCount();
+    auto *sliceBatch = new VectorBatch(rowCount);
+    for (int32_t columnIdx = 0; columnIdx < outputColCount; columnIdx++) {
+        auto *vector = vectorBatch->Get(columnIdx);
+        sliceBatch->Append(vec::VectorHelper::SliceVector(vector, 0, rowCount));
     }
-    for (int32_t i = 0; i < outputRowCount; i++) {
-        auto batch = batches[i];
-        auto inputRowIdx = rowIdxes[i];
-        auto keyVector = static_cast<VarcharVector *>(batch->Get(0));
-        auto key = keyVector->GetValue(inputRowIdx);
-        StringRef keyRef(const_cast<char *>(key.data()), key.size());
-        serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, i);
-    }
+    return sliceBatch;
 }
 
 template <typename Deserialize>
@@ -572,74 +565,90 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
         spillTotalRowCount = spillMerger->GetTotalRowCount();
     }
 
-    auto rowCount = std::min(static_cast<int64_t>(rowsPerBatch), spillTotalRowCount);
-    batches.resize(rowCount);
-    rowIdxes.resize(rowCount);
-    auto &arenaAllocator = *(executionContext->GetArena());
-    int32_t aggNum = aggregators.size();
+    auto rowCount = std::min(static_cast<int64_t>(rowsPerBatch), spillTotalRowCount - spillRowOffset);
+    auto output = new VectorBatch(rowCount);
+    SetVectors(output, outputTypes, rowCount);
     int32_t groupColNum = static_cast<int32_t>(this->groupByCols.size());
+    std::vector<BaseVector *> groupOutputVectors(groupColNum);
+    for (int32_t i = 0; i < groupColNum; i++) {
+        groupOutputVectors[i] = output->Get(i);
+    }
+
+    int32_t aggNum = aggregators.size();
     int32_t rowIdx = 0;
 
     bool isEqual = false;
+    bool isNewKey = true;
     if (aggNum == 0) {
         do {
-            batches[rowIdx] = spillMerger->CurrentBatchWithEqual(isEqual);
-            rowIdxes[rowIdx] = spillMerger->CurrentRowIndex();
-            rowIdx++;
-            spillTotalRowCount--;
-            spillMerger->Pop();
-            // process the same key
-            while (isEqual) {
-                spillMerger->CurrentBatchWithEqual(isEqual);
-                spillMerger->CurrentRowIndex();
-                spillTotalRowCount--;
-                spillMerger->Pop();
+            auto currentVecBatch = spillMerger->CurrentBatchWithEqual(isEqual);
+            if (currentVecBatch == nullptr) {
+                break;
             }
-        } while (rowIdx < rowCount && spillTotalRowCount > 0);
-        auto output = new VectorBatch(rowIdx);
-        SetVectors(output, outputTypes, rowIdx);
-        SetSpillKeyOutputVector(output, rowIdx, groupColNum);
-        *outputVecBatch = output;
+            auto currentRowIndex = spillMerger->CurrentRowIndex();
+            if (!isEqual) {
+                auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(0));
+                auto key = keyVector->GetValue(currentRowIndex);
+                StringRef keyRef(const_cast<char *>(key.data()), key.size());
+                serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, rowIdx);
+                rowIdx++;
+            }
+            spillMerger->Pop();
+            spillRowOffset++;
+        } while (rowIdx < rowCount && spillRowOffset < spillTotalRowCount);
+        if (rowIdx < rowCount) {
+            *outputVecBatch = GetVectorBatchFromSlice(output, rowIdx);
+            VectorHelper::FreeVecBatch(output);
+        } else {
+            *outputVecBatch = output;
+        }
         return;
     }
 
     rowStates.resize(rowCount);
+    auto &arenaAllocator = *(executionContext->GetArena());
     do {
-        batches[rowIdx] = spillMerger->CurrentBatchWithEqual(isEqual);
-        rowIdxes[rowIdx] = spillMerger->CurrentRowIndex();
-        spillTotalRowCount--;
-        spillMerger->Pop();
-        // init AggregateState
+        auto currentVecBatch = spillMerger->CurrentBatchWithEqual(isEqual);
+        if (currentVecBatch == nullptr) {
+            break;
+        }
+        auto currentRowIndex = spillMerger->CurrentRowIndex();
         int32_t vectorIndex = 1;
-        auto currentGroupStateSize = static_cast<int64_t>(aggNum * sizeof(AggregateState));
-        auto *currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
-        for (int32_t i = 0; i < aggNum; i++) {
-            aggregators[i]->InitState(currentGroupStates[i]);
-            aggregators[i]->ProcessGroupAfterSpill(currentGroupStates[i], batches[rowIdx], vectorIndex,
-                rowIdxes[rowIdx]);
-        }
+        if (isNewKey) {
+            auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(0));
+            auto key = keyVector->GetValue(currentRowIndex);
+            StringRef keyRef(const_cast<char *>(key.data()), key.size());
+            serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, rowIdx);
 
-        while (isEqual) {
-            VectorBatch *currentVectorBatch = spillMerger->CurrentBatchWithEqual(isEqual);
-            int32_t currentRowIdx = spillMerger->CurrentRowIndex();
-
-            // aggregation operation is performed for the same key
-            int32_t currentVectorIndex = 1;
+            // init AggregateState
+            auto currentGroupStateSize = static_cast<int64_t>(aggNum * sizeof(AggregateState));
+            AggregateState *currentGroupStates =
+                    reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
             for (int32_t i = 0; i < aggNum; i++) {
-                aggregators[i]->ProcessGroupAfterSpill(currentGroupStates[i], currentVectorBatch, currentVectorIndex,
-                    currentRowIdx);
+                aggregators[i]->InitState(currentGroupStates[i]);
+                aggregators[i]->ProcessGroupAfterSpill(currentGroupStates[i], currentVecBatch, vectorIndex,
+                                                       currentRowIndex);
             }
-            spillTotalRowCount--;
-            spillMerger->Pop();
+            rowStates[rowIdx] = currentGroupStates;
+            rowIdx++;
+        } else {
+            AggregateState *currentGroupStates = rowStates[rowIdx - 1];
+            for (int32_t i = 0; i < aggNum; i++) {
+                aggregators[i]->ProcessGroupAfterSpill(currentGroupStates[i], currentVecBatch, vectorIndex,
+                                                       currentRowIndex);
+            }
         }
-        rowStates[rowIdx] = currentGroupStates;
-        rowIdx++;
-    } while (rowIdx < rowCount && spillTotalRowCount > 0);
-    auto output = new VectorBatch(rowIdx);
-    SetVectors(output, outputTypes, rowIdx);
-    SetSpillKeyOutputVector(output, rowIdx, groupColNum);
+        isNewKey = !isEqual;
+        spillMerger->Pop();
+        spillRowOffset++;
+    } while (rowIdx < rowCount && spillRowOffset < spillTotalRowCount);
     SetStateOutputVecBatch(output, rowIdx, groupColNum, aggNum);
-    *outputVecBatch = output;
+    if (rowIdx < rowCount) {
+        *outputVecBatch = GetVectorBatchFromSlice(output, rowIdx);
+        VectorHelper::FreeVecBatch(output);
+    } else {
+        *outputVecBatch = output;
+    }
 }
 
 template <typename Deserialize>
@@ -647,7 +656,7 @@ int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorB
 {
     if (hasSpill) {
         GetOutputFromDisk(deserializeHashmap, outputVecBatch);
-        if (spillTotalRowCount == 0) {
+        if (spillTotalRowCount == spillRowOffset) {
             SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
         }
         return 1;
