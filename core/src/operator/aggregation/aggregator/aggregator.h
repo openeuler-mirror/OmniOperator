@@ -216,7 +216,7 @@ public:
 #endif
         auto filterVecIdx = static_cast<int32_t>(filterOffset);
         auto filterVec = static_cast<Vector<bool> *>(vectorBatch->Get(filterVecIdx));
-        size_t rowCount = rowStates.size();
+        auto rowCount = static_cast<int32_t>(rowStates.size());
         bool needFilterJude = DoNeedHandleAggFilter(filterVec, rowOffset, rowCount);
 
         int32_t rowIndex = rowOffset;
@@ -229,7 +229,7 @@ public:
                 rowIndex++;
             }
         } else {
-            for (size_t i = 0; i < rowCount; ++i) {
+            for (int32_t i = 0; i < rowCount; ++i) {
                 ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
             }
         }

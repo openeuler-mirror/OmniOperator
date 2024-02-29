@@ -121,8 +121,9 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
     struct statfs diskInfo;
     auto result = statfs(spillPathChars, &diskInfo);
     if (result != 0) {
-        throw exception::OmniException(GetErrorCode(ErrorCode::DISK_STAT_FAILED),
-            GetErrorMessage(ErrorCode::DISK_STAT_FAILED));
+        std::string message = GetErrorMessage(ErrorCode::DISK_STAT_FAILED) + "Get stat for " + spillPathChars +
+            " failed since " + strerror(errno) + ".";
+        throw exception::OmniException(GetErrorCode(ErrorCode::DISK_STAT_FAILED), message);
     }
 
     auto availableDiskSize =
@@ -130,7 +131,8 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
     auto maxSpillBytes = spillConfig.GetMaxSpillBytes();
     if (availableDiskSize < maxSpillBytes) {
         std::string message = GetErrorMessage(ErrorCode::DISK_SPACE_NOT_ENOUGH) +
-            "The disk available size:" + std::to_string(availableDiskSize / GB_UNIT) +
+            "The available size of the disk where the spill directory " + spillPathChars +
+            " located:" + std::to_string(availableDiskSize / GB_UNIT) +
             "GB and the max spill size:" + std::to_string(maxSpillBytes / GB_UNIT) + "GB.";
         throw exception::OmniException(GetErrorCode(ErrorCode::DISK_SPACE_NOT_ENOUGH), message);
     }
@@ -138,9 +140,11 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
 
 static void CreateSpillDirectory(const char *spillPathChars)
 {
-    auto result = mkdir(spillPathChars, 0750);
-    if (result != 0) {
-        throw exception::OmniException(GetErrorCode(ErrorCode::MKDIR_FAILED), GetErrorMessage(ErrorCode::MKDIR_FAILED));
+    mkdir(spillPathChars, 0750);
+    if (access(spillPathChars, 0) != 0) {
+        std::string message = GetErrorMessage(ErrorCode::MKDIR_FAILED) + "Create spill directory " + spillPathChars +
+            " failed since " + strerror(errno) + ".";
+        throw exception::OmniException(GetErrorCode(ErrorCode::MKDIR_FAILED), message);
     }
 }
 
@@ -154,9 +158,7 @@ static void CreateSpillDirectories(char *spillPathChars)
             int32_t nextPos = curPos + 1;
             auto tmpChar = spillPathChars[nextPos];
             spillPathChars[nextPos] = '\0';
-            if (access(spillPathChars, 0) == -1) {
-                CreateSpillDirectory(spillPathChars);
-            }
+            CreateSpillDirectory(spillPathChars);
             spillPathChars[nextPos] = tmpChar;
             curPos = nextPos;
         } else {
@@ -165,10 +167,7 @@ static void CreateSpillDirectories(char *spillPathChars)
         c = spillPathChars[curPos];
     }
 
-    // create spill directory if it does not exist
-    if (access(spillPathChars, 0) == -1) {
-        CreateSpillDirectory(spillPathChars);
-    }
+    CreateSpillDirectory(spillPathChars);
 }
 
 void OperatorConfig::CheckSpillConfig(SpillConfig *spillConfig)
