@@ -756,7 +756,7 @@ extern "C" DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPt
 
 extern "C" DLLEXPORT int32_t CastStringToIntRetNull(bool *isNull, const char *str, int32_t strLen)
 {
-    int32_t result;
+    int32_t result = 0;
     Status status = ConvertStringToInteger<int32_t>(result, str, strLen);
     *isNull = status != Status::CONVERT_SUCCESS;
     return result;
@@ -764,7 +764,7 @@ extern "C" DLLEXPORT int32_t CastStringToIntRetNull(bool *isNull, const char *st
 
 extern "C" DLLEXPORT int64_t CastStringToLongRetNull(bool *isNull, const char *str, int32_t strLen)
 {
-    long result;
+    int64_t result = 0;
     Status status = ConvertStringToInteger<int64_t>(result, str, strLen);
     *isNull = status != Status::CONVERT_SUCCESS;
     return result;

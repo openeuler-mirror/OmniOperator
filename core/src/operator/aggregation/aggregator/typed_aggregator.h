@@ -137,13 +137,13 @@ public:
             std::vector<uint8_t> notSatisfiedArray;
             notSatisfiedArray.resize(rowCount);
             if (nullMap == nullptr) {
-                for (int i = 0; i < rowCount; ++i) {
+                for (int32_t i = 0; i < rowCount; ++i) {
                     notSatisfiedArray[i] = not filterPtr[i];
                 }
             } else {
                 auto *nullmapPtr = nullMap;
                 nullmapPtr += rowOffset;
-                for (int i = 0; i < rowCount; ++i) {
+                for (int32_t i = 0; i < rowCount; ++i) {
                     notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
@@ -187,13 +187,13 @@ public:
             std::vector<uint8_t> notSatisfiedArray;
             notSatisfiedArray.resize(rowCount);
             if (nullMap == nullptr) {
-                for (int i = 0; i < rowCount; ++i) {
+                for (int32_t i = 0; i < rowCount; ++i) {
                     notSatisfiedArray[i] = not filterPtr[i];
                 }
             } else {
                 auto *nullmapPtr = nullMap;
                 nullmapPtr += rowOffset;
-                for (int i = 0; i < rowCount; ++i) {
+                for (int32_t i = 0; i < rowCount; ++i) {
                     notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
