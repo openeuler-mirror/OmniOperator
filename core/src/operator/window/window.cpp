@@ -491,7 +491,6 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
 
         currentBatch = spillMerger->CurrentBatch();
         currentRowIdx = spillMerger->CurrentRowIndex();
-        spillMerger->Pop();
     }
 
     int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
@@ -583,9 +582,9 @@ bool WindowOperator::ProcessNextWindowPartition()
             break;
         }
 
+        spillMerger->Pop();
         currentBatch = spillMerger->CurrentBatch();
         currentRowIdx = spillMerger->CurrentRowIndex();
-        spillMerger->Pop();
     }
 
     pagesIndex->AddVecBatch(vecBatch);
