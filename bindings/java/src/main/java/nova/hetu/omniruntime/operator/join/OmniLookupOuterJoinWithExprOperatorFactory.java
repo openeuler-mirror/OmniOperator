@@ -116,7 +116,7 @@ public class OmniLookupOuterJoinWithExprOperatorFactory
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
                     Arrays.hashCode(probeHashKeys), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
-                    operatorConfig);
+                    operatorConfig, hashBuilderWithExprOperatorFactory);
         }
 
         @Override
@@ -132,7 +132,8 @@ public class OmniLookupOuterJoinWithExprOperatorFactory
                     && Arrays.equals(probeHashKeys, that.probeHashKeys)
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
                     && Arrays.equals(buildOutputTypes, that.buildOutputTypes)
-                    && operatorConfig.equals(that.operatorConfig);
+                    && operatorConfig.equals(that.operatorConfig)
+                    && hashBuilderWithExprOperatorFactory == that.hashBuilderWithExprOperatorFactory;
         }
 
         public long getHashBuilderWithExprOperatorFactory() {

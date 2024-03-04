@@ -180,7 +180,6 @@ public class OmniAggregationWithExprOperatorFactory
                     operatorConfig);
         }
 
-
         private static String[] checkAggChannelsFilter(String[] aggChannelsFilter) {
             for (int i = 0; i < aggChannelsFilter.length; i++) {
                 aggChannelsFilter[i] = aggChannelsFilter[i] == null ? "" : aggChannelsFilter[i];

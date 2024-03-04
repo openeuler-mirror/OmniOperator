@@ -104,7 +104,7 @@ public class OmniSmjBufferedTableWithExprOperatorFactoryV3
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(soruceTypes), Arrays.hashCode(equalKeyExprs),
-                    Arrays.hashCode(outputChannels), operatorConfig);
+                    Arrays.hashCode(outputChannels), operatorConfig, streamedTableOperatorFactoryV3);
         }
 
         @Override
@@ -117,7 +117,8 @@ public class OmniSmjBufferedTableWithExprOperatorFactoryV3
             }
             FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(soruceTypes, that.soruceTypes) && Arrays.equals(equalKeyExprs, that.equalKeyExprs)
-                    && Arrays.equals(outputChannels, that.outputChannels) && operatorConfig.equals(that.operatorConfig);
+                    && Arrays.equals(outputChannels, that.outputChannels) && operatorConfig.equals(that.operatorConfig)
+                    && streamedTableOperatorFactoryV3 == that.streamedTableOperatorFactoryV3;
         }
 
         public long getStreamedTableOperatorFactoryV3() {

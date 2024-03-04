@@ -99,15 +99,16 @@ public class OmniLookupOuterJoinOperatorFactory
             this.probeOutputCols = requireNonNull(probeOutputCols, "probeOutputCols");
             this.buildOutputCols = requireNonNull(buildOutputCols, "buildOutputCols");
             this.buildOutputTypes = requireNonNull(buildOutputTypes, "buildOutputTypes");
-            this.operatorConfig = operatorConfig;
             this.hashBuilderOperatorFactory = hashBuilderOperatorFactory.getNativeOperatorFactory();
+            this.operatorConfig = operatorConfig;
             setNeedCache(false);
         }
 
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
-                    Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes), operatorConfig);
+                    Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes), hashBuilderOperatorFactory,
+                    operatorConfig);
         }
 
         @Override
@@ -122,6 +123,7 @@ public class OmniLookupOuterJoinOperatorFactory
             return Arrays.equals(probeTypes, that.probeTypes) && Arrays.equals(probeOutputCols, that.probeOutputCols)
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
                     && Arrays.equals(buildOutputTypes, that.buildOutputTypes)
+                    && hashBuilderOperatorFactory == that.hashBuilderOperatorFactory
                     && operatorConfig.equals(that.operatorConfig);
         }
 

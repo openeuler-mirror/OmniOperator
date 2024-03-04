@@ -105,12 +105,22 @@ public class SparkSpillConfig extends SpillConfig {
 
     @Override
     public boolean equals(Object obj) {
-        return super.equals(obj)
-                && numElementsForSpillThreshold == ((SparkSpillConfig) obj).numElementsForSpillThreshold;
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        if (!super.equals(obj)) {
+            return false;
+        }
+        SparkSpillConfig that = (SparkSpillConfig) obj;
+        return numElementsForSpillThreshold == that.numElementsForSpillThreshold
+                && memUsagePctForSpillThreshold == that.memUsagePctForSpillThreshold;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), numElementsForSpillThreshold);
+        return Objects.hash(super.hashCode(), numElementsForSpillThreshold, memUsagePctForSpillThreshold);
     }
 }

@@ -97,12 +97,13 @@ public class OmniSortWithExprOperatorFactory
             this.sortAscendings = sortAscendings;
             this.sortNullFirsts = sortNullFirsts;
             this.operatorConfig = operatorConfig;
+            setNeedCache(false);
         }
 
         @Override
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(sourceTypes), Arrays.hashCode(outputColumns), Arrays.hashCode(sortKeys),
-                    Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts));
+                    Arrays.hashCode(sortAscendings), Arrays.hashCode(sortNullFirsts), operatorConfig);
         }
 
         @Override
@@ -116,7 +117,8 @@ public class OmniSortWithExprOperatorFactory
             FactoryContext that = (FactoryContext) obj;
             return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(outputColumns, that.outputColumns)
                     && Arrays.equals(sortKeys, that.sortKeys) && Arrays.equals(sortAscendings, that.sortAscendings)
-                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts);
+                    && Arrays.equals(sortNullFirsts, that.sortNullFirsts)
+                    && Objects.equals(operatorConfig, that.operatorConfig);
         }
     }
 }

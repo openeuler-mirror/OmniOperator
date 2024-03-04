@@ -14,6 +14,9 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
+static std::string SPILL_TEMPLATE("/spill-XXXXXX");
+static const char *SPILL_TEMPLATE_CHARS = SPILL_TEMPLATE.c_str();
+static int32_t SPILL_TEMPLATE_SIZE = static_cast<int32_t>(SPILL_TEMPLATE.size());
 
 ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort)
 {
@@ -117,21 +120,18 @@ template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vecto
 ErrorCode SpillWriter::CreateTempFile()
 {
     // the spill directory will be created when CheckOperatorConfig if it does not exist
+    int32_t fileNameLen = dirPath.size() + SPILL_TEMPLATE_SIZE + 1;
     auto dirPathChars = dirPath.c_str();
-    std::string spillFilePath(dirPath);
-    const char templateName[] = "spill-XXXXXX";
-    if (dirPathChars[spillFilePath.size() - 1] == '/') {
-        spillFilePath.append(templateName);
-    } else {
-        spillFilePath.append("/");
-        spillFilePath.append(templateName);
+    char filePathChars[fileNameLen];
+    if (snprintf_s(filePathChars, fileNameLen, fileNameLen, "%s%s", dirPathChars, SPILL_TEMPLATE_CHARS) < 0) {
+        LogError("Snprintf for %s and %s failed since %s.", dirPathChars, SPILL_TEMPLATE_CHARS, strerror(errno));
+        return ErrorCode::WRITE_FAILED;
     }
 
-    auto filePathChars = spillFilePath.c_str();
     // it will open the file and the file permission is 600
     int32_t tempFd = mkstemp(const_cast<char *>(filePathChars));
     if (tempFd == -1) {
-        LogError("Mkstemp in %s failed since %s.", dirPathChars, strerror(errno));
+        LogError("Mkstemp in %s for %s failed since %s.", dirPathChars, filePathChars, strerror(errno));
         return ErrorCode::MKSTEMP_FAILED;
     }
     // set the file permission to 600
@@ -140,7 +140,7 @@ ErrorCode SpillWriter::CreateTempFile()
         return ErrorCode::WRITE_FAILED;
     }
     fd = tempFd;
-    filePath = spillFilePath;
+    filePath = filePathChars;
     return ErrorCode::SUCCESS;
 }
 
