@@ -16,18 +16,6 @@ class AggregationOperator : public AggregationCommonOperator {
 public:
     AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs,
         std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> &inputRaws,
-        std::vector<bool> &outputPartials)
-        : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials), aggsOutputTypes(aggsOutputTypes)
-    {
-        aggsStates.reserve(aggregators.size());
-        for (uint32_t i = 0; i < aggregators.size(); i++) {
-            aggsStates.push_back(AggregateState());
-            aggregators[i]->InitState(aggsStates[i]);
-        }
-    }
-
-    AggregationOperator(std::vector<std::unique_ptr<Aggregator>> aggs,
-        std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> &inputRaws,
         std::vector<bool> &outputPartials, const std::vector<int8_t> &hasAggFilters)
         : AggregationCommonOperator(std::move(aggs), inputRaws, outputPartials),
           aggsOutputTypes(aggsOutputTypes),
