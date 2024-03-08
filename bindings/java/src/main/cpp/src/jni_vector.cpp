@@ -28,9 +28,9 @@ static void RecordStack(BaseVector *vector, JNIEnv *env)
     jstring jstack = (jstring)env->CallStaticObjectMethod(traceUtilCls, traceUtilStackMethodId);
     auto stackChars = env->GetStringUTFChars(jstack, JNI_FALSE);
     std::string stack(stackChars);
-    MemoryTrace *trace = MemoryTrace::GetMemoryTrace();
+    ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
     // replace c++ stack with java stack after vector is created.
-    trace->ReplaceVectorPtrAllocated(reinterpret_cast<uintptr_t>(vector), stack);
+    threadMemoryTrace->ReplaceVectorTracedLog(reinterpret_cast<uintptr_t>(vector), stack);
     env->ReleaseStringUTFChars(jstack, stackChars);
 }
 #endif
@@ -223,6 +223,11 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_getAlloc
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_memoryClearNative(JNIEnv *env, jclass jcls)
 {
+    ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
+    if (threadMemoryTrace->HasMemoryLeak()) {
+        threadMemoryTrace->FreeLeakedMemory();
+    }
+
     auto threadMemoryManager = omniruntime::mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
 }

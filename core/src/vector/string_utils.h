@@ -20,18 +20,14 @@ public:
         data.reserve(capacity);
         int64_t bufferCapacity = sizeof(LargeStringBuffer) + capacity;
         omniruntime::mem::ThreadMemoryManager::ReportMemory(bufferCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddArenaMemory(reinterpret_cast<uintptr_t>(this), bufferCapacity);
-#endif
     }
 
     ~LargeStringBuffer()
     {
         int64_t bufferCapacity = sizeof(LargeStringBuffer) + capacity;
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(bufferCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::SubArenaMemory(reinterpret_cast<uintptr_t>(this), bufferCapacity);
-#endif
     }
 
     ALWAYS_INLINE uint64_t Capacity()

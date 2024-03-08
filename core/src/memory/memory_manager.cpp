@@ -29,22 +29,10 @@ MemoryManager::MemoryManager(MemoryManager *parentMemoryManager)
 MemoryManager::~MemoryManager()
 {
     if (parent == nullptr) {
-#ifdef TRACE
-        // if has memoryLeak, it will print and free leaked memory.
-        MemoryTrace *trace = MemoryTrace::GetMemoryTrace();
-        int64_t vectorMemory = trace->GetVectorAllocated();
-        if (vectorMemory != 0) {
-            std::cout << "vector has memory leak: leak size is " << vectorMemory << std::endl;
+        int64_t finalSize = memoryAmount.load(std::memory_order_relaxed);
+        if (finalSize != 0) {
+            std::cout << "it may has memory leak, leak size is " << finalSize << std::endl;
         }
-        int64_t arenaMemory = trace->GetArenaAllocated();
-        if (arenaMemory != 0) {
-            std::cout << "arena has memory leak: leak size is " << arenaMemory << std::endl;
-        }
-        if (trace->HasMemoryLeak()) {
-            trace->FreeLeakedMemory();
-        }
-        delete trace;
-#endif
     }
 }
 

@@ -46,7 +46,7 @@ public:
     {
         untrackedMemory += size;
         if (currentMemoryManager && untrackedMemory > untrackedMemoryThreshold) {
-            currentMemoryManager->Account(untrackedMemory);
+            currentMemoryManager->AccountMemory(untrackedMemory);
 #ifdef DEBUG
             currentMemoryManager->AddScopeAmount(currentScope, untrackedMemory);
 #endif
@@ -58,7 +58,7 @@ public:
     {
         untrackedMemory -= size;
         if (currentMemoryManager && labs(untrackedMemory) > untrackedMemoryThreshold) {
-            currentMemoryManager->Account(untrackedMemory);
+            currentMemoryManager->AccountMemory(untrackedMemory);
 #ifdef DEBUG
             currentMemoryManager->SubScopeAmount(currentScope, untrackedMemory);
 #endif

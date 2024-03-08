@@ -20,7 +20,7 @@ void TestUnlimitedAccountMultipleThreads(int count, int64_t size)
     EXPECT_TRUE(currentMemoryManager != nullptr);
 
     for (int i = 0; i < count; ++i) {
-        currentMemoryManager->Account(size);
+        currentMemoryManager->AccountMemory(size);
     }
     int64_t currentMemoryAmount = currentMemoryManager->GetMemoryAmount();
     EXPECT_EQ(currentMemoryAmount, count * size);
@@ -80,7 +80,7 @@ void testLimitedAccountMultipleThreads(int count, int64_t size)
 
     for (int i = 0; i < count; ++i) {
         try {
-            currentMemoryManager->Account(size);
+            currentMemoryManager->AccountMemory(size);
         } catch (exception::OmniException &e) {
             break;
         }
@@ -175,7 +175,7 @@ TEST(MemoryManager, testStatisticsFunctionMemoryLimit)
     EXPECT_EQ(globalMemoryAmount, 5242880);
     // it is equivalent to "auto vector = std::make_unique<Vector<int32_t>>(size)"
     auto currentMemoryManager = std::make_unique<mem::MemoryManager>(globalMemoryManager);
-    EXPECT_ANY_THROW(currentMemoryManager->Account(globalMemoryAmount));
+    EXPECT_ANY_THROW(currentMemoryManager->AccountMemory(globalMemoryAmount));
 
     globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
     EXPECT_EQ(globalMemoryAmount, 10485760);
@@ -368,7 +368,7 @@ TEST(MemoryManager, testUnlimitedAccount)
     int64_t positiveSize = 1 * 1024 * 1024;
     int64_t negativeSize = -1 * 1024 * 1024;
     for (int i = 0; i < count; ++i) {
-        currentMemoryManager->Account(positiveSize);
+        currentMemoryManager->AccountMemory(positiveSize);
     }
     int64_t currentMemoryAmount = currentMemoryManager->GetMemoryAmount();
     EXPECT_EQ(currentMemoryAmount, count * positiveSize);
@@ -379,7 +379,7 @@ TEST(MemoryManager, testUnlimitedAccount)
     EXPECT_EQ(parentMemoryAmount, count * positiveSize);
 
     for (int i = 0; i < count; ++i) {
-        currentMemoryManager->Account(negativeSize);
+        currentMemoryManager->AccountMemory(negativeSize);
     }
     currentMemoryAmount = currentMemoryManager->GetMemoryAmount();
     EXPECT_EQ(currentMemoryAmount, 0);
@@ -404,7 +404,7 @@ TEST(MemoryManager, testLimitedAccount)
     int64_t positiveSize = 1 * 1024 * 1024;
     for (int i = 0; i < count; ++i) {
         try {
-            currentMemoryManager->Account(positiveSize);
+            currentMemoryManager->AccountMemory(positiveSize);
         } catch (exception::OmniException &e) {
             break;
         }

@@ -54,7 +54,7 @@ public class MemoryManager implements AutoCloseable {
     }
 
     /**
-     * only for ut
+     * clear memory of current task
      * */
     public static void clearMemory() {
         memoryClearNative();

@@ -12,19 +12,19 @@
 #include <type/data_type.h>
 #include "util/compiler_util.h"
 #include "memory_manager_allocator.h"
+#include "thread_memory_trace.h"
 
 namespace omniruntime {
 namespace mem {
-using PtrMapAllocator = MemoryManagerAllocator<std::pair<uintptr_t, std::pair<int64_t, std::string>>>;
-using PtrMap = std::unordered_map<uintptr_t, std::pair<int64_t, std::string>, std::hash<uintptr_t>, std::equal_to<>,
-    PtrMapAllocator>;
-
+/**
+ * it is responsible for memory usage trace of each thread and the global memory usage.
+ **/
 class MemoryTrace {
 public:
     static ALWAYS_INLINE MemoryTrace *GetMemoryTrace()
     {
-        static MemoryTrace *memoryTrace = new MemoryTrace();
-        return memoryTrace;
+        static MemoryTrace memoryTrace;
+        return &memoryTrace;
     }
 
     static void AddVectorMemory(uintptr_t ptr, int64_t size);
@@ -35,41 +35,19 @@ public:
 
     static void SubArenaMemory(uintptr_t ptr, int64_t size);
 
-    void SetVectorAllocated(int64_t size);
+    MemoryTrace() = default;
 
-    int64_t GetVectorAllocated();
+    ~MemoryTrace();
 
-    void SetArenaAllocated(int64_t size);
+    void AddThreadMemoryTrace(ThreadMemoryTrace *threadMemoryTrace);
 
-    int64_t GetArenaAllocated();
+    void SubThreadMemoryTrace(ThreadMemoryTrace *threadMemoryTrace);
 
-    void ReplaceVectorPtrAllocated(uintptr_t ptr, const std::string &stack);
-
-    void AddVectorPtrAllocated(uintptr_t ptr, const std::pair<int64_t, std::string> &pair);
-
-    void SubVectorPtrAllocated(uintptr_t ptr, int64_t size);
-
-    PtrMap GetVectorPtrAllocated();
-
-    void AddArenaPtrAllocated(uintptr_t ptr, const std::pair<int64_t, std::string> &pair);
-
-    void SubArenaPtrAllocated(uintptr_t ptr, int64_t size);
-
-    PtrMap GetArenaPtrAllocated();
-
-    bool HasMemoryLeak();
-
-    void FreeLeakedMemory();
-
-    void Clear();
+    std::unordered_set<ThreadMemoryTrace *> GetThreadMemoryTraceSet();
 
 private:
-    std::mutex vectorLock;                   // keep memoryAllocatedByDataType thread-safely
-    std::mutex arenaLock;                    // keep arenaAllocated thread-safely
-    std::atomic<int64_t> curVectorAllocated; // current vector allocated memory size
-    std::atomic<int64_t> curArenaAllocated;  // current arena allocated memory size
-    PtrMap curVectorPtrAllocated; // <uintptr : pair<size, stackLog>>, record the size and stack of each vector.
-    PtrMap curArenaPtrAllocated;  // <uintptr : pair<size, stackLog>>, record the size and stack of each arena.
+    std::unordered_set<ThreadMemoryTrace *> threadMemoryTraceSet;
+    std::mutex m_mutex;
 };
 }
 }
