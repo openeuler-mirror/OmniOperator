@@ -151,18 +151,16 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
         return;
     }
 
-    BaseVector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
     auto rowCount = end - start + 1;
-    BaseVector *vector = nullptr;
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
-        vector = new Vector<int64_t>(rowCount);
-        inputVecBatchForAgg->SetVector(0, vector);
+        auto vector = std::make_unique<Vector<int64_t>>(rowCount);
+        inputVecBatchForAgg->SetVector(0, vector.get());
         aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, start, rowCount);
-        delete vector;
-        vector = nullptr;
         return;
     }
 
+    BaseVector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
+    BaseVector *vector = nullptr;
     for (int32_t position = start; position <= end; ++position) {
         uint32_t vectorIndex = UINT32_MAX;
         int64_t sliceAddress = windowIndex->GetPagesIndex()->GetValueAddresses()[position + windowIndex->GetStart()];

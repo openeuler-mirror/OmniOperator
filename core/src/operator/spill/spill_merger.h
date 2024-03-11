@@ -52,7 +52,7 @@ public:
 
     ~SpillReader();
 
-    ErrorCode ReadVecBatch(vec::VectorBatch **pVectorBatch, bool &isEnd);
+    ErrorCode ReadVecBatch(std::unique_ptr<vec::VectorBatch> &vectorBatch, bool &isEnd);
 
     uint64_t GetFileLength() const
     {
@@ -89,7 +89,6 @@ public:
     ~SpillMergeStream()
     {
         delete reader;
-        VectorHelper::FreeVecBatch(currentBatch);
     }
 
     int32_t CompareTo(const SpillMergeStream &other);
@@ -107,7 +106,8 @@ public:
     ErrorCode GetNextBatch()
     {
         bool isEnd = false;
-        auto result = reader->ReadVecBatch(&currentBatch, isEnd);
+        auto result = reader->ReadVecBatch(currentBatch, isEnd);
+        currentBatchPtr = currentBatch.get();
         if (isEnd) {
             currentRowIdx = 0;
             currentRowCount = 0;
@@ -115,13 +115,13 @@ public:
         }
 
         currentRowIdx = 0;
-        currentRowCount = currentBatch->GetRowCount();
+        currentRowCount = currentBatchPtr->GetRowCount();
         return result;
     }
 
     VectorBatch *GetCurrentBatch()
     {
-        return currentBatch;
+        return currentBatchPtr;
     }
 
     int32_t GetCurrentRowIdx()
@@ -155,7 +155,8 @@ private:
     std::vector<OperatorUtil::CompareFunc> sortCompareFuncs;
     SpillTracker *spillTracker = nullptr;
     SpillReader *reader = nullptr;
-    vec::VectorBatch *currentBatch = nullptr;
+    std::unique_ptr<vec::VectorBatch> currentBatch = nullptr;
+    vec::VectorBatch *currentBatchPtr = nullptr;
     int32_t currentRowIdx = 0;
     int32_t currentRowCount = 0;
 };

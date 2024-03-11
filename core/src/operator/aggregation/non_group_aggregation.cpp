@@ -95,6 +95,7 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     }
 
     VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
     return 0;
 }
 
@@ -102,7 +103,7 @@ static ALWAYS_INLINE void GenerateAggVector(VectorBatch *vectorBatch, std::vecto
 {
     for (auto &type : dataTypes) {
         auto omniId = type->GetId();
-        auto &newFunc = newUniqueVectorFunctions.at(omniId);
+        auto &newFunc = newUniqueVectorFunctions[omniId];
         newFunc(vectorBatch, size);
     }
 }
@@ -119,8 +120,9 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
             aggsOutputDataTypePtrs.push_back(aggOutputTypes.GetType(i));
         }
     }
-    auto output = new VectorBatch(1);
-    GenerateAggVector(output, aggsOutputDataTypePtrs, 1);
+    auto output = std::make_unique<VectorBatch>(1);
+    auto outputPtr = output.get();
+    GenerateAggVector(outputPtr, aggsOutputDataTypePtrs, 1);
 
     // set result value
     int32_t aggOutputColsStart = 0;
@@ -128,8 +130,8 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
         auto aggregator = aggregators[aggIdx].get();
         auto &state = aggsStates[aggIdx];
         std::vector<BaseVector *> extractVectors;
-        for (int i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
-            extractVectors.push_back(output->Get(aggOutputColsStart + i));
+        for (int32_t i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
+            extractVectors.push_back(outputPtr->Get(aggOutputColsStart + i));
         }
         aggOutputColsStart += aggsOutputTypes[aggIdx].GetSize();
 
@@ -139,12 +141,11 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
             // release VectorBatch when aggregator.ExtractValues throw exception
             // when spark hash agg sum/avg decimal overflow, it will throw exception when
             // OverflowConfigId==OVERFLOW_CONFIG_EXCEPTION
-            VectorHelper::FreeVecBatch(output);
             throw oneException;
         }
     }
 
-    *outputVecBatch = output;
+    *outputVecBatch = output.release();
     SetStatus(OMNI_STATUS_FINISHED);
     return OMNI_STATUS_FINISHED;
 }

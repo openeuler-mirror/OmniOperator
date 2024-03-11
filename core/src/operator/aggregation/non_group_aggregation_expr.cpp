@@ -137,8 +137,9 @@ int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
         // do filter and update newInputVecBatch
         AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
     }
-    aggOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
+    ResetInputVecBatch();
+    aggOperator->AddInput(newInputVecBatch);
     return 0;
 }
 

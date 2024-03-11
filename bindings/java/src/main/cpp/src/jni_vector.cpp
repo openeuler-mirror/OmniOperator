@@ -243,6 +243,7 @@ jlong Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *en
 void Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative(JNIEnv *env, jclass jcls, jlong jVecBatchAddress)
 {
     VectorBatch *vecBatch = reinterpret_cast<VectorBatch *>(jVecBatchAddress);
+    vecBatch->ClearVectors();
     delete vecBatch;
 }
 

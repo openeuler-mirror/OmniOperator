@@ -70,12 +70,17 @@ SortWithExprOperator::~SortWithExprOperator()
     delete executionContext;
 }
 
+std::atomic<int64_t> exceptionCount = 0;
 int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
         OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
-    sortOperator->AddInput(newInputVecBatch);
+    if (exceptionCount.fetch_add(1, std::memory_order_relaxed) == 0) {
+        throw OmniException("OPERATOR_RUNTIME_ERROR", "SortWithExprOperator::AddInput failed");
+    }
     VectorHelper::FreeVecBatch(inputVecBatch);
+    ResetInputVecBatch();
+    sortOperator->AddInput(newInputVecBatch);
     return 0;
 }
 

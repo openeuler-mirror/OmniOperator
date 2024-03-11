@@ -20,6 +20,7 @@ public:
     Operator()
         : sourceTypes(nullptr),
           context(nullptr),
+          inputVecBatch(nullptr),
           status(OMNI_STATUS_NORMAL)
     {}
 
@@ -60,9 +61,25 @@ public:
         return 0;
     }
 
+    omniruntime::vec::VectorBatch *GetInputVecBatch()
+    {
+        return inputVecBatch;
+    }
+
+    void SetInputVecBatch(omniruntime::vec::VectorBatch *vecBatch)
+    {
+        inputVecBatch = vecBatch;
+    }
+
+    void ResetInputVecBatch()
+    {
+        inputVecBatch = nullptr;
+    }
+
 protected:
     int32_t *sourceTypes;
     ExecutionContext *context;
+    vec::VectorBatch *inputVecBatch = nullptr;
 
 private:
     OmniStatus status;

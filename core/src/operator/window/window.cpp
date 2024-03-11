@@ -10,6 +10,7 @@ using namespace omniruntime::vec;
 namespace omniruntime {
 namespace op {
 const int MID_SEARCH_FACTOR = 2;
+
 WindowOperatorFactory::WindowOperatorFactory(const DataTypes &sourceTypes, int32_t *outputCols, int32_t outputColsCount,
     int32_t *windowFunctionTypes, int32_t windowFunctionCount, int32_t *partitionCols, int32_t partitionCount,
     int32_t *preGroupedCols, int32_t preGroupedCount, int32_t *sortCols, int32_t *sortAscendings,
@@ -217,10 +218,12 @@ int32_t WindowOperator::AddInput(VectorBatch *vecBatch)
     auto rowCount = vecBatch->GetRowCount();
     if (rowCount <= 0) {
         VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
         return 0;
     }
     totalRowCount += rowCount;
     pagesIndex->AddVecBatch(vecBatch);
+    ResetInputVecBatch();
     if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
@@ -312,12 +315,14 @@ void WindowOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
      * This is mainly to avoid using location information to copy data and construct a continuous vectorBatch when
      * calling agg interface.
      */
-    int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
-    auto output = new VectorBatch(rowCount);
+    int32_t rowCount = static_cast<int32_t>(min(maxRowCount, totalRowCount - rowCountOutputted));
+    auto output = std::make_unique<VectorBatch>(rowCount);
+    auto outputPtr = output.get();
     DataTypes dataTypes(outputTypes);
-    VectorHelper::AppendVectors(output, dataTypes, rowCount);
+    VectorHelper::AppendVectors(outputPtr, dataTypes, rowCount);
+
     try {
-        ProcessData(output, rowCount);
+        ProcessData(outputPtr, rowCount);
     } catch (const OmniException &e) {
         // in ProcessData, WindowFunction may be throw exception:
         // when spark sum/avg decimal overflow, it will throw exception when
@@ -330,7 +335,7 @@ void WindowOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
         throw e;
     }
 
-    *outputVecBatch = output;
+    *outputVecBatch = output.release();
     rowCountOutputted += rowCount;
 }
 
@@ -494,12 +499,13 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
     }
 
     int32_t rowCount = min(maxRowCount, totalRowCount - rowCountOutputted);
-    auto *output = new VectorBatch(rowCount);
+    auto output = std::make_unique<VectorBatch>(rowCount);
+    auto outputPtr = output.get();
     DataTypes dataTypes(outputTypes);
-    VectorHelper::AppendVectors(output, dataTypes, rowCount);
+    VectorHelper::AppendVectors(outputPtr, dataTypes, rowCount);
 
     try {
-        ProcessDataFromDisk(output, rowCount);
+        ProcessDataFromDisk(outputPtr, rowCount);
     } catch (const OmniException &e) {
         // in ProcessData, WindowFunction may be throw exception:
         // when spark sum/avg decimal overflow, it will throw exception when
@@ -512,7 +518,7 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         throw e;
     }
 
-    *outputVecBatch = output;
+    *outputVecBatch = output.release();
 }
 
 void WindowOperator::ProcessDataFromDisk(VectorBatch *&outputVecBatch, int32_t rowCount)
