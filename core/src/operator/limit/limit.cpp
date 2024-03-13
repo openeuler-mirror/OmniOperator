@@ -29,31 +29,34 @@ LimitOperator::~LimitOperator() {}
 
 int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
 {
-    if (vecBatch == nullptr) {
+    inputVecBatch = vecBatch;
+    if (inputVecBatch == nullptr) {
         return 0;
     }
-    if ((vecBatch->GetRowCount() == 0) || (outputVecBatch != nullptr) || (remainingLimit <= 0)) {
-        VectorHelper::FreeVecBatch(vecBatch);
+    if ((inputVecBatch->GetRowCount() == 0) || (outputVecBatch != nullptr) || (remainingLimit <= 0)) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        inputVecBatch = nullptr;
         return 0;
     }
 
-    int32_t rowCount = vecBatch->GetRowCount();
-    int32_t vectorCount = vecBatch->GetVectorCount();
+    int32_t rowCount = inputVecBatch->GetRowCount();
+    int32_t vectorCount = inputVecBatch->GetVectorCount();
     int64_t limitSize = remainingLimit > rowCount ? rowCount : remainingLimit;
-    outputVecBatch = new VectorBatch(limitSize);
+    outputVecBatch = make_unique<VectorBatch>(limitSize);
     for (int32_t i = 0; i < vectorCount; ++i) {
-        BaseVector *inputVector = vecBatch->Get(i);
+        BaseVector *inputVector = inputVecBatch->Get(i);
         outputVecBatch->Append(VectorHelper::SliceVector(inputVector, 0, limitSize));
     }
     remainingLimit -= limitSize;
-    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    inputVecBatch = nullptr;
     return 0;
 }
 
 int32_t LimitOperator::GetOutput(VectorBatch **resultVecBatch)
 {
     if (outputVecBatch != nullptr) {
-        *resultVecBatch = outputVecBatch;
+        *resultVecBatch = outputVecBatch.release();
         outputVecBatch = nullptr;
     }
 
@@ -67,7 +70,6 @@ int32_t LimitOperator::GetOutput(VectorBatch **resultVecBatch)
 OmniStatus LimitOperator::Close()
 {
     if (outputVecBatch != nullptr) {
-        VectorHelper::FreeVecBatch(outputVecBatch);
         outputVecBatch = nullptr;
     }
 

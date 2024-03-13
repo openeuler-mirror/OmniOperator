@@ -40,7 +40,7 @@ public:
 
 private:
     int64_t remainingLimit;
-    vec::VectorBatch *outputVecBatch;
+    std::unique_ptr<vec::VectorBatch> outputVecBatch;
 };
 }
 }

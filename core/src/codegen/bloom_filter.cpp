@@ -116,7 +116,6 @@ int32_t BloomFilterOperator::AddInput(VectorBatch *vecBatch)
     inputVecBatch = vecBatch;
     int32_t vectorCount = inputVecBatch->GetVectorCount();
     if (vectorCount != 1) {
-        VectorHelper::FreeVecBatch(inputVecBatch);
         throw omniruntime::exception::OmniException("ILLEGAL_INPUT", "vecBatch col should be 1 for bloom filter");
     }
     BaseVector *colVec = inputVecBatch->Get(0);
