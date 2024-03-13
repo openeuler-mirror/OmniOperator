@@ -104,6 +104,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
         }
     }
     VectorHelper::FreeVecBatch(vectorBatch);
+    inputVecBatch = nullptr;
     SetStatus(OMNI_STATUS_NORMAL);
     return 0;
 }
@@ -219,12 +220,14 @@ static void ALWAYS_INLINE SetVectorForSingleRowVecBatch(omniruntime::vec::Vector
 VectorBatch *TopNOperator::CreateSingleRowVecBatch(VectorBatch *vectorBatch, int32_t position) const
 {
     auto typeIds = sourceTypes.GetIds();
-    auto singleRowVecBatch = new VectorBatch(1);
+    auto singleRowVecBatch = std::make_unique<VectorBatch>(1);
+    auto singleRowVecBatchPtr = singleRowVecBatch.get();
     for (int i = 0; i < sourceTypesCount; ++i) {
         BaseVector *vector = vectorBatch->Get(i);
-        DYNAMIC_TYPE_DISPATCH(SetVectorForSingleRowVecBatch, typeIds[i], singleRowVecBatch, vector, position);
+        DYNAMIC_TYPE_DISPATCH(SetVectorForSingleRowVecBatch, typeIds[i], singleRowVecBatchPtr, vector, position);
     }
-    return singleRowVecBatch;
+
+    return singleRowVecBatch.release();
 }
 
 template <type::DataTypeId typeId>
@@ -257,14 +260,15 @@ int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
         hasFilledResult = true;
     }
     int64_t rowCount = std::min(maxRowCount, totalRowCount - outputtedRowCount);
-    auto resultVecBatch = new VectorBatch(rowCount);
-    omniruntime::vec::VectorHelper::AppendVectors(resultVecBatch, sourceTypes, rowCount);
+    auto resultVecBatch = std::make_unique<VectorBatch>(rowCount);
+    auto resultVecBatchPtr = resultVecBatch.get();
+    omniruntime::vec::VectorHelper::AppendVectors(resultVecBatchPtr, sourceTypes, rowCount);
     auto typeIds = sourceTypes.GetIds();
     for (int64_t i = 0; i < rowCount; i++) {
         VectorBatch *singleVecBatch = resultVectorBatchList[i + outputtedRowCount];
         for (int j = 0; j < sourceTypesCount; ++j) {
             BaseVector *singleVector = singleVecBatch->Get(j);
-            BaseVector *resultVector = resultVecBatch->Get(j);
+            BaseVector *resultVector = resultVecBatchPtr->Get(j);
             if (typeIds[j] == OMNI_VARCHAR || typeIds[j] == OMNI_CHAR) {
                 SetVarcharValueForVectorBatch(i, singleVector, resultVector);
             } else {
@@ -275,7 +279,7 @@ int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
         singleRowVectorBatchSet.erase(singleVecBatch);
     }
     outputtedRowCount += rowCount;
-    *outputVecBatch = resultVecBatch;
+    *outputVecBatch = resultVecBatch.release();
     if (!HasNext()) {
         SetStatus(OMNI_STATUS_FINISHED);
     }
@@ -303,6 +307,17 @@ void TopNOperator::SetVarcharValueForVectorBatch(int64_t rowNum, BaseVector *pqV
     auto value = static_cast<VarcharVector *>(pqVector)->GetValue(0);
     static_cast<VarcharVector *>(tmpVector)->SetValue(static_cast<int32_t>(rowNum), value);
 }
+
+OmniStatus TopNOperator::Close()
+{
+    if (inputVecBatch != nullptr) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        inputVecBatch = nullptr;
+    }
+
+    return OMNI_STATUS_NORMAL;
+}
+
 
 RowComparator::~RowComparator() = default;
 

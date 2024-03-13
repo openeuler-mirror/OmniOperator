@@ -150,6 +150,7 @@ public:
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
+    OmniStatus Close() override;
 
 private:
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForInnerJoin();

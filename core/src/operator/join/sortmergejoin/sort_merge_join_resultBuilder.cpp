@@ -82,6 +82,7 @@ void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
 
 VectorBatch *JoinResultBuilder::NewEmptyVectorBatch() const
 {
+    // using smart ptr to avoid memory leak when task recovery
     auto vectorBatch = std::make_unique<VectorBatch>(maxRowCount);
 
     for (auto &type : allTypes) {

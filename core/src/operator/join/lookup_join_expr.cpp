@@ -73,8 +73,10 @@ LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
     VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, probeTypes, projections, executionContext);
-    lookupJoinOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(vecBatch);
+    inputVecBatch = nullptr;
+
+    lookupJoinOperator->AddInput(newInputVecBatch);
     SetStatus(lookupJoinOperator->GetStatus());
     return 0;
 }

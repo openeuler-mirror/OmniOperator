@@ -356,6 +356,15 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
     return 0;
 }
 
+OmniStatus LookupJoinOperator::Close()
+{
+    if (curInputBatch != nullptr) {
+        VectorHelper::FreeVecBatch(curInputBatch);
+        curInputBatch = nullptr;
+    }
+    return OMNI_STATUS_NORMAL;
+}
+
 template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForInnerJoin()
 {
     std::visit(
@@ -1007,16 +1016,17 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
 
 void LookupJoinOutputBuilder::BuildOutput(BaseVector **probeOutputColumns, VectorBatch **outputVecBatch)
 {
-    auto output = new VectorBatch(probeRowCount);
+    auto output = std::make_unique<VectorBatch>(probeRowCount);
+    auto outputPtr = output.get();
     if (!probeOutputCols.empty()) {
         // only probe side will produce dic vector
-        ConstructProbeColumns(output, probeOutputColumns);
+        ConstructProbeColumns(outputPtr, probeOutputColumns);
     }
     if (!buildOutputCols.empty()) {
-        ConstructBuildColumns(output);
+        ConstructBuildColumns(outputPtr);
     }
 
-    *outputVecBatch = output;
+    *outputVecBatch = output.release();
     probeIndex.clear();
     buildIndex.clear();
     probeRowCount = 0;

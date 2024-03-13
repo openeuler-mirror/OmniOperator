@@ -46,8 +46,11 @@ int32_t TopNWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
         OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
-    topNOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(inputVecBatch);
+    this->inputVecBatch = nullptr;
+
+    topNOperator->SetInputVecBatch(newInputVecBatch);
+    topNOperator->AddInput(newInputVecBatch);
     SetStatus(topNOperator->GetStatus());
     return 0;
 }
@@ -61,6 +64,7 @@ int32_t TopNWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 
 OmniStatus TopNWithExprOperator::Close()
 {
+    topNOperator->Close();
     return OMNI_STATUS_NORMAL;
 }
 }

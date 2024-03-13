@@ -236,6 +236,7 @@ int32_t SortMergeJoinOperator::GetOutput(omniruntime::vec::VectorBatch **outputV
 
 OmniStatus SortMergeJoinOperator::Close()
 {
+    joinResultBuilder->Clear();
     return OMNI_STATUS_NORMAL;
 }
 } // end of namespace op
