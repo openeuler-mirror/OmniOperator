@@ -262,12 +262,11 @@ void WindowOperator::PrepareOutput()
             return;
         }
         FinishPagesIndex();
-
-        inputVecBatchForAgg = make_unique<VectorBatch>(totalRowCount);
-        inputVecBatchForAgg->ResizeVectorCount(1);
     } else {
         maxRowCountPerVecBatch = OperatorUtil::GetMaxRowCount(sourceTypes.GetSize());
     }
+    inputVecBatchForAgg = make_unique<VectorBatch>(totalRowCount);
+    inputVecBatchForAgg->ResizeVectorCount(1);
 }
 
 int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
@@ -277,7 +276,7 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         rowCountOutputted = 0;
         hasPrepare = false;
-        inputVecBatchForAgg = nullptr;
+        inputVecBatchForAgg->SetVector(0, nullptr);
         pagesIndex->Clear();
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
@@ -298,7 +297,7 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         rowCountOutputted = 0;
         hasPrepare = false;
-        inputVecBatchForAgg = nullptr;
+        inputVecBatchForAgg->SetVector(0, nullptr);
         pagesIndex->Clear();
         SetStatus(OMNI_STATUS_FINISHED);
     }
@@ -330,7 +329,7 @@ void WindowOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         rowCountOutputted = 0;
         hasPrepare = false;
-        inputVecBatchForAgg = nullptr;
+        inputVecBatchForAgg->SetVector(0, nullptr);
         pagesIndex->Clear();
         throw e;
     }
@@ -513,7 +512,7 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         rowCountOutputted = 0;
         hasPrepare = false;
-        inputVecBatchForAgg = nullptr;
+        inputVecBatchForAgg->SetVector(0, nullptr);
         pagesIndex->Clear();
         throw e;
     }
@@ -535,6 +534,7 @@ void WindowOperator::ProcessDataFromDisk(VectorBatch *&outputVecBatch, int32_t r
                 partition = nullptr;
                 break;
             }
+            inputVecBatchForAgg->SetVector(0, nullptr);
             inputVecBatchForAgg = make_unique<VectorBatch>(partitionRowCount);
             inputVecBatchForAgg->ResizeVectorCount(1);
             int32_t outputCount = min(partitionRowCount, rowCount - i);
@@ -598,6 +598,7 @@ bool WindowOperator::ProcessNextWindowPartition()
     peerGroupHashStrategy = make_unique<PagesHashStrategy>(pagesIndex->GetColumns(), pagesIndex->GetTypes(),
         originSortCols.data(), originSortColCount);
 
+    inputVecBatchForAgg->SetVector(0, nullptr);
     inputVecBatchForAgg = make_unique<VectorBatch>(totalRowCount);
     inputVecBatchForAgg->ResizeVectorCount(1);
 

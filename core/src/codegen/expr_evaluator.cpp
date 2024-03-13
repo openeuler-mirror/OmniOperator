@@ -519,7 +519,6 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
         BaseVector *outCol = projections[i]->Project(vecBatch, valueAddrs, nullAddrs, offsetAddrs, context,
             dictionaries, GetInputDataTypes().GetIds());
         if (context->HasError()) {
-            VectorHelper::FreeVecBatch(vecBatch);
             context->GetArena()->Reset();
             std::string errorMessage = context->GetError();
             throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);

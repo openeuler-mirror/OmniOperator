@@ -29,10 +29,6 @@ MemoryManager::MemoryManager(MemoryManager *parentMemoryManager)
 MemoryManager::~MemoryManager()
 {
     if (parent == nullptr) {
-        int64_t finalSize = memoryAmount.load(std::memory_order_relaxed);
-        if (finalSize != 0) {
-            std::cout << "it may has memory leak, leak size is " << finalSize << std::endl;
-        }
 #ifdef TRACE
         // if has memoryLeak, it will print and free leaked memory.
         MemoryTrace *trace = MemoryTrace::GetMemoryTrace();

@@ -29,34 +29,34 @@ LimitOperator::~LimitOperator() {}
 
 int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
 {
-    inputVecBatch = vecBatch;
-    if (inputVecBatch == nullptr) {
+    if (vecBatch == nullptr) {
         return 0;
     }
-    if ((inputVecBatch->GetRowCount() == 0) || (outputVecBatch != nullptr) || (remainingLimit <= 0)) {
-        VectorHelper::FreeVecBatch(inputVecBatch);
-        inputVecBatch = nullptr;
+    if ((vecBatch->GetRowCount() == 0) || (outputVecBatch != nullptr) || (remainingLimit <= 0)) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
         return 0;
     }
 
-    int32_t rowCount = inputVecBatch->GetRowCount();
-    int32_t vectorCount = inputVecBatch->GetVectorCount();
+    int32_t rowCount = vecBatch->GetRowCount();
+    int32_t vectorCount = vecBatch->GetVectorCount();
     int64_t limitSize = remainingLimit > rowCount ? rowCount : remainingLimit;
-    outputVecBatch = make_unique<VectorBatch>(limitSize);
+    auto result = make_unique<VectorBatch>(limitSize);
     for (int32_t i = 0; i < vectorCount; ++i) {
-        BaseVector *inputVector = inputVecBatch->Get(i);
-        outputVecBatch->Append(VectorHelper::SliceVector(inputVector, 0, limitSize));
+        BaseVector *inputVector = vecBatch->Get(i);
+        result->Append(VectorHelper::SliceVector(inputVector, 0, limitSize));
     }
     remainingLimit -= limitSize;
-    VectorHelper::FreeVecBatch(inputVecBatch);
-    inputVecBatch = nullptr;
+    VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
+    outputVecBatch = result.release();
     return 0;
 }
 
 int32_t LimitOperator::GetOutput(VectorBatch **resultVecBatch)
 {
     if (outputVecBatch != nullptr) {
-        *resultVecBatch = outputVecBatch.release();
+        *resultVecBatch = outputVecBatch;
         outputVecBatch = nullptr;
     }
 
@@ -70,6 +70,7 @@ int32_t LimitOperator::GetOutput(VectorBatch **resultVecBatch)
 OmniStatus LimitOperator::Close()
 {
     if (outputVecBatch != nullptr) {
+        VectorHelper::FreeVecBatch(outputVecBatch);
         outputVecBatch = nullptr;
     }
 

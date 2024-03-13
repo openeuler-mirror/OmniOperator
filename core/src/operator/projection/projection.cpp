@@ -15,10 +15,9 @@ namespace omniruntime {
 namespace op {
 int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
 {
-    inputVecBatch = vecBatch;
-    projectedVecs = this->exprEvaluator->Evaluate(inputVecBatch, this->context);
-    VectorHelper::FreeVecBatch(inputVecBatch);
-    inputVecBatch = nullptr;
+    projectedVecs = this->exprEvaluator->Evaluate(vecBatch, this->context);
+    VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
     return 0;
 }
 

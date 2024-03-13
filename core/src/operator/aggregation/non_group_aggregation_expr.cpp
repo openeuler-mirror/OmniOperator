@@ -134,8 +134,15 @@ int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 
     // if hasAggFilter is false, then skip AddFilterColumn
     if (hasAggFilter) {
-        // do filter and update newInputVecBatch
-        AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
+        try {
+            // do filter and update newInputVecBatch
+            AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
+        } catch (const std::exception &e) {
+            VectorHelper::FreeVecBatch(inputVecBatch);
+            ResetInputVecBatch();
+            VectorHelper::FreeVecBatch(newInputVecBatch);
+            throw e;
+        }
     }
     VectorHelper::FreeVecBatch(inputVecBatch);
     ResetInputVecBatch();

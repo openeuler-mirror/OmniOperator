@@ -76,10 +76,9 @@ Operator *FilterAndProjectOperatorFactory::CreateOperator()
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
-    inputVecBatch = vecBatch;
-    projectedVecs = this->exprEvaluator->Evaluate(inputVecBatch, this->context, &selectedRowsBuffer);
-    VectorHelper::FreeVecBatch(inputVecBatch);
-    inputVecBatch = nullptr;
+    projectedVecs = this->exprEvaluator->Evaluate(vecBatch, this->context, &selectedRowsBuffer);
+    VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
     return 0;
 }
 
