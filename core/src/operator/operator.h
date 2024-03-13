@@ -66,11 +66,12 @@ public:
         return inputVecBatch;
     }
 
-    void SetInputVecBatch(omniruntime::vec::VectorBatch *vecBatch)
+    void SetInputVecBatch(vec::VectorBatch *inVecBatch)
     {
-        inputVecBatch = vecBatch;
+        inputVecBatch = inVecBatch;
     }
 
+    // no need to clear memory when exception, so we have to reset
     void ResetInputVecBatch()
     {
         inputVecBatch = nullptr;

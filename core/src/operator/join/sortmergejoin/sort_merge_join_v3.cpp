@@ -1171,14 +1171,15 @@ void SortMergeJoinOperatorV3::HandleMatchForLeftAntiJoin(uint64_t *streamAddress
 
 void SortMergeJoinOperatorV3::BuildOutput(VectorBatch **outputVecBatch)
 {
-    auto output = new VectorBatch(probeRowCount);
+    auto output = std::make_unique<VectorBatch>(probeRowCount);
+
     if (streamOutputColCount > 0) {
-        ConstructResultColumns(true, output);
+        ConstructResultColumns(true, output.get());
     }
     if (bufferOutputColCount > 0) {
-        ConstructResultColumns(false, output);
+        ConstructResultColumns(false, output.get());
     }
-    *outputVecBatch = output;
+    *outputVecBatch = output.release();
 
     streamIndexes.clear();
     bufferIndexes.clear();

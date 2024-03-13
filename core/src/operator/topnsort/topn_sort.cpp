@@ -657,6 +657,7 @@ void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *
 int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
 {
     inputs.emplace_back(inputVecBatch);
+    ResetInputVecBatch();
     auto inputVectors = inputVecBatch->GetVectors();
     auto inputColNum = sourceTypes.GetSize();
     for (int32_t i = 0; i < inputColNum; i++) {
@@ -761,9 +762,10 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
     }
 
     auto outputColNum = sourceTypes.GetSize();
-    auto result = new VectorBatch(outputRowCount);
+    auto result = std::make_unique<VectorBatch>(outputRowCount);
+
     int32_t resultRowIdx = 0;
-    VectorHelper::AppendVectors(result, sourceTypes, outputRowCount);
+    VectorHelper::AppendVectors(result.get(), sourceTypes, outputRowCount);
     auto resultVectors = result->GetVectors();
     for (auto iter = currentIter; iter != end; ++iter) {
         auto mapValue = iter->second;
@@ -779,7 +781,7 @@ int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBat
             resultRowIdx++;
         }
     }
-    *outputVecBatch = result;
+    *outputVecBatch = result.release();
     currentIter = end;
     return 0;
 }
