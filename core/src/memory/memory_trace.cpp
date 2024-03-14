@@ -110,13 +110,11 @@ void MemoryTrace::SubArenaPtrAllocated(uintptr_t ptr, int64_t size)
         if (iter->second.first != size) {
             auto message =
                 "wrong arena size, alloc: " + std::to_string(iter->second.first) + ", free: " + std::to_string(size);
-            LogError("%s.", message.c_str());
-            // throw OmniException("Memory Trace Error", message);
+            throw OmniException("Memory Trace Error", message);
         }
         curArenaPtrAllocated.erase(ptr);
     } else {
-        LogError("arena ptr is wrong!");
-        // throw OmniException("Memory Trace Error", "arena ptr is wrong!");
+        throw OmniException("Memory Trace Error", "arena ptr is wrong!");
     }
 }
 
