@@ -159,8 +159,9 @@ public class OmniLookupJoinOperatorFactory extends OmniOperatorFactory<OmniLooku
                     && Arrays.equals(probeHashCols, that.probeHashCols)
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
                     && Arrays.equals(buildOutputTypes, that.buildOutputTypes)
-                    && (hashBuilderOperatorFactory == that.hashBuilderOperatorFactory)
-                    && filterExpression.equals(that.filterExpression) && operatorConfig.equals(that.operatorConfig);
+                    && hashBuilderOperatorFactory == that.hashBuilderOperatorFactory
+                    && Objects.equals(filterExpression, that.filterExpression)
+                    && Objects.equals(operatorConfig, that.operatorConfig);
         }
 
         /**

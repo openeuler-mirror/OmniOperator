@@ -205,8 +205,8 @@ public class OperatorConfig {
             return false;
         }
         OperatorConfig that = (OperatorConfig) obj;
-        return isSkipExpressionVerify == that.isSkipExpressionVerify && Objects.equals(spillConfig, that.spillConfig)
-                && Objects.equals(overflowConfig, that.overflowConfig)
+        return Objects.equals(spillConfig, that.spillConfig) && Objects.equals(overflowConfig, that.overflowConfig)
+                && isSkipExpressionVerify == that.isSkipExpressionVerify
                 && adaptivityThreshold == that.adaptivityThreshold;
     }
 

@@ -100,8 +100,9 @@ public class OmniDistinctLimitOperatorFactory
             if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            FactoryContext context = (FactoryContext) obj;
-            return limit == context.limit && operatorConfig.equals(context.operatorConfig);
+            FactoryContext that = (FactoryContext) obj;
+            return Arrays.equals(sourceTypes, that.sourceTypes) && Arrays.equals(distinctCols, that.distinctCols)
+                    && limit == that.limit && hashCol == that.hashCol && operatorConfig.equals(that.operatorConfig);
         }
 
         @Override

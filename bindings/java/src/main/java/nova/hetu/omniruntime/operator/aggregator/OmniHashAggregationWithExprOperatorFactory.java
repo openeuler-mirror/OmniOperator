@@ -158,6 +158,7 @@ public class OmniHashAggregationWithExprOperatorFactory
             this.isInputRaws = requireNonNull(isInputRaws, "isInputRaws");
             this.isOutputPartials = requireNonNull(isOutputPartials, "isInputRaws");
             this.operatorConfig = operatorConfig;
+            setNeedCache(false);
         }
 
         /**
@@ -180,7 +181,6 @@ public class OmniHashAggregationWithExprOperatorFactory
                     getDefaultMaskChannel(aggFunctionTypes), aggOutputTypes, isInputRaws, isOutputPartials,
                     operatorConfig);
         }
-
 
         private static String[] checkAggChannelsFilter(String[] aggChannelsFilter) {
             for (int i = 0; i < aggChannelsFilter.length; i++) {

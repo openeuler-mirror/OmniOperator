@@ -132,7 +132,7 @@ public class OmniProjectOperatorFactory extends OmniOperatorFactory<OmniProjectO
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(expressions), Arrays.hashCode(inputTypes), operatorConfig);
+            return Objects.hash(Arrays.hashCode(inputTypes), Arrays.hashCode(expressions), parseFormat, operatorConfig);
         }
 
         @Override
