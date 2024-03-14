@@ -120,12 +120,13 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInput
     jlong jOperatorAddress, jlong jVecBatchAddress)
 {
     int32_t errNo = 0;
-    JNI_METHOD_START
     auto *vecBatch = reinterpret_cast<VectorBatch *>(jVecBatchAddress);
     auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddress);
+    JNI_METHOD_START
     RecordInputVectorsStack(vecBatch, env);
+    nativeOperator->SetInputVecBatch(vecBatch);
     errNo = nativeOperator->AddInput(vecBatch);
-    JNI_METHOD_END(errNo)
+    JNI_METHOD_END_WITH_VECBATCH(errNo, nativeOperator->GetInputVecBatch())
     return errNo;
 }
 
@@ -147,7 +148,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
     VectorBatch *outputVecBatch = nullptr;
     JNI_METHOD_START
     nativeOperator->GetOutput(&outputVecBatch);
-    JNI_METHOD_END_WITH_VECBATCHES(nullptr, outputVecBatch)
+    JNI_METHOD_END_WITH_VECBATCH(nullptr, outputVecBatch)
     jobject result = nullptr;
     if (outputVecBatch) {
         RecordOutputVectorsStack(*outputVecBatch, env);
@@ -164,8 +165,12 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNative(JNIEnv *env, jobject jObj,
     jlong jOperatorAddr)
 {
-    auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddr);
-    Operator::DeleteOperator(nativeOperator);
+    try {
+        auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddr);
+        Operator::DeleteOperator(nativeOperator);
+    } catch (const std::exception &e) {
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());
+    }
 }
 
 /*

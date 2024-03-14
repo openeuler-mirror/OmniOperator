@@ -37,16 +37,15 @@ TEST(SpillTest, TestWriteRead)
 
     auto spillFile = writer.GetSpillFileInfo();
     SpillReader reader(sourceTypes, spillFile.filePath, spillFile.fileLength, spillFile.totalRowCount);
-    VectorBatch *outputVecBatch = nullptr;
+    std::unique_ptr<VectorBatch> outputVecBatch = nullptr;
     bool isEnd = false;
-    reader.ReadVecBatch(&outputVecBatch, isEnd);
-    VectorHelper::PrintVecBatch(outputVecBatch);
-    TestUtil::AssertVecBatchEquals(outputVecBatch, sourceTypes.GetSize(), dataSize, data1, data2, data3);
+    reader.ReadVecBatch(outputVecBatch, isEnd);
+    VectorHelper::PrintVecBatch(outputVecBatch.get());
+    TestUtil::AssertVecBatchEquals(outputVecBatch.get(), sourceTypes.GetSize(), dataSize, data1, data2, data3);
     ASSERT_FALSE(isEnd);
 
-    reader.ReadVecBatch(&outputVecBatch, isEnd);
+    reader.ReadVecBatch(outputVecBatch, isEnd);
     ASSERT_TRUE(isEnd);
-    VectorHelper::FreeVecBatch(outputVecBatch);
     outputVecBatch = nullptr;
 
     rmdir(path.c_str());

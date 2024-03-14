@@ -40,10 +40,10 @@ public:
         ExecutionContext *executionContext)
     {
         int32_t rowCount = inputVecBatch->GetRowCount();
-        auto newInputVecBatch = new VectorBatch(rowCount);
+        auto newInputVecBatch = std::make_unique<VectorBatch>(rowCount);
         if (rowCount == 0) {
-            VectorHelper::AppendVectors(newInputVecBatch, inputTypes, rowCount);
-            return newInputVecBatch;
+            VectorHelper::AppendVectors(newInputVecBatch.get(), inputTypes, rowCount);
+            return newInputVecBatch.release();
         }
 
         int32_t originVecCount = inputVecBatch->GetVectorCount();
@@ -57,15 +57,13 @@ public:
             auto projectVec = projection->Project(inputVecBatch, valueAddrs, nullAddrs, offsetAddrs, executionContext,
                 dictionaryVectors, originTypes.GetIds());
             if (executionContext->HasError()) {
-                VectorHelper::FreeVecBatch(newInputVecBatch);
-                VectorHelper::FreeVecBatch(inputVecBatch);
                 executionContext->GetArena()->Reset();
                 std::string errorMessage = executionContext->GetError();
                 throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
             }
             newInputVecBatch->Append(projectVec);
         }
-        return newInputVecBatch;
+        return newInputVecBatch.release();
     }
 
     static void AddFilterColumn(VectorBatch *inputVecBatch, VectorBatch *newInputVecBatch,

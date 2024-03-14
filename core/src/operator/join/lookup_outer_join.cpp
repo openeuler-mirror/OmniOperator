@@ -103,9 +103,10 @@ int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
         return 0;
     }
     int32_t rowCount = std::min(maxRowCount, static_cast<int32_t>(totalRowCount) - outputtedRowCount);
-    auto result = new VectorBatch(rowCount);
-    BuildVecBatch(result);
-    *outputVecBatch = result;
+    auto result = std::make_unique<VectorBatch>(rowCount);
+    auto resultPtr = result.get();
+    BuildVecBatch(resultPtr);
+    *outputVecBatch = result.release();
     outputtedRowCount += rowCount;
     if (!HasNext()) {
         SetStatus(OMNI_STATUS_FINISHED);

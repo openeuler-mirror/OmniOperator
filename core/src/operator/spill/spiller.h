@@ -78,7 +78,6 @@ public:
 
     ~Spiller()
     {
-        VectorHelper::FreeVecBatch(spillVecBatch);
         for (auto writer : writers) {
             delete writer;
         }
@@ -123,7 +122,7 @@ private:
     std::vector<std::string> dirPaths;
     std::vector<int32_t> outputCols;
     int32_t maxRowCountPerBatch;
-    vec::VectorBatch *spillVecBatch = nullptr;
+    std::unique_ptr<vec::VectorBatch> spillVecBatch = nullptr;
     std::vector<SpillWriter *> writers;
     SpillTracker *spillTracker = nullptr;
 };

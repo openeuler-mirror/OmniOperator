@@ -514,22 +514,19 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
     intptr_t *nullAddrs, intptr_t *offsetAddrs, intptr_t *dictionaries)
 {
     auto rowCount = vecBatch->GetRowCount();
-    auto projectedVecs = new VectorBatch(rowCount);
+    auto projectedVecs = std::make_unique<VectorBatch>(rowCount);
     for (int32_t i = 0; i < projectVecCount; i++) {
         BaseVector *outCol = projections[i]->Project(vecBatch, valueAddrs, nullAddrs, offsetAddrs, context,
             dictionaries, GetInputDataTypes().GetIds());
         if (context->HasError()) {
-            VectorHelper::FreeVecBatch(projectedVecs);
-            VectorHelper::FreeVecBatch(vecBatch);
             context->GetArena()->Reset();
             std::string errorMessage = context->GetError();
             throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
         }
         projectedVecs->Append(outCol);
     }
-    VectorHelper::FreeVecBatch(vecBatch);
     context->GetArena()->Reset();
-    return projectedVecs;
+    return projectedVecs.release();
 }
 
 VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context,
@@ -542,33 +539,27 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
         reinterpret_cast<int64_t>(context), dictionaries);
     if (context->HasError()) {
         context->GetArena()->Reset();
-        VectorHelper::FreeVecBatch(vecBatch);
         std::string errorMessage = context->GetError();
         throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
     }
     if (numSelectedRows <= 0) {
         context->GetArena()->Reset();
-        VectorHelper::FreeVecBatch(vecBatch);
         return nullptr;
     }
 
-    auto projectedVecs = new VectorBatch(numSelectedRows);
+    auto projectedVecs = std::make_unique<VectorBatch>(numSelectedRows);
     for (int32_t i = 0; i < projectVecCount; i++) {
         BaseVector *col = projections[i]->Project(vecBatch, selectedRows, numSelectedRows, valueAddrs, nullAddrs,
             offsetAddrs, context, dictionaries, GetInputDataTypes().GetIds());
         if (context->HasError()) {
-            VectorHelper::FreeVecBatch(projectedVecs);
-            VectorHelper::FreeVecBatch(vecBatch);
             context->GetArena()->Reset();
-
             std::string errorMessage = context->GetError();
             throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
         }
         projectedVecs->Append(col);
     }
 
-    VectorHelper::FreeVecBatch(vecBatch);
     context->GetArena()->Reset();
-    return projectedVecs;
+    return projectedVecs.release();
 }
 }

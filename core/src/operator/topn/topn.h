@@ -93,6 +93,8 @@ public:
 
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
+    OmniStatus Close() override;
+
 private:
     type::DataTypes sourceTypes;
     int32_t sourceTypesCount = 0;

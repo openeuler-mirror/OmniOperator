@@ -9,7 +9,6 @@
 #include "operator/util/operator_util.h"
 #include "util/omni_exception.h"
 
-
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
@@ -22,7 +21,8 @@ SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *ou
       sortCols(sortCols, sortCols + sortColCount),
       sortAscendings(sortAscendings, sortAscendings + sortColCount),
       sortNullFirsts(sortNullFirsts, sortNullFirsts + sortColCount),
-      operatorConfig(operatorConfig) {}
+      operatorConfig(operatorConfig)
+{}
 
 SortOperatorFactory::~SortOperatorFactory() = default;
 
@@ -53,9 +53,13 @@ Operator *SortOperatorFactory::CreateOperator()
 // function implements for class Sort
 SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &outputCols, std::vector<int32_t> &sortCols,
     std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, const OperatorConfig &operatorConfig)
-    : sourceTypes(dataTypes), outputCols(outputCols), sortCols(sortCols),
-      sortAscendings(sortAscendings), sortNullFirsts(sortNullFirsts),
-      pagesIndex(std::make_unique<PagesIndex>(sourceTypes)), operatorConfig(operatorConfig)
+    : sourceTypes(dataTypes),
+      outputCols(outputCols),
+      sortCols(sortCols),
+      sortAscendings(sortAscendings),
+      sortNullFirsts(sortNullFirsts),
+      pagesIndex(std::make_unique<PagesIndex>(sourceTypes)),
+      operatorConfig(operatorConfig)
 {
     for (auto outputCol : outputCols) {
         outputTypes.emplace_back(dataTypes.GetType(outputCol));
@@ -63,10 +67,9 @@ SortOperator::SortOperator(const DataTypes &dataTypes, std::vector<int32_t> &out
     maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(dataTypes.Get(), outputCols.data(), outputCols.size());
     maxRowCountPerBatch = maxRowCountPerBatch == 0 ? 1 : maxRowCountPerBatch;
     if (sourceTypes.GetSize() == 1) {
-        const auto& firstSourceTypeId = sourceTypes.GetType(0)->GetId();
-        canInplaceSort = (firstSourceTypeId != OMNI_VARCHAR) &&
-                         (firstSourceTypeId != OMNI_CHAR) &&
-                         (firstSourceTypeId != OMNI_BOOLEAN);
+        const auto &firstSourceTypeId = sourceTypes.GetType(0)->GetId();
+        canInplaceSort = (firstSourceTypeId != OMNI_VARCHAR) && (firstSourceTypeId != OMNI_CHAR) &&
+            (firstSourceTypeId != OMNI_BOOLEAN);
     }
 
     if (!canInplaceSort) {
@@ -82,10 +85,12 @@ int32_t SortOperator::AddInput(VectorBatch *vecBatch)
     auto rowCount = vecBatch->GetRowCount();
     if (rowCount <= 0) {
         VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
         return 0;
     }
     totalRowCount += rowCount;
     pagesIndex->AddVecBatch(vecBatch);
+    ResetInputVecBatch();
     if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
@@ -190,7 +195,7 @@ bool SortOperator::CanUseRadixSort()
     if (!canUseRadixSort) {
         return false;
     }
-    const auto& sortDataType = sourceTypes.GetType(sortCols[0])->GetId();
+    const auto &sortDataType = sourceTypes.GetType(sortCols[0])->GetId();
     bool isAllowedDataType = (sortDataType == OMNI_LONG || sortDataType == OMNI_DATE32 || sortDataType == OMNI_INT ||
         sortDataType == OMNI_SHORT || sortDataType == OMNI_BOOLEAN || sortDataType == OMNI_DECIMAL64);
     return isAllowedDataType;
@@ -255,22 +260,24 @@ void SortOperator::GetOutputFromMemory(VectorBatch **outputVecBatch)
     int32_t rowCountToOutput =
         static_cast<int32_t>(std::min(static_cast<size_t>(maxRowCountPerBatch), (totalRowCount - rowCountOutputted)));
 
-    auto *result = new VectorBatch(rowCountToOutput);
+    auto result = std::make_unique<VectorBatch>(rowCountToOutput);
+    auto resultPtr = result.get();
     DataTypes outputDataTypes(outputTypes);
-    VectorHelper::AppendVectors(result, outputDataTypes, rowCountToOutput);
+    VectorHelper::AppendVectors(resultPtr, outputDataTypes, rowCountToOutput);
+
     if (canInplaceSort) {
-        pagesIndex->GetOutputInplaceSort(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(),
+        pagesIndex->GetOutputInplaceSort(outputCols.data(), outputCols.size(), resultPtr, sourceTypes.GetIds(),
             rowCountOutputted, rowCountToOutput);
     } else if (canRadixSort) {
-        pagesIndex->GetOutputRadixSort(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(),
+        pagesIndex->GetOutputRadixSort(outputCols.data(), outputCols.size(), resultPtr, sourceTypes.GetIds(),
             rowCountOutputted, rowCountToOutput);
     } else {
-        pagesIndex->GetOutput(outputCols.data(), outputCols.size(), result, sourceTypes.GetIds(), rowCountOutputted,
+        pagesIndex->GetOutput(outputCols.data(), outputCols.size(), resultPtr, sourceTypes.GetIds(), rowCountOutputted,
             rowCountToOutput);
     }
 
     rowCountOutputted += rowCountToOutput;
-    *outputVecBatch = result;
+    *outputVecBatch = result.release();
 }
 
 void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
@@ -298,8 +305,9 @@ void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
     rowIdxes.resize(rowCount);
 
     // create a empty vector batch, and copy data
-    auto *resultVecBatch = new VectorBatch(rowCount);
-    VectorHelper::AppendVectors(resultVecBatch, sourceTypes, rowCount);
+    auto result = std::make_unique<VectorBatch>(rowCount);
+    auto resultPtr = result.get();
+    VectorHelper::AppendVectors(resultPtr, sourceTypes, rowCount);
 
     int32_t rowOffset = 0;
     int32_t resultRowOffset = 0;
@@ -311,18 +319,18 @@ void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         rowIdx++;
         rowOffset++;
         if (isLastRow) {
-            SetSpillOutputVecBatch(resultVecBatch, resultRowOffset, rowIdx);
+            SetSpillOutputVecBatch(resultPtr, resultRowOffset, rowIdx);
             rowIdx = 0;
         }
         spillMerger->Pop();
     }
     int32_t remainingCount = rowCount - resultRowOffset;
     if (remainingCount > 0) {
-        SetSpillOutputVecBatch(resultVecBatch, resultRowOffset, rowIdx);
+        SetSpillOutputVecBatch(resultPtr, resultRowOffset, rowIdx);
     }
 
     rowCountOutputted += rowCount;
-    *outputVecBatch = resultVecBatch;
+    *outputVecBatch = result.release();
 }
 
 void SortOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t &rowOffset, int32_t rowCount)

@@ -80,7 +80,10 @@ public:
 
     ALWAYS_INLINE void Clear()
     {
-        VectorHelper::FreeVecBatch(buildVectorBatch);
+        if (buildVectorBatch != nullptr) {
+            VectorHelper::FreeVecBatch(buildVectorBatch);
+            buildVectorBatch = nullptr;
+        }
         buildVectorBatchRowCount = 0;
         addressOffset = 0;
         isPreRowMatched = false;
@@ -88,7 +91,6 @@ public:
         bufferedTableValueAddresses.clear();
         streamedTableValueAddresses.clear();
         isSameBufferedKeyMatched.clear();
-        buildVectorBatch = nullptr;
     }
 
     ~JoinResultBuilder();

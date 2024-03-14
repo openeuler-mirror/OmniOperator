@@ -11,7 +11,10 @@ namespace omniruntime::vec {
  */
 VectorBatch::VectorBatch(size_t rowCnt) : capacity(rowCnt), rowCnt(rowCnt) {}
 
-VectorBatch::~VectorBatch() = default;
+VectorBatch::~VectorBatch()
+{
+    FreeAllVectors();
+}
 
 /**
  * Set the vector at the indicated index, need ResizeVectorCount before SetVector
@@ -77,5 +80,10 @@ void VectorBatch::Resize(size_t rowCount)
     }
 
     rowCnt = rowCount;
+}
+
+void VectorBatch::ClearVectors()
+{
+    vectors.clear();
 }
 }

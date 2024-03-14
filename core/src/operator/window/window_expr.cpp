@@ -137,8 +137,9 @@ WindowWithExprOperator::~WindowWithExprOperator()
 int32_t WindowWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
     VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, sourceTypes, projections, executionContext);
-    windowOperator->AddInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
+    windowOperator->AddInput(newInputVecBatch);
     return 0;
 }
 

@@ -18,7 +18,7 @@ SpillReader::~SpillReader()
     remove(filePath.c_str());
 }
 
-ErrorCode SpillReader::ReadVecBatch(vec::VectorBatch **pVectorBatch, bool &isEnd)
+ErrorCode SpillReader::ReadVecBatch(std::unique_ptr<vec::VectorBatch> &vectorBatch, bool &isEnd)
 {
     if (rowOffset >= totalRowCount) {
         isEnd = true;
@@ -45,22 +45,21 @@ ErrorCode SpillReader::ReadVecBatch(vec::VectorBatch **pVectorBatch, bool &isEnd
         return ErrorCode::READ_FAILED;
     }
 
-    auto vecBatch = *pVectorBatch;
-    if (vecBatch == nullptr || rowCount > maxRowCount) {
-        VectorHelper::FreeVecBatch(vecBatch);
-        vecBatch = new VectorBatch(rowCount);
-        VectorHelper::AppendVectors(vecBatch, dataTypes, rowCount);
+    auto vectorBatchPtr = vectorBatch.get();
+    if (vectorBatchPtr == nullptr || rowCount > maxRowCount) {
+        vectorBatch = std::make_unique<VectorBatch>(rowCount);
+        VectorHelper::AppendVectors(vectorBatch.get(), dataTypes, rowCount);
+        vectorBatchPtr = vectorBatch.get();
         maxRowCount = rowCount;
-        *pVectorBatch = vecBatch;
     } else {
-        vecBatch->Resize(rowCount);
+        vectorBatchPtr->Resize(rowCount);
     }
 
-    int32_t vecCount = vecBatch->GetVectorCount();
+    int32_t vecCount = vectorBatchPtr->GetVectorCount();
     auto vecTypeIds = dataTypes.GetIds();
     for (int32_t vecIndex = 0; vecIndex < vecCount; vecIndex++) {
         ErrorCode result = ErrorCode::SUCCESS;
-        BaseVector *vector = vecBatch->Get(vecIndex);
+        BaseVector *vector = vectorBatchPtr->Get(vecIndex);
         int32_t typeId = vecTypeIds[vecIndex];
         switch (typeId) {
             case OMNI_BOOLEAN:
@@ -168,8 +167,8 @@ template <typename T> ErrorCode SpillReader::ReadVector(BaseVector *vector, int3
 
 int32_t SpillMergeStream::CompareTo(const SpillMergeStream &other)
 {
-    auto leftVectorBatch = currentBatch;
-    auto rightVectorBatch = other.currentBatch;
+    auto leftVectorBatch = currentBatchPtr;
+    auto rightVectorBatch = other.currentBatchPtr;
     auto leftPosition = currentRowIdx;
     auto rightPosition = other.currentRowIdx;
     auto sortColsCount = sortCols.size();

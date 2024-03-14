@@ -446,10 +446,10 @@ public:
     {
         int32_t vecCount = inputVecBatch->GetVectorCount();
         int32_t rowCount = inputVecBatch->GetRowCount();
-        auto newInputVecBatch = new vec::VectorBatch(rowCount);
+        auto newInputVecBatch = std::make_unique<vec::VectorBatch>(rowCount);
         if (rowCount == 0) {
-            vec::VectorHelper::AppendVectors(newInputVecBatch, inputTypes, rowCount);
-            return newInputVecBatch;
+            vec::VectorHelper::AppendVectors(newInputVecBatch.get(), inputTypes, rowCount);
+            return newInputVecBatch.release();
         }
 
         for (int32_t i = 0; i < vecCount; i++) {
@@ -474,8 +474,6 @@ public:
                 auto projectVec = projections[i]->Project(inputVecBatch, valueAddrs, nullAddrs, offsetAddrs,
                     executionContext, dictionaryVectors, inputTypes.GetIds());
                 if (executionContext->HasError()) {
-                    VectorHelper::FreeVecBatch(newInputVecBatch);
-                    VectorHelper::FreeVecBatch(inputVecBatch);
                     executionContext->GetArena()->Reset();
                     std::string errorMessage = executionContext->GetError();
                     throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
@@ -485,7 +483,7 @@ public:
             // short-circuit logic for column projections
             // no need to go through codegen
         }
-        return newInputVecBatch;
+        return newInputVecBatch.release();
     }
 
     template <DataTypeId typeId>

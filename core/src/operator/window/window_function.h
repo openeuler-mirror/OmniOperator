@@ -123,8 +123,8 @@ public:
     virtual ~WindowFunction() = default;
 
     virtual void Reset(WindowIndex *windowIndex) {};
-    virtual void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column,
-        int32_t index, int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) {};
+    virtual void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index, int32_t peerGroupStart,
+        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) {};
 
     WindowFrameInfo *GetWindowFrameInfo()
     {
@@ -142,11 +142,11 @@ private:
 class RankingWindowFunction : public WindowFunction {
 public:
     void Reset(WindowIndex *pWindowIndex) override;
-    void ProcessRow(VectorBatch *vectorBatch, BaseVector *column, int32_t index,
-        int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) override;
+    void ProcessRow(VectorBatch *vectorBatch, BaseVector *column, int32_t index, int32_t peerGroupStart,
+        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) override;
     virtual void Reset() {};
-    virtual void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup,
-        int32_t peerGroupCount, int32_t currentPositionIndex) {};
+    virtual void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
+        int32_t currentPositionIndex) {};
     RankingWindowFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType);
     ~RankingWindowFunction() override;
 
@@ -186,8 +186,8 @@ public:
         DataTypePtr outputType, std::unique_ptr<WindowFrameInfo> frame, bool isOverflowAsNull = false);
     ~AggregateWindowFunction() override;
     void Reset(WindowIndex *pWindowIndex) override;
-    void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index,
-        int32_t peerGroupStart, int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) override;
+    void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index, int32_t peerGroupStart,
+        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) override;
     void ResetAccumulator();
 
 private:

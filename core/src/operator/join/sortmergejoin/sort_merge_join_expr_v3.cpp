@@ -63,8 +63,9 @@ int32_t StreamedTableWithExprOperatorV3::AddInput(VectorBatch *vecBatch)
     }
 
     auto newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, streamTypes, projections, executionContext);
-    smjOperator->AddStreamInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(vecBatch);
+    this->ResetInputVecBatch();
+    smjOperator->AddStreamInput(newInputVecBatch);
     return 0;
 }
 
@@ -130,8 +131,10 @@ int32_t BufferedTableWithExprOperatorV3::AddInput(VectorBatch *vecBatch)
     }
 
     auto newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, bufferTypes, projections, executionContext);
-    smjOperator->AddBufferInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(vecBatch);
+    this->ResetInputVecBatch();
+    smjOperator->AddBufferInput(newInputVecBatch);
+
     return 0;
 }
 

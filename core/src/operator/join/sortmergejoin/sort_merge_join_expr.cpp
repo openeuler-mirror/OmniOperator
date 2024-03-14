@@ -71,8 +71,10 @@ int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
 
     VectorBatch *newInputVecBatch =
         OperatorUtil::ProjectVectors(vecBatch, streamedTypes, projections, executionContext);
-    retCode = smjOperator->AddStreamedTableInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(vecBatch);
+    inputVecBatch = nullptr;
+
+    retCode = smjOperator->AddStreamedTableInput(newInputVecBatch);
     SetStatus(smjOperator->GetStatus());
     return retCode;
 }
@@ -146,8 +148,10 @@ int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     }
     VectorBatch *newInputVecBatch =
         OperatorUtil::ProjectVectors(vecBatch, bufferedTypes, projections, executionContext);
-    retCode = smjOperator->AddBufferedTableInput(newInputVecBatch);
     VectorHelper::FreeVecBatch(vecBatch);
+    inputVecBatch = nullptr;
+
+    retCode = smjOperator->AddBufferedTableInput(newInputVecBatch);
     SetStatus(smjOperator->GetStatus());
     return retCode;
 }

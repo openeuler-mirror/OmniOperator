@@ -16,6 +16,8 @@ namespace op {
 int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
 {
     projectedVecs = this->exprEvaluator->Evaluate(vecBatch, this->context);
+    VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
     return 0;
 }
 

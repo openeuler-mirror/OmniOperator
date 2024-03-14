@@ -41,8 +41,9 @@ int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
     auto outBatch = new VectorBatch(rowCount);
     for (int32_t i = 0; i < vectorCount; ++i) {
         BaseVector *inputVector = vecBatch->Get(i);
-        outBatch->Append(inputVector);
+        outBatch->Append(VectorHelper::SliceVector(inputVector, 0, rowCount));
     }
+    VectorHelper::FreeVecBatch(vecBatch);
     inputVecBatches.push_back(outBatch);
     vecBatchCount++;
     return 0;

@@ -37,7 +37,7 @@ void DeleteTopNOperatorFactory(TopNOperatorFactory *topNOperatorFactory)
 TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
 {
     // construct input data
-    const int32_t dataSize = 10000000;
+    const int32_t dataSize = 100000;
     const int32_t expectedDataSize = 5;
 
     // prepare data

@@ -34,19 +34,22 @@ int32_t LimitOperator::AddInput(VectorBatch *vecBatch)
     }
     if ((vecBatch->GetRowCount() == 0) || (outputVecBatch != nullptr) || (remainingLimit <= 0)) {
         VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
         return 0;
     }
 
     int32_t rowCount = vecBatch->GetRowCount();
     int32_t vectorCount = vecBatch->GetVectorCount();
     int64_t limitSize = remainingLimit > rowCount ? rowCount : remainingLimit;
-    outputVecBatch = new VectorBatch(limitSize);
+    auto result = make_unique<VectorBatch>(limitSize);
     for (int32_t i = 0; i < vectorCount; ++i) {
         BaseVector *inputVector = vecBatch->Get(i);
-        outputVecBatch->Append(VectorHelper::SliceVector(inputVector, 0, limitSize));
+        result->Append(VectorHelper::SliceVector(inputVector, 0, limitSize));
     }
     remainingLimit -= limitSize;
     VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
+    outputVecBatch = result.release();
     return 0;
 }
 

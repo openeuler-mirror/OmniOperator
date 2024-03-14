@@ -54,6 +54,7 @@ int32_t TopNSortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     VectorBatch *newInputVecBatch =
         OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
     VectorHelper::FreeVecBatch(inputVecBatch);
+    this->ResetInputVecBatch();
     topNSortOperator->AddInput(newInputVecBatch);
     SetStatus(topNSortOperator->GetStatus());
     return 0;
