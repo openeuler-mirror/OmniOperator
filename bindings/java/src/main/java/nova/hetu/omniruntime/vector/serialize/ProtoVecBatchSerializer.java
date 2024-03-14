@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector.serialize;
@@ -211,18 +211,29 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
 
     @Override
     public VecBatch deserialize(byte[] bytes) {
+        VecBatchSerde.VecBatch protoVecBatch;
         try {
-            VecBatchSerde.VecBatch protoVecBatch = VecBatchSerde.VecBatch.parseFrom(bytes);
-            int vecCount = protoVecBatch.getVecCount();
-            int rowCount = protoVecBatch.getRowCount();
-            Vec[] vecs = new Vec[vecCount];
+            protoVecBatch = VecBatchSerde.VecBatch.parseFrom(bytes);
+        } catch (Exception e) {
+            throw new OmniRuntimeException(OmniErrorType.OMNI_INNER_ERROR, "deserialize failed." + e.getCause());
+        }
+        int vecCount = protoVecBatch.getVecCount();
+        int rowCount = protoVecBatch.getRowCount();
+        Vec[] vecs = new Vec[vecCount];
+        try {
             for (int i = 0; i < vecCount; i++) {
                 vecs[i] = buildVec(protoVecBatch.getVectors(i));
             }
-            return new VecBatch(vecs, rowCount);
-        } catch (InvalidProtocolBufferException e) {
-            throw new OmniRuntimeException(OmniErrorType.OMNI_INNER_ERROR, "deserialize failed." + e.getCause());
+        } catch (Exception e) {
+            for (Vec v : vecs) {
+                if (v == null) {
+                    continue;
+                }
+                v.close();
+            }
         }
+
+        return new VecBatch(vecs, rowCount);
     }
 
     private Vec buildVec(VecBatchSerde.Vec protoVec) {
