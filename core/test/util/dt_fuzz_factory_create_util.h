@@ -22,6 +22,9 @@ OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sour
 std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataTypes &sourceTypes,
     OverflowConfig *overflowConfig, std::string filterExpr, int32_t operatorCount);
 
+std::vector<OperatorFactory *> CreateLookupOuterFactory(omniruntime::type::DataTypes &sourceTypes,
+    OverflowConfig *overflowConfig, std::string filterExpr, int32_t operatorCount);
+
 OperatorFactory *CreateDistinctLimitFactory(omniruntime::type::DataTypes &sourceTypes, int32_t loopCount);
 
 OperatorFactory *CreateProjectFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<Expr *> exprs,
