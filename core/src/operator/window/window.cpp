@@ -276,7 +276,9 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         totalRowCount = 0;
         rowCountOutputted = 0;
         hasPrepare = false;
-        inputVecBatchForAgg->SetVector(0, nullptr);
+        if (inputVecBatchForAgg != nullptr) {
+            inputVecBatchForAgg->SetVector(0, nullptr);
+        }
         pagesIndex->Clear();
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
