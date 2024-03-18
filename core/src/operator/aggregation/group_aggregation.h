@@ -260,7 +260,7 @@ private:
     int32_t InitMaxRowCountAndOutputTypes();
     void InitSpillInfos();
     void SpillHashMap();
-    void SpillToDisk();
+    ErrorCode SpillToDisk();
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);

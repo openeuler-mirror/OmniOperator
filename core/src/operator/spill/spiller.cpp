@@ -34,20 +34,20 @@ ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
     for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; vecBatchIdx++) {
         auto rowCount = std::min(maxRowCountPerBatch, static_cast<int32_t>(totalRowCount - totalRowOffset));
         if (spillVecBatch == nullptr || rowCount > maxRowCount) {
-            VectorHelper::FreeVecBatch(spillVecBatch);
-            spillVecBatch = new VectorBatch(rowCount);
-            VectorHelper::AppendVectors(spillVecBatch, dataTypes, rowCount);
+            spillVecBatch = std::make_unique<VectorBatch>(rowCount);
+            VectorHelper::AppendVectors(spillVecBatch.get(), dataTypes, rowCount);
             maxRowCount = rowCount;
         } else {
             spillVecBatch->Resize(rowCount);
         }
-        aggregationSort->SetSpillVectorBatch(spillVecBatch, totalRowOffset);
-        auto vecBatchSize = CollectVecBatchSize(spillVecBatch);
+        auto spillVecBatchPtr = spillVecBatch.get();
+        aggregationSort->SetSpillVectorBatch(spillVecBatchPtr, totalRowOffset);
+        auto vecBatchSize = CollectVecBatchSize(spillVecBatchPtr);
         if (spillTracker->CheckIfExceedAndReserve(vecBatchSize)) {
             return ErrorCode::EXCEED_SPILL_THRESHOLD;
         }
 
-        auto result = writer->WriteVecBatch(spillVecBatch, vecBatchSize);
+        auto result = writer->WriteVecBatch(spillVecBatchPtr, vecBatchSize);
         if (result != ErrorCode::SUCCESS) {
             return result;
         }

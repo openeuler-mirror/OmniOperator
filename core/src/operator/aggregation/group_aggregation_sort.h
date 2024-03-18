@@ -13,13 +13,14 @@
 namespace omniruntime::op {
 class AggregationSort {
 public:
-    explicit AggregationSort(std::vector<std::unique_ptr<Aggregator>> &aggregators)
+    explicit AggregationSort(std::vector<std::unique_ptr<Aggregator>> &aggregators, size_t size)
     {
         size_t aggregatorNum = aggregators.size();
         this->aggregators.resize(aggregatorNum);
         for (size_t i = 0; i < aggregatorNum; i++) {
             this->aggregators[i] = &aggregators[i];
         }
+        kvVec.reserve(size);
     }
     std::vector<omniruntime::op::KeyValue> &GetKvVector()
     {

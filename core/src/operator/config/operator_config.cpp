@@ -140,10 +140,11 @@ void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfi
 
 static void CreateSpillDirectory(const char *spillPathChars)
 {
-    auto result = mkdir(spillPathChars, 0750);
-    if (result != 0) {
-        LogError("Create spill directory %s failed since %s.", spillPathChars, strerror(errno));
-        throw exception::OmniException(GetErrorCode(ErrorCode::MKDIR_FAILED), GetErrorMessage(ErrorCode::MKDIR_FAILED));
+    mkdir(spillPathChars, 0750);
+    if (access(spillPathChars, 0) != 0) {
+        std::string message = GetErrorMessage(ErrorCode::MKDIR_FAILED) + "Create spill directory " + spillPathChars +
+                              " failed since " + strerror(errno) + ".";
+        throw exception::OmniException(GetErrorCode(ErrorCode::MKDIR_FAILED), message);
     }
 }
 
