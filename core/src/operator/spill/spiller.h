@@ -111,6 +111,15 @@ public:
         return spillTracker;
     }
 
+    // the spill files should be deleted if there is exception
+    void RemoveSpillFiles()
+    {
+        for (auto writer : writers) {
+            auto spillFile = writer->GetSpillFileInfo();
+            remove(spillFile.filePath.c_str());
+        }
+    }
+
 private:
     uint64_t CollectVecBatchSize(vec::VectorBatch *vectorBatch);
 

@@ -128,8 +128,13 @@ int32_t SortOperator::GetOutput(VectorBatch **outputVecBatch)
 OmniStatus SortOperator::Close()
 {
     // delete spiller object when exception occurs
+    if (spiller != nullptr) {
+        spiller->RemoveSpillFiles();
+    }
     delete spiller;
+    spiller = nullptr;
     delete spillMerger;
+    spillMerger = nullptr;
 
     // ensure free pagesIndex if exception occurs
     pagesIndex->Clear();

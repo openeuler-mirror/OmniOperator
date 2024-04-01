@@ -320,9 +320,16 @@ OmniStatus HashAggregationOperator::Close()
 {
     delete[] sourceTypes;
     sourceTypes = nullptr;
-    delete spillMerger;
+    // delete spiller object when exception occurs
+    if (spiller != nullptr) {
+        spiller->RemoveSpillFiles();
+    }
     delete spiller;
+    spiller = nullptr;
+    delete spillMerger;
+    spillMerger = nullptr;
     delete pagesIndex;
+    pagesIndex = nullptr;
     executionContext->GetArena()->Reset();
     return OMNI_STATUS_NORMAL;
 }

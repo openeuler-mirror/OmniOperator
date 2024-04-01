@@ -140,8 +140,8 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
 {
     std::call_once(loadVecBatchClsFlag, LoadVecBatchAndOmniResults, env);
     if (vecBatchCls == nullptr || omniResultsCls == nullptr) {
-        throw omniruntime::exception::OmniException("LOAD_CLASS_FAILED",
-            "The class VecBatch or OmniResult has not load yet.");
+        env->ThrowNew(omniRuntimeExceptionClass, "The class VecBatch or OmniResult has not load yet.");
+        return nullptr;
     }
 
     auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddr);
