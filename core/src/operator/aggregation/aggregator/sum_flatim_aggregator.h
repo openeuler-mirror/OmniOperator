@@ -140,14 +140,14 @@ public:
         state.count = 0;
     }
 
-    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
+    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
     {
         if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
-            spillTypes.push_back(OMNI_LONG);
+            spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
         } else {
-            spillTypes.push_back(OMNI_DOUBLE);
+            spillTypes.push_back(std::make_shared<DataType>(OMNI_DOUBLE));
         }
-        spillTypes.push_back(OMNI_LONG);
+        spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
     }
 
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override

@@ -130,7 +130,7 @@ public:
             std::to_string(as_integer(type)));
     }
 
-    virtual void GetSpillType(std::vector<DataTypeId> &spillTypes)
+    virtual void GetSpillType(std::vector<DataTypePtr> &spillTypes)
     {
         throw OmniException("UNSUPPORTED_ERROR",
             "GetSpillType not implemented for " + std::to_string(as_integer(type)));

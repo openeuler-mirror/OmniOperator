@@ -87,10 +87,10 @@ public:
         }
     }
 
-    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
+    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
     {
-        spillTypes.push_back(OMNI_DOUBLE);
-        spillTypes.push_back(OMNI_LONG);
+        spillTypes.push_back(std::make_shared<DataType>(OMNI_DOUBLE));
+        spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
     }
 
     void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,

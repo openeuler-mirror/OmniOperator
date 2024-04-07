@@ -67,7 +67,7 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxAggregator : public Type
 
 public:
     ~MaxAggregator() override = default;
-    void GetSpillType(std::vector<DataTypeId> &spillTypes) override;
+    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override;
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     void InitState(AggregateState &state) override;

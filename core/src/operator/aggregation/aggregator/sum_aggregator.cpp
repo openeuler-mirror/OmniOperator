@@ -41,16 +41,16 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
     }
 }
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId> &spillTypes)
+void SumAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypePtr> &spillTypes)
 {
     if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
-        spillTypes.push_back(OMNI_LONG);
+        spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
     } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
-        spillTypes.push_back(OMNI_DOUBLE);
+        spillTypes.push_back(std::make_shared<DataType>(OMNI_DOUBLE));
     } else {
-        spillTypes.push_back(OMNI_DECIMAL128);
+        spillTypes.push_back(std::make_shared<DataType>(OMNI_DECIMAL128));
     }
-    spillTypes.push_back(OMNI_LONG);
+    spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
 }
 
 

@@ -49,9 +49,9 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
+    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
     {
-        spillTypes.push_back(OMNI_VARCHAR);
+        spillTypes.push_back(inputTypes.GetType(0));
     }
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)

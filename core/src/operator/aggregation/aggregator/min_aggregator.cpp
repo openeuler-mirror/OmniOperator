@@ -30,12 +30,12 @@ void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypeId> &spillTypes)
+void MinAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypePtr> &spillTypes)
 {
     if constexpr (IN_ID == OMNI_SHORT) {
-        spillTypes.push_back(OMNI_INT);
+        spillTypes.push_back(std::make_shared<DataType>(OMNI_INT));
     } else {
-        spillTypes.push_back(IN_ID);
+        spillTypes.push_back(std::make_shared<DataType>(IN_ID));
     }
 }
 

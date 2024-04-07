@@ -267,24 +267,16 @@ int32_t HashAggregationOperator::InitMaxRowCountAndOutputTypes()
 
 void HashAggregationOperator::InitSpillInfos()
 {
-    std::vector<DataTypeId> currentSpillType;
+    std::vector<DataTypePtr> currentSpillType;
     spillTypes.push_back(VarcharType());
     spillRowSize += OperatorUtil::GetTypeSize(VarcharType());
     for (uint64_t i = 0; i < aggregators.size(); i++) {
         currentSpillType.clear();
         aggregators[i]->GetSpillType(currentSpillType);
         for (auto &type : currentSpillType) {
-            if (type == OMNI_VARCHAR) {
-                auto dataTypePtr = aggregators[i]->GetInputTypes().GetType(0);
-                aggTypes.push_back(dataTypePtr);
-                spillTypes.push_back(dataTypePtr);
-                spillRowSize += OperatorUtil::GetTypeSize(dataTypePtr);
-            } else {
-                auto dataTypePtr = std::make_shared<DataType>(type);
-                aggTypes.push_back(dataTypePtr);
-                spillTypes.push_back(dataTypePtr);
-                spillRowSize += OperatorUtil::GetTypeSize(dataTypePtr);
-            }
+            aggTypes.push_back(type);
+            spillTypes.push_back(type);
+            spillRowSize += OperatorUtil::GetTypeSize(type);
         }
     }
     SortOrder sortOrder;
