@@ -21,7 +21,6 @@ using namespace omniruntime::vec;
 
 class AggregatorUtil {
 public:
-
     static std::vector<type::DataTypes> WrapWithVector(const type::DataTypes &value);
 
     static std::vector<std::vector<uint32_t>> WrapWithVector(const std::vector<uint32_t> &value);

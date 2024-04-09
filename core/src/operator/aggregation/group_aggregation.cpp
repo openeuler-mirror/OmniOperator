@@ -323,7 +323,14 @@ OmniStatus HashAggregationOperator::Close()
     spillMerger = nullptr;
     delete aggregationSort;
     aggregationSort = nullptr;
-    executionContext->GetArena()->Reset();
+
+    // detail info of simple arena
+    auto arena = executionContext->GetArena();
+    auto totalBytes = arena->TotalBytes();
+    auto usedBytes = arena->UsedBytes();
+    LogDebug("Simple Arena info : totalBytes=%lld,usedBytes=%lld,remainingBytes=%lld", totalBytes, usedBytes,
+        (totalBytes - usedBytes));
+    arena->Reset();
     return OMNI_STATUS_NORMAL;
 }
 
@@ -379,13 +386,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         auto ret = emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
         if (ret.IsInsert()) {
-            if (rowIdx <= 3) {
-                LogWarn("Before aggstate alloc availBuf=%p,availByte=%lld,continuousUsedBytes=%lld,minChunkSize=%lld", arenaAllocator.GetAvailBuf(), arenaAllocator.GetAvailBytes(), arenaAllocator.GetContinuousUsedMemoryBytes(), arenaAllocator.GetMinChunkSize());
-                currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
-                LogWarn("After  aggstate alloc availBuf=%p,availByte=%lld,continuousUsedBytes=%lld,minChunkSize=%lld", arenaAllocator.GetAvailBuf(), arenaAllocator.GetAvailBytes(), arenaAllocator.GetContinuousUsedMemoryBytes(), arenaAllocator.GetMinChunkSize());
-            } else {
-                currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
-            }
+            currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
             for (size_t j = 0; j < aggNum; ++j) {
                 aggregators[j]->InitState(currentGroupStates[j]);
             }
@@ -472,7 +473,6 @@ ErrorCode HashAggregationOperator::SpillToDisk()
 {
     auto &spillHashMap = serialize->hashmap;
     auto totalSpillCount = spillHashMap.GetElementsSize();
-    const size_t aggNum = this->aggregators.size();
     OutputState curOutputState;
     {
         auto statefulMachine =
@@ -630,11 +630,11 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
             // init AggregateState
             auto currentGroupStateSize = static_cast<int64_t>(aggNum * sizeof(AggregateState));
             AggregateState *currentGroupStates =
-                    reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
+                reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
             for (int32_t i = 0; i < aggNum; i++) {
                 aggregators[i]->InitState(currentGroupStates[i]);
                 aggregators[i]->ProcessGroupAfterSpill(currentGroupStates[i], currentVecBatch, vectorIndex,
-                                                       currentRowIndex);
+                    currentRowIndex);
             }
             rowStates[rowIdx] = currentGroupStates;
             rowIdx++;
@@ -642,7 +642,7 @@ void HashAggregationOperator::GetOutputFromDisk(Deserialize &deserializeHashmap,
             AggregateState *currentGroupStates = rowStates[rowIdx - 1];
             for (int32_t i = 0; i < aggNum; i++) {
                 aggregators[i]->ProcessGroupAfterSpill(currentGroupStates[i], currentVecBatch, vectorIndex,
-                                                       currentRowIndex);
+                    currentRowIndex);
             }
         }
         isNewKey = !isEqual;

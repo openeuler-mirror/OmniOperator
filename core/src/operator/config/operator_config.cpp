@@ -143,7 +143,7 @@ static void CreateSpillDirectory(const char *spillPathChars)
     mkdir(spillPathChars, 0750);
     if (access(spillPathChars, 0) != 0) {
         std::string message = GetErrorMessage(ErrorCode::MKDIR_FAILED) + "Create spill directory " + spillPathChars +
-                              " failed since " + strerror(errno) + ".";
+            " failed since " + strerror(errno) + ".";
         throw exception::OmniException(GetErrorCode(ErrorCode::MKDIR_FAILED), message);
     }
 }

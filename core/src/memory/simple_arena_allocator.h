@@ -15,11 +15,13 @@ namespace mem {
 class SimpleArenaAllocator {
 public:
     explicit SimpleArenaAllocator(int64_t minChunkSize = 4096, Allocator *allocator = Allocator::GetAllocator(),
-        uint32_t growthFactor = 2, int64_t linearGrowthThreshold = 128 * 1024 * 1024)
+        uint32_t growthFactor = 2, int64_t linearGrowthThreshold = 512 * 1024)
         : minChunkSize(minChunkSize),
           totalBytes(0),
+          usedBytes(0),
           availBytes(0),
           availBuf(nullptr),
+          continuousUsedMemoryBytes(0),
           allocator(allocator),
           growthFactor(growthFactor),
           linearGrowthThreshold(linearGrowthThreshold)
@@ -70,6 +72,7 @@ public:
         uint8_t *ret = availBuf;
         availBuf += sizeInBytes;
         availBytes -= sizeInBytes;
+        usedBytes += sizeInBytes;
         return ret;
     }
 
@@ -101,7 +104,10 @@ public:
             start = (ret);
             return ret;
         }
-        return (AllocateContinueNotNull(sizeInBytes, start));
+
+        uint8_t *ret = AllocateContinueNotNull(sizeInBytes, start);
+        usedBytes += sizeInBytes;
+        return ret;
     }
 
     void Reset()
@@ -120,17 +126,25 @@ public:
         auto chunk = chunks[0];
         availBuf = reinterpret_cast<uint8_t *>(chunk->GetAddress());
         availBytes = totalBytes = chunk->GetSizeInBytes();
+        continuousUsedMemoryBytes = 0;
+        usedBytes = 0;
     }
 
     ALWAYS_INLINE void RollBackContinualMem()
     {
         availBuf -= continuousUsedMemoryBytes;
         availBytes += continuousUsedMemoryBytes;
+        usedBytes -= continuousUsedMemoryBytes;
     }
 
     ALWAYS_INLINE uint64_t TotalBytes()
     {
         return totalBytes;
+    }
+
+    ALWAYS_INLINE uint64_t UsedBytes()
+    {
+        return usedBytes;
     }
 
     ALWAYS_INLINE uint64_t AvailBytes()
@@ -176,7 +190,7 @@ private:
         }
         auto newSpace = continuousUsedMemoryBytes + static_cast<uint64_t>(sizeInBytes);
         if (availBytes < sizeInBytes) {
-            AllocateChunk(std::max(newSpace, minChunkSize));
+            AllocateChunk(GetNextSize(static_cast<uint64_t>(newSpace)));
             std::copy(start, start + continuousUsedMemoryBytes, availBuf);
             start = availBuf;
             availBuf += continuousUsedMemoryBytes;
@@ -191,6 +205,7 @@ private:
 
     uint64_t minChunkSize;
     uint64_t totalBytes;
+    uint64_t usedBytes;
     uint64_t availBytes;
     uint8_t *availBuf;
     // Record the size of the memory used continuously.
