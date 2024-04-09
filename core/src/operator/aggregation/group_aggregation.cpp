@@ -379,7 +379,13 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         auto ret = emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
         if (ret.IsInsert()) {
-            currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
+            if (rowIdx <= 3) {
+                LogWarn("Before aggstate alloc availBuf=%p,availByte=%lld,continuousUsedBytes=%lld,minChunkSize=%lld", arenaAllocator.GetAvailBuf(), arenaAllocator.GetAvailBytes(), arenaAllocator.GetContinuousUsedMemoryBytes(), arenaAllocator.GetMinChunkSize());
+                currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
+                LogWarn("After  aggstate alloc availBuf=%p,availByte=%lld,continuousUsedBytes=%lld,minChunkSize=%lld", arenaAllocator.GetAvailBuf(), arenaAllocator.GetAvailBytes(), arenaAllocator.GetContinuousUsedMemoryBytes(), arenaAllocator.GetMinChunkSize());
+            } else {
+                currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
+            }
             for (size_t j = 0; j < aggNum; ++j) {
                 aggregators[j]->InitState(currentGroupStates[j]);
             }
