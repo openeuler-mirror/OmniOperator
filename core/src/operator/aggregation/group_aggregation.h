@@ -293,6 +293,7 @@ private:
     int32_t rowsPerBatch;
     std::vector<int8_t> hasAggFilters;
     int32_t aggFiltersCount = 0;
+    int64_t memoryChunkSize = 0;
 
     // for spill
     OperatorConfig operatorConfig;
@@ -308,8 +309,6 @@ private:
     std::vector<type::DataTypePtr> spillTypes;
     OutputState spillOutputState;
     bool hasSpill = false;
-    int32_t spillRowSize;
-    int32_t maxRowCountPerBatch;
     AggregationSort *aggregationSort = nullptr;
 };
 

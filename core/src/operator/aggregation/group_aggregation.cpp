@@ -189,6 +189,7 @@ OmniStatus HashAggregationOperator::Init()
     // group by source types
     for (const auto &c : groupByCols) {
         sourceTypes[c.idx] = static_cast<int32_t>(c.input->GetId());
+        memoryChunkSize += OperatorUtil::GetTypeSize(c.input);
     }
 
     // agg source types
@@ -198,6 +199,8 @@ OmniStatus HashAggregationOperator::Init()
         }
     }
     executionContext = std::make_unique<op::ExecutionContext>();
+    memoryChunkSize += static_cast<int64_t>(aggregators.size() * sizeof(AggregateState));
+    executionContext->GetArena()->SetMinChunkSize(memoryChunkSize * 8);
 
     int32_t rowByteSize = InitMaxRowCountAndOutputTypes();
     rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
@@ -269,20 +272,17 @@ void HashAggregationOperator::InitSpillInfos()
 {
     std::vector<DataTypePtr> currentSpillType;
     spillTypes.push_back(VarcharType());
-    spillRowSize += OperatorUtil::GetTypeSize(VarcharType());
     for (uint64_t i = 0; i < aggregators.size(); i++) {
         currentSpillType.clear();
         aggregators[i]->GetSpillType(currentSpillType);
         for (auto &type : currentSpillType) {
             aggTypes.push_back(type);
             spillTypes.push_back(type);
-            spillRowSize += OperatorUtil::GetTypeSize(type);
         }
     }
     SortOrder sortOrder;
     sortOrders.resize(1, sortOrder);
     groupByCloIdx.resize(1, 0);
-    maxRowCountPerBatch = OperatorUtil::GetMaxRowCount(spillRowSize);
     auto totalSpillCount = serialize->hashmap.GetElementsSize();
     aggregationSort = new AggregationSort(aggregators, totalSpillCount);
 }
@@ -321,8 +321,9 @@ OmniStatus HashAggregationOperator::Close()
     spiller = nullptr;
     delete spillMerger;
     spillMerger = nullptr;
-    executionContext->GetArena()->Reset();
     delete aggregationSort;
+    aggregationSort = nullptr;
+    executionContext->GetArena()->Reset();
     return OMNI_STATUS_NORMAL;
 }
 

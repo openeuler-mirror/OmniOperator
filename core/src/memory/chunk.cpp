@@ -1,12 +1,12 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 #include "chunk.h"
 
 namespace omniruntime {
 namespace mem {
-Chunk::Chunk(Allocator *allocator, void *address, int64_t sizeInBytes)
+Chunk::Chunk(Allocator *allocator, void *address, uint64_t sizeInBytes)
     : address(address), sizeInBytes(sizeInBytes), allocator(allocator)
 {}
 
@@ -17,7 +17,7 @@ Chunk::~Chunk()
         return;
     }
 
-    allocator->Free(address, sizeInBytes);
+    allocator->Free(address, static_cast<int64_t>(sizeInBytes));
     address = nullptr;
 }
 
@@ -26,7 +26,7 @@ void *Chunk::GetAddress() const
     return address;
 }
 
-int64_t Chunk::GetSizeInBytes()
+uint64_t Chunk::GetSizeInBytes()
 {
     return sizeInBytes;
 }

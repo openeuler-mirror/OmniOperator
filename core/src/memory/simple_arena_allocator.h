@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 #ifndef SIMPLE_ARENA_ALLOCATOR_H
@@ -14,13 +14,46 @@ namespace mem {
 // such as when dealing with types such as varchar/decimal and so on.
 class SimpleArenaAllocator {
 public:
-    explicit SimpleArenaAllocator(int64_t minChunkSize = 4096, Allocator *allocator = Allocator::GetAllocator())
-        : minChunkSize(minChunkSize), totalBytes(0), availBytes(0), availBuf(NULL), allocator(allocator)
+    explicit SimpleArenaAllocator(int64_t minChunkSize = 4096, Allocator *allocator = Allocator::GetAllocator(),
+        uint32_t growthFactor = 2, int64_t linearGrowthThreshold = 128 * 1024 * 1024)
+        : minChunkSize(minChunkSize),
+          totalBytes(0),
+          availBytes(0),
+          availBuf(nullptr),
+          allocator(allocator),
+          growthFactor(growthFactor),
+          linearGrowthThreshold(linearGrowthThreshold)
     {}
 
     ~SimpleArenaAllocator()
     {
         ReleaseChunks(false /* retainFirst */);
+    }
+
+    void SetMinChunkSize(uint64_t chunkSize)
+    {
+        if (chunkSize > minChunkSize) {
+            uint32_t bits = 63 - __builtin_clzll(chunkSize);
+            uint64_t lower = 1ULL << bits;
+            if (lower == chunkSize) {
+                minChunkSize = chunkSize;
+            } else {
+                minChunkSize = 2 * lower;
+            }
+        }
+    }
+
+    uint64_t GetNextSize(uint64_t sizeInBytes)
+    {
+        if (chunks.empty()) {
+            return std::max(sizeInBytes, minChunkSize);
+        }
+        auto lastChunkSize = chunks.back()->GetSizeInBytes();
+        if (lastChunkSize < linearGrowthThreshold) {
+            return std::max(sizeInBytes, lastChunkSize * growthFactor);
+        } else {
+            return ((sizeInBytes + linearGrowthThreshold - 1) / linearGrowthThreshold) * linearGrowthThreshold;
+        }
     }
 
     uint8_t *Allocate(int64_t sizeInBytes)
@@ -31,13 +64,33 @@ public:
             return reinterpret_cast<uint8_t *>(&zeroAddress);
         }
         if (availBytes < sizeInBytes) {
-            AllocateChunk(std::max(sizeInBytes, minChunkSize));
+            AllocateChunk(GetNextSize(static_cast<uint64_t>(sizeInBytes)));
         }
         continuousUsedMemoryBytes = sizeInBytes;
         uint8_t *ret = availBuf;
         availBuf += sizeInBytes;
         availBytes -= sizeInBytes;
         return ret;
+    }
+
+    uint8_t *GetAvailBuf()
+    {
+        return availBuf;
+    }
+
+    uint64_t GetAvailBytes()
+    {
+        return availBytes;
+    }
+
+    uint64_t GetContinuousUsedMemoryBytes()
+    {
+        return continuousUsedMemoryBytes;
+    }
+
+    uint64_t GetMinChunkSize()
+    {
+        return minChunkSize;
     }
 
     uint8_t *AllocateContinue(int64_t sizeInBytes, const uint8_t *&start)
@@ -53,7 +106,7 @@ public:
 
     void Reset()
     {
-        if (chunks.size() == 0) {
+        if (chunks.empty()) {
             // if there are no chunks, nothing to do.
             return;
         }
@@ -64,8 +117,9 @@ public:
             chunks.erase(chunks.cbegin() + 1, chunks.cend());
         }
 
-        availBuf = reinterpret_cast<uint8_t *>(chunks.at(0)->GetAddress());
-        availBytes = totalBytes = chunks.at(0)->GetSizeInBytes();
+        auto chunk = chunks[0];
+        availBuf = reinterpret_cast<uint8_t *>(chunk->GetAddress());
+        availBytes = totalBytes = chunk->GetSizeInBytes();
     }
 
     ALWAYS_INLINE void RollBackContinualMem()
@@ -74,12 +128,12 @@ public:
         availBytes += continuousUsedMemoryBytes;
     }
 
-    ALWAYS_INLINE int64_t TotalBytes()
+    ALWAYS_INLINE uint64_t TotalBytes()
     {
         return totalBytes;
     }
 
-    ALWAYS_INLINE int64_t AvailBytes()
+    ALWAYS_INLINE uint64_t AvailBytes()
     {
         return availBytes;
     }
@@ -120,7 +174,7 @@ private:
         if (sizeInBytes == 0) {
             return ret;
         }
-        auto newSpace = continuousUsedMemoryBytes + sizeInBytes;
+        auto newSpace = continuousUsedMemoryBytes + static_cast<uint64_t>(sizeInBytes);
         if (availBytes < sizeInBytes) {
             AllocateChunk(std::max(newSpace, minChunkSize));
             std::copy(start, start + continuousUsedMemoryBytes, availBuf);
@@ -135,14 +189,16 @@ private:
         return ret;
     }
 
-    int64_t minChunkSize;
-    int64_t totalBytes;
-    int64_t availBytes;
+    uint64_t minChunkSize;
+    uint64_t totalBytes;
+    uint64_t availBytes;
     uint8_t *availBuf;
     // Record the size of the memory used continuously.
-    int64_t continuousUsedMemoryBytes;
+    uint64_t continuousUsedMemoryBytes;
     std::vector<Chunk *> chunks;
     Allocator *allocator;
+    uint32_t growthFactor;
+    uint64_t linearGrowthThreshold;
 };
 } // namespace mem
 } // namespace omniruntime
