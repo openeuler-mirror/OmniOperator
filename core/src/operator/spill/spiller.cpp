@@ -18,6 +18,45 @@ static std::string SPILL_TEMPLATE("/spill-XXXXXX");
 static const char *SPILL_TEMPLATE_CHARS = SPILL_TEMPLATE.c_str();
 static int32_t SPILL_TEMPLATE_SIZE = static_cast<int32_t>(SPILL_TEMPLATE.size());
 
+ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
+{
+    size_t totalRowCount = aggregationSort->GetRowCount();
+    if (totalRowCount <= 0) {
+        return ErrorCode::SUCCESS;
+    }
+    // create spill writer object
+    auto writer = new SpillWriter(dataTypes, dirPaths[0]);
+    writers.emplace_back(writer);
+
+    int64_t totalRowOffset = 0;
+    int32_t vecBatchCount = OperatorUtil::GetVecBatchCount(totalRowCount, maxRowCountPerBatch);
+    int32_t maxRowCount = 0; // for reuse vector batch memory
+    for (int32_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; vecBatchIdx++) {
+        auto rowCount = std::min(maxRowCountPerBatch, static_cast<int32_t>(totalRowCount - totalRowOffset));
+        if (spillVecBatch == nullptr || rowCount > maxRowCount) {
+            spillVecBatch = std::make_unique<VectorBatch>(rowCount);
+            VectorHelper::AppendVectors(spillVecBatch.get(), dataTypes, rowCount);
+            maxRowCount = rowCount;
+        } else {
+            spillVecBatch->Resize(rowCount);
+        }
+        auto spillVecBatchPtr = spillVecBatch.get();
+        aggregationSort->SetSpillVectorBatch(spillVecBatchPtr, totalRowOffset);
+        auto vecBatchSize = CollectVecBatchSize(spillVecBatchPtr);
+        if (spillTracker->CheckIfExceedAndReserve(vecBatchSize)) {
+            return ErrorCode::EXCEED_SPILL_THRESHOLD;
+        }
+
+        auto result = writer->WriteVecBatch(spillVecBatchPtr, vecBatchSize);
+        if (result != ErrorCode::SUCCESS) {
+            return result;
+        }
+        totalRowOffset += rowCount;
+    }
+    writer->Close();
+    return ErrorCode::SUCCESS;
+}
+
 ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort)
 {
     int64_t totalRowCount = pagesIndex->GetRowCount();

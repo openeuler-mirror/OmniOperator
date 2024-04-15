@@ -241,10 +241,10 @@ public:
         firstState->valueSet = firstState->valueSet || intermediateState;
     }
 
-    void GetSpillType(std::vector<DataTypeId> &spillTypes) override
+    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
     {
-        spillTypes.push_back(static_cast<DataTypeId>(this->inputTypes.GetIds()[0]));
-        spillTypes.push_back(OMNI_BOOLEAN);
+        spillTypes.push_back(this->inputTypes.GetType(0));
+        spillTypes.push_back(std::make_shared<DataType>(OMNI_BOOLEAN));
     }
 
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override

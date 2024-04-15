@@ -416,8 +416,14 @@ int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrateg
 
 OmniStatus WindowOperator::Close()
 {
+    // delete spiller object when exception occurs
+    if (spiller != nullptr) {
+        spiller->RemoveSpillFiles();
+    }
     delete spiller;
+    spiller = nullptr;
     delete spillMerger;
+    spillMerger = nullptr;
 
     // ensure free pagesIndex if exception occurs
     pagesIndex->Clear();

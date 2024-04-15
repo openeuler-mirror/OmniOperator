@@ -1046,26 +1046,26 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_no_aggNum)
     VectorBatch *vecBatch2 =
         CreateVectorBatch(sourceTypes, 2, data12, data22, data32, data42, data52, data62, data72, data82);
 
-    int64_t expData1[] = {0, 0, 0, 1, 1, 2};
+    int64_t expData1[] = {0, 0, 1, 1, 2, 0};
     int32_t expData2[] = {2, 2, 2, 2, 2, 2};
-    int16_t expData3[] = {0, 1, 1, 5, 5, 1};
-    bool expData4[] = {true, true, true, false, false, true};
-    double expData5[] = {0.1, 0.1, 0.1, 1.1, 1.1, 0};
-    std::string expData6[] = {"", "2w", "2w", "5sf", "5sf", "d4y4"};
-    int64_t expData7[] = {10L, 0L, 10L, 100L, 100L, 100L};
-    Decimal128 expData8[] = {Decimal128(-1, -2), Decimal128(-1, -2), Decimal128(-1, -2), 0, 0, Decimal128(3, 2)};
+    int16_t expData3[] = {1, 1, 5, 5, 1, 0};
+    bool expData4[] = {true, true, false, false, true, true};
+    double expData5[] = {0.1, 0.1, 1.1, 1.1, 0, 0.1};
+    std::string expData6[] = {"2w", "2w", "5sf", "5sf", "d4y4", ""};
+    int64_t expData7[] = {10L, 0L, 100L, 100L, 100L, 10L};
+    Decimal128 expData8[] = {Decimal128(-1, -2), Decimal128(-1, -2), 0, 0, Decimal128(3, 2), Decimal128(-1, -2)};
     VectorBatch *expectVecorBatch = CreateVectorBatch(sourceTypes, expectDataSize, expData1, expData2, expData3,
         expData4, expData5, expData6, expData7, expData8);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(5);
-    expectVecorBatch->Get(2)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(5);
+    expectVecorBatch->Get(1)->SetNull(4);
+    expectVecorBatch->Get(2)->SetNull(5);
     expectVecorBatch->Get(3)->SetNull(1);
-    expectVecorBatch->Get(4)->SetNull(5);
+    expectVecorBatch->Get(4)->SetNull(4);
     expectVecorBatch->Get(6)->SetNull(1);
     expectVecorBatch->Get(7)->SetNull(3);
     auto expectVarCharVector =
         reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(5));
-    expectVarCharVector->SetNull(0);
+    expectVarCharVector->SetNull(5);
 
     // groupByKeys
     LiteralExpr *modRight = new LiteralExpr(3, LongType());
@@ -1156,18 +1156,18 @@ void TestHashAggSpillWithMultiRecords(std::vector<uint32_t> aggFuncTypes, DataTy
     varCharVector->SetNull(4);
 
     // agg(c2*5), agg(c3), agg(c4), agg(c5), agg(c6), agg(c7), agg(c8), agg(c9) group by c0%3, c1
-    int64_t data02[] = {20, 23};                                       // c0
-    int32_t data12[] = {5, 5};                                         // c1
-    int64_t data22[] = {7, 8};                                         // c2
-    int32_t data32[] = {7, 8};                                         // c3
-    int16_t data42[] = {7, 8};                                         // c4
-    bool data52[] = {false, false};                                    // c5
-    double data62[] = {-1.2, -1.2};                                    // c6
-    std::string data72[] = {"-1.20", "-1.20"};                         // c7
-    int64_t data82[] = {-120, -120};                                   // c8
-    Decimal128 data9_2[] = {Decimal128("-1.20"), Decimal128("-1.20")}; // c9
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52, data62,
-        data72, data82, data9_2);
+    int64_t data02[] = {20, 23};                                      // c0
+    int32_t data12[] = {5, 5};                                        // c1
+    int64_t data22[] = {7, 8};                                        // c2
+    int32_t data32[] = {7, 8};                                        // c3
+    int16_t data42[] = {7, 8};                                        // c4
+    bool data52[] = {false, false};                                   // c5
+    double data62[] = {-1.2, -1.2};                                   // c6
+    std::string data72[] = {"-1.20", "-1.20"};                        // c7
+    int64_t data82[] = {-120, -120};                                  // c8
+    Decimal128 data92[] = {Decimal128("-1.20"), Decimal128("-1.20")}; // c9
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52,
+        data62, data72, data82, data92);
 
     // groupByKeys
     LiteralExpr *modRight = new LiteralExpr(3, LongType());
@@ -1237,30 +1237,30 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_sum_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    int64_t expData2[] = {0, 25, 5, 140};                                                     // c2
-    int64_t expData3[] = {0, 5, 1, 28};                                                       // c3
-    int64_t expData4[] = {0, 5, 1, 28};                                                       // c4
-    bool expData5[] = {true, true, true, false};                                              // c5
-    double expData6[] = {-1.2, 1.2, 0, CalculateHashAggSumValue()};                           // c6
-    std::string expData7[] = {"-1.20", "1.20", "", "3.40"};                                   // c7
-    int64_t expData8[] = {-120, 120, 0, 320};                                                 // c8
-    Decimal128 expData9[] = {Decimal128("-1.20"), Decimal128("1.20"), 0, Decimal128("3.20")}; // c9
+    int32_t expData1[] = {1, 3, 5, 0};
+    int64_t expData2[] = {25, 5, 140, 0};                                                     // c2
+    int64_t expData3[] = {5, 1, 28, 0};                                                       // c3
+    int64_t expData4[] = {5, 1, 28, 0};                                                       // c4
+    bool expData5[] = {true, true, false, true};                                              // c5
+    double expData6[] = {1.2, 0, CalculateHashAggSumValue(), -1.2};                           // c6
+    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
+    int64_t expData8[] = {120, 0, 320, -120};                                                 // c8
+    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.20"), Decimal128("-1.20")}; // c9
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-    expectVecorBatch->Get(2)->SetNull(0);
-    expectVecorBatch->Get(3)->SetNull(0);
-    expectVecorBatch->Get(4)->SetNull(0);
-    expectVecorBatch->Get(5)->SetNull(0);
-    expectVecorBatch->Get(6)->SetNull(2);
-    expectVecorBatch->Get(8)->SetNull(2);
-    expectVecorBatch->Get(9)->SetNull(2);
+    expectVecorBatch->Get(1)->SetNull(3);
+    expectVecorBatch->Get(2)->SetNull(3);
+    expectVecorBatch->Get(3)->SetNull(3);
+    expectVecorBatch->Get(4)->SetNull(3);
+    expectVecorBatch->Get(5)->SetNull(3);
+    expectVecorBatch->Get(6)->SetNull(1);
+    expectVecorBatch->Get(8)->SetNull(1);
+    expectVecorBatch->Get(9)->SetNull(1);
     auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(2);
+    varCharVector->SetNull(1);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), BooleanType(), DoubleType(),
         VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
@@ -1275,30 +1275,30 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_sum_container_support_spi
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    int64_t expData2[] = {0, 25, 5, 140};                                                     // c2
-    int64_t expData3[] = {0, 5, 1, 28};                                                       // c3
-    int64_t expData4[] = {0, 5, 1, 28};                                                       // c4
-    bool expData5[] = {true, true, true, false};                                              // c5
-    double expData6[] = {-1.2, 1.2, 0, CalculateHashAggSumValue()};                           // c6
-    std::string expData7[] = {"-1.20", "1.20", "", "3.40"};                                   // c7
-    int64_t expData8[] = {-120, 120, 0, 320};                                                 // c8
-    Decimal128 expData9[] = {Decimal128("-1.20"), Decimal128("1.20"), 0, Decimal128("3.20")}; // c9
+    int32_t expData1[] = {1, 3, 5, 0};
+    int64_t expData2[] = {25, 5, 140, 0};                                                     // c2
+    int64_t expData3[] = {5, 1, 28, 0};                                                       // c3
+    int64_t expData4[] = {5, 1, 28, 0};                                                       // c4
+    bool expData5[] = {true, true, false, true};                                              // c5
+    double expData6[] = {1.2, 0, CalculateHashAggSumValue(), -1.2};                           // c6
+    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
+    int64_t expData8[] = {120, 0, 320, -120};                                                 // c8
+    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.20"), Decimal128("-1.20")}; // c9
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-    expectVecorBatch->Get(2)->SetNull(0);
-    expectVecorBatch->Get(3)->SetNull(0);
-    expectVecorBatch->Get(4)->SetNull(0);
-    expectVecorBatch->Get(5)->SetNull(0);
-    expectVecorBatch->Get(6)->SetNull(2);
-    expectVecorBatch->Get(8)->SetNull(2);
-    expectVecorBatch->Get(9)->SetNull(2);
+    expectVecorBatch->Get(1)->SetNull(3);
+    expectVecorBatch->Get(2)->SetNull(3);
+    expectVecorBatch->Get(3)->SetNull(3);
+    expectVecorBatch->Get(4)->SetNull(3);
+    expectVecorBatch->Get(5)->SetNull(3);
+    expectVecorBatch->Get(6)->SetNull(1);
+    expectVecorBatch->Get(8)->SetNull(1);
+    expectVecorBatch->Get(9)->SetNull(1);
     auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(2);
+    varCharVector->SetNull(1);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), BooleanType(), DoubleType(),
         VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
@@ -1313,30 +1313,30 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_avg_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    double expData2[] = {0, 25, 5, 28};                                                       // c2
-    double expData3[] = {0, 5, 1, 5.6};                                                       // c3
-    double expData4[] = {0, 5, 1, 5.6};                                                       // c4
-    bool expData5[] = {true, true, true, false};                                              // c5
-    double expData6[] = {-1.2, 1.2, 0, 0.64};                                                 // c6
-    std::string expData7[] = {"-1.20", "1.20", "", "3.40"};                                   // c7
-    int64_t expData8[] = {-120, 120, 0, 64};                                                  // c8
-    Decimal128 expData9[] = {Decimal128("-1.20"), Decimal128("1.20"), 0, Decimal128("0.64")}; // c9
+    int32_t expData1[] = {1, 3, 5, 0};
+    double expData2[] = {25, 5, 28, 0};                                                       // c2
+    double expData3[] = {5, 1, 5.6, 0};                                                       // c3
+    double expData4[] = {5, 1, 5.6, 0};                                                       // c4
+    bool expData5[] = {true, true, false, true};                                              // c5
+    double expData6[] = {1.2, 0, 0.64, -1.2};                                                 // c6
+    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
+    int64_t expData8[] = {120, 0, 64, -120};                                                  // c8
+    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("0.64"), Decimal128("-1.20")}; // c9
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), DoubleType(), DoubleType(), DoubleType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-    expectVecorBatch->Get(2)->SetNull(0);
-    expectVecorBatch->Get(3)->SetNull(0);
-    expectVecorBatch->Get(4)->SetNull(0);
-    expectVecorBatch->Get(5)->SetNull(0);
-    expectVecorBatch->Get(6)->SetNull(2);
-    expectVecorBatch->Get(8)->SetNull(2);
-    expectVecorBatch->Get(9)->SetNull(2);
+    expectVecorBatch->Get(1)->SetNull(3);
+    expectVecorBatch->Get(2)->SetNull(3);
+    expectVecorBatch->Get(3)->SetNull(3);
+    expectVecorBatch->Get(4)->SetNull(3);
+    expectVecorBatch->Get(5)->SetNull(3);
+    expectVecorBatch->Get(6)->SetNull(1);
+    expectVecorBatch->Get(8)->SetNull(1);
+    expectVecorBatch->Get(9)->SetNull(1);
     auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(2);
+    varCharVector->SetNull(1);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType(), BooleanType(),
         DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
@@ -1351,30 +1351,30 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_avg_container_support_spi
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    double expData2[] = {0, 25, 5, 28};                                                       // c2
-    double expData3[] = {0, 5, 1, 5.6};                                                       // c3
-    double expData4[] = {0, 5, 1, 5.6};                                                       // c4
-    bool expData5[] = {true, true, true, false};                                              // c5
-    double expData6[] = {-1.2, 1.2, 0, 0.64};                                                 // c6
-    std::string expData7[] = {"-1.20", "1.20", "", "3.40"};                                   // c7
-    int64_t expData8[] = {-120L, 120L, 0, 64};                                                // c8
-    Decimal128 expData9[] = {Decimal128("-1.20"), Decimal128("1.20"), 0, Decimal128("0.64")}; // c9
+    int32_t expData1[] = {1, 3, 5, 0};
+    double expData2[] = {25, 5, 28, 0};                                                       // c2
+    double expData3[] = {5, 1, 5.6, 0};                                                       // c3
+    double expData4[] = {5, 1, 5.6, 0};                                                       // c4
+    bool expData5[] = {true, true, false, true};                                              // c5
+    double expData6[] = {1.2, 0, 0.64, -1.2};                                                 // c6
+    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
+    int64_t expData8[] = {120, 0, 64, -120};                                                // c8
+    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("0.64"), Decimal128("-1.20")}; // c9
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), DoubleType(), DoubleType(), DoubleType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-    expectVecorBatch->Get(2)->SetNull(0);
-    expectVecorBatch->Get(3)->SetNull(0);
-    expectVecorBatch->Get(4)->SetNull(0);
-    expectVecorBatch->Get(5)->SetNull(0);
-    expectVecorBatch->Get(6)->SetNull(2);
-    expectVecorBatch->Get(8)->SetNull(2);
-    expectVecorBatch->Get(9)->SetNull(2);
+    expectVecorBatch->Get(1)->SetNull(3);
+    expectVecorBatch->Get(2)->SetNull(3);
+    expectVecorBatch->Get(3)->SetNull(3);
+    expectVecorBatch->Get(4)->SetNull(3);
+    expectVecorBatch->Get(5)->SetNull(3);
+    expectVecorBatch->Get(6)->SetNull(1);
+    expectVecorBatch->Get(8)->SetNull(1);
+    expectVecorBatch->Get(9)->SetNull(1);
     auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(2);
+    varCharVector->SetNull(1);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType(), BooleanType(),
         DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
@@ -1389,21 +1389,21 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_count_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    int64_t expData2[] = {0, 1, 1, 5};
-    int64_t expData3[] = {0, 1, 1, 5};
-    int64_t expData4[] = {0, 1, 1, 5};
-    int64_t expData5[] = {0, 1, 1, 5};
-    int64_t expData6[] = {1, 1, 0, 5};
-    int64_t expData7[] = {1, 1, 0, 5};
-    int64_t expData8[] = {1, 1, 0, 5};
-    int64_t expData9[] = {1, 1, 0, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
+    int64_t expData2[] = {1, 1, 5, 0};
+    int64_t expData3[] = {1, 1, 5, 0};
+    int64_t expData4[] = {1, 1, 5, 0};
+    int64_t expData5[] = {1, 1, 5, 0};
+    int64_t expData6[] = {1, 0, 5, 1};
+    int64_t expData7[] = {1, 0, 5, 1};
+    int64_t expData8[] = {1, 0, 5, 1};
+    int64_t expData9[] = {1, 0, 5, 1};
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
         LongType(), LongType(), LongType(), LongType(), LongType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(1)->SetNull(3);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>(
         { LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
@@ -1418,30 +1418,30 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_min_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    int64_t expData2[] = {0, 25, 5, 15};
-    int32_t expData3[] = {0, 5, 1, 3};
-    int32_t expData4[] = {0, 5, 1, 3};
-    bool expData5[] = {true, true, true, false};
-    double expData6[] = {-1.2, 1.2, 0, -1.2};
-    std::string expData7[] = {"-1.20", "1.20", "", "-1.20"};
-    int64_t expData8[] = {-120, 120, 0, -120};
-    Decimal128 expData9[] = {Decimal128("-1.20"), Decimal128("1.20"), 0, Decimal128("-1.20")};
+    int32_t expData1[] = {1, 3, 5, 0};
+    int64_t expData2[] = {25, 5, 15, 0};
+    int32_t expData3[] = {5, 1, 3, 0};
+    int32_t expData4[] = {5, 1, 3, 0};
+    bool expData5[] = {true, true, false, true};
+    double expData6[] = {1.2, 0, -1.2, -1.2};
+    std::string expData7[] = {"1.20", "", "-1.20", "-1.20"};
+    int64_t expData8[] = {120, 0, -120, -120};
+    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("-1.20"), Decimal128("-1.20")};
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), IntType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-    expectVecorBatch->Get(2)->SetNull(0);
-    expectVecorBatch->Get(3)->SetNull(0);
-    expectVecorBatch->Get(4)->SetNull(0);
-    expectVecorBatch->Get(5)->SetNull(0);
-    expectVecorBatch->Get(6)->SetNull(2);
-    expectVecorBatch->Get(8)->SetNull(2);
-    expectVecorBatch->Get(9)->SetNull(2);
+    expectVecorBatch->Get(1)->SetNull(3);
+    expectVecorBatch->Get(2)->SetNull(3);
+    expectVecorBatch->Get(3)->SetNull(3);
+    expectVecorBatch->Get(4)->SetNull(3);
+    expectVecorBatch->Get(5)->SetNull(3);
+    expectVecorBatch->Get(6)->SetNull(1);
+    expectVecorBatch->Get(8)->SetNull(1);
+    expectVecorBatch->Get(9)->SetNull(1);
     auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(2);
+    varCharVector->SetNull(1);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), IntType(), BooleanType(), DoubleType(),
         VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
@@ -1456,30 +1456,30 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_max_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    int64_t expData2[] = {0, 25, 5, 40};
-    int32_t expData3[] = {0, 5, 1, 8};
-    int16_t expData4[] = {0, 5, 1, 8};
-    bool expData5[] = {true, true, true, false};
-    double expData6[] = {-1.2, 1.2, 0, 3.4};
-    std::string expData7[] = {"-1.20", "1.20", "", "3.40"};
-    int64_t expData8[] = {-120, 120, 0, 340};
-    Decimal128 expData9[] = {Decimal128("-1.20"), Decimal128("1.20"), 0, Decimal128("3.40")};
+    int32_t expData1[] = {1, 3, 5, 0};
+    int64_t expData2[] = {25, 5, 40, 0};
+    int32_t expData3[] = {5, 1, 8, 0};
+    int16_t expData4[] = {5, 1, 8, 0};
+    bool expData5[] = {true, true, false, true};
+    double expData6[] = {1.2, 0, 3.4, -1.2};
+    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};
+    int64_t expData8[] = {120, 0, 340, -120};
+    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.40"), Decimal128("-1.20")};
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-    expectVecorBatch->Get(2)->SetNull(0);
-    expectVecorBatch->Get(3)->SetNull(0);
-    expectVecorBatch->Get(4)->SetNull(0);
-    expectVecorBatch->Get(5)->SetNull(0);
-    expectVecorBatch->Get(6)->SetNull(2);
-    expectVecorBatch->Get(8)->SetNull(2);
-    expectVecorBatch->Get(9)->SetNull(2);
+    expectVecorBatch->Get(1)->SetNull(3);
+    expectVecorBatch->Get(2)->SetNull(3);
+    expectVecorBatch->Get(3)->SetNull(3);
+    expectVecorBatch->Get(4)->SetNull(3);
+    expectVecorBatch->Get(5)->SetNull(3);
+    expectVecorBatch->Get(6)->SetNull(1);
+    expectVecorBatch->Get(8)->SetNull(1);
+    expectVecorBatch->Get(9)->SetNull(1);
     auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(2);
+    varCharVector->SetNull(1);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), ShortType(), BooleanType(), DoubleType(),
         VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
@@ -1494,30 +1494,30 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_first_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    int64_t expData2[] = {0, 25, 5, 15};
-    int32_t expData3[] = {0, 5, 1, 3};
-    int16_t expData4[] = {0, 5, 1, 3};
-    bool expData5[] = {true, true, true, false};
-    double expData6[] = {-1.2, 1.2, 0, 3.4};
-    std::string expData7[] = {"-1.20", "1.20", "", "3.40"};
-    int64_t expData8[] = {-120, 120, 0, 340};
-    Decimal128 expData9[] = {Decimal128("-1.20"), Decimal128("1.20"), 0, Decimal128("3.40")};
+    int32_t expData1[] = {1, 3, 5, 0};
+    int64_t expData2[] = {25, 5, 15, 0};
+    int32_t expData3[] = {5, 1, 3, 0};
+    int16_t expData4[] = {5, 1, 3, 0};
+    bool expData5[] = {true, true, false, true};
+    double expData6[] = {1.2, 0, 3.4, -1.2};
+    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};
+    int64_t expData8[] = {120, 0, 340, -120};
+    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.40"), Decimal128("-1.20")};
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-    expectVecorBatch->Get(2)->SetNull(0);
-    expectVecorBatch->Get(3)->SetNull(0);
-    expectVecorBatch->Get(4)->SetNull(0);
-    expectVecorBatch->Get(5)->SetNull(0);
-    expectVecorBatch->Get(6)->SetNull(2);
-    expectVecorBatch->Get(8)->SetNull(2);
-    expectVecorBatch->Get(9)->SetNull(2);
+    expectVecorBatch->Get(1)->SetNull(3);
+    expectVecorBatch->Get(2)->SetNull(3);
+    expectVecorBatch->Get(3)->SetNull(3);
+    expectVecorBatch->Get(4)->SetNull(3);
+    expectVecorBatch->Get(5)->SetNull(3);
+    expectVecorBatch->Get(6)->SetNull(1);
+    expectVecorBatch->Get(8)->SetNull(1);
+    expectVecorBatch->Get(9)->SetNull(1);
     auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(2);
+    varCharVector->SetNull(1);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), ShortType(), BooleanType(), DoubleType(),
         VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
@@ -1534,30 +1534,30 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_first_include_null_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
-    int64_t expData2[] = {0, 25, 5, 15};
-    int32_t expData3[] = {0, 5, 1, 3};
-    int16_t expData4[] = {0, 5, 1, 3};
-    bool expData5[] = {true, true, true, false};
-    double expData6[] = {-1.2, 1.2, 0, 3.4};
-    std::string expData7[] = {"-1.20", "1.20", "", "3.40"};
-    int64_t expData8[] = {-120, 120, 0, 340};
-    Decimal128 expData9[] = {Decimal128("-1.20"), Decimal128("1.20"), 0, Decimal128("3.40")};
+    int32_t expData1[] = {1, 3, 5, 0};
+    int64_t expData2[] = {25, 5, 15, 0};
+    int32_t expData3[] = {5, 1, 3, 0};
+    int16_t expData4[] = {5, 1, 3, 0};
+    bool expData5[] = {true, true, false, true};
+    double expData6[] = {1.2, 0, 3.4, -1.2};
+    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};
+    int64_t expData8[] = {120, 0, 340, -120};
+    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.40"), Decimal128("-1.20")};
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(0);
-    expectVecorBatch->Get(2)->SetNull(0);
-    expectVecorBatch->Get(3)->SetNull(0);
-    expectVecorBatch->Get(4)->SetNull(0);
-    expectVecorBatch->Get(5)->SetNull(0);
-    expectVecorBatch->Get(6)->SetNull(2);
-    expectVecorBatch->Get(8)->SetNull(2);
-    expectVecorBatch->Get(9)->SetNull(2);
+    expectVecorBatch->Get(1)->SetNull(3);
+    expectVecorBatch->Get(2)->SetNull(3);
+    expectVecorBatch->Get(3)->SetNull(3);
+    expectVecorBatch->Get(4)->SetNull(3);
+    expectVecorBatch->Get(5)->SetNull(3);
+    expectVecorBatch->Get(6)->SetNull(1);
+    expectVecorBatch->Get(8)->SetNull(1);
+    expectVecorBatch->Get(9)->SetNull(1);
     auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(2);
+    varCharVector->SetNull(1);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), ShortType(), BooleanType(), DoubleType(),
         VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
@@ -1625,9 +1625,9 @@ void TestHashAggSpillWithNullRecords(std::vector<uint32_t> aggFuncTypes, DataTyp
     double data62[] = {0, 0};        // c6
     std::string data72[] = {"", ""}; // c7
     int64_t data82[] = {0, 0};       // c8
-    Decimal128 data9_2[] = {0, 0};   // c9
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52, data62,
-        data72, data82, data9_2);
+    Decimal128 data92[] = {0, 0};    // c9
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52,
+        data62, data72, data82, data92);
     for (int i = 0; i < 2; i++) {
         vecBatch2->Get(2)->SetNull(i);
         vecBatch2->Get(3)->SetNull(i);
@@ -1699,11 +1699,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_sum_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     int64_t expData2[] = {0, 0, 0, 0};           // c2
     int64_t expData3[] = {0, 0, 0, 0};           // c3
     int64_t expData4[] = {0, 0, 0, 0};           // c4
-    bool expData5[] = {true, true, true, false}; // c5
+    bool expData5[] = {true, true, false, true}; // c5
     double expData6[] = {0, 0, 0, 0};            // c6
     std::string expData7[] = {"", "", "", ""};   // c7
     int64_t expData8[] = {0, 0, 0, 0};           // c8
@@ -1713,8 +1713,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_sum_spill)
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
     for (int i = 0; i < expectDataSize; i++) {
         expectVecorBatch->Get(2)->SetNull(i);
         expectVecorBatch->Get(3)->SetNull(i);
@@ -1741,11 +1741,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_sum_container
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     int64_t expData2[] = {0, 0, 0, 0};           // c2
     int64_t expData3[] = {0, 0, 0, 0};           // c3
     int64_t expData4[] = {0, 0, 0, 0};           // c4
-    bool expData5[] = {true, true, true, false}; // c5
+    bool expData5[] = {true, true, false, true}; // c5
     double expData6[] = {0, 0, 0, 0};            // c6
     std::string expData7[] = {"", "", "", ""};   // c7
     int64_t expData8[] = {0, 0, 0, 0};           // c8
@@ -1755,8 +1755,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_sum_container
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
     for (int i = 0; i < expectDataSize; i++) {
         expectVecorBatch->Get(2)->SetNull(i);
         expectVecorBatch->Get(3)->SetNull(i);
@@ -1783,11 +1783,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_avg_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     int64_t expData2[] = {0, 0, 0, 0};           // c2
     int64_t expData3[] = {0, 0, 0, 0};           // c3
     int64_t expData4[] = {0, 0, 0, 0};           // c4
-    bool expData5[] = {true, true, true, false}; // c5
+    bool expData5[] = {true, true, false, true}; // c5
     double expData6[] = {0, 0, 0, 0};            // c6
     std::string expData7[] = {"", "", "", ""};   // c7
     int64_t expData8[] = {0, 0, 0, 0};           // c8
@@ -1797,8 +1797,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_avg_spill)
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
     for (int i = 0; i < expectDataSize; i++) {
         expectVecorBatch->Get(2)->SetNull(i);
         expectVecorBatch->Get(3)->SetNull(i);
@@ -1825,11 +1825,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_avg_container
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     double expData2[] = {0, 0, 0, 0};            // c2
     double expData3[] = {0, 0, 0, 0};            // c3
     double expData4[] = {0, 0, 0, 0};            // c4
-    bool expData5[] = {true, true, true, false}; // c5
+    bool expData5[] = {true, true, false, true}; // c5
     double expData6[] = {0, 0, 0, 0};            // c6
     std::string expData7[] = {"", "", "", ""};   // c7
     int64_t expData8[] = {0, 0, 0, 0};           // c8
@@ -1839,8 +1839,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_avg_container
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
     for (int i = 0; i < expectDataSize; i++) {
         expectVecorBatch->Get(2)->SetNull(i);
         expectVecorBatch->Get(3)->SetNull(i);
@@ -1867,7 +1867,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_count_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     int64_t expData2[] = {0, 0, 0, 0};
     int64_t expData3[] = {0, 0, 0, 0};
     int64_t expData4[] = {0, 0, 0, 0};
@@ -1881,8 +1881,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_count_spill)
         LongType(), LongType(), LongType(), LongType(), LongType() }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
 
     DataTypes aggOutputTypes(std::vector<DataTypePtr>(
         { LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
@@ -1897,11 +1897,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_min_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     int64_t expData2[] = {0, 0, 0, 0};           // c2
     int64_t expData3[] = {0, 0, 0, 0};           // c3
     int64_t expData4[] = {0, 0, 0, 0};           // c4
-    bool expData5[] = {true, true, true, false}; // c5
+    bool expData5[] = {true, true, false, true}; // c5
     double expData6[] = {0, 0, 0, 0};            // c6
     std::string expData7[] = {"", "", "", ""};   // c7
     int64_t expData8[] = {0, 0, 0, 0};           // c8
@@ -1911,8 +1911,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_min_spill)
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
     for (int i = 0; i < expectDataSize; i++) {
         expectVecorBatch->Get(2)->SetNull(i);
         expectVecorBatch->Get(3)->SetNull(i);
@@ -1939,11 +1939,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_max_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     int64_t expData2[] = {0, 0, 0, 0};           // c2
     int64_t expData3[] = {0, 0, 0, 0};           // c3
     int64_t expData4[] = {0, 0, 0, 0};           // c4
-    bool expData5[] = {true, true, true, false}; // c5
+    bool expData5[] = {true, true, false, true}; // c5
     double expData6[] = {0, 0, 0, 0};            // c6
     std::string expData7[] = {"", "", "", ""};   // c7
     int64_t expData8[] = {0, 0, 0, 0};           // c8
@@ -1953,8 +1953,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_max_spill)
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
     for (int i = 0; i < expectDataSize; i++) {
         expectVecorBatch->Get(2)->SetNull(i);
         expectVecorBatch->Get(3)->SetNull(i);
@@ -1981,11 +1981,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_first_spill)
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     int64_t expData2[] = {0, 0, 0, 0};           // c2
     int64_t expData3[] = {0, 0, 0, 0};           // c3
     int64_t expData4[] = {0, 0, 0, 0};           // c4
-    bool expData5[] = {true, true, true, false}; // c5
+    bool expData5[] = {true, true, false, true}; // c5
     double expData6[] = {0, 0, 0, 0};            // c6
     std::string expData7[] = {"", "", "", ""};   // c7
     int64_t expData8[] = {0, 0, 0, 0};           // c8
@@ -1995,8 +1995,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_null_record_first_spill)
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
     for (int i = 0; i < expectDataSize; i++) {
         expectVecorBatch->Get(2)->SetNull(i);
         expectVecorBatch->Get(3)->SetNull(i);
@@ -2025,11 +2025,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_first_null_record_include
 {
     const int32_t expectDataSize = 4;
     int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {0, 1, 3, 5};
+    int32_t expData1[] = {1, 3, 5, 0};
     int64_t expData2[] = {0, 0, 0, 0};           // c2
     int64_t expData3[] = {0, 0, 0, 0};           // c3
     int64_t expData4[] = {0, 0, 0, 0};           // c4
-    bool expData5[] = {true, true, true, false}; // c5
+    bool expData5[] = {true, true, false, true}; // c5
     double expData6[] = {0, 0, 0, 0};            // c6
     std::string expData7[] = {"", "", "", ""};   // c7
     int64_t expData8[] = {0, 0, 0, 0};           // c8
@@ -2039,8 +2039,8 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_first_null_record_include
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(0)->SetNull(0);
-    expectVecorBatch->Get(1)->SetNull(0);
+    expectVecorBatch->Get(0)->SetNull(3);
+    expectVecorBatch->Get(1)->SetNull(3);
     for (int i = 0; i < expectDataSize; i++) {
         expectVecorBatch->Get(2)->SetNull(i);
         expectVecorBatch->Get(3)->SetNull(i);

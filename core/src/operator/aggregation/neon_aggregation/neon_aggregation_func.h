@@ -105,7 +105,7 @@ template <typename IN, typename OUT> struct BinaryOperation<BasicOp::Min, IN, OU
     }
 };
 
-#define BASIC_DEFINE_FOR_SIMD                                   \
+#define BASIC_DEFINE_FOR_SIMD                                \
     static constexpr uint32_t RawSize = sizeof(RawType) * 8; \
     static constexpr uint32_t HandleNumOnce = NeonBitWidth / RawSize
 

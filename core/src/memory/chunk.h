@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
 #ifndef CHUNK_H
@@ -17,11 +17,11 @@ public:
 
     void *GetAddress() const;
 
-    int64_t GetSizeInBytes();
+    uint64_t GetSizeInBytes();
 
-    static Chunk *NewChunk(Allocator *globalAllocator, int64_t sizeInByte, bool zeroFill = false)
+    static Chunk *NewChunk(Allocator *globalAllocator, uint64_t sizeInByte, bool zeroFill = false)
     {
-        void *data = globalAllocator->Alloc(sizeInByte);
+        void *data = globalAllocator->Alloc(static_cast<int64_t>(sizeInByte));
         if (data != nullptr) {
             return new Chunk(globalAllocator, data, sizeInByte);
         }
@@ -29,11 +29,11 @@ public:
     }
 
 protected:
-    explicit Chunk(Allocator *allocator, void *address, int64_t sizeInBytes);
+    explicit Chunk(Allocator *allocator, void *address, uint64_t sizeInBytes);
 
 private:
     void *address = nullptr;
-    int64_t sizeInBytes;
+    uint64_t sizeInBytes;
     Allocator *allocator = nullptr;
 };
 } // namespace mem

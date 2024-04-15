@@ -18,6 +18,7 @@
 #include "operator/filter/filter_and_project.h"
 #include "operator/pages_index.h"
 #include "operator/spill/spiller.h"
+#include "group_aggregation_sort.h"
 
 namespace omniruntime::op {
 using namespace vec;
@@ -259,7 +260,7 @@ private:
     int32_t InitMaxRowCountAndOutputTypes();
     void InitSpillInfos();
     void SpillHashMap();
-    void ConvertHashMap2PageIndex();
+    ErrorCode SpillToDisk();
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
     template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
@@ -272,10 +273,7 @@ private:
 
     template <typename Deserialize>
     void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
-    void SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum);
     void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
-    template <typename T>
-    void SetSpillOutputVector(BaseVector *outputVector, int32_t outputRowCount, int32_t outputCol);
 
     std::vector<ColumnIndex> groupByCols;
     std::vector<std::vector<int32_t>> aggInputCols;
@@ -295,25 +293,23 @@ private:
     int32_t rowsPerBatch;
     std::vector<int8_t> hasAggFilters;
     int32_t aggFiltersCount = 0;
+    int64_t memoryChunkSize = 0;
 
     // for spill
     OperatorConfig operatorConfig;
     SpillMerger *spillMerger = nullptr;
     Spiller *spiller = nullptr;
-    PagesIndex *pagesIndex = nullptr;
     std::vector<SortOrder> sortOrders;
-    std::vector<int32_t> ascendings;
-    std::vector<int32_t> nullsFirst;
-    std::vector<int32_t> groupByClomIdx;
+    std::vector<int32_t> groupByCloIdx;
     int64_t spillTotalRowCount = 0;
-    std::vector<vec::VectorBatch *> batches;
-    std::vector<int32_t> rowIdxes;
+    int64_t spillRowOffset = 0;
     std::vector<AggregateState *> rowStates;
     uint64_t spilledBytes = 0;
+    std::vector<type::DataTypePtr> aggTypes;
     std::vector<type::DataTypePtr> spillTypes;
-    int32_t spillRowsPerPagesIndexs;
     OutputState spillOutputState;
     bool hasSpill = false;
+    AggregationSort *aggregationSort = nullptr;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {

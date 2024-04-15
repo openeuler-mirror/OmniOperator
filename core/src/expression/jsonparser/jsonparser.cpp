@@ -141,10 +141,6 @@ Expr *JSONParser::ParseJSONUnary(const Json &jsonExpr)
     if (expr == nullptr) {
         return nullptr;
     }
-    if (expr->GetType() != ExprType::IS_NULL_E) {
-        delete expr;
-        return nullptr;
-    }
     return new UnaryExpr(op, expr, std::make_shared<BooleanDataType>());
 }
 
@@ -318,11 +314,7 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
     if (funcName == "CAST" && args.size() == 1) {
         if (retTypeId == args[0]->GetReturnTypeId()) {
             if (!TypeUtil::IsDecimalType(retTypeId) && !TypeUtil::IsStringType(retTypeId)) {
-                if (args[0]->GetType() == ExprType::LITERAL_E) {
-                    return static_cast<LiteralExpr *>(args[0]);
-                } else if (args[0]->GetType() == ExprType::FIELD_E) {
-                    return static_cast<FieldExpr *>(args[0]);
-                }
+                return args[0];
             }
         }
     }

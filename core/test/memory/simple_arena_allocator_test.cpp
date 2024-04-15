@@ -103,8 +103,8 @@ TEST(SimpleArenaAllocator, testResetFromBigToSmall)
     p = arena.Allocate(smallSize);
     EXPECT_NE(p, nullptr);
 
-    EXPECT_EQ(arena.TotalBytes(), chunkSize + largeSize);
-    EXPECT_EQ(arena.AvailBytes(), chunkSize - smallSize);
+    EXPECT_EQ(arena.TotalBytes(), largeSize + 2 * largeSize);
+    EXPECT_EQ(arena.AvailBytes(), 2 * largeSize - smallSize);
     arena.Reset();
     EXPECT_EQ(arena.TotalBytes(), largeSize);
     EXPECT_EQ(arena.AvailBytes(), largeSize);
