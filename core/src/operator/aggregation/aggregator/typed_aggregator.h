@@ -342,7 +342,7 @@ private:
         Decimal128Wrapper result(val);
         // following if condition makes sure that both input and output are acutally decimal,
         // not varchare (which has no scale)
-        if ((inputType->GetId() == OMNI_DECIMAL128) &&
+        if ((inputType->GetId() == OMNI_DECIMAL128 || inputType->GetId() == OMNI_DECIMAL64) &&
             (outputType->GetId() == OMNI_DECIMAL64 || outputType->GetId() == OMNI_DECIMAL128)) {
             int32_t scale = static_cast<DecimalDataType *>(outputType.get())->GetScale() -
                 static_cast<DecimalDataType *>(inputType.get())->GetScale();
