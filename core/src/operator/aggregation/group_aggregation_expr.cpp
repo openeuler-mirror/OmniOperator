@@ -139,8 +139,7 @@ HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes
       sourceTypes(sourceTypes),
       projections(projections),
       aggSimpleFilters(aggSimpleFilters),
-      hashAggOperator(hashAggOperator),
-      executionContext(new ExecutionContext())
+      hashAggOperator(hashAggOperator)
 {
     for (auto simpleFilter : aggSimpleFilters) {
         if (simpleFilter != nullptr) {
@@ -153,19 +152,25 @@ HashAggregationWithExprOperator::HashAggregationWithExprOperator(const DataTypes
 HashAggregationWithExprOperator::~HashAggregationWithExprOperator()
 {
     delete hashAggOperator;
-    delete executionContext;
 }
 
 int32_t HashAggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
+    if (inputVecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
+
     VectorBatch *newInputVecBatch =
-        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext);
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext.get());
 
     // if hasAggFilter is false, then skip AddFilterColumn
     if (hasAggFilter) {
         try {
             // do filter and update newInputVecBatch
-            AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
+            AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext.get(),
+                originTypes);
         } catch (const std::exception &e) {
             VectorHelper::FreeVecBatch(inputVecBatch);
             ResetInputVecBatch();
@@ -183,7 +188,7 @@ void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t 
 {
     auto inputVecBatch = oneRowAdaptor.Trans2VectorBatch(rowValues, lens);
     VectorBatch *newInputVecBatch =
-        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext);
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext.get());
     hashAggOperator->AddInput(newInputVecBatch);
     // no need to delete inputVecBatch, it will be reused when this interface call again
 }

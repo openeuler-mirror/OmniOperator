@@ -46,23 +46,24 @@ Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 
 HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,
     std::vector<std::unique_ptr<Projection>> &projections, HashBuilderOperator *hashBuilderOperator)
-    : buildTypes(buildTypes),
-      projections(projections),
-      hashBuilderOperator(hashBuilderOperator),
-      executionContext(new ExecutionContext())
+    : buildTypes(buildTypes), projections(projections), hashBuilderOperator(hashBuilderOperator)
 {}
 
 HashBuilderWithExprOperator::~HashBuilderWithExprOperator()
 {
     delete this->hashBuilderOperator;
-    delete this->executionContext;
 }
 
 int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, buildTypes, projections, executionContext);
+    if (vecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
+    auto *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, buildTypes, projections, executionContext.get());
     VectorHelper::FreeVecBatch(vecBatch);
-    inputVecBatch = nullptr;
+    ResetInputVecBatch();
 
     hashBuilderOperator->AddInput(newInputVecBatch);
     SetStatus(hashBuilderOperator->GetStatus());

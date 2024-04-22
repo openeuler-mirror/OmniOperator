@@ -57,7 +57,6 @@ private:
     const DataTypes buildTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
     HashBuilderOperator *hashBuilderOperator;
-    ExecutionContext *executionContext;
 };
 }
 }

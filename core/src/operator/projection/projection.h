@@ -22,19 +22,16 @@ using namespace codegen;
 
 class ProjectionOperator : public Operator {
 public:
-    explicit ProjectionOperator(ExecutionContext *context, std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
+    explicit ProjectionOperator(std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
         : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
-    {
-        this->context = context;
-    }
+    {}
 
-    ~ProjectionOperator() override
-    {
-        delete context;
-    }
+    ~ProjectionOperator() override = default;
 
     int32_t AddInput(VectorBatch *vecBatch) override;
+
     int32_t GetOutput(VectorBatch **outputVecBatch) override;
+
     OmniStatus Close() override;
 
 private:

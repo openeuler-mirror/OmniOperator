@@ -66,7 +66,6 @@ private:
     std::vector<std::unique_ptr<Projection>> &projections;
     std::vector<SimpleFilter *> aggSimpleFilters;
     HashAggregationOperator *hashAggOperator;
-    ExecutionContext *executionContext;
     bool hasAggFilter = false;
 };
 }

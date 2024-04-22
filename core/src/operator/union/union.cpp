@@ -32,18 +32,24 @@ UnionOperator::UnionOperator(const type::DataTypes &sourceTypes, int32_t sourceT
     : sourceTypes(sourceTypes), sourceTypesCount(sourceTypesCount), isDistinct(isDistinct)
 {}
 
-UnionOperator::~UnionOperator() {}
+UnionOperator::~UnionOperator() = default;
 
 int32_t UnionOperator::AddInput(VectorBatch *vecBatch)
 {
-    int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t rowCount = vecBatch->GetRowCount();
+    if (rowCount <= 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
+    int32_t vectorCount = vecBatch->GetVectorCount();
     auto outBatch = new VectorBatch(rowCount);
     for (int32_t i = 0; i < vectorCount; ++i) {
         BaseVector *inputVector = vecBatch->Get(i);
         outBatch->Append(VectorHelper::SliceVector(inputVector, 0, rowCount));
     }
     VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
     inputVecBatches.push_back(outBatch);
     vecBatchCount++;
     return 0;

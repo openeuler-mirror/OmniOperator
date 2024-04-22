@@ -256,10 +256,15 @@ public:
 
     uint64_t GetSpilledBytes() override;
 
+    void SetRowCountPerBatch(int32_t rowCount)
+    {
+        this->rowsPerBatch = rowCount;
+    }
+
 private:
     int32_t InitMaxRowCountAndOutputTypes();
     void InitSpillInfos();
-    void SpillHashMap();
+    ErrorCode SpillHashMap();
     ErrorCode SpillToDisk();
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
@@ -271,8 +276,9 @@ private:
     friend void FillValueImpl(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
     friend void FillVarcharValue(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
 
-    template <typename Deserialize>
-    void GetOutputFromDisk(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
+    void GetOutputFromDisk(VectorBatch **outputVecBatch);
+    VectorBatch *GetOutputFromDiskWithoutAgg(VectorBatch *outputVecBatch);
+    VectorBatch *GetOutputFromDiskWithAgg(VectorBatch *outputVecBatch);
     void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
 
     std::vector<ColumnIndex> groupByCols;
@@ -281,7 +287,6 @@ private:
     std::vector<DataTypes> aggInputTypes;
     std::vector<DataTypes> aggOutputTypes;
     std::vector<type::DataTypePtr> outputTypes;
-    std::unique_ptr<ExecutionContext> executionContext;
     HandleType groupByColumnsHandleType = HandleType::serialize;
     std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
     bool isInited = false;
@@ -301,8 +306,9 @@ private:
     Spiller *spiller = nullptr;
     std::vector<SortOrder> sortOrders;
     std::vector<int32_t> groupByCloIdx;
-    int64_t spillTotalRowCount = 0;
-    int64_t spillRowOffset = 0;
+    uint64_t spillTotalRowCount = 0;
+    uint64_t spillRowOffset = 0;
+    std::unique_ptr<AggregateState[]> groupStates = nullptr;
     std::vector<AggregateState *> rowStates;
     uint64_t spilledBytes = 0;
     std::vector<type::DataTypePtr> aggTypes;

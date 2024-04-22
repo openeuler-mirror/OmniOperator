@@ -58,7 +58,6 @@ private:
     DataTypes sourceTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
     SortOperator *sortOperator;
-    ExecutionContext *executionContext;
 };
 }
 }

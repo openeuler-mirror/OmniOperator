@@ -110,8 +110,7 @@ AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &origin
       sourceTypes(sourceTypes),
       projections(projections),
       aggSimpleFilters(aggSimpleFilters),
-      aggOperator(aggOperator),
-      executionContext(new ExecutionContext())
+      aggOperator(aggOperator)
 {
     for (auto simpleFilter : aggSimpleFilters) {
         if (simpleFilter != nullptr) {
@@ -124,19 +123,25 @@ AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &origin
 AggregationWithExprOperator::~AggregationWithExprOperator()
 {
     delete aggOperator;
-    delete executionContext;
 }
 
 int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext);
+    if (inputVecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
+
+    auto newInputVecBatch = AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections,
+        executionContext.get());
 
     // if hasAggFilter is false, then skip AddFilterColumn
     if (hasAggFilter) {
         try {
             // do filter and update newInputVecBatch
-            AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext, originTypes);
+            AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext.get(),
+                originTypes);
         } catch (const std::exception &e) {
             VectorHelper::FreeVecBatch(inputVecBatch);
             ResetInputVecBatch();

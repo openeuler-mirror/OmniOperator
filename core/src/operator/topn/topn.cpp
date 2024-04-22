@@ -86,6 +86,12 @@ int CompareVectorBatch(int32_t leftPosition, omniruntime::vec::VectorBatch *left
 
 int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
 {
+    if (vectorBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(vectorBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
+
     auto typeIds = sourceTypes.GetIds();
     int32_t position = 0;
     for (; (static_cast<int32_t>(pq.size()) < n) && (position < vectorBatch->GetRowCount()); ++position) {
@@ -104,7 +110,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
         }
     }
     VectorHelper::FreeVecBatch(vectorBatch);
-    inputVecBatch = nullptr;
+    ResetInputVecBatch();
     SetStatus(OMNI_STATUS_NORMAL);
     return 0;
 }

@@ -656,6 +656,12 @@ void TopNSortOperator::UpdatePartitionValue(PartitionValue &value, VectorBatch *
 
 int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
 {
+    if (inputVecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        this->ResetInputVecBatch();
+        return 0;
+    }
+
     inputs.emplace_back(inputVecBatch);
     ResetInputVecBatch();
     auto inputVectors = inputVecBatch->GetVectors();

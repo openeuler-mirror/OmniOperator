@@ -86,7 +86,9 @@ public:
     }
 
     ErrorCode Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort);
+
     ErrorCode Spill(AggregationSort *aggregationSort);
+
     std::vector<SpillFileInfo> FinishSpill()
     {
         std::vector<SpillFileInfo> spillFiles;

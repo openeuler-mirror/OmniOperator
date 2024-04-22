@@ -37,22 +37,23 @@ Operator *TopNSortWithExprOperatorFactory::CreateOperator()
 TopNSortWithExprOperator::TopNSortWithExprOperator(const type::DataTypes &sourceTypes,
     std::vector<int32_t> &partitionCols, std::vector<int32_t> &sortCols,
     std::vector<std::unique_ptr<Projection>> &projections, TopNSortOperator *topNSortOperator)
-    : sourceTypes(sourceTypes),
-      projections(projections),
-      topNSortOperator(topNSortOperator),
-      executionContext(new ExecutionContext())
+    : sourceTypes(sourceTypes), projections(projections), topNSortOperator(topNSortOperator)
 {}
 
 TopNSortWithExprOperator::~TopNSortWithExprOperator()
 {
     delete topNSortOperator;
-    delete executionContext;
 }
 
 int32_t TopNSortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
+    if (inputVecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        this->ResetInputVecBatch();
+        return 0;
+    }
+    auto *newInputVecBatch =
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext.get());
     VectorHelper::FreeVecBatch(inputVecBatch);
     this->ResetInputVecBatch();
     topNSortOperator->AddInput(newInputVecBatch);

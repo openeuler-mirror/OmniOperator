@@ -80,6 +80,11 @@ HashBuilderOperator::HashBuilderOperator(const DataTypes &buildTypes, HashTableV
 
 int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
+    if (vecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
     std::visit([&](auto &&arg) { arg.AddVecBatch(partitionIndex, vecBatch); }, *hashTablesVariants);
     return 0;
 }
