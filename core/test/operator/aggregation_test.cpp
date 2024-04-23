@@ -2316,12 +2316,16 @@ TEST(AggregatorTest, sum_test)
     std::vector<int32_t> channal0 = { 0 };
     std::vector<int32_t> channal3 = { 3 };
     // sum test types : long + decimal + dictionary + null
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLong = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
+    sumLong->SetExecutionContext(executionContext.get());
     auto sumShortDecimal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(SHORT_DECIMAL_TYPE).get()),
         *(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()), channal0, true, false, false);
+    sumShortDecimal->SetExecutionContext(executionContext.get());
     auto sumNull = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal3, true, false, false);
+    sumNull->SetExecutionContext(executionContext.get());
 
     auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(Decimal128Type(38, 2), rowPerVecBatch);
@@ -2376,10 +2380,13 @@ TEST(AggregatorTest, count_column_test)
     std::vector<int32_t> channal0 = { 0 };
     std::vector<int32_t> channal2 = { 2 };
     // count test types : long + dictionary + null
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto countLong = countFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
+    countLong->SetExecutionContext(executionContext.get());
     auto countNull = countFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal2, true, false, false);
+    countNull->SetExecutionContext(executionContext.get());
 
     auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
     LongDataType longDataType;
@@ -2418,10 +2425,13 @@ TEST(AggregatorTest, count_all_test)
     auto countAllFactory = new CountAllAggregatorFactory();
     std::vector<int32_t> channal0 = { -1 };
 
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto countLong = countAllFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(NoneType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
+    countLong->SetExecutionContext(executionContext.get());
     auto countNull = countAllFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(NoneType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
+    countNull->SetExecutionContext(executionContext.get());
 
     auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
     LongDataType longDataType;
@@ -2457,20 +2467,28 @@ TEST(AggregatorTest, min_test)
     std::vector<int32_t> channal5 = { 5 };
     std::vector<int32_t> channal6 = { 6 };
     // min test types : long + decimal + varchar + dictionary + null
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto minLong = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
+    minLong->SetExecutionContext(executionContext.get());
     auto minDecimal = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()),
         *(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()), channal3, true, false, false);
+    minDecimal->SetExecutionContext(executionContext.get());
     auto minVarchar = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(VarcharType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(VarcharType()).get()), channal4, true, false, false);
+    minVarchar->SetExecutionContext(executionContext.get());
     auto minNull = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal2, true, false, false);
+    minNull->SetExecutionContext(executionContext.get());
     auto minIntLong = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal5, true, false, false);
+    minIntLong->SetExecutionContext(executionContext.get());
     auto minLongInt = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal0, true, false, false);
+    minLongInt->SetExecutionContext(executionContext.get());
     auto minBoolean = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()), channal6, true, false, false);
+    minBoolean->SetExecutionContext(executionContext.get());
 
     auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(Decimal128Type(38, 0), rowPerVecBatch);
@@ -2570,20 +2588,28 @@ TEST(AggregatorTest, max_test)
     std::vector<int32_t> channal5 = { 5 };
     std::vector<int32_t> channal6 = { 6 };
     // max test types : long + decimal + varchar + dictionary + null
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto maxLong = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, false, false);
+    maxLong->SetExecutionContext(executionContext.get());
     auto maxDecimal = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()),
         *(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()), channal1, true, false, false);
+    maxDecimal->SetExecutionContext(executionContext.get());
     auto maxVarchar = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(VarcharType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(VarcharType()).get()), channal2, true, false, false);
+    maxVarchar->SetExecutionContext(executionContext.get());
     auto maxNull = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal4, true, false, false);
+    maxNull->SetExecutionContext(executionContext.get());
     auto maxIntLong = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal5, true, false, false);
+    maxIntLong->SetExecutionContext(executionContext.get());
     auto maxLongInt = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal0, true, false, false);
+    maxLongInt->SetExecutionContext(executionContext.get());
     auto maxBoolean = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()), channal6, true, false, false);
+    maxBoolean->SetExecutionContext(executionContext.get());
 
     auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(Decimal128Type(38, 0), rowPerVecBatch);
@@ -2672,8 +2698,10 @@ TEST(AggregatorTest, verify_decimal_presision_improvement)
     auto avgFactory = new AverageAggregatorFactory();
     std::vector<int32_t> channel0 = { 0 };
     ConfigUtil::SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_SUPPORT);
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDeciAgg1 = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 10)).get()), channel0, true, false, true);
+    avgDeciAgg1->SetExecutionContext(executionContext.get());
 
     Decimal128Wrapper deci0("60000000000000000.00000000");
     Decimal128Wrapper deci1("30000000000000000.00000000");
@@ -2705,6 +2733,7 @@ TEST(AggregatorTest, verify_decimal_presision_improvement)
     ConfigUtil::SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT);
     auto avgDeciAgg2 = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 10)).get()), channel0, true, false, true);
+    avgDeciAgg2->SetExecutionContext(executionContext.get());
     auto *resultVec2 = new Vector<Decimal128>(1);
     std::vector<BaseVector *> extractVec2 = { resultVec2 };
     AggregateState state2 { nullptr };
@@ -2735,12 +2764,16 @@ TEST(AggregatorTest, avg_test)
     std::vector<int32_t> channal1 = { 1 };
     std::vector<int32_t> channal3 = { 3 };
     // avg test types : long + decimal + dictionary + null
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgLong = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, true, false, false);
+    avgLong->SetExecutionContext(executionContext.get());
     auto avgDecimal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()),
         *(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()), channal1, true, false, false);
+    avgDecimal->SetExecutionContext(executionContext.get());
     auto avgNull = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal3, true, false, false);
+    avgNull->SetExecutionContext(executionContext.get());
 
     auto longInputVec = BuildAggregateInput(LongType(), rowPerVecBatch);
     auto decimalInputVec = BuildAggregateInput(Decimal128Type(38, 0), rowPerVecBatch);
@@ -2787,9 +2820,11 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumDeciAggPartial =
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal64Type(18, 6)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)).get()), channal0, true, true);
+    sumDeciAggPartial->SetExecutionContext(executionContext.get());
 
     auto *deci18_6Vec = new Vector<int64_t>(3);
     deci18_6Vec->SetValue(0, 999999999999999999L);
@@ -2841,9 +2876,11 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumDeciAggPartial =
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()), channal0, true, true);
+    sumDeciAggPartial->SetExecutionContext(executionContext.get());
 
     Decimal128 deci("99999999999999999.99999999");
     auto *deci25_8Vec = new Vector<Decimal128>(3);
@@ -2877,6 +2914,7 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
     auto sumDeciAggFinal =
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()), channal0, false, false);
+    sumDeciAggFinal->SetExecutionContext(executionContext.get());
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
     sumDeciAggFinal->ExtractValues(state, extractVec, 0);
 
@@ -2894,9 +2932,11 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumDeciAggPartial =
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()), channal0, true, true, false);
+    sumDeciAggPartial->SetExecutionContext(executionContext.get());
 
     Decimal128 deci("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Vector<Decimal128>(3);
@@ -2931,6 +2971,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
     auto sumDeciAggFinal =
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()), channal0, false, false, false);
+    sumDeciAggFinal->SetExecutionContext(executionContext.get());
 
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
 
@@ -2952,9 +2993,11 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumDeciAggPartial =
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()), channal0, true, true, true);
+    sumDeciAggPartial->SetExecutionContext(executionContext.get());
 
     Decimal128 deci("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Vector<Decimal128>(3);
@@ -2989,6 +3032,7 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
     auto sumDeciAggFinal =
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()), channal0, false, false, true);
+    sumDeciAggFinal->SetExecutionContext(executionContext.get());
 
     sumDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
     sumDeciAggFinal->ExtractValues(state, extractVec, 0);
@@ -3005,9 +3049,11 @@ TEST(AggregatorTest, spark_avg_decimal64_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDeciAggPartial =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal64Type(18, 6)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)).get()), channal0, true, true);
+    avgDeciAggPartial->SetExecutionContext(executionContext.get());
 
     auto *deci18_6Vec = new Vector<int64_t>(3);
     deci18_6Vec->SetValue(0, 999999999999999999L);
@@ -3041,6 +3087,7 @@ TEST(AggregatorTest, spark_avg_decimal64_normal)
     auto avgDeciAggFinal =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(22, 10)).get()), channal0, false, false);
+    avgDeciAggFinal->SetExecutionContext(executionContext.get());
 
     EXPECT_EQ(3, state.count);
     AggregateState stateFinal { nullptr };
@@ -3062,9 +3109,11 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDeciAggPartial =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(25, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()), channal0, true, true);
+    avgDeciAggPartial->SetExecutionContext(executionContext.get());
 
     Decimal128Wrapper deci("99999999999999999.99999999");
     Decimal128 decimal128 = deci.ToDecimal128();
@@ -3099,6 +3148,7 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
     auto avgDeciAggFinal =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(29, 12)).get()), channal0, false, false);
+    avgDeciAggFinal->SetExecutionContext(executionContext.get());
 
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
     avgDeciAggFinal->ExtractValues(state, extractVec, 0);
@@ -3117,9 +3167,11 @@ TEST(AggregatorTest, spark_avg_decimal128_result_decimal64)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDeciAggPartial =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(19, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal64Type(18, 8)).get()), channal0, false, false);
+    avgDeciAggPartial->SetExecutionContext(executionContext.get());
     int32_t totalRow = 1;
     auto *deci19_8Vec = new Vector<Decimal128>(totalRow);
 
@@ -3154,9 +3206,11 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverfl
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDeciAggPartial =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()), channal0, true, true, false);
+    avgDeciAggPartial->SetExecutionContext(executionContext.get());
 
     Decimal128 deci("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Vector<Decimal128>(3);
@@ -3190,6 +3244,7 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverfl
     auto avgDeciAggFinal =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 4)).get()), channal0, false, false, false);
+    avgDeciAggFinal->SetExecutionContext(executionContext.get());
 
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
 
@@ -3211,9 +3266,11 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDeciAggPartial =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()), channal0, true, true, true);
+    avgDeciAggPartial->SetExecutionContext(executionContext.get());
 
     Decimal128 deci("99999999999999999999999999999999999999");
     auto *deci38_0Vec = new Vector<Decimal128>(3);
@@ -3247,6 +3304,7 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
     auto avgDeciAggFinal =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 4)).get()), channal0, false, false, true);
+    avgDeciAggFinal->SetExecutionContext(executionContext.get());
 
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
     avgDeciAggFinal->ExtractValues(state, extractVec, 0);
@@ -3262,9 +3320,11 @@ TEST(AggregatorTest, spark_avg_decimal128_count_cast_to_wider_type_overflow_retu
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDeciAggPartial =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)).get()), channal0, true, true, true);
+    avgDeciAggPartial->SetExecutionContext(executionContext.get());
 
     Decimal128Wrapper deci1("-0.99999999999999999999999999999999999999");
     Decimal128Wrapper deci2("0.14159265354378240000000000000000000000");
@@ -3300,6 +3360,7 @@ TEST(AggregatorTest, spark_avg_decimal128_count_cast_to_wider_type_overflow_retu
     auto avgDeciAggFinal =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)).get()), channal0, false, false, true);
+    avgDeciAggFinal->SetExecutionContext(executionContext.get());
 
     avgDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
     avgDeciAggFinal->ExtractValues(state, extractVec, 0);
@@ -3315,8 +3376,10 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDeciWindow = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(22, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(26, 4)).get()), channal0, true, false, true);
+    avgDeciWindow->SetExecutionContext(executionContext.get());
 
     Decimal128Wrapper deci1("1234567890123456789012");
     Decimal128Wrapper deci2("9999999999999999999999");
@@ -3360,8 +3423,10 @@ TEST(AggregatorTest, spark_sum_short_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumShortAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
+    sumShortAggPartial->SetExecutionContext(executionContext.get());
 
     auto *shortVec = new Vector<short>(3);
     shortVec->SetValue(0, 12345);
@@ -3384,6 +3449,7 @@ TEST(AggregatorTest, spark_sum_short_normal)
 
     auto sumShortAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
+    sumShortAggFinal->SetExecutionContext(executionContext.get());
     sumShortAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(48141, resultVec->GetValue(0));
 
@@ -3397,8 +3463,10 @@ TEST(AggregatorTest, spark_sum_int_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumIntAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
+    sumIntAggPartial->SetExecutionContext(executionContext.get());
 
     auto *intVec = new Vector<int32_t>(3);
     intVec->SetValue(0, 1234567890);
@@ -3421,6 +3489,7 @@ TEST(AggregatorTest, spark_sum_int_normal)
 
     auto sumIntAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
+    sumIntAggFinal->SetExecutionContext(executionContext.get());
     sumIntAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(4514814681, resultVec->GetValue(0));
 
@@ -3434,8 +3503,10 @@ TEST(AggregatorTest, spark_sum_long_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLongAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
+    sumLongAggPartial->SetExecutionContext(executionContext.get());
 
     auto *longVec = new Vector<int64_t>(3);
     longVec->SetValue(0, 1234567890123456789);
@@ -3458,6 +3529,7 @@ TEST(AggregatorTest, spark_sum_long_normal)
 
     auto sumLongAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
+    sumLongAggFinal->SetExecutionContext(executionContext.get());
     sumLongAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(7037035803703703592, resultVec->GetValue(0));
 
@@ -3471,8 +3543,10 @@ TEST(AggregatorTest, spark_sum_long_overflow)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLongAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
+    sumLongAggPartial->SetExecutionContext(executionContext.get());
 
     auto *longVec = new Vector<int64_t>(3);
     longVec->SetValue(0, 9223372036854774807);
@@ -3525,8 +3599,10 @@ TEST(AggregatorTest, spark_sum_long_final_stage)
 
     AggregateState state { nullptr };
 
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLongAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
+    sumLongAggFinal->SetExecutionContext(executionContext.get());
     sumLongAggFinal->InitState(state);
     sumLongAggFinal->ProcessGroup(state, vecBatch1, 0, 2);
     sumLongAggFinal->ExtractValues(state, extractVec, 0);
@@ -3553,8 +3629,10 @@ TEST(AggregatorTest, spark_sum_double_normal)
 {
     auto sumFactory = new SumSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto sumDoubleAggPartial = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, true, true);
+    sumDoubleAggPartial->SetExecutionContext(executionContext.get());
 
     auto *doubleVec = new Vector<double>(3);
     doubleVec->SetValue(0, 123456789012.3456789);
@@ -3577,6 +3655,7 @@ TEST(AggregatorTest, spark_sum_double_normal)
 
     auto sumDoubleAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
+    sumDoubleAggFinal->SetExecutionContext(executionContext.get());
     sumDoubleAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(7.037035803703704E11, resultVec->GetValue(0));
 
@@ -3591,8 +3670,10 @@ TEST(AggregatorTest, spark_avg_short_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgShortAggPartial = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, true, true);
+    avgShortAggPartial->SetExecutionContext(executionContext.get());
 
     auto *shortVec = new Vector<short>(3);
     shortVec->SetValue(0, 12345);
@@ -3634,8 +3715,10 @@ TEST(AggregatorTest, spark_avg_int_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgIntAggPartial = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, true, true);
+    avgIntAggPartial->SetExecutionContext(executionContext.get());
 
     auto *intVec = new Vector<int32_t>(3);
     intVec->SetValue(0, 1234567890);
@@ -3664,6 +3747,7 @@ TEST(AggregatorTest, spark_avg_int_normal)
 
     auto avgIntAggFinal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
+    avgIntAggFinal->SetExecutionContext(executionContext.get());
     avgIntAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(1.504938227E9, resultVec->GetValue(0));
 
@@ -3677,8 +3761,10 @@ TEST(AggregatorTest, spark_avg_long_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgLongAggPartial = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, true, true);
+    avgLongAggPartial->SetExecutionContext(executionContext.get());
 
     auto *longVec = new Vector<int64_t>(3);
     longVec->SetValue(0, 9223372036854774807L);
@@ -3707,6 +3793,7 @@ TEST(AggregatorTest, spark_avg_long_normal)
 
     auto avgLongAggFinal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
+    avgLongAggFinal->SetExecutionContext(executionContext.get());
     avgLongAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(9.2233720368547748E18, resultVec->GetValue(0));
 
@@ -3720,8 +3807,10 @@ TEST(AggregatorTest, spark_avg_double_normal)
 {
     auto avgFactory = new AverageSparkAggregatorFactory();
     std::vector<int32_t> channal0 = { 0, 1 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto avgDoubleAggPartial = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, true, true);
+    avgDoubleAggPartial->SetExecutionContext(executionContext.get());
 
     auto *doubleVec = new Vector<double>(3);
     doubleVec->SetValue(0, 123456789012.3456789);
@@ -3746,6 +3835,7 @@ TEST(AggregatorTest, spark_avg_double_normal)
 
     auto avgDoubleAggFinal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
+    avgDoubleAggFinal->SetExecutionContext(executionContext.get());
     avgDoubleAggFinal->ExtractValues(state, extractVec, 0);
     EXPECT_EQ(2.345678601234568E11, resultVec->GetValue(0));
 
@@ -3760,9 +3850,11 @@ TEST(AggregatorTest, first_short_ignorenull_test)
 {
     auto firstIgnoreNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL);
     std::vector<int32_t> channal0 = { 0 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto firstIgnoreNullIntAggPartial =
         firstIgnoreNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(ShortType()).get()), channal0, true, true);
+    firstIgnoreNullIntAggPartial->SetExecutionContext(executionContext.get());
 
     auto *inputShortVec1 = new Vector<short>(5);
     for (int i = 0; i < 5; i++) {
@@ -3840,9 +3932,11 @@ TEST(AggregatorTest, first_int_ignorenull_test)
 {
     auto firstIgnoreNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL);
     std::vector<int32_t> channal0 = { 0 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto firstIgnoreNullIntAggPartial =
         firstIgnoreNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal0, true, true);
+    firstIgnoreNullIntAggPartial->SetExecutionContext(executionContext.get());
 
     auto *inputIntVec1 = new Vector<int32_t>(5);
     for (int i = 0; i < 5; i++) {
@@ -3920,9 +4014,11 @@ TEST(AggregatorTest, first_int_includenull_test)
 {
     auto firstWithNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL);
     std::vector<int32_t> channal0 = { 0 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto firstWithNullIntAggPartial =
         firstWithNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal0, true, true);
+    firstWithNullIntAggPartial->SetExecutionContext(executionContext.get());
 
     auto *inputIntVec1 = new Vector<int32_t>(5);
     inputIntVec1->SetNull(0);
@@ -3977,9 +4073,11 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     auto firstIgnoreNullFactory = new FirstAggregatorFactory(OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL);
 
     std::vector<int32_t> channal0 = { 0 };
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto firstIgnoreNullIntAggPartial =
         firstIgnoreNullFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, true, true);
+    firstIgnoreNullIntAggPartial->SetExecutionContext(executionContext.get());
 
     auto *inputLongVec1 = new Vector<int64_t>(2);
     inputLongVec1->SetNull(0);
@@ -4013,6 +4111,7 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     std::vector<int32_t> channal2 = { 0, 1 };
     auto firstIgnoreNullIntAggFinal = firstIgnoreNullFactory->CreateAggregator(*inputTypes.get(),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal2, false, false);
+    firstIgnoreNullIntAggFinal->SetExecutionContext(executionContext.get());
 
     auto *inputLongVec2 = new Vector<int64_t>(4);
     inputLongVec2->SetNull(0);
@@ -4273,31 +4372,44 @@ TEST(AggregatorTest, max_agg_extrame_value_test)
     std::vector<int32_t> channal4 = { 4 };
     std::vector<int32_t> channal5 = { 5 };
     // max test types : long + decimal + varchar + dictionary + null
+    auto executionContext = std::make_unique<ExecutionContext>();
     auto maxBoolean = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()), channal0, true, false, false);
+    maxBoolean->SetExecutionContext(executionContext.get());
     auto maxShort = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(ShortType()).get()), channal1, true, false, false);
+    maxShort->SetExecutionContext(executionContext.get());
     auto maxInt = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal2, true, false, false);
+    maxInt->SetExecutionContext(executionContext.get());
     auto maxLong = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal3, true, false, false);
+    maxLong->SetExecutionContext(executionContext.get());
     auto maxDouble = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal4, true, false, false);
+    maxDouble->SetExecutionContext(executionContext.get());
     auto maxDecimal = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()),
         *(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()), channal5, true, false, false);
+    maxDecimal->SetExecutionContext(executionContext.get());
 
     auto minBoolean = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(BooleanType()).get()), channal0, true, false, false);
+    minBoolean->SetExecutionContext(executionContext.get());
     auto minShort = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(ShortType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(ShortType()).get()), channal1, true, false, false);
+    minShort->SetExecutionContext(executionContext.get());
     auto minInt = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(IntType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(IntType()).get()), channal2, true, false, false);
+    minInt->SetExecutionContext(executionContext.get());
     auto minLong = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal3, true, false, false);
+    minLong->SetExecutionContext(executionContext.get());
     auto minDouble = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal4, true, false, false);
+    minDouble->SetExecutionContext(executionContext.get());
     auto minDecimal = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()),
         *(AggregatorUtil::WrapWithDataTypes(LONG_DECIMAL_TYPE).get()), channal5, true, false, false);
+    minDecimal->SetExecutionContext(executionContext.get());
 
     ExtremumValueCreator<int8_t> int8Creator;
     auto boolVector = int8Creator.ProduceVec(rowPerVecBatch);

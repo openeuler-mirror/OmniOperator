@@ -18,11 +18,15 @@ class AggregationCommonOperator : public Operator {
 public:
     explicit AggregationCommonOperator(std::vector<std::unique_ptr<Aggregator>> &&aggs, std::vector<bool> &inputRaws,
         std::vector<bool> &outputPartials, bool isOverflowAsNull = false)
-        : aggregators(std::move(aggs)),
-          inputRaws(inputRaws),
+        : inputRaws(inputRaws),
           outputPartials(outputPartials),
           isOverflowAsNull(isOverflowAsNull)
-    {}
+    {
+        for (auto &agg: aggs) {
+            agg->SetExecutionContext(executionContext.get());
+        }
+        this->aggregators = std::move(aggs);
+    }
 
     ~AggregationCommonOperator() override {};
 

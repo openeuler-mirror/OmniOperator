@@ -84,12 +84,14 @@ void RowNumberFunction::RankingProcessRow(BaseVector *column, int32_t index, boo
 AggregateWindowFunction::~AggregateWindowFunction() = default;
 
 AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType,
-    DataTypePtr inputType, DataTypePtr outputType, std::unique_ptr<WindowFrameInfo> frame, bool isOverflowAsNull)
+    DataTypePtr inputType, DataTypePtr outputType, std::unique_ptr<WindowFrameInfo> frame,
+    ExecutionContext *executionContext, bool isOverflowAsNull)
     : WindowFunction(std::move(frame), std::move(inputType), std::move(outputType)),
       windowIndex(nullptr),
       currentStart(0),
       currentEnd(0),
-      isOverflowAsNull(isOverflowAsNull)
+      isOverflowAsNull (isOverflowAsNull),
+      executionContext(executionContext)
 {
     this->argumentChannels.push_back(argumentChannel);
     this->aggregatorFactory = CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
@@ -130,6 +132,7 @@ void AggregateWindowFunction::ResetAccumulator()
         std::vector<int32_t> winChannels = { 0 };
         aggregator = aggregatorFactory->CreateAggregator(*DataTypes::GenerateDataTypes(inputType),
             *DataTypes::GenerateDataTypes(outputType), winChannels, true, false, isOverflowAsNull);
+        aggregator->SetExecutionContext(executionContext);
         aggregateState = std::make_unique<omniruntime::op::AggregateState>();
         aggregator->InitState(*aggregateState);
         currentStart = -1;

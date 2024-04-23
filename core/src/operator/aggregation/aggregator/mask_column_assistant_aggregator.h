@@ -21,6 +21,11 @@ public:
 
     ~MaskColAggregator() override = default;
 
+    void SetExecutionContext(ExecutionContext *executionContext) override
+    {
+        realAggregator->SetExecutionContext(executionContext);
+    }
+
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         BaseVector *maskVector = vectorBatch->Get(maskColumnId);

@@ -110,9 +110,13 @@ public:
           inputRaw(inputRaw),
           outputPartial(outputPartial),
           isOverflowAsNull(isOverflowAsNull),
-          channels(channels),
-          executionContext(std::make_unique<ExecutionContext>())
+          channels(channels)
     {}
+
+    virtual void SetExecutionContext(ExecutionContext *executionContext)
+    {
+        this->executionContext = executionContext;
+    }
 
     virtual ~Aggregator() = default;
 
@@ -287,6 +291,11 @@ public:
         return channels;
     }
 
+    virtual const ExecutionContext *GetExecutionContext() const
+    {
+        return executionContext;
+    }
+
 public:
     static constexpr int32_t INVALID_MASK_COL = -1;
 
@@ -298,7 +307,7 @@ protected:
     const bool outputPartial;
     const bool isOverflowAsNull;
     const std::vector<int32_t> channels;
-    std::unique_ptr<ExecutionContext> executionContext;
+    ExecutionContext *executionContext;
 };
 } // end of namespace op
 } // end of namespace omniruntime

@@ -349,8 +349,8 @@ bool IsExistSameRow(const type::DataTypes &inputTypes, VectorBatch *vectorBatch,
     return false;
 }
 
-void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int32_t rowIndex,
-    std::vector<AggregateState> &tuple, ExecutionContext *executionContextPtr)
+void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int rowIndex,
+    std::vector<AggregateState> &tuple)
 {
     const int32_t *vectorTypes = sourceTypes.GetIds();
     BaseVector *inputVector;
@@ -364,10 +364,10 @@ void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int32_
         if (!(inputVector->IsNull(rowIndex))) {
             if (inputVector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFunc(tuple[colIndex], inputVector, rowIndex,
-                    executionContextPtr);
+                    executionContext.get());
             } else {
                 DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFuncFromDict(tuple[colIndex], inputVector, rowIndex,
-                    executionContextPtr);
+                    executionContext.get());
             }
         }
     }
@@ -379,7 +379,6 @@ void DistinctLimitOperator::InLoop(VectorBatch *vectorBatch, const int32_t rowCo
     uint64_t hashValue;
     int32_t pickedRows = 0;
 
-    auto executionContextPtr = executionContext.get();
     for (int32_t rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
         hashValue = combineHashVal[rowIndex];
         auto &bucket = distinctedTable[hashValue];
@@ -387,7 +386,7 @@ void DistinctLimitOperator::InLoop(VectorBatch *vectorBatch, const int32_t rowCo
         existed = IsExistSameRow(sourceTypes, vectorBatch, distinctCols, distinctColsCount, bucket, rowIndex);
         if (!existed) {
             std::vector<AggregateState> distinctedTuple(outColsCount);
-            FillDistinctedTuple(vectorBatch, rowIndex, distinctedTuple, executionContextPtr);
+            FillDistinctedTuple(vectorBatch, rowIndex, distinctedTuple);
             bucket.push_back(distinctedTuple);
 
             auto rowInfo = new DistinctRowInfo();

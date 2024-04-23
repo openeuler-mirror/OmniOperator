@@ -425,7 +425,6 @@ TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n
         sortGetValueFuncs.resize(sortColNum);
         sortCompareOptimizeFuncs.resize(sortColNum);
     }
-    executionContext = std::make_unique<op::ExecutionContext>();
     serializers.resize(partitionColNum);
 
     auto inputColNum = sourceTypes.GetSize();
