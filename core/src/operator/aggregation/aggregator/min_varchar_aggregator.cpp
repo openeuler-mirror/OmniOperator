@@ -13,7 +13,7 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
     int32_t rowIndex)
 {
     auto v = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
-    if (state.val == nullptr || state.count == 0) {
+    if (state.val == nullptr) {
         // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
         v->SetNull(rowIndex);
     } else {
@@ -102,33 +102,10 @@ ALWAYS_INLINE void MinVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState
     }
 
     int32_t len = static_cast<int32_t>(state.count & VALUE_FLAG);
-    if (state.val == nullptr || len == 0) {
-        state.val = nullptr;
-        state.count = 0;
-        return;
-    }
-
     uint8_t *ptr = reinterpret_cast<uint8_t *>(this->executionContext->GetArena()->Allocate(len));
     std::copy(reinterpret_cast<uint8_t *>(state.val), reinterpret_cast<uint8_t *>(state.val) + len, ptr);
     state.val = ptr;
     state.count = len;
-}
-
-// Explicit template instantiation
-// Defining templated aggregators in header file consume a lot of memory during compilation
-// since, compiler needs to generate each individual template instance wherever aggregator header is include
-// to reduce time and memory usage during compilation moved templated aggregator implementation into .cpp files
-// and used explicit template instantiation to generate template instances
-
-void InitialVarcharState(AggregateState &state, Vector<LargeStringContainer<std::string_view>> *rawVector,
-    const char *res, int32_t idx)
-{
-    if (state.val == nullptr || state.count == 0) {
-        auto strView = rawVector->GetValue(idx);
-        res = strView.data();
-        state.count = strView.size();
-        state.count |= UPDATE_FLAG;
-    }
 }
 
 template class MinVarcharAggregator<OMNI_CHAR, OMNI_CHAR>;
