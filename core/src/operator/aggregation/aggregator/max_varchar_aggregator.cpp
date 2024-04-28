@@ -14,7 +14,7 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
     int32_t rowIndex)
 {
     auto v = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
-    if (state.val == nullptr || state.count == 0) {
+    if (state.val == nullptr) {
         // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
         v->SetNull(rowIndex);
     } else {
@@ -102,12 +102,6 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState &state)
     }
 
     int32_t len = static_cast<int32_t>(state.count & VALUE_FLAG);
-    if (state.val == nullptr || len == 0) {
-        state.val = nullptr;
-        state.count = 0;
-        return;
-    }
-
     uint8_t *ptr = reinterpret_cast<uint8_t *>(this->executionContext->GetArena()->Allocate(len));
     std::copy(reinterpret_cast<uint8_t *>(state.val), reinterpret_cast<uint8_t *>(state.val) + len, ptr);
     state.val = ptr;

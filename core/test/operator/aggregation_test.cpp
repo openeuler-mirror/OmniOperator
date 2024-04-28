@@ -1237,6 +1237,92 @@ TEST(AggregationOperatorTest, min_max_varchar_without_nulls)
     VectorHelper::FreeVecBatch(finalOutputVecBatch);
 }
 
+TEST(AggregationOperatorTest, min_max_varchar_mix)
+{
+    int32_t rowCount = 6;
+    std::string data1[] = {"", "", "", "", "", ""};
+    std::string data2[] = {"Zulma.Carter@MfvjVN43Udd95KeZ.com", "*", "", "Zulema.Ruiz@J2XvbX7.com", "*", ""};
+    std::string data3[] = {"", "", "", "", "", ""};
+    std::string data4[] = {"*", "", "Aaron.Anderson@0CQ4QUkBY2Q.edu", "", "Zulema.R", "Aaron.Artis@bv.org"};
+    std::string_view dataV1[rowCount];
+    std::string_view dataV2[rowCount];
+    std::string_view dataV3[rowCount];
+    std::string_view dataV4[rowCount];
+    for (int i = 0; i < rowCount; ++i) {
+        dataV1[i] = std::string_view(data1[i].c_str(), data1[i].size());
+        dataV2[i] = std::string_view(data2[i].c_str(), data2[i].size());
+        dataV3[i] = std::string_view(data3[i].c_str(), data3[i].size());
+        dataV4[i] = std::string_view(data4[i].c_str(), data4[i].size());
+    }
+
+    std::vector<DataTypePtr> types =
+        std::vector<DataTypePtr> { VarcharType(30), VarcharType(30), VarcharType(30), VarcharType(30) };
+    auto vector1 = new Vector<LargeStringContainer<std::string_view>>(rowCount);
+    auto vector2 = new Vector<LargeStringContainer<std::string_view>>(rowCount);
+    auto vector3 = new Vector<LargeStringContainer<std::string_view>>(rowCount);
+    auto vector4 = new Vector<LargeStringContainer<std::string_view>>(rowCount);
+    for (int32_t i = 0; i < rowCount; i++) {
+        if (i == 4 || i == 5) {
+            vector1->SetNull(i);
+            vector2->SetNull(i);
+        } else {
+            vector1->SetValue(i, dataV1[i]);
+            vector2->SetValue(i, dataV2[i]);
+        }
+        if (i == 0 || i == 1) {
+            vector3->SetNull(i);
+            vector4->SetNull(i);
+        } else {
+            vector3->SetValue(i, dataV3[i]);
+            vector4->SetValue(i, dataV4[i]);
+        }
+    }
+
+    auto input = new VectorBatch(6);
+    input->Append(vector1);
+    input->Append(vector2);
+    input->Append(vector3);
+    input->Append(vector4);
+
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN };
+
+    // STAGE1: (partial)
+    std::vector<DataTypePtr> partialOutputTypes { VarcharType(30), VarcharType(30), VarcharType(30), VarcharType(30) };
+    auto aggPartialFactory = CreateAggregationOperatorFactory(aggFuncTypes, std::vector<uint32_t>({ 0, 1, 2, 3 }),
+        types, partialOutputTypes, std::vector<uint32_t>(), true, true, false);
+    auto aggPartial = aggPartialFactory->CreateOperator();
+    aggPartial->AddInput(input);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t vecBatchCount = aggPartial->GetOutput(&outputVecBatch);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    // STAGE2: (final)
+    std::vector<DataTypePtr> finalOutputTypes { VarcharType(30), VarcharType(30), VarcharType(30), VarcharType(30) };
+    auto aggFinalFactory = CreateAggregationOperatorFactory(aggFuncTypes, std::vector<uint32_t>({ 0, 1, 2, 3 }),
+        partialOutputTypes, finalOutputTypes, std::vector<uint32_t>(), false, false, false);
+    auto aggFinal = aggFinalFactory->CreateOperator();
+    aggFinal->AddInput(outputVecBatch);
+
+    VectorBatch *finalOutputVecBatch = nullptr;
+    vecBatchCount = aggFinal->GetOutput(&finalOutputVecBatch);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    std::string expectData1[] = {""};
+    std::string expectData2[] = {"Zulma.Carter@MfvjVN43Udd95KeZ.com"};
+    std::string expectData3[] = {""};
+    std::string expectData4[] = {""};
+    std::vector<DataTypePtr> outputTypes = { VarcharType(30), VarcharType(30), VarcharType(30), VarcharType(30) };
+    DataTypes expectTypes(outputTypes);
+    auto expectVecBatch = CreateVectorBatch(expectTypes, 1, expectData1, expectData2, expectData3, expectData4);
+    EXPECT_TRUE(VecBatchMatch(finalOutputVecBatch, expectVecBatch));
+
+    omniruntime::op::Operator::DeleteOperator(aggPartial);
+    omniruntime::op::Operator::DeleteOperator(aggFinal);
+    VectorHelper::FreeVecBatch(finalOutputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
 TEST(AggregationOperatorTest, sum_avg)
 {
     const int32_t dataSize = 5;

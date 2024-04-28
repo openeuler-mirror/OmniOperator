@@ -109,7 +109,7 @@ VECTORIZE_LOOP inline void AddConditionalChar(AggregateState &state, BaseVector 
         int32_t idx = rowOffset;
         const auto end = rowOffset + rowCount;
 
-        if (state.val == nullptr || state.count == 0) {
+        if (state.val == nullptr) {
             while (idx < end) {
                 if (!(*condition)) {
                     auto strView = rawVector->GetValue(idx);
