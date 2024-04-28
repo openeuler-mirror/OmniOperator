@@ -48,7 +48,6 @@ private:
     std::vector<int32_t> sortCols;
     std::vector<std::unique_ptr<Projection>> &projections;
     TopNSortOperator *topNSortOperator;
-    ExecutionContext *executionContext;
 };
 }
 #endif // OMNI_RUNTIME_TOPN_SORT_EXPR_H

@@ -51,16 +51,10 @@ SortMergeJoinOperator *StreamedTableWithExprOperatorFactory::GetSmjOperator()
 
 StreamedTableWithExprOperator::StreamedTableWithExprOperator(const type::DataTypes &streamedTypes,
     std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperator *smjOperator)
-    : streamedTypes(streamedTypes),
-      projections(projections),
-      smjOperator(smjOperator),
-      executionContext(new ExecutionContext())
+    : streamedTypes(streamedTypes), projections(projections), smjOperator(smjOperator)
 {}
 
-StreamedTableWithExprOperator::~StreamedTableWithExprOperator()
-{
-    delete executionContext;
-}
+StreamedTableWithExprOperator::~StreamedTableWithExprOperator() = default;
 
 int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
@@ -69,8 +63,7 @@ int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
         return retCode;
     }
 
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, streamedTypes, projections, executionContext);
+    auto *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, streamedTypes, projections, executionContext.get());
     VectorHelper::FreeVecBatch(vecBatch);
     inputVecBatch = nullptr;
 
@@ -129,16 +122,10 @@ Operator *BufferedTableWithExprOperatorFactory::CreateOperator()
 
 BufferedTableWithExprOperator::BufferedTableWithExprOperator(const type::DataTypes &bufferedTypes,
     std::vector<std::unique_ptr<Projection>> &projections, SortMergeJoinOperator *smjOperator)
-    : bufferedTypes(bufferedTypes),
-      projections(projections),
-      smjOperator(smjOperator),
-      executionContext(new ExecutionContext())
+    : bufferedTypes(bufferedTypes), projections(projections), smjOperator(smjOperator)
 {}
 
-BufferedTableWithExprOperator::~BufferedTableWithExprOperator()
-{
-    delete executionContext;
-}
+BufferedTableWithExprOperator::~BufferedTableWithExprOperator() = default;
 
 int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
@@ -146,8 +133,7 @@ int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     if (vecBatch == nullptr) {
         return retCode;
     }
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(vecBatch, bufferedTypes, projections, executionContext);
+    auto *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, bufferedTypes, projections, executionContext.get());
     VectorHelper::FreeVecBatch(vecBatch);
     inputVecBatch = nullptr;
 

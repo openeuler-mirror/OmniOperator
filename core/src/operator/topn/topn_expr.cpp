@@ -30,22 +30,24 @@ Operator *TopNWithExprOperatorFactory::CreateOperator()
 
 TopNWithExprOperator::TopNWithExprOperator(const type::DataTypes &sourceTypes,
     std::vector<std::unique_ptr<Projection>> &projections, TopNOperator *topNOperator)
-    : sourceTypes(sourceTypes),
-      projections(projections),
-      topNOperator(topNOperator),
-      executionContext(new ExecutionContext())
+    : sourceTypes(sourceTypes), projections(projections), topNOperator(topNOperator)
 {}
 
 TopNWithExprOperator::~TopNWithExprOperator()
 {
     delete topNOperator;
-    delete executionContext;
 }
 
 int32_t TopNWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
+    if (inputVecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        this->ResetInputVecBatch();
+        return 0;
+    }
+
+    auto *newInputVecBatch =
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext.get());
     VectorHelper::FreeVecBatch(inputVecBatch);
     this->inputVecBatch = nullptr;
 

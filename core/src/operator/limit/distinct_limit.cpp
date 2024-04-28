@@ -289,8 +289,7 @@ void GenerateCombinedHash(VectorBatch *vectorBatch, const int32_t start, int32_t
 
 DistinctLimitOperator::DistinctLimitOperator(const type::DataTypes &sourceTypes, std::vector<int32_t> &distinctCols,
     int32_t distinctColsCount, int32_t hashCol, int64_t limit)
-    : executionContext(new ExecutionContext()),
-      sourceTypes(sourceTypes),
+    : sourceTypes(sourceTypes),
       distinctCols(distinctCols),
       distinctColsCount(distinctColsCount),
       hashCol(hashCol),
@@ -312,10 +311,7 @@ DistinctLimitOperator::DistinctLimitOperator(const type::DataTypes &sourceTypes,
     }
 }
 
-DistinctLimitOperator::~DistinctLimitOperator()
-{
-    delete executionContext;
-}
+DistinctLimitOperator::~DistinctLimitOperator() {}
 
 bool IsExistSameRow(const type::DataTypes &inputTypes, VectorBatch *vectorBatch, std::vector<int32_t> &distinctCols,
     int32_t distinctColsCount, std::vector<std::vector<AggregateState>> &bucket, int rowIndex)
@@ -353,8 +349,8 @@ bool IsExistSameRow(const type::DataTypes &inputTypes, VectorBatch *vectorBatch,
     return false;
 }
 
-void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int rowIndex,
-    std::vector<AggregateState> &tuple)
+void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int32_t rowIndex,
+    std::vector<AggregateState> &tuple, ExecutionContext *executionContextPtr)
 {
     const int32_t *vectorTypes = sourceTypes.GetIds();
     BaseVector *inputVector;
@@ -368,10 +364,10 @@ void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int ro
         if (!(inputVector->IsNull(rowIndex))) {
             if (inputVector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFunc(tuple[colIndex], inputVector, rowIndex,
-                    executionContext);
+                    executionContextPtr);
             } else {
                 DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFuncFromDict(tuple[colIndex], inputVector, rowIndex,
-                    executionContext);
+                    executionContextPtr);
             }
         }
     }
@@ -383,14 +379,15 @@ void DistinctLimitOperator::InLoop(VectorBatch *vectorBatch, const int32_t rowCo
     uint64_t hashValue;
     int32_t pickedRows = 0;
 
-    for (int rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
+    auto executionContextPtr = executionContext.get();
+    for (int32_t rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
         hashValue = combineHashVal[rowIndex];
         auto &bucket = distinctedTable[hashValue];
 
         existed = IsExistSameRow(sourceTypes, vectorBatch, distinctCols, distinctColsCount, bucket, rowIndex);
         if (!existed) {
             std::vector<AggregateState> distinctedTuple(outColsCount);
-            FillDistinctedTuple(vectorBatch, rowIndex, distinctedTuple);
+            FillDistinctedTuple(vectorBatch, rowIndex, distinctedTuple, executionContextPtr);
             bucket.push_back(distinctedTuple);
 
             auto rowInfo = new DistinctRowInfo();
@@ -415,6 +412,7 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
     }
     if ((vecBatch->GetRowCount() == 0) || (remainingLimit < 0)) {
         VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
         return 0;
     }
 
@@ -428,6 +426,7 @@ int32_t DistinctLimitOperator::AddInput(VectorBatch *vecBatch)
 
     this->InLoop(vecBatch, rowCount, combineHashVal.get());
     VectorHelper::FreeVecBatch(vecBatch);
+    ResetInputVecBatch();
     return 0;
 }
 

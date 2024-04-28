@@ -69,7 +69,6 @@ private:
     type::DataTypes sourceTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
     WindowOperator *windowOperator;
-    ExecutionContext *executionContext;
 };
 }
 }

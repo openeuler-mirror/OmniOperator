@@ -19,7 +19,7 @@ class Operator {
 public:
     Operator()
         : sourceTypes(nullptr),
-          context(nullptr),
+          executionContext(std::make_unique<ExecutionContext>()),
           inputVecBatch(nullptr),
           status(OMNI_STATUS_NORMAL)
     {}
@@ -79,7 +79,7 @@ public:
 
 protected:
     int32_t *sourceTypes;
-    ExecutionContext *context;
+    std::unique_ptr<ExecutionContext> executionContext;
     vec::VectorBatch *inputVecBatch = nullptr;
 
 private:

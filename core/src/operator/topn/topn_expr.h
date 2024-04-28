@@ -43,7 +43,6 @@ private:
     omniruntime::type::DataTypes sourceTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
     TopNOperator *topNOperator;
-    ExecutionContext *executionContext;
 };
 }
 #endif // OMNI_RUNTIME_TOPN_EXPR_H

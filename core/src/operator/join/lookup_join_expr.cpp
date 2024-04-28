@@ -60,21 +60,24 @@ LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &pr
     std::vector<std::unique_ptr<Projection>> &projections, LookupJoinOperator *lookupJoinOperator)
     : probeTypes(probeTypes),
       projections(projections),
-      lookupJoinOperator(lookupJoinOperator),
-      executionContext(new ExecutionContext())
+      lookupJoinOperator(lookupJoinOperator)
 {}
 
 LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 {
     delete lookupJoinOperator;
-    delete executionContext;
 }
 
 int32_t LookupJoinWithExprOperator::AddInput(VectorBatch *vecBatch)
 {
-    VectorBatch *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, probeTypes, projections, executionContext);
+    if (vecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
+    auto *newInputVecBatch = OperatorUtil::ProjectVectors(vecBatch, probeTypes, projections, executionContext.get());
     VectorHelper::FreeVecBatch(vecBatch);
-    inputVecBatch = nullptr;
+    ResetInputVecBatch();
 
     lookupJoinOperator->AddInput(newInputVecBatch);
     SetStatus(lookupJoinOperator->GetStatus());

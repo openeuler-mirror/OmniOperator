@@ -70,7 +70,6 @@ private:
     DataTypes streamTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
     SortMergeJoinOperatorV3 *smjOperator;
-    ExecutionContext *executionContext;
 };
 
 class BufferedTableWithExprOperatorFactoryV3 : public OperatorFactory {
@@ -114,7 +113,6 @@ private:
     DataTypes bufferTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
     SortMergeJoinOperatorV3 *smjOperator;
-    ExecutionContext *executionContext;
 };
 }
 }

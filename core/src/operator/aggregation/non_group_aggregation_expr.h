@@ -57,7 +57,6 @@ private:
     std::vector<std::unique_ptr<Projection>> &projections;
     std::vector<SimpleFilter *> aggSimpleFilters;
     AggregationOperator *aggOperator;
-    ExecutionContext *executionContext;
     bool hasAggFilter = false;
 };
 }

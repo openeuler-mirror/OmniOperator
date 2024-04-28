@@ -2075,6 +2075,154 @@ TEST(HashAggregationOperatorTest, supported_type_test)
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
+TEST(HashAggregationOperatorTest, TestSerializedMultiVecBatch)
+{
+    // construct input data
+    const int32_t dataSize = 6;
+    // prepare data
+    int32_t data0[dataSize] = {0, -1, 127, 0, -1, 32767};
+    int32_t data1[dataSize] = {-1, 127, 2147483647, 0, 32767, 2147483647};
+    int64_t data2[dataSize] = {0, 1, 2, 3, 4, 5};
+    int64_t data3[dataSize] = {7, 8, 9, 10, 11, 12};
+    int *groupdatas[2] = {data0, data1};
+    long *aggdatas[2] = {data2, data3};
+    VectorBatch **input = new VectorBatch *[2];
+    for (int32_t i = 0; i < 2; i++) {
+        VectorBatch *vecBatch = new VectorBatch(dataSize);
+        auto groupvec = new Vector<int>(dataSize);
+        for (int k = 0; k < dataSize; ++k) {
+            groupvec->SetValue(k, groupdatas[i][k]);
+        }
+        vecBatch->Append(groupvec);
+
+        auto aggvec = new Vector<long>(dataSize);
+        for (int k = 0; k < dataSize; ++k) {
+            aggvec->SetValue(k, aggdatas[i][k]);
+        }
+        vecBatch->Append(aggvec);
+        input[i] = vecBatch;
+    }
+
+    auto aggFactory = CreateHashAggregationOperatorFactory(std::vector<uint32_t>({ 0 }),
+        std::vector<DataTypePtr>({ IntType() }), std::vector<uint32_t>({ OMNI_AGGREGATION_TYPE_SUM }),
+        std::vector<uint32_t>({ 1 }), std::vector<DataTypePtr>({ LongType() }),
+        std::vector<DataTypePtr>({ LongType() }), std::vector<uint32_t>(), true, false, false);
+    auto groupBy = aggFactory->CreateOperator();
+    groupBy->Init();
+
+    for (int32_t i = 0; i < 2; ++i) {
+        groupBy->AddInput(input[i]);
+    }
+
+    VectorBatch *outputVecBatch = nullptr;
+    groupBy->GetOutput(&outputVecBatch);
+
+    // construct the output data
+    std::vector<DataTypePtr> expectFieldTypes { IntType(), LongType() };
+    DataTypes expectTypes(expectFieldTypes);
+    int32_t expectData1[5] = {0, -1, 127, 32767, 2147483647};
+    int64_t expectData2[5] = {13, 12, 10, 16, 21};
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, 5, expectData1, expectData2);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    delete[] input;
+    op::Operator::DeleteOperator(groupBy);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
+TEST(HashAggregationOperatorTest, test_hashagg_same_key_cross_spill_file)
+{
+    std::string data00[] = {"Asleep, high machines shall no", "Asleep, indian sciences may in",
+        "As junior schools love simply.", "A", "Ab"};
+    int64_t data01[] = {21194, 22342, 22901, 7205, 25033};
+    int32_t data02[] = {11313, 10957, 11316, 11301, 11263};
+    int32_t data03[] = {1, 1, 1, 1, 1};
+
+    std::string data10[] = {"Asleep, high machines shall no", "Asleep, indian sciences may in",
+        "As junior schools love simply.", "A", "Ab"};
+    int64_t data11[] = {21194, 22342, 22900, 7205, 25033};
+    int32_t data12[] = {11308, 11274, 10957, 11275, 11273};
+    int32_t data13[] = {1, 1, 1, 1, 1};
+
+    std::string data20[] = {"Asleep, high machines shall no", "Asleep, indian sciences may in",
+        "As junior schools love simply.", "A", "Ab"};
+    int64_t data21[] = {21194, 22342, 22901, 7205, 25033};
+    int32_t data22[] = {11313, 11274, 11316, 11301, 11317};
+    int32_t data23[] = {1, 1, 1, 1, 1};
+
+    DataTypes dataTypes(
+        std::vector<DataTypePtr>({ VarcharType(50), LongType(), Date32Type(DateUnit::DAY), IntType() }));
+    VectorBatch *vecBatch0 = CreateVectorBatch(dataTypes, 5, data00, data01, data02, data03);
+    VectorBatch *vecBatch1 = CreateVectorBatch(dataTypes, 5, data10, data11, data12, data13);
+    VectorBatch *vecBatch2 = CreateVectorBatch(dataTypes, 5, data20, data21, data22, data23);
+
+    std::vector<uint32_t> groupByCol({ 0, 1, 2 });
+    DataTypes groupInputTypes(std::vector<DataTypePtr>({ VarcharType(50), LongType(), Date32Type(DateUnit::DAY) }));
+    std::vector<uint32_t> aggInputCols({ 3 });
+    auto aggInputColsWrap = AggregatorUtil::WrapWithVector(aggInputCols);
+    DataTypes aggInputTypes(std::vector<DataTypePtr>({ IntType() }));
+    auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType() }));
+    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
+
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_COUNT_COLUMN };
+    std::vector<uint32_t> maskColsVector = { static_cast<uint32_t>(-1) };
+    auto inputRaws = std::vector<bool>(aggFuncTypes.size(), true);
+    auto outputPartials = std::vector<bool>(aggFuncTypes.size(), true);
+    SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, 5);
+    OperatorConfig operatorConfig(spillConfig);
+    auto hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCol, groupInputTypes, aggInputColsWrap,
+        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypes, maskColsVector, inputRaws, outputPartials, operatorConfig);
+    hashAggOperatorFactory->Init();
+    auto *hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
+    hashAggOperator->AddInput(vecBatch0);
+    hashAggOperator->AddInput(vecBatch1);
+    hashAggOperator->AddInput(vecBatch2);
+
+    std::string expectData00[] = {"A", "A", "Ab", "Ab", "Ab"};
+    int64_t expectData01[] = {7205, 7205, 25033, 25033, 25033};
+    int32_t expectData02[] = {11275, 11301, 11273, 11317, 11263};
+    int64_t expectData03[] = {1, 2, 1, 1, 1};
+    std::string expectData10[] = {"As junior schools love simply.", "As junior schools love simply.",
+        "Asleep, high machines shall no", "Asleep, high machines shall no", "Asleep, indian sciences may in"};
+    int64_t expectData11[] = {22900, 22901, 21194, 21194, 22342};
+    int32_t expectData12[] = {10957, 11316, 11308, 11313, 11274};
+    int64_t expectData13[] = {1, 2, 1, 2, 2};
+    std::string expectData20[] = {"Asleep, indian sciences may in"};
+    int64_t expectData21[] = {22342};
+    int32_t expectData22[] = {10957};
+    int64_t expectData23[] = {1};
+    DataTypes expectDataTypes(
+        std::vector<DataTypePtr>({ VarcharType(50), LongType(), Date32Type(DateUnit::DAY), LongType() }));
+    auto expectVecBatch0 =
+        CreateVectorBatch(expectDataTypes, 5, expectData00, expectData01, expectData02, expectData03);
+    auto expectVecBatch1 =
+        CreateVectorBatch(expectDataTypes, 5, expectData10, expectData11, expectData12, expectData13);
+    auto expectVecBatch2 =
+        CreateVectorBatch(expectDataTypes, 1, expectData20, expectData21, expectData22, expectData23);
+
+    hashAggOperator->SetRowCountPerBatch(5);
+    std::vector<VectorBatch *> result;
+    while (hashAggOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        VectorBatch *outputVecBatch = nullptr;
+        hashAggOperator->GetOutput(&outputVecBatch);
+        result.emplace_back(outputVecBatch);
+    }
+
+    EXPECT_EQ(3, result.size());
+    EXPECT_TRUE(VecBatchMatch(result[0], expectVecBatch0));
+    EXPECT_TRUE(VecBatchMatch(result[1], expectVecBatch1));
+    EXPECT_TRUE(VecBatchMatch(result[2], expectVecBatch2));
+
+    omniruntime::op::Operator::DeleteOperator(hashAggOperator);
+    delete hashAggOperatorFactory;
+    VectorHelper::FreeVecBatches(result);
+    VectorHelper::FreeVecBatch(expectVecBatch0);
+    VectorHelper::FreeVecBatch(expectVecBatch1);
+    VectorHelper::FreeVecBatch(expectVecBatch2);
+}
+
 TEST(AggregatorTest, sum_test)
 {
     int32_t rowPerVecBatch = 200;
@@ -2459,7 +2607,7 @@ TEST(AggregatorTest, verify_decimal_presision_improvement)
 
     auto *resultVec1 = new Vector<Decimal128>(1);
     std::vector<BaseVector *> extractVec1 = { resultVec1 };
-    AggregateState state1{ nullptr };
+    AggregateState state1 { nullptr };
     avgDeciAgg1->InitState(state1);
     avgDeciAgg1->ProcessGroup(state1, vecBatch, 0, 3);
     avgDeciAgg1->ExtractValues(state1, extractVec1, 0);
@@ -2473,7 +2621,7 @@ TEST(AggregatorTest, verify_decimal_presision_improvement)
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 10)).get()), channel0, true, false, true);
     auto *resultVec2 = new Vector<Decimal128>(1);
     std::vector<BaseVector *> extractVec2 = { resultVec2 };
-    AggregateState state2{ nullptr };
+    AggregateState state2 { nullptr };
     avgDeciAgg2->InitState(state2);
     avgDeciAgg2->ProcessGroup(state2, vecBatch, 0, 3);
     avgDeciAgg2->ExtractValues(state2, extractVec2, 0);

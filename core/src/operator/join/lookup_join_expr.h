@@ -58,7 +58,6 @@ private:
     DataTypes probeTypes;
     std::vector<std::unique_ptr<Projection>> &projections;
     LookupJoinOperator *lookupJoinOperator;
-    ExecutionContext *executionContext;
 };
 }
 }

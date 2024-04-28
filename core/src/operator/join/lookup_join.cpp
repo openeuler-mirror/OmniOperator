@@ -310,6 +310,12 @@ void LookupJoinOperator::ProcessProbe(bool hasFilter, bool singleHT)
 
 int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 {
+    if (vecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
     if (!firstVecBatch && simpleFilter != nullptr) {
         firstVecBatch = true;
         std::visit([&](

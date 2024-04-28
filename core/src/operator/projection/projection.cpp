@@ -15,7 +15,9 @@ namespace omniruntime {
 namespace op {
 int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
 {
-    projectedVecs = this->exprEvaluator->Evaluate(vecBatch, this->context);
+    if (vecBatch->GetRowCount() > 0) {
+        projectedVecs = this->exprEvaluator->Evaluate(vecBatch, executionContext.get());
+    }
     VectorHelper::FreeVecBatch(vecBatch);
     ResetInputVecBatch();
     return 0;
@@ -43,7 +45,7 @@ OmniStatus ProjectionOperator::Close()
 
 omniruntime::op::Operator *ProjectionOperatorFactory::CreateOperator()
 {
-    return new ProjectionOperator(new ExecutionContext(), this->exprEvaluator);
+    return new ProjectionOperator(this->exprEvaluator);
 }
 }
 }

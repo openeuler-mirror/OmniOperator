@@ -83,16 +83,11 @@ private:
 
 class FilterAndProjectOperator : public Operator {
 public:
-    FilterAndProjectOperator(ExecutionContext *context, std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
+    explicit FilterAndProjectOperator(std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
         : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
-    {
-        this->context = context;
-    }
+    {}
 
-    ~FilterAndProjectOperator() override
-    {
-        delete context;
-    }
+    ~FilterAndProjectOperator() override = default;
 
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
 

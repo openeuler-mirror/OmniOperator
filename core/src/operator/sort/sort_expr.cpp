@@ -58,22 +58,23 @@ Operator *SortWithExprOperatorFactory::CreateOperator()
 
 SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes,
     std::vector<std::unique_ptr<Projection>> &projections, SortOperator *sortOperator)
-    : sourceTypes(sourceTypes),
-      projections(projections),
-      sortOperator(sortOperator),
-      executionContext(new ExecutionContext())
+    : sourceTypes(sourceTypes), projections(projections), sortOperator(sortOperator)
 {}
 
 SortWithExprOperator::~SortWithExprOperator()
 {
     delete sortOperator;
-    delete executionContext;
 }
 
 int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 {
-    VectorBatch *newInputVecBatch =
-        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext);
+    if (inputVecBatch->GetRowCount() <= 0) {
+        VectorHelper::FreeVecBatch(inputVecBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
+    auto *newInputVecBatch =
+        OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext.get());
     VectorHelper::FreeVecBatch(inputVecBatch);
     ResetInputVecBatch();
     sortOperator->AddInput(newInputVecBatch);

@@ -888,7 +888,7 @@ TEST(HashAggregationWithExprOperatorTest, test_agg_min_max_avg)
     VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
         expData3, expData4, expData5, expData6, expData7, expData8, expData9, expData10, expData11, expData12,
         expData13, expData14, expData15, expData16, expData17);
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     Expr::DeleteExprs(aggAllKeys);
@@ -1166,8 +1166,8 @@ void TestHashAggSpillWithMultiRecords(std::vector<uint32_t> aggFuncTypes, DataTy
     std::string data72[] = {"-1.20", "-1.20"};                        // c7
     int64_t data82[] = {-120, -120};                                  // c8
     Decimal128 data92[] = {Decimal128("-1.20"), Decimal128("-1.20")}; // c9
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52,
-        data62, data72, data82, data92);
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52, data62,
+        data72, data82, data92);
 
     // groupByKeys
     LiteralExpr *modRight = new LiteralExpr(3, LongType());
@@ -1358,7 +1358,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_avg_container_support_spi
     bool expData5[] = {true, true, false, true};                                              // c5
     double expData6[] = {1.2, 0, 0.64, -1.2};                                                 // c6
     std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
-    int64_t expData8[] = {120, 0, 64, -120};                                                // c8
+    int64_t expData8[] = {120, 0, 64, -120};                                                  // c8
     Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("0.64"), Decimal128("-1.20")}; // c9
 
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), DoubleType(), DoubleType(), DoubleType(),
@@ -1626,8 +1626,8 @@ void TestHashAggSpillWithNullRecords(std::vector<uint32_t> aggFuncTypes, DataTyp
     std::string data72[] = {"", ""}; // c7
     int64_t data82[] = {0, 0};       // c8
     Decimal128 data92[] = {0, 0};    // c9
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52,
-        data62, data72, data82, data92);
+    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52, data62,
+        data72, data82, data92);
     for (int i = 0; i < 2; i++) {
         vecBatch2->Get(2)->SetNull(i);
         vecBatch2->Get(3)->SetNull(i);

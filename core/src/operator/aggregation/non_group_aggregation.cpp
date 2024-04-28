@@ -77,6 +77,12 @@ Operator *AggregationOperatorFactory::CreateOperator()
 int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
 {
     auto rowCount = vecBatch->GetRowCount();
+    if (rowCount <= 0) {
+        VectorHelper::FreeVecBatch(vecBatch);
+        ResetInputVecBatch();
+        return 0;
+    }
+
     size_t aggCount = aggregators.size();
     if (aggFiltersCount > 0) {
         int32_t filterOffset = vecBatch->GetVectorCount() - aggFiltersCount;

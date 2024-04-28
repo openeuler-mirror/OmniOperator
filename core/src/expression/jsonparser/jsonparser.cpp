@@ -310,20 +310,6 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
         }
     }
 
-    // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
-    if (funcName == "CAST" && args.size() == 1) {
-        if (retTypeId == args[0]->GetReturnTypeId()) {
-            if (!TypeUtil::IsDecimalType(retTypeId) && !TypeUtil::IsStringType(retTypeId)) {
-                return args[0];
-            }
-        }
-    }
-
-    // Check that the signature matches
-    vector<DataTypeId> argTypes(args.size());
-    std::transform(args.begin(), args.end(), argTypes.begin(),
-        [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
-
     if (TypeUtil::IsStringType(retTypeId)) {
         width = jsonExpr.contains("width") ? jsonExpr["width"].get<int32_t>() : width;
         if (retTypeId == OMNI_CHAR) {
@@ -342,6 +328,35 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
     } else {
         retType = std::make_shared<DataType>(retTypeId);
     }
+
+    // CAST short-circuit - Convert CAST function of a type to its own type to DataExpr
+    if (funcName == "CAST" && args.size() == 1) {
+        auto argReturnType = args[0]->GetReturnType().get();
+        if (retTypeId == argReturnType->GetId()) {
+            if (TypeUtil::IsStringType(retTypeId)) {
+                auto argWidth = static_cast<VarcharDataType *>(argReturnType)->GetWidth();
+                auto retWidth = static_cast<VarcharDataType *>(retType.get())->GetWidth();
+                if (argWidth <= retWidth) {
+                    return args[0];
+                }
+            } else if (TypeUtil::IsDecimalType(retTypeId)) {
+                auto argScale = static_cast<DecimalDataType *>(argReturnType)->GetScale();
+                auto argPrecision = static_cast<DecimalDataType *>(argReturnType)->GetPrecision();
+                auto retScale = static_cast<DecimalDataType *>(retType.get())->GetScale();
+                auto retPrecision = static_cast<DecimalDataType *>(retType.get())->GetPrecision();
+                if (argScale == retScale && argPrecision <= retPrecision) {
+                    return args[0];
+                }
+            } else {
+                return args[0];
+            }
+        }
+    }
+
+    // Check that the signature matches
+    vector<DataTypeId> argTypes(args.size());
+    std::transform(args.begin(), args.end(), argTypes.begin(),
+        [](Expr *expr) -> DataTypeId { return expr->GetReturnTypeId(); });
     auto signature = FunctionSignature(funcName, argTypes, retTypeId);
     auto function = omniruntime::codegen::FunctionRegistry::LookupFunction(&signature);
     if (function != nullptr) {

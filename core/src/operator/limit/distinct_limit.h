@@ -83,16 +83,16 @@ public:
     OmniStatus Close() override;
 
 private:
-    void FillDistinctedTuple(vec::VectorBatch *vectorBatch, int rowIndex, std::vector<AggregateState> &tuple);
+    void FillDistinctedTuple(vec::VectorBatch *vectorBatch, int rowIndex, std::vector<AggregateState> &tuple,
+        ExecutionContext *executionContextPtr);
 
     void InLoop(vec::VectorBatch *vectorBatch, const int32_t rowCount, const uint64_t *combineHashVal);
 
     void ReleaseRowInfo(std::vector<DistinctRowInfo *> &rowInfo);
 
 private:
-    ExecutionContext *executionContext;
-    std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil>
-        distinctedTable;                            // hashValue=>record vector with distinct
+    // hashValue=>record vector with distinct
+    std::unordered_map<uint64_t, std::vector<std::vector<AggregateState>>, HashUtil> distinctedTable;
     std::vector<DistinctRowInfo *> distinctRowInfo; // info(hash value and conflict index) of all distinct records
     type::DataTypes sourceTypes;
     std::vector<DataTypePtr> outputTypes;

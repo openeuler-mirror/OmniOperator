@@ -168,7 +168,7 @@ WindowOperator::WindowOperator(const type::DataTypes &sourceTypes, std::vector<i
 OmniStatus WindowOperator::Init()
 {
     OmniStatus ret = OMNI_STATUS_NORMAL;
-    pagesIndex = std::move(make_unique<PagesIndex>(sourceTypes));
+    pagesIndex = std::make_unique<PagesIndex>(sourceTypes);
     for (int32_t i = 0; i < windowFunctionCount; i++) {
         auto type = windowFunctionTypes[i];
         auto windowFrame = std::make_unique<WindowFrameInfo>(static_cast<FrameType>(windowFrameTypes[i]),
@@ -227,6 +227,7 @@ int32_t WindowOperator::AddInput(VectorBatch *vecBatch)
     if (operatorConfig.GetSpillConfig()->NeedSpill(pagesIndex.get())) {
         auto result = SpillToDisk();
         pagesIndex->Clear();
+        executionContext->GetArena()->Reset();
         if (result != ErrorCode::SUCCESS) {
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
@@ -280,6 +281,7 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
             inputVecBatchForAgg->SetVector(0, nullptr);
         }
         pagesIndex->Clear();
+        executionContext->GetArena()->Reset();
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
@@ -301,6 +303,7 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         hasPrepare = false;
         inputVecBatchForAgg->SetVector(0, nullptr);
         pagesIndex->Clear();
+        executionContext->GetArena()->Reset();
         SetStatus(OMNI_STATUS_FINISHED);
     }
 

@@ -71,12 +71,14 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
 
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
-    return new FilterAndProjectOperator(new ExecutionContext(), this->exprEvaluator);
+    return new FilterAndProjectOperator(this->exprEvaluator);
 }
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
-    projectedVecs = this->exprEvaluator->Evaluate(vecBatch, this->context, &selectedRowsBuffer);
+    if (vecBatch->GetRowCount() > 0) {
+        projectedVecs = this->exprEvaluator->Evaluate(vecBatch, executionContext.get(), &selectedRowsBuffer);
+    }
     VectorHelper::FreeVecBatch(vecBatch);
     ResetInputVecBatch();
     return 0;
@@ -144,10 +146,10 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
     const int rowCount = 1;
     int32_t selectedRows[rowCount];
     int32_t numSelectedRows = exprEvaluator->GetFilterFunc()(valueAddrs, rowCount, selectedRows, nullsAddrs,
-        offsetsAddrs, reinterpret_cast<int64_t>(context), dictsAddrs);
+        offsetsAddrs, reinterpret_cast<int64_t>(executionContext.get()), dictsAddrs);
 
-    if (context->HasError()) {
-        context->GetArena()->Reset();
+    if (executionContext->HasError()) {
+        executionContext->GetArena()->Reset();
         for (int i = 0; i < vecCount; ++i) {
             delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
             delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);
@@ -155,12 +157,12 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
         delete[] dictsAddrs;
         delete[] nullsAddrs;
         delete[] offsetsAddrs;
-        string errorMessage = context->GetError();
+        string errorMessage = executionContext->GetError();
         throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
     }
 
     if (numSelectedRows <= 0) {
-        context->GetArena()->Reset();
+        executionContext->GetArena()->Reset();
         for (int i = 0; i < vecCount; ++i) {
             delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
             delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);
@@ -177,7 +179,7 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
             outValueAddrs[i] = valueAddrs[projections[i]->GetColumnProjectionIndex()];
             outLens[i] = inputLens[projections[i]->GetColumnProjectionIndex()];
         } else {
-            context->GetArena()->Reset();
+            executionContext->GetArena()->Reset();
             for (int j = 0; j < vecCount; ++j) {
                 delete[] reinterpret_cast<bool *>(nullsAddrs[j]);
                 delete[] reinterpret_cast<int32_t *>(offsetsAddrs[j]);
@@ -190,7 +192,7 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
         }
     }
 
-    context->GetArena()->Reset();
+    executionContext->GetArena()->Reset();
     for (int i = 0; i < vecCount; ++i) {
         delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
         delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);

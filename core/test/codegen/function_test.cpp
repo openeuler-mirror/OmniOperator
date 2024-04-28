@@ -31,7 +31,7 @@ TEST(FunctionTest, ArenaAllocatorMalloc)
     auto execContext = new ExecutionContext();
     int64_t contextptr = reinterpret_cast<int64_t>(execContext);
     char *ptr;
-    for (int i = 1; i <= execContext->GetArena()->TotalBytes() / 256; ++i) {
+    for (uint64_t i = 1; i <= execContext->GetArena()->TotalBytes() / 256; ++i) {
         ptr = ArenaAllocatorMalloc(contextptr, 256);
         EXPECT_NE(ptr, nullptr);
         // check 256 is allocated each call;
