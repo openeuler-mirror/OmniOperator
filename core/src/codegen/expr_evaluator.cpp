@@ -94,39 +94,43 @@ Filter::Filter(const Expr &expression, const DataTypes &inputDataTypes, Overflow
 
 bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
 {
+    if (literalExpr->isNull) {
+        literalVal.isNull = true;
+        return true;
+    }
     switch (outType->GetId()) {
         case OMNI_INT:
         case OMNI_DATE32: {
-            literalVal.intVal = literalExpr->intVal;
+            literalVal.value.intVal = literalExpr->intVal;
             break;
         }
         case OMNI_SHORT: {
-            literalVal.shortVal = literalExpr->shortVal;
+            literalVal.value.shortVal = literalExpr->shortVal;
             break;
         }
         case OMNI_LONG:
         case OMNI_DECIMAL64:
         case OMNI_TIMESTAMP: {
-            literalVal.longVal = literalExpr->longVal;
+            literalVal.value.longVal = literalExpr->longVal;
             break;
         }
         case OMNI_DOUBLE: {
-            literalVal.doubleVal = literalExpr->doubleVal;
+            literalVal.value.doubleVal = literalExpr->doubleVal;
             break;
         }
         case OMNI_BOOLEAN: {
-            literalVal.boolVal = literalExpr->boolVal;
+            literalVal.value.boolVal = literalExpr->boolVal;
             break;
         }
         case OMNI_DECIMAL128: {
             std::string dec128String = *literalExpr->stringVal;
             __uint128_t dec128 = Decimal128Utils::StrToUint128_t(dec128String.c_str());
-            literalVal.decimal128Val.SetValue(static_cast<int128_t>(dec128));
+            literalVal.value.decimal128Val.SetValue(static_cast<int128_t>(dec128));
             break;
         }
         case OMNI_VARCHAR:
         case OMNI_CHAR: {
-            literalVal.stringVal = std::string_view(*(literalExpr->stringVal));
+            literalVal.value.stringVal = std::string_view(*(literalExpr->stringVal));
             break;
         }
         default:
@@ -141,21 +145,15 @@ bool Projection::Initialize(bool filter, const DataTypes &inputDataTypes, Overfl
     // short-circuit logic for column projections
     // no need to go through codegen
     if (expr->GetType() == ExprType::FIELD_E) {
-        auto fieldExpr = static_cast<const FieldExpr *>(expr);
         this->isColumnProjection = true;
-        this->columnProjectionIndex = fieldExpr->colVal;
+        this->columnProjectionIndex = static_cast<const FieldExpr *>(expr)->colVal;
         return true;
     }
 
     // short-circuit logic for literal expression
     if (expr->GetType() == ExprType::LITERAL_E) {
-        auto literalExpr = static_cast<const LiteralExpr *>(expr);
         this->isConstantProjection = true;
-        if (literalExpr->isNull) {
-            this->isConstantNull = true;
-        } else {
-            return SetLiteralValue(literalExpr);
-        }
+        return SetLiteralValue(static_cast<const LiteralExpr *>(expr));
     }
 
     intptr_t f;
@@ -227,35 +225,35 @@ template <typename T> void Projection::SetConstantValues(T &value, BaseVector *o
 
 bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector *outVec)
 {
-    if (this->isConstantNull) {
+    if (literalVal.isNull) {
         return NullColumnProjection(context, outVec);
     }
     auto outputTypeId = this->outType->GetId();
     switch (outputTypeId) {
         case OMNI_INT:
         case OMNI_DATE32:
-            SetConstantValues<int32_t>(literalVal.intVal, outVec);
+            SetConstantValues<int32_t>(literalVal.value.intVal, outVec);
             break;
         case OMNI_SHORT:
-            SetConstantValues<int16_t>(literalVal.shortVal, outVec);
+            SetConstantValues<int16_t>(literalVal.value.shortVal, outVec);
             break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
         case OMNI_TIMESTAMP:
-            SetConstantValues<int64_t>(literalVal.longVal, outVec);
+            SetConstantValues<int64_t>(literalVal.value.longVal, outVec);
             break;
         case OMNI_DOUBLE:
-            SetConstantValues<double>(literalVal.doubleVal, outVec);
+            SetConstantValues<double>(literalVal.value.doubleVal, outVec);
             break;
         case OMNI_BOOLEAN:
-            SetConstantValues<bool>(literalVal.boolVal, outVec);
+            SetConstantValues<bool>(literalVal.value.boolVal, outVec);
             break;
         case OMNI_DECIMAL128:
-            SetConstantValues<Decimal128>(literalVal.decimal128Val, outVec);
+            SetConstantValues<Decimal128>(literalVal.value.decimal128Val, outVec);
             break;
         case OMNI_VARCHAR:
         case OMNI_CHAR:
-            SetConstantValues<std::string_view>(literalVal.stringVal, outVec);
+            SetConstantValues<std::string_view>(literalVal.value.stringVal, outVec);
             break;
         default:
             std::string errorMessage = "Do not support such vector type " + std::to_string(outputTypeId);
@@ -271,11 +269,19 @@ BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], i
 {
     if (this->isColumnProjection) {
         return ColumnProjectionProxy(vecBatch, selectedRows, numSelectedRows, typeIds);
-    }
-
-    DataTypeId outTypeId = this->GetOutputType().GetId();
-    BaseVector *outVec = VectorHelper::CreateFlatVector(outTypeId, numSelectedRows);
-    if (!this->isConstantProjection) {
+    } else if (this->isConstantProjection) {
+        BaseVector *outVec = VectorHelper::CreateFlatVector(outType->GetId(), numSelectedRows);
+        if (!ConstantColumnProjection(context, outVec)) {
+            delete outVec;
+            context->GetArena()->Reset();
+            return nullptr;
+        } else {
+            context->GetArena()->Reset();
+            return outVec;
+        }
+    } else {
+        DataTypeId outTypeId = outType->GetId();
+        BaseVector *outVec = VectorHelper::CreateFlatVector(outTypeId, numSelectedRows);
         if (outTypeId == OMNI_VARCHAR || outTypeId == OMNI_CHAR) {
             ProjectHelperVarWidth(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, outVec, numSelectedRows, selectedRows,
                 context, dictionaryVectors, outTypeId);
@@ -285,13 +291,6 @@ BaseVector *Projection::Project(VectorBatch *vecBatch, int32_t selectedRows[], i
         }
         context->GetArena()->Reset();
         return outVec;
-    } else {
-        if (!ConstantColumnProjection(context, outVec)) {
-            delete outVec;
-            return nullptr;
-        } else {
-            return outVec;
-        }
     }
 }
 

@@ -24,16 +24,20 @@ using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t
 using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, int64_t const *,
     bool *, int32_t *, int64_t, int64_t *);
 
-typedef union LiteralValue {
-    bool boolVal;
-    int16_t shortVal;
-    int32_t intVal;
-    int64_t longVal;
-    double doubleVal;
-    Decimal128 decimal128Val;
-    std::string_view stringVal;
+typedef struct LiteralValue {
+    bool isNull = false;
+    union Value {
+        bool boolVal;
+        int16_t shortVal;
+        int32_t intVal;
+        int64_t longVal;
+        double doubleVal;
+        Decimal128 decimal128Val;
+        std::string_view stringVal;
 
-    LiteralValue() : stringVal(nullptr, 0) {}
+        Value() {}
+    } value;
+    LiteralValue() {}
 } LiteralValue;
 
 void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[], intptr_t offsetAddrs[],
@@ -117,7 +121,6 @@ private:
     bool isColumnProjection = false;
     int columnProjectionIndex = -1;
     bool isConstantProjection = false;
-    bool isConstantNull = false;
     LiteralValue literalVal;
     DataTypePtr outType;
     ProjFunc projector;
