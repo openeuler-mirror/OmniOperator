@@ -134,7 +134,6 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
 
     this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeOutputCols, probeOutputTypes.GetIds(),
         buildOutputCols, buildOutputTypes.GetIds(), outputRowSize);
-    this->executionContext = new ExecutionContext();
     this->probeHashColumns = new BaseVector *[probeHashCols.size()]();     // 2D array
     this->probeOutputColumns = new BaseVector *[probeOutputCols.size()](); // 2D array
 
@@ -171,8 +170,6 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
 
 LookupJoinOperator::~LookupJoinOperator()
 {
-    delete executionContext;
-    executionContext = nullptr;
     delete[] probeHashColumns;
     delete[] probeOutputColumns;
     delete[] probeFilterColumns;
@@ -389,7 +386,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                         HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
                 }
 
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
+                auto result = arg.Find(probeSerializers, executionContext.get(), probeHashColumns, probeHashCols.size(),
                     probePosition, partition);
                 if (!result.IsInsert()) {
                     continue;
@@ -438,7 +435,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                         HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
                 }
 
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
+                auto result = arg.Find(probeSerializers, executionContext.get(), probeHashColumns, probeHashCols.size(),
                     probePosition, partition);
                 if (result.IsInsert()) {
                     auto it = result.GetValue()->Begin();
@@ -490,7 +487,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                         HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
                 }
                 bool hasProduceRow = false;
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
+                auto result = arg.Find(probeSerializers, executionContext.get(), probeHashColumns, probeHashCols.size(),
                     probePosition, partition);
                 if (result.IsInsert()) {
                     auto it = result.GetValue()->Begin();
@@ -543,7 +540,8 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                             HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
                     }
                     bool hasProduceRow = false;
-                    auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
+                    auto result = arg.Find(probeSerializers, executionContext.get(), probeHashColumns,
+                        probeHashCols.size(),
                         probePosition, partition);
                     if (result.IsInsert()) {
                         auto it = result.GetValue()->Begin();
@@ -597,7 +595,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                         HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
                 }
 
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
+                auto result = arg.Find(probeSerializers, executionContext.get(), probeHashColumns, probeHashCols.size(),
                     probePosition, partition);
                 if (!result.IsInsert()) {
                     continue;
@@ -648,7 +646,7 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                         HashUtil::GetRawHashPartition(curProbeHashes[probePosition], arg.GetHashTableCount() - 1);
                 }
                 bool hasProduceRow = false;
-                auto result = arg.Find(probeSerializers, executionContext, probeHashColumns, probeHashCols.size(),
+                auto result = arg.Find(probeSerializers, executionContext.get(), probeHashColumns, probeHashCols.size(),
                     probePosition, partition);
                 if (result.IsInsert()) {
                     auto it = result.GetValue()->Begin();
@@ -705,7 +703,7 @@ NO_INLINE bool LookupJoinOperator::IsJoinPositionEligible(uint32_t partition, ui
         values[colIdx] =
             OperatorUtil::GetValuePtrAndLength(buildVec, buildRowIdx, lengths + colIdx, buildFilterTypeIds[j]);
     }
-    return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext));
+    return simpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(executionContext.get()));
 }
 
 template <typename T>

@@ -86,6 +86,11 @@ class TypedMaskColAggregator : public TypedAggregator {
 public:
     ~TypedMaskColAggregator() override = default;
 
+    void SetExecutionContext(ExecutionContext *executionContext) override
+    {
+        realAggregator->SetExecutionContext(executionContext);
+    }
+
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount) override
     {

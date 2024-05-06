@@ -193,12 +193,13 @@ OmniStatus WindowOperator::Init()
             case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL:
                 windowFunctions.push_back(std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type,
                     sourceTypes.GetType(argumentChannels[i]), allTypes.GetType(sourceTypes.GetSize() + i),
-                    std::move(windowFrame), isOverflowAsNull)));
+                    std::move(windowFrame), executionContext.get(), isOverflowAsNull)));
                 break;
             case OMNI_AGGREGATION_TYPE_COUNT_ALL:
                 windowFunctions.push_back(
                     std::move(make_unique<AggregateWindowFunction>(argumentChannels[i], type, NoneDataType::Instance(),
-                    allTypes.GetType(sourceTypes.GetSize() + i), std::move(windowFrame), isOverflowAsNull)));
+                        allTypes.GetType(sourceTypes.GetSize() + i), std::move(windowFrame), executionContext.get(),
+                        isOverflowAsNull)));
                 break;
             default:
                 ret = OMNI_STATUS_ERROR;

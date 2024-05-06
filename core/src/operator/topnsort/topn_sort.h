@@ -180,7 +180,6 @@ private:
     std::vector<CompareOptimizeFunc> sortCompareOptimizeFuncs;
     std::vector<CompareFunc> sortCompareFuncs;
     int32_t sortColNum;
-    std::unique_ptr<ExecutionContext> executionContext;
     std::unordered_map<type::StringRef, PartitionValue *, PartitionHash> partitionedMap;
     std::vector<VectorSerializer> serializers;
     std::vector<EqualFunc> equalFuncs;

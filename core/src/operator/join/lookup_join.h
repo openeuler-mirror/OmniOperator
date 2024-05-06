@@ -191,7 +191,6 @@ private:
     std::vector<int8_t> curProbeNulls;
 
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
-    ExecutionContext *executionContext = nullptr;
     omniruntime::vec::VectorBatch *curInputBatch = nullptr;
     int32_t curProbePosition = 0;
     omniruntime::vec::VectorBatch *curOutputBatch = nullptr;
