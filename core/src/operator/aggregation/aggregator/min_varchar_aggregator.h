@@ -57,7 +57,7 @@ VECTORIZE_LOOP inline void AddChar(AggregateState &state, BaseVector *vector, co
         int32_t idx = rowOffset;
         const auto end = rowOffset + rowCount;
 
-        if (state.val == nullptr || state.count == 0) {
+        if (state.val == nullptr) {
             auto strView = rawVector->GetValue(idx++);
             res = strView.data();
             state.count = strView.size();
@@ -81,7 +81,7 @@ VECTORIZE_LOOP inline void AddDictChar(AggregateState &state, BaseVector *vector
         int32_t idx = rowOffset;
         const auto end = rowOffset + rowCount;
 
-        if (state.val == nullptr || state.count == 0) {
+        if (state.val == nullptr) {
             auto strView = rawVector->GetValue(idx++);
             res = strView.data();
             state.count = strView.size();
@@ -152,7 +152,7 @@ VECTORIZE_LOOP inline void AddDictConditionalChar(AggregateState &state, BaseVec
         int32_t idx = rowOffset;
         const auto end = rowOffset + rowCount;
 
-        if (state.val == nullptr || state.count == 0) {
+        if (state.val == nullptr) {
             while (idx < end) {
                 if (!condition[idx]) {
                     auto strView = rawVector->GetValue(idx);
@@ -186,7 +186,7 @@ VECTORIZE_LOOP inline void AddUseRowIndexChar(std::vector<AggregateState *> &row
         int32_t rowIdx = rowOffset;
         for (size_t i = 0; i < rowCount; ++i) {
             auto &state = rowStates[i][aggIdx];
-            if (state.val == nullptr || state.count == 0) {
+            if (state.val == nullptr) {
                 auto strView = rawVector->GetValue(rowIdx);
                 auto *res = strView.data();
                 state.count = strView.size();
@@ -210,7 +210,7 @@ VECTORIZE_LOOP inline void AddDictUseRowIndexChar(std::vector<AggregateState *> 
         int32_t rowIdx = rowOffset;
         for (size_t i = 0; i < rowCount; ++i) {
             auto &state = rowStates[i][aggIdx];
-            if (state.val == nullptr || state.count == 0) {
+            if (state.val == nullptr) {
                 auto strView = dictVector->GetValue(rowIdx);
                 auto *res = strView.data();
                 state.count = strView.size();
@@ -241,7 +241,7 @@ VECTORIZE_LOOP inline void AddConditionalUseRowIndexChar(std::vector<AggregateSt
         for (size_t i = 0; i < rowCount; ++i) {
             if (!(*condition)) {
                 auto &state = rowStates[i][aggIdx];
-                if (state.val == nullptr || state.count == 0) {
+                if (state.val == nullptr) {
                     auto strView = rawVector->GetValue(rowIdx);
                     auto *res = strView.data();
                     state.count = strView.size();
@@ -275,7 +275,7 @@ VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<Aggrega
         for (size_t i = 0; i < rowCount; ++i) {
             if (!condition[i]) {
                 auto &state = rowStates[i][aggIdx];
-                if (state.val == nullptr || state.count == 0) {
+                if (state.val == nullptr) {
                     auto strView = rawVector->GetValue(rowIdx);
                     auto res = strView.data();
                     state.count = strView.size();
