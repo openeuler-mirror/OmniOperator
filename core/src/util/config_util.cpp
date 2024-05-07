@@ -30,7 +30,13 @@ static std::string GetOmniHome()
 
 static std::string GetConfigFilePath()
 {
-    std::string confFile = "/conf/omni.conf";
+    static std::string confFile = "/conf/omni.conf";
+    auto omniConf = std::getenv("OMNI_CONF");
+    if (omniConf != nullptr && omniConf[0] != '\0') {
+        std::string confDir { omniConf };
+        Trim(confDir);
+        return confDir + confFile;
+    }
     return GetOmniHome() + confFile;
 }
 
