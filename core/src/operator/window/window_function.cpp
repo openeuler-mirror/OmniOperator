@@ -90,8 +90,8 @@ AggregateWindowFunction::AggregateWindowFunction(int32_t argumentChannel, int32_
       windowIndex(nullptr),
       currentStart(0),
       currentEnd(0),
-      isOverflowAsNull (isOverflowAsNull),
-      executionContext(executionContext)
+      executionContext(executionContext),
+      isOverflowAsNull(isOverflowAsNull)
 {
     this->argumentChannels.push_back(argumentChannel);
     this->aggregatorFactory = CreateAggregatorFactory(static_cast<FunctionType>(aggregationType));
@@ -162,14 +162,16 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
         return;
     }
 
-    BaseVector ***vectors = windowIndex->GetPagesIndex()->GetColumns();
-    BaseVector *vector = nullptr;
+    int32_t argumentChannel = argumentChannels[0];
+    BaseVector **vectors = windowIndex->GetPagesIndex()->GetColumns()[argumentChannel];
+    uint64_t *valueAddresses = windowIndex->GetPagesIndex()->GetValueAddresses();
+    int32_t windowStart = windowIndex->GetStart();
     for (int32_t position = start; position <= end; ++position) {
         uint32_t vectorIndex = UINT32_MAX;
-        int64_t sliceAddress = windowIndex->GetPagesIndex()->GetValueAddresses()[position + windowIndex->GetStart()];
+        uint64_t sliceAddress = valueAddresses[position + windowStart];
         if (DecodeSliceIndex(sliceAddress) != vectorIndex) {
             vectorIndex = DecodeSliceIndex(sliceAddress);
-            vector = vectors[argumentChannels[0]][vectorIndex];
+            auto vector = vectors[vectorIndex];
             inputVecBatchForAgg->SetVector(0, vector);
         }
         uint32_t vectorPosition = DecodePosition(sliceAddress);

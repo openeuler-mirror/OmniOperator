@@ -13,7 +13,7 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
     int32_t rowIndex)
 {
     auto v = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
-    if (state.val == nullptr) {
+    if (state.val == 0) {
         // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
         v->SetNull(rowIndex);
     } else {
@@ -80,15 +80,15 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState 
     auto vectorPtr = vectorBatch->Get(vectorIndex++);
     if (!vectorPtr->IsNull(rowIdx)) {
         auto varcharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
-        if (state.val == nullptr) {
+        if (state.val == 0) {
             auto strView = varcharVec->GetValue(rowIdx);
             auto *res = strView.data();
             state.count = strView.size();
             state.count |= UPDATE_FLAG;
-            state.val = const_cast<char *>(res);
+            state.val = (int64_t)(res);
             SaveState(state);
         } else {
-            state.val = const_cast<char *>(MinCharOp(reinterpret_cast<char *>(state.val), state.count, varcharVec,
+            state.val = (int64_t)(MinCharOp(reinterpret_cast<char *>(state.val), state.count, varcharVec,
                 rowIdx));
         }
     }
@@ -102,9 +102,9 @@ ALWAYS_INLINE void MinVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState
     }
 
     int32_t len = static_cast<int32_t>(state.count & VALUE_FLAG);
-    uint8_t *ptr = reinterpret_cast<uint8_t *>(this->executionContext->GetArena()->Allocate(len));
+    uint8_t *ptr = reinterpret_cast<uint8_t *>(arenaAllocator->Allocate(len));
     std::copy(reinterpret_cast<uint8_t *>(state.val), reinterpret_cast<uint8_t *>(state.val) + len, ptr);
-    state.val = ptr;
+    state.val = reinterpret_cast<int64_t>(ptr);
     state.count = len;
 }
 

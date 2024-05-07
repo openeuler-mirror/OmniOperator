@@ -899,14 +899,14 @@ private:
     }
 
     Allocator allocator;
-    uint8_t *slotsAddress;
-    Slot *slots;
+    uint8_t *slotsAddress = nullptr;
+    Slot *slots = nullptr;
     ctrl_t *identifiers = EmptyGroup();
-    uint8_t *ctrlAddress;
+    uint8_t *ctrlAddress = nullptr;
     Slot *nullSlot = nullptr;
     size_t elementsSize = 0;
     HashType hasher;
-    uint64_t capacity;
+    uint64_t capacity = 0;
     static constexpr uint8_t defaultDegreeSize = 15;
     GrowStrategy grower;
 };

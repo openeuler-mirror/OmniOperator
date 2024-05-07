@@ -13,20 +13,17 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
     int32_t rowIndex)
 {
     auto v = static_cast<OutVector *>(vectors[0]);
-    if (state.count == 0 || (state.count > 0 && state.val == nullptr)) {
+    if (state.count == 0) {
         v->SetNull(rowIndex);
         return;
     }
 
     bool overflow = state.count < 0;
-    auto result =
-        this->template CastWithOverflow<ResultType, OutType>(*reinterpret_cast<ResultType *>(state.val), overflow);
+    auto result = CastWithOverflowEntry<ResultType, OutType>(state.val, overflow);
 
     v->SetValue(rowIndex, result);
     if (overflow) {
         this->SetNullOrThrowException(v, rowIndex, "max_aggregator overflow.");
-    } else if (state.count == 0 || state.val == nullptr) {
-        v->SetNull(rowIndex);
     }
 }
 
@@ -44,18 +41,27 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)
 {
-    auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
-    if (state.count == 0 || state.val == nullptr) {
-        spillValue->SetNull(rowIndex);
+    auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
+    if (state.count == 0) {
+        spillValueVec->SetNull(rowIndex);
         return;
     }
-    spillValue->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+    if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+        spillValueVec->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+    } else {
+        spillValueVec->SetValue(rowIndex, static_cast<ResultType>(state.val));
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
-    state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-    *reinterpret_cast<ResultType *>(state.val) = GetMin<ResultType>();
+    if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+        state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(sizeof(ResultType)));
+        *reinterpret_cast<ResultType *>(state.val) = GetMin<ResultType>();
+    } else {
+        state.val = GetMin<ResultType>();
+    }
+
     state.count = 0;
 }
 
@@ -63,27 +69,30 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
-    if (state.val == nullptr) {
-        InitState(state);
-    }
-    auto *res = reinterpret_cast<ResultType *>(state.val);
-
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
-                Add<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount);
+                Add<InType, ResultType, MaxOp<InType, ResultType>>(reinterpret_cast<ResultType *>(state.val),
+                    state.count, ptr, rowCount);
+            } else if constexpr (std::is_floating_point_v<ResultType>) {
+                simd::SIMDAdd<InType, ResultType, simd::BasicOp::Max>(reinterpret_cast<ResultType *>(state.val),
+                    state.count, ptr, rowCount);
             } else {
-                simd::SIMDAdd<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount);
+                simd::SIMDAdd<InType, ResultType, simd::BasicOp::Max>(reinterpret_cast<ResultType *>(&state.val),
+                    state.count, ptr, rowCount);
             }
         } else {
             if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
-                AddConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
-                    rowCount, nullMap);
+                AddConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(
+                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
+            } else if constexpr (std::is_floating_point_v<ResultType>) {
+                simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Max>(
+                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
             } else {
-                simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount,
-                    nullMap);
+                simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Max>(
+                    reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
             }
         }
     } else {
@@ -91,17 +100,25 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
             if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
-                AddDict<InType, ResultType, MaxOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
+                AddDict<InType, ResultType, MaxOp<InType, ResultType>>(reinterpret_cast<ResultType *>(state.val),
+                    state.count, ptr, rowCount, indexMap);
+            } else if constexpr (std::is_floating_point_v<ResultType>) {
+                simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Max>(reinterpret_cast<ResultType *>(state.val),
+                    state.count, ptr, rowCount, indexMap);
             } else {
-                simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount, indexMap);
+                simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Max>(reinterpret_cast<ResultType *>(&state.val),
+                    state.count, ptr, rowCount, indexMap);
             }
         } else {
             if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
-                AddDictConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(res, state.count,
-                    ptr, rowCount, nullMap, indexMap);
+                AddDictConditional<InType, ResultType, MaxConditionalOp<InType, ResultType, false>>(
+                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
+            } else if constexpr (std::is_floating_point_v<ResultType>) {
+                simd::SIMDAddDictConditional<InType, ResultType, simd::BasicOp::Max>(
+                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
             } else {
-                simd::SIMDAddDictConditional<InType, ResultType, simd::BasicOp::Max>(res, state.count, ptr, rowCount,
-                    nullMap, indexMap);
+                simd::SIMDAddDictConditional<InType, ResultType, simd::BasicOp::Max>(
+                    reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap, indexMap);
             }
         }
     }
@@ -141,11 +158,16 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
         if constexpr (IN_ID == type::OMNI_SHORT) {
             auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_INT>(vectorPtr));
             ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-            MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
+            MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, ptr[rowIdx], 1LL);
         } else {
             auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<IN_ID>(vectorPtr));
             ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-            MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
+            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+                MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
+            } else {
+                MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, ptr[rowIdx],
+                    1LL);
+            }
         }
     }
 }

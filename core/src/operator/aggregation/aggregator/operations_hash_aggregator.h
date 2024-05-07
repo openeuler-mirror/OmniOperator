@@ -25,10 +25,13 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndex(std::vector<AggregateState *> &rowS
         }
 #endif
         ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
-            OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], 1LL);
+            if constexpr (std::is_floating_point_v<OUT> || std::is_same_v<OUT, Decimal128>) {
+                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], 1LL);
+            } else {
+                OP(reinterpret_cast<OUT *>(&state.val), state.count, ptr[i], 1LL);
+            }
         }
     }
 }
@@ -52,7 +55,11 @@ VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndex(std::vector<AggregateState *> &
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
-            OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[indexMap[i]], 1LL);
+            if constexpr (std::is_floating_point_v<OUT> || std::is_same_v<OUT, Decimal128>) {
+                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[indexMap[i]], 1LL);
+            } else {
+                OP(reinterpret_cast<OUT *>(&state.val), state.count, ptr[indexMap[i]], 1LL);
+            }
         }
     }
 }
@@ -76,7 +83,11 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndex(std::vector<AggregateSta
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
-            OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], 1LL, condition[i]);
+            if constexpr (std::is_floating_point_v<OUT> || std::is_same_v<OUT, Decimal128>) {
+                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], 1LL, condition[i]);
+            } else {
+                OP(reinterpret_cast<OUT *>(&state.val), state.count, ptr[i], 1LL, condition[i]);
+            }
         }
     }
 }
@@ -105,7 +116,11 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndex(std::vector<Aggregat
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
-            OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[indexMap[i]], 1LL, condition[i]);
+            if constexpr (std::is_floating_point_v<OUT> || std::is_same_v<OUT, Decimal128>) {
+                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[indexMap[i]], 1LL, condition[i]);
+            } else {
+                OP(reinterpret_cast<OUT *>(&state.val), state.count, ptr[indexMap[i]], 1LL, condition[i]);
+            }
         }
     }
 }
@@ -130,7 +145,11 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndexAvg(std::vector<AggregateState *> &r
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
             if (cntPtr[i] >= 0) {
-                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], cntPtr[i]);
+                if constexpr (std::is_floating_point_v<OUT> || std::is_same_v<OUT, Decimal128>) {
+                    OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], cntPtr[i]);
+                } else {
+                    OP(reinterpret_cast<OUT *>(&state.val), state.count, ptr[i], cntPtr[i]);
+                }
             } else {
                 state.count = -1;
             }
@@ -162,7 +181,11 @@ VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndexAvg(std::vector<AggregateState *
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
             const auto idx = indexMap[i];
-            OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[idx], cntPtr[idx]);
+            if constexpr (std::is_floating_point_v<OUT> || std::is_same_v<OUT, Decimal128>) {
+                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[idx], cntPtr[idx]);
+            } else {
+                OP(reinterpret_cast<OUT *>(&state.val), state.count, ptr[idx], cntPtr[idx]);
+            }
         }
     }
 }
@@ -192,7 +215,11 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexAvg(std::vector<Aggregate
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
             if (cntPtr[i] > 0 && !static_cast<bool>(condition[i])) {
-                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], cntPtr[i], condition[i]);
+                if constexpr (std::is_floating_point_v<OUT> || std::is_same_v<OUT, Decimal128>) {
+                    OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[i], cntPtr[i], condition[i]);
+                } else {
+                    OP(reinterpret_cast<OUT *>(&state.val), state.count, ptr[i], cntPtr[i], condition[i]);
+                }
             } else {
                 state.count = -1;
             }
@@ -229,7 +256,11 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexAvg(std::vector<Aggre
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState &state = rowStates[i][aggIdx];
             const auto idx = indexMap[i];
-            OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[idx], cntPtr[idx], condition[i]);
+            if constexpr (std::is_floating_point_v<OUT> || std::is_same_v<OUT, Decimal128>) {
+                OP(reinterpret_cast<OUT *>(state.val), state.count, ptr[idx], cntPtr[idx], condition[i]);
+            } else {
+                OP(reinterpret_cast<OUT *>(&state.val), state.count, ptr[idx], cntPtr[idx], condition[i]);
+            }
         }
     }
 }

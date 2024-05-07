@@ -363,9 +363,9 @@ void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount)
     vecBatch->Append(containerVector);
 }
 
-void FillVarcharValue(BaseVector *v, int32_t rowIndex, const AggregateState &state)
+void FillVarcharValue(BaseVector *v, int32_t rowIndex, AggregateState &state)
 {
-    if (state.val == nullptr) {
+    if (state.val == 0) {
         static_cast<Vector<LargeStringContainer<std::string_view>> *>(v)->SetNull(rowIndex);
     } else {
         std::string_view str(reinterpret_cast<char *>(state.val), state.count);

@@ -31,7 +31,9 @@ struct ColumnIndex {
 struct AggregateState {
     // for sum/avg/min/max holds latest aggregatred value
     // for stringMin/stringMax holds pointer to latestes aggregated value
-    void *val = nullptr;
+    // for bool/short/int/long/decimal64, the val is the real value
+    // for double/decimal128/char/varchar, the val is the value pointer
+    int64_t val = 0;
 
     // for sum/avg holds number of rows aggregated so far (not including null rows), or -1 if overflow happened.
     // for min/max it is 1 when at leats there is one not-null row in aggregation, otherwise 0.
@@ -40,7 +42,7 @@ struct AggregateState {
 
     void Reset()
     {
-        val = nullptr;
+        val = 0;
         count = 0;
     }
 };
@@ -113,18 +115,12 @@ public:
           channels(channels)
     {}
 
+    virtual ~Aggregator() = default;
+
     virtual void SetExecutionContext(ExecutionContext *executionContext)
     {
         this->executionContext = executionContext;
-    }
-
-    virtual ~Aggregator() = default;
-
-    virtual void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex)
-    {
-        throw OmniException("Not implemented",
-            "InitiateGroup(AggregateState &, VectorBatch *, int32_t) not implemented for " +
-            std::to_string(as_integer(type)));
+        this->arenaAllocator = executionContext->GetArena();
     }
 
     virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex)
@@ -241,7 +237,7 @@ public:
 
     virtual void InitState(AggregateState &state)
     {
-        state.val = nullptr;
+        state.val = 0;
         state.count = 0;
     }
 
@@ -291,7 +287,7 @@ public:
         return channels;
     }
 
-    virtual const ExecutionContext *GetExecutionContext() const
+    const ExecutionContext *GetExecutionContext() const
     {
         return executionContext;
     }
@@ -307,7 +303,8 @@ protected:
     const bool outputPartial;
     const bool isOverflowAsNull;
     const std::vector<int32_t> channels;
-    ExecutionContext *executionContext;
+    ExecutionContext *executionContext = nullptr;
+    SimpleArenaAllocator *arenaAllocator = nullptr;
 };
 } // end of namespace op
 } // end of namespace omniruntime

@@ -31,7 +31,7 @@ using DuplicateKeyValue = void (*)(AggregateState &state, BaseVector *vector, co
     ExecutionContext *context);
 using IsSameNodeFunc = void (*)(BaseVector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame);
 using SetVector = void (*)(VectorBatch *vecBatch, int32_t rowCount);
-using FillValue = void (*)(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
+using FillValue = void (*)(BaseVector *vector, int32_t rowIndex, AggregateState &state);
 
 struct FunctionByDataType {
     DataTypeId dataTypeId;
@@ -136,11 +136,16 @@ void HashDecimalVectFuncProxy(BaseVector *vector, const uint32_t start, const ui
 template <typename V, typename D>
 void IsSameNodeFuncImpl(BaseVector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame)
 {
-    bool isIntermediateNull = static_cast<D *>(slot.val) == nullptr;
+    bool isIntermediateNull = slot.count == 0;
     bool isInputNull = vector->IsNull(offset);
     if (!isInputNull && !isIntermediateNull) {
         auto intTmp = static_cast<V *>(vector)->GetValue(offset);
-        isSame = intTmp == *static_cast<D *>(slot.val);
+        if constexpr (std::is_same_v<D, Decimal128> || std::is_floating_point_v<D>) {
+            isSame = intTmp == *reinterpret_cast<D *>(slot.val);
+        } else {
+            isSame = intTmp == static_cast<D>(slot.val);
+        }
+
         return;
     }
     if (isInputNull != isIntermediateNull) {
@@ -154,12 +159,13 @@ void IsSameNodeFuncImpl(BaseVector *vector, const uint32_t offset, const Aggrega
 template <typename V = Vector<LargeStringContainer<std::string_view>>>
 void IsSameNodeFuncVarcharImpl(BaseVector *vector, const uint32_t offset, const AggregateState &slot, bool &isSame)
 {
-    bool isIntermediateNull = slot.val == nullptr;
+    bool isIntermediateNull = slot.val == 0;
     bool isInputNull = vector->IsNull(offset);
     if (!isInputNull && !isIntermediateNull) {
         std::string_view str = static_cast<V *>(vector)->GetValue(offset);
         auto valLen = str.size();
-        isSame = (static_cast<int64_t>(valLen) == slot.count) && (memcmp(str.data(), slot.val, valLen) == 0);
+        isSame = (static_cast<int64_t>(valLen) == slot.count) &&
+            (memcmp(str.data(), reinterpret_cast<void *>(slot.val), valLen) == 0);
         return;
     }
     if (isInputNull != isIntermediateNull) {
@@ -176,11 +182,17 @@ void DuplicateKeyValueImpl(AggregateState &state, BaseVector *vector, const uint
     if (vector->IsNull(offset)) {
         return;
     }
-    constexpr auto len = sizeof(D);
-    uint8_t *ptr = context->GetArena()->Allocate(len);
+
     D data = static_cast<V *>(vector)->GetValue(offset);
-    memcpy_s(ptr, len, &data, len);
-    state.val = ptr;
+    if constexpr (std::is_floating_point_v<D> || std::is_same_v<D, Decimal128>) {
+        constexpr auto len = sizeof(D);
+        uint8_t *ptr = context->GetArena()->Allocate(len);
+        memcpy_s(ptr, len, &data, len);
+        state.val = reinterpret_cast<int64_t>(ptr);
+    } else {
+        state.val = data;
+    }
+    state.count = 1;
 }
 
 template <typename V = Vector<LargeStringContainer<std::string_view>>>
@@ -196,7 +208,7 @@ void DuplicateVarcharKeyValue(AggregateState &state, BaseVector *vector, const u
     uint8_t *tmp = reinterpret_cast<uint8_t *>(const_cast<char *>(str.data()));
     uint8_t *data = context->GetArena()->Allocate(valLen);
     memcpy_s(data, valLen, tmp, static_cast<size_t>(valLen));
-    state.val = data;
+    state.val = reinterpret_cast<int64_t>(data);
     state.count = valLen;
 }
 
@@ -208,15 +220,19 @@ template <typename V> void SetVectorImpl(VectorBatch *vecBatch, int32_t rowCount
 void SetVarcharVector(VectorBatch *vecBatch, int32_t rowCount);
 void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount);
 
-template <typename V, typename D> void FillValueImpl(BaseVector *v, int32_t rowIndex, const AggregateState &state)
+template <typename V, typename D> void FillValueImpl(BaseVector *v, int32_t rowIndex, AggregateState &state)
 {
-    if (state.val == nullptr) {
+    if (state.count == 0) {
         static_cast<V *>(v)->SetNull(rowIndex);
     } else {
-        static_cast<V *>(v)->SetValue(rowIndex, *static_cast<D *>(state.val));
+        if constexpr (std::is_same_v<D, Decimal128> || std::is_floating_point_v<D>) {
+            static_cast<V *>(v)->SetValue(rowIndex, *reinterpret_cast<D *>(state.val));
+        } else {
+            static_cast<V *>(v)->SetValue(rowIndex, static_cast<D>(state.val));
+        }
     }
 }
-void FillVarcharValue(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
+void FillVarcharValue(BaseVector *vector, int32_t rowIndex, AggregateState &state);
 
 class HashAggregationOperator : public AggregationCommonOperator {
 public:

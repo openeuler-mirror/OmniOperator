@@ -38,21 +38,11 @@ public:
         }
     }
 
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
-    {
-        BaseVector *maskVector = vectorBatch->Get(maskColumnId);
-        if (maskVector->IsNull(rowIndex)) {
-            return;
-        }
-
-        if (static_cast<Vector<bool> *>(maskVector)->GetValue(rowIndex)) {
-            realAggregator->InitiateGroup(state, vectorBatch, rowIndex);
-        }
-    }
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);
     }
+
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);

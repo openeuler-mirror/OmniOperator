@@ -24,7 +24,8 @@ public:
         outputPartial, isOverflowAsNull)
     {}
 
-    ~AverageFlatIMAggregator() override {}
+    ~AverageFlatIMAggregator() override = default;
+
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
@@ -32,9 +33,8 @@ public:
             SumFlatIMAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
         } else {
             using InType = double;
-            auto *res = reinterpret_cast<ResultType *>(state.val);
-            // when input is not raw, vector is container with <double, long> columns for <sum, count>
 
+            // when input is not raw, vector is container with <double, long> columns for <sum, count>
             auto *sumVector =
                 reinterpret_cast<RawInputVectorType *>(SumFlatIMAggregator<IN_ID, OUT_ID>::curVectorBatch->Get(
                     SumFlatIMAggregator<IN_ID, OUT_ID>::channels[0]));
@@ -49,10 +49,21 @@ public:
             ptr += rowOffset;
             cntPtr += rowOffset;
             if (nullMap == nullptr) {
-                AddAvg<InType, ResultType, SumOp<InType, ResultType, false>>(res, state.count, ptr, cntPtr, rowCount);
+                if constexpr (std::is_floating_point_v<ResultType>) {
+                    AddAvg<InType, ResultType, SumOp<InType, ResultType, false>>(
+                        reinterpret_cast<ResultType *>(state.val), state.count, ptr, cntPtr, rowCount);
+                } else {
+                    AddAvg<InType, ResultType, SumOp<InType, ResultType, false>>(
+                        reinterpret_cast<ResultType *>(&state.val), state.count, ptr, cntPtr, rowCount);
+                }
             } else {
-                AddConditionalAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(res,
-                    state.count, ptr, cntPtr, rowCount, nullMap);
+                if constexpr (std::is_floating_point_v<ResultType>) {
+                    AddConditionalAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
+                        reinterpret_cast<ResultType *>(state.val), state.count, ptr, cntPtr, rowCount, nullMap);
+                } else {
+                    AddConditionalAvg<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
+                        reinterpret_cast<ResultType *>(&state.val), state.count, ptr, cntPtr, rowCount, nullMap);
+                }
             }
         }
     }
@@ -106,8 +117,12 @@ public:
         int64_t cnt = cntPtr[rowIdx];
         if (cnt == 0 || sumVector->IsNull(rowIdx)) {
             return;
-        } else {
+        }
+        if constexpr (std::is_floating_point_v<ResultType>) {
             SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx],
+                cnt);
+        } else {
+            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(&state.val), state.count, sum[rowIdx],
                 cnt);
         }
     }
@@ -116,13 +131,18 @@ public:
     {
         auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
         auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
-        if (state.count == 0 || state.val == nullptr) {
+        if (state.count == 0) {
             avgValVector->SetNull(rowIndex);
             avgCountVector->SetValue(rowIndex, 0);
             return;
         }
 
-        avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        if constexpr (std::is_floating_point_v<ResultType>) {
+            avgValVector->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+        } else {
+            avgValVector->SetValue(rowIndex, static_cast<ResultType>(state.val));
+        }
+
         avgCountVector->SetValue(rowIndex, state.count);
     }
 
@@ -139,7 +159,11 @@ public:
                 return;
             }
 
-            avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+            if constexpr (std::is_floating_point_v<ResultType>) {
+                avgValVector->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+            } else {
+                avgValVector->SetValue(rowIndex, static_cast<ResultType>(state.val));
+            }
             avgCountVector->SetValue(rowIndex, state.count);
         } else {
             auto avgValVector = static_cast<Vector<double> *>(vectors[0]);
@@ -150,7 +174,12 @@ public:
                 return;
             }
 
-            auto currentVal = *(static_cast<ResultType *>(state.val));
+            ResultType currentVal;
+            if constexpr (std::is_floating_point_v<ResultType>) {
+                currentVal = *(reinterpret_cast<ResultType *>(state.val));
+            } else {
+                currentVal = static_cast<ResultType>(state.val);
+            }
             auto result = currentVal / state.count;
             avgValVector->SetValue(rowIndex, result);
         }

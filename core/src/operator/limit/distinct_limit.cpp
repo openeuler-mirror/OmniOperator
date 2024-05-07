@@ -17,7 +17,7 @@ static void DoubleCheckEqualFuncImp(BaseVector *inputColVector, const uint32_t r
     const AggregateState &existedRow, bool &isSame)
 {
     auto *typeVector = dynamic_cast<T *>(inputColVector);
-    if (std::abs(*(static_cast<double *>(existedRow.val)) - typeVector->GetValue(rowIndex)) < __DBL_EPSILON__) {
+    if (std::abs(*(reinterpret_cast<double *>(existedRow.val)) - typeVector->GetValue(rowIndex)) < __DBL_EPSILON__) {
         isSame = true;
         return;
     }
@@ -30,14 +30,18 @@ static void FillOutputFuncImp(VectorBatch *outBatch, std::vector<AggregateState>
     int32_t colIndex)
 {
     // nullptr handle
-    if (srcRowVector[colIndex].val == nullptr) {
+    if (srcRowVector[colIndex].count == 0) {
         BaseVector *resultCol = outBatch->Get(colIndex);
         resultCol->SetNull(rowIndex);
         return;
     }
 
     auto typeVector = static_cast<VT *>(outBatch->Get(colIndex));
-    typeVector->SetValue(rowIndex, *(static_cast<DT *>(srcRowVector[colIndex].val)));
+    if constexpr (std::is_same_v<DT, Decimal128> || std::is_floating_point_v<DT>) {
+        typeVector->SetValue(rowIndex, *(reinterpret_cast<DT *>(srcRowVector[colIndex].val)));
+    } else {
+        typeVector->SetValue(rowIndex, static_cast<DT>(srcRowVector[colIndex].val));
+    }
 }
 
 static void FillVarcharFuncImp(VectorBatch *resultBatch, std::vector<AggregateState> &rowVector, int32_t rowIndex,
@@ -45,7 +49,7 @@ static void FillVarcharFuncImp(VectorBatch *resultBatch, std::vector<AggregateSt
 {
     using VarcharVector = NativeAndVectorType<type::DataTypeId::OMNI_VARCHAR>::vector;
     // nullptr handle
-    if (rowVector[colIndex].val == nullptr) {
+    if (rowVector[colIndex].val == 0) {
         VarcharVector *resultCol = reinterpret_cast<VarcharVector *>(resultBatch->Get(colIndex));
         resultCol->SetNull(rowIndex);
         return;
@@ -328,8 +332,8 @@ bool IsExistSameRow(const type::DataTypes &inputTypes, VectorBatch *vectorBatch,
             columnId = distinctCols[column];
             typeId = inputTypes.GetType(columnId)->GetId();
             inputVector = vectorBatch->Get(columnId);
-            if ((rowVector[column].val == nullptr) || (inputVector->IsNull(rowIndex))) {
-                isSame = ((rowVector[column].val == nullptr) && (inputVector->IsNull(rowIndex)));
+            if ((rowVector[column].count == 0) || (inputVector->IsNull(rowIndex))) {
+                isSame = ((rowVector[column].count == 0) && (inputVector->IsNull(rowIndex)));
                 continue;
             }
             if (inputVector->GetEncoding() != OMNI_DICTIONARY) {
@@ -349,8 +353,8 @@ bool IsExistSameRow(const type::DataTypes &inputTypes, VectorBatch *vectorBatch,
     return false;
 }
 
-void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int rowIndex,
-    std::vector<AggregateState> &tuple)
+void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int32_t rowIndex,
+    std::vector<AggregateState> &tuple, ExecutionContext *executionContextPtr)
 {
     const int32_t *vectorTypes = sourceTypes.GetIds();
     BaseVector *inputVector;
@@ -358,16 +362,16 @@ void DistinctLimitOperator::FillDistinctedTuple(VectorBatch *vectorBatch, int ro
     for (int32_t colIndex = 0; colIndex < outColsCount; ++colIndex) {
         int32_t colId = outCols[colIndex];
         int32_t typeId = vectorTypes[colId];
-        tuple[colIndex].val = nullptr;
+        tuple[colIndex].val = 0;
         tuple[colIndex].count = 0;
         inputVector = vectorBatch->Get(colId);
         if (!(inputVector->IsNull(rowIndex))) {
             if (inputVector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFunc(tuple[colIndex], inputVector, rowIndex,
-                    executionContext.get());
+                    executionContextPtr);
             } else {
                 DISTINCT_LIMIT_FUNC_SET[typeId].duplicateValueFuncFromDict(tuple[colIndex], inputVector, rowIndex,
-                    executionContext.get());
+                    executionContextPtr);
             }
         }
     }
@@ -379,6 +383,7 @@ void DistinctLimitOperator::InLoop(VectorBatch *vectorBatch, const int32_t rowCo
     uint64_t hashValue;
     int32_t pickedRows = 0;
 
+    auto executionContextPtr = executionContext.get();
     for (int32_t rowIndex = 0; rowIndex < rowCount; ++rowIndex) {
         hashValue = combineHashVal[rowIndex];
         auto &bucket = distinctedTable[hashValue];
@@ -386,7 +391,7 @@ void DistinctLimitOperator::InLoop(VectorBatch *vectorBatch, const int32_t rowCo
         existed = IsExistSameRow(sourceTypes, vectorBatch, distinctCols, distinctColsCount, bucket, rowIndex);
         if (!existed) {
             std::vector<AggregateState> distinctedTuple(outColsCount);
-            FillDistinctedTuple(vectorBatch, rowIndex, distinctedTuple);
+            FillDistinctedTuple(vectorBatch, rowIndex, distinctedTuple, executionContextPtr);
             bucket.push_back(distinctedTuple);
 
             auto rowInfo = new DistinctRowInfo();
@@ -433,17 +438,6 @@ void FillOutPutValue(VectorBatch *resultBatch, std::vector<AggregateState> &rowV
     std::vector<type::DataTypePtr> &outTypes, int32_t rowIndex)
 {
     for (int i = 0; i < static_cast<int>(outTypes.size()); ++i) {
-        // nullptr handle
-        if (rowVector[i].val == nullptr) {
-            BaseVector *resultCol = resultBatch->Get(i);
-            if (outTypes[i]->GetId() == OMNI_VARCHAR || outTypes[i]->GetId() == OMNI_CHAR) {
-                static_cast<Vector<LargeStringContainer<std::string_view>> *>(resultCol)->SetNull(rowIndex);
-            } else {
-                resultCol->SetNull(rowIndex);
-            }
-            continue;
-        }
-
         DISTINCT_LIMIT_FUNC_SET[outTypes[i]->GetId()].fillOutputFunc(resultBatch, rowVector, rowIndex, i);
     }
 }
