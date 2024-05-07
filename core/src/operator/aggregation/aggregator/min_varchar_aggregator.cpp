@@ -80,7 +80,7 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState 
     auto vectorPtr = vectorBatch->Get(vectorIndex++);
     if (!vectorPtr->IsNull(rowIdx)) {
         auto varcharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
-        if (state.val == nullptr || state.count == 0) {
+        if (state.val == nullptr) {
             auto strView = varcharVec->GetValue(rowIdx);
             auto *res = strView.data();
             state.count = strView.size();
