@@ -12,6 +12,9 @@
 
 namespace omniruntime {
 namespace mem {
+#ifdef DEBUG
+#define THREAD_NAME_SIZE 16
+#endif
 /**
  * TLS Object, it is responsible for memory aggregation per thread.
  *      */
@@ -65,19 +68,6 @@ public:
 
 #ifdef DEBUG
     /* *
-     * There are three external engine mobilization interfaces for implementing sql-level memory statistics.
-     * StartScope interface is used to start or cut in the memory statistics of a certain sql.
-     * @param scope: scope is mapped to sql
-     *      */
-    void StartScope(const std::string &scope);
-
-    /* *
-     * RemoveScope interface is used to cut out the memory statistics of a certain sql.
-     * @param scope: scope is mapped to sql
-     *      */
-    void RemoveScope(const std::string &scope);
-
-    /* *
      * DeleteScope interface is used to end the memory statistics of a certain sql.
      * @param scope: scope is mapped to sql
      *      */
@@ -93,7 +83,7 @@ public:
 
 private:
 #ifdef DEBUG
-    std::string currentScope = "";
+    char currentScope[THREAD_NAME_SIZE];
 #endif
     MemoryManager *currentMemoryManager;
     /* *

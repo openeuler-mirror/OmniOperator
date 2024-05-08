@@ -2311,7 +2311,7 @@ TEST(NativeOmniJoinTest, TestVariableKeysFullEqualityJoinWithBuildNull)
     vectorBatch->Get(1)->SetNull(3);
     vectorBatch->Get(2)->SetNull(0);
     vectorBatch->Get(2)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);

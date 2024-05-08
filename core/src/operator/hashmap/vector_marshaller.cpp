@@ -6,23 +6,46 @@
 #include "operator/omni_id_type_vector_traits.h"
 #include "vector/unsafe_vector.h"
 
+static constexpr int32_t BYTE_1 = 1;
+static constexpr int32_t BYTE_2 = 2;
+static constexpr int32_t BYTE_4 = 4;
+static constexpr int32_t BYTE_8 = 8;
+static constexpr int32_t BYTE_16 = 16;
+static constexpr int32_t BIT_8 = 8;
+static constexpr int32_t BIT_32 = 32;
+static constexpr int32_t BIT_64 = 64;
+
 namespace omniruntime {
 namespace op {
 template <DataTypeId id> const char *VariableTypeDeserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
 {
     using RealVector = typename NativeAndVectorType<id>::vector;
     auto realVector = static_cast<RealVector *>(baseVector);
-    const auto stringSize = *reinterpret_cast<const int32_t *>(pos);
-    pos += sizeof(int32_t);
+    auto rowLenSize = *reinterpret_cast<const uint8_t *>(pos);
 
-    if (stringSize < 0) {
-        // string_size < 0 means null pointer
-        realVector->SetNull(static_cast<int32_t>(rowIdx));
-        return pos;
-    } else {
-        std::string_view strView(pos, stringSize);
+    if (rowLenSize != 0) {
+        // decompress rowLenSize byte to stringLen.
+        auto stringLen = 0;
+        switch (rowLenSize) {
+            case BYTE_1:
+                stringLen = *reinterpret_cast<const int8_t *>(pos + sizeof(uint8_t));
+                break;
+            case BYTE_2:
+                stringLen = *reinterpret_cast<const int16_t *>(pos + sizeof(uint8_t));
+                break;
+            case BYTE_4:
+                stringLen = *reinterpret_cast<const int32_t *>(pos + sizeof(uint8_t));
+                break;
+            default:
+                throw OmniException("DESERIALIZED FAILED", "Invalid String Length");
+        }
+        pos = pos + sizeof(uint8_t) + rowLenSize;
+        std::string_view strView(pos, stringLen);
         realVector->SetValue(rowIdx, strView);
-        return pos + stringSize;
+        return pos + stringLen;
+    } else {
+        realVector->SetNull(rowIdx);
+        return pos + sizeof(uint8_t);
     }
 }
 
@@ -30,83 +53,149 @@ void ALWAYS_INLINE VariableTypeSerializer(const std::string_view &inValue, mem::
     StringRef &result)
 {
     auto stringLen = static_cast<int32_t>(inValue.size());
-    auto resLen = sizeof(int32_t) + stringLen;
+    // __builtin_clzll is a built-in function of gcc and clang compiler
+    uint8_t rowLenSize = (BIT_64 - __builtin_clzll(stringLen)) / BIT_8;
+    // find the value of the closest PowerOfTwo for rowDataSize
+    rowLenSize = BYTE_1 << (BIT_32 - __builtin_clz(rowLenSize));
+
+    auto resLen = sizeof(uint8_t) + rowLenSize + stringLen;
     auto *&data = result.data;
     auto pos = arenaAllocator.AllocateContinue(resLen, (const uint8_t *&)(data));
-    *reinterpret_cast<int32_t *>(pos) = stringLen;
-    std::copy(inValue.data(), inValue.data() + stringLen, pos + sizeof(int32_t));
+    *reinterpret_cast<uint8_t *>(pos) = rowLenSize;
+
+    // compress stringLen from 4 bytes to rowLenSize bytes
+    // copy stringLen
+    memcpy_s(pos + sizeof(uint8_t), rowLenSize, &stringLen, rowLenSize);
+    // copy string
+    std::copy(inValue.data(), inValue.data() + stringLen, pos + sizeof(uint8_t) + rowLenSize);
     result.size += resLen;
 }
 
 void NullVariableTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
+    auto resSize = sizeof(uint8_t);
     auto *&data = result.data;
-    auto *pos = arenaAllocator.AllocateContinue(sizeof(int32_t), (const uint8_t *&)(data));
-    *reinterpret_cast<int32_t *>(pos) = -1;
-    result.size += sizeof(int32_t);
+    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
+    (*pos) = 0; // value is null
+    result.size += resSize;
+}
+
+const char *Decimal128Deserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
+{
+    auto realVector = reinterpret_cast<vec::Vector<Decimal128> *>(baseVector);
+    uint8_t rowDataSize = *(reinterpret_cast<const uint8_t *>(pos));
+    if (rowDataSize != 0) {
+        // must copy value
+        auto *copyPointer = reinterpret_cast<const Decimal128 *>(pos + sizeof(uint8_t));
+        auto value = *copyPointer;
+        realVector->SetValue(rowIdx, value);
+        return pos + rowDataSize + sizeof(uint8_t);
+    } else {
+        realVector->SetNull(rowIdx);
+        return pos + sizeof(uint8_t);
+    }
+}
+
+template <typename T> T GetValue(uint8_t rowDataSize, const char *pos)
+{
+    T value;
+    switch (rowDataSize) {
+        case BYTE_1:
+            value = (T)(*reinterpret_cast<const int8_t *>(pos));
+            break;
+        case BYTE_2:
+            value = (T)(*reinterpret_cast<const int16_t *>(pos));
+            break;
+        case BYTE_4:
+            value = (T)(*reinterpret_cast<const int32_t *>(pos));
+            break;
+        case BYTE_8:
+            if constexpr (std::is_same_v<T, double>) {
+                value = (T)(*reinterpret_cast<const double *>(pos));
+            } else {
+                value = (T)(*reinterpret_cast<const int64_t *>(pos));
+            }
+            break;
+        default:
+            auto message = "Invalid Fixed Value Size: " + std::to_string(rowDataSize);
+            throw OmniException("DESERIALIZED FAILED", message);
+    }
+    return value;
 }
 
 template <DataTypeId id> const char *FixedLenTypeDeserializer(BaseVector *baseVector, size_t rowIdx, const char *pos)
 {
     using RawDataType = typename NativeAndVectorType<id>::type;
     using RealVector = typename NativeAndVectorType<id>::vector;
-    static constexpr uint8_t RawDataSize = sizeof(RawDataType);
     auto realVector = static_cast<RealVector *>(baseVector);
-    bool isNull = *(reinterpret_cast<const bool *>(pos));
-    if (!isNull) {
-        // must copy value
-        auto *copyPointer = reinterpret_cast<const RawDataType *>(pos + 1);
-        auto value = *copyPointer;
+    auto rowDataSize = *(reinterpret_cast<const uint8_t *>(pos));
+    if (rowDataSize != 0) {
+        // value is not null, must copy value
+        auto value = GetValue<RawDataType>(rowDataSize, pos + sizeof(uint8_t));
         realVector->SetValue(rowIdx, value);
+        return pos + sizeof(uint8_t) + rowDataSize;
     } else {
+        // value is null
         realVector->SetNull(rowIdx);
+        return pos + sizeof(uint8_t);
     }
-    return pos + RawDataSize + sizeof(bool);
 }
 
 void Decimal128Serializer(Decimal128 &value, mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
-    static constexpr uint8_t RawDataSize = sizeof(Decimal128);
-    auto resSize = sizeof(bool) + RawDataSize;
+    uint8_t rowDataSize = BYTE_16;
+    auto resSize = sizeof(uint8_t) + rowDataSize;
     auto *&data = result.data;
     auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
-    (*pos) = false;
-    *reinterpret_cast<Decimal128 *>((pos + sizeof(bool))) = value;
+    (*pos) = rowDataSize;
+    *reinterpret_cast<Decimal128 *>((pos + sizeof(uint8_t))) = value;
     result.size += resSize;
 }
 
 template <typename RawDataType>
 void FixedLenTypeSerializer(RawDataType value, mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
-    static constexpr uint8_t RawDataSize = sizeof(RawDataType);
-    auto resSize = sizeof(bool) + RawDataSize;
+    uint8_t rowDataSize;
+    if constexpr (std::is_same_v<RawDataType, double>) {
+        rowDataSize = BYTE_8;
+    } else if constexpr (std::is_same_v<RawDataType, bool>) {
+        rowDataSize = BYTE_1;
+    } else {
+        auto tmp = value;
+        if (value < 0) {
+            tmp = ~tmp;
+        }
+        // __builtin_clzll is a built-in function of gcc and clang compiler
+        rowDataSize = (BIT_64 - __builtin_clzll(tmp)) / BIT_8;
+        // find the value of the closest PowerOfTwo for rowDataSize
+        rowDataSize = BYTE_1 << (BIT_32 - __builtin_clz(rowDataSize));
+    }
+
+    auto resSize = sizeof(int8_t) + rowDataSize;
     auto *&data = result.data;
+
     auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
-    (*pos) = false;
-    *reinterpret_cast<RawDataType *>(pos + sizeof(bool)) = value;
+    (*pos) = rowDataSize;
+    // copy value
+    memcpy_s(pos + sizeof(uint8_t), rowDataSize, &value, rowDataSize);
     result.size += resSize;
 }
 
 void NullDecimal128Serializer(mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
-    static constexpr uint8_t RawDataSize = sizeof(Decimal128);
-    auto resSize = sizeof(bool) + RawDataSize;
+    auto resSize = sizeof(uint8_t);
     auto *&data = result.data;
     auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
-    (*pos) = true;
-    memset_sp(pos + sizeof(bool), RawDataSize, 0, RawDataSize);
+    (*pos) = 0;
     result.size += resSize;
 }
 
-template <typename RawDataType>
 void NullFixedLenTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, StringRef &result)
 {
-    static constexpr uint8_t RawDataSize = sizeof(RawDataType);
-    auto resSize = sizeof(bool) + RawDataSize;
+    auto resSize = sizeof(uint8_t);
     auto *&data = result.data;
     auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
-    (*pos) = true;
-    *reinterpret_cast<RawDataType *>(pos + sizeof(bool)) = 0;
+    (*pos) = 0; // value is null
     result.size += resSize;
 }
 
@@ -137,7 +226,7 @@ void SerializeValueIntoArena(BaseVector *baseVector, int32_t rowIdx, mem::Simple
         } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
             NullDecimal128Serializer(arenaAllocator, result);
         } else {
-            NullFixedLenTypeSerializer<RawDataType>(arenaAllocator, result);
+            NullFixedLenTypeSerializer(arenaAllocator, result);
         }
     }
 }
@@ -167,7 +256,7 @@ void SerializeDictionaryValueIntoArena(BaseVector *baseVector, int32_t rowIdx,
     } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
         NullDecimal128Serializer(arenaAllocator, result);
     } else {
-        NullFixedLenTypeSerializer<RawDataType>(arenaAllocator, result);
+        NullFixedLenTypeSerializer(arenaAllocator, result);
     }
 }
 
@@ -178,6 +267,8 @@ const char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const
     // the analysis of const expr  will be in compile stage
     if constexpr (std::is_same_v<RawDataType, std::string_view>) {
         return VariableTypeDeserializer<id>(baseVector, rowIdx, begin);
+    } else if constexpr (std::is_same_v<RawDataType, Decimal128>) {
+        return Decimal128Deserializer(baseVector, rowIdx, begin);
     } else {
         return FixedLenTypeDeserializer<id>(baseVector, rowIdx, begin);
     }
