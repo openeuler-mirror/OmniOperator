@@ -2038,18 +2038,8 @@ TEST(FilterTest, Coalesce6)
 
 // Testing multithreading
 // Two operators running at once
-void process(omniruntime::op::Operator *op, VectorBatch *t, VectorBatch **outputVecBatch, int32_t *numReturned)
+void process(omniruntime::op::FilterAndProjectOperatorFactory *factory, int32_t *numReturned)
 {
-    op->AddInput(t);
-    *numReturned = op->GetOutput(outputVecBatch);
-    std::cout << "numSelectedRows: " << *numReturned << std::endl;
-}
-
-#include <thread>
-#include <ratio>
-TEST(FilterTest, Multithreading)
-{
-    ConfigUtil::SetEnableBatchExprEvaluate(false);
     const int32_t numRows = 100000;
     auto *col1 = new int32_t[numRows];
     auto *col2 = new int64_t[numRows];
@@ -2059,14 +2049,29 @@ TEST(FilterTest, Multithreading)
         col2[i] = i % 5;
         col3[i] = -1;
     }
+    VectorBatch *outputVecBatch = nullptr;
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType(), IntType() }));
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
+
+    op->AddInput(t);
+    *numReturned = op->GetOutput(&outputVecBatch);
+    std::cout << "numSelectedRows: " << *numReturned << std::endl;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+}
+
+#include <thread>
+#include <ratio>
+TEST(FilterTest, Multithreading)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
 
     DataTypes inputTypes(std::vector<DataTypePtr>({ IntType(), LongType(), IntType() }));
-    DataTypes inputTypes2(std::vector<DataTypePtr>({ IntType(), LongType(), IntType() }));
-    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
-    VectorBatch *t2 = CreateVectorBatch(inputTypes2, numRows, col1, col2, col3);
 
-    VectorBatch *outputVecBatch1 = nullptr;
-    VectorBatch *outputVecBatch2 = nullptr;
     int32_t *numReturned = new int32_t;
     int32_t *numReturned2 = new int32_t;
 
@@ -2098,8 +2103,7 @@ TEST(FilterTest, Multithreading)
     auto overflowConfig = new OverflowConfig();
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr1, projections1, inputTypes, overflowConfig);
     auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
-    omniruntime::op::Operator *op = factory->CreateOperator();
-    std::thread thread1(process, op, t, &outputVecBatch1, numReturned);
+    std::thread thread1(process, factory, numReturned);
 
     // filter2
     auto eqRight2 = new LiteralExpr(4L, LongType());
@@ -2110,8 +2114,7 @@ TEST(FilterTest, Multithreading)
 
     auto exprEvaluator2 = std::make_shared<ExpressionEvaluator>(filterExpr2, projections2, inputTypes, overflowConfig);
     auto *factory2 = new FilterAndProjectOperatorFactory(move(exprEvaluator2));
-    omniruntime::op::Operator *op2 = factory2->CreateOperator();
-    std::thread thread2(process, op2, t2, &outputVecBatch2, numReturned2);
+    std::thread thread2(process, factory2, numReturned2);
 
     thread2.join();
     thread1.join();
@@ -2121,14 +2124,6 @@ TEST(FilterTest, Multithreading)
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << "Total time for multithreading test: ";
     std::cout << std::chrono::duration<double, std::milli>(end - start).count() << std::endl;
-
-    VectorHelper::FreeVecBatch(outputVecBatch1);
-    VectorHelper::FreeVecBatch(outputVecBatch2);
-    delete[] col1;
-    delete[] col2;
-    delete[] col3;
-    omniruntime::op::Operator::DeleteOperator(op);
-    delete op2;
 
     delete factory2;
     delete numReturned;

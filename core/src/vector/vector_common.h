@@ -11,5 +11,8 @@
 #include "vector_batch.h"
 #include "vector_helper.h"
 #include "memory/allocator.h"
+#include "memory/memory_manager.h"
+#include "memory/memory_trace.h"
+#include "memory/thread_memory_trace.h"
 
 #endif // OMNI_RUNTIME_VECTOR_COMMON_H

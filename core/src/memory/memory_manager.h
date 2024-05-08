@@ -63,11 +63,11 @@ public:
 
     /* *
      * A unified interface for updating memory usage.
-     * Account() interface is called when the untrackedMemory exceeds the threshold range [-THRESHOLD, THRESHOLD].
+     * AccountMemory() interface is called when the untrackedMemory exceeds the threshold range [-THRESHOLD, THRESHOLD].
      * Note that untrackedMemory could be less than -THRESHOLD. That is, the memory is continuously allocated,
      * and then be continuously freed.
     *  */
-    void Account(int64_t size)
+    void AccountMemory(int64_t size)
     {
         int64_t newMemoryAmount = memoryAmount.fetch_add(size, std::memory_order_relaxed) + size;
         int64_t limit = memoryLimit.load(std::memory_order_relaxed);
@@ -77,27 +77,20 @@ public:
             /* *
              * A thread cannot throw multiple exceptions in the case of multiple threads.
              * The If statement is used to avoid the following case: When the thread exceeds the limit,
-             * the destructor of the thread is called and the Account interface is executed again,
+             * the destructor of the thread is called and the AccountMemory interface is executed again,
              * which may cause the OmniException to be thrown again.
             *  */
             if (!isBlocked.load(std::memory_order_relaxed)) {
                 isBlocked.store(true, std::memory_order_relaxed);
-#ifdef TRACE
-                // print current vector and arena memory usage.
-                MemoryTrace *trace = MemoryTrace::GetMemoryTrace();
-                int64_t vectorMemory = trace->GetVectorAllocated();
-                std::cout << "vector memory is: " << vectorMemory << std::endl;
-                int64_t arenaMemory = trace->GetArenaAllocated();
-                std::cout << "arena memory is: " << arenaMemory << std::endl;
-#endif
+
                 auto message =
-                    op::GetErrorMessage(op::ErrorCode::MEM_CAP_EXCEEDED) + std::to_string(limit / 1024 / 1024);
+                        op::GetErrorMessage(op::ErrorCode::MEM_CAP_EXCEEDED) + std::to_string(limit / 1024 / 1024);
                 throw OmniException(GetErrorCode(op::ErrorCode::MEM_CAP_EXCEEDED), message);
             }
         }
 
         if (auto parentMemoryManager = parent.load(std::memory_order_relaxed)) {
-            parentMemoryManager->Account(size);
+            parentMemoryManager->AccountMemory(size);
         }
     }
 

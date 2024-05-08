@@ -205,9 +205,7 @@ public:
         int64_t vectorCapacity =
             sizeof(Vector<RAW_DATA_TYPE>) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<RAW_DATA_TYPE>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     virtual ~Vector() override
@@ -219,9 +217,7 @@ public:
                 vectorCapacity += sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<RAW_DATA_TYPE>);
             }
             omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
-#ifdef TRACE
             omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
         }
     }
 
@@ -241,9 +237,7 @@ public:
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     /* *
@@ -386,9 +380,7 @@ public:
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>) +
             sizeof(AlignedBuffer<bool>) + container->GetContainerCapacity();
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     // used for vector slice, sliced vector use same container as parent vector
@@ -401,9 +393,7 @@ public:
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<DictionaryContainer<RAW_DATA_TYPE, CONTAINER>>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     ~Vector() override
@@ -414,9 +404,7 @@ public:
             vectorCapacity += sizeof(AlignedBuffer<bool>) + container->GetContainerCapacity();
         }
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     /* *
@@ -517,9 +505,7 @@ public:
         int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>) + sizeof(AlignedBuffer<bool>) +
             container->GetContainerCapacity();
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     // used for vector slice, sliced vector use same container as parent vector
@@ -531,9 +517,7 @@ public:
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<LargeStringContainer<RAW_DATA_TYPE>>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     ~Vector() override
@@ -544,9 +528,7 @@ public:
             vectorCapacity += sizeof(AlignedBuffer<bool>) + container->GetContainerCapacity();
         }
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     /* *

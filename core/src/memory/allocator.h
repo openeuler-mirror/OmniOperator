@@ -25,9 +25,7 @@ public:
         ThreadMemoryManager::ReportMemory(size);
         uint8_t *data = nullptr;
         pool->Allocate(size, &data, zeroFill);
-#ifdef TRACE
         MemoryTrace::AddArenaMemory(reinterpret_cast<uintptr_t>(data), size);
-#endif
         return data;
     }
 
@@ -35,9 +33,7 @@ public:
     {
         // memory usage statistics
         ThreadMemoryManager::ReclaimMemory(size);
-#ifdef TRACE
         MemoryTrace::SubArenaMemory(reinterpret_cast<uintptr_t>(reinterpret_cast<uint8_t *>(data)), size);
-#endif
         pool->Release(reinterpret_cast<uint8_t *>(data));
     }
 

@@ -45,9 +45,7 @@ public:
         // report memory usage
         int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     ContainerVector(int32_t capacityInBytes, int32_t positionCount)
@@ -66,9 +64,7 @@ public:
         // report memory usage
         int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     // inline for high performance.
@@ -185,9 +181,7 @@ public:
 
         int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
-#ifdef TRACE
         omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
-#endif
     }
 
     void SetDataTypes(const std::vector<type::DataTypePtr> &dataTypes)
