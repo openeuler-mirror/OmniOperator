@@ -55,11 +55,12 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
                 isOverflow = __builtin_add_overflow(tmpResult, dataPtr[i], &tmpResult);
                 state.val = OutDecimalType(tmpResult);
             }
-            state.count += 1;
-        }
 
-        if (isOverflow) {
-            state.count = -1;
+            if (isOverflow) {
+                state.count = -1;
+            } else {
+                state.count += 1;
+            }
         }
     }
 }
