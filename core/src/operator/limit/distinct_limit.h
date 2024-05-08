@@ -83,7 +83,8 @@ public:
     OmniStatus Close() override;
 
 private:
-    void FillDistinctedTuple(vec::VectorBatch *vectorBatch, int rowIndex, std::vector<AggregateState> &tuple);
+    void FillDistinctedTuple(vec::VectorBatch *vectorBatch, int32_t rowIndex, std::vector<AggregateState> &tuple,
+        ExecutionContext *executionContextPtr);
 
     void InLoop(vec::VectorBatch *vectorBatch, const int32_t rowCount, const uint64_t *combineHashVal);
 

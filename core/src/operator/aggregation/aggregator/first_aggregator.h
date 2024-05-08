@@ -39,19 +39,11 @@ public:
 
     ~FirstAggregator() override = default;
 
-    void InitiateGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
-    {
-        if (state.val == nullptr) {
-            InitState(state);
-        }
-        ProcessGroup(state, vectorBatch, rowIndex);
-    }
-
     int64_t UpdateFirstStateVarcharVal(FirstState *firstState, int64_t length, std::string_view &firstVarcharValue)
     {
         auto firstValueLength = static_cast<int64_t>(firstVarcharValue.size());
         if (firstValueLength > length) {
-            auto ptr = executionContext->GetArena()->Allocate(firstValueLength);
+            auto ptr = arenaAllocator->Allocate(firstValueLength);
             memcpy_s(ptr, firstValueLength, firstVarcharValue.data(), firstValueLength);
             firstState->val = ptr;
         } else {
@@ -137,7 +129,7 @@ public:
 
     void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        auto firstState = static_cast<FirstState *>(state.val);
+        auto firstState = reinterpret_cast<FirstState *>(state.val);
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             if constexpr (INPUT_RAW) {
                 BaseVector *vector = vectorBatch->Get(channels[0]);
@@ -194,7 +186,7 @@ public:
     {
         auto firstVector = vectorBatch->Get(vectorIndex++);
         auto valueSetVector = vectorBatch->Get(vectorIndex++);
-        auto firstState = static_cast<FirstState *>(state.val);
+        auto firstState = reinterpret_cast<FirstState *>(state.val);
 
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             if constexpr (IGNORE_NULL) {
@@ -251,7 +243,7 @@ public:
     {
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             auto firstVarcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
-            auto firstState = static_cast<FirstState *>(state.val);
+            auto firstState = reinterpret_cast<FirstState *>(state.val);
             if (firstState->valIsNull) {
                 firstVarcharVector->SetNull(rowIndex);
             } else {
@@ -263,7 +255,7 @@ public:
             valueSetVector->SetValue(rowIndex, firstState->valueSet);
         } else {
             auto firstVector = reinterpret_cast<Vector<InputType> *>(vectors[0]);
-            auto firstState = static_cast<FirstState *>(state.val);
+            auto firstState = reinterpret_cast<FirstState *>(state.val);
             if (firstState->valIsNull) {
                 firstVector->SetNull(rowIndex);
             } else {
@@ -278,7 +270,7 @@ public:
     {
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             auto firstVarcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
-            auto firstState = static_cast<FirstState *>(state.val);
+            auto firstState = reinterpret_cast<FirstState *>(state.val);
             if constexpr (OUT_PARTIAL) {
                 if (firstState->valIsNull) {
                     firstVarcharVector->SetNull(rowIndex);
@@ -301,7 +293,7 @@ public:
             }
         } else {
             auto firstVector = reinterpret_cast<Vector<InputType> *>(vectors[0]);
-            auto firstState = static_cast<FirstState *>(state.val);
+            auto firstState = reinterpret_cast<FirstState *>(state.val);
             if constexpr (OUT_PARTIAL) {
                 if (firstState->valIsNull) {
                     firstVector->SetNull(rowIndex);
@@ -325,14 +317,14 @@ public:
 
     void InitState(AggregateState &state) override
     {
-        state.val = executionContext->GetArena()->Allocate(PARTIAL_FIRST_OUTPUT_LENGTH);
+        state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(PARTIAL_FIRST_OUTPUT_LENGTH));
         state.count = 0;
-        auto firstState = static_cast<FirstState *>(state.val);
+        auto firstState = reinterpret_cast<FirstState *>(state.val);
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             // allocate 1 byte for varchar default
-            firstState->val = executionContext->GetArena()->Allocate(1);
+            firstState->val = arenaAllocator->Allocate(1);
         } else {
-            firstState->val = executionContext->GetArena()->Allocate(sizeof(InputType));
+            firstState->val = arenaAllocator->Allocate(sizeof(InputType));
         }
         firstState->valueSet = false;
         firstState->valIsNull = true;

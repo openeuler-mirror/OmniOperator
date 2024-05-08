@@ -13,13 +13,12 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
 {
     auto v = static_cast<OutVector *>(vectors[0]);
 
-    OutType result{};
+    OutType result {};
     bool overflow = state.count < 0;
 
     if constexpr (OUT_ID == OMNI_VARCHAR) {
-        if (state.count > 0 && state.val != nullptr) {
-            result.sum = this->template CastWithOverflow<Decimal128, Decimal128>(
-                *reinterpret_cast<Decimal128 *>(state.val), overflow);
+        if (state.count > 0) {
+            result.sum = CastWithOverflow<Decimal128, Decimal128>(*reinterpret_cast<Decimal128 *>(state.val), overflow);
         }
         result.count = overflow ? 0 : state.count;
         std::string_view decimal2Str(reinterpret_cast<char *>(&result), sizeof(OutType));
@@ -28,14 +27,13 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
             throw OmniException("OPERATOR_RUNTIME_ERROR", "sum_aggregator overflow.");
         }
     } else {
-        if (state.count > 0 && state.val != nullptr) {
-            result = this->template CastWithOverflow<ResultType, OutType>(*reinterpret_cast<ResultType *>(state.val),
-                overflow);
+        if (state.count > 0) {
+            result = CastWithOverflowEntry<ResultType, OutType>(state.val, overflow);
         }
         v->SetValue(rowIndex, result);
         if (overflow) {
             this->SetNullOrThrowException(v, rowIndex, "sum_aggregator overflow.");
-        } else if (state.count == 0 || state.val == nullptr) {
+        } else if (state.count == 0) {
             v->SetNull(rowIndex);
         }
     }
@@ -58,21 +56,31 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const omniruntime::op::AggregateState &state,
     std::vector<BaseVector *> &vectors, int32_t rowIndex)
 {
-    auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
-    auto spillCount = static_cast<Vector<long> *>(vectors[1]);
-    if (state.count == 0 || state.val == nullptr) {
-        spillValue->SetNull(rowIndex);
-        spillCount->SetValue(rowIndex, state.count);
+    auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
+    auto spillCountVec = static_cast<Vector<long> *>(vectors[1]);
+    if (state.count == 0) {
+        spillValueVec->SetNull(rowIndex);
+        spillCountVec->SetValue(rowIndex, state.count);
         return;
     }
-    spillValue->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-    spillCount->SetValue(rowIndex, state.count);
+    if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType> ||
+        std::is_same_v<ResultType, std::string_view>) {
+        spillValueVec->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+    } else {
+        spillValueVec->SetValue(rowIndex, static_cast<ResultType>(state.val));
+    }
+    spillCountVec->SetValue(rowIndex, state.count);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
 {
-    state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-    *reinterpret_cast<ResultType *>(state.val) = ResultType{};
+    if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType> ||
+        std::is_same_v<ResultType, std::string_view>) {
+        state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(sizeof(ResultType)));
+        *reinterpret_cast<ResultType *>(state.val) = ResultType {};
+    } else {
+        state.val = 0;
+    }
     state.count = 0;
 }
 
@@ -80,32 +88,55 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
-    if (state.val == nullptr) {
-        this->InitState(state);
-    }
-    auto *res = reinterpret_cast<ResultType *>(state.val);
-
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            Add<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount);
+            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+                Add<InType, ResultType, SumOp<InType, ResultType>>(reinterpret_cast<ResultType *>(state.val),
+                    state.count, ptr, rowCount);
+            } else {
+                Add<InType, ResultType, SumOp<InType, ResultType>>(reinterpret_cast<ResultType *>(&state.val),
+                    state.count, ptr, rowCount);
+            }
         } else {
             if constexpr (std::is_floating_point_v<InType>) {
-                SumConditionalFloat<InType, ResultType, false>(res, state.count, ptr, rowCount, nullMap);
+                if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+                    SumConditionalFloat<InType, ResultType, false>(reinterpret_cast<ResultType *>(state.val),
+                        state.count, ptr, rowCount, nullMap);
+                } else {
+                    SumConditionalFloat<InType, ResultType, false>(reinterpret_cast<ResultType *>(&state.val),
+                        state.count, ptr, rowCount, nullMap);
+                }
             } else {
-                AddConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
-                    rowCount, nullMap);
+                if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+                    AddConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
+                        reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
+                } else {
+                    AddConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
+                        reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
+                }
             }
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
-            AddDict<InType, ResultType, SumOp<InType, ResultType>>(res, state.count, ptr, rowCount, indexMap);
+            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+                AddDict<InType, ResultType, SumOp<InType, ResultType>>(reinterpret_cast<ResultType *>(state.val),
+                    state.count, ptr, rowCount, indexMap);
+            } else {
+                AddDict<InType, ResultType, SumOp<InType, ResultType>>(reinterpret_cast<ResultType *>(&state.val),
+                    state.count, ptr, rowCount, indexMap);
+            }
         } else {
-            AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(res, state.count, ptr,
-                rowCount, nullMap, indexMap);
+            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+                AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
+                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
+            } else {
+                AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
+                    reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap, indexMap);
+            }
         }
     }
 }
@@ -156,7 +187,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state,
         } else if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
             auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_LONG>(sumVector));
             sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, sum[rowIdx], cnt);
         } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
             auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
             sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);

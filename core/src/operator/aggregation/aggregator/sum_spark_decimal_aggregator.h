@@ -27,7 +27,7 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
             // cur state overflow, so no need to aggregate
             continue;
         }
-        auto res = reinterpret_cast<OutDecimalType *>(state.val);
+
         ResultIntType tmpResult = 0;
         if constexpr (HasNullFlag) {
             if (nullMap[i]) {
@@ -39,6 +39,7 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
 
         if (not emptyPtr[i]) {
             if constexpr (std::is_same_v<OutDecimalType, Decimal128>) {
+                auto res = reinterpret_cast<OutDecimalType *>(state.val);
                 tmpResult = res->ToInt128();
                 if constexpr (std::is_same_v<InDecimalType, Decimal128>) {
                     // decimal128 + decimal128 = decimal128
@@ -47,13 +48,14 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
                     // decimal64 + decimal64 = decimal128
                     isOverflow = AddCheckedOverflow(tmpResult, int128_t(dataPtr[i]), tmpResult);
                 }
+                *res = OutDecimalType(tmpResult);
             } else {
                 // decimal64 + decimal64 = decimal64
-                tmpResult = *res;
+                tmpResult = state.val;
                 isOverflow = __builtin_add_overflow(tmpResult, dataPtr[i], &tmpResult);
+                state.val = OutDecimalType(tmpResult);
             }
             state.count += 1;
-            *res = OutDecimalType(tmpResult);
         }
 
         if (isOverflow) {
@@ -71,10 +73,10 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalRowIndex(AggregateState &state, const In
         // cur state overflow, so no need to aggregate
         return;
     }
-    auto res = reinterpret_cast<OutDecimalType *>(state.val);
-    ResultIntType tmpResult = 0;
 
+    ResultIntType tmpResult = 0;
     if constexpr (std::is_same_v<OutDecimalType, Decimal128>) {
+        auto res = reinterpret_cast<OutDecimalType *>(state.val);
         tmpResult = res->ToInt128();
         if constexpr (std::is_same_v<InDecimalType, Decimal128>) {
             // decimal128 + decimal128 = decimal128
@@ -83,13 +85,14 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalRowIndex(AggregateState &state, const In
             // decimal64 + decimal64 = decimal128
             isOverflow = AddCheckedOverflow(tmpResult, int128_t(dataPtr[rowIdx]), tmpResult);
         }
+        *res = OutDecimalType(tmpResult);
     } else {
         // decimal64 + decimal64 = decimal64
-        tmpResult = *res;
+        tmpResult = state.val;
         isOverflow = __builtin_add_overflow(tmpResult, dataPtr[rowIdx], &tmpResult);
+        state.val = OutDecimalType(tmpResult);
     }
     state.count += cnt;
-    *res = OutDecimalType(tmpResult);
 
     if (isOverflow) {
         state.count = -1;
@@ -131,26 +134,32 @@ public:
 
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
-        auto spillCount = static_cast<Vector<long> *>(vectors[1]);
+        auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto spillCountVec = static_cast<Vector<long> *>(vectors[1]);
         if (state.count == 0) {
-            spillValue->SetNull(rowIndex);
-            spillCount->SetValue(rowIndex, state.count);
+            spillValueVec->SetNull(rowIndex);
+            spillCountVec->SetValue(rowIndex, state.count);
             return;
         }
 
-        spillValue->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
-        spillCount->SetValue(rowIndex, state.count);
+        if constexpr (std::is_same_v<ResultType, Decimal128>) {
+            spillValueVec->SetValue(rowIndex, *reinterpret_cast<Decimal128 *>(state.val));
+        } else {
+            spillValueVec->SetValue(rowIndex, state.val);
+        }
+
+        spillCountVec->SetValue(rowIndex, state.count);
     }
+
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         BaseVector *vector = vectors[0];
 
         int128_t decodedDec = 0;
         if constexpr (std::is_same_v<ResultType, Decimal128>) {
-            decodedDec = static_cast<Decimal128 *>(state.val)->ToInt128();
+            decodedDec = reinterpret_cast<Decimal128 *>(state.val)->ToInt128();
         } else {
-            decodedDec = *(static_cast<int64_t *>(state.val));
+            decodedDec = state.val;
         }
         bool isOverflow = (state.count < 0);
         bool isEmpty = (state.count == 0);
@@ -193,11 +202,11 @@ public:
     void InitState(AggregateState &state) override
     {
         if constexpr (std::is_same_v<ResultType, Decimal128>) {
-            state.val = executionContext->GetArena()->Allocate(sizeof(Decimal128));
-            new (state.val) Decimal128(0, 0);
+            auto val = arenaAllocator->Allocate(sizeof(Decimal128));
+            new (val)Decimal128(0, 0);
+            state.val = reinterpret_cast<int64_t>(val);
         } else {
-            state.val = executionContext->GetArena()->Allocate(sizeof(int64_t));
-            *((int64_t *)(state.val)) = 0;
+            state.val = 0;
         }
         state.count = 0;
     }
@@ -230,8 +239,13 @@ public:
         if (cnt == 0 || sumVector->IsNull(rowIdx)) {
             return;
         } else if (inputRaw) {
-            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx],
-                cnt);
+            if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count,
+                    sum[rowIdx], cnt);
+            } else {
+                SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(&state.val), state.count,
+                    sum[rowIdx], cnt);
+            }
         } else {
             AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, sum, cnt, rowIdx);
         }
@@ -270,7 +284,6 @@ public:
     void ProcessSingleInternalFinal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *conditionMap)
     {
-        auto *res = reinterpret_cast<ResultType *>(state.val);
         auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
 
         auto *emptyVector = curVectorBatch->Get(channels[1]);
@@ -286,7 +299,13 @@ public:
                 }
                 if (not emptyPtr[i]) {
                     // the emptyPtr here means partial result is null
-                    SumOp<InRawType, ResultType>(res, state.count, ptr[i], 1LL);
+                    if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                        SumOp<InRawType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[i],
+                            1LL);
+                    } else {
+                        SumOp<InRawType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, ptr[i],
+                            1LL);
+                    }
                 }
             }
         } else {
@@ -298,7 +317,13 @@ public:
                 if (not conditionMap[i]) {
                     if (not emptyPtr[i]) {
                         // the emptyPtr here means partial result is null
-                        SumOp<InRawType, ResultType>(res, state.count, ptr[i], 1LL);
+                        if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                            SumOp<InRawType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[i],
+                                1LL);
+                        } else {
+                            SumOp<InRawType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count,
+                                ptr[i], 1LL);
+                        }
                     }
                 } else {
                     // means partial overflow , no need to calculate remaining data
@@ -312,26 +337,46 @@ public:
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
-        auto *res = reinterpret_cast<ResultType *>(state.val);
         if (inputRaw) {
             if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    Add<InRawType, ResultType, SumOp<InRawType, ResultType>>(res, state.count, ptr, rowCount);
+                    if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                        Add<InRawType, ResultType, SumOp<InRawType, ResultType>>(
+                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount);
+                    } else {
+                        Add<InRawType, ResultType, SumOp<InRawType, ResultType>>(
+                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount);
+                    }
                 } else {
-                    AddConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(res,
-                        state.count, ptr, rowCount, nullMap);
+                    if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                        AddConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
+                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
+                    } else {
+                        AddConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
+                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
+                    }
                 }
             } else {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
                 auto *indexMap = GetIdsFromDict<InDecimalId>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    AddDict<InRawType, ResultType, SumOp<InRawType, ResultType>>(res, state.count, ptr, rowCount,
-                        indexMap);
+                    if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                        AddDict<InRawType, ResultType, SumOp<InRawType, ResultType>>(
+                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, indexMap);
+                    } else {
+                        AddDict<InRawType, ResultType, SumOp<InRawType, ResultType>>(
+                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, indexMap);
+                    }
                 } else {
-                    AddDictConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(res,
-                        state.count, ptr, rowCount, nullMap, indexMap);
+                    if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                        AddDictConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
+                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
+                    } else {
+                        AddDictConditional<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
+                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap, indexMap);
+                    }
                 }
             }
         } else {

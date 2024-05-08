@@ -84,48 +84,82 @@ public:
         if (cnt == 0 || sumVector->IsNull(rowIdx)) {
             return;
         } else {
-            SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx],
-                cnt);
+            if constexpr (std::is_floating_point_v<ResultType>) {
+                SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count,
+                    sum[rowIdx], cnt);
+            } else {
+                SumOp<ResultType, ResultType, false>((ResultType *)(&state.val), state.count, sum[rowIdx], cnt);
+            }
         }
     }
 
     void ProcessSingleInternalFinal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
-        auto *res = reinterpret_cast<ResultType *>(state.val);
         auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            simd::SIMDAdd<ResultType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount);
+            if constexpr (std::is_floating_point_v<ResultType>) {
+                simd::SIMDAdd<ResultType, ResultType, simd::BasicOp::Sum>(reinterpret_cast<ResultType *>(state.val),
+                    state.count, ptr, rowCount);
+            } else {
+                simd::SIMDAdd<ResultType, ResultType, simd::BasicOp::Sum>(reinterpret_cast<ResultType *>(&state.val),
+                    state.count, ptr, rowCount);
+            }
         } else {
-            simd::SIMDAddConditional<ResultType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount,
-                nullMap);
+            if constexpr (std::is_floating_point_v<ResultType>) {
+                simd::SIMDAddConditional<ResultType, ResultType, simd::BasicOp::Sum>(
+                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
+            } else {
+                simd::SIMDAddConditional<ResultType, ResultType, simd::BasicOp::Sum>(
+                    reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
+            }
         }
     }
 
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
-        auto *res = reinterpret_cast<ResultType *>(state.val);
         if (inputRaw) {
             if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    simd::SIMDAdd<InType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount);
+                    if constexpr (std::is_floating_point_v<ResultType>) {
+                        simd::SIMDAdd<InType, ResultType, simd::BasicOp::Sum>(reinterpret_cast<ResultType *>(state.val),
+                            state.count, ptr, rowCount);
+                    } else {
+                        simd::SIMDAdd<InType, ResultType, simd::BasicOp::Sum>(
+                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount);
+                    }
                 } else {
-                    simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount,
-                        nullMap);
+                    if constexpr (std::is_floating_point_v<ResultType>) {
+                        simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Sum>(
+                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
+                    } else {
+                        simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Sum>(
+                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
+                    }
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Sum>(res, state.count, ptr, rowCount,
-                        indexMap);
+                    if constexpr (std::is_floating_point_v<ResultType>) {
+                        simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Sum>(
+                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, indexMap);
+                    } else {
+                        simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Sum>(
+                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, indexMap);
+                    }
                 } else {
-                    AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(res,
-                        state.count, ptr, rowCount, nullMap, indexMap);
+                    if constexpr (std::is_floating_point_v<ResultType>) {
+                        AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
+                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
+                    } else {
+                        AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
+                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap, indexMap);
+                    }
                 }
             }
         } else {
@@ -135,8 +169,12 @@ public:
 
     void InitState(AggregateState &state)
     {
-        state.val = this->executionContext->GetArena()->Allocate(sizeof(ResultType));
-        *reinterpret_cast<ResultType *>(state.val) = ResultType {};
+        if constexpr (std::is_floating_point_v<ResultType>) {
+            state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(sizeof(ResultType)));
+            *reinterpret_cast<ResultType *>(state.val) = ResultType {};
+        } else {
+            state.val = 0;
+        }
         state.count = 0;
     }
 
@@ -152,17 +190,21 @@ public:
 
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
-        auto spillValue = static_cast<Vector<ResultType> *>(vectors[0]);
-        auto spillCount = static_cast<Vector<long> *>(vectors[1]);
+        auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto spillCountVec = static_cast<Vector<long> *>(vectors[1]);
         if (state.count == 0) {
-            spillValue->SetNull(rowIndex);
-            spillCount->SetValue(rowIndex, state.count);
+            spillValueVec->SetNull(rowIndex);
+            spillCountVec->SetValue(rowIndex, state.count);
             return;
         }
-
-        spillValue->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
-        spillCount->SetValue(rowIndex, state.count);
+        if constexpr (std::is_floating_point_v<ResultType>) {
+            spillValueVec->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+        } else {
+            spillValueVec->SetValue(rowIndex, static_cast<ResultType>(state.val));
+        }
+        spillCountVec->SetValue(rowIndex, state.count);
     }
+
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         auto v = static_cast<Vector<ResultType> *>(vectors[0]);
@@ -180,7 +222,11 @@ public:
             return;
         }
         // we can not distinguish whether value is overflow when stage.val is null
-        v->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        if constexpr (std::is_floating_point_v<ResultType>) {
+            v->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+        } else {
+            v->SetValue(rowIndex, static_cast<ResultType>(state.val));
+        }
     }
 };
 }

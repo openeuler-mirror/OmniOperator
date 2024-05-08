@@ -183,8 +183,8 @@ public:
 class AggregateWindowFunction : public WindowFunction {
 public:
     AggregateWindowFunction(int32_t argumentChannel, int32_t aggregationType, DataTypePtr inputType,
-        DataTypePtr outputType, std::unique_ptr<WindowFrameInfo> frame,
-        ExecutionContext *executionContext, bool isOverflowAsNull = false);
+        DataTypePtr outputType, std::unique_ptr<WindowFrameInfo> frame, ExecutionContext *executionContext,
+        bool isOverflowAsNull = false);
     ~AggregateWindowFunction() override;
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index, int32_t peerGroupStart,
@@ -199,8 +199,8 @@ private:
     int32_t currentEnd;
     std::unique_ptr<Aggregator> aggregator;
     std::unique_ptr<AggregateState> aggregateState;
-    bool isOverflowAsNull;
     ExecutionContext *executionContext;
+    bool isOverflowAsNull;
 
     void EvaluateFinal(std::unique_ptr<Aggregator> &pAggregator, BaseVector *pColumn, int32_t index) const;
 

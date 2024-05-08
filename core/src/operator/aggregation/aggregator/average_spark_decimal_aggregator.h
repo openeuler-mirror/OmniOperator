@@ -67,7 +67,12 @@ public:
         if (cnt == 0 || sumVector->IsNull(rowIdx)) {
             return;
         } else if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+            if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+            } else {
+                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, sum[rowIdx],
+                    cnt);
+            }
         } else {
             AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, sum, cnt, rowIdx);
         }
@@ -76,7 +81,6 @@ public:
     void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
-        auto *res = reinterpret_cast<ResultType *>(state.val);
         if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
             SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::ProcessSingleInternal(state, vector, rowOffset,
                 rowCount, nullMap);
@@ -92,13 +96,25 @@ public:
             cntPtr += rowOffset;
 
             if (nullMap == nullptr) {
-                AddAvg<InRawType, ResultType, SumOp<InRawType, ResultType>>(res, state.count, ptr, cntPtr, rowCount);
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    AddAvg<InRawType, ResultType, SumOp<InRawType, ResultType>>(
+                        reinterpret_cast<ResultType *>(state.val), state.count, ptr, cntPtr, rowCount);
+                } else {
+                    AddAvg<InRawType, ResultType, SumOp<InRawType, ResultType>>(
+                        reinterpret_cast<ResultType *>(&state.val), state.count, ptr, cntPtr, rowCount);
+                }
             } else {
-                AddConditionalAvg<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(res,
-                    state.count, ptr, cntPtr, rowCount, nullMap);
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    AddConditionalAvg<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
+                        reinterpret_cast<ResultType *>(state.val), state.count, ptr, cntPtr, rowCount, nullMap);
+                } else {
+                    AddConditionalAvg<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
+                        reinterpret_cast<ResultType *>(&state.val), state.count, ptr, cntPtr, rowCount, nullMap);
+                }
             }
         }
     }
+
     void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
     {
         if constexpr (InDecimalId == OMNI_DECIMAL64) {
@@ -108,27 +124,33 @@ public:
         }
         spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
     }
+
     void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
         auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
-        if (state.count == 0 || state.val == nullptr) {
+        if (state.count == 0) {
             avgValVector->SetNull(rowIndex);
             avgCountVector->SetValue(rowIndex, state.count);
             return;
         }
-        avgValVector->SetValue(rowIndex, *static_cast<ResultType *>(state.val));
+        if constexpr (std::is_same_v<ResultType, Decimal128>) {
+            avgValVector->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+        } else {
+            avgValVector->SetValue(rowIndex, static_cast<ResultType>(state.val));
+        }
         avgCountVector->SetValue(rowIndex, state.count);
     }
+
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         BaseVector *vector = vectors[0];
 
         int128_t decodedDec;
         if constexpr (std::is_same_v<ResultType, Decimal128>) {
-            decodedDec = (static_cast<ResultType *>(state.val))->ToInt128();
+            decodedDec = (reinterpret_cast<ResultType *>(state.val))->ToInt128();
         } else {
-            decodedDec = *(static_cast<ResultType *>(state.val));
+            decodedDec = static_cast<ResultType>(state.val);
         }
 
         int128_t countDec = state.count;

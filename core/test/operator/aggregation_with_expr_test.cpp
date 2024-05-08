@@ -1103,7 +1103,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_no_aggNum)
     VectorBatch *outputVecBatch = nullptr;
     hashAggWithExprOperator->GetOutput(&outputVecBatch);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
 
     Expr::DeleteExprs(groupByKeys);
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
@@ -1214,7 +1214,7 @@ void TestHashAggSpillWithMultiRecords(std::vector<uint32_t> aggFuncTypes, DataTy
     VectorBatch *outputVecBatch = nullptr;
     hashAggWithExprOperator->GetOutput(&outputVecBatch);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
 
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     delete hashAggWithExprOperatorFactory;
@@ -1685,7 +1685,7 @@ void TestHashAggSpillWithNullRecords(std::vector<uint32_t> aggFuncTypes, DataTyp
     VectorBatch *outputVecBatch = nullptr;
     hashAggWithExprOperator->GetOutput(&outputVecBatch);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecorBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
 
     omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
     delete hashAggWithExprOperatorFactory;

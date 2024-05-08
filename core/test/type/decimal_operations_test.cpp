@@ -87,18 +87,18 @@ TEST(DecimalOperations, decode_avg_decimal)
     using namespace omniruntime::op;
     AggregateState state;
     ExecutionContext executionContext;
-    state.val = executionContext.GetArena()->Allocate(24);
+    state.val = reinterpret_cast<int64_t>(executionContext.GetArena()->Allocate(24));
 
     int128_t oldDec = CreateInt128(2, 3);
     int64_t oldOther = 1;
     int64_t oldOverflow = 1;
-    EncodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), oldDec, oldOverflow, oldOther);
+    EncodeAvgDecimal(reinterpret_cast<DecimalAverageState *>(state.val), oldDec, oldOverflow, oldOther);
 
     // decode phase
     int128_t newDec = 0;
     int64_t newOverflow = 0;
     int64_t newOther = 0;
-    DecodeAvgDecimal(static_cast<DecimalAverageState *>(state.val), newDec, newOverflow, newOther);
+    DecodeAvgDecimal(reinterpret_cast<DecimalAverageState *>(state.val), newDec, newOverflow, newOther);
     EXPECT_EQ(newOverflow, oldOverflow);
     EXPECT_EQ(newOverflow, oldOverflow);
 }
