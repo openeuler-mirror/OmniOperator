@@ -17,8 +17,8 @@ class ThreadMemoryTrace {
 public:
     static ThreadMemoryTrace *GetThreadMemoryTrace()
     {
-        thread_local ThreadMemoryTrace *threadMemoryTrace = new ThreadMemoryTrace();
-        return threadMemoryTrace;
+        thread_local ThreadMemoryTrace threadMemoryTrace;
+        return &threadMemoryTrace;
     }
 
     ThreadMemoryTrace() = default;
@@ -49,6 +49,10 @@ public:
 
     void Clear();
 
+    void SetInsertGlobalFlag();
+
+    bool GetInsertGlobalFlag();
+
 private:
     // <uintptr, size>, record the size of each vector.
     std::unordered_map<uintptr_t, int64_t> vectorTraced;
@@ -59,6 +63,8 @@ private:
     std::unordered_map<uintptr_t, std::pair<int64_t, std::string >> vectorTracedWithLog;
     // <uintptr : pair<size, stackLog>>, record the size and stack of each arena.
     std::unordered_map<uintptr_t, std::pair<int64_t, std::string >> arenaTracedWithLog;
+
+    bool insertGlobalFlag = false;
 };
 }
 }

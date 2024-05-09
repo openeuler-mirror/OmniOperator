@@ -12,9 +12,6 @@ ThreadMemoryTrace::~ThreadMemoryTrace()
 {
     MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
     globalMemoryTrace->SubThreadMemoryTrace(this);
-    if (HasMemoryLeak()) {
-        FreeLeakedMemory();
-    }
 }
 
 void ThreadMemoryTrace::AddVectorMemory(uintptr_t ptr, int64_t size)
@@ -50,7 +47,7 @@ void ThreadMemoryTrace::RemoveVectorMemory(uintptr_t ptr, int64_t size)
                 auto currentStack = this->vectorTracedWithLog.find(ptr)->second.second;
                 message.append("\n originStack is: " + originStack + "\n currentStack is: " + currentStack);
 #endif
-                throw exception::OmniException("Memory Trace Error", message);
+                (*traceIter)->vectorTraced.erase(ptr);
             }
         }
     }
@@ -89,7 +86,7 @@ void ThreadMemoryTrace::RemoveArenaMemory(uintptr_t ptr, int64_t size)
                 auto currentStack = this->arenaTracedWithLog.find(ptr)->second.second;
                 message.append("\n originStack is: " + originStack + "\n currentStack is: " + currentStack);
 #endif
-                throw exception::OmniException("Memory Trace Error", message);
+                (*traceIter)->arenaTraced.erase(ptr);
             }
         }
     }
@@ -155,19 +152,35 @@ bool ThreadMemoryTrace::HasMemoryLeak()
     return !(vectorTraced.empty() && arenaTraced.empty());
 }
 
+/**
+ * free memory of vector and arena when memory leak happened
+ * */
 void ThreadMemoryTrace::FreeLeakedMemory()
 {
     std::unordered_map<uintptr_t, int64_t>::iterator iter;
     if (!vectorTraced.empty()) {
+        std::vector<uintptr_t> vectors;
         for (iter = vectorTraced.begin(); iter != vectorTraced.end(); ++iter) {
+            // copy the leaked vector record to avoid invalidating the unordered_map iterator.
+            // Because the iterator is traversed at the same time as the map is updated.
+            vectors.emplace_back(iter->first);
+        }
+
+        for (int i = 0; i < vectors.size(); ++i) {
             // free vector and buffer if vector type is varchar.
-            delete reinterpret_cast<omniruntime::vec::BaseVector *>(iter->first);
+            delete reinterpret_cast<omniruntime::vec::BaseVector *>(vectors.at(i));
         }
     }
 
     if (!arenaTraced.empty()) {
         Allocator *allocator = Allocator::GetAllocator();
+        std::unordered_map<uintptr_t, int64_t> arenas;
         for (iter = arenaTraced.begin(); iter != arenaTraced.end(); ++iter) {
+            // copy the leaked arena record to avoid invalidating the unordered_map iterator.
+            arenas.emplace(iter->first, iter->second);
+        }
+
+        for (iter = arenas.begin(); iter != arenas.end(); ++iter) {
             // free arena ptr
             allocator->Free(reinterpret_cast<uint8_t *>(iter->first), iter->second);
         }
@@ -182,5 +195,15 @@ void ThreadMemoryTrace::Clear()
 
     vectorTracedWithLog.clear();
     arenaTracedWithLog.clear();
+}
+
+void ThreadMemoryTrace::SetInsertGlobalFlag()
+{
+    insertGlobalFlag = true;
+}
+
+bool ThreadMemoryTrace::GetInsertGlobalFlag()
+{
+    return insertGlobalFlag;
 }
 }
