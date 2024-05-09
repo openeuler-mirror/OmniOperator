@@ -16,7 +16,6 @@ ThreadMemoryManager::ThreadMemoryManager() noexcept
 
 ThreadMemoryManager::~ThreadMemoryManager() noexcept
 {
-    ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
     currentMemoryManager->AccountMemory(untrackedMemory);
     untrackedMemory = 0;
 #ifdef DEBUG

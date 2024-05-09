@@ -12,7 +12,7 @@ void MemoryTrace::AddVectorMemory(uintptr_t ptr, int64_t size)
     ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
     threadMemoryTrace->AddVectorMemory(ptr, size);
     if (!threadMemoryTrace->GetInsertGlobalFlag()) {
-        MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
+        MemoryTrace *globalMemoryTrace = GetMemoryTrace();
         globalMemoryTrace->AddThreadMemoryTrace(threadMemoryTrace);
         threadMemoryTrace->SetInsertGlobalFlag();
     }
@@ -29,7 +29,7 @@ void MemoryTrace::AddArenaMemory(uintptr_t ptr, int64_t size)
     ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
     threadMemoryTrace->AddArenaMemory(ptr, size);
     if (!threadMemoryTrace->GetInsertGlobalFlag()) {
-        MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
+        MemoryTrace *globalMemoryTrace = GetMemoryTrace();
         globalMemoryTrace->AddThreadMemoryTrace(threadMemoryTrace);
         threadMemoryTrace->SetInsertGlobalFlag();
     }
@@ -41,7 +41,12 @@ void MemoryTrace::SubArenaMemory(uintptr_t ptr, int64_t size)
     threadMemoryTrace->RemoveArenaMemory(ptr, size);
 }
 
-MemoryTrace::~MemoryTrace() {}
+MemoryTrace::MemoryTrace() {}
+
+MemoryTrace::~MemoryTrace()
+{
+    threadMemoryTraceSet.clear();
+}
 
 void MemoryTrace::AddThreadMemoryTrace(ThreadMemoryTrace *threadMemoryTrace)
 {
@@ -55,8 +60,14 @@ void MemoryTrace::SubThreadMemoryTrace(ThreadMemoryTrace *threadMemoryTrace)
     threadMemoryTraceSet.erase(threadMemoryTrace);
 }
 
-std::unordered_set<ThreadMemoryTrace *> MemoryTrace::GetThreadMemoryTraceSet()
+const std::unordered_set<ThreadMemoryTrace *> &MemoryTrace::GetThreadMemoryTraceSet()
 {
     return threadMemoryTraceSet;
+}
+
+static MemoryTrace g_globalMemoryTrace;
+MemoryTrace *GetMemoryTrace()
+{
+    return &g_globalMemoryTrace;
 }
 }

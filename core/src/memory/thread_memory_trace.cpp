@@ -10,7 +10,7 @@
 namespace omniruntime::mem {
 ThreadMemoryTrace::~ThreadMemoryTrace()
 {
-    MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
+    MemoryTrace *globalMemoryTrace = GetMemoryTrace();
     globalMemoryTrace->SubThreadMemoryTrace(this);
 }
 
@@ -36,7 +36,7 @@ void ThreadMemoryTrace::RemoveVectorMemory(uintptr_t ptr, int64_t size)
         vectorTracedWithLog.erase(ptr);
 #endif
     } else {
-        MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
+        MemoryTrace *globalMemoryTrace = GetMemoryTrace();
         std::unordered_set<ThreadMemoryTrace *> set = globalMemoryTrace->GetThreadMemoryTraceSet();
         std::unordered_set<ThreadMemoryTrace *>::iterator traceIter;
         for (traceIter = set.begin(); traceIter != set.end() && *traceIter != this; ++traceIter) {
@@ -75,7 +75,7 @@ void ThreadMemoryTrace::RemoveArenaMemory(uintptr_t ptr, int64_t size)
         arenaTracedWithLog.erase(ptr);
 #endif
     } else {
-        MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
+        MemoryTrace *globalMemoryTrace = GetMemoryTrace();
         std::unordered_set<ThreadMemoryTrace *> set = globalMemoryTrace->GetThreadMemoryTraceSet();
         std::unordered_set<ThreadMemoryTrace *>::iterator traceIter;
         for (traceIter = set.begin(); traceIter != set.end() && *traceIter != this; ++traceIter) {
@@ -166,7 +166,7 @@ void ThreadMemoryTrace::FreeLeakedMemory()
             vectors.emplace_back(iter->first);
         }
 
-        for (int i = 0; i < vectors.size(); ++i) {
+        for (uint32_t i = 0; i < vectors.size(); ++i) {
             // free vector and buffer if vector type is varchar.
             delete reinterpret_cast<omniruntime::vec::BaseVector *>(vectors.at(i));
         }
