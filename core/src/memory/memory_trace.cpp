@@ -9,10 +9,13 @@
 namespace omniruntime::mem {
 void MemoryTrace::AddVectorMemory(uintptr_t ptr, int64_t size)
 {
-    MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
     ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
-    globalMemoryTrace->AddThreadMemoryTrace(threadMemoryTrace);
     threadMemoryTrace->AddVectorMemory(ptr, size);
+    if (!threadMemoryTrace->GetInsertGlobalFlag()) {
+        MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
+        globalMemoryTrace->AddThreadMemoryTrace(threadMemoryTrace);
+        threadMemoryTrace->SetInsertGlobalFlag();
+    }
 }
 
 void MemoryTrace::SubVectorMemory(uintptr_t ptr, int64_t size)
@@ -23,10 +26,13 @@ void MemoryTrace::SubVectorMemory(uintptr_t ptr, int64_t size)
 
 void MemoryTrace::AddArenaMemory(uintptr_t ptr, int64_t size)
 {
-    MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
     ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
-    globalMemoryTrace->AddThreadMemoryTrace(threadMemoryTrace);
     threadMemoryTrace->AddArenaMemory(ptr, size);
+    if (!threadMemoryTrace->GetInsertGlobalFlag()) {
+        MemoryTrace *globalMemoryTrace = MemoryTrace::GetMemoryTrace();
+        globalMemoryTrace->AddThreadMemoryTrace(threadMemoryTrace);
+        threadMemoryTrace->SetInsertGlobalFlag();
+    }
 }
 
 void MemoryTrace::SubArenaMemory(uintptr_t ptr, int64_t size)
