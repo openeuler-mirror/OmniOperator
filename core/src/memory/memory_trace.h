@@ -21,12 +21,6 @@ namespace mem {
  **/
 class MemoryTrace {
 public:
-    static ALWAYS_INLINE MemoryTrace *GetMemoryTrace()
-    {
-        static MemoryTrace memoryTrace;
-        return &memoryTrace;
-    }
-
     static void AddVectorMemory(uintptr_t ptr, int64_t size);
 
     static void SubVectorMemory(uintptr_t ptr, int64_t size);
@@ -35,7 +29,7 @@ public:
 
     static void SubArenaMemory(uintptr_t ptr, int64_t size);
 
-    MemoryTrace() = default;
+    MemoryTrace();
 
     ~MemoryTrace();
 
@@ -43,12 +37,14 @@ public:
 
     void SubThreadMemoryTrace(ThreadMemoryTrace *threadMemoryTrace);
 
-    std::unordered_set<ThreadMemoryTrace *> GetThreadMemoryTraceSet();
+    const std::unordered_set<ThreadMemoryTrace *> &GetThreadMemoryTraceSet();
 
 private:
     std::unordered_set<ThreadMemoryTrace *> threadMemoryTraceSet;
     std::mutex m_mutex;
 };
+
+MemoryTrace *GetMemoryTrace();
 }
 }
 
