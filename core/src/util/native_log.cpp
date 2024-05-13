@@ -15,10 +15,16 @@ jmethodID logDebugId;
 JavaVM *localJVM;
 jobject oplogObj;
 int g_logLevel;
+bool g_isDebugEnable = false;
 
 int GetLogLevel()
 {
     return g_logLevel;
+}
+
+bool IsDebugEnable()
+{
+    return g_isDebugEnable;
 }
 
 void Log(const std::string &logStr, LogType logLev)
@@ -66,7 +72,7 @@ void InitLevel(JNIEnv *env)
     jmethodID logInfoLevelId = env->GetMethodID(logClass, "isInfoEnabled", "()Z");
     jmethodID logWarnLevelId = env->GetMethodID(logClass, "isWarnEnabled", "()Z");
     jmethodID logErrorLevelId = env->GetMethodID(logClass, "isErrorEnabled", "()Z");
-
+    g_isDebugEnable = env->CallBooleanMethod(oplogObj, logDebugLevelId);
     if (env->CallBooleanMethod(oplogObj, logDebugLevelId)) {
         g_logLevel = static_cast<int>(LogType::LOG_DEBUG);
     } else if (env->CallBooleanMethod(oplogObj, logInfoLevelId)) {

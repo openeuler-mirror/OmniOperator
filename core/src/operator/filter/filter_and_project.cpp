@@ -79,6 +79,7 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     if (vecBatch->GetRowCount() > 0) {
         projectedVecs = this->exprEvaluator->Evaluate(vecBatch, executionContext.get(), &selectedRowsBuffer);
     }
+    UpdateAddInputInfo(vecBatch->GetRowCount());
     VectorHelper::FreeVecBatch(vecBatch);
     ResetInputVecBatch();
     return 0;
@@ -93,6 +94,7 @@ int32_t FilterAndProjectOperator::GetOutput(VectorBatch **outputVecBatch)
     int rowCount = this->projectedVecs->GetRowCount();
     *outputVecBatch = this->projectedVecs;
     this->projectedVecs = nullptr;
+    UpdateGetOutputInfo(rowCount);
 
     return rowCount;
 }
@@ -103,6 +105,7 @@ OmniStatus FilterAndProjectOperator::Close()
         VectorHelper::FreeVecBatch(projectedVecs);
         projectedVecs = nullptr;
     }
+    UpdateCloseInfo();
     return OMNI_STATUS_NORMAL;
 }
 

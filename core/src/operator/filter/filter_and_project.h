@@ -85,7 +85,9 @@ class FilterAndProjectOperator : public Operator {
 public:
     explicit FilterAndProjectOperator(std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
         : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
-    {}
+    {
+        SetOperatorName(metricsNameFilter);
+    }
 
     ~FilterAndProjectOperator() override = default;
 

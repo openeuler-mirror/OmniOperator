@@ -136,7 +136,7 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
         buildOutputCols, buildOutputTypes.GetIds(), outputRowSize);
     this->probeHashColumns = new BaseVector *[probeHashCols.size()]();     // 2D array
     this->probeOutputColumns = new BaseVector *[probeOutputCols.size()](); // 2D array
-
+    SetOperatorName(metricsNameLookUpJoin);
     if (simpleFilter != nullptr) {
         auto usedColumns = simpleFilter->GetVectorIndexes();
         for (const auto &col : usedColumns) {
@@ -309,6 +309,7 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
         SetStatus(OMNI_STATUS_NORMAL);
         return 0;
     }
+    UpdateAddInputInfo(vecBatch->GetRowCount());
     if (firstVecBatch) {
         firstVecBatch = false;
         InitFirst();
@@ -350,6 +351,11 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
         outputBuilder->Clear();
         SetStatus(OMNI_STATUS_FINISHED);
     }
+    if ((*outputVecBatch != nullptr)) {
+        UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
+    } else {
+        UpdateGetOutputInfo(0);
+    }
     return 0;
 }
 
@@ -359,6 +365,7 @@ OmniStatus LookupJoinOperator::Close()
         VectorHelper::FreeVecBatch(curInputBatch);
         curInputBatch = nullptr;
     }
+    UpdateCloseInfo();
     return OMNI_STATUS_NORMAL;
 }
 

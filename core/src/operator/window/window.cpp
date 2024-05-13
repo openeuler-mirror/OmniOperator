@@ -205,6 +205,7 @@ OmniStatus WindowOperator::Init()
                 break;
         }
     }
+    SetOperatorName(metricsNameWindow);
     return ret;
 }
 
@@ -221,6 +222,7 @@ int32_t WindowOperator::AddInput(VectorBatch *vecBatch)
         ResetInputVecBatch();
         return 0;
     }
+    UpdateAddInputInfo(rowCount);
     totalRowCount += rowCount;
     pagesIndex->AddVecBatch(vecBatch);
     ResetInputVecBatch();
@@ -282,6 +284,7 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         }
         pagesIndex->Clear();
         executionContext->GetArena()->Reset();
+        UpdateGetOutputInfo(0);
         SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
@@ -295,6 +298,11 @@ int32_t WindowOperator::GetOutput(VectorBatch **outputVecBatch)
         GetOutputFromDisk(outputVecBatch);
     } else {
         GetOutputFromMemory(outputVecBatch);
+    }
+    if (*outputVecBatch != nullptr) {
+        UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
+    } else {
+        UpdateGetOutputInfo(0);
     }
 
     if (totalRowCount == rowCountOutputted) {
@@ -433,6 +441,7 @@ OmniStatus WindowOperator::Close()
 
     // ensure free pagesIndex if exception occurs
     pagesIndex->Clear();
+    UpdateCloseInfo();
     return OMNI_STATUS_NORMAL;
 }
 
@@ -466,6 +475,7 @@ ErrorCode WindowOperator::SpillToDisk()
 
     LogDebug("Spill data to disk starting in window operator, rowCount=%lld\n", rowCount);
     auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, false);
+    UpdateSpillTimesInfo();
     LogDebug("Spill data to disk finished in window operator, rowCount=%lld\n", rowCount);
     return result;
 }
@@ -498,6 +508,7 @@ void WindowOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
             throw omniruntime::exception::OmniException(GetErrorCode(result), GetErrorMessage(result));
         }
         auto spillFiles = spiller->FinishSpill();
+        UpdateSpillFileInfo(spillFiles.size());
         spillMerger = spiller->CreateSpillMerger(spillFiles);
         if (spillMerger == nullptr) {
             delete spiller;

@@ -45,6 +45,7 @@ public:
     ALWAYS_INLINE void ReportMemoryUsage(int64_t size)
     {
         untrackedMemory += size;
+        allocMemory += size;
         if (currentMemoryManager && untrackedMemory > untrackedMemoryThreshold) {
             currentMemoryManager->AccountMemory(untrackedMemory);
 #ifdef DEBUG
@@ -57,6 +58,7 @@ public:
     ALWAYS_INLINE void ReclaimMemoryUsage(int64_t size)
     {
         untrackedMemory -= size;
+        freeMemory += size;
         if (currentMemoryManager && labs(untrackedMemory) > untrackedMemoryThreshold) {
             currentMemoryManager->AccountMemory(untrackedMemory);
 #ifdef DEBUG
@@ -80,6 +82,15 @@ public:
     int64_t GetUntrackedMemory() const;
 
     int64_t GetThreadAccountedMemory();
+    int64_t GetAllocMemory() const
+    {
+        return allocMemory;
+    }
+
+    int64_t GetFreeMemory() const
+    {
+        return freeMemory;
+    }
 
 private:
 #ifdef DEBUG
@@ -94,6 +105,8 @@ private:
      *      */
     int64_t untrackedMemory = 0;
     int64_t untrackedMemoryThreshold = 1 * 1024 * 1024;
+    int64_t allocMemory = 0;
+    int64_t freeMemory = 0;
 };
 } // mem
 } // omniruntime

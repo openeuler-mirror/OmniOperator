@@ -138,6 +138,7 @@ OmniStatus SortOperator::Close()
 
     // ensure free pagesIndex if exception occurs
     pagesIndex->Clear();
+    UpdateCloseInfo();
     return OMNI_STATUS_NORMAL;
 }
 
@@ -174,6 +175,7 @@ ErrorCode SortOperator::SpillToDisk()
     Sort();
 
     LogDebug("Spill data to disk starting in sort operator, rowCount=%lld\n", rowCount);
+    UpdateSpillTimesInfo();
     auto result = spiller->Spill(pagesIndex.get(), canInplaceSort, canRadixSort);
     LogDebug("Spill data to disk finished in sort operator, rowCount=%lld\n", rowCount);
     return result;
@@ -296,6 +298,7 @@ void SortOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         }
         auto spillFiles = spiller->FinishSpill();
         spillMerger = spiller->CreateSpillMerger(spillFiles);
+        UpdateSpillFileInfo(spillFiles.size());
         // when the spill completed, the spiller object can be released in advance
         if (spillMerger == nullptr) {
             delete spiller;
