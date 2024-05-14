@@ -466,25 +466,24 @@ extern "C" DLLEXPORT void BatchCastStringToLong(int64_t contextPtr, uint8_t **st
 extern "C" DLLEXPORT void BatchCastStringToDouble(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     double *output, int32_t rowCnt)
 {
-    double result = 0.0;
-    std::string s;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 0;
             continue;
         }
-        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
-        StringUtil::TrimString(s);
-        int status = StringToDouble(s, result);
-        if (status == -1) {
+        double result;
+        Status status = ConvertStringToDouble(result, reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (status == Status::IS_NOT_A_NUMBER) {
             std::ostringstream errorMessage;
-            errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value is not a number.";
+            errorMessage << "Cannot cast '" << std::string(reinterpret_cast<const char *>(str[i]), strLen[i])
+                         << "' to DOUBLE. Value is not a number.";
             SetError(contextPtr, errorMessage.str());
             continue;
         }
-        if (status == 1) {
+        if (status == Status::CONVERT_OVERFLOW) {
             std::ostringstream errorMessage;
-            errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value too large.";
+            errorMessage << "Cannot cast '" << std::string(reinterpret_cast<const char *>(str[i]), strLen[i])
+                         << "' to DOUBLE. Value is not a number.";
             SetError(contextPtr, errorMessage.str());
             continue;
         }
@@ -771,12 +770,10 @@ extern "C" DLLEXPORT void BatchCastStringToLongRetNull(bool *isNull, uint8_t **s
 extern "C" DLLEXPORT void BatchCastStringToDoubleRetNull(bool *isNull, uint8_t **str, int32_t *strLen, double *output,
     int32_t rowCnt)
 {
-    double result = 0.0;
-    std::string s;
     for (int i = 0; i < rowCnt; ++i) {
-        s = std::string(reinterpret_cast<const char *>(str[i]), strLen[i]);
-        StringUtil::TrimString(s);
-        if (StringToDouble(s, result) != 0) {
+        double result;
+        Status status = ConvertStringToDouble(result, reinterpret_cast<const char *>(str[i]), strLen[i]);
+        if (status != Status::CONVERT_SUCCESS) {
             output[i] = 0;
             isNull[i] = true;
             continue;

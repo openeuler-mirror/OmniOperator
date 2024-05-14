@@ -3,6 +3,7 @@
  * Description: registry  function  implementation
  */
 #include "stringfunctions.h"
+#include "md5.h"
 
 namespace omniruntime::codegen::function {
 /**
@@ -479,21 +480,18 @@ extern "C" DLLEXPORT double CastStringToDouble(int64_t contextPtr, const char *s
     if (isNull) {
         return 0;
     }
+
     double result;
-    std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
-    if (!regex_match(s, g_doubleRegex)) {
+    Status status = ConvertStringToDouble(result, str, strLen);
+    if (status == Status::IS_NOT_A_NUMBER) {
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value is not a number.";
+        errorMessage << "Cannot cast '" << std::string(str, strLen) << "' to DOUBLE. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
-
-    try {
-        result = stod(s);
-    } catch (std::exception &e) {
+    if (status == Status::CONVERT_OVERFLOW) {
         std::ostringstream errorMessage;
-        errorMessage << "Cannot cast '" << s << "' to DOUBLE. Value too large.";
+        errorMessage << "Cannot cast '" << std::string(str, strLen) << "' to DOUBLE. Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
@@ -769,16 +767,8 @@ extern "C" DLLEXPORT int64_t CastStringToLongRetNull(bool *isNull, const char *s
 extern "C" DLLEXPORT double CastStringToDoubleRetNull(bool *isNull, const char *str, int32_t strLen)
 {
     double result;
-    std::string s = std::string(str, strLen);
-    StringUtil::TrimString(s);
-    if (!regex_match(s, g_doubleRegex)) {
-        *isNull = true;
-        return 0;
-    }
-
-    try {
-        result = stod(s);
-    } catch (std::exception &e) {
+    Status status = ConvertStringToDouble(result, str, strLen);
+    if (status != Status::CONVERT_SUCCESS) {
         *isNull = true;
         return 0;
     }
@@ -946,5 +936,17 @@ extern "C" DLLEXPORT const char *CastDateToString(int64_t contextPtr, int32_t va
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
     date.ToString(ret, 11);
     return ret;
+}
+
+extern "C" DLLEXPORT char *Md5Str(int64_t contextPtr, const char *str, int32_t len, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    Md5Function md5(str, len);
+    *outLen = 32;
+    char *mdString = ArenaAllocatorMalloc(contextPtr, *outLen);
+    md5.FinishHex(mdString);
+    return mdString;
 }
 }

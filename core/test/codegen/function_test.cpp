@@ -41,6 +41,17 @@ void Date32TruncTest(const std::string &input, const std::string &level, const s
 /*
  * context helper tests
  */
+
+static void Md5StringTest(const std::string &input, const std::string &expect)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outLen;
+    char *res = Md5Str(contextPtr, input.c_str(), input.size(), false, &outLen);
+    EXPECT_EQ(expect, std::string(res, outLen));
+    delete context;
+}
+
 TEST(FunctionTest, ArenaAllocatorMalloc)
 {
     auto execContext = new ExecutionContext();
@@ -94,6 +105,19 @@ TEST(FunctionTest, Mm3String)
 {
     std::string value("hello world");
     EXPECT_EQ(Mm3String(const_cast<char *>(value.c_str()), 11, false, 42, false), -1528836094);
+}
+
+TEST(FunctionTest, Md5String)
+{
+    Md5StringTest("hellow world!", "df6a571d99e454e99be79a258ca3a57d");
+    Md5StringTest("123412345892376487612983", "1eac0a767ccdf782870bac35db9af264");
+    Md5StringTest("1eac0a767ccdf782870bac35db9af2642345", "582aa488923f89ea825358ffe387f5ae");
+    Md5StringTest("", "d41d8cd98f00b204e9800998ecf8427e");
+    Md5StringTest("  1", "37705de0752d1027f8fc3b3f390c448d");
+    Md5StringTest("1  ", "42609f6cf2cbebfe205241bf26e2e0ef");
+    Md5StringTest("1", "c4ca4238a0b923820dcc509a6f75849b");
+    Md5StringTest("uwefbuiwef7821ho;o;lhf8923golecg288823pfhl;hsf2893fgOIHDWQIUHFGEWF7823GHQDFddj2",
+        "03f2ace2c433c4b743787d96b41ed1b6");
 }
 
 /*
@@ -1856,6 +1880,9 @@ TEST(FunctionTest, CastStringToDouble)
     s = "-10078";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, -10078);
+    s = "-923.4123";
+    result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, -923.4123);
     s = "123.123";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, 123.123);
@@ -1871,6 +1898,14 @@ TEST(FunctionTest, CastStringToDouble)
     s = "1.111e-202";
     result = CastStringToDouble(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
     EXPECT_EQ(result, 1.111e-202);
+    s = "62229.33";
+    bool isNull = false;
+    result = CastStringToDoubleRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, 62229.33);
+    isNull = false;
+    s = "1234ee231";
+    result = CastStringToDoubleRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
     delete context;
 }
 

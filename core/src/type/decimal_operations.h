@@ -19,6 +19,7 @@
 #include "decimal_base.h"
 #include "decimal128.h"
 #include "base_operations.h"
+#include "data_operations.h"
 
 namespace omniruntime {
 namespace type {
@@ -755,7 +756,9 @@ public:
 
     explicit operator double() const
     {
-        return std::stod(ToString());
+        double result;
+        ConvertStringToDouble(result, ToString());
+        return result;
     }
 
     Decimal128Wrapper &ReScale(int32_t newScale, RoundingMode mode = RoundingMode::ROUND_UP)
@@ -1426,7 +1429,9 @@ public:
 
     explicit operator double() const
     {
-        return std::stod(ToString());
+        double result;
+        ConvertStringToDouble(result, ToString());
+        return result;
     }
 
     static constexpr int DOUBLE_MAX_PRECISION = std::numeric_limits<double>::max_digits10;

@@ -351,9 +351,11 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToLongRetNull(bool *isNull, int64_t 
 extern "C" DLLEXPORT void BatchCastDecimal64ToDoubleRetNull(bool *isNull, const int64_t *x, int32_t precision,
     int32_t scale, double *output, int32_t rowCnt)
 {
+    double result;
     for (int i = 0; i < rowCnt; ++i) {
         std::string doubleString = Decimal64(x[i]).SetScale(scale).ToString();
-        output[i] = stod(doubleString);
+        ConvertStringToDouble(result, doubleString);
+        output[i] = result;
     }
 }
 
@@ -411,11 +413,12 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToLongRetNull(bool *isNull, Decimal
 extern "C" DLLEXPORT void BatchCastDecimal128ToDoubleRetNull(bool *isNull, Decimal128 *x, int32_t precision,
     int32_t scale, double *output, int32_t rowCnt)
 {
-    Decimal128Wrapper input;
+    double result;
     std::string doubleString;
     for (int i = 0; i < rowCnt; ++i) {
         doubleString = Decimal128Wrapper(x[i]).SetScale(scale).ToString();
-        output[i] = stod(doubleString);
+        ConvertStringToDouble(result, doubleString);
+        output[i] = result;
     }
 }
 
