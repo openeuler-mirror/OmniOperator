@@ -46,6 +46,34 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpilledBytesNative(JNIEnv *, jobject,
     jlong);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    setRowOutput
+ * Signature: (J)J
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getRowOutputNative(JNIEnv *, jobject,
+                                                                                               jlong);
+
+JNIEXPORT void JNICALL  Java_nova_hetu_omniruntime_vector_RowBatch_freeRowBatchNative(JNIEnv *env,
+                                                                                         jclass jcls,
+                                                                                         jlong jVecBatchAddress);
+
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVectorBatch(
+        JNIEnv *env, jclass jcls, jlong vectorBatch);
+
+JNIEXPORT jlong JNICALL  Java_nova_hetu_omniruntime_vector_RowBatch_newRowBatchNative(JNIEnv *env, jclass jcls,
+                                                                                      jobjectArray rows,
+                                                                                      jint rowCount);
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_newOmniRowDeserializer(
+        JNIEnv *env, jclass jcls, jintArray typeArray);
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_freeOmniRowDeserializer(
+        JNIEnv *env, jclass jcls, jlong parserAddr);
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_parseOneRow(
+        JNIEnv *env, jclass jcls, jlong parserAddr, jbyteArray bytes, jlongArray vecs, jint rowIndex);
+
 #ifdef __cplusplus
 }
 #endif

@@ -11,6 +11,7 @@
 #include "operator/aggregation/group_aggregation.h"
 #include "type/data_types.h"
 #include "one_row_adaptor.h"
+#include "vector/omni_row.h"
 
 namespace omniruntime {
 namespace op {
@@ -59,6 +60,12 @@ public:
 
     uint64_t GetSpilledBytes() override;
 
+    void SetRowOutput() {
+        needRowOutput = true;
+    }
+
+    int32_t GetOutput(omniruntime::vec::RowBatch **outputRowBatch);
+
 private:
     OneRowAdaptor oneRowAdaptor;
     DataTypes originTypes;
@@ -67,6 +74,7 @@ private:
     std::vector<SimpleFilter *> aggSimpleFilters;
     HashAggregationOperator *hashAggOperator;
     bool hasAggFilter = false;
+    bool needRowOutput = false;
 };
 }
 }

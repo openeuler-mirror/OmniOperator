@@ -4,12 +4,13 @@
  */
 
 #include <vector>
-#include <algorithm>
 #include "vector/vector_batch.h"
 #include "vector/vector_helper.h"
 #include "jni_common_def.h"
 #include "operator/operator_factory.h"
 #include "jni_operator.h"
+#include "operator/aggregation/group_aggregation_expr.h"
+#include "vector/omni_row.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -17,10 +18,16 @@ using namespace omniruntime::vec;
 static std::once_flag loadVecBatchClsFlag;
 
 static jclass vecBatchCls = nullptr;
-static jmethodID vecBatchInitMethodId = nullptr;
-
+static jclass rowBatchCls = nullptr;
+static jclass rowCls = nullptr;
 static jclass omniResultsCls = nullptr;
+static jclass rowResultsCls = nullptr;
+
 static jmethodID omniResultsInitMethodId = nullptr;
+static jmethodID vecBatchInitMethodId = nullptr;
+static jmethodID rowBatchInitMethodId = nullptr;
+static jmethodID rowInitMethodId = nullptr;
+static jmethodID rowResultsInitMethodId = nullptr;
 
 static void RecordInputVectorsStack(VectorBatch *vectorBatch, JNIEnv *env)
 {
@@ -60,8 +67,26 @@ static void LoadVecBatchAndOmniResults(JNIEnv *env)
         vecBatchCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/vector/VecBatch");
         vecBatchInitMethodId = env->GetMethodID(vecBatchCls, "<init>", "(J[J[J[J[J[I[II)V");
         omniResultsCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/operator/OmniResults");
+
+        rowCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/vector/Row");
+        rowBatchCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/vector/RowBatch");
+        rowResultsCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/operator/OmniRowResults");
+
         omniResultsInitMethodId =
             env->GetMethodID(omniResultsCls, "<init>", "(Lnova/hetu/omniruntime/vector/VecBatch;I)V");
+
+        // Row(long dataAddr, int hashPos, int len)
+        rowInitMethodId =
+                env->GetMethodID(rowCls, "<init>", "(JII)V");
+
+        // RowBatch(long nativeAddress, Row[] rows, int rowCount)
+        rowBatchInitMethodId =
+                env->GetMethodID(rowBatchCls, "<init>", "(J[Lnova/hetu/omniruntime/vector/Row;I)V");
+
+        // OmniRowResults(RowBatch rowBatch, int status)
+        rowResultsInitMethodId =
+                env->GetMethodID(rowResultsCls, "<init>", "(Lnova/hetu/omniruntime/vector/RowBatch;I)V");
+
     }
 }
 
@@ -116,12 +141,30 @@ static jobject transform(JNIEnv *env, VectorBatch &result)
     return obj;
 }
 
+static jobject transformFromRow(JNIEnv *env, RowBatch &result)
+{
+    int32_t rowCount = result.GetRowCount();
+    jobjectArray resultArray = env->NewObjectArray(rowCount, rowCls, nullptr);
+    for (int32_t i = 0; i < rowCount; ++i) {
+        RowInfo row = result.Get(i);
+        jobject rowObject = env->NewObject(rowCls, rowInitMethodId, reinterpret_cast<long>(row.row),
+                                           row.hashPos, row.length);
+        env->SetObjectArrayElement(resultArray, i, rowObject);
+        env->DeleteLocalRef(rowObject);
+    }
+
+    // create vector batch java object.
+    jobject obj = env->NewObject(rowBatchCls, rowBatchInitMethodId, (jlong)(&result), resultArray, rowCount);
+    env->DeleteLocalRef(resultArray);
+    return obj;
+}
+
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_addInputNative(JNIEnv *env, jobject jObj,
     jlong jOperatorAddress, jlong jVecBatchAddress)
 {
     int32_t errNo = 0;
     auto *vecBatch = reinterpret_cast<VectorBatch *>(jVecBatchAddress);
-    auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddress);
+    auto *nativeOperator = reinterpret_cast<op::Operator *>(jOperatorAddress);
     JNI_METHOD_START
     RecordInputVectorsStack(vecBatch, env);
     nativeOperator->SetInputVecBatch(vecBatch);
@@ -144,7 +187,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getOu
         return nullptr;
     }
 
-    auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddr);
+    auto *nativeOperator = reinterpret_cast<op::Operator *>(jOperatorAddr);
     VectorBatch *outputVecBatch = nullptr;
     JNI_METHOD_START
     nativeOperator->GetOutput(&outputVecBatch);
@@ -166,8 +209,8 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
     jlong jOperatorAddr)
 {
     try {
-        auto *nativeOperator = reinterpret_cast<Operator *>(jOperatorAddr);
-        Operator::DeleteOperator(nativeOperator);
+        auto *nativeOperator = reinterpret_cast<op::Operator *>(jOperatorAddr);
+        op::Operator::DeleteOperator(nativeOperator);
     } catch (const std::exception &e) {
         env->ThrowNew(omniRuntimeExceptionClass, e.what());
     }
@@ -181,6 +224,125 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpilledBytesNative(JNIEnv *env,
     jobject jObj, jlong jOperatorAddr)
 {
-    auto *nativeOperator = (Operator *)jOperatorAddr;
+    auto *nativeOperator = (op::Operator *)jOperatorAddr;
     return static_cast<jlong>(nativeOperator->GetSpilledBytes());
+}
+
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    getRowOutputNative
+ * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getRowOutputNative(JNIEnv *env, jobject jObj,
+                                                                                           jlong jOperatorAddr)
+{
+    std::call_once(loadVecBatchClsFlag, LoadVecBatchAndOmniResults, env);
+    if (vecBatchCls == nullptr || omniResultsCls == nullptr) {
+        env->ThrowNew(omniRuntimeExceptionClass, "The class RowBatch or OmniRowResult has not load yet.");
+        return nullptr;
+    }
+
+    auto *hashAggOperator = reinterpret_cast<HashAggregationWithExprOperator *>(jOperatorAddr);
+    RowBatch *rowBatch = nullptr;
+
+    try {
+        hashAggOperator->GetOutput(&rowBatch);
+    } catch (const std::exception &e) {
+        delete rowBatch;
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());
+        return nullptr;
+    }
+
+    jobject result = nullptr;
+    if (rowBatch) {
+        // todo : should we record rowBatch stack?
+//        RecordOutputVectorsStack(*outputVecBatch, env);
+        result = transformFromRow(env, *rowBatch);
+    }
+    return env->NewObject(rowResultsCls, rowResultsInitMethodId, result, hashAggOperator->GetStatus());
+}
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_freeRowBatchNative(JNIEnv *env, jclass jcls,
+                                                                                     jlong jrowBatchAddress)
+{
+    auto *rowBatch = reinterpret_cast<RowBatch *>(jrowBatchAddress);
+    delete rowBatch;
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_newRowBatchNative(JNIEnv *env, jclass jcls,
+                                                                                     jobjectArray rows, jint rowCount)
+{
+    jclass rowClass = env->FindClass("nova/hetu/omniruntime/vector/Row");
+
+    jfieldID rowAddrId = env->GetFieldID(rowClass, "nativeRow", "J");
+    jfieldID posId = env->GetFieldID(rowClass, "keyPos", "I");
+    jfieldID lengthId = env->GetFieldID(rowClass, "length", "I");
+
+    auto *rowBatch = new RowBatch(rowCount);
+
+    for (int i = 0; i < rowCount; ++i) {
+        auto obj = env->GetObjectArrayElement(rows, i);
+        auto rowAddr = env->GetLongField(obj, rowAddrId);
+        auto hashPos = env->GetIntField(obj, posId);
+        auto length = env->GetIntField(obj, lengthId);
+        rowBatch->SetRow(i, {(uint8_t*)(rowAddr), hashPos, length});
+    }
+    return reinterpret_cast<jlong>(rowBatch);
+}
+
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVectorBatch(
+        JNIEnv *env, jclass jcls, jlong vectorBatch) {
+    auto *outputVecBatch = reinterpret_cast<VectorBatch*>(vectorBatch);
+    std::vector<type::DataTypeId> outputTypeIds;
+    for(int i = 0;i<outputVecBatch->GetVectorCount(); i++) {
+        outputTypeIds.push_back(outputVecBatch->Get(i)->GetTypeId());
+    }
+
+    auto rowBuffer = std::make_unique<RowBuffer>(outputTypeIds, outputTypeIds.size() - 1);
+
+    auto rowBatch = std::make_unique<RowBatch>(outputVecBatch->GetRowCount());
+    for (int32_t i =0;i<outputVecBatch->GetRowCount(); ++i) {
+        // 1.get value from vector batch
+        rowBuffer->TransValueFromVectorBatch(outputVecBatch, i);
+
+        // 2.generate one buffer of one row
+        auto oneRowLen = rowBuffer->FillBuffer();
+
+        // 3.get hash position for shuffle
+        int32_t hashPos = rowBuffer->CalculateHashPos();
+        rowBatch->SetHashPos(i, hashPos);
+
+        // 4.set one row
+        rowBatch->SetRow(i, {rowBuffer->TakeRowBuffer(), hashPos, oneRowLen});
+
+    }
+    return transformFromRow(env, *rowBatch);
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_newOmniRowDeserializer(
+        JNIEnv *env, jclass jcls, jintArray typeArray) {
+    jboolean isCopy = false;
+    auto *types = env->GetIntArrayElements(typeArray, &isCopy);
+    auto len = env->GetArrayLength(typeArray);
+    auto *parser = new RowParser((type::DataTypeId*)types, len);
+    env->ReleaseIntArrayElements(typeArray, types, 0);
+    return reinterpret_cast<intptr_t>(parser);
+}
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_freeOmniRowDeserializer(
+        JNIEnv *env, jclass jcls, jlong parserAddr) {
+    delete reinterpret_cast<RowParser*>(parserAddr);
+}
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_parseOneRow(
+        JNIEnv *env, jclass jcls, jlong parserAddr, jbyteArray bytes, jlongArray vecArray, jint rowIndex) {
+    auto *parser = reinterpret_cast<RowParser*>(parserAddr);
+    jboolean isCopy = false;
+    auto *vecs = env->GetLongArrayElements(vecArray, &isCopy);
+    auto *row = env->GetByteArrayElements(bytes, &isCopy);
+    LogDebug("OmniRowDeserializer_parseOneRow use copy : %c\n", isCopy);
+    parser->ParseOnRow(reinterpret_cast<uint8_t*>(row), vecs, rowIndex);
+    env->ReleaseLongArrayElements(vecArray, vecs, 0);
+    env->ReleaseByteArrayElements(bytes, row, 0);
 }

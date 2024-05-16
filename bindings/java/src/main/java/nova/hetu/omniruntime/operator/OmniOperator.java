@@ -6,6 +6,7 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
+import nova.hetu.omniruntime.vector.RowBatch;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
@@ -23,6 +24,8 @@ public final class OmniOperator implements AutoCloseable {
 
     private VecBatchIterator outputIterator;
 
+    private RowBatchIterator rowOutputIter;
+
     /**
      * Instantiates a new Omni operator.
      *
@@ -37,6 +40,8 @@ public final class OmniOperator implements AutoCloseable {
 
     // getOutput
     private static native OmniResults getOutputNative(long nativeOperator);
+
+    private static native OmniRowResults getRowOutputNative(long nativeOperator);
 
     // close
     private static native void closeNative(long nativeOperator);
@@ -65,6 +70,14 @@ public final class OmniOperator implements AutoCloseable {
         }
         outputIterator.reset();
         return outputIterator;
+    }
+
+    public Iterator<RowBatch> getRowOutput() {
+        if (rowOutputIter == null) {
+            rowOutputIter = new RowBatchIterator();
+        }
+        rowOutputIter.reset();
+        return rowOutputIter;
     }
 
     /**
@@ -148,4 +161,73 @@ public final class OmniOperator implements AutoCloseable {
             return !OMNI_STATUS_NORMAL.equals(results.getStatus());
         }
     }
+
+    private class RowBatchIterator implements Iterator<RowBatch> {
+        private boolean hasNext;
+
+        private OmniRowResults results;
+
+        private RowBatch next;
+
+        /**
+         * Instantiates a new Vec batch iterator.
+         */
+        public RowBatchIterator() {
+            resetIterator();
+            advanced();
+            hasNext = true;
+        }
+
+        public void reset() {
+            hasNext = true;
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (!hasNext) {
+                return false;
+            }
+            // if it first, the results is null,
+            // or index reach the count of vector batches but it don't finished,
+            // then advanced().
+            if (results == null || (next == results.getRowBatch() && !isFinished())) {
+                resetIterator();
+                advanced();
+            }
+
+            // after advanced(), if results is still null,
+            // or vectorBatch hash been pulled, or vecBatch is null
+            // means there is no more data.
+            if (results == null || next == results.getRowBatch()) {
+                resetIterator();
+                hasNext = false;
+                return false;
+            }
+
+            hasNext = true;
+            return true;
+        }
+
+        @Override
+        public RowBatch next() {
+            next = results.getRowBatch();
+            return next;
+        }
+
+        private void resetIterator() {
+            results = null;
+            next = null;
+        }
+
+        private void advanced() {
+            results = getRowOutputNative(nativeOperator);
+        }
+
+        private boolean isFinished() {
+            return !OMNI_STATUS_NORMAL.equals(results.getStatus());
+        }
+    }
+
+
+
 }
