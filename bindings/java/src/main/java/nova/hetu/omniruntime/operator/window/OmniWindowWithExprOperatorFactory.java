@@ -201,7 +201,6 @@ public class OmniWindowWithExprOperatorFactory
             this.frameEndTypes = windowFrameEndTypes;
             this.frameEndChannels = winddowFrameEndChannels;
             this.operatorConfig = operatorConfig;
-            setNeedCache(false);
         }
 
         @Override
