@@ -144,6 +144,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastDecimal128ToString), CastFnStr(), {}, { OMNI_DECIMAL128 }, OMNI_VARCHAR,
             INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(CastDateToString), CastFnStr(), {}, { OMNI_DATE32 }, OMNI_VARCHAR, INPUT_DATA,
+            true),
 
         Function(reinterpret_cast<void *>(CastStringToInt), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA,
             true),
@@ -184,6 +186,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
         Function(reinterpret_cast<void *>(CastDecimal128ToStringRetNull), CastNullFnStr(), {}, { OMNI_DECIMAL128 },
             OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastDateToStringRetNull), CastNullFnStr(), {}, { OMNI_DATE32 }, OMNI_VARCHAR,
+            INPUT_DATA_AND_OVERFLOW_NULL, true),
 
         Function(reinterpret_cast<void *>(CastStringToIntRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT,
             INPUT_DATA_AND_OVERFLOW_NULL),

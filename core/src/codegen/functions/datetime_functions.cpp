@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  * Description: date time functions implementation
  */
 
@@ -27,7 +27,7 @@ extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmt
     if (isNull) {
         return 0;
     }
-    time_t desiredTime = date * type::Date32::SECOND_OF_DAY;
+    time_t desiredTime = type::SECOND_OF_DAY * date;
     struct tm ltm;
     ltm = *localtime(&desiredTime);
     time_t result = desiredTime - ltm.tm_gmtoff;
@@ -51,5 +51,28 @@ extern "C" DLLEXPORT char *FromUnixTimeRetNull(int64_t contextPtr, bool *isNull,
     int32_t fmtLen, int32_t *outLen)
 {
     return FromUnixTime(contextPtr, isNull, timestamp, fmtStr, fmtLen, outLen);
+}
+
+extern "C" DLLEXPORT int32_t DateTrunc(int64_t contextPtr, int32_t days, const char *levelStr, int32_t len)
+{
+    type::DateTruncMode level = type::Date32::ParseTruncLevel(std::string(levelStr, len));
+    int32_t result;
+    if (type::Date32::TruncDate(days, level, result) != type::Status::CONVERT_SUCCESS) {
+        std::ostringstream errorMessage;
+        errorMessage << "The level is not supported yet: " << std::string(levelStr, len);
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+    return result;
+}
+
+extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const char *levelStr, int32_t len)
+{
+    type::DateTruncMode level = type::Date32::ParseTruncLevel(std::string(levelStr, len));
+    int32_t result;
+    if (type::Date32::TruncDate(days, level, result) != type::Status::CONVERT_SUCCESS) {
+        *isNull = true;
+    }
+    return result;
 }
 }

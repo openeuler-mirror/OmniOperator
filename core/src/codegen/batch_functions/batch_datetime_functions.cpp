@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  * Description: batch date time functions implementation
  */
 #include "batch_datetime_functions.h"
@@ -33,7 +33,7 @@ extern "C" DLLEXPORT void BatchUnixTimestampFromDate(int32_t *dates, const char 
             output[i] = 0;
             continue;
         }
-        time_t desiredTime = dates[i] * type::Date32::SECOND_OF_DAY;
+        time_t desiredTime = type::SECOND_OF_DAY * dates[i];
         struct tm ltm;
         ltm = *localtime(&desiredTime);
         time_t result = desiredTime - ltm.tm_gmtoff;

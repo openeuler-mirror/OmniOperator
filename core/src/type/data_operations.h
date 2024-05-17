@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2022. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: decimal128 utils
  */
 
@@ -10,6 +10,7 @@
 #include <regex>
 #include <limits>
 #include "util/compiler_util.h"
+#include "base_operations.h"
 
 namespace omniruntime {
 namespace type {
@@ -17,12 +18,6 @@ static std::regex g_decimalRegex("[+-]?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[
 static std::regex g_doubleRegex(
     "[[:blank:]]*([+-])?[[:digit:]]+([.][[:digit:]]+)?([eE][+-]?[[:digit:]]+)?[[:blank:]]*");
 static std::regex g_dateRegex(R"(\d{4}-\d{2}-\d{2}$)");
-
-enum Status {
-    CONVERT_SUCCESS,
-    CONVERT_OVERFLOW,
-    IS_NOT_A_NUMBER
-};
 
 template<typename T, bool allowTruncate = true>
 inline Status ConvertStringToInteger(T &result, const char *bytes, int length)

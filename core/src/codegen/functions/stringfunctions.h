@@ -313,5 +313,10 @@ extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const 
 
 extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
     bool isNull);
+
+extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
+    int32_t *outLen);
+
+extern "C" DLLEXPORT const char *CastDateToString(int64_t contextPtr, int32_t value, bool isNull, int32_t *outLen);
 }
 #endif

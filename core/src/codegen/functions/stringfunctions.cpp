@@ -133,18 +133,18 @@ extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t cont
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int64_t result = 0;
     std::string s(str, strLen);
     StringUtil::TrimString(s);
     if (!regex_match(s, g_dateRegex)) {
         SetError(contextPtr, "Only support cast date\'YYYY-MM-DD\' to integer");
         return -1;
     }
-    if (Date32::StringToDate32(str, strLen, result) == -1) {
+    if (Date32::StringToDate32(str, strLen, result) != Status::CONVERT_SUCCESS) {
         SetError(contextPtr, "Value cannot be cast to date: " + std::string(str, strLen));
         return -1;
     }
-    return result;
+    return static_cast<int32_t >(result);
 }
 
 extern "C" DLLEXPORT int32_t CastStringToDateAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
@@ -156,14 +156,12 @@ extern "C" DLLEXPORT int32_t CastStringToDateAllowReducePrecison(int64_t context
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
-    std::string s(str, strLen);
-    StringUtil::TrimString(s);
-    if (Date32::StringToDate32(str, strLen, result) == -1) {
+    int64_t result = 0;
+    if (Date32::StringToDate32(str, strLen, result) != Status::CONVERT_SUCCESS) {
         SetError(contextPtr, "Value cannot be cast to date: " + std::string(str, strLen));
         return -1;
     }
-    return result;
+    return static_cast<int32_t >(result);
 }
 
 extern "C" DLLEXPORT const char *ToUpperStr(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
@@ -639,18 +637,18 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullNotAllowReducePrecison(bool 
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int64_t result = 0;
     std::string s(str, strLen);
     StringUtil::TrimString(s);
     if (!regex_match(s, g_dateRegex)) {
         *isNull = true;
         return -1;
     }
-    if (Date32::StringToDate32(str, strLen, result) == -1) {
+    if (Date32::StringToDate32(str, strLen, result) != Status::CONVERT_SUCCESS) {
         *isNull = true;
         return -1;
     }
-    return result;
+    return static_cast<int32_t >(result);
 }
 
 extern "C" DLLEXPORT int32_t CastStringToDateRetNullAllowReducePrecison(bool *isNull, const char *str, int32_t strLen)
@@ -658,14 +656,12 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullAllowReducePrecison(bool *is
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
-    std::string s(str, strLen);
-    StringUtil::TrimString(s);
-    if (Date32::StringToDate32(str, strLen, result) == -1) {
+    int64_t result = 0;
+    if (Date32::StringToDate32(str, strLen, result) != Status::CONVERT_SUCCESS) {
         *isNull = true;
         return -1;
     }
-    return result;
+    return static_cast<int32_t >(result);
 }
 
 extern "C" DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
@@ -928,5 +924,27 @@ extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const c
         }
     }
     return true;
+}
+
+extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
+    int32_t *outLen)
+{
+    Date32 date(value);
+    *outLen = static_cast<int32_t>(11);
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    date.ToString(ret, 11);
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *CastDateToString(int64_t contextPtr, int32_t value, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    Date32 date(value);
+    *outLen = static_cast<int32_t>(11);
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    date.ToString(ret, 11);
+    return ret;
 }
 }
