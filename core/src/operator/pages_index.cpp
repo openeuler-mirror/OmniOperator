@@ -28,13 +28,8 @@ void ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **inputVecBat
     BaseVector *outputVector, int32_t outputIndex);
 
 template <type::DataTypeId dataTypeId>
-void ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length, BaseVector **inputVecBatch, bool hasNull,
+void ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length, BaseVector **inputVectors, bool hasNull,
     bool hasDictionary, uint32_t radixRowWidth, BaseVector *outputVector);
-
-static ALWAYS_INLINE std::tuple<uint16_t, uint32_t> CompactDecodeSytheticAddress(const uint8_t *address)
-{
-    return { *reinterpret_cast<const uint16_t *>(address), *reinterpret_cast<const uint32_t *>(address + 2) };
-}
 
 // function implements for class PagesIndex
 PagesIndex::PagesIndex(const DataTypes &types)
@@ -204,38 +199,22 @@ ALWAYS_INLINE void PagesIndex::FillRadixDataChunk(const int32_t sortCol, const b
         for (uint32_t rowIdx = 0; rowIdx < vecBatchRowCount; rowIdx++) {
             if constexpr (hasNull) {
                 if (col->IsNull(rowIdx)) {
-                    ret = memcpy_s(nullPtr + radixValueWidth, SHORT_NBYTES, &vecBatchIdx, SHORT_NBYTES);
-                    if (UNLIKELY(ret != EOK)) {
-                        std::string errStr = "copy radixValue vectorBathIdx error when value is null,"
-                            "error is " + std::to_string(ret);
-                        throw OmniException("OPERATOR_RUNTIME_ERROR", errStr);
-                    }
-                    ret = memcpy_s(nullPtr + radixValueWidth + SHORT_NBYTES, INT_NBYTES, &rowIdx, INT_NBYTES);
-                    if (UNLIKELY(ret != EOK)) {
-                        std::string errStr = "copy radixValue rowIdx error when value is null,"
-                            " error is " + std::to_string(ret);
-                        throw OmniException("OPERATOR_RUNTIME_ERROR", errStr);
-                    }
-                    nullPtr += radixRowWidth;
+                    auto tmpNullPtr = nullPtr + radixValueWidth;
+                    *reinterpret_cast<uint16_t *>(tmpNullPtr) = static_cast<uint16_t>(vecBatchIdx);
+                    *reinterpret_cast<uint32_t *>(tmpNullPtr + SHORT_NBYTES) = rowIdx;
+                    nullPtr = tmpNullPtr + SHORT_NBYTES + INT_NBYTES;
                     continue;
                 }
             }
             const auto value = col->GetValue(rowIdx);
             *reinterpret_cast<T *>(rowPtr) = value;
-            ret = memcpy_s(rowPtr + radixValueWidth, SHORT_NBYTES, &vecBatchIdx, SHORT_NBYTES);
-            if (UNLIKELY(ret != EOK)) {
-                std::string errStr = "copy radixValue vecBatchIdx error , error is " + std::to_string(ret);
-                throw OmniException("OPERATOR_RUNTIME_ERROR", errStr);
-            }
-            ret = memcpy_s(rowPtr + radixValueWidth + SHORT_NBYTES, INT_NBYTES, &rowIdx, INT_NBYTES);
-            if (UNLIKELY(ret != EOK)) {
-                std::string errStr = "copy radixValue rowIdx error , error is " + std::to_string(ret);
-                throw OmniException("OPERATOR_RUNTIME_ERROR", errStr);
-            }
+            auto tmpRowPtr = rowPtr + radixValueWidth;
+            *reinterpret_cast<uint16_t *>(tmpRowPtr) = static_cast<uint16_t>(vecBatchIdx);
+            *reinterpret_cast<uint32_t *>(tmpRowPtr + SHORT_NBYTES) = rowIdx;
             if constexpr (hasNegative) {
                 rowPtr[signByte] ^= signFlipMask;
             }
-            rowPtr += radixRowWidth;
+            rowPtr = tmpRowPtr + SHORT_NBYTES + INT_NBYTES;
         }
     }
 }
@@ -1269,46 +1248,45 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
 void PagesIndex::GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount,
     omniruntime::vec::VectorBatch *outputVecBatch, const int32_t *sourceTypes, int32_t offset, int32_t length) const
 {
-    BaseVector ***inputVecBatches = this->columns;
     const uint8_t *vaStart = radixComboRow.data() + offset * radixRowWidth + radixValueWidth;
     for (int32_t j = 0; j < outputColsCount; ++j) {
         int32_t outputCol = outputCols[j];
         int32_t colTypeId = sourceTypes[outputCol];
-        BaseVector **inputVecBatch = inputVecBatches[outputCol];
+        BaseVector **inputVectors = columns[outputCol];
         bool hasDictionary = hasDictionaries[outputCol];
         bool hasNull = hasNulls[outputCol];
         auto outputVector = outputVecBatch->Get(j);
         switch (colTypeId) {
             case OMNI_INT:
             case OMNI_DATE32:
-                ConstructVectorRadixSort<OMNI_INT>(vaStart, length, inputVecBatch, hasNull, hasDictionary,
+                ConstructVectorRadixSort<OMNI_INT>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);
                 break;
             case OMNI_SHORT:
-                ConstructVectorRadixSort<OMNI_SHORT>(vaStart, length, inputVecBatch, hasNull, hasDictionary,
+                ConstructVectorRadixSort<OMNI_SHORT>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);
                 break;
             case OMNI_LONG:
             case OMNI_DECIMAL64:
-                ConstructVectorRadixSort<OMNI_LONG>(vaStart, length, inputVecBatch, hasNull, hasDictionary,
+                ConstructVectorRadixSort<OMNI_LONG>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);
                 break;
             case OMNI_DOUBLE:
-                ConstructVectorRadixSort<OMNI_DOUBLE>(vaStart, length, inputVecBatch, hasNull, hasDictionary,
+                ConstructVectorRadixSort<OMNI_DOUBLE>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);
                 break;
             case OMNI_BOOLEAN:
-                ConstructVectorRadixSort<OMNI_BOOLEAN>(vaStart, length, inputVecBatch, hasNull, hasDictionary,
+                ConstructVectorRadixSort<OMNI_BOOLEAN>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR: {
-                ConstructVectorRadixSort<OMNI_VARCHAR>(vaStart, length, inputVecBatch, hasNull, hasDictionary,
+                ConstructVectorRadixSort<OMNI_VARCHAR>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);
                 break;
             }
             case OMNI_DECIMAL128:
-                ConstructVectorRadixSort<OMNI_DECIMAL128>(vaStart, length, inputVecBatch, hasNull, hasDictionary,
+                ConstructVectorRadixSort<OMNI_DECIMAL128>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);
                 break;
             default:
@@ -1413,37 +1391,41 @@ NO_INLINE void ConstructVector(uint64_t *vaStart, int32_t length, BaseVector **i
 }
 
 template <type::DataTypeId dataTypeId>
-NO_INLINE void ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length, BaseVector **inputVecBatch,
+NO_INLINE void ConstructVectorRadixSort(const uint8_t *vaStart, int32_t length, BaseVector **inputVectors,
     bool hasNull, bool hasDictionary, uint32_t radixRowWidth, BaseVector *outputVector)
 {
     int32_t outputIndex = 0;
     const uint8_t *vaEnd = vaStart + length * radixRowWidth;
     if (hasNull && hasDictionary) {
         while (vaStart < vaEnd) {
-            auto [pageIndex, position] = CompactDecodeSytheticAddress(vaStart);
-            auto inputVector = inputVecBatch[pageIndex];
+            auto vecBatchIdx = *reinterpret_cast<const uint16_t *>(vaStart);
+            auto position = *reinterpret_cast<const uint32_t *>(vaStart + SHORT_NBYTES);
             vaStart += radixRowWidth;
+            auto inputVector = inputVectors[vecBatchIdx];
             SetValue<dataTypeId, true, true>(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
         }
     } else if (hasNull) {
         while (vaStart < vaEnd) {
-            auto [pageIndex, position] = CompactDecodeSytheticAddress(vaStart);
-            auto inputVector = inputVecBatch[pageIndex];
+            auto vecBatchIdx = *reinterpret_cast<const uint16_t *>(vaStart);
+            auto position = *reinterpret_cast<const uint32_t *>(vaStart + SHORT_NBYTES);
             vaStart += radixRowWidth;
+            auto inputVector = inputVectors[vecBatchIdx];
             SetValue<dataTypeId, true, false>(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
         }
     } else if (hasDictionary) {
         while (vaStart < vaEnd) {
-            auto [pageIndex, position] = CompactDecodeSytheticAddress(vaStart);
-            auto inputVector = inputVecBatch[pageIndex];
+            auto vecBatchIdx = *reinterpret_cast<const uint16_t *>(vaStart);
+            auto position = *reinterpret_cast<const uint32_t *>(vaStart + SHORT_NBYTES);
             vaStart += radixRowWidth;
+            auto inputVector = inputVectors[vecBatchIdx];
             SetValue<dataTypeId, false, true>(inputVector, static_cast<int32_t>(position), outputVector, outputIndex++);
         }
     } else {
         while (vaStart < vaEnd) {
-            auto [pageIndex, position] = CompactDecodeSytheticAddress(vaStart);
-            auto inputVector = inputVecBatch[pageIndex];
+            auto vecBatchIdx = *reinterpret_cast<const uint16_t *>(vaStart);
+            auto position = *reinterpret_cast<const uint32_t *>(vaStart + SHORT_NBYTES);
             vaStart += radixRowWidth;
+            auto inputVector = inputVectors[vecBatchIdx];
             SetValue<dataTypeId, false, false>(inputVector, static_cast<int32_t>(position), outputVector,
                 outputIndex++);
         }
