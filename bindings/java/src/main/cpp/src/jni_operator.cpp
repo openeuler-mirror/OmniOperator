@@ -146,9 +146,9 @@ static jobject transformFromRow(JNIEnv *env, RowBatch &result)
     int32_t rowCount = result.GetRowCount();
     jobjectArray resultArray = env->NewObjectArray(rowCount, rowCls, nullptr);
     for (int32_t i = 0; i < rowCount; ++i) {
-        RowInfo row = result.Get(i);
-        jobject rowObject = env->NewObject(rowCls, rowInitMethodId, reinterpret_cast<long>(row.row),
-                                           row.hashPos, row.length);
+        RowInfo* row = result.Get(i);
+        jobject rowObject = env->NewObject(rowCls, rowInitMethodId, reinterpret_cast<long>(row->row),
+                                           row->hashPos, row->length);
         env->SetObjectArrayElement(resultArray, i, rowObject);
         env->DeleteLocalRef(rowObject);
     }
@@ -286,12 +286,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_newRowBatchNa
         auto rowAddr = env->GetLongField(obj, rowAddrId);
         auto hashPos = env->GetIntField(obj, posId);
         auto length = env->GetIntField(obj, lengthId);
-        rowBatch->SetRow(i, {(uint8_t*)(rowAddr), hashPos, length});
+        rowBatch->SetRow(i, new RowInfo((uint8_t*)(rowAddr), hashPos, length));
     }
     return reinterpret_cast<jlong>(rowBatch);
 }
 
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVectorBatch(
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVectorBatch(
         JNIEnv *env, jclass jcls, jlong vectorBatch) {
     auto *outputVecBatch = reinterpret_cast<VectorBatch*>(vectorBatch);
     std::vector<type::DataTypeId> outputTypeIds;
@@ -309,15 +309,11 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVe
         // 2.generate one buffer of one row
         auto oneRowLen = rowBuffer->FillBuffer();
 
-        // 3.get hash position for shuffle
-        int32_t hashPos = rowBuffer->CalculateHashPos();
-        rowBatch->SetHashPos(i, hashPos);
-
         // 4.set one row
-        rowBatch->SetRow(i, {rowBuffer->TakeRowBuffer(), hashPos, oneRowLen});
+        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), 0, oneRowLen));
 
     }
-    return transformFromRow(env, *rowBatch);
+    return reinterpret_cast<jlong>(rowBatch.release());
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_newOmniRowDeserializer(

@@ -24,10 +24,9 @@ public class RowBatch implements AutoCloseable {
     }
 
     public RowBatch(VecBatch vb) {
-        RowBatch rb = transFromVectorBatch(vb.getNativeVectorBatch());
-        this.rows = rb.rows;
-        this.rowCount = rb.rowCount;
-        this.nativeRowBatch = rb.nativeRowBatch;
+        long rb = transFromVectorBatch(vb.getNativeVectorBatch());
+        this.rowCount = vb.getRowCount();
+        this.nativeRowBatch = rb;
     }
 
     public RowBatch(Row[] rows, int rowCount) {
@@ -39,7 +38,7 @@ public class RowBatch implements AutoCloseable {
 
     public static native long newRowBatchNative(Row[] rows, int rowCount);
 
-    public static native RowBatch transFromVectorBatch(long vbAddress);
+    public static native long transFromVectorBatch(long vbAddress);
 
     public long getNativeRowBatch() {
         return nativeRowBatch;

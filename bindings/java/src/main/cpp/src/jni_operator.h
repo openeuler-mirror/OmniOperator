@@ -58,7 +58,7 @@ JNIEXPORT void JNICALL  Java_nova_hetu_omniruntime_vector_RowBatch_freeRowBatchN
                                                                                          jclass jcls,
                                                                                          jlong jVecBatchAddress);
 
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVectorBatch(
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVectorBatch(
         JNIEnv *env, jclass jcls, jlong vectorBatch);
 
 JNIEXPORT jlong JNICALL  Java_nova_hetu_omniruntime_vector_RowBatch_newRowBatchNative(JNIEnv *env, jclass jcls,

@@ -351,7 +351,7 @@ int32_t HashAggregationOperator::GetOutput(RowBatch **outputRowBatch)
         auto hashVal = HashUtil::HashValue((int8_t *)buffer, hashPos);
 
         // 4.set one row
-        rowBatch->SetRow(i, {rowBuffer->TakeRowBuffer(), hashVal, oneRowLen});
+        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), hashVal, oneRowLen));
 
     }
     *outputRowBatch = rowBatch.release();

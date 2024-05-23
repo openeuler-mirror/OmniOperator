@@ -30,6 +30,7 @@ public:
     static constexpr int32_t PrefixLen = 1;
     static constexpr int32_t BIT_64 = 64;
     static constexpr int32_t BIT_8 = 8;
+    static constexpr int32_t BIT_1 = 1;
     static constexpr int32_t BIT_16 = 16;
     static constexpr int8_t VARCHAR_BIT = 1 << 7;
     static constexpr int8_t FIX_BIT = 0;
@@ -114,7 +115,7 @@ public:
     uint8_t CalMetaSize() {
         if constexpr (std::is_same_v<T, std::string_view>) {
             // for varchar
-            return (BIT_64 - __builtin_clzll(value.length()) + BIT_8) / BIT_8;
+            return sizeof(int32_t);
         } else if constexpr (std::is_same_v<T, double>) {
             return BIT_8;
         } else if constexpr (std::is_same_v<T, type::Decimal128>) {
@@ -125,7 +126,7 @@ public:
             if(value < 0) {
                 tmp = ~value;
             }
-            return (BIT_64 - __builtin_clzll(tmp) + BIT_8) / BIT_8;
+            return sizeof(T);
         }
     }
 
@@ -170,6 +171,11 @@ public:
                 memcpy(writeBuffer, &value, BIT_8);
                 LogDebug("double offset is %d\n", 1 + BIT_8);
                 return writeBuffer + BIT_8;
+            } else if constexpr (std::is_same_v<T, bool>) {
+                *writeBuffer = (FIX_BIT | (isNull << NULL_POS) | BIT_1);
+                ++writeBuffer;
+                memcpy(writeBuffer, &value, BIT_1);
+                return writeBuffer + BIT_1;
             } else {
                 auto tmp = value;
                 bool neg = false;
@@ -177,7 +183,8 @@ public:
                     tmp = ~value;
                     neg = true;
                 }
-                uint8_t rowLenSize = (BIT_64 - __builtin_clzll(tmp) + BIT_8) / BIT_8;
+                // uint8_t rowLenSize = (BIT_64 - __builtin_clzll(tmp) + BIT_8) / BIT_8;
+                uint8_t rowLenSize = sizeof(T);
                 *writeBuffer = (FIX_BIT | (isNull << NULL_POS) | (neg << NEG_POS) | rowLenSize);
                 ++writeBuffer;
                 memcpy(writeBuffer, &tmp, rowLenSize);
@@ -216,7 +223,26 @@ static inline uint8_t* FixedRowSetVecValue(uint8_t *row, Vector<IntLikeType> *ve
     } else {
         vec->SetValue(rowIndex, value);
     }
-    std::cout<<"fix value parse value is "<<(negValue?-value:value)<<", offset is "<< 1+ valueLen<<std::endl;
+    /*std::string out;
+    out = "fix value parse value is " + std::to_string(negValue?-value:value) + ". \n";
+    printf(out.c_str());*/
+    return row + valueLen;
+}
+
+template<typename IntLikeType>
+static inline uint8_t* FixedRowGetValue(uint8_t *row) {
+    IntLikeType value = 0;
+    bool negValue = false;
+    if(*row & (1<<BaseSerialize::NEG_POS)) {
+        negValue = true;
+    }
+    auto valueLen = (*row) & (0x0F);
+    // point to real value
+    ++row;
+    memcpy(&value, row, valueLen);
+    std::string out;
+    out = "fix value parse value is " + std::to_string(negValue?-value:value) + ". \n";
+    printf(out.c_str());
     return row + valueLen;
 }
 
@@ -225,7 +251,28 @@ static inline uint8_t* DecimalRowSetVecValue(uint8_t *row, Vector<Decimal128> *v
     ++row;
     memcpy(&value, row, BaseSerialize::BIT_16);
     vec->SetValue(rowIndex, value);
+    /*std::string out;
+    out = "Decimal value parse highBits is " + std::to_string(value.HighBits()) + ", lowBits is " + std::to_string(value.LowBits());
+    printf(out.c_str());*/
     return row + BaseSerialize::BIT_16;
+}
+
+static inline uint8_t* DecimalRowGetValue(uint8_t *row) {
+    type::Decimal128 value;
+    ++row;
+    memcpy(&value, row, BaseSerialize::BIT_16);
+    std::string out;
+    out = "Decimal value parse highBits is " + std::to_string(value.HighBits()) + ", lowBits is " + std::to_string(value.LowBits()) + ". \n";
+    printf(out.c_str());
+    return row + BaseSerialize::BIT_16;
+}
+
+static inline uint8_t* BoolRowSetVecValue(uint8_t *row, Vector<bool> *vec, int32_t rowIndex) {
+    bool value;
+    ++row;
+    memcpy(&value, row, BaseSerialize::BIT_1);
+    vec->SetValue(rowIndex, value);
+    return row + BaseSerialize::BIT_1;
 }
 
 static inline uint8_t* DoubleRowSetVecValue(uint8_t *row, Vector<double> *vec, int32_t rowIndex) {
@@ -233,7 +280,19 @@ static inline uint8_t* DoubleRowSetVecValue(uint8_t *row, Vector<double> *vec, i
     ++row;
     memcpy(&value, row, BaseSerialize::BIT_8);
     vec->SetValue(rowIndex, value);
-    std::cout<<"double parse value is "<<value<<", offset is 9"<<std::endl;
+    /*std::string out;
+    out = "double parse value is " + std::to_string(value);
+    printf(out.c_str());*/
+    return row + BaseSerialize::BIT_8;
+}
+
+static inline uint8_t* DoubleRowGetValue(uint8_t *row) {
+    double value;
+    ++row;
+    memcpy(&value, row, BaseSerialize::BIT_8);
+    std::string out;
+    out = "double parse value is " + std::to_string(value) + ". \n";
+    printf(out.c_str());
     return row + BaseSerialize::BIT_8;
 }
 
@@ -248,7 +307,25 @@ static inline uint8_t* StringRowSetVecValue(uint8_t *row, Vector<LargeStringCont
     // row will be copied to value 's string buffer
     std::string_view value{(char*)(row), strLen};
     vec->SetValue(rowIndex, value);
-    std::cout<<"str parse len is "<<strLen<<", offset is "<< 1 + valueLen + strLen<<std::endl;
+    /*std::string out;
+    out = "str parse value is " + std::string(value.data(), value.size()) + ". \n";
+    printf(out.c_str());*/
+    return row + strLen;
+}
+
+static inline uint8_t* StringRowGetValue(uint8_t *row) {
+    auto valueLen = (*row) & (0b00000111);
+    // point to strLen value
+    ++row;
+    int32_t strLen = 0;
+    memcpy(&strLen, row, valueLen);
+    // point to str
+    row += valueLen;
+    // row will be copied to value 's string buffer
+    std::string_view value{(char*)(row), strLen};
+    std::string out;
+    out = "str parse value is " + std::string(value.data(), value.size()) + ". \n";
+    printf(out.c_str());
     return row + strLen;
 }
 
@@ -261,6 +338,7 @@ uint8_t *RowToVec(uint8_t *row, BaseVector *vec, int32_t rowIndex) {
     auto *typeVector = reinterpret_cast<VectorType *>(vec);
     if(*row & (0x1 << BaseSerialize::NULL_POS)) {
         typeVector->SetNull(rowIndex);
+        return row + BaseSerialize::PrefixLen;
     } else {
         if constexpr (std::is_same_v<std::string_view, Type>) {
             return StringRowSetVecValue(row, typeVector, rowIndex);
@@ -268,8 +346,30 @@ uint8_t *RowToVec(uint8_t *row, BaseVector *vec, int32_t rowIndex) {
             return DoubleRowSetVecValue(row, typeVector, rowIndex);
         } else if constexpr (std::is_same_v<Type, Decimal128>){
             return DecimalRowSetVecValue(row, typeVector, rowIndex);
+        } else if constexpr (std::is_same_v<Type, bool>){
+            return BoolRowSetVecValue(row, typeVector, rowIndex);
         } else {
-            return FixedRowSetVecValue(row, typeVector, rowIndex);
+            return FixedRowSetVecValue<Type>(row, typeVector, rowIndex);
+        }
+    }
+}
+
+template<type::DataTypeId id>
+uint8_t *PrintRow(uint8_t *row) {
+    using Type = typename NativeType<id>::type;
+    if(*row & (0x1 << BaseSerialize::NULL_POS)) {
+        std::string out;
+        out = "the value is null. \n";
+        printf(out.c_str());
+    } else {
+        if constexpr (std::is_same_v<std::string_view, Type>) {
+            return StringRowGetValue(row);
+        } else if constexpr (std::is_same_v<Type, double>) {
+            return DoubleRowGetValue(row);
+        } else if constexpr (std::is_same_v<Type, Decimal128>){
+            return DecimalRowGetValue(row);
+        } else {
+            return FixedRowGetValue<Type>(row);
         }
     }
 }
@@ -277,6 +377,7 @@ uint8_t *RowToVec(uint8_t *row, BaseVector *vec, int32_t rowIndex) {
 using TransFuncPtr = void (*)(BaseVector *vec, int32_t rowIndex, BaseSerialize *value);
 using GenFuncPtr = BaseSerialize *(*)();
 using RowToVecFuncPtr = uint8_t* (*)(uint8_t *row, BaseVector *vec, int32_t rowIndex);
+using PrintRowFuncPtr = uint8_t* (*)(uint8_t *row);
 
 static std::vector<RowToVecFuncPtr> Row2VecFuncCenter = {
         nullptr,                                        // OMNI_NONE,
@@ -296,6 +397,27 @@ static std::vector<RowToVecFuncPtr> Row2VecFuncCenter = {
         nullptr,                                        // OMNI_INTERVAL_DAY_TIME
         RowToVec<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
         RowToVec<type::OMNI_VARCHAR>,    // OMNI_CHAR,
+        nullptr                                         // OMNI_CONTAINER,
+};
+
+static std::vector<PrintRowFuncPtr> PrintRowFuncCenter = {
+        nullptr,                                        // OMNI_NONE,
+        PrintRow<type::OMNI_INT>,        // OMNI_INT
+        PrintRow<type::OMNI_LONG>,       // OMNI_LONG
+        PrintRow<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
+        PrintRow<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
+        PrintRow<type::OMNI_SHORT>,      // OMNI_SHORT
+        PrintRow<type::OMNI_LONG>,       // OMNI_DECIMAL64,
+        PrintRow<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
+        PrintRow<type::OMNI_INT>,        // OMNI_DATE32
+        PrintRow<type::OMNI_LONG>,       // OMNI_DATE64
+        PrintRow<type::OMNI_INT>,        // OMNI_TIME32
+        PrintRow<type::OMNI_LONG>,       // OMNI_TIME64
+        nullptr,                                        // OMNI_TIMESTAMP
+        nullptr,                                        // OMNI_INTERVAL_MONTHS
+        nullptr,                                        // OMNI_INTERVAL_DAY_TIME
+        PrintRow<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
+        PrintRow<type::OMNI_VARCHAR>,    // OMNI_CHAR,
         nullptr                                         // OMNI_CONTAINER,
 };
 
@@ -368,6 +490,7 @@ public:
         uint8_t *buffer;
         mem::GetMemoryPool()->Allocate(sizeof(intptr_t) * columnSize, &buffer);
         oneRow = reinterpret_cast<BaseSerialize **>(buffer);
+        transFuns.reserve(columnSize);
         for (int i = 0; i < types.size(); i++) {
             ConstructFuncById(i, types[i]);
         }
@@ -398,7 +521,7 @@ public:
             auto len = oneRow[i]->CompactLength();
             ret += len;
         }
-        std::cout<<"total len is "<<ret<<std::endl;
+        // std::cout<<"total len is "<<ret<<std::endl;
         return ret;
     }
 
@@ -460,7 +583,79 @@ private:
     int32_t columnSize;
 };
 
-struct RowInfo {
+
+class RowParser {
+public:
+    RowParser(std::vector<DataTypeId> types) {
+        typeParser.reserve(types.size());
+        printParser.reserve(types.size());
+        for(int i = 0; i < types.size(); ++i) {
+            typeParser.push_back(Row2VecFuncCenter[types[i]]);
+            printParser.push_back(PrintRowFuncCenter[types[i]]);
+        }
+    }
+
+    RowParser(DataTypeId* types, int32_t len) {
+        typeParser.reserve(len);
+        for(int i=0; i < len; ++i) {
+            LogWarn("cpp parser type: %d\n.", types[i]);
+            typeParser.push_back(Row2VecFuncCenter[types[i]]);
+        }
+    }
+
+    RowParser(std::vector<DataTypePtr> &typeIds) {
+        typeParser.reserve(typeIds.size());
+        for(int i=0; i < typeIds.size(); ++i) {
+            typeParser.push_back(Row2VecFuncCenter[typeIds[i]->GetId()]);
+        }
+    }
+
+    void ParseOneRow(uint8_t *row, BaseVector** vec, int32_t rowIndex) {
+        for (int i = 0; i< typeParser.size(); ++i) {
+            auto parseFunc = typeParser[i];
+            row = parseFunc(row, vec[i], rowIndex);
+        }
+    }
+
+    // friendly to jni
+    void ParseOnRow(uint8_t *row, long* vecs, int32_t rowIndex) {
+        for (int i = 0; i< typeParser.size(); ++i) {
+            auto parseFunc = typeParser[i];
+            row = parseFunc(row, (BaseVector*)(vecs[i]), rowIndex);
+        }
+    }
+
+    void PrintOneRow(uint8_t *row) {
+        for (int i = 0; i< typeParser.size(); ++i) {
+            auto printFunc = printParser[i];
+            row = printFunc(row);
+        }
+    }
+
+    void ReserveBuffer(int32_t bufSize) {
+        if(capacity >= bufSize) {
+            return ;
+        } else {
+            mem::GetMemoryPool()->Release(reuseBuffer);
+            mem::GetMemoryPool()->Allocate(bufSize, &reuseBuffer);
+        }
+    }
+
+    uint8_t *GetBuffer() {
+        return reuseBuffer;
+    }
+
+    ~RowParser() = default;
+
+private:
+    std::vector<RowToVecFuncPtr> typeParser;
+    std::vector<PrintRowFuncPtr> printParser;
+    uint8_t *reuseBuffer = nullptr;
+    int32_t capacity;
+};
+
+class RowInfo {
+public:
     uint8_t *row;
     int32_t hashPos;
     int32_t length;
@@ -487,6 +682,14 @@ public:
         rowArray.resize(rowCount);
     }
 
+    RowBatch(int32_t rowCount, const std::vector<DataTypeId>& typeIds) {
+        rowArray.resize(rowCount);
+        this->types.reserve(typeIds.size());
+        for (int i = 0; i < typeIds.size(); ++i) {
+            types[i] = typeIds[i];
+        }
+    }
+    
     void Resize(int32_t rowCount) {
         rowArray.resize(rowCount);
     }
@@ -495,29 +698,35 @@ public:
         return rowArray.size();
     }
 
-
-    void SetRow(int32_t index, uint8_t *buffer) {
-        rowArray[index].row = buffer;
+    void SetTypes(std::vector<DataTypeId> typeIds) {
+        types.reserve(typeIds.size());
+        for (int i = 0; i < typeIds.size(); ++i) {
+            types[i] = typeIds[i];
+        }
     }
 
-    void SetRow(int32_t index, const RowInfo &info) {
+    void SetRow(int32_t index, uint8_t *buffer) {
+        rowArray[index]->row = buffer;
+    }
+
+    void SetRow(int32_t index, RowInfo *info) {
         rowArray[index] = info;
     }
 
     void SetHashPos(int32_t index, int32_t pos) {
-        rowArray[index].hashPos = pos;
+        rowArray[index]->hashPos = pos;
     }
 
     void FreeAllRow() {
-        for(auto &row:rowArray) {
-            mem::GetMemoryPool()->Release(row.row);
-            row.row = nullptr;
+        for(auto *row:rowArray) {
+            mem::GetMemoryPool()->Release(row->row);
+            row->row = nullptr;
         }
     }
     /*
      * get one row
      */
-    RowInfo Get(int32_t index) {
+    RowInfo *Get(int32_t index) {
         return rowArray[index];
     }
 
@@ -525,69 +734,23 @@ public:
         // we cant free rowBatch now
         // for adaptor , memory in rowArray will be reuse
     }
+    
+    void PrintRowBatch(std::vector<DataTypeId> types) {
+        auto parser = std::make_unique<RowParser>(types);
+        for (int i = 0; i < rowArray.size(); ++i) {
+            std::string out;
+            out = "--------row info--------. \n";
+            printf(out.c_str());
+            parser->PrintOneRow(rowArray[i]->row);
+        }
+    }
 
 private:
-    std::vector<RowInfo> rowArray;
+    std::vector<RowInfo*> rowArray;
+    std::vector<DataTypeId> types;
 };
 
-class RowParser {
-public:
-    RowParser(std::vector<DataTypeId> types) {
-        typeParser.reserve(types.size());
-        for(auto type:types) {
-            typeParser.push_back(Row2VecFuncCenter[type]);
-        }
-    }
 
-    RowParser(DataTypeId* types, int32_t len) {
-        typeParser.reserve(len);
-        for(int i=0; i < len; ++i) {
-            typeParser.push_back(Row2VecFuncCenter[types[i]]);
-        }
-    }
-
-    RowParser(std::vector<DataTypePtr> &typeIds) {
-        typeParser.reserve(typeIds.size());
-        for(int i=0; i < typeIds.size(); ++i) {
-            typeParser.push_back(Row2VecFuncCenter[typeIds[i]->GetId()]);
-        }
-    }
-
-    void ParseOneRow(uint8_t *row, BaseVector** vec, int32_t rowIndex) {
-        for (int i = 0; i< typeParser.size(); ++i) {
-            auto parseFunc = typeParser[i];
-            row = parseFunc(row, vec[i], rowIndex);
-        }
-    }
-
-    // friendly to jni
-    void ParseOnRow(uint8_t *row, long* vecs, int32_t rowIndex) {
-        for (int i = 0; i< typeParser.size(); ++i) {
-            auto parseFunc = typeParser[i];
-            parseFunc(row, (BaseVector*)(vecs[i]), rowIndex);
-        }
-    }
-
-    void ReserveBuffer(int32_t bufSize) {
-        if(capacity >= bufSize) {
-            return ;
-        } else {
-            mem::GetMemoryPool()->Release(reuseBuffer);
-            mem::GetMemoryPool()->Allocate(bufSize, &reuseBuffer);
-        }
-    }
-
-    uint8_t *GetBuffer() {
-        return reuseBuffer;
-    }
-
-    ~RowParser() = default;
-
-private:
-    std::vector<RowToVecFuncPtr> typeParser;
-    uint8_t *reuseBuffer = nullptr;
-    int32_t capacity;
-};
 
 
 }

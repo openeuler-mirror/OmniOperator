@@ -19,10 +19,10 @@ public class OmniRowDeserializer {
     public static native long newOmniRowDeserializer(int[] types);
     public static native long freeOmniRowDeserializer(long addr);
 
-    public static native void ParseOneRow(long nativeParserAddr, byte[] bytes, long[] vecs, int rowIdx);
+    public static native void parseOneRow(long nativeParserAddr, byte[] bytes, long[] vecs, int rowIdx);
 
     public void parse(byte[] bytes, long[] vecs, int rowIdx) {
-        ParseOneRow(getNativeParser(), bytes, vecs, rowIdx);
+        parseOneRow(getNativeParser(), bytes, vecs, rowIdx);
     }
 
     public void close(){
