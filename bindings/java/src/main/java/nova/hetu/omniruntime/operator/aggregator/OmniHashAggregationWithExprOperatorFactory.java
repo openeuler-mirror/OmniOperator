@@ -158,7 +158,6 @@ public class OmniHashAggregationWithExprOperatorFactory
             this.isInputRaws = requireNonNull(isInputRaws, "isInputRaws");
             this.isOutputPartials = requireNonNull(isOutputPartials, "isInputRaws");
             this.operatorConfig = operatorConfig;
-            setNeedCache(false);
         }
 
         /**
