@@ -147,8 +147,7 @@ static jobject transformFromRow(JNIEnv *env, RowBatch &result)
     jobjectArray resultArray = env->NewObjectArray(rowCount, rowCls, nullptr);
     for (int32_t i = 0; i < rowCount; ++i) {
         RowInfo* row = result.Get(i);
-        jobject rowObject = env->NewObject(rowCls, rowInitMethodId, reinterpret_cast<long>(row->row),
-                                           row->hashPos, row->length);
+        jobject rowObject = env->NewObject(rowCls, rowInitMethodId, reinterpret_cast<long>(row->row), row->length);
         env->SetObjectArrayElement(resultArray, i, rowObject);
         env->DeleteLocalRef(rowObject);
     }
@@ -276,7 +275,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_newRowBatchNa
     jclass rowClass = env->FindClass("nova/hetu/omniruntime/vector/Row");
 
     jfieldID rowAddrId = env->GetFieldID(rowClass, "nativeRow", "J");
-    jfieldID posId = env->GetFieldID(rowClass, "keyPos", "I");
     jfieldID lengthId = env->GetFieldID(rowClass, "length", "I");
 
     auto *rowBatch = new RowBatch(rowCount);
@@ -284,9 +282,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_newRowBatchNa
     for (int i = 0; i < rowCount; ++i) {
         auto obj = env->GetObjectArrayElement(rows, i);
         auto rowAddr = env->GetLongField(obj, rowAddrId);
-        auto hashPos = env->GetIntField(obj, posId);
         auto length = env->GetIntField(obj, lengthId);
-        rowBatch->SetRow(i, new RowInfo((uint8_t*)(rowAddr), hashPos, length));
+        rowBatch->SetRow(i, new RowInfo((uint8_t*)(rowAddr), length));
     }
     return reinterpret_cast<jlong>(rowBatch);
 }
@@ -301,7 +298,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVect
 
     auto rowBuffer = std::make_unique<RowBuffer>(outputTypeIds, outputTypeIds.size() - 1);
 
-    auto rowBatch = std::make_unique<RowBatch>(outputVecBatch->GetRowCount());
+    auto rowBatch = std::make_unique<RowBatch>(outputVecBatch->GetRowCount(), outputTypeIds);
     for (int32_t i =0;i<outputVecBatch->GetRowCount(); ++i) {
         // 1.get value from vector batch
         rowBuffer->TransValueFromVectorBatch(outputVecBatch, i);
@@ -309,8 +306,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVect
         // 2.generate one buffer of one row
         auto oneRowLen = rowBuffer->FillBuffer();
 
-        // 4.set one row
-        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), 0, oneRowLen));
+        // 3.set one row
+        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen));
 
     }
     return reinterpret_cast<jlong>(rowBatch.release());

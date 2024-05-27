@@ -335,7 +335,7 @@ int32_t HashAggregationOperator::GetOutput(RowBatch **outputRowBatch)
     VectorBatch *outputVecBatch = nullptr;
     int32_t status = this->GetOutput(&outputVecBatch);
     auto rowBatch = std::make_unique<RowBatch>(outputVecBatch->GetRowCount());
-    // todo: it is a performance decade operation ,we should ignore it after 5.20
+
     for (int32_t i =0;i<outputVecBatch->GetRowCount(); ++i) {
         // 1.get value from vector batch
         rowBuffer->TransValueFromVectorBatch(outputVecBatch, i);
@@ -343,15 +343,8 @@ int32_t HashAggregationOperator::GetOutput(RowBatch **outputRowBatch)
         // 2.generate one buffer of one row
         auto oneRowLen = rowBuffer->FillBuffer();
 
-        // 3.get hash position for shuffle
-        int32_t hashPos = rowBuffer->CalculateHashPos();
-
-        auto *buffer = rowBuffer->GetRowBuffer();
-
-        auto hashVal = HashUtil::HashValue((int8_t *)buffer, hashPos);
-
-        // 4.set one row
-        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), hashVal, oneRowLen));
+        // 3.set one row
+        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen));
 
     }
     *outputRowBatch = rowBatch.release();
