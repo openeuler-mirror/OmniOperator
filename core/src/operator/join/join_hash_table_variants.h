@@ -192,7 +192,6 @@ private:
     std::vector<uint32_t> totalRowCount;
     std::vector<std::vector<omniruntime::vec::VectorBatch *>> inputVecBatches;
     std::vector<std::unique_ptr<ExecutionContext>> executionContexts;
-    std::vector<size_t> buildHashes;
     uint32_t visitedCounts = 0;
     uint32_t totalVisitedCounts = 0;
     std::vector<omniruntime::vec::BaseVector ***> columns; // Vector* [partitionIdx][columnIdx][vecBatchIdx]

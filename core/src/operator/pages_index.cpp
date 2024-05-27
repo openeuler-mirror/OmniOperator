@@ -191,7 +191,6 @@ ALWAYS_INLINE void PagesIndex::FillRadixDataChunk(const int32_t sortCol, const b
         radixComboRow.data() + (rowCount - totalNullCount) * radixRowWidth;
 
     const size_t vecBatchCount = inputVecBatches.size();
-    errno_t ret = EOK;
     for (size_t vecBatchIdx = 0; vecBatchIdx < vecBatchCount; ++vecBatchIdx) {
         VectorBatch *vecBatch = inputVecBatches[vecBatchIdx];
         const auto vecBatchRowCount = static_cast<uint32_t>(vecBatch->GetRowCount());
