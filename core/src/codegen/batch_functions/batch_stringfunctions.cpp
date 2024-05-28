@@ -209,30 +209,11 @@ extern "C" DLLEXPORT void BatchCastLongToString(int64_t contextPtr, int64_t *val
 extern "C" DLLEXPORT void BatchCastDoubleToString(int64_t contextPtr, double *value, bool *isAnyNull, uint8_t **output,
     int32_t *outLen, int32_t rowCnt)
 {
-    int precision = std::numeric_limits<double>::max_digits10;
-    std::ostringstream errorMessage;
     for (int i = 0; i < rowCnt; ++i) {
-        if (isAnyNull[i]) {
-            outLen[i] = 0;
-            output[i] = nullptr;
-            continue;
-        }
-        errorMessage.str("");
-        errorMessage.precision(precision);
-        errorMessage << value[i];
-        outLen[i] = static_cast<int32_t>(errorMessage.str().size());
-        if (outLen[i] <= 0) {
-            outLen[i] = 0;
-            output[i] = (uint8_t *)"";
-            continue;
-        }
-        if (ceil(value[i]) == floor(value[i])) {
-            int appendLength = 2;
-            outLen[i] = outLen[i] + appendLength;
-            errorMessage << ".0";
-        }
+        auto result = DoubleToString::DoubleToStringConverter(value[i]);
+        outLen[i] = result.size();
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        errno_t res = memcpy_s(ret, outLen[i], (errorMessage.str()).c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], result.c_str(), outLen[i]);
         if (res != EOK) {
             SetError(contextPtr, "cast failed");
             output[i] = nullptr;
@@ -575,26 +556,11 @@ extern "C" DLLEXPORT void BatchCastLongToStringRetNull(bool *isNull, int64_t con
 extern "C" DLLEXPORT void BatchCastDoubleToStringRetNull(bool *isNull, int64_t contextPtr, double *value,
     uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
-    int precision = std::numeric_limits<double>::max_digits10;
-
-    std::ostringstream errorMessage;
     for (int i = 0; i < rowCnt; ++i) {
-        errorMessage.str("");
-        errorMessage.precision(precision);
-        errorMessage << value[i];
-        outLen[i] = static_cast<int32_t>(errorMessage.str().size());
-        if (outLen[i] <= 0) {
-            outLen[i] = 0;
-            output[i] = (uint8_t *)"";
-            continue;
-        }
-        if (ceil(value[i]) == floor(value[i])) {
-            int appendLength = 2;
-            outLen[i] = outLen[i] + appendLength;
-            errorMessage << ".0";
-        }
+        auto result = DoubleToString::DoubleToStringConverter(value[i]);
+        outLen[i] = result.size();
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        errno_t res = memcpy_s(ret, outLen[i], (errorMessage.str()).c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], result.c_str(), outLen[i]);
         if (res != EOK) {
             output[i] = nullptr;
             isNull[i] = true;

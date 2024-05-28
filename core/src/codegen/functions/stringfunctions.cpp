@@ -4,6 +4,7 @@
  */
 #include "stringfunctions.h"
 #include "md5.h"
+#include "dtoa.h"
 
 namespace omniruntime::codegen::function {
 /**
@@ -348,20 +349,10 @@ extern "C" DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double v
     if (isNull) {
         return nullptr;
     }
-    int precision = std::numeric_limits<double>::max_digits10;
-
-    std::ostringstream errorMessage;
-    errorMessage.precision(precision);
-    errorMessage << value;
-    *outLen = static_cast<int32_t>(errorMessage.str().size());
-    if (ceil(value) == floor(value)) {
-        int appendLength = 2;
-        *outLen = *outLen + appendLength;
-        errorMessage << ".0";
-    }
-
+    auto result = DoubleToString::DoubleToStringConverter(value);
+    *outLen = result.size();
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, (errorMessage.str()).c_str(), *outLen);
+    errno_t res = memcpy_s(ret, *outLen, result.c_str(), *outLen);
     if (res != EOK) {
         SetError(contextPtr, "cast failed");
         *outLen = 0;
@@ -695,20 +686,10 @@ extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, boo
 extern "C" DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool *isNull, double value,
     int32_t *outLen)
 {
-    int precision = std::numeric_limits<double>::max_digits10;
-
-    std::ostringstream errorMessage;
-    errorMessage.precision(precision);
-    errorMessage << value;
-    *outLen = static_cast<int32_t>(errorMessage.str().size());
-    if (ceil(value) == floor(value)) {
-        int appendLength = 2;
-        *outLen = *outLen + appendLength;
-        errorMessage << ".0";
-    }
-
+    auto result = DoubleToString::DoubleToStringConverter(value);
+    *outLen = result.size();
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, (errorMessage.str()).c_str(), *outLen);
+    errno_t res = memcpy_s(ret, *outLen, result.c_str(), *outLen);
     if (res != EOK) {
         *isNull = true;
         *outLen = 0;
