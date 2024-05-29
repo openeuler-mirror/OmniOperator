@@ -23,8 +23,8 @@ public:
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address);
     void BuildOutput(BaseVector **probeOutputColumns, VectorBatch **outputVecBatch);
-    void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns);
-    void ConstructBuildColumns(VectorBatch *vectorBatch);
+    void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns, int32_t rowCount);
+    void ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount);
 
     ALWAYS_INLINE bool IsFull()
     {
@@ -33,7 +33,15 @@ public:
 
     ALWAYS_INLINE bool IsEmpty()
     {
-        return probeRowCount == 0;
+        return probeRowCount <= 0;
+    }
+
+    ALWAYS_INLINE void Clear()
+    {
+        probeRowOffset = 0;
+        probeRowCount = 0;
+        probeIndex.clear();
+        buildIndex.clear();
     }
 
     static const uint32_t SHIFT_SIZE_32 = 32;
@@ -53,38 +61,45 @@ public:
     }
 
 private:
-    ALWAYS_INLINE void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
+    ALWAYS_INLINE void ConstructProbeColumnsFromPositions(VectorBatch *vectorBatch, BaseVector **probeOutputColumns,
+        int32_t rowCount)
     {
-        BaseVector *probeColumn = nullptr;
-        auto probePositions = probeIndex.data();
-        for (size_t j = 0; j < probeOutputCols.size(); ++j) {
+        auto probeOutputColsCount = probeOutputCols.size();
+        auto probePositions = probeIndex.data() + probeRowOffset;
+        for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
             auto type = probeOutputTypes[j];
             // we want to keep only one level dictionary vector here
             // if the data is non-dictionary, we build dictionary to avoid data copy
+            BaseVector *probeColumn = nullptr;
             if (column->GetEncoding() == vec::OMNI_DICTIONARY) {
-                probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, probeRowCount);
+                probeColumn = VectorHelper::CopyPositionsVector(column, probePositions, 0, rowCount);
             } else {
-                probeColumn = VectorHelper::CreateDictionaryVector(probePositions, probeRowCount, column, type);
+                probeColumn = VectorHelper::CreateDictionaryVector(probePositions, rowCount, column, type);
             }
             vectorBatch->Append(probeColumn);
         }
     }
 
-    ALWAYS_INLINE void ConstructProbeColumnsFromReuse(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
+    ALWAYS_INLINE void ConstructProbeColumnsFromReuse(VectorBatch *vectorBatch, BaseVector **probeOutputColumns,
+        int32_t rowCount)
     {
-        for (size_t j = 0; j < probeOutputCols.size(); ++j) {
+        auto probeOutputColsCount = probeOutputCols.size();
+        for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
-            auto resultColumn = VectorHelper::SliceVector(column, 0, column->GetSize());
+            auto resultColumn = VectorHelper::SliceVector(column, 0, rowCount);
             vectorBatch->Append(resultColumn);
         }
     }
 
-    ALWAYS_INLINE void ConstructProbeColumnsFromSlice(VectorBatch *vectorBatch, BaseVector **probeOutputColumns)
+    ALWAYS_INLINE void ConstructProbeColumnsFromSlice(VectorBatch *vectorBatch, BaseVector **probeOutputColumns,
+        int32_t rowCount)
     {
-        for (size_t j = 0; j < probeOutputCols.size(); ++j) {
+        auto probeOutputColsCount = probeOutputCols.size();
+        auto offset = probeIndex[probeRowOffset];
+        for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
-            auto resultColumn = VectorHelper::SliceVector(column, probeIndex[0], probeRowCount);
+            auto resultColumn = VectorHelper::SliceVector(column, offset, rowCount);
             vectorBatch->Append(resultColumn);
         }
     }
@@ -95,6 +110,7 @@ private:
     std::vector<int32_t> buildOutputCols;
     const int32_t *buildOutputTypes;
     int32_t probeRowCount = 0;
+    int32_t probeRowOffset = 0;
     std::vector<int32_t> probeIndex;
     std::vector<std::pair<BaseVector ***, uint64_t>> buildIndex;
 };
@@ -153,6 +169,7 @@ public:
     OmniStatus Close() override;
 
 private:
+    void InitFirst();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForInnerJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForRightJoin();
@@ -165,7 +182,7 @@ private:
     void PrepareSerializers();
     void PopulateProbeHashes();
     void PopulateProbeNulls();
-    void ProcessProbe(bool hasFilter, bool singleHT);
+    void ProcessProbe();
 
     ALWAYS_INLINE std::vector<BaseVector **> &GetBuildFilterColPtrs(uint32_t partition)
     {
@@ -194,7 +211,9 @@ private:
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
     omniruntime::vec::VectorBatch *curInputBatch = nullptr;
     int32_t curProbePosition = 0;
-    omniruntime::vec::VectorBatch *curOutputBatch = nullptr;
+    JoinType joinType;
+    uint32_t partitionMask = 0;
+    bool isSingleHT;
 
     // this is for join filter
     SimpleFilter *simpleFilter = nullptr;
@@ -208,7 +227,7 @@ private:
     bool *nulls = nullptr;
     int32_t *lengths = nullptr;
     std::vector<std::vector<BaseVector **>> tableBuildFilterColPtrs;
-    bool firstVecBatch = false;
+    bool firstVecBatch = true;
     std::vector<VectorSerializerIgnoreNull> probeSerializers;
 };
 } // end of op
