@@ -21,6 +21,7 @@ public class SparkSpillConfig extends SpillConfig {
     public SparkSpillConfig() {
         super();
         numElementsForSpillThreshold = Integer.MAX_VALUE;
+        memUsagePctForSpillThreshold = 90;
     }
 
     /**
@@ -44,7 +45,7 @@ public class SparkSpillConfig extends SpillConfig {
      */
     public SparkSpillConfig(boolean isSpillEnabled, String spillPath, long maxSpillBytes,
             int numElementsForSpillThreshold) {
-        super(SpillConfigId.SPILL_CONFIG_SPARK, isSpillEnabled, spillPath, maxSpillBytes);
+        super(SpillConfigId.SPILL_CONFIG_SPARK, isSpillEnabled, spillPath, maxSpillBytes, DEFAULT_WRITE_BUFFER_SIZE);
         this.numElementsForSpillThreshold = numElementsForSpillThreshold;
         this.memUsagePctForSpillThreshold = 90; // default memory usage percentage for spill threshold
     }
@@ -56,12 +57,12 @@ public class SparkSpillConfig extends SpillConfig {
      * @param spillPath the spill path
      * @param maxSpillBytes the max spill bytes
      * @param numElementsForSpillThreshold the num elements for spill threshold
-     * @param memUsagePctForSpillThreshold the memory usage percentage for spill
-     *            threshold
+     * @param memUsagePctForSpillThreshold the memory usage percentage for spill threshold
+     * @param writeBufferSize the spill write buffer size
      */
     public SparkSpillConfig(boolean isSpillEnabled, String spillPath, long maxSpillBytes,
-            int numElementsForSpillThreshold, int memUsagePctForSpillThreshold) {
-        super(SpillConfigId.SPILL_CONFIG_SPARK, isSpillEnabled, spillPath, maxSpillBytes);
+            int numElementsForSpillThreshold, int memUsagePctForSpillThreshold, long writeBufferSize) {
+        super(SpillConfigId.SPILL_CONFIG_SPARK, isSpillEnabled, spillPath, maxSpillBytes, writeBufferSize);
         this.numElementsForSpillThreshold = numElementsForSpillThreshold;
         this.memUsagePctForSpillThreshold = memUsagePctForSpillThreshold;
     }

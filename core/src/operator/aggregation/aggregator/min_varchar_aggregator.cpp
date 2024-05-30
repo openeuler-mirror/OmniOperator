@@ -88,8 +88,8 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState 
             state.val = (int64_t)(res);
             SaveState(state);
         } else {
-            state.val = (int64_t)(MinCharOp(reinterpret_cast<char *>(state.val), state.count, varcharVec,
-                rowIdx));
+            state.val = reinterpret_cast<int64_t>(
+                MinCharOp(reinterpret_cast<char *>(state.val), state.count, varcharVec, rowIdx));
         }
     }
 }
