@@ -19,7 +19,6 @@
 #include "operator/pages_index.h"
 #include "operator/spill/spiller.h"
 #include "group_aggregation_sort.h"
-#include "vector/omni_row.h"
 
 namespace omniruntime::op {
 using namespace vec;
@@ -278,13 +277,6 @@ public:
         this->rowsPerBatch = rowCount;
     }
 
-    int32_t GetOutput(omniruntime::vec::RowBatch **outputRowBatch);
-
-    void SetRowOutput() {
-        needRowOutput = true;
-        rowBuffer = std::make_unique<RowBuffer>(outputTypes, groupByCols.size());
-    }
-
 private:
     int32_t InitMaxRowCountAndOutputTypes();
     void InitSpillInfos();
@@ -340,9 +332,6 @@ private:
     OutputState spillOutputState;
     bool hasSpill = false;
     AggregationSort *aggregationSort = nullptr;
-
-    bool needRowOutput = false;
-    std::unique_ptr<RowBuffer> rowBuffer = nullptr;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {

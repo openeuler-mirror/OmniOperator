@@ -127,7 +127,7 @@ public:
     {
         if constexpr (std::is_same_v<T, std::string_view>) {
             // for varchar
-            return sizeof(int32_t);
+            return (BIT_64 - __builtin_clzll(value.length()) + BIT_8) / BIT_8;
         } else if constexpr (std::is_same_v<T, double>) {
             return BIT_8;
         } else if constexpr (std::is_same_v<T, type::Decimal128>) {
@@ -225,10 +225,10 @@ template <type::DataTypeId id> void TransToValue(BaseVector *vec, int32_t rowInd
     reinterpret_cast<SerializedValue<T> *>(value)->TransValue(vec, rowIndex);
 }
 
-template <type::DataTypeId id> BaseSerialize *GenerateSerValue()
+template <type::DataTypeId id> std::unique_ptr<BaseSerialize> GenerateSerValue()
 {
     using T = typename NativeType<id>::type;
-    return new SerializedValue<T>();
+    return std::make_unique<SerializedValue<T>>();
 }
 
 template <typename IntLikeType>
@@ -445,7 +445,7 @@ template <type::DataTypeId id> uint8_t *PrintRow(uint8_t *row)
         nullptr };
 
 using TransFuncPtr = void (*)(BaseVector *vec, int32_t rowIndex, BaseSerialize *value);
-using GenFuncPtr = BaseSerialize *(*)();
+using GenFuncPtr = std::unique_ptr<BaseSerialize> (*)();
 using RowToVecFuncPtr = uint8_t *(*)(uint8_t *row, BaseVector *vec, int32_t rowIndex);
 using PrintRowFuncPtr = uint8_t *(*)(uint8_t *row);
 
@@ -465,10 +465,8 @@ public:
     explicit RowBuffer(std::vector<DataTypePtr> &types, int32_t keyColumnSize = 0)
         : columnSize(types.size()), keyColumn(keyColumnSize)
     {
-        uint8_t *buffer;
-        mem::GetMemoryPool()->Allocate(sizeof(intptr_t) * columnSize, &buffer);
-        oneRow = reinterpret_cast<BaseSerialize **>(buffer);
-        transFuns.reserve(columnSize);
+        oneRow.resize(columnSize);
+        transFuns.resize(columnSize);
         for (int i = 0; i < types.size(); i++) {
             ConstructFuncById(i, types[i]->GetId());
         }
@@ -477,10 +475,8 @@ public:
     RowBuffer(std::vector<type::DataTypeId> types, int32_t keyColumnSize = 0)
         : columnSize(types.size()), keyColumn(keyColumnSize)
     {
-        uint8_t *buffer;
-        mem::GetMemoryPool()->Allocate(sizeof(intptr_t) * columnSize, &buffer);
-        oneRow = reinterpret_cast<BaseSerialize **>(buffer);
-        transFuns.reserve(columnSize);
+        oneRow.resize(columnSize);
+        transFuns.resize(columnSize);
         for (int i = 0; i < types.size(); i++) {
             ConstructFuncById(i, types[i]);
         }
@@ -488,23 +484,19 @@ public:
 
     ~RowBuffer()
     {
-        for (int i = 0; i < columnSize; ++i) {
-            delete oneRow[i];
-        }
-        mem::GetMemoryPool()->Release((uint8_t *)(oneRow));
     }
 
     void TransValue(BaseVector **vecs, int32_t rowIndex)
     {
         for (int32_t i = 0; i < columnSize; ++i) {
-            transFuns[i](vecs[i], rowIndex, oneRow[i]);
+            transFuns[i](vecs[i], rowIndex, oneRow[i].get());
         }
     }
 
     void TransValueFromVectorBatch(vec::VectorBatch *vb, int32_t index)
     {
         for (int32_t i = 0; i < columnSize; ++i) {
-            transFuns[i](vb->Get(i), index, oneRow[i]);
+            transFuns[i](vb->Get(i), index, oneRow[i].get());
         }
     }
 
@@ -521,7 +513,7 @@ public:
     int32_t FillBuffer()
     {
         oneRowLen = CalculateCompactLength(columnSize);
-        mem::GetMemoryPool()->Allocate(oneRowLen, &originBuffer);
+        originBuffer = (uint8_t *)(mem::Allocator::GetAllocator()->Alloc(oneRowLen));
         writeBuffer = originBuffer;
         for (int32_t i = 0; i < columnSize; ++i) {
             writeBuffer = oneRow[i]->WriteBuffer(writeBuffer);
@@ -549,16 +541,9 @@ public:
         return retBuffer;
     }
 
-    static void ClearRowMemory(const std::vector<uint8_t *> &res)
-    {
-        for (auto row : res) {
-            mem::GetMemoryPool()->Release(row);
-        }
-    }
-
     BaseSerialize *GetOneOfRow(int32_t index)
     {
-        return oneRow[index];
+        return oneRow[index].get();
     }
 
     // this api can be called after FillBuffer()
@@ -574,7 +559,7 @@ private:
         transFuns[i] = TransFuncCenter[id];
     }
 
-    BaseSerialize **oneRow;
+    std::vector<std::unique_ptr<BaseSerialize>> oneRow;
     std::vector<TransFuncPtr> transFuns;
     int32_t oneRowLen;
     // it is necessaries for shuffle when calculate partition id
@@ -641,8 +626,8 @@ public:
         if (capacity >= bufSize) {
             return;
         } else {
-            mem::GetMemoryPool()->Release(reuseBuffer);
-            mem::GetMemoryPool()->Allocate(bufSize, &reuseBuffer);
+            mem::Allocator::GetAllocator()->Free(reuseBuffer, capacity);
+            reuseBuffer = reinterpret_cast<uint8_t*>(mem::Allocator::GetAllocator()->Alloc(capacity));
         }
     }
 
@@ -689,7 +674,7 @@ public:
 
     ~RowInfo()
     {
-        mem::GetMemoryPool()->Release(row);
+        mem::Allocator::GetAllocator()->Free(row, length);
     }
 };
 
@@ -738,13 +723,6 @@ public:
         rowArray[index] = info;
     }
 
-    void FreeAllRow()
-    {
-        for (auto *row : rowArray) {
-            mem::GetMemoryPool()->Release(row->row);
-            row->row = nullptr;
-        }
-    }
     /*
      * get one row
      */

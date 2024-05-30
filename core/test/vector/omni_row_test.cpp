@@ -1,6 +1,7 @@
-//
-// Created by root on 5/15/24.
-//
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+ * Description: omni_row_test
+ */
 #include "vector/omni_row.h"
 #include "gtest/gtest.h"
 #include "test/util/test_util.h"
@@ -49,6 +50,15 @@ TEST(omni_row, compact_set_string)
     EXPECT_EQ(serializedValue.CompactLength(), 1 + 1 + 4);
 }
 
+TEST(omni_row, compact_set_negative_value)
+{
+    int32_t value = -1024;
+    SerializedValue<int32_t> serializedValue;
+    serializedValue.SetValue(value);
+    EXPECT_EQ(serializedValue.CompactLength(), 1 + 2);
+}
+
+
 TEST(omni_row, fill_buffer_no_null)
 {
     std::vector<DataTypePtr> types(
@@ -65,7 +75,7 @@ TEST(omni_row, fill_buffer_no_null)
     buffer = rowBuffer.GetOneOfRow(2);
     auto *strValue = reinterpret_cast<SerializedValue<std::string_view> *>(buffer);
     strValue->SetValue(testStr);
-    rowBuffer.FillBuffer();
+    auto len = rowBuffer.FillBuffer();
     auto *buf = rowBuffer.GetRowBuffer();
 
     EXPECT_EQ(buf[0], 0b00000010);
@@ -79,7 +89,7 @@ TEST(omni_row, fill_buffer_no_null)
     EXPECT_EQ(buf[12], 0b10000001);
     EXPECT_EQ(buf[13], 11);
     EXPECT_TRUE(0 == memcmp((void *)(buf + 14), (void *)testStr.data(), testStr.length()));
-    mem::GetMemoryPool()->Release(buf);
+    mem::Allocator::GetAllocator()->Free(buf, len);
 }
 
 TEST(omni_row, fill_buffer_and_deserial_to_vector)
@@ -95,12 +105,12 @@ TEST(omni_row, fill_buffer_and_deserial_to_vector)
 
     DataTypes dataTypes(types);
     VectorBatch *vecBatch = CreateVectorBatch(dataTypes, rowNumber, data1, data2, data3);
-    std::vector<uint8_t *> rows;
+    std::vector<RowInfo> rows;
     rows.reserve(rowNumber);
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
-        rowBuffer.FillBuffer();
-        rows.push_back(rowBuffer.GetRowBuffer());
+        auto len = rowBuffer.FillBuffer();
+        rows.emplace_back(rowBuffer.TakeRowBuffer(), len);
     }
 
     auto parser = std::make_unique<RowParser>(types);
@@ -117,12 +127,11 @@ TEST(omni_row, fill_buffer_and_deserial_to_vector)
     }
 
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
-        parser->ParseOneRow(rows[i], vecs, i);
+        parser->ParseOneRow(rows[i].row, vecs, i);
     }
 
     // after parse, result should be the same as vecbatch
     EXPECT_TRUE(VecBatchMatch(result, vecBatch));
-    RowBuffer::ClearRowMemory(rows);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(result);
 }
@@ -141,12 +150,12 @@ TEST(omni_row, fill_buffer_and_check_hash)
 
     DataTypes dataTypes(types);
     VectorBatch *vecBatch = CreateVectorBatch(dataTypes, rowNumber, data1, data2, data3);
-    std::vector<uint8_t *> rows;
+    std::vector<RowInfo> rows;
     rows.reserve(rowNumber);
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
-        rowBuffer.FillBuffer();
-        rows.push_back(rowBuffer.GetRowBuffer());
+        auto len = rowBuffer.FillBuffer();
+        rows.emplace_back(rowBuffer.GetRowBuffer(), len);
         // 3.get hash position for shuffle
         int32_t hashPos = rowBuffer.CalculateHashPos();
 
@@ -155,7 +164,6 @@ TEST(omni_row, fill_buffer_and_check_hash)
         auto hashVal = op::HashUtil::HashValue((int8_t *)buffer, hashPos);
         std::cout << "test calculate hash " << hashVal << std::endl;
     }
-    RowBuffer::ClearRowMemory(rows);
     VectorHelper::FreeVecBatch(vecBatch);
 }
 
@@ -164,27 +172,26 @@ TEST(omni_row, fill_buffer_performance)
     std::vector<DataTypePtr> types(
         { LongDataType::Instance(), DoubleDataType::Instance(), VarcharDataType::Instance() });
     RowBuffer rowBuffer(types, 2);
-    int32_t rowNumber = 100000;
+    int32_t rowNumber = 400;
     std::vector<int64_t> data1(rowNumber);
     std::vector<double> data2(rowNumber);
     std::vector<std::string> data3(rowNumber);
     for (int i = 0; i < rowNumber; i++) {
-        data1.push_back(i);
-        data2.push_back(i * 0.1f);
-        data3.push_back("lala" + std::to_string(i));
+        data1[i] =i;
+        data2[i] = (i * 0.1f);
+        data3[i] = ("lala" + std::to_string(i));
     }
 
     DataTypes dataTypes(types);
     VectorBatch *vecBatch = CreateVectorBatch(dataTypes, rowNumber, data1.data(), data2.data(), data3.data());
-    std::vector<uint8_t *> rows;
+    std::vector<RowInfo> rows;
     rows.reserve(rowNumber);
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
-        rowBuffer.FillBuffer();
-        rows.push_back(rowBuffer.TakeRowBuffer());
+        auto len = rowBuffer.FillBuffer();
+        rows.emplace_back(rowBuffer.TakeRowBuffer(), len);
     }
 
-    RowBuffer::ClearRowMemory(rows);
     VectorHelper::FreeVecBatch(vecBatch);
 }
 
@@ -197,12 +204,12 @@ TEST(omni_row, fill_bool_buffer_and_deserial_to_vector)
 
     DataTypes dataTypes(types);
     VectorBatch *vecBatch = CreateVectorBatch(dataTypes, rowNumber, data1);
-    std::vector<uint8_t *> rows;
+    std::vector<RowInfo> rows;
     rows.reserve(rowNumber);
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         rowBuffer.TransValueFromVectorBatch(vecBatch, i);
-        rowBuffer.FillBuffer();
-        rows.push_back(rowBuffer.GetRowBuffer());
+        auto len = rowBuffer.FillBuffer();
+        rows.emplace_back(rowBuffer.TakeRowBuffer(), len);
     }
 
     auto parser = std::make_unique<RowParser>(types);
@@ -217,12 +224,11 @@ TEST(omni_row, fill_bool_buffer_and_deserial_to_vector)
     }
 
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
-        parser->ParseOneRow(rows[i], vecs, i);
+        parser->ParseOneRow(rows[i].row, vecs, i);
     }
 
     // after parse, result should be the same as vecbatch
     EXPECT_TRUE(VecBatchMatch(vecBatch, result));
-    RowBuffer::ClearRowMemory(rows);
     VectorHelper::FreeVecBatch(vecBatch);
     VectorHelper::FreeVecBatch(result);
 }

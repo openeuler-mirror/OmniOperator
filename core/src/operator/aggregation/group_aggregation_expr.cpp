@@ -200,13 +200,6 @@ int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
     return status;
 }
 
-int32_t HashAggregationWithExprOperator::GetOutput(omniruntime::vec::RowBatch **outputRowBatch)
-{
-    int32_t status = hashAggOperator->GetOutput(outputRowBatch);
-    SetStatus(hashAggOperator->GetStatus());
-    return status;
-}
-
 OmniStatus HashAggregationWithExprOperator::Close()
 {
     hashAggOperator->Close();

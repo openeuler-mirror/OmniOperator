@@ -211,10 +211,6 @@ OmniStatus HashAggregationOperator::Init()
 
     int32_t rowByteSize = InitMaxRowCountAndOutputTypes();
     rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
-
-    if (operatorConfig.GetIsRowOutput()) {
-        SetRowOutput();
-    }
     return OMNI_STATUS_NORMAL;
 }
 
@@ -328,27 +324,6 @@ int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
         throw std::out_of_range("other groupby field handle type not implement");
     }
     return expectedBatchSize;
-}
-
-int32_t HashAggregationOperator::GetOutput(RowBatch **outputRowBatch)
-{
-    VectorBatch *outputVecBatch = nullptr;
-    int32_t status = this->GetOutput(&outputVecBatch);
-    auto rowBatch = std::make_unique<RowBatch>(outputVecBatch->GetRowCount());
-
-    for (int32_t i =0;i<outputVecBatch->GetRowCount(); ++i) {
-        // 1.get value from vector batch
-        rowBuffer->TransValueFromVectorBatch(outputVecBatch, i);
-
-        // 2.generate one buffer of one row
-        auto oneRowLen = rowBuffer->FillBuffer();
-
-        // 3.set one row
-        rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen));
-
-    }
-    *outputRowBatch = rowBatch.release();
-    return status;
 }
 
 OmniStatus HashAggregationOperator::Close()

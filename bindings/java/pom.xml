@@ -19,7 +19,7 @@
         <arrow.version>5.0.0</arrow.version>
         <protobuf.version>3.13.0-h19</protobuf.version>
         <jackson.version>2.10.0</jackson.version>
-        <testng.version>7.0.0</testng.version>
+        <testng.version>6.10</testng.version>
         <jdk.jmh.version>1.20</jdk.jmh.version>
         <openhft.version>3.2.4</openhft.version>
         <fastjson.version>1.2.78</fastjson.version>

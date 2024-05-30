@@ -227,41 +227,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpil
     return static_cast<jlong>(nativeOperator->GetSpilledBytes());
 }
 
-
-/*
- * Class:     nova_hetu_omniruntime_operator_OmniOperator
- * Method:    getRowOutputNative
- * Signature: (J)[Lnova/hetu/omniruntime/operator/OMResult;
- */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getRowOutputNative(JNIEnv *env, jobject jObj,
-                                                                                           jlong jOperatorAddr)
-{
-    std::call_once(loadVecBatchClsFlag, LoadVecBatchAndOmniResults, env);
-    if (vecBatchCls == nullptr || omniResultsCls == nullptr) {
-        env->ThrowNew(omniRuntimeExceptionClass, "The class RowBatch or OmniRowResult has not load yet.");
-        return nullptr;
-    }
-
-    auto *hashAggOperator = reinterpret_cast<HashAggregationWithExprOperator *>(jOperatorAddr);
-    RowBatch *rowBatch = nullptr;
-
-    try {
-        hashAggOperator->GetOutput(&rowBatch);
-    } catch (const std::exception &e) {
-        delete rowBatch;
-        env->ThrowNew(omniRuntimeExceptionClass, e.what());
-        return nullptr;
-    }
-
-    jobject result = nullptr;
-    if (rowBatch) {
-        // todo : should we record rowBatch stack?
-//        RecordOutputVectorsStack(*outputVecBatch, env);
-        result = transformFromRow(env, *rowBatch);
-    }
-    return env->NewObject(rowResultsCls, rowResultsInitMethodId, result, hashAggOperator->GetStatus());
-}
-
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_freeRowBatchNative(JNIEnv *env, jclass jcls,
                                                                                      jlong jrowBatchAddress)
 {
