@@ -1984,4 +1984,42 @@ TEST(FunctionTest, FromUnixTimeRetNull)
 
     delete context;
 }
+
+TEST(FunctionTest, RegexMatch)
+{
+    std::string input("");
+    std::string pattern(R"(^\d+$)");
+    auto result = RegexMatch(input.c_str(), input.length(), pattern.c_str(), pattern.length(), false);
+    EXPECT_FALSE(result);
+
+    input = std::string("");
+    pattern = std::string("");
+    result = RegexMatch(input.c_str(), input.length(), pattern.c_str(), pattern.length(), false);
+    EXPECT_TRUE(result);
+
+    input = std::string("123");
+    pattern = std::string("");
+    result = RegexMatch(input.c_str(), input.length(), pattern.c_str(), pattern.length(), false);
+    EXPECT_TRUE(result);
+
+    input = std::string("123");
+    pattern = std::string(R"(^\d+$)");
+    result = RegexMatch(input.c_str(), input.length(), pattern.c_str(), pattern.length(), false);
+    EXPECT_TRUE(result);
+
+    input = std::string("abc123d");
+    pattern = std::string(R"(^\d+$)");
+    result = RegexMatch(input.c_str(), input.length(), pattern.c_str(), pattern.length(), false);
+    EXPECT_FALSE(result);
+
+    input = std::string("abc123");
+    pattern = std::string(R"(^\d+$)");
+    result = RegexMatch(input.c_str(), input.length(), pattern.c_str(), pattern.length(), false);
+    EXPECT_FALSE(result);
+
+    input = std::string("123d");
+    pattern = std::string(R"(^\d+$)");
+    result = RegexMatch(input.c_str(), input.length(), pattern.c_str(), pattern.length(), false);
+    EXPECT_FALSE(result);
+}
 }
