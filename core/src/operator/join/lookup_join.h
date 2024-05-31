@@ -176,7 +176,7 @@ private:
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForFullJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftSemiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftAntiJoin();
-    bool IsJoinPositionEligible(uint32_t partition, uint64_t address, uint32_t probeRow,
+    bool IsJoinPositionEligible(uint32_t partition, uint64_t buildAddress, uint32_t probeRow,
         ExecutionContext *executionContextPtr);
     void PrepareCurrentProbe();
     void PrepareSerializers();

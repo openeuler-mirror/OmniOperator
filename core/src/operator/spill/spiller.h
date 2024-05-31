@@ -64,8 +64,9 @@ private:
 class Spiller {
 public:
     Spiller(const type::DataTypes &dataTypes, const std::vector<int32_t> &sortCols,
-        const std::vector<SortOrder> &sortOrders, const std::string &spillPath, uint64_t maxSpillBytes)
-        : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders)
+        const std::vector<SortOrder> &sortOrders, const std::string &spillPath, uint64_t maxSpillBytes,
+        uint64_t writeBufferSize = 0)
+        : dataTypes(dataTypes), sortCols(sortCols), sortOrders(sortOrders), writeBufferSize(writeBufferSize)
     {
         dirPaths.emplace_back(spillPath);
         int32_t dataTypeCount = dataTypes.GetSize();
@@ -137,6 +138,7 @@ private:
     std::unique_ptr<vec::VectorBatch> spillVecBatch = nullptr;
     std::vector<SpillWriter *> writers;
     SpillTracker *spillTracker = nullptr;
+    uint64_t writeBufferSize = 0;
 };
 }
 }

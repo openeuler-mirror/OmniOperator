@@ -60,7 +60,7 @@ void ALWAYS_INLINE VariableTypeSerializer(const std::string_view &inValue, mem::
 
     auto resLen = sizeof(uint8_t) + rowLenSize + stringLen;
     auto *&data = result.data;
-    auto pos = arenaAllocator.AllocateContinue(resLen, (const uint8_t *&)(data));
+    auto pos = arenaAllocator.AllocateContinue(resLen, reinterpret_cast<const uint8_t *&>(data));
     *reinterpret_cast<uint8_t *>(pos) = rowLenSize;
 
     // compress stringLen from 4 bytes to rowLenSize bytes
@@ -75,7 +75,7 @@ void NullVariableTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, Strin
 {
     auto resSize = sizeof(uint8_t);
     auto *&data = result.data;
-    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
+    auto *pos = arenaAllocator.AllocateContinue(resSize, reinterpret_cast<const uint8_t *&>(data));
     (*pos) = 0; // value is null
     result.size += resSize;
 }
@@ -101,19 +101,19 @@ template <typename T> T GetValue(uint8_t rowDataSize, const char *pos)
     T value;
     switch (rowDataSize) {
         case BYTE_1:
-            value = (T)(*reinterpret_cast<const int8_t *>(pos));
+            value = static_cast<T>(*reinterpret_cast<const int8_t *>(pos));
             break;
         case BYTE_2:
-            value = (T)(*reinterpret_cast<const int16_t *>(pos));
+            value = static_cast<T>(*reinterpret_cast<const int16_t *>(pos));
             break;
         case BYTE_4:
-            value = (T)(*reinterpret_cast<const int32_t *>(pos));
+            value = static_cast<T>(*reinterpret_cast<const int32_t *>(pos));
             break;
         case BYTE_8:
             if constexpr (std::is_same_v<T, double>) {
-                value = (T)(*reinterpret_cast<const double *>(pos));
+                value = *reinterpret_cast<const double *>(pos);
             } else {
-                value = (T)(*reinterpret_cast<const int64_t *>(pos));
+                value = static_cast<T>(*reinterpret_cast<const int64_t *>(pos));
             }
             break;
         default:
@@ -146,7 +146,7 @@ void Decimal128Serializer(Decimal128 &value, mem::SimpleArenaAllocator &arenaAll
     uint8_t rowDataSize = BYTE_16;
     auto resSize = sizeof(uint8_t) + rowDataSize;
     auto *&data = result.data;
-    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
+    auto *pos = arenaAllocator.AllocateContinue(resSize, reinterpret_cast<const uint8_t *&>(data));
     (*pos) = rowDataSize;
     *reinterpret_cast<Decimal128 *>((pos + sizeof(uint8_t))) = value;
     result.size += resSize;
@@ -174,7 +174,7 @@ void FixedLenTypeSerializer(RawDataType value, mem::SimpleArenaAllocator &arenaA
     auto resSize = sizeof(int8_t) + rowDataSize;
     auto *&data = result.data;
 
-    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
+    auto *pos = arenaAllocator.AllocateContinue(resSize, reinterpret_cast<const uint8_t *&>(data));
     (*pos) = rowDataSize;
     // copy value
     memcpy_s(pos + sizeof(uint8_t), rowDataSize, &value, rowDataSize);
@@ -185,7 +185,7 @@ void NullDecimal128Serializer(mem::SimpleArenaAllocator &arenaAllocator, StringR
 {
     auto resSize = sizeof(uint8_t);
     auto *&data = result.data;
-    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
+    auto *pos = arenaAllocator.AllocateContinue(resSize, reinterpret_cast<const uint8_t *&>(data));
     (*pos) = 0;
     result.size += resSize;
 }
@@ -194,7 +194,7 @@ void NullFixedLenTypeSerializer(mem::SimpleArenaAllocator &arenaAllocator, Strin
 {
     auto resSize = sizeof(uint8_t);
     auto *&data = result.data;
-    auto *pos = arenaAllocator.AllocateContinue(resSize, (const uint8_t *&)(data));
+    auto *pos = arenaAllocator.AllocateContinue(resSize, reinterpret_cast<const uint8_t *&>(data));
     (*pos) = 0; // value is null
     result.size += resSize;
 }
@@ -343,7 +343,7 @@ void ALWAYS_INLINE FixedLenTypeSerializerForJoin(RawDataType value, mem::SimpleA
 {
     static constexpr uint8_t RawDataSize = sizeof(RawDataType);
     auto *&data = result.data;
-    auto *pos = arenaAllocator.AllocateContinue(RawDataSize, (const uint8_t *&)(data));
+    auto *pos = arenaAllocator.AllocateContinue(RawDataSize, reinterpret_cast<const uint8_t *&>(data));
     *reinterpret_cast<RawDataType *>(pos) = value;
     result.size += RawDataSize;
 }
@@ -353,7 +353,7 @@ void ALWAYS_INLINE Decimal128SerializerForJoin(Decimal128 &value, mem::SimpleAre
 {
     static constexpr uint8_t RawDataSize = sizeof(Decimal128);
     auto *&data = result.data;
-    auto *pos = arenaAllocator.AllocateContinue(RawDataSize, (const uint8_t *&)(data));
+    auto *pos = arenaAllocator.AllocateContinue(RawDataSize, reinterpret_cast<const uint8_t *&>(data));
     *reinterpret_cast<Decimal128 *>(pos) = value;
     result.size += RawDataSize;
 }

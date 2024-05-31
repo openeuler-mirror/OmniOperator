@@ -163,7 +163,7 @@ ErrorCode SortOperator::SpillToDisk()
             sortOrders.emplace_back(sortOrder);
         }
         spiller = new Spiller(sourceTypes, sortCols, sortOrders, spillConfig->GetSpillPath(),
-            spillConfig->GetMaxSpillBytes());
+            spillConfig->GetMaxSpillBytes(), spillConfig->GetWriteBufferSize());
         hasSpill = true;
     }
 

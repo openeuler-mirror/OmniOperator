@@ -363,13 +363,13 @@ void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount)
     vecBatch->Append(containerVector);
 }
 
-void FillVarcharValue(BaseVector *v, int32_t rowIndex, AggregateState &state)
+void FillVarcharValue(BaseVector *vector, int32_t rowIndex, AggregateState &state)
 {
     if (state.val == 0) {
-        static_cast<Vector<LargeStringContainer<std::string_view>> *>(v)->SetNull(rowIndex);
+        static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(rowIndex);
     } else {
         std::string_view str(reinterpret_cast<char *>(state.val), state.count);
-        static_cast<Vector<LargeStringContainer<std::string_view>> *>(v)->SetValue(rowIndex, str);
+        static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetValue(rowIndex, str);
     }
 }
 
@@ -514,7 +514,8 @@ ErrorCode HashAggregationOperator::SpillHashMap()
         OperatorConfig::CheckSpillConfig(spillConfig);
         InitSpillInfos();
         spiller = new Spiller(DataTypes(spillTypes), groupByCloIdx, sortOrders,
-            operatorConfig.GetSpillConfig()->GetSpillPath(), spillConfig->GetMaxSpillBytes());
+            operatorConfig.GetSpillConfig()->GetSpillPath(), spillConfig->GetMaxSpillBytes(),
+            spillConfig->GetWriteBufferSize());
         hasSpill = true;
     }
     auto result = SpillToDisk();

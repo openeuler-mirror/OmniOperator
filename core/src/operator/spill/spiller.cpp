@@ -25,7 +25,7 @@ ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
         return ErrorCode::SUCCESS;
     }
     // create spill writer object
-    auto writer = new SpillWriter(dataTypes, dirPaths[0]);
+    auto writer = new SpillWriter(dataTypes, dirPaths[0], writeBufferSize);
     writers.emplace_back(writer);
 
     int64_t totalRowOffset = 0;
@@ -65,7 +65,7 @@ ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRa
     }
 
     // create spill writer object
-    auto writer = new SpillWriter(dataTypes, dirPaths[0]);
+    auto writer = new SpillWriter(dataTypes, dirPaths[0], writeBufferSize);
     writers.emplace_back(writer);
 
     int64_t totalRowOffset = 0;
@@ -179,8 +179,8 @@ ErrorCode SpillWriter::CreateTempFile()
         LogError("Fchmod %s failed since %s.", filePathChars, strerror(errno));
         return ErrorCode::WRITE_FAILED;
     }
-    fd = tempFd;
     filePath = filePathChars;
+    fd = tempFd;
     return ErrorCode::SUCCESS;
 }
 
@@ -206,13 +206,13 @@ ErrorCode SpillWriter::WriteVecBatch(vec::VectorBatch *vectorBatch, uint64_t vec
         if (vectorBatchSize > writeBufferSize) {
             result = WriteVecBatchToFile(vectorBatch);
             if (result == ErrorCode::SUCCESS) {
-                writeBufferOffset += vectorBatchSize;
+                fileLength += vectorBatchSize;
             }
         } else {
             // write vector batch to writer buffer
             result = WriteVecBatchToBuffer(vectorBatch);
             if (result == ErrorCode::SUCCESS) {
-                fileLength += vectorBatchSize;
+                writeBufferOffset += vectorBatchSize;
             }
         }
         return result;
@@ -230,11 +230,7 @@ ErrorCode SpillWriter::WriteVecBatchToBuffer(vec::VectorBatch *vectorBatch)
     int32_t rowCount = vectorBatch->GetRowCount();
     int32_t writeOffset = writeBufferOffset;
     auto writeBufferStart = writeBuffer + writeOffset;
-    errno_t ret = memcpy_s(writeBufferStart, sizeof(rowCount), &rowCount, sizeof(rowCount));
-    if (ret != EOK) {
-        LogError("Write row count to buffer failed since %s.", strerror(errno));
-        return ErrorCode::WRITE_FAILED;
-    }
+    *reinterpret_cast<int32_t *>(writeBufferStart) = rowCount;
     writeOffset += sizeof(rowCount);
 
     int32_t vecCount = vectorBatch->GetVectorCount();

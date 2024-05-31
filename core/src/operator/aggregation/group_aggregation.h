@@ -293,8 +293,8 @@ private:
     friend void FillVarcharValue(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
 
     void GetOutputFromDisk(VectorBatch **outputVecBatch);
-    VectorBatch *GetOutputFromDiskWithoutAgg(VectorBatch *outputVecBatch);
-    VectorBatch *GetOutputFromDiskWithAgg(VectorBatch *outputVecBatch);
+    VectorBatch *GetOutputFromDiskWithoutAgg(VectorBatch *output);
+    VectorBatch *GetOutputFromDiskWithAgg(VectorBatch *output);
     void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
 
     std::vector<ColumnIndex> groupByCols;

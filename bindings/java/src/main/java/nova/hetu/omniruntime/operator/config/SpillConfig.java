@@ -37,6 +37,11 @@ public class SpillConfig implements Serializable {
      */
     public static final long DEFAULT_MAX_SPILL_BYTES = 100L * (1 << 30); // 100GB
 
+    /**
+     * The default spill write buffer size.
+     */
+    public static final long DEFAULT_WRITE_BUFFER_SIZE = 4 * (1 << 20); // 4MB
+
     private static final long serialVersionUID = -1420544948753374714L;
 
     private SpillConfigId spillConfigId;
@@ -47,11 +52,13 @@ public class SpillConfig implements Serializable {
 
     private long maxSpillBytes;
 
+    private long writeBufferSize;
+
     /**
      * Spill config default constructor.
      */
     public SpillConfig() {
-        this(SpillConfigId.SPILL_CONFIG_NONE, false, "", DEFAULT_MAX_SPILL_BYTES);
+        this(SpillConfigId.SPILL_CONFIG_NONE, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE);
     }
 
     /**
@@ -60,7 +67,7 @@ public class SpillConfig implements Serializable {
      * @param spillConfigId the spill config id
      */
     public SpillConfig(SpillConfigId spillConfigId) {
-        this(spillConfigId, false, "", DEFAULT_MAX_SPILL_BYTES);
+        this(spillConfigId, false, "", DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE);
     }
 
     /**
@@ -71,7 +78,7 @@ public class SpillConfig implements Serializable {
      * @param spillPath the spill path
      */
     public SpillConfig(SpillConfigId spillConfigId, boolean isSpillEnabled, String spillPath) {
-        this(spillConfigId, isSpillEnabled, spillPath, DEFAULT_MAX_SPILL_BYTES);
+        this(spillConfigId, isSpillEnabled, spillPath, DEFAULT_MAX_SPILL_BYTES, DEFAULT_WRITE_BUFFER_SIZE);
     }
 
     /**
@@ -81,8 +88,10 @@ public class SpillConfig implements Serializable {
      * @param isSpillEnabled whether the spill enabled
      * @param spillPath the spill path
      * @param maxSpillBytes the max spill bytes
+     * @param writeBufferSize the sill write buffer size
      */
-    public SpillConfig(SpillConfigId spillConfigId, boolean isSpillEnabled, String spillPath, long maxSpillBytes) {
+    public SpillConfig(SpillConfigId spillConfigId, boolean isSpillEnabled, String spillPath, long maxSpillBytes,
+        long writeBufferSize) {
         if (isSpillEnabled && (spillPath == null || spillPath.isEmpty())) {
             throw new OmniRuntimeException(OMNI_PARAM_ERROR, "Enable spill but do not config spill path.");
         }
@@ -90,6 +99,7 @@ public class SpillConfig implements Serializable {
         this.isSpillEnabled = isSpillEnabled;
         this.spillPath = spillPath;
         this.maxSpillBytes = maxSpillBytes;
+        this.writeBufferSize = writeBufferSize;
     }
 
     /**
@@ -165,6 +175,24 @@ public class SpillConfig implements Serializable {
     }
 
     /**
+     * get the spill write buffer size.
+     *
+     * @return the spill write buffer size
+     */
+    public long getWriteBufferSize() {
+        return writeBufferSize;
+    }
+
+    /**
+     * set the spill write buffer size.
+     *
+     * @param writeBufferSize the spill write buffer size
+     */
+    public void setWriteBufferSize(long writeBufferSize) {
+        this.writeBufferSize = writeBufferSize;
+    }
+
+    /**
      * The enum for spill config id.
      */
     public enum SpillConfigId {
@@ -184,11 +212,12 @@ public class SpillConfig implements Serializable {
         }
         SpillConfig spillConfig = (SpillConfig) obj;
         return spillConfigId == spillConfig.spillConfigId && isSpillEnabled == isSpillEnabled
-                && spillPath.equals(spillConfig.spillPath) && maxSpillBytes == spillConfig.maxSpillBytes;
+                && spillPath.equals(spillConfig.spillPath) && maxSpillBytes == spillConfig.maxSpillBytes
+                && writeBufferSize == spillConfig.writeBufferSize;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(spillConfigId, isSpillEnabled, spillPath, maxSpillBytes);
+        return Objects.hash(spillConfigId, isSpillEnabled, spillPath, maxSpillBytes, writeBufferSize);
     }
 }
