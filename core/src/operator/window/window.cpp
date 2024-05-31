@@ -419,6 +419,9 @@ int32_t FindGroupEnd(PagesIndex *pagesIndex, PagesHashStrategy *pagesHashStrateg
 
 OmniStatus WindowOperator::Close()
 {
+    if (inputVecBatchForAgg != nullptr) {
+        inputVecBatchForAgg->SetVector(0, nullptr);
+    }
     // delete spiller object when exception occurs
     if (spiller != nullptr) {
         spiller->RemoveSpillFiles();
