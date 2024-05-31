@@ -37,7 +37,7 @@ template <typename T> T GetMax()
 }
 
 template <typename IN, typename OUT>
-SIMD_ALWAYS_INLINE void MinOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed)
+SIMD_ALWAYS_INLINE void MinOp(OUT *res, int64_t &flag, const IN &in, const int64_t notUsed)
 {
     const OUT cur = static_cast<OUT>(in);
     *res = std::min(*res, cur);
@@ -45,7 +45,7 @@ SIMD_ALWAYS_INLINE void MinOp(OUT *res, int64_t &flag, const IN &in, const int64
 }
 
 template <typename IN, typename OUT, bool addIf>
-SIMD_ALWAYS_INLINE void MinConditionalOp(OUT *res, int64_t &flag, const IN &in, const int64_t &notUsed,
+SIMD_ALWAYS_INLINE void MinConditionalOp(OUT *res, int64_t &flag, const IN &in, const int64_t notUsed,
     const uint8_t &condition)
 {
     if (condition == addIf) {
@@ -68,9 +68,14 @@ public:
     ~MinAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override;
     void InitState(AggregateState &state) override;
-    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override;
+    void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx) override;
+    std::vector<DataTypePtr> GetSpillType() override;
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
@@ -95,8 +100,8 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex) override;
 
 protected:
     MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,

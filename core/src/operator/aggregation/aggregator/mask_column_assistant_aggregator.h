@@ -38,14 +38,21 @@ public:
         }
     }
 
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override
     {
-        realAggregator->ExtractValues(state, vectors, rowIndex);
+        realAggregator->ExtractValuesForSpill(groupStates, aggIdx, vectors);
     }
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);
+    }
+
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    {
+        realAggregator->ExtractValuesBatch(groupStates, aggIdx, vectors, rowOffset, rowCount);
     }
 
     bool IsInputRaw() const override

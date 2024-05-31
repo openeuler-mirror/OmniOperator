@@ -301,7 +301,7 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
         // write values
         char *values = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector));
         auto valueLength = static_cast<ssize_t>(valueOffsets[rowCount] - valueOffsets[0]);
-        ret = memcpy_s(writeBuffer + writeOffset, valueLength, values, valueLength);
+        ret = valueLength == 0 ? EOK : memcpy_s(writeBuffer + writeOffset, valueLength, values, valueLength);
         if (ret != EOK) {
             LogError("Write values to buffer failed since %s.", strerror(errno));
             return op::ErrorCode::WRITE_FAILED;

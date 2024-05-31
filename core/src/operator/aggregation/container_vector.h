@@ -164,7 +164,7 @@ public:
     ContainerVector *Slice(int positionOffset, int length, bool isCopy = false)
     {
         throw exception::OmniException(omniruntime::op::GetErrorCode(omniruntime::op::ErrorCode::UNSUPPORTED),
-            "container vector not support CopyPositions");
+            "container vector not support Slice");
     }
 
     ~ContainerVector()

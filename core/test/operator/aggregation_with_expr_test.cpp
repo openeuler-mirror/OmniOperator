@@ -1112,20 +1112,10 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_no_aggNum)
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
-template <bool SupportContainerVecRule = true>
-void TestHashAggSpillWithMultiRecords(std::vector<uint32_t> aggFuncTypes, DataTypes aggOutputTypes,
-    VectorBatch *expectVecorBatch)
+std::vector<VectorBatch *> PreparePartialInputData()
 {
-    if constexpr (SupportContainerVecRule) {
-        ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
-    } else {
-        ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
-    }
-
     const int32_t dataSize = 6;
-    const int32_t groupByNum = 2;
 
-    // prepare data
     // agg(c2*5), agg(c3), agg(c4), agg(c5), agg(c6), agg(c7), agg(c8), agg(c9) group by c0%3, c1
     int64_t data0[] = {2, 5, 8, 11, 14, 17};                              // c0
     int32_t data1[] = {1, 5, 3, 5, 3, 5};                                 // c1
@@ -1141,7 +1131,7 @@ void TestHashAggSpillWithMultiRecords(std::vector<uint32_t> aggFuncTypes, DataTy
 
     DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *vecBatch1 =
+    auto vecBatch1 =
         CreateVectorBatch(sourceTypes, dataSize, data0, data1, data2, data3, data4, data5, data6, data7, data8, data9);
     // set null
     vecBatch1->Get(1)->SetNull(2);
@@ -1166,62 +1156,194 @@ void TestHashAggSpillWithMultiRecords(std::vector<uint32_t> aggFuncTypes, DataTy
     std::string data72[] = {"-1.20", "-1.20"};                        // c7
     int64_t data82[] = {-120, -120};                                  // c8
     Decimal128 data92[] = {Decimal128("-1.20"), Decimal128("-1.20")}; // c9
-    VectorBatch *vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52, data62,
-        data72, data82, data92);
+    auto vecBatch2 = CreateVectorBatch(sourceTypes, 2, data02, data12, data22, data32, data42, data52, data62, data72,
+        data82, data92);
 
-    // groupByKeys
-    LiteralExpr *modRight = new LiteralExpr(3, LongType());
-    modRight->longVal = 3;
-    BinaryExpr *modExpr =
-        new BinaryExpr(omniruntime::expressions::Operator::MOD, new FieldExpr(0, LongType()), modRight, LongType());
-    std::vector<Expr *> groupByKeys = { modExpr, new FieldExpr(1, IntType()) };
+    std::vector<VectorBatch *> input;
+    input.emplace_back(vecBatch1);
+    input.emplace_back(vecBatch2);
+    return input;
+}
 
-    // aggKeys
-    LiteralExpr *mulRight = new LiteralExpr(5, LongType());
-    mulRight->longVal = 5;
-    BinaryExpr *mulExpr =
-        new BinaryExpr(omniruntime::expressions::Operator::MUL, new FieldExpr(2, LongType()), mulRight, LongType());
-    std::vector<Expr *> aggKeys1 = { mulExpr };
-    std::vector<Expr *> aggKeys2 = { new FieldExpr(3, IntType()) };
-    std::vector<Expr *> aggKeys3 = { new FieldExpr(4, ShortType()) };
-    std::vector<Expr *> aggKeys4 = { new FieldExpr(5, BooleanType()) };
-    std::vector<Expr *> aggKeys5 = { new FieldExpr(6, DoubleType()) };
-    std::vector<Expr *> aggKeys6 = { new FieldExpr(7, VarcharType(10)) };
-    std::vector<Expr *> aggKeys7 = { new FieldExpr(8, Decimal64Type()) };
-    std::vector<Expr *> aggKeys8 = { new FieldExpr(9, Decimal128Type(8, 2)) };
-    std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys1, aggKeys2, aggKeys3, aggKeys4,
-                                                                              aggKeys5, aggKeys6, aggKeys7, aggKeys8 };
+template <bool SupportContainerVecRule>
+void SetAggKeys(const std::vector<DataTypePtr> &finalInputTypes, const std::vector<uint32_t> &aggFuncTypes,
+    std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggsInputTypes)
+{
+    auto aggIdx = 2;
+    for (auto funcType : aggFuncTypes) {
+        std::vector<uint32_t> aggCols;
+        std::vector<DataTypePtr> aggInputType;
+        switch (funcType) {
+            case OMNI_AGGREGATION_TYPE_SUM: {
+                aggCols.emplace_back(aggIdx);
+                aggInputType.emplace_back(finalInputTypes[aggIdx]);
+                if constexpr (!SupportContainerVecRule) {
+                    if (finalInputTypes[aggIdx]->GetId() == OMNI_DECIMAL64 ||
+                        finalInputTypes[aggIdx]->GetId() == OMNI_DECIMAL128) {
+                        aggIdx++;
+                        aggCols.emplace_back(aggIdx);
+                        aggInputType.emplace_back(finalInputTypes[aggIdx]);
+                        aggIdx++;
+                    } else {
+                        aggIdx++;
+                    }
+                } else {
+                    aggIdx++;
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_COUNT_COLUMN:
+            case OMNI_AGGREGATION_TYPE_COUNT_ALL:
+            case OMNI_AGGREGATION_TYPE_MAX:
+            case OMNI_AGGREGATION_TYPE_MIN: {
+                aggCols.emplace_back(aggIdx);
+                aggInputType.emplace_back(finalInputTypes[aggIdx]);
+                aggIdx++;
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_AVG: {
+                if constexpr (SupportContainerVecRule) {
+                    aggCols.emplace_back(aggIdx);
+                    aggInputType.emplace_back(finalInputTypes[aggIdx]);
+                    aggIdx++;
+                } else {
+                    aggCols.emplace_back(aggIdx);
+                    aggInputType.emplace_back(finalInputTypes[aggIdx]);
+                    aggIdx++;
+                    aggCols.emplace_back(aggIdx);
+                    aggInputType.emplace_back(finalInputTypes[aggIdx]);
+                    aggIdx++;
+                }
+                break;
+            }
+            case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL:
+            case OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL: {
+                aggCols.emplace_back(aggIdx);
+                aggInputType.emplace_back(finalInputTypes[aggIdx]);
+                aggIdx++;
+                aggCols.emplace_back(aggIdx);
+                aggInputType.emplace_back(finalInputTypes[aggIdx]);
+                aggIdx++;
+                break;
+            }
+            default:
+                break;
+        }
+        aggsCols.emplace_back(aggCols);
+        aggsInputTypes.emplace_back(DataTypes(aggInputType));
+    }
+}
+
+template <bool InputRaw, bool OutputPartial, bool SupportContainerVecRule = false>
+VectorBatch *TestHashAggMultiRecords(DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypes,
+    std::vector<DataTypes> &aggOutputTypes, std::vector<VectorBatch *> &finalInput, OperatorConfig &operatorConfig)
+{
+    if constexpr (SupportContainerVecRule) {
+        ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
+    } else {
+        ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
+    }
 
     std::vector<uint32_t> maskCols = { static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
         static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
         static_cast<uint32_t>(-1), static_cast<uint32_t>(-1) };
+    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), InputRaw);
+    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), OutputPartial);
+    std::vector<VectorBatch *> input;
+    VectorBatch *outputVecBatch = nullptr;
 
+    if constexpr (InputRaw) {
+        input = PreparePartialInputData();
+
+        // groupByKeys
+        const int32_t groupByNum = 2;
+        std::vector<Expr *> groupByKeys;
+        auto modLeft = new FieldExpr(0, LongType());
+        auto modRight = new LiteralExpr(3L, LongType());
+        auto modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, modLeft, modRight, LongType());
+        groupByKeys.emplace_back(modExpr);
+        groupByKeys.emplace_back(new FieldExpr(1, IntType()));
+
+        // aggKeys
+        std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys;
+        auto mulLeft = new FieldExpr(2, LongType());
+        auto mulRight = new LiteralExpr(5L, LongType());
+        auto mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, LongType());
+        std::vector<Expr *> aggKeys1 = { mulExpr };
+        std::vector<Expr *> aggKeys2 = { new FieldExpr(3, IntType()) };
+        std::vector<Expr *> aggKeys3 = { new FieldExpr(4, ShortType()) };
+        std::vector<Expr *> aggKeys4 = { new FieldExpr(5, BooleanType()) };
+        std::vector<Expr *> aggKeys5 = { new FieldExpr(6, DoubleType()) };
+        std::vector<Expr *> aggKeys6 = { new FieldExpr(7, VarcharType(10)) };
+        std::vector<Expr *> aggKeys7 = { new FieldExpr(8, Decimal64Type()) };
+        std::vector<Expr *> aggKeys8 = { new FieldExpr(9, Decimal128Type(8, 2)) };
+        aggAllKeys.emplace_back(aggKeys1);
+        aggAllKeys.emplace_back(aggKeys2);
+        aggAllKeys.emplace_back(aggKeys3);
+        aggAllKeys.emplace_back(aggKeys4);
+        aggAllKeys.emplace_back(aggKeys5);
+        aggAllKeys.emplace_back(aggKeys6);
+        aggAllKeys.emplace_back(aggKeys7);
+        aggAllKeys.emplace_back(aggKeys8);
+
+        std::vector<omniruntime::expressions::Expr *> aggFilters;
+        auto *hashAggWithExprOperatorFactory =
+            new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
+            aggOutputTypes, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, operatorConfig);
+        auto *hashAggWithExprOperator =
+            dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
+
+        for (auto inputVecBatch : input) {
+            hashAggWithExprOperator->AddInput(inputVecBatch);
+        }
+
+        hashAggWithExprOperator->GetOutput(&outputVecBatch);
+        omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
+        delete hashAggWithExprOperatorFactory;
+        Expr::DeleteExprs(groupByKeys);
+        Expr::DeleteExprs(aggAllKeys);
+    } else {
+        std::vector<uint32_t> groupByCols({ 0, 1 });
+        DataTypes groupInputTypes(std::vector<DataTypePtr> { sourceTypes.GetType(0), sourceTypes.GetType(1) });
+        std::vector<std::vector<uint32_t>> aggsCols;
+        std::vector<DataTypes> aggInputTypes;
+        SetAggKeys<SupportContainerVecRule>(sourceTypes.Get(), aggFuncTypes, aggsCols, aggInputTypes);
+        input = finalInput;
+
+        auto *hashAggOperatorFactory = new HashAggregationOperatorFactory(groupByCols, groupInputTypes, aggsCols,
+            aggInputTypes, aggOutputTypes, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, operatorConfig);
+        hashAggOperatorFactory->Init();
+        auto *hashAggOperator = dynamic_cast<HashAggregationOperator *>(CreateTestOperator(hashAggOperatorFactory));
+
+        for (auto inputVecBatch : input) {
+            hashAggOperator->AddInput(inputVecBatch);
+        }
+        hashAggOperator->GetOutput(&outputVecBatch);
+        omniruntime::op::Operator::DeleteOperator(hashAggOperator);
+        delete hashAggOperatorFactory;
+    }
+
+    return outputVecBatch;
+}
+
+template <bool InputRaw, bool OutputPartial, bool SupportContainerVecRule = false>
+VectorBatch *TestHashAggWithOutSpillMultiRecords(DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypes,
+    std::vector<DataTypes> &aggOutputTypes, std::vector<VectorBatch *> &finalInput)
+{
+    SpillConfig spillConfig;
+    OperatorConfig operatorConfig(spillConfig);
+    return TestHashAggMultiRecords<InputRaw, OutputPartial, SupportContainerVecRule>(sourceTypes, aggFuncTypes,
+        aggOutputTypes, finalInput, operatorConfig);
+}
+
+template <bool InputRaw, bool OutputPartial, bool SupportContainerVecRule>
+VectorBatch *TestHashAggWithSpillMultiRecords(DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypes,
+    std::vector<DataTypes> &aggOutputTypes, std::vector<VectorBatch *> &finalInput)
+{
     SparkSpillConfig spillConfig(GenerateSpillPath(), INT32_MAX, 4);
     OperatorConfig operatorConfig(spillConfig);
-
-    auto aggOutputTypesWrap = AggregatorUtil::WrapWithVector(aggOutputTypes);
-    auto inputRawWrap = std::vector<bool>(aggFuncTypes.size(), true);
-    auto outputPartialWrap = std::vector<bool>(aggFuncTypes.size(), false);
-    std::vector<omniruntime::expressions::Expr *> aggFilters;
-    auto *hashAggWithExprOperatorFactory =
-        new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggAllKeys, aggFilters, sourceTypes,
-        aggOutputTypesWrap, aggFuncTypes, maskCols, inputRawWrap, outputPartialWrap, operatorConfig);
-    auto *hashAggWithExprOperator =
-        dynamic_cast<HashAggregationWithExprOperator *>(CreateTestOperator(hashAggWithExprOperatorFactory));
-
-    hashAggWithExprOperator->AddInput(vecBatch1);
-    hashAggWithExprOperator->AddInput(vecBatch2);
-    VectorBatch *outputVecBatch = nullptr;
-    hashAggWithExprOperator->GetOutput(&outputVecBatch);
-
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecorBatch));
-
-    omniruntime::op::Operator::DeleteOperator(hashAggWithExprOperator);
-    delete hashAggWithExprOperatorFactory;
-    Expr::DeleteExprs(groupByKeys);
-    Expr::DeleteExprs(aggAllKeys);
-    VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectVecorBatch);
+    return TestHashAggMultiRecords<InputRaw, OutputPartial, SupportContainerVecRule>(sourceTypes, aggFuncTypes,
+        aggOutputTypes, finalInput, operatorConfig);
 }
 
 double CalculateHashAggSumValue()
@@ -1235,339 +1357,426 @@ double CalculateHashAggSumValue()
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_sum_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    int64_t expData2[] = {25, 5, 140, 0};                                                     // c2
-    int64_t expData3[] = {5, 1, 28, 0};                                                       // c3
-    int64_t expData4[] = {5, 1, 28, 0};                                                       // c4
-    bool expData5[] = {true, true, false, true};                                              // c5
-    double expData6[] = {1.2, 0, CalculateHashAggSumValue(), -1.2};                           // c6
-    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
-    int64_t expData8[] = {120, 0, 320, -120};                                                 // c8
-    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.20"), Decimal128("-1.20")}; // c9
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-    expectVecorBatch->Get(2)->SetNull(3);
-    expectVecorBatch->Get(3)->SetNull(3);
-    expectVecorBatch->Get(4)->SetNull(3);
-    expectVecorBatch->Get(5)->SetNull(3);
-    expectVecorBatch->Get(6)->SetNull(1);
-    expectVecorBatch->Get(8)->SetNull(1);
-    expectVecorBatch->Get(9)->SetNull(1);
-    auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(1);
+    std::vector<DataTypes> partialAggOutputTypes;
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2), BooleanType() })));
 
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), BooleanType(), DoubleType(),
-        VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM };
-    TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, expectInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch, 5e-16));
+
+    DataTypes finalInputTypes(
+        std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(), BooleanType(),
+        DoubleType(), VarcharType(10), Decimal64Type(), BooleanType(), Decimal128Type(8, 2), BooleanType() }));
+    std::vector<DataTypes> finalAggOutputTypes;
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
+    expectInput.emplace_back(expectPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch, 5e-16));
+
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_sum_container_support_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    int64_t expData2[] = {25, 5, 140, 0};                                                     // c2
-    int64_t expData3[] = {5, 1, 28, 0};                                                       // c3
-    int64_t expData4[] = {5, 1, 28, 0};                                                       // c4
-    bool expData5[] = {true, true, false, true};                                              // c5
-    double expData6[] = {1.2, 0, CalculateHashAggSumValue(), -1.2};                           // c6
-    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
-    int64_t expData8[] = {120, 0, 320, -120};                                                 // c8
-    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.20"), Decimal128("-1.20")}; // c9
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-    expectVecorBatch->Get(2)->SetNull(3);
-    expectVecorBatch->Get(3)->SetNull(3);
-    expectVecorBatch->Get(4)->SetNull(3);
-    expectVecorBatch->Get(5)->SetNull(3);
-    expectVecorBatch->Get(6)->SetNull(1);
-    expectVecorBatch->Get(8)->SetNull(1);
-    expectVecorBatch->Get(9)->SetNull(1);
-    auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(1);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), BooleanType(), DoubleType(),
-        VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> partialAggOutputTypes;
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
     std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM,
         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM };
-    TestHashAggSpillWithMultiRecords<false>(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, true>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, expectInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, true>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch, 5e-16));
+
+    DataTypes finalInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
+        BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> finalAggOutputTypes(partialAggOutputTypes);
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
+
+    expectInput.emplace_back(expectPartialVecBatch);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, true>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, true>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch, 5e-16));
+
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_avg_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    double expData2[] = {25, 5, 28, 0};                                                       // c2
-    double expData3[] = {5, 1, 5.6, 0};                                                       // c3
-    double expData4[] = {5, 1, 5.6, 0};                                                       // c4
-    bool expData5[] = {true, true, false, true};                                              // c5
-    double expData6[] = {1.2, 0, 0.64, -1.2};                                                 // c6
-    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
-    int64_t expData8[] = {120, 0, 64, -120};                                                  // c8
-    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("0.64"), Decimal128("-1.20")}; // c9
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), DoubleType(), DoubleType(), DoubleType(),
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-    expectVecorBatch->Get(2)->SetNull(3);
-    expectVecorBatch->Get(3)->SetNull(3);
-    expectVecorBatch->Get(4)->SetNull(3);
-    expectVecorBatch->Get(5)->SetNull(3);
-    expectVecorBatch->Get(6)->SetNull(1);
-    expectVecorBatch->Get(8)->SetNull(1);
-    expectVecorBatch->Get(9)->SetNull(1);
-    auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(1);
+    std::vector<DataTypes> partialAggOutputTypes;
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType(), LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType(), LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType(), LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType(), LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type(), LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2), LongType() })));
 
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType(), BooleanType(),
-        DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG };
-    TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, expectInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch, 5e-16));
+
+    DataTypes finalInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), DoubleType(), LongType(), DoubleType(),
+        LongType(), DoubleType(), LongType(), BooleanType(), DoubleType(), LongType(), VarcharType(10), Decimal64Type(),
+        LongType(), Decimal128Type(8, 2), LongType() }));
+    std::vector<DataTypes> finalAggOutputTypes;
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
+
+    expectInput.emplace_back(expectPartialVecBatch);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch, 5e-16));
+
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_avg_container_support_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    double expData2[] = {25, 5, 28, 0};                                                       // c2
-    double expData3[] = {5, 1, 5.6, 0};                                                       // c3
-    double expData4[] = {5, 1, 5.6, 0};                                                       // c4
-    bool expData5[] = {true, true, false, true};                                              // c5
-    double expData6[] = {1.2, 0, 0.64, -1.2};                                                 // c6
-    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};                                   // c7
-    int64_t expData8[] = {120, 0, 64, -120};                                                  // c8
-    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("0.64"), Decimal128("-1.20")}; // c9
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), DoubleType(), DoubleType(), DoubleType(),
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-    expectVecorBatch->Get(2)->SetNull(3);
-    expectVecorBatch->Get(3)->SetNull(3);
-    expectVecorBatch->Get(4)->SetNull(3);
-    expectVecorBatch->Get(5)->SetNull(3);
-    expectVecorBatch->Get(6)->SetNull(1);
-    expectVecorBatch->Get(8)->SetNull(1);
-    expectVecorBatch->Get(9)->SetNull(1);
-    auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(1);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ DoubleType(), DoubleType(), DoubleType(), BooleanType(),
-        DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> partialAggOutputTypes;
+    auto containerType1 = ContainerType(std::vector<DataTypePtr>({ DoubleType(), LongType() }));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ containerType1 })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ containerType1 })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ containerType1 })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ containerType1 })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(12) })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(12) })));
     std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_AVG, OMNI_AGGREGATION_TYPE_AVG };
-    TestHashAggSpillWithMultiRecords<false>(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, true>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, expectInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, true>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch, 5e-16));
+
+    DataTypes finalInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), containerType1, containerType1,
+        containerType1, BooleanType(), containerType1, VarcharType(10), VarcharType(12), VarcharType(12) }));
+    std::vector<DataTypes> finalAggOutputTypes;
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
+
+    expectInput.emplace_back(expectPartialVecBatch);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, true>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, true>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch, 5e-16));
+
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_count_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    int64_t expData2[] = {1, 1, 5, 0};
-    int64_t expData3[] = {1, 1, 5, 0};
-    int64_t expData4[] = {1, 1, 5, 0};
-    int64_t expData5[] = {1, 1, 5, 0};
-    int64_t expData6[] = {1, 0, 5, 1};
-    int64_t expData7[] = {1, 0, 5, 1};
-    int64_t expData8[] = {1, 0, 5, 1};
-    int64_t expData9[] = {1, 0, 5, 1};
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
-        LongType(), LongType(), LongType(), LongType(), LongType() }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>(
-        { LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
+        BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> partialAggOutputTypes;
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
     std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
         OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_COUNT_COLUMN };
-    TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, expectInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch));
+
+    DataTypes finalInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), LongType(), LongType(),
+        LongType(), LongType(), LongType(), LongType(), LongType() }));
+    std::vector<DataTypes> finalAggOutputTypes(partialAggOutputTypes);
+    expectInput.emplace_back(expectPartialVecBatch);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch));
+
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_min_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    int64_t expData2[] = {25, 5, 15, 0};
-    int32_t expData3[] = {5, 1, 3, 0};
-    int32_t expData4[] = {5, 1, 3, 0};
-    bool expData5[] = {true, true, false, true};
-    double expData6[] = {1.2, 0, -1.2, -1.2};
-    std::string expData7[] = {"1.20", "", "-1.20", "-1.20"};
-    int64_t expData8[] = {120, 0, -120, -120};
-    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("-1.20"), Decimal128("-1.20")};
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), IntType(),
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-    expectVecorBatch->Get(2)->SetNull(3);
-    expectVecorBatch->Get(3)->SetNull(3);
-    expectVecorBatch->Get(4)->SetNull(3);
-    expectVecorBatch->Get(5)->SetNull(3);
-    expectVecorBatch->Get(6)->SetNull(1);
-    expectVecorBatch->Get(8)->SetNull(1);
-    expectVecorBatch->Get(9)->SetNull(1);
-    auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(1);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), IntType(), BooleanType(), DoubleType(),
-        VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> partialAggOutputTypes;
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ IntType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ IntType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
     std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
         OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
         OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
         OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN };
-    TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, expectInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch));
+
+    DataTypes finalInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), IntType(),
+        BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> finalAggOutputTypes(partialAggOutputTypes);
+    expectInput.emplace_back(expectPartialVecBatch);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch));
+
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_max_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    int64_t expData2[] = {25, 5, 40, 0};
-    int32_t expData3[] = {5, 1, 8, 0};
-    int16_t expData4[] = {5, 1, 8, 0};
-    bool expData5[] = {true, true, false, true};
-    double expData6[] = {1.2, 0, 3.4, -1.2};
-    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};
-    int64_t expData8[] = {120, 0, 340, -120};
-    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.40"), Decimal128("-1.20")};
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-    expectVecorBatch->Get(2)->SetNull(3);
-    expectVecorBatch->Get(3)->SetNull(3);
-    expectVecorBatch->Get(4)->SetNull(3);
-    expectVecorBatch->Get(5)->SetNull(3);
-    expectVecorBatch->Get(6)->SetNull(1);
-    expectVecorBatch->Get(8)->SetNull(1);
-    expectVecorBatch->Get(9)->SetNull(1);
-    auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(1);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), ShortType(), BooleanType(), DoubleType(),
-        VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> partialAggOutputTypes;
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ IntType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ ShortType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
     std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
         OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX };
-    TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, expectInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch));
+
+    DataTypes finalInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
+        BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> finalAggOutputTypes(partialAggOutputTypes);
+    expectInput.emplace_back(expectPartialVecBatch);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch));
+
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_first_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    int64_t expData2[] = {25, 5, 15, 0};
-    int32_t expData3[] = {5, 1, 3, 0};
-    int16_t expData4[] = {5, 1, 3, 0};
-    bool expData5[] = {true, true, false, true};
-    double expData6[] = {1.2, 0, 3.4, -1.2};
-    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};
-    int64_t expData8[] = {120, 0, 340, -120};
-    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.40"), Decimal128("-1.20")};
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-    expectVecorBatch->Get(2)->SetNull(3);
-    expectVecorBatch->Get(3)->SetNull(3);
-    expectVecorBatch->Get(4)->SetNull(3);
-    expectVecorBatch->Get(5)->SetNull(3);
-    expectVecorBatch->Get(6)->SetNull(1);
-    expectVecorBatch->Get(8)->SetNull(1);
-    expectVecorBatch->Get(9)->SetNull(1);
-    auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(1);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), ShortType(), BooleanType(), DoubleType(),
-        VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> partialAggOutputTypes;
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ IntType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ ShortType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2), BooleanType() })));
     std::vector<uint32_t> aggFuncTypes = {
         OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL, OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL,
         OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL, OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL,
         OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL, OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL,
         OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL, OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL
     };
-    TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, expectInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch));
+
+    DataTypes finalInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), BooleanType(), IntType(),
+        BooleanType(), ShortType(), BooleanType(), BooleanType(), BooleanType(), DoubleType(), BooleanType(),
+        VarcharType(10), BooleanType(), Decimal64Type(), BooleanType(), Decimal128Type(8, 2), BooleanType() }));
+    std::vector<DataTypes> finalAggOutputTypes;
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ IntType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ ShortType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
+
+    expectInput.emplace_back(expectPartialVecBatch);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch));
+
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
 }
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_first_include_null_spill)
 {
-    const int32_t expectDataSize = 4;
-    int64_t expData0[] = {2, 2, 2, 2};
-    int32_t expData1[] = {1, 3, 5, 0};
-    int64_t expData2[] = {25, 5, 15, 0};
-    int32_t expData3[] = {5, 1, 3, 0};
-    int16_t expData4[] = {5, 1, 3, 0};
-    bool expData5[] = {true, true, false, true};
-    double expData6[] = {1.2, 0, 3.4, -1.2};
-    std::string expData7[] = {"1.20", "", "3.40", "-1.20"};
-    int64_t expData8[] = {120, 0, 340, -120};
-    Decimal128 expData9[] = {Decimal128("1.20"), 0, Decimal128("3.40"), Decimal128("-1.20")};
-
-    DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
+    DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
-    VectorBatch *expectVecorBatch = CreateVectorBatch(expectTypes, expectDataSize, expData0, expData1, expData2,
-        expData3, expData4, expData5, expData6, expData7, expData8, expData9);
-    expectVecorBatch->Get(1)->SetNull(3);
-    expectVecorBatch->Get(2)->SetNull(3);
-    expectVecorBatch->Get(3)->SetNull(3);
-    expectVecorBatch->Get(4)->SetNull(3);
-    expectVecorBatch->Get(5)->SetNull(3);
-    expectVecorBatch->Get(6)->SetNull(1);
-    expectVecorBatch->Get(8)->SetNull(1);
-    expectVecorBatch->Get(9)->SetNull(1);
-    auto varCharVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(expectVecorBatch->Get(7));
-    varCharVector->SetNull(1);
-
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), ShortType(), BooleanType(), DoubleType(),
-        VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
+    std::vector<DataTypes> partialAggOutputTypes;
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ IntType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ ShortType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type(), BooleanType() })));
+    partialAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2), BooleanType() })));
     std::vector<uint32_t> aggFuncTypes = {
         OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL, OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL,
         OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL, OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL,
         OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL, OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL,
         OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL, OMNI_AGGREGATION_TYPE_FIRST_INCLUDENULL
     };
-    TestHashAggSpillWithMultiRecords(aggFuncTypes, aggOutputTypes, expectVecorBatch);
+    std::vector<VectorBatch *> expectInput;
+    std::vector<VectorBatch *> resultInput;
+    auto expectPartialVecBatch = TestHashAggWithOutSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    auto resultPartialVecBatch = TestHashAggWithSpillMultiRecords<true, true, false>(partialInputTypes, aggFuncTypes,
+        partialAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultPartialVecBatch, expectPartialVecBatch));
+
+    DataTypes finalInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), BooleanType(), IntType(),
+        BooleanType(), ShortType(), BooleanType(), BooleanType(), BooleanType(), DoubleType(), BooleanType(),
+        VarcharType(10), BooleanType(), Decimal64Type(), BooleanType(), Decimal128Type(8, 2), BooleanType() }));
+    std::vector<DataTypes> finalAggOutputTypes;
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ LongType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ IntType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ ShortType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ BooleanType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ DoubleType() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ VarcharType(10) })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal64Type() })));
+    finalAggOutputTypes.emplace_back(DataTypes(std::vector<DataTypePtr>({ Decimal128Type(8, 2) })));
+
+    expectInput.emplace_back(expectPartialVecBatch);
+    resultInput.emplace_back(resultPartialVecBatch);
+    auto expectFinalVecBatch = TestHashAggWithOutSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, expectInput);
+    auto resultFinalVecBatch = TestHashAggWithSpillMultiRecords<false, false, false>(finalInputTypes, aggFuncTypes,
+        finalAggOutputTypes, resultInput);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(resultFinalVecBatch, expectFinalVecBatch));
+
+    VectorHelper::FreeVecBatch(resultFinalVecBatch);
+    VectorHelper::FreeVecBatch(expectFinalVecBatch);
 }
 
 template <bool SupportContainerVecRule = true>

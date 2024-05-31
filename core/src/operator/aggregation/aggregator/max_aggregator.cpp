@@ -28,28 +28,57 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypePtr> &spillTypes)
+void MaxAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+    std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
 {
-    if constexpr (IN_ID == OMNI_SHORT) {
-        spillTypes.push_back(std::make_shared<DataType>(OMNI_INT));
-    } else {
-        spillTypes.push_back(std::make_shared<DataType>(IN_ID));
+    auto v = static_cast<OutVector *>(vectors[0]);
+    for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        auto &state = groupStates[rowIndex][aggIdx];
+        if (state.count == 0) {
+            v->SetNull(rowIndex);
+        } else if (state.count < 0) {
+            this->SetNullOrThrowException(v, rowIndex, "max_aggregator overflow.");
+        } else {
+            OutType result;
+            bool isOverflow = false;
+            result = CastWithOverflowEntry<ResultType, OutType>(state.val, isOverflow);
+            if (isOverflow) {
+                this->SetNullOrThrowException(v, rowIndex, "max_aggregator overflow.");
+            } else {
+                v->SetValue(rowIndex, result);
+            }
+        }
     }
 }
 
+template <DataTypeId IN_ID, DataTypeId OUT_ID> std::vector<DataTypePtr> MaxAggregator<IN_ID, OUT_ID>::GetSpillType()
+{
+    std::vector<DataTypePtr> spillTypes;
+    if constexpr (IN_ID == OMNI_SHORT) {
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_INT));
+    } else {
+        spillTypes.emplace_back(outputTypes.GetType(0));
+    }
+    return spillTypes;
+}
+
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
-    int32_t rowIndex)
+void MaxAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
+    const size_t aggIdx, std::vector<BaseVector *> &vectors)
 {
     auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
-    if (state.count == 0) {
-        spillValueVec->SetNull(rowIndex);
-        return;
-    }
-    if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-        spillValueVec->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-    } else {
-        spillValueVec->SetValue(rowIndex, static_cast<ResultType>(state.val));
+    auto rowCount = static_cast<int32_t>(groupStates.size());
+    for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        auto &state = groupStates[rowIndex][aggIdx];
+        if (state.count == 0) {
+            spillValueVec->SetNull(rowIndex);
+        } else {
+            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+                spillValueVec->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
+            } else {
+                spillValueVec->SetValue(rowIndex, static_cast<ResultType>(state.val));
+            }
+        }
     }
 }
 
@@ -63,6 +92,23 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> void MaxAggregator<IN_ID, OUT_ID>
     }
 
     state.count = 0;
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxAggregator<IN_ID, OUT_ID>::InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx)
+{
+    ResultType minVal = GetMin<ResultType>();
+    for (auto groupState : groupStates) {
+        auto &state = groupState[aggIdx];
+        if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+            state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(sizeof(ResultType)));
+            *reinterpret_cast<ResultType *>(state.val) = minVal;
+        } else {
+            state.val = minVal;
+        }
+
+        state.count = 0;
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
@@ -150,23 +196,22 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
-    int32_t &vectorIndex, int32_t rowIdx)
+void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount,
+    const size_t aggIdx, int32_t &vectorIndex)
 {
-    auto vectorPtr = vectorBatch->Get(vectorIndex++);
-    if (!vectorPtr->IsNull(rowIdx)) {
-        if constexpr (IN_ID == type::OMNI_SHORT) {
-            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_INT>(vectorPtr));
-            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-            MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, ptr[rowIdx], 1LL);
-        } else {
-            auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<IN_ID>(vectorPtr));
-            ptr = (ResultType *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+    auto firstVecIdx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        auto batch = row.batch;
+        auto index = row.rowIdx;
+        auto vectorPtr = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
+        if (!vectorPtr->IsNull(index)) {
+            auto &state = row.state[aggIdx];
+            auto value = vectorPtr->GetValue(index);
             if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, ptr[rowIdx], 1LL);
+                MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, value, 1LL);
             } else {
-                MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, ptr[rowIdx],
-                    1LL);
+                MaxOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, value, 1LL);
             }
         }
     }

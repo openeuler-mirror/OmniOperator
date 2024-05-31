@@ -42,8 +42,13 @@ public:
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) override
     {}
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
-        const int32_t rowIndex) override
+
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    {}
+
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override
     {}
 
     template <typename InType, typename OutType> OutType TestCastWithOverflow(const InType val, bool &overflow)
@@ -1206,7 +1211,7 @@ TEST_P(AggregatorCastTest, verify_cast)
     }
 }
 
-static std::vector<DataTypeId> testTypes{ OMNI_SHORT,     OMNI_INT,        OMNI_LONG,   OMNI_DOUBLE,
+static std::vector<DataTypeId> testTypes { OMNI_SHORT,     OMNI_INT,        OMNI_LONG,   OMNI_DOUBLE,
     OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR };
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, AggregatorCastTest,

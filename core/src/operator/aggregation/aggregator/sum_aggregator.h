@@ -10,7 +10,7 @@
 namespace omniruntime {
 namespace op {
 template <typename IN, typename MID, bool CareOverFlow = true>
-SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64_t &cnt)
+SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64_t cnt)
 {
     if constexpr (std::is_same_v<MID, Decimal128>) {
         if (flag >= 0) {
@@ -60,7 +60,7 @@ SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64
 }
 
 template <typename IN, typename MID, bool addIf, bool CareOverFlow = true>
-SIMD_ALWAYS_INLINE void SumConditionalOp(MID *res, int64_t &flag, const IN &in, const int64_t &cnt,
+SIMD_ALWAYS_INLINE void SumConditionalOp(MID *res, int64_t &flag, const IN &in, const int64_t cnt,
     const uint8_t &condition)
 {
     if constexpr (std::is_same_v<MID, Decimal128> || std::is_same_v<IN, int64_t> || std::is_floating_point_v<IN>) {
@@ -169,9 +169,13 @@ public:
     ~SumAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override;
     void InitState(AggregateState &state) override;
-    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override;
+    void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx) override;
+    std::vector<DataTypePtr> GetSpillType() override;
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
@@ -209,8 +213,8 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex) override;
 
 protected:
     SumAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
@@ -224,6 +228,8 @@ protected:
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap) override;
+
+    void ExtractValuesInternal(const AggregateState &state, OutVector *vector, int32_t rowIndex);
 
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,
         const DataTypeId inId, const DataTypeId outId)
@@ -241,6 +247,10 @@ protected:
 
         return true;
     }
+
+private:
+    static constexpr ResultType SPILL_EMPTY_VALUE { 0 };
+    static constexpr ResultType SPILL_OVERFLOW_VALUE { -1 };
 };
 }
 }

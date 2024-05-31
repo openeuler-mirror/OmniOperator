@@ -191,7 +191,7 @@ VECTORIZE_LOOP inline void AddUseRowIndexChar(std::vector<AggregateState *> &row
                 auto *res = strView.data();
                 state.count = strView.size();
                 state.count |= UPDATE_FLAG;
-                state.val = (int64_t) (res);
+                state.val = (int64_t)(res);
             } else {
                 state.val = (int64_t)(OP(reinterpret_cast<char *>(state.val), state.count, vector, rowIdx));
             }
@@ -215,7 +215,7 @@ VECTORIZE_LOOP inline void AddDictUseRowIndexChar(std::vector<AggregateState *> 
                 auto *res = strView.data();
                 state.count = strView.size();
                 state.count |= UPDATE_FLAG;
-                state.val = (int64_t) res;
+                state.val = (int64_t)res;
             } else {
                 state.val = (int64_t)(OP(reinterpret_cast<char *>(state.val), state.count, vector, rowIdx));
             }
@@ -246,7 +246,7 @@ VECTORIZE_LOOP inline void AddConditionalUseRowIndexChar(std::vector<AggregateSt
                     auto *res = strView.data();
                     state.count = strView.size();
                     state.count |= UPDATE_FLAG;
-                    state.val = (int64_t) (res);
+                    state.val = (int64_t)(res);
                 } else {
                     state.val = (int64_t)(OP(reinterpret_cast<char *>(state.val), state.count, vector, rowIdx));
                 }
@@ -279,7 +279,7 @@ VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<Aggrega
                     auto res = strView.data();
                     state.count = strView.size();
                     state.count |= UPDATE_FLAG;
-                    state.val = (int64_t) (res);
+                    state.val = (int64_t)(res);
                 } else {
                     state.val = (int64_t)(OP(reinterpret_cast<const char *>(state.val), state.count, vector, rowIdx));
                 }
@@ -294,11 +294,19 @@ public:
     ~MinVarcharAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
+
+    std::vector<DataTypePtr> GetSpillType() override
     {
-        spillTypes.push_back(inputTypes.GetType(0));
+        std::vector<DataTypePtr> spillTypes;
+        spillTypes.emplace_back(inputTypes.GetType(0));
+        return spillTypes;
     }
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override;
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
@@ -325,8 +333,8 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex) override;
 
 protected:
     MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,

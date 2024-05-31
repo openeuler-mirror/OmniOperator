@@ -65,6 +65,70 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesFunction(const AggregateStat
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT, bool IS_OVERFLOW_AS_NULL>
+void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesBatchInternal(std::vector<AggregateState *> &groupStates,
+    const size_t aggIdx, std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
+{
+    if constexpr (PARTIAL_OUT) {
+        if constexpr (OUT_ID == OMNI_VARCHAR) {
+            SumAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(groupStates, aggIdx, vectors, rowOffset, rowCount);
+        } else if constexpr (OUT_ID == OMNI_CONTAINER) {
+            auto *vector = static_cast<ContainerVector *>(vectors[0]);
+            auto *doubleVector = reinterpret_cast<OutVector *>(vector->GetValue(0));
+            auto *longVector = reinterpret_cast<Vector<int64_t> *>(vector->GetValue(1));
+
+            for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+                auto &state = groupStates[rowIndex][aggIdx];
+                bool overflow = state.count < 0;
+                OutType result {};
+                if (state.count > 0) {
+                    result = this->template CastWithOverflowEntry<ResultType, OutType>(state.val, overflow);
+                }
+                doubleVector->SetValue(rowIndex, result);
+                longVector->SetValue(rowIndex, overflow ? 0 : state.count);
+
+                if (overflow && !this->IsOverflowAsNull()) {
+                    throw OmniException("OPERATOR_RUNTIME_ERROR", "average_aggregator overflow.");
+                }
+            }
+        } else {
+            throw OmniException("Unreachable code", "Reached unreachable code in average aggregator extract partial");
+        }
+    } else {
+        auto v = static_cast<OutVector *>(vectors[0]);
+        for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            auto &state = groupStates[rowIndex][aggIdx];
+            bool isOverflow = state.count < 0;
+            bool isEmpty = state.count == 0;
+            if (isOverflow) {
+                this->SetNullOrThrowException(v, rowIndex, "average_aggregator overflow.");
+            } else if (isEmpty) {
+                v->SetNull(rowIndex);
+            } else {
+                OutType result {};
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    DivideWithOverflow<DECIMAL_PRECISION_IMPROVEMENT>(state, result, isOverflow);
+                } else if constexpr (std::is_same_v<ResultType, double>) {
+                    // Result type is double, we generate double avgResult
+                    double avgResult = *reinterpret_cast<double *>(state.val) / static_cast<double>(state.count);
+                    result = this->template CastWithOverflow<double, OutType>(avgResult, isOverflow);
+                } else {
+                    // Result type is int64, we generate double avgResult
+                    auto avgResult =
+                        static_cast<double>(static_cast<ResultType>(state.val)) / static_cast<double>(state.count);
+                    result = this->template CastWithOverflow<double, OutType>(avgResult, isOverflow);
+                }
+                if (isOverflow) {
+                    this->SetNullOrThrowException(v, rowIndex, "average_aggregator overflow.");
+                } else {
+                    v->SetValue(rowIndex, result);
+                }
+            }
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 template <bool DECIMAL_PRECISION_IMPROVEMENT>
 void AverageAggregator<IN_ID, OUT_ID>::DivideWithOverflow(const AggregateState &state, OutType &result, bool &overflow)
 {
@@ -87,37 +151,81 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<IN_ID, OUT_ID>::GetSpillType(std::vector<DataTypePtr> &spillTypes)
+void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates,
+    const size_t aggIdx, std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
 {
-    spillTypes.clear();
-    if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
-        spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
-    } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
-        spillTypes.push_back(std::make_shared<DataType>(OMNI_DOUBLE));
+    // varchar only in partial stage
+    if constexpr (OUT_ID == OMNI_VARCHAR || OUT_ID == OMNI_CONTAINER) {
+        if (this->IsOverflowAsNull()) {
+            ExtractValuesBatchInternal<true, false, true>(groupStates, aggIdx, vectors, rowOffset, rowCount);
+        } else {
+            ExtractValuesBatchInternal<true, false, false>(groupStates, aggIdx, vectors, rowOffset, rowCount);
+        }
     } else {
-        spillTypes.push_back(std::make_shared<DataType>(OMNI_DECIMAL128));
+        if (ConfigUtil::GetSupportDecimalPrecisionImprovementRule() ==
+            SupportDecimalPrecisionImprovementRule::IS_SUPPORT) {
+            if (this->IsOverflowAsNull()) {
+                ExtractValuesBatchInternal<false, true, true>(groupStates, aggIdx, vectors, rowOffset, rowCount);
+            } else {
+                ExtractValuesBatchInternal<false, true, false>(groupStates, aggIdx, vectors, rowOffset, rowCount);
+            }
+        } else {
+            if (this->IsOverflowAsNull()) {
+                ExtractValuesBatchInternal<false, false, true>(groupStates, aggIdx, vectors, rowOffset, rowCount);
+            } else {
+                ExtractValuesBatchInternal<false, false, false>(groupStates, aggIdx, vectors, rowOffset, rowCount);
+            }
+        }
     }
-    spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID> std::vector<DataTypePtr> AverageAggregator<IN_ID, OUT_ID>::GetSpillType()
+{
+    std::vector<DataTypePtr> spillTypes;
+    if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_LONG));
+    } else if constexpr (IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER) {
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DOUBLE));
+    } else {
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DECIMAL128));
+    }
+    spillTypes.emplace_back(std::make_shared<DataType>(OMNI_LONG));
+    return spillTypes;
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
-    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
+    const size_t aggIdx, std::vector<BaseVector *> &vectors)
 {
     auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
     auto spillCountVec = reinterpret_cast<Vector<int64_t> *>(vectors[1]);
-    if (state.count == 0) {
-        spillValueVec->SetNull(rowIndex);
-        spillCountVec->SetValue(rowIndex, state.count);
-        return;
-    }
-    if constexpr (std::is_floating_point_v<ResultType> || std::is_same_v<ResultType, Decimal128>) {
-        spillValueVec->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-    } else {
-        spillValueVec->SetValue(rowIndex, static_cast<ResultType>(state.val));
-    }
 
-    spillCountVec->SetValue(rowIndex, state.count);
+    auto rowCount = static_cast<int32_t>(groupStates.size());
+    for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        auto &state = groupStates[rowIndex][aggIdx];
+        auto count = state.count;
+        bool isOverflow = count < 0;
+        bool isEmpty = count == 0;
+
+        if (isOverflow) {
+            this->SetNullOrThrowException(spillValueVec, rowIndex, "average_aggregator overflow.");
+            // set -1 to count vector if it is overflow
+            spillCountVec->SetValue(rowIndex, -1);
+        } else if (isEmpty) {
+            spillValueVec->SetNull(rowIndex);
+            // set null for empty group(all rows are NULL) when spill to ensure skip empty group when unspill
+            spillCountVec->SetValue(rowIndex, 0);
+        } else {
+            ResultType result;
+            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
+                result = *reinterpret_cast<ResultType *>(state.val);
+            } else {
+                result = static_cast<ResultType>(state.val);
+            }
+            spillValueVec->SetValue(rowIndex, result);
+            spillCountVec->SetValue(rowIndex, count);
+        }
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
@@ -200,7 +308,6 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
         // when input is not raw, vector is container with <double, long> columns for <sum, count>
         auto *v = static_cast<ContainerVector *>(vector);
         auto *sumVector = reinterpret_cast<InVector *>(v->GetValue(0));
-
         auto *cntVector = reinterpret_cast<Vector<int64_t> *>(v->GetValue(1));
 
         if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
@@ -233,45 +340,33 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggregat
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
-    int32_t &vectorIndex, int32_t rowIdx)
+void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount,
+    const size_t aggIdx, int32_t &vectorIndex)
 {
-    if constexpr (IN_ID == OMNI_CONTAINER || IN_ID == OMNI_DOUBLE) {
-        auto sumVector = vectorBatch->Get(vectorIndex++);
-        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_DOUBLE>(sumVector));
-        auto countVector = vectorBatch->Get(vectorIndex++);
-        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
-        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-
-        int64_t cnt = cntPtr[rowIdx];
-        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
-            return;
-        }
-        if constexpr (std::is_floating_point_v<ResultType> || std::is_same_v<ResultType, Decimal128>) {
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+    auto firstVecIdx = vectorIndex++;
+    auto secondVecIdx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        auto batch = row.batch;
+        auto index = row.rowIdx;
+        auto &state = row.state[aggIdx];
+        auto countVector = static_cast<Vector<int64_t> *>(batch->Get(secondVecIdx));
+        auto count = countVector->GetValue(index);
+        if (count < 0) {
+            // we set -1 in overflow case
+            state.count = -1;
+        } else if (count == 0) {
+            // we skipped in empty group case
+            continue;
         } else {
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, sum[rowIdx], cnt);
+            auto sumVector = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
+            auto value = sumVector->GetValue(index);
+            if constexpr (std::is_floating_point_v<ResultType> || std::is_same_v<ResultType, Decimal128>) {
+                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, value, count);
+            } else {
+                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, value, count);
+            }
         }
-    } else if constexpr (IN_ID == OMNI_SHORT || IN_ID == OMNI_INT || IN_ID == OMNI_LONG) {
-        auto sumVector = vectorBatch->Get(vectorIndex++);
-        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OMNI_LONG>(sumVector));
-        auto countVector = vectorBatch->Get(vectorIndex++);
-        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-        sum = (ResultType *)__builtin_assume_aligned(sum, ARRAY_ALIGNMENT);
-        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-
-        int64_t cnt = cntPtr[rowIdx];
-        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
-            return;
-        }
-        if constexpr (std::is_floating_point_v<ResultType> || std::is_same_v<ResultType, Decimal128>) {
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
-        } else {
-            SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, sum[rowIdx], cnt);
-        }
-    } else {
-        SumAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(state, vectorBatch, vectorIndex, rowIdx);
     }
 }
 

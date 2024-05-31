@@ -65,41 +65,6 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
     }
 }
 
-template <typename InDecimalType, typename OutDecimalType, typename ResultIntType>
-VECTORIZE_LOOP NO_INLINE void AddDecimalRowIndex(AggregateState &state, const InDecimalType *__restrict dataPtr,
-    int64_t cnt, int32_t rowIdx)
-{
-    bool isOverflow = false;
-    if (state.count < 0) {
-        // cur state overflow, so no need to aggregate
-        return;
-    }
-
-    ResultIntType tmpResult = 0;
-    if constexpr (std::is_same_v<OutDecimalType, Decimal128>) {
-        auto res = reinterpret_cast<OutDecimalType *>(state.val);
-        tmpResult = res->ToInt128();
-        if constexpr (std::is_same_v<InDecimalType, Decimal128>) {
-            // decimal128 + decimal128 = decimal128
-            isOverflow = AddCheckedOverflow(tmpResult, dataPtr[rowIdx].ToInt128(), tmpResult);
-        } else {
-            // decimal64 + decimal64 = decimal128
-            isOverflow = AddCheckedOverflow(tmpResult, int128_t(dataPtr[rowIdx]), tmpResult);
-        }
-        *res = OutDecimalType(tmpResult);
-    } else {
-        // decimal64 + decimal64 = decimal64
-        tmpResult = state.val;
-        isOverflow = __builtin_add_overflow(tmpResult, dataPtr[rowIdx], &tmpResult);
-        state.val = OutDecimalType(tmpResult);
-    }
-    state.count += cnt;
-
-    if (isOverflow) {
-        state.count = -1;
-    }
-}
-
 /**
  * SUM agg data type
  * input: decimal
@@ -123,80 +88,189 @@ public:
     {}
 
     ~SumSparkDecimalAggregator() override = default;
-    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
+
+    std::vector<DataTypePtr> GetSpillType() override
     {
-        if constexpr (InDecimalId == OMNI_DECIMAL64) {
-            spillTypes.push_back(std::make_shared<DataType>(OutDecimalId));
-        } else {
-            spillTypes.push_back(std::make_shared<DataType>(OMNI_DECIMAL128));
-        }
-        spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
+        std::vector<DataTypePtr> spillTypes;
+        spillTypes.emplace_back(outputTypes.GetType(0));
+        return spillTypes;
     }
 
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    template <bool isOutputPartial>
+    void ExtractValuesForSpillInternal(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors)
     {
-        auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
-        auto spillCountVec = static_cast<Vector<long> *>(vectors[1]);
-        if (state.count == 0) {
-            spillValueVec->SetNull(rowIndex);
-            spillCountVec->SetValue(rowIndex, state.count);
-            return;
-        }
+        auto spillVec = static_cast<Vector<ResultType> *>(vectors[0]);
+        auto rowCount = static_cast<int32_t>(groupStates.size());
+        for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            auto &state = groupStates[rowIndex][aggIdx];
+            bool isOverflow = (state.count < 0);
+            bool isEmpty = (state.count == 0);
 
-        if constexpr (std::is_same_v<ResultType, Decimal128>) {
-            spillValueVec->SetValue(rowIndex, *reinterpret_cast<Decimal128 *>(state.val));
+            // use null and value to distinguish empty group, overflow and other normal case
+            if (isEmpty) {
+                // set null for empty group(all rows are NULL) when spill to ensure skip empty group when unspill
+                spillVec->SetNull(rowIndex);
+                int128_t emptyValue = SPILL_EMPTY_VALUE;
+                SetValToVector(spillVec, rowIndex, emptyValue);
+            } else if (isOverflow) {
+                int128_t overflowValue = SPILL_OVERFLOW_VALUE;
+                SetValToVector(spillVec, rowIndex, overflowValue);
+                if constexpr (isOutputPartial) {
+                    spillVec->SetNull(rowIndex);
+                } else {
+                    SetNullOrThrowException(spillVec, rowIndex);
+                }
+            } else {
+                int128_t decodedDec;
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    decodedDec = reinterpret_cast<Decimal128 *>(state.val)->ToInt128();
+                } else {
+                    decodedDec = state.val;
+                }
+                SetValToVector(spillVec, rowIndex, decodedDec);
+            }
+        }
+    }
+
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override
+    {
+        if (outputPartial) {
+            ExtractValuesForSpillInternal<true>(groupStates, aggIdx, vectors);
         } else {
-            spillValueVec->SetValue(rowIndex, state.val);
+            ExtractValuesForSpillInternal<false>(groupStates, aggIdx, vectors);
         }
-
-        spillCountVec->SetValue(rowIndex, state.count);
     }
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         BaseVector *vector = vectors[0];
-
-        int128_t decodedDec = 0;
-        if constexpr (std::is_same_v<ResultType, Decimal128>) {
-            decodedDec = reinterpret_cast<Decimal128 *>(state.val)->ToInt128();
-        } else {
-            decodedDec = state.val;
-        }
+        int128_t resultDec = 0;
         bool isOverflow = (state.count < 0);
         bool isEmpty = (state.count == 0);
 
-        int128_t resultDec;
-        // only support output scale >= input scale
-        // for spark, input type is always decimal. for olk, input type is varbinary and the precision
-        // and scale are zero.
-        int32_t scaleDiff = static_cast<DecimalDataType *>(outputTypes.GetType(0).get())->GetScale() -
-            static_cast<DecimalDataType *>(inputTypes.GetType(0).get())->GetScale();
-        // rescale dividend and divisor to output scale
-        isOverflow = isOverflow || MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
-
-        // The outputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128
-        int32_t outputType = outputTypes.GetIds()[0];
         if (outputPartial) {
             if (isOverflow) {
-                // partial output vector is sum, it will be set to NULL if overflowed.
                 vector->SetNull(rowIndex);
+            } else if (isEmpty) {
+                SetValToVector(vector, rowIndex, resultDec);
             } else {
-                SetValToVector(vector, rowIndex, outputType, resultDec);
-            }
+                int128_t decodedDec = 0;
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    decodedDec = reinterpret_cast<Decimal128 *>(state.val)->ToInt128();
+                } else {
+                    decodedDec = state.val;
+                }
 
+                // only support output scale >= input scale
+                // for spark, input type is always decimal. for olk, input type is varbinary and the precision
+                // and scale are zero.
+                int32_t scaleDiff = static_cast<DecimalDataType *>(outputTypes.GetType(0).get())->GetScale() -
+                    static_cast<DecimalDataType *>(inputTypes.GetType(0).get())->GetScale();
+                // rescale dividend and divisor to output scale
+                isOverflow = MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
+                if (isOverflow) {
+                    vector->SetNull(rowIndex);
+                } else {
+                    SetValToVector(vector, rowIndex, resultDec);
+                }
+            }
             BaseVector *emptyVector = vectors[1];
             reinterpret_cast<Vector<bool> *>(emptyVector)->SetValue(rowIndex, isEmpty);
         } else {
             if (isOverflow) {
                 SetNullOrThrowException(vector, rowIndex);
-                return;
-            }
-            if (isEmpty) {
-                // isEmpty is true means that all row is NULL, so we set the result to NULL.
+            } else if (isEmpty) {
                 vector->SetNull(rowIndex);
-                return;
+            } else {
+                int128_t decodedDec = 0;
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    decodedDec = reinterpret_cast<Decimal128 *>(state.val)->ToInt128();
+                } else {
+                    decodedDec = state.val;
+                }
+
+                // only support output scale >= input scale
+                // for spark, input type is always decimal. for olk, input type is varbinary and the precision
+                // and scale are zero.
+                int32_t scaleDiff = static_cast<DecimalDataType *>(outputTypes.GetType(0).get())->GetScale() -
+                    static_cast<DecimalDataType *>(inputTypes.GetType(0).get())->GetScale();
+                // rescale dividend and divisor to output scale
+                isOverflow = MulCheckedOverflow(decodedDec, TenOfInt128[scaleDiff], resultDec);
+                if (isOverflow) {
+                    SetNullOrThrowException(vector, rowIndex);
+                } else {
+                    SetValToVector(vector, rowIndex, resultDec);
+                }
             }
-            SetValToVector(vector, rowIndex, outputType, resultDec);
+        }
+    }
+
+    template <bool OUTPUT_PARTIAL>
+    void ExtractValuesBatchInternal(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
+    {
+        // only support output scale >= input scale
+        // for spark, input type is always decimal. for olk, input type is varbinary and the precision
+        // and scale are zero.
+        int32_t scaleDiff = static_cast<DecimalDataType *>(outputTypes.GetType(0).get())->GetScale() -
+            static_cast<DecimalDataType *>(inputTypes.GetType(0).get())->GetScale();
+        auto scaleNum = TenOfInt128[scaleDiff];
+        BaseVector *vector = vectors[0];
+        for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            auto &state = groupStates[rowIndex][aggIdx];
+            bool isOverflow = (state.count < 0);
+            bool isEmpty = (state.count == 0);
+            if constexpr (OUTPUT_PARTIAL) {
+                reinterpret_cast<Vector<bool> *>(vectors[1])->SetValue(rowIndex, isEmpty);
+            }
+
+            int128_t decodedDec = 0;
+            if (isOverflow) {
+                if constexpr (OUTPUT_PARTIAL) {
+                    // partial output vector is sum, it will be set to NULL if overflowed.
+                    vector->SetNull(rowIndex);
+                } else {
+                    SetNullOrThrowException(vector, rowIndex);
+                }
+            } else if (isEmpty) {
+                if constexpr (OUTPUT_PARTIAL) {
+                    SetValToVector(vector, rowIndex, decodedDec);
+                } else {
+                    vector->SetNull(rowIndex);
+                }
+            } else {
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    decodedDec = reinterpret_cast<Decimal128 *>(state.val)->ToInt128();
+                } else {
+                    decodedDec = state.val;
+                }
+                int128_t resultDec;
+                // rescale dividend and divisor to output scale
+                isOverflow = MulCheckedOverflow(decodedDec, scaleNum, resultDec);
+                if (isOverflow) {
+                    if constexpr (OUTPUT_PARTIAL) {
+                        // partial output vector is sum, it will be set to NULL if overflowed.
+                        vector->SetNull(rowIndex);
+                    } else {
+                        SetNullOrThrowException(vector, rowIndex);
+                    }
+                } else {
+                    SetValToVector(vector, rowIndex, resultDec);
+                }
+            }
+        }
+    }
+
+    // The outputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    {
+        if (outputPartial) {
+            ExtractValuesBatchInternal<true>(groupStates, aggIdx, vectors, rowOffset, rowCount);
+        } else {
+            ExtractValuesBatchInternal<false>(groupStates, aggIdx, vectors, rowOffset, rowCount);
         }
     }
 
@@ -210,6 +284,14 @@ public:
             state.val = 0;
         }
         state.count = 0;
+    }
+
+    void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx) override
+    {
+        for (auto groupState : groupStates) {
+            auto &state = groupState[aggIdx];
+            InitState(state);
+        }
     }
 
     void ProcessGroupInternalFinal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
@@ -228,27 +310,40 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx) override
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex) override
     {
-        auto sumVector = vectorBatch->Get(vectorIndex++);
-        auto sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(sumVector));
-        auto countVector = vectorBatch->Get(vectorIndex++);
-        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-
-        int64_t cnt = cntPtr[rowIdx];
-        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
-            return;
-        } else if (inputRaw) {
-            if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count,
-                    sum[rowIdx], cnt);
+        auto firstVecIdx = vectorIndex++;
+        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            auto &row = unspillRows[rowIdx];
+            auto batch = row.batch;
+            auto index = row.rowIdx;
+            auto sumVector = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
+            auto &state = row.state[aggIdx];
+            auto value = sumVector->GetValue(index);
+            if (!sumVector->IsNull(index)) {
+                // normal case
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, value,
+                        1LL);
+                } else {
+                    SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(&state.val), state.count, value,
+                        1LL);
+                }
             } else {
-                SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(&state.val), state.count,
-                    sum[rowIdx], cnt);
+                // empty group or overflow case
+                // if it is overflow we set -1
+                // if it is empty group we skipped
+                int128_t resultIntValue;
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    resultIntValue = value.ToInt128();
+                } else {
+                    resultIntValue = value;
+                }
+                if (resultIntValue == SPILL_OVERFLOW_VALUE) {
+                    state.count = -1;
+                }
             }
-        } else {
-            AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, sum, cnt, rowIdx);
         }
     }
 
@@ -396,7 +491,7 @@ private:
     }
 
     // Set decimal val to output vector in Extract function. The outputType is either OMNI_DECIMAL64 or OMNI_DECIMAL128.
-    void SetValToVector(BaseVector *vector, int32_t rowIndex, int32_t outputType, int128_t &deciVal)
+    void SetValToVector(BaseVector *vector, int32_t rowIndex, int128_t &deciVal)
     {
         if constexpr (std::is_same_v<ResultType, Decimal128>) {
             Decimal128 decimal128Val(deciVal);
@@ -406,6 +501,9 @@ private:
             static_cast<Vector<int64_t> *>(vector)->SetValue(rowIndex, longVal);
         }
     }
+
+    static constexpr int128_t SPILL_EMPTY_VALUE = 0;
+    static constexpr int128_t SPILL_OVERFLOW_VALUE = -1;
 };
 }
 }
