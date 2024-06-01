@@ -6,7 +6,6 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
-import nova.hetu.omniruntime.vector.RowBatch;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;

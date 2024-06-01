@@ -1,11 +1,10 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  */
 
 package nova.hetu.omniruntime.operator;
 
 import nova.hetu.omniruntime.constants.Status;
-import nova.hetu.omniruntime.vector.Row;
 import nova.hetu.omniruntime.vector.RowBatch;
 
 import java.io.Closeable;
@@ -13,7 +12,7 @@ import java.io.Closeable;
 /**
  * The type Omni results.
  *
- * @since 2021-06-30
+ * @since 2024-05-16
  */
 public class OmniRowResults implements Closeable {
     private final RowBatch rowBatch;

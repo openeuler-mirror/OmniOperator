@@ -7,7 +7,7 @@
 #define OMNI_RUNTIME_OMNI_ROW_H
 
 /*
- * row :
+ * row format:
  * | isVarchar(1bit 1) + isNull(1bit) + pad (3bit) + sizeLength(3bit) | realLength (n bytes)| varcharValue |
  * | isVarchar(1bit 0) + isNull(1bit) + neg(1bit) + pad (1bit) + sizeLength(4bit) | fixValue |
  *
@@ -18,207 +18,10 @@
  * + | 0 1 000 000 | + | 0 0 001 000 | 500|
  * + | 1 0 001 000 (b)| 5 | h e l l o  | + | 1 1 000 000 (b)|
  */
-#include "vector.h"
-#include "type/data_types.h"
-#include "type/data_types.h"
-#include "vector_batch.h"
-#include "util/debug.h"
+#include "omni_row_value.h"
 
 namespace omniruntime {
 namespace vec {
-class BaseSerialize {
-protected:
-    bool isNull = false;
-
-public:
-    static constexpr int32_t PrefixLen = 1;
-    static constexpr int32_t BIT_64 = 64;
-    static constexpr int32_t BIT_8 = 8;
-    static constexpr int32_t BIT_1 = 1;
-    static constexpr int32_t BIT_16 = 16;
-    static constexpr int8_t VARCHAR_BIT = 1 << 7;
-    static constexpr int8_t FIX_BIT = 0;
-    static constexpr int8_t NULL_POS = 6;
-    static constexpr int8_t NEG_POS = 5;
-
-    virtual void TransValue(BaseVector *baseVector, int32_t rowIndex)
-    {
-        throw exception::OmniException("BaseSerialize", "not implement");
-    }
-
-    virtual int32_t CompactLength()
-    {
-        throw exception::OmniException("BaseSerialize", "not implement");
-    }
-
-    virtual uint8_t *WriteBuffer(uint8_t *writeBuffer)
-    {
-        throw exception::OmniException("BaseSerialize", "WriteBuffer not implement");
-    }
-
-    virtual void Print()
-    {
-        throw exception::OmniException("BaseSerialize", "Print not implement");
-    }
-
-    void Reset()
-    {
-        isNull = false;
-    }
-
-    void SetNull()
-    {
-        isNull = true;
-    }
-};
-
-template <typename T> class SerializedValue : public BaseSerialize {
-private:
-    T value;
-    using VectorType = std::conditional_t<std::is_same_v<T, std::string_view>,
-        Vector<LargeStringContainer<std::string_view>>, Vector<T>>;
-
-public:
-    // only 1 Bytes represent following coding :
-    // 'isVarchar(1bit 1) + isNull(1bit) + sizeLength(3bit)  + pad (3bit)'
-    // or 'isVarchar(1bit 0) + isNull(1bit) + sizeLength(3bit) '
-    // set value from vector row
-    void TransValue(BaseVector *baseVector, int32_t rowIndex)
-    {
-        if (baseVector->IsNull(rowIndex)) {
-            SetNull();
-        } else {
-            isNull = false;
-            value = reinterpret_cast<VectorType *>(baseVector)->GetValue(rowIndex);
-        }
-    }
-
-    // set value from row
-    void SetValue(T setValue)
-    {
-        isNull = false;
-        value = setValue;
-    }
-
-    /* *
-     * length is final length
-     * @return
-     */
-    int32_t CompactLength()
-    {
-        if (isNull) {
-            return PrefixLen;
-        }
-
-        if constexpr (std::is_same_v<T, std::string_view>) {
-            // for varchar
-            uint8_t rowLenSize = CalMetaSize();
-            return PrefixLen + rowLenSize + value.length();
-        } else {
-            return PrefixLen + CalMetaSize();
-        }
-    }
-
-    /*
-     * for varchar return compaction of value.length
-     * for len return compaction of value
-     */
-    uint8_t CalMetaSize()
-    {
-        if constexpr (std::is_same_v<T, std::string_view>) {
-            // for varchar
-            return (BIT_64 - __builtin_clzll(value.length()) + BIT_8) / BIT_8;
-        } else if constexpr (std::is_same_v<T, double>) {
-            return BIT_8;
-        } else if constexpr (std::is_same_v<T, type::Decimal128>) {
-            // decimal is fix 16 bit
-            return BIT_16;
-        } else {
-            auto tmp = value;
-            if (value < 0) {
-                tmp = ~value;
-            }
-            uint8_t rowLenSize = (BIT_64 - __builtin_clzll(tmp) + BIT_8) / BIT_8;
-            return rowLenSize;
-        }
-    }
-
-    /* *
-     *
-     * @param writeBuffer : start point
-     * @return writeBuffer + CompactLength()
-     */
-    uint8_t *WriteBuffer(uint8_t *writeBuffer) override
-    {
-        // for varchar
-        if constexpr (std::is_same_v<T, std::string_view>) {
-            if (isNull) {
-                *writeBuffer = (VARCHAR_BIT | (0x1 << NULL_POS));
-                ++writeBuffer;
-                return writeBuffer;
-            }
-            int32_t len = value.length();
-            uint8_t rowLenSize = CalMetaSize();
-            *writeBuffer = (VARCHAR_BIT | (isNull << NULL_POS) | rowLenSize);
-            ++writeBuffer;
-            std::copy(reinterpret_cast<uint8_t *>(&len), reinterpret_cast<uint8_t *>(&len) + rowLenSize, writeBuffer);
-            writeBuffer += rowLenSize;
-            std::copy(reinterpret_cast<const uint8_t *>(value.data()),
-                reinterpret_cast<const uint8_t *>(value.data()) + value.size(), writeBuffer);
-#ifdef DEBUG
-            LogDebug("row write str value: offset in writebuffer is %d\n", 1 + rowLenSize + value.size());
-#endif
-            return writeBuffer + value.size();
-        } else {
-            if (isNull) {
-                *writeBuffer = (FIX_BIT | (0x1 << NULL_POS));
-                ++writeBuffer;
-                return writeBuffer;
-            }
-            if constexpr (std::is_same_v<T, type::Decimal128>) {
-                // fix len for decimal
-                *writeBuffer = (FIX_BIT | (isNull << NULL_POS) | BIT_16);
-                ++writeBuffer;
-                std::copy(reinterpret_cast<uint8_t *>(&value), reinterpret_cast<uint8_t *>(&value) + BIT_16,
-                    writeBuffer);
-                return writeBuffer + BIT_16;
-            } else if constexpr (std::is_same_v<T, double>) {
-                // fix len for decimal
-                *writeBuffer = (FIX_BIT | (isNull << NULL_POS) | BIT_8);
-                ++writeBuffer;
-                std::copy(reinterpret_cast<uint8_t *>(&value), reinterpret_cast<uint8_t *>(&value) + BIT_8,
-                    writeBuffer);
-#ifdef DEBUG
-                LogDebug("double offset is %d\n", 1 + BIT_8);
-#endif
-                return writeBuffer + BIT_8;
-            } else if constexpr (std::is_same_v<T, bool>) {
-                *writeBuffer = (FIX_BIT | (isNull << NULL_POS) | BIT_1);
-                ++writeBuffer;
-                std::copy(reinterpret_cast<uint8_t *>(&value), reinterpret_cast<uint8_t *>(&value) + BIT_1,
-                    writeBuffer);
-                return writeBuffer + BIT_1;
-            } else {
-                auto tmp = value;
-                bool neg = false;
-                if (value < 0) {
-                    tmp = ~value;
-                    neg = true;
-                }
-                uint8_t rowLenSize = (BIT_64 - __builtin_clzll(tmp) + BIT_8) / BIT_8;
-                *writeBuffer = (FIX_BIT | (isNull << NULL_POS) | (neg << NEG_POS) | rowLenSize);
-                ++writeBuffer;
-                std::copy(reinterpret_cast<uint8_t *>(&tmp), reinterpret_cast<uint8_t *>(&tmp) + rowLenSize,
-                    writeBuffer);
-#ifdef DEBUG
-                LogDebug("fix value offset is %d\n", 1 + rowLenSize);
-#endif
-                return writeBuffer + rowLenSize;
-            }
-        }
-    }
-};
-
 template <type::DataTypeId id> void TransToValue(BaseVector *vec, int32_t rowIndex, BaseSerialize *value)
 {
     using T = typename NativeType<id>::type;
@@ -232,7 +35,7 @@ template <type::DataTypeId id> std::unique_ptr<BaseSerialize> GenerateSerValue()
 }
 
 template <typename IntLikeType>
-static inline uint8_t *FixedRowSetVecValue(uint8_t *row, Vector<IntLikeType> *vec, int32_t rowIndex)
+static uint8_t *FixedRowSetVecValue(uint8_t *row, Vector<IntLikeType> *vec, int32_t rowIndex)
 {
     IntLikeType value = 0;
     bool negValue = false;
@@ -248,14 +51,13 @@ static inline uint8_t *FixedRowSetVecValue(uint8_t *row, Vector<IntLikeType> *ve
     }
     vec->SetValue(rowIndex, value);
 #ifdef DEBUG
-    std::string out;
-    out = "fix value parse value is " + std::to_string(value) + ".";
+    std::string out = "fix value parse value is " + std::to_string(value) + ".";
     LogDebug("Row Handle:%s\n", out.c_str());
 #endif
     return row + valueLen;
 }
 
-template <typename IntLikeType> static inline uint8_t *FixedRowGetValue(uint8_t *row)
+template <typename IntLikeType> static uint8_t *FixedRowGetValue(uint8_t *row)
 {
     IntLikeType value = 0;
     bool negValue = false;
@@ -267,79 +69,72 @@ template <typename IntLikeType> static inline uint8_t *FixedRowGetValue(uint8_t 
     ++row;
 #ifdef DEBUG
     std::copy(row, row + valueLen, reinterpret_cast<uint8_t *>(&value));
-    std::string out;
-    out = "fix value parse value is " + std::to_string(negValue ? -value : value) + ".";
+    std::string out = "fix value parse value is " + std::to_string(negValue ? -value : value) + ".";
     LogDebug("Row Handle:%s\n", out.c_str());
 #endif
     return row + valueLen;
 }
 
-static inline uint8_t *DecimalRowSetVecValue(uint8_t *row, Vector<Decimal128> *vec, int32_t rowIndex)
+static uint8_t *DecimalRowSetVecValue(uint8_t *row, Vector<Decimal128> *vec, int32_t rowIndex)
 {
     type::Decimal128 value;
     ++row;
     std::copy(row, row + BaseSerialize::BIT_16, reinterpret_cast<uint8_t *>(&value));
     vec->SetValue(rowIndex, value);
 #ifdef DEBUG
-    std::string out;
-    out = "Decimal value parse highBits is " + std::to_string(value.HighBits()) + ", lowBits is " +
+    std::string out = "Decimal value parse highBits is " + std::to_string(value.HighBits()) + ", lowBits is " +
         std::to_string(value.LowBits());
     LogDebug("Row Handle:%s\n", out.c_str());
 #endif
     return row + BaseSerialize::BIT_16;
 }
 
-static inline uint8_t *DecimalRowGetValue(uint8_t *row)
+static uint8_t *DecimalRowGetValue(uint8_t *row)
 {
     type::Decimal128 value;
     ++row;
 #ifdef DEBUG
     std::copy(row, row + BaseSerialize::BIT_16, reinterpret_cast<uint8_t *>(&value));
-    std::string out;
-    out = "Decimal value parse highBits is " + std::to_string(value.HighBits()) + ", lowBits is " +
+    std::string out = "Decimal value parse highBits is " + std::to_string(value.HighBits()) + ", lowBits is " +
         std::to_string(value.LowBits()) + ".";
     LogDebug("Row Handle:%s\n", out.c_str());
 #endif
     return row + BaseSerialize::BIT_16;
 }
 
-static inline uint8_t *BoolRowSetVecValue(uint8_t *row, Vector<bool> *vec, int32_t rowIndex)
+static uint8_t *BoolRowSetVecValue(uint8_t *row, Vector<bool> *vec, int32_t rowIndex)
 {
-    bool value;
-    ++row;
-    std::copy(row, row + BaseSerialize::BIT_1, reinterpret_cast<uint8_t *>(&value));
+    bool value = (*row & 0x01);
     vec->SetValue(rowIndex, value);
     return row + BaseSerialize::BIT_1;
 }
 
-static inline uint8_t *DoubleRowSetVecValue(uint8_t *row, Vector<double> *vec, int32_t rowIndex)
+static uint8_t *DoubleRowSetVecValue(uint8_t *row, Vector<double> *vec, int32_t rowIndex)
 {
     double value;
     ++row;
     std::copy(row, row + BaseSerialize::BIT_8, reinterpret_cast<uint8_t *>(&value));
     vec->SetValue(rowIndex, value);
 #ifdef DEBUG
-    std::string out;
-    out = "double parse value is " + std::to_string(value);
+    std::string out = "double parse value is " + std::to_string(value);
     LogDebug("Row Handle:%s\n", out.c_str());
 #endif
     return row + BaseSerialize::BIT_8;
 }
 
-static inline uint8_t *DoubleRowGetValue(uint8_t *row)
+static uint8_t *DoubleRowGetValue(uint8_t *row)
 {
     double value;
     ++row;
 #ifdef DEBUG
     std::copy(row, row + BaseSerialize::BIT_8, reinterpret_cast<uint8_t *>(&value));
-    std::string out;
-    out = "double parse value is " + std::to_string(value) + ".";
+    std::string out = "double parse value is " + std::to_string(value) + ".";
     LogDebug("Row Handle:%s\n", out.c_str());
 #endif
     return row + BaseSerialize::BIT_8;
 }
 
-static inline uint8_t *StringRowSetVecValue(uint8_t *row, Vector<LargeStringContainer<std::string_view>> *vec,
+static uint8_t *StringRowSetVecValue(uint8_t *row, Vector<LargeStringContainer<std::string_view>> *vec,
     int32_t rowIndex)
 {
     auto valueLen = (*row) & (0b00000111);
@@ -353,14 +148,15 @@ static inline uint8_t *StringRowSetVecValue(uint8_t *row, Vector<LargeStringCont
     std::string_view value{ (char *)(row), strLen };
     vec->SetValue(rowIndex, value);
 #ifdef DEBUG
-    std::string out;
-    out = "str parse value is " + std::string(value.data(), value.size()) + ".";
+    std::string out = "str parse value is ";
+    out.append(value.data(), value.size());
+    out += ".";
     LogDebug("Row Handle:%s\n", out.c_str());
 #endif
     return row + strLen;
 }
 
-static inline uint8_t *StringRowGetValue(uint8_t *row)
+static uint8_t *StringRowGetValue(uint8_t *row)
 {
     auto valueLen = (*row) & (0b00000111);
     // point to strLen value
@@ -372,8 +168,9 @@ static inline uint8_t *StringRowGetValue(uint8_t *row)
 #ifdef DEBUG
     // row will be copied to value 's string buffer
     std::string_view value{ (char *)(row), strLen };
-    std::string out;
-    out = "str parse value is " + std::string(value.data(), value.size()) + ".";
+    std::string out = "str parse value is ";
+    out.append(value.data(), value.size());
+    out += ".";
     LogDebug("Row Handle:%s\n", out.c_str());
 #endif
     return row + strLen;
@@ -385,6 +182,8 @@ template <type::DataTypeId id> uint8_t *RowToVec(uint8_t *row, BaseVector *vec, 
     using VectorType = std::conditional_t<std::is_same_v<Type, std::string_view>,
         Vector<LargeStringContainer<std::string_view>>, Vector<Type>>;
     auto *typeVector = reinterpret_cast<VectorType *>(vec);
+
+    // check whether cur value is null, the pos is NULL_POS bit of one first bytes;
     if (*row & (0x1 << BaseSerialize::NULL_POS)) {
         typeVector->SetNull(rowIndex);
         return row + BaseSerialize::PrefixLen;
@@ -442,23 +241,26 @@ template <type::DataTypeId id> uint8_t *PrintRow(uint8_t *row)
         nullptr,                                              \
         TMP_FUNC_PTR<type::OMNI_VARCHAR>,                     \
         TMP_FUNC_PTR<type::OMNI_VARCHAR>,                     \
-        nullptr };
+        nullptr }
 
 using TransFuncPtr = void (*)(BaseVector *vec, int32_t rowIndex, BaseSerialize *value);
 using GenFuncPtr = std::unique_ptr<BaseSerialize> (*)();
 using RowToVecFuncPtr = uint8_t *(*)(uint8_t *row, BaseVector *vec, int32_t rowIndex);
 using PrintRowFuncPtr = uint8_t *(*)(uint8_t *row);
 
-FUNC_CENTER_DEF(Row2VecFuncCenter, RowToVecFuncPtr, RowToVec)
-FUNC_CENTER_DEF(PrintRowFuncCenter, PrintRowFuncPtr, PrintRow)
-FUNC_CENTER_DEF(GenerateValueFuncCenter, GenFuncPtr, GenerateSerValue)
-FUNC_CENTER_DEF(TransFuncCenter, TransFuncPtr, TransToValue)
+FUNC_CENTER_DEF(Row2VecFuncCenter, RowToVecFuncPtr, RowToVec);
+FUNC_CENTER_DEF(PrintRowFuncCenter, PrintRowFuncPtr, PrintRow);
+FUNC_CENTER_DEF(GenerateValueFuncCenter, GenFuncPtr, GenerateSerValue);
+FUNC_CENTER_DEF(TransFuncCenter, TransFuncPtr, TransToValue);
 
 /*
- * RowBuffer.TransValue();
- * RowBuffer.FillBuffer();
- * auto *buffer = RowBuffer.GetRowBuffer();
- * SerializedRowBatch.SetRow(index, buffer);
+ * Row buffer is used to trans one row of VectorBatch to row
+ * the basic usage of RowBuffer:
+ * Traverse All Rows of vb and call as following:
+ * 1 RowBuffer.TransValue(vb, i);
+ * 2 RowBuffer.FillBuffer();
+ * 3 auto *buffer = RowBuffer.TakeRowBuffer();
+ * 4 rowBatch.SetRow(index, buffer);
  */
 class RowBuffer {
 public:
@@ -482,9 +284,7 @@ public:
         }
     }
 
-    ~RowBuffer()
-    {
-    }
+    ~RowBuffer() {}
 
     void TransValue(BaseVector **vecs, int32_t rowIndex)
     {
@@ -627,7 +427,7 @@ public:
             return;
         } else {
             mem::Allocator::GetAllocator()->Free(reuseBuffer, capacity);
-            reuseBuffer = reinterpret_cast<uint8_t*>(mem::Allocator::GetAllocator()->Alloc(capacity));
+            reuseBuffer = reinterpret_cast<uint8_t *>(mem::Allocator::GetAllocator()->Alloc(capacity));
         }
     }
 
@@ -741,8 +541,7 @@ public:
     {
         auto parser = std::make_unique<RowParser>(types);
         for (int i = 0; i < rowArray.size(); ++i) {
-            std::string out;
-            out = "--------row info--------. \n";
+            std::string out = "--------row info--------";
             LogDebug("Row Handle:%s\n", out.c_str());
             parser->PrintOneRow(rowArray[i]->row);
         }

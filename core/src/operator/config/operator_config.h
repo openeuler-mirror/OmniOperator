@@ -270,7 +270,7 @@ public:
         return adaptivityThreshold;
     }
 
-    bool GetIsRowOutput() const
+    bool IsRowOutput() const
     {
         return isRowOutput;
     }
