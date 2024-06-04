@@ -34,6 +34,8 @@ public class OperatorConfig {
 
     private int adaptivityThreshold = -1;
 
+    private boolean isRowOutput = false;
+
     /**
      * Operator config default constructor.
      */
@@ -88,12 +90,27 @@ public class OperatorConfig {
      * @param spillConfig the spill config
      * @param overflowConfig the overflow config
      * @param isSkipExpressionVerify whether to skip exprVerify
-     * @param adaptivityThreshold an int for adaptivity of operator. For example, radix sort threshold for Sort
+     * @param adaptivityThreshold an int for adaptivity of operator. For example,
+     *            radix sort threshold for Sort
      */
     public OperatorConfig(SpillConfig spillConfig, OverflowConfig overflowConfig, boolean isSkipExpressionVerify,
-        int adaptivityThreshold) {
+            int adaptivityThreshold) {
         this(spillConfig, overflowConfig, isSkipExpressionVerify);
         this.adaptivityThreshold = adaptivityThreshold;
+    }
+
+    /**
+     * Operator config constructor.
+     *
+     * @param spillConfig the spill config
+     * @param overflowConfig the overflow config
+     * @param isSkipExpressionVerify whether to skip exprVerify
+     * @param isRowOutput true mean operator need to output row batch,
+     */
+    public OperatorConfig(SpillConfig spillConfig, OverflowConfig overflowConfig, boolean isSkipExpressionVerify,
+            boolean isRowOutput) {
+        this(spillConfig, overflowConfig, isSkipExpressionVerify);
+        this.isRowOutput = isRowOutput;
     }
 
     /**
@@ -159,6 +176,10 @@ public class OperatorConfig {
         this.adaptivityThreshold = adaptivityThreshold;
     }
 
+    public void setIsRowOutput(boolean inputRowOutput) {
+        this.isRowOutput = inputRowOutput;
+    }
+
     /**
      * Get adaptivityThreshold
      *
@@ -166,6 +187,10 @@ public class OperatorConfig {
      */
     public int getAdaptivityThreshold() {
         return adaptivityThreshold;
+    }
+
+    public boolean getIsRowOutput() {
+        return isRowOutput;
     }
 
     /**
@@ -207,11 +232,11 @@ public class OperatorConfig {
         OperatorConfig that = (OperatorConfig) obj;
         return Objects.equals(spillConfig, that.spillConfig) && Objects.equals(overflowConfig, that.overflowConfig)
                 && isSkipExpressionVerify == that.isSkipExpressionVerify
-                && adaptivityThreshold == that.adaptivityThreshold;
+                && adaptivityThreshold == that.adaptivityThreshold && isRowOutput == that.isRowOutput;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(spillConfig, overflowConfig, isSkipExpressionVerify, adaptivityThreshold);
+        return Objects.hash(spillConfig, overflowConfig, isSkipExpressionVerify, adaptivityThreshold, isRowOutput);
     }
 }

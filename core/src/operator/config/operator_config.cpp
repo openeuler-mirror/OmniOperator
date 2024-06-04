@@ -61,6 +61,7 @@ OperatorConfig::OperatorConfig(const OperatorConfig &operatorConfig)
     }
     this->overflowConfig = new OverflowConfig(operatorConfig.GetOverflowConfig()->GetOverflowConfigId());
     this->adaptivityThreshold = operatorConfig.GetAdaptivityThreshold();
+    this->isRowOutput = operatorConfig.IsRowOutput();
 }
 
 OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &configString)
@@ -69,6 +70,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     OverflowConfig *resultOverflowConfig = nullptr;
     bool needSkipVerify = false;
     int adaptThreshold = -1;
+    bool curIsRowOutput = false;
 
     auto result = nlohmann::json::parse(configString);
     if (result.contains("overflowConfig")) {
@@ -114,8 +116,11 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     if (result.contains("adaptivityThreshold")) {
         adaptThreshold = result.at("adaptivityThreshold").get<int>();
     }
+    if (result.contains("isRowOutput")) {
+        curIsRowOutput = result.at("isRowOutput").get<bool>();
+    }
 
-    return OperatorConfig { resultSpillConfig, resultOverflowConfig, needSkipVerify, adaptThreshold };
+    return OperatorConfig{ resultSpillConfig, resultOverflowConfig, needSkipVerify, adaptThreshold, curIsRowOutput };
 }
 
 void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)

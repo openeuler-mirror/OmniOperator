@@ -10,10 +10,34 @@
 #include "type/data_types.h"
 #include "vector_batch.h"
 #include "operator/aggregation/container_vector.h"
+#include "omni_row.h"
 
 namespace omniruntime::vec {
 class VectorHelper {
 public:
+    static RowBatch *TransRowBatchFromVectorBatch(VectorBatch *vecBatch)
+    {
+        std::vector<type::DataTypeId> outputTypeIds;
+        for (int i = 0; i < vecBatch->GetVectorCount(); i++) {
+            outputTypeIds.push_back(vecBatch->Get(i)->GetTypeId());
+        }
+
+        auto rowBuffer = std::make_unique<RowBuffer>(outputTypeIds, outputTypeIds.size() - 1);
+
+        auto rowBatch = new RowBatch(vecBatch->GetRowCount());
+        for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
+            // 1.get value from vector batch
+            rowBuffer->TransValueFromVectorBatch(vecBatch, i);
+
+            // 2.generate one buffer of one row
+            auto oneRowLen = rowBuffer->FillBuffer();
+
+            // 3.set one row
+            rowBatch->SetRow(i, new RowInfo(rowBuffer->TakeRowBuffer(), oneRowLen));
+        }
+        return rowBatch;
+    }
+
     static BaseVector *CreateStringDictionary(const int32_t *values, int32_t valueSize,
         Vector<LargeStringContainer<std::string_view>> *vector)
     {
