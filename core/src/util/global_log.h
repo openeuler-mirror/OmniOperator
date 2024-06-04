@@ -36,6 +36,7 @@ void Log(const std::string &logStr, LogType logLev);
 void FreeLog();
 
 int GetLogLevel();
+bool IsDebugEnable();
 
 #ifdef __cplusplus
 }

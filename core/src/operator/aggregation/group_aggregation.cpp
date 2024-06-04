@@ -172,6 +172,7 @@ OmniStatus HashAggregationOperator::Init()
         return OMNI_STATUS_NORMAL;
     }
     isInited = true;
+    SetOperatorName(metricsNameHashAgg);
     // put at beginning so that we do not allocate memory if there is error
     if (groupByColumnsHandleType == HandleType::serialize) {
         serialize = std::make_unique<decltype(serialize)::element_type>();
@@ -221,7 +222,7 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
         ResetInputVecBatch();
         return 0;
     }
-
+    UpdateAddInputInfo(rowCount);
     auto groupColNum = static_cast<int32_t>(this->groupByCols.size());
     serialize->ResetSerializer();
     BaseVector *groupVectors[groupColNum];
@@ -341,6 +342,7 @@ OmniStatus HashAggregationOperator::Close()
     aggregationSort = nullptr;
 
     executionContext->GetArena()->Reset();
+    UpdateCloseInfo();
     return OMNI_STATUS_NORMAL;
 }
 
@@ -356,7 +358,7 @@ void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount)
     std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
     vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector.get());
     vectorAddresses[1] = reinterpret_cast<int64_t>(longVector.get());
-    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
+    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
     auto containerVector = new ContainerVector(rowCount, vectorAddresses, dataTypes);
     doubleVector.release();
     longVector.release();
@@ -518,6 +520,7 @@ ErrorCode HashAggregationOperator::SpillHashMap()
             spillConfig->GetWriteBufferSize());
         hasSpill = true;
     }
+    UpdateSpillTimesInfo();
     auto result = SpillToDisk();
     spillOutputState.hasBeenOutputNum = 0;
     spillOutputState.outputHashmapPos = 0;
@@ -679,6 +682,7 @@ void HashAggregationOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
 
         spilledBytes = spiller->GetSpilledBytes();
         auto spillFiles = spiller->FinishSpill();
+        UpdateSpillFileInfo(spillFiles.size());
         spillMerger = spiller->CreateSpillMerger(spillFiles);
         delete spiller;
         spiller = nullptr;
@@ -716,6 +720,11 @@ int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorB
     if (hasSpill) {
         GetOutputFromDisk(outputVecBatch);
         executionContext->GetArena()->Reset();
+        if (*outputVecBatch != nullptr) {
+            UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
+        } else {
+            UpdateGetOutputInfo(0);
+        }
         if (spillTotalRowCount == spillRowOffset) {
             SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
         }
@@ -739,7 +748,7 @@ int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorB
     TraverseHashmapToGetOneResult(deserializeHashmap, outputPtr);
 
     *outputVecBatch = output.release();
-
+    UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
     if (static_cast<int32_t>(outputState.hasBeenOutputNum) == totalRowCount) {
         SetStatus(OmniStatus::OMNI_STATUS_FINISHED);
     }

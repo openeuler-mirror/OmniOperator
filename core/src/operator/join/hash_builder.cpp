@@ -76,15 +76,19 @@ Operator *HashBuilderOperatorFactory::CreateOperator()
 HashBuilderOperator::HashBuilderOperator(const DataTypes &buildTypes, HashTableVariants *hashTables,
     int32_t partitionIndex)
     : buildTypes(buildTypes), partitionIndex(partitionIndex), hashTablesVariants(hashTables)
-{}
+{
+    SetOperatorName(metricsNameHashBuilder);
+}
 
 int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 {
-    if (vecBatch->GetRowCount() <= 0) {
+    auto rowCount = vecBatch->GetRowCount();
+    if (rowCount <= 0) {
         VectorHelper::FreeVecBatch(vecBatch);
         ResetInputVecBatch();
         return 0;
     }
+    UpdateAddInputInfo(rowCount);
     std::visit([&](auto &&arg) { arg.AddVecBatch(partitionIndex, vecBatch); }, *hashTablesVariants);
     return 0;
 }
@@ -97,12 +101,26 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
             arg.BuildHashTable(partitionIndex);
         },
         *hashTablesVariants);
+    if (UNLIKELY(IsDebugEnable())) {
+        int32_t hashTableSize = 0;
+        auto hasgTableType =
+            std::visit([&](auto &&arg) { return arg.GetHashTableTypes(partitionIndex); }, *hashTablesVariants);
+        if (hasgTableType == HashTableImplementationType::NORMAL_HASH_TABLE) {
+            hashTableSize = std::visit([&](auto &&arg) { return arg.GetHashTable(partitionIndex)->GetElementsSize(); },
+                *hashTablesVariants);
+        } else {
+            hashTableSize = std::visit([&](auto &&arg) { return arg.GetArrayTable(partitionIndex)->GetElementsSize(); },
+                *hashTablesVariants);
+        }
+        UpdateGetOutputInfo(hashTableSize);
+    }
     SetStatus(OMNI_STATUS_FINISHED);
     return 0;
 }
 
 OmniStatus HashBuilderOperator::Close()
 {
+    UpdateCloseInfo();
     return OMNI_STATUS_NORMAL;
 }
 } // end of op

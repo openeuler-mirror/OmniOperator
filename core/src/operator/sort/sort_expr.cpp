@@ -59,7 +59,9 @@ Operator *SortWithExprOperatorFactory::CreateOperator()
 SortWithExprOperator::SortWithExprOperator(const type::DataTypes &sourceTypes,
     std::vector<std::unique_ptr<Projection>> &projections, SortOperator *sortOperator)
     : sourceTypes(sourceTypes), projections(projections), sortOperator(sortOperator)
-{}
+{
+    SetOperatorName(metricsNameSort);
+}
 
 SortWithExprOperator::~SortWithExprOperator()
 {
@@ -73,6 +75,7 @@ int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
         ResetInputVecBatch();
         return 0;
     }
+    UpdateAddInputInfo(inputVecBatch->GetRowCount());
     auto *newInputVecBatch =
         OperatorUtil::ProjectVectors(inputVecBatch, sourceTypes, projections, executionContext.get());
     VectorHelper::FreeVecBatch(inputVecBatch);
@@ -84,6 +87,11 @@ int32_t SortWithExprOperator::AddInput(VectorBatch *inputVecBatch)
 int32_t SortWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     int32_t status = sortOperator->GetOutput(outputVecBatch);
+    if (*outputVecBatch != nullptr) {
+        UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
+    } else {
+        UpdateGetOutputInfo(0);
+    }
     SetStatus(sortOperator->GetStatus());
     return status;
 }

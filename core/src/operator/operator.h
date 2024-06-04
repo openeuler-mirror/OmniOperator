@@ -11,6 +11,7 @@
 #include "status.h"
 #include "vector/vector_batch.h"
 #include "vector/vector_helper.h"
+#include "metrics/metrics.h"
 
 namespace omniruntime {
 namespace op {
@@ -82,8 +83,57 @@ protected:
     std::unique_ptr<ExecutionContext> executionContext;
     vec::VectorBatch *inputVecBatch = nullptr;
 
+    void UpdateAddInputInfo(int32_t rowCount)
+    {
+        if (LIKELY(!IsDebugEnable())) {
+            return;
+        }
+        metrics.UpdateAddInputInfo(rowCount, executionContext);
+    }
+
+    void UpdateGetOutputInfo(int32_t rowCount)
+    {
+        if (LIKELY(!IsDebugEnable())) {
+            return;
+        }
+        metrics.UpdateGetOutputInfo(rowCount, executionContext);
+    }
+
+    void UpdateSpillFileInfo(uint32_t fileCount)
+    {
+        if (LIKELY(!IsDebugEnable())) {
+            return;
+        }
+        metrics.UpdateSpillFileInfo(fileCount, executionContext);
+    }
+
+    void UpdateSpillTimesInfo()
+    {
+        if (LIKELY(!IsDebugEnable())) {
+            return;
+        }
+        metrics.UpdateSpillTimesInfo(executionContext);
+    }
+
+    void UpdateCloseInfo()
+    {
+        if (LIKELY(!IsDebugEnable())) {
+            return;
+        }
+        metrics.UpdateCloseInfo(executionContext);
+    }
+
+    void SetOperatorName(const std::string &operatorName)
+    {
+        if (LIKELY(!IsDebugEnable())) {
+            return;
+        }
+        metrics.SetOperatorName(operatorName);
+    }
+
 private:
     OmniStatus status;
+    Metrics metrics;
 };
 }
 }
