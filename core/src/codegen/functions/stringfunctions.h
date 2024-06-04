@@ -310,5 +310,8 @@ extern "C" DLLEXPORT bool StartsWithStr(const char *srcStr, int32_t srcLen, cons
 
 extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
     bool isNull);
+
+extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
+    bool isNull);
 }
 #endif

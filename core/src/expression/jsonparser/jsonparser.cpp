@@ -353,6 +353,21 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
         }
     }
 
+    // check rlike since we only support ^d+$ currently, all other regex are fallback
+    if (funcName == "RLike" && args.size() == 2) {
+        auto secondArg = args[1];
+        if (secondArg->GetType() != ExprType::LITERAL_E) {
+            Expr::DeleteExprs(args);
+            return nullptr;
+        }
+
+        auto literalExpr = static_cast<LiteralExpr *>(secondArg);
+        if (*(literalExpr->stringVal) != "^\\d+$") {
+            Expr::DeleteExprs(args);
+            return nullptr;
+        }
+    }
+
     // Check that the signature matches
     vector<DataTypeId> argTypes(args.size());
     std::transform(args.begin(), args.end(), argTypes.begin(),

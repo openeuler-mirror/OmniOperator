@@ -99,6 +99,12 @@ const std::string EndsWithFnStr()
     return endsWithFnStr;
 }
 
+const std::string RLikeFnStr()
+{
+    const std::string rLikeFnStr = "RLike";
+    return rLikeFnStr;
+}
+
 std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = { // concat functions
@@ -195,6 +201,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(StartsWithStr), StartsWithFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
             OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(EndsWithStr), EndsWithFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(RegexMatch), RLikeFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
             OMNI_BOOLEAN, INPUT_DATA)
     };
 

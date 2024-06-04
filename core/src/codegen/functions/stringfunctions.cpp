@@ -541,14 +541,14 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUp(int64_t contextPtr, co
     if (result.IsOverflow(outPrecision) == OpStatus::OP_OVERFLOW) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << std::string(str, strLen) << "' to DECIMAL(" << outPrecision <<
-                     ", " << outScale << "). Value too large.";
+            ", " << outScale << "). Value too large.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
     if (result.IsOverflow(outPrecision) == OpStatus::FAIL) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
-                     "). Value is not a number.";
+            "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
@@ -593,7 +593,7 @@ extern "C" DLLEXPORT void CastStringToDecimal128RoundUp(int64_t contextPtr, cons
     if (!regex_match(s, g_decimalRegex)) {
         std::ostringstream errorMessage;
         errorMessage << "Cannot cast VARCHAR '" << s << "' to DECIMAL(" << outPrecision << ", " << outScale <<
-                     "). Value is not a number.";
+            "). Value is not a number.";
         SetError(contextPtr, errorMessage.str());
         return;
     }
@@ -907,5 +907,26 @@ extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const 
         return true;
     }
     return memcmp(srcStr + srcLen - matchLen, matchStr, matchLen) == 0;
+}
+
+extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
+    bool isNull)
+{
+    if (isNull) {
+        return false;
+    }
+    if (matchLen == 0) {
+        return true;
+    }
+    if (srcLen == 0) {
+        return false;
+    }
+    for (int32_t i = 0; i < srcLen; i++) {
+        char c = srcStr[i];
+        if (c < '0' || c > '9') {
+            return false;
+        }
+    }
+    return true;
 }
 }
