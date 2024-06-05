@@ -107,7 +107,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateNotAllowReducePrecison(int64_t co
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int64_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 0;
@@ -120,12 +120,12 @@ extern "C" DLLEXPORT void BatchCastStringToDateNotAllowReducePrecison(int64_t co
             output[i] = 0;
             continue;
         }
-        if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1 &&
+        if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) != Status::CONVERT_SUCCESS &&
             !HasError(contextPtr)) {
             SetError(contextPtr, "Value cannot be cast to date: " + s);
             continue;
         }
-        output[i] = result;
+        output[i] = static_cast<int32_t >(result);
     }
 }
 
@@ -135,7 +135,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateAllowReducePrecison(int64_t conte
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int64_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             output[i] = 0;
@@ -143,12 +143,12 @@ extern "C" DLLEXPORT void BatchCastStringToDateAllowReducePrecison(int64_t conte
         }
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
         StringUtil::TrimString(s);
-        if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1 &&
+        if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) != Status::CONVERT_SUCCESS &&
             !HasError(contextPtr)) {
             SetError(contextPtr, "Value cannot be cast to date: " + s);
             continue;
         }
-        output[i] = result;
+        output[i] = static_cast<int32_t >(result);
     }
 }
 
@@ -498,7 +498,7 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNullNotAllowReducePrecison(boo
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int64_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
         StringUtil::TrimString(s);
@@ -507,12 +507,12 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNullNotAllowReducePrecison(boo
             isNull[i] = true;
             continue;
         }
-        if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+        if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) != Status::CONVERT_SUCCESS) {
             output[i] = 0;
             isNull[i] = true;
             continue;
         }
-        output[i] = result;
+        output[i] = static_cast<int32_t >(result);
         isNull[i] = false;
     }
 }
@@ -523,16 +523,16 @@ extern "C" DLLEXPORT void BatchCastStringToDateRetNullAllowReducePrecison(bool *
     // Date is in the format 1996-02-28
     // Doesn't account for leap seconds or daylight savings
     // Should be ok just for dates
-    int32_t result = 0;
+    int64_t result = 0;
     for (int i = 0; i < rowCnt; ++i) {
         std::string s = std::string(reinterpret_cast<char *>(str[i]), strLen[i]);
         StringUtil::TrimString(s);
-        if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) == -1) {
+        if (Date32::StringToDate32(reinterpret_cast<char *>(str[i]), strLen[i], result) != Status::CONVERT_SUCCESS) {
             output[i] = 0;
             isNull[i] = true;
             continue;
         }
-        output[i] = result;
+        output[i] = static_cast<int32_t >(result);
         isNull[i] = false;
     }
 }

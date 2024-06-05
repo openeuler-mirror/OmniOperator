@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  * Description: function test
  */
 #include <string>
@@ -22,6 +22,21 @@ namespace omniruntime {
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
 using namespace omniruntime::codegen::function;
+
+void Date32TruncTest(const std::string &input, const std::string &level, const std::string &expect, bool expectIsNull)
+{
+    int64_t date32Value;
+    Date32::StringToDate32(input.c_str(), input.length(), date32Value);
+    bool isNull = false;
+    int32_t result = DateTruncRetNull(&isNull, static_cast<int32_t>(date32Value), level.c_str(), level.length());
+    Date32 resDate(result);
+    char resStr[11];
+    resDate.ToString(resStr, 11);
+    if (!expectIsNull) {
+        EXPECT_EQ(expect, std::string(resStr, 10));
+    }
+    EXPECT_EQ(isNull, expectIsNull);
+}
 
 /*
  * context helper tests
@@ -2021,5 +2036,23 @@ TEST(FunctionTest, RegexMatch)
     pattern = std::string(R"(^\d+$)");
     result = RegexMatch(input.c_str(), input.length(), pattern.c_str(), pattern.length(), false);
     EXPECT_FALSE(result);
+}
+
+TEST(FunctionTest, Date32Trunc)
+{
+    Date32TruncTest("0086-03-14", "YEAR", "0086-01-01", false);
+    Date32TruncTest("0987-12-27", "YEAR", "0987-01-01", false);
+
+    Date32TruncTest("0086-03-14", "MONTH", "0086-03-01", false);
+    Date32TruncTest("0987-12-27", "MONTH", "0987-12-01", false);
+
+    Date32TruncTest("0086-03-14", "QUARTER", "0086-01-01", false);
+    Date32TruncTest("0987-12-27", "QUARTER", "0987-10-01", false);
+
+    Date32TruncTest("0086-03-14", "WEeK", "0086-03-11", false);
+    Date32TruncTest("0987-12-27", "WEeK", "0987-12-24", false);
+
+    Date32TruncTest("0086-03-14", "ww", "0086-03-11", true);
+    Date32TruncTest("0987-12-27", "weeek", "0987-12-24", true);
 }
 }

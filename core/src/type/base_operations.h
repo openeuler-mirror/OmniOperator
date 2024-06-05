@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
  * Description: base operations implementation
  */
 
@@ -7,9 +7,16 @@
 #define OMNI_RUNTIME_BASE_OPERATIONS_H
 
 #include <iostream>
+#include <limits>
 #include "width_integer.h"
 
 namespace omniruntime::type {
+enum Status {
+    CONVERT_SUCCESS,
+    CONVERT_OVERFLOW,
+    IS_NOT_A_NUMBER
+};
+
 static constexpr int128_t DECIMAL128_MAX_VALUE = (int128_t(5421010862427522170) << 64) + 687399551400673279;
 static constexpr int128_t DECIMAL128_MIN_VALUE = -((int128_t(5421010862427522170) << 64) + 687399551400673279);
 
@@ -38,6 +45,16 @@ static inline bool DivideRoundUp(T left, T right, T &result)
         temp = -temp;
     }
     result = (left + temp) / right;
+    return false;
+}
+
+template<typename T>
+static inline bool NegateCheckedOverflow(const T a, T &r)
+{
+    if (UNLIKELY(a == std::numeric_limits<T>::min())) {
+        return true;
+    }
+    r = std::negate<std::remove_cv_t<T>>()(a);
     return false;
 }
 }

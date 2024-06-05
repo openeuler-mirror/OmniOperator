@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  * Description: Date Time Function Registry
  */
 
@@ -20,7 +20,12 @@ std::vector<Function> DateTimeFunctionRegistry::GetFunctions()
         Function(Function(reinterpret_cast<void *>(FromUnixTime), "from_unixtime", {}, { OMNI_LONG, OMNI_VARCHAR },
             OMNI_VARCHAR, INPUT_DATA, true)),
         Function(reinterpret_cast<void *>(FromUnixTimeRetNull), "from_unixtime_null", {}, { OMNI_LONG, OMNI_VARCHAR },
-            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true) };
+            OMNI_VARCHAR, INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(DateTrunc), "trunc_date", {}, { OMNI_DATE32, OMNI_VARCHAR },
+            OMNI_DATE32, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(DateTruncRetNull), "trunc_date_null", {}, { OMNI_DATE32, OMNI_VARCHAR },
+            OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL) };
+
     return dateTimeFnRegistry;
 }
 }

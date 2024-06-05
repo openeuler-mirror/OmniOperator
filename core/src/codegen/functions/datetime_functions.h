@@ -26,5 +26,9 @@ extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_
 
 extern "C" DLLEXPORT char *FromUnixTimeRetNull(int64_t contextPtr, bool *isNull, int64_t timestamp, const char *fmtStr,
     int32_t fmtLen, int32_t *outLen);
+
+extern "C" DLLEXPORT int32_t DateTrunc(int64_t contextPtr, int32_t days, const char *levelStr, int32_t len);
+
+extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const char *levelStr, int32_t len);
 }
 #endif // OMNI_RUNTIME_DATETIME_FUNCTIONS_H
