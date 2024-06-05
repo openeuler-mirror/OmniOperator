@@ -444,7 +444,9 @@ extern "C" DLLEXPORT int64_t CastDecimal64ToLongRetNull(bool *isNull, int64_t x,
 extern "C" DLLEXPORT double CastDecimal64ToDoubleRetNull(bool *isNull, int64_t x, int32_t precision, int32_t scale)
 {
     std::string doubleString = Decimal64(x).SetScale(scale).ToString();
-    return stod(doubleString);
+    double result;
+    ConvertStringToDouble(result, doubleString);
+    return result;
 }
 
 extern "C" DLLEXPORT int32_t CastDecimal128ToIntRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,
@@ -464,8 +466,9 @@ extern "C" DLLEXPORT int64_t CastDecimal128ToLongRetNull(bool *isNull, int64_t x
 extern "C" DLLEXPORT double CastDecimal128ToDoubleRetNull(bool *isNull, int64_t xHigh, uint64_t xLow, int32_t precision,
     int32_t scale)
 {
-    Decimal128Wrapper input(xHigh, xLow);
     std::string doubleString = Decimal128Wrapper(xHigh, xLow).SetScale(scale).ToString();
-    return stod(doubleString);
+    double result;
+    ConvertStringToDouble(result, doubleString);
+    return result;
 }
 }

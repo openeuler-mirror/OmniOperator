@@ -318,5 +318,7 @@ extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, boo
     int32_t *outLen);
 
 extern "C" DLLEXPORT const char *CastDateToString(int64_t contextPtr, int32_t value, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT char *Md5Str(int64_t contextPtr, const char *str, int32_t len, bool isNull, int32_t *outLen);
 }
 #endif

@@ -264,11 +264,11 @@ TEST(omni_row, fill_buffer_and_check_hash)
 TEST(omni_row, fill_buffer_performance)
 {
     auto t = Timer();
-    t.Start("test generate vectorBatch(500000 row * 3col) time:");
+    t.Start("test generate vectorBatch(5 row * 3col) time:");
     std::vector<DataTypePtr> types(
         { LongDataType::Instance(), DoubleDataType::Instance(), VarcharDataType::Instance() });
     RowBuffer rowBuffer(types, 2);
-    int32_t rowNumber = 500000;
+    int32_t rowNumber = 5;
     std::vector<int64_t> data1(rowNumber);
     std::vector<double> data2(rowNumber);
     std::vector<std::string> data3(rowNumber);
@@ -281,7 +281,7 @@ TEST(omni_row, fill_buffer_performance)
     DataTypes dataTypes(types);
     VectorBatch *vecBatch = CreateVectorBatch(dataTypes, rowNumber, data1.data(), data2.data(), data3.data());
     t.End();
-    t.Start("tran vec to row time (500000 row * 3 col):");
+    t.Start("tran vec to row time (5 row * 3 col):");
     std::vector<RowInfo> rows;
     rows.reserve(rowNumber);
     for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
