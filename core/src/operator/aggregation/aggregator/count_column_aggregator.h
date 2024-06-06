@@ -11,13 +11,13 @@
 namespace omniruntime {
 namespace op {
 SIMD_ALWAYS_INLINE
-void CountAllOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t &noUsed2)
+void CountAllOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t noUsed2)
 {
     *res += in;
 }
 
 template <bool addIf>
-SIMD_ALWAYS_INLINE void CountAllConditionalOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t &noUsed2,
+SIMD_ALWAYS_INLINE void CountAllConditionalOp(int64_t *res, int64_t &noUsed1, const int64_t &in, const int64_t noUsed2,
     const uint8_t &condition)
 {
     const int64_t mask = (!condition == addIf) - 1;
@@ -29,11 +29,18 @@ public:
     ~CountColumnAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override;
+
+    std::vector<DataTypePtr> GetSpillType() override
     {
-        spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
+        std::vector<DataTypePtr> spillTypes;
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_LONG));
+        return spillTypes;
     }
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inRaw, bool outPartial, bool isOverflowAsNull)
     {
@@ -57,8 +64,8 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex) override;
 
 protected:
     CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels, const bool inputRaw,

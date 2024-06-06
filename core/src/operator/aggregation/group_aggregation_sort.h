@@ -6,43 +6,58 @@
 #ifndef OMNI_RUNTIME_GROUP_AGGREATION_SORT_H
 #define OMNI_RUNTIME_GROUP_AGGREATION_SORT_H
 
-#include "operator/hashmap/column_marshaller.h"
 #include "aggregator/aggregator.h"
 #include "type/data_types.h"
+#include "type/string_ref.h"
 
 namespace omniruntime::op {
 class AggregationSort {
 public:
-    explicit AggregationSort(std::vector<std::unique_ptr<Aggregator>> &aggregators, size_t size)
+    explicit AggregationSort(std::vector<std::unique_ptr<Aggregator>> &aggregators) : aggregators(aggregators)
     {
-        size_t aggregatorNum = aggregators.size();
-        this->aggregators.resize(aggregatorNum);
-        for (size_t i = 0; i < aggregatorNum; i++) {
-            this->aggregators[i] = &aggregators[i];
+        for (auto &aggregator : aggregators) {
+            aggVectorCounts.emplace_back(aggregator->GetSpillType().size());
         }
-        kvVec.reserve(size);
     }
-    std::vector<omniruntime::op::KeyValue> &GetKvVector()
+
+    void ResizeKvVector(size_t size)
     {
-        return kvVec;
+        kvVec.resize(size);
+        groupCount = size;
     }
+
+    void ParseHashMapToVector(const omniruntime::type::StringRef &key, AggregateState *value, size_t groupIndex)
+    {
+        auto &kv = kvVec[groupIndex];
+        kv.keyAddr = const_cast<char *>(key.data);
+        kv.keyLen = key.size;
+        kv.value = value;
+    }
+
     void ClearVector()
     {
         kvVec.clear();
     }
+
     size_t GetRowCount()
     {
-        return kvVec.size();
+        return groupCount;
     }
+
     void SortKvVector()
     {
         std::sort(kvVec.begin(), kvVec.end(), HashKeyCompare);
     }
+
     void SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint64_t rowOffset);
 
 private:
+    std::vector<std::unique_ptr<Aggregator>> &aggregators;
     std::vector<omniruntime::op::KeyValue> kvVec;
-    std::vector<std::unique_ptr<Aggregator> *> aggregators;
+    std::vector<AggregateState *> groupStates;
+    size_t groupCount = 0;
+    std::vector<int32_t> aggVectorCounts;
+
     static ALWAYS_INLINE bool HashKeyCompare(const omniruntime::op::KeyValue &a, omniruntime::op::KeyValue &b)
     {
         int ret = memcmp(a.keyAddr, b.keyAddr, std::min(a.keyLen, b.keyLen));

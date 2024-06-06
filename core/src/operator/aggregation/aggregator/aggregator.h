@@ -64,6 +64,18 @@ struct FirstState {
     bool valueSet = false;
 };
 
+struct KeyValue {
+    char *keyAddr;
+    size_t keyLen;
+    AggregateState *value;
+};
+
+struct UnspillRowInfo {
+    AggregateState *state;
+    VectorBatch *batch;
+    int32_t rowIdx;
+};
+
 // Avg decimal and overflow is decode/encode in continuous memory
 static inline void DecodeAvgDecimal(op::DecimalAverageState *statePtr, type::int128_t &val, int64_t &overflow,
     int64_t &count)
@@ -130,7 +142,7 @@ public:
             std::to_string(as_integer(type)));
     }
 
-    virtual void GetSpillType(std::vector<DataTypePtr> &spillTypes)
+    virtual std::vector<DataTypePtr> GetSpillType()
     {
         throw OmniException("UNSUPPORTED_ERROR",
             "GetSpillType not implemented for " + std::to_string(as_integer(type)));
@@ -200,11 +212,11 @@ public:
         }
     }
 
-    virtual void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx)
+    virtual void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex)
     {
         throw OmniException("UNSUPPORTED_ERROR",
-            "ProcessGroupAfterSpill not implemented for " + std::to_string(as_integer(type)));
+            "ProcessGroupUnspill not implemented for " + std::to_string(as_integer(type)));
     }
 
     // for groupby hash aggregation
@@ -241,11 +253,24 @@ public:
         state.count = 0;
     }
 
+    virtual void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx)
+    {
+        for (auto groupState : groupStates) {
+            auto &state = groupState[aggIdx];
+            state.val = 0;
+            state.count = 0;
+        }
+    }
+
     // set result to output vector
     virtual void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
         const int32_t rowIndex) = 0;
-    virtual void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
-        const int32_t rowIndex) = 0;
+
+    virtual void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) = 0;
+
+    virtual void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) = 0;
 
     virtual bool IsTypedAggregator()
     {

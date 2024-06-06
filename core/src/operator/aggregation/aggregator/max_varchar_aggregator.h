@@ -48,11 +48,18 @@ public:
     ~MaxVarcharAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override;
+
+    std::vector<DataTypePtr> GetSpillType() override
     {
-        spillTypes.push_back(inputTypes.GetType(0));
+        std::vector<DataTypePtr> spillTypes;
+        spillTypes.emplace_back(inputTypes.GetType(0));
+        return spillTypes;
     }
+
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
     {
@@ -79,8 +86,8 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex) override;
 
 protected:
     MaxVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,

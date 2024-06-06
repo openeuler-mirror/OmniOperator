@@ -23,10 +23,38 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &st
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
-    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates,
+    const size_t aggIdx, std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
 {
-    this->ExtractValues(state, vectors, rowIndex);
+    auto v = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
+    for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        auto &state = groupStates[rowIndex][aggIdx];
+        if (state.val == 0) {
+            // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
+            v->SetNull(rowIndex);
+        } else {
+            std::string_view val(reinterpret_cast<char *>(state.val), state.count);
+            v->SetValue(rowIndex, val);
+        }
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
+    const size_t aggIdx, std::vector<BaseVector *> &vectors)
+{
+    auto v = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
+    auto rowCount = static_cast<int32_t>(groupStates.size());
+    for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        auto &state = groupStates[rowIndex][aggIdx];
+        if (state.val == 0) {
+            // Note: due to issue #614 we should call SetValueNull on VarcharVector vector not Vector base class
+            v->SetNull(rowIndex);
+        } else {
+            std::string_view val(reinterpret_cast<char *>(state.val), state.count);
+            v->SetValue(rowIndex, val);
+        }
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
@@ -74,22 +102,27 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggre
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
-    int32_t &vectorIndex, int32_t rowIdx)
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows,
+    int32_t rowCount, const size_t aggIdx, int32_t &vectorIndex)
 {
-    auto vectorPtr = vectorBatch->Get(vectorIndex++);
-    if (!vectorPtr->IsNull(rowIdx)) {
-        auto varcharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vectorPtr);
-        if (state.val == 0) {
-            auto strView = varcharVec->GetValue(rowIdx);
-            auto *res = strView.data();
-            state.count = strView.size();
-            state.count |= UPDATE_FLAG;
-            state.val = (int64_t)(res);
-            SaveState(state);
-        } else {
-            state.val = reinterpret_cast<int64_t>(
-                MinCharOp(reinterpret_cast<char *>(state.val), state.count, varcharVec, rowIdx));
+    auto firstVecIdx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        auto batch = row.batch;
+        auto index = row.rowIdx;
+        auto varcharVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(batch->Get(firstVecIdx));
+        if (!varcharVec->IsNull(index)) {
+            auto &state = row.state[aggIdx];
+            if (state.val == 0) {
+                auto strView = varcharVec->GetValue(index);
+                auto *res = strView.data();
+                state.count = strView.size();
+                state.count |= UPDATE_FLAG;
+                state.val = (int64_t)(res);
+                SaveState(state);
+            } else {
+                state.val = (int64_t)(MinCharOp(reinterpret_cast<char *>(state.val), state.count, varcharVec, index));
+            }
         }
     }
 }

@@ -4413,21 +4413,19 @@ TEST(AggregatorTest, typed_aggregator_test)
         {
             return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, channelIdx);
         }
-        void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex)
-        {
-            return;
-        }
+        void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) {}
 
-        void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex)
-        {
-            return;
-        }
+        void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+            std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
+        {}
+
+        void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+            std::vector<BaseVector *> &vectors)
+        {}
 
         virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
             const int32_t rowCount, const uint8_t *nullMap)
-        {
-            return;
-        }
+        {}
 
         virtual void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
             const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)

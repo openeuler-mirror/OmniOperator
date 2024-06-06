@@ -104,47 +104,47 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
 };
 
 #define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
-    [&]() {                                                                                 \
-        switch (typeId) {                                                                   \
-            case OMNI_INT: {                                                                \
+    [&]() {                                                                                   \
+        switch (typeId) {                                                                     \
+            case OMNI_INT: {                                                                  \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_INT>(__VA_ARGS__);        \
-            }                                                                               \
-            case OMNI_DATE32: {                                                             \
+            }                                                                                 \
+            case OMNI_DATE32: {                                                               \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_DATE32>(__VA_ARGS__);     \
-            }                                                                               \
-            case OMNI_LONG: {                                                               \
+            }                                                                                 \
+            case OMNI_LONG: {                                                                 \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_LONG>(__VA_ARGS__);       \
-            }                                                                               \
-            case OMNI_DATE64: {                                                             \
+            }                                                                                 \
+            case OMNI_DATE64: {                                                               \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_DATE64>(__VA_ARGS__);     \
-            }                                                                               \
-            case OMNI_DECIMAL64: {                                                          \
+            }                                                                                 \
+            case OMNI_DECIMAL64: {                                                            \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_DECIMAL64>(__VA_ARGS__);  \
-            }                                                                               \
-            case OMNI_DOUBLE: {                                                             \
+            }                                                                                 \
+            case OMNI_DOUBLE: {                                                               \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_DOUBLE>(__VA_ARGS__);     \
-            }                                                                               \
-            case OMNI_BOOLEAN: {                                                            \
+            }                                                                                 \
+            case OMNI_BOOLEAN: {                                                              \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_BOOLEAN>(__VA_ARGS__);    \
-            }                                                                               \
-            case OMNI_SHORT: {                                                              \
+            }                                                                                 \
+            case OMNI_SHORT: {                                                                \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_SHORT>(__VA_ARGS__);      \
-            }                                                                               \
-            case OMNI_DECIMAL128: {                                                         \
+            }                                                                                 \
+            case OMNI_DECIMAL128: {                                                           \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_DECIMAL128>(__VA_ARGS__); \
-            }                                                                               \
-            case OMNI_CHAR: {                                                               \
+            }                                                                                 \
+            case OMNI_CHAR: {                                                                 \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_CHAR>(__VA_ARGS__);       \
-            }                                                                               \
-            case OMNI_VARCHAR: {                                                            \
+            }                                                                                 \
+            case OMNI_VARCHAR: {                                                              \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_VARCHAR>(__VA_ARGS__);    \
-            }                                                                               \
-            default:                                                                        \
-                LogError("Can not handle this type %d", typeId);                            \
-        }                                                                                   \
+            }                                                                                 \
+            default:                                                                          \
+                LogError("Can not handle this type %d", typeId);                              \
+        }                                                                                     \
     }()
 
-template<typename T> constexpr DataTypeId TYPE_ID = DataTypeId::OMNI_INVALID;
+template <typename T> constexpr DataTypeId TYPE_ID = DataTypeId::OMNI_INVALID;
 template <> inline constexpr DataTypeId TYPE_ID<int16_t> = DataTypeId::OMNI_SHORT;
 template <> inline constexpr DataTypeId TYPE_ID<int32_t> = DataTypeId::OMNI_INT;
 template <> inline constexpr DataTypeId TYPE_ID<int64_t> = DataTypeId::OMNI_LONG;

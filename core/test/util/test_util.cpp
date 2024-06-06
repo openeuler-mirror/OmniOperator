@@ -153,9 +153,23 @@ bool ColumnMatch(BaseVector *actualColumn, BaseVector *expectColumn)
         if ((actualColumn->IsNull(rowIndex) == expectColumn->IsNull(rowIndex)) && actualColumn->IsNull(rowIndex)) {
             continue;
         }
-        result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, typeId, actualColumn, expectColumn, rowIndex);
-        if (!result) {
-            return false;
+
+        if (typeId == OMNI_CONTAINER) {
+            auto vecCount = static_cast<ContainerVector *>(expectColumn)->GetVectorCount();
+            for (int32_t vecIdx = 0; vecIdx < vecCount; vecIdx++) {
+                auto actualVec = static_cast<ContainerVector *>(actualColumn)->GetValue(vecIdx);
+                auto expectVec = static_cast<ContainerVector *>(expectColumn)->GetValue(vecIdx);
+                result =
+                    ColumnMatch(reinterpret_cast<BaseVector *>(actualVec), reinterpret_cast<BaseVector *>(expectVec));
+                if (!result) {
+                    return false;
+                }
+            }
+        } else {
+            result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, typeId, actualColumn, expectColumn, rowIndex);
+            if (!result) {
+                return false;
+            }
         }
     }
 
@@ -733,10 +747,30 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
                 resultVector, expectedVector, error);
             break;
         }
+        case OMNI_CONTAINER: {
+            isMatched = CompareUnorderedRowsContainer(static_cast<ContainerVector *>(resultVector),
+                static_cast<ContainerVector *>(expectedVector), error);
+            break;
+        }
         default: {
             return false;
         }
     }
     return isMatched;
+}
+
+bool CompareUnorderedRowsContainer(ContainerVector *resultContainerVector, ContainerVector *expectedContainerVector,
+    const double error)
+{
+    int32_t vecCount = expectedContainerVector->GetVectorCount();
+    for (int32_t vecIdx = 0; vecIdx < vecCount; vecIdx++) {
+        auto resultVector = reinterpret_cast<BaseVector *>(resultContainerVector->GetValue(vecIdx));
+        auto expectedVector = reinterpret_cast<BaseVector *>(expectedContainerVector->GetValue(vecIdx));
+        auto result = ColumnMatchIgnoreOrder(resultVector, expectedVector, error);
+        if (!result) {
+            return false;
+        }
+    }
+    return true;
 }
 }

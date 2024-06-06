@@ -182,6 +182,9 @@ template <typename D, typename V>
 bool CompareUnorderedRows(vec::BaseVector *resultVector, vec::BaseVector *expectedVector,
     const double error = DBL_EPSILON);
 
+bool CompareUnorderedRowsContainer(vec::ContainerVector *resultContainerVector,
+    vec::ContainerVector *expectedContainerVector, const double error = DBL_EPSILON);
+
 bool ColumnMatchIgnoreOrder(vec::BaseVector *resultVector, vec::BaseVector *expectedVector,
     const double error = DBL_EPSILON);
 

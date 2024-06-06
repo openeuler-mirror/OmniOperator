@@ -60,8 +60,11 @@ public:
     ~AverageAggregator() override = default;
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override;
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
+    std::vector<DataTypePtr> GetSpillType() override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override;
     template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT>
     void ExtractValuesFunction(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex);
 
@@ -117,8 +120,8 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex) override;
 
 protected:
     AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
@@ -133,6 +136,10 @@ protected:
 private:
     void (AverageAggregator<IN_ID, OUT_ID>::*extractValuesFuncPointer)(const AggregateState &state,
         std::vector<BaseVector *> &vectors, int32_t rowIndex) = nullptr;
+
+    template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT, bool IS_OVERFLOW_AS_NULL>
+    void ExtractValuesBatchInternal(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount);
 
     template <bool DECIMAL_PRECISION_IMPROVEMENT>
     void DivideWithOverflow(const AggregateState &state, OutType &result, bool &overflow);

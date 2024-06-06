@@ -33,10 +33,27 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &s
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<IN_ID, OUT_ID>::ExtractSpillValues(const AggregateState &state,
-    std::vector<BaseVector *> &vectors, int32_t rowIndex)
+void CountColumnAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates,
+    const size_t aggIdx, std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
 {
-    this->ExtractValues(state, vectors, rowIndex);
+    auto countVec = static_cast<Vector<int64_t> *>(vectors[0]);
+    for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        auto &state = groupStates[rowIndex][aggIdx];
+        countVec->SetValue(rowIndex, state.count);
+    }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void CountColumnAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
+    const size_t aggIdx, std::vector<BaseVector *> &vectors)
+{
+    auto spillCountVec = static_cast<Vector<int64_t> *>(vectors[0]);
+
+    auto rowCount = static_cast<int32_t>(groupStates.size());
+    for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        auto &state = groupStates[rowIndex][aggIdx];
+        spillCountVec->SetValue(rowIndex, state.count);
+    }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
@@ -51,7 +68,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessSingleInternalFunction(Aggrega
             AddConditionalCountRaw<false>(state.count, rowCount, nullMap);
         }
     } else {
-        int64_t noUsed{};
+        int64_t noUsed {};
 
         if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
             auto *ptr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(vector));
@@ -148,13 +165,20 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<Aggr
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch,
-    int32_t &vectorIndex, int32_t rowIdx)
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows,
+    int32_t rowCount, const size_t aggIdx, int32_t &vectorIndex)
 {
-    auto countVector = vectorBatch->Get(vectorIndex++);
-    auto *cnt = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-    int64_t unsedFlag = 0;
-    CountAllOp(&(state.count), unsedFlag, cnt[rowIdx], 0LL);
+    auto firstVecIdx = vectorIndex++;
+    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        auto &row = unspillRows[rowIdx];
+        auto batch = row.batch;
+        auto index = row.rowIdx;
+        auto &state = row.state[aggIdx];
+
+        auto countVector = static_cast<Vector<int64_t> *>(batch->Get(firstVecIdx));
+        auto count = countVector->GetValue(index);
+        state.count += count;
+    }
 }
 
 // Explicit template instantiation

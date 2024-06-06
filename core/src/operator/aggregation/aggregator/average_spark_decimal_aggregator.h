@@ -54,27 +54,34 @@ public:
         }
     }
 
-    void ProcessGroupAfterSpill(AggregateState &state, VectorBatch *vectorBatch, int32_t &vectorIndex,
-        int32_t rowIdx) override
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
+        int32_t &vectorIndex) override
     {
-        auto sumVector = vectorBatch->Get(vectorIndex++);
-        auto *sum = reinterpret_cast<ResultType *>(GetValuesFromVector<OutDecimalId>(sumVector));
-        auto countVector = vectorBatch->Get(vectorIndex++);
-        auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-        cntPtr = (int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-
-        int64_t cnt = cntPtr[rowIdx];
-        if (cnt == 0 || sumVector->IsNull(rowIdx)) {
-            return;
-        } else if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
-            if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, sum[rowIdx], cnt);
+        auto firstVecIdx = vectorIndex++;
+        auto secondVecIdx = vectorIndex++;
+        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            auto &row = unspillRows[rowIdx];
+            auto batch = row.batch;
+            auto index = row.rowIdx;
+            auto &state = row.state[aggIdx];
+            auto countVector = static_cast<Vector<int64_t> *>(batch->Get(secondVecIdx));
+            auto count = countVector->GetValue(index);
+            if (count < 0) {
+                // overflow
+                state.count = -1;
+            } else if (count == 0) {
+                // we skipped in empty group case
+                continue;
             } else {
-                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, sum[rowIdx],
-                    cnt);
+                auto sumVector = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
+                auto value = sumVector->GetValue(index);
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, value, count);
+                } else {
+                    SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, value,
+                        count);
+                }
             }
-        } else {
-            AddDecimalRowIndex<ResultType, ResultType, ResultIntType>(state, sum, cnt, rowIdx);
         }
     }
 
@@ -115,31 +122,53 @@ public:
         }
     }
 
-    void GetSpillType(std::vector<DataTypePtr> &spillTypes) override
+    std::vector<DataTypePtr> GetSpillType() override
     {
+        std::vector<DataTypePtr> spillTypes;
         if constexpr (InDecimalId == OMNI_DECIMAL64) {
-            spillTypes.push_back(std::make_shared<DataType>(OutDecimalId));
+            spillTypes.emplace_back(std::make_shared<DataType>(OutDecimalId));
         } else {
-            spillTypes.push_back(std::make_shared<DataType>(OMNI_DECIMAL128));
+            spillTypes.emplace_back(std::make_shared<DataType>(OMNI_DECIMAL128));
         }
-        spillTypes.push_back(std::make_shared<DataType>(OMNI_LONG));
+        spillTypes.emplace_back(std::make_shared<DataType>(OMNI_LONG));
+        return spillTypes;
     }
 
-    void ExtractSpillValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors) override
     {
         auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
         auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
-        if (state.count == 0) {
-            avgValVector->SetNull(rowIndex);
-            avgCountVector->SetValue(rowIndex, state.count);
-            return;
+        auto rowCount = static_cast<int32_t>(groupStates.size());
+        for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            auto &state = groupStates[rowIndex][aggIdx];
+
+            if (state.count < 0) {
+                // overflow
+                if (!this->IsOverflowAsNull()) {
+                    throw OmniException("OPERATOR_RUNTIME_ERROR", "average_aggregator overflow.");
+                }
+                avgCountVector->SetValue(rowIndex, -1);
+            } else if (state.count == 0) {
+                // set count to zero for empty group when spill to ensure skip empty group when unspill
+                avgCountVector->SetValue(rowIndex, 0);
+            } else {
+                int128_t decodedDec;
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    decodedDec = (reinterpret_cast<ResultType *>(state.val))->ToInt128();
+                } else {
+                    decodedDec = static_cast<ResultType>(state.val);
+                }
+
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    Decimal128 decimal128Result(decodedDec);
+                    avgValVector->SetValue(rowIndex, decimal128Result);
+                } else {
+                    avgValVector->SetValue(rowIndex, static_cast<int64_t>(decodedDec));
+                }
+                avgCountVector->SetValue(rowIndex, state.count);
+            }
         }
-        if constexpr (std::is_same_v<ResultType, Decimal128>) {
-            avgValVector->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-        } else {
-            avgValVector->SetValue(rowIndex, static_cast<ResultType>(state.val));
-        }
-        avgCountVector->SetValue(rowIndex, state.count);
     }
 
     void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
@@ -208,6 +237,92 @@ public:
             } else {
                 int64_t shortResult = static_cast<int64_t>(finalResultDec);
                 static_cast<Vector<int64_t> *>(vector)->SetValue(rowIndex, shortResult);
+            }
+        }
+    }
+
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    {
+        auto outputDecimalType = static_cast<DecimalDataType *>(this->outputTypes.GetType(0).get());
+        auto inputDecimalType = static_cast<DecimalDataType *>(this->inputTypes.GetType(0).get());
+        BaseVector *vector = vectors[0];
+
+        if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::outputPartial) {
+            int32_t scaleDiff = outputDecimalType->GetScale() - inputDecimalType->GetScale();
+            auto scaleNum = TenOfInt128[scaleDiff];
+            for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+                auto &state = groupStates[rowIndex][aggIdx];
+                if (state.count < 0) {
+                    // overflow
+                    this->SetNullOrThrowException(vector, rowIndex);
+                    continue;
+                }
+
+                int128_t decodedDec;
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    decodedDec = (reinterpret_cast<ResultType *>(state.val))->ToInt128();
+                } else {
+                    decodedDec = static_cast<ResultType>(state.val);
+                }
+                int128_t resultDec;
+                // rescale dividend and divisor to output scale.
+                // In Partial mode, if input type is Decimal(p,s), then, output type is Decimal(p+10,s).
+                // So, it can not be overflowed.
+                __builtin_mul_overflow(decodedDec, scaleNum, &resultDec);
+
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    auto decimal128Vector = reinterpret_cast<Vector<Decimal128> *>(vector);
+                    Decimal128 decimal128Result(resultDec);
+                    static_cast<Vector<Decimal128> *>(decimal128Vector)->SetValue(rowIndex, decimal128Result);
+                } else {
+                    auto longVector = reinterpret_cast<Vector<int64_t> *>(vector);
+                    int64_t shortResult = static_cast<int64_t>(resultDec);
+                    longVector->SetValue(rowIndex, shortResult);
+                }
+
+                BaseVector *avgCountVector = vectors[1];
+                reinterpret_cast<Vector<int64_t> *>(avgCountVector)->SetValue(rowIndex, state.count);
+            }
+        } else {
+            for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+                auto &state = groupStates[rowIndex][aggIdx];
+                if (state.count < 0) {
+                    // overflow
+                    this->SetNullOrThrowException(vector, rowIndex);
+                    continue;
+                }
+
+                int128_t decodedDec;
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    decodedDec = (reinterpret_cast<ResultType *>(state.val))->ToInt128();
+                } else {
+                    decodedDec = static_cast<ResultType>(state.val);
+                }
+
+                int128_t countDec = state.count;
+                int128_t finalResultDec;
+                // if count is zero, it means all input is null
+                if (countDec == 0) {
+                    vector->SetNull(rowIndex);
+                    continue;
+                }
+                OpStatus status = CalcAvg(inputDecimalType, decodedDec, countDec, outputDecimalType, finalResultDec);
+                if (status == OpStatus::OP_OVERFLOW) {
+                    this->SetNullOrThrowException(vector, rowIndex);
+                    continue;
+                }
+                // we can not use template std::is_same_v<resultType,Decimal128> here
+                // for average, Decimal128 / n = Decimal64 is possible,
+                // but all intermediate types such as ResultType are Decimal128,
+                // so we have to get type from outputTypes , rather than ResultTyp
+                if (outputDecimalType->GetId() == OMNI_DECIMAL128) {
+                    Decimal128 decimal128Result(finalResultDec);
+                    static_cast<Vector<Decimal128> *>(vector)->SetValue(rowIndex, decimal128Result);
+                } else {
+                    int64_t shortResult = static_cast<int64_t>(finalResultDec);
+                    static_cast<Vector<int64_t> *>(vector)->SetValue(rowIndex, shortResult);
+                }
             }
         }
     }

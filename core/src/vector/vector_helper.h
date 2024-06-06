@@ -163,6 +163,12 @@ public:
 
     template <type::DataTypeId typeId> static void PrintFlatVectorValue(BaseVector *vector, int32_t rowIndex)
     {
+        if constexpr (typeId == OMNI_CONTAINER) {
+            auto vec0 = reinterpret_cast<Vector<double> *>(static_cast<ContainerVector *>(vector)->GetValue(0));
+            auto vec1 = reinterpret_cast<Vector<int64_t> *>(static_cast<ContainerVector *>(vector)->GetValue(1));
+            std::cout << std::dec << vec0->GetValue(rowIndex) << "/" << vec1->GetValue(rowIndex) << "\t";
+            return;
+        }
         using namespace omniruntime::type;
         using T = typename NativeType<typeId>::type;
         if constexpr (std::is_same_v<T, std::string_view>) {
@@ -181,10 +187,18 @@ public:
             return;
         }
 
-        if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
-            DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, vector->GetTypeId(), vector, rowIndex);
-        } else {
+        auto encoding = vector->GetEncoding();
+        if (encoding == vec::OMNI_DICTIONARY) {
             DYNAMIC_TYPE_DISPATCH(PrintDictionaryVectorValue, vector->GetTypeId(), vector, rowIndex);
+        } else if (encoding == vec::OMNI_ENCODING_CONTAINER) {
+            auto vecCount = static_cast<ContainerVector *>(vector)->GetVectorCount();
+            for (int32_t vecIdx = 0; vecIdx < vecCount; vecIdx++) {
+                auto value = static_cast<ContainerVector *>(vector)->GetValue(vecIdx);
+                auto valueVec = reinterpret_cast<BaseVector *>(value);
+                DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, valueVec->GetTypeId(), valueVec, rowIndex);
+            }
+        } else {
+            DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, vector->GetTypeId(), vector, rowIndex);
         }
     }
 
@@ -370,8 +384,20 @@ public:
     }
     static BaseVector *SliceVector(BaseVector *vector, int positionOffset, int length)
     {
-        if (vector->GetEncoding() == OMNI_DICTIONARY) {
+        auto encoding = vector->GetEncoding();
+        if (encoding == OMNI_DICTIONARY) {
             return SliceDictionaryVector(vector, positionOffset, length);
+        }
+        if (encoding == OMNI_ENCODING_CONTAINER) {
+            auto containerVector = reinterpret_cast<ContainerVector *>(vector);
+            std::vector<int64_t> newFieldVecs;
+            auto fieldCount = containerVector->GetVectorCount();
+            for (int32_t i = 0; i < fieldCount; i++) {
+                auto field = reinterpret_cast<BaseVector *>(containerVector->GetValue(i));
+                auto newField = SliceVector(field, positionOffset, length);
+                newFieldVecs.emplace_back(reinterpret_cast<int64_t>(newField));
+            }
+            return new ContainerVector(length, newFieldVecs, containerVector->GetDataTypes());
         }
         DataTypeId dataTypeId = vector->GetTypeId();
         switch (dataTypeId) {
@@ -401,8 +427,6 @@ public:
                 return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
                     length);
             }
-            case type::OMNI_CONTAINER:
-                return reinterpret_cast<ContainerVector *>(vector)->Slice(positionOffset, length);
             default: {
                 std::string omniExceptionInfo =
                     "In function SliceVector, no such data type " + std::to_string(dataTypeId);

@@ -331,7 +331,7 @@ private:
     std::vector<type::DataTypePtr> spillTypes;
     OutputState spillOutputState;
     bool hasSpill = false;
-    AggregationSort *aggregationSort = nullptr;
+    std::unique_ptr<AggregationSort> aggregationSort = nullptr;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
