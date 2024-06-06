@@ -392,6 +392,7 @@ extern "C" DLLEXPORT int64_t CastDoubleToDecimal64RetNull(bool *isNull, double x
     int32_t outScale)
 {
     Decimal64 result(x);
+    result.ReScale(outScale);
     if (result.IsOverflow(outPrecision) != OpStatus::SUCCESS) {
         *isNull = true;
         return 0;

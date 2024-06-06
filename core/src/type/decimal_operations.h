@@ -20,6 +20,7 @@
 #include "decimal128.h"
 #include "base_operations.h"
 #include "data_operations.h"
+#include "codegen/functions/dtoa.h"
 
 namespace omniruntime {
 namespace type {
@@ -405,7 +406,8 @@ public:
         }
     }
 
-    explicit Decimal128Wrapper(double value) : Decimal128Wrapper(omniruntime::type::ToString(value).c_str())
+    explicit Decimal128Wrapper(double value) : Decimal128Wrapper(
+        codegen::function::DoubleToString::DoubleToStringConverter(value).c_str())
     {}
 
     Decimal128Wrapper &operator=(const Decimal128Wrapper &rhs) = default;
@@ -1108,10 +1110,7 @@ public:
 
     Decimal64(double inputVal)
     {
-        std::stringstream os;
-        os.precision(DOUBLE_MAX_PRECISION);
-        os << inputVal;
-        std::string s = os.str();
+        auto s = codegen::function::DoubleToString::DoubleToStringConverter(inputVal);
         new(this)Decimal64(s);
     }
 
