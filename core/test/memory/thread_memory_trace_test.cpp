@@ -48,6 +48,7 @@ static BaseVector *CreateDictionaryVector()
     return dicVec;
 }
 
+#ifdef TRACE
 // scenario test
 TEST(MemoryTrace, testNoMemoryLeak)
 {
@@ -135,7 +136,6 @@ TEST(MemoryTrace, testTAddVectorMemoryWithException)
     delete vector1;
 }
 
-#ifdef TRACE
 TEST(MemoryTrace, testReplaceVectorTraced)
 {
     int size = 100;
@@ -168,7 +168,6 @@ TEST(MemoryTrace, testReplaceVectorTracedWithException)
     delete vector1;
     delete vector2;
 }
-#endif
 
 TEST(MemoryTrace, testAddArenaMemory)
 {
@@ -203,4 +202,5 @@ TEST(MemoryTrace, testAddArenaMemoryWithException)
     trace->RemoveArenaMemory(reinterpret_cast<uintptr_t>(arena1), size);
     pool->Release(arena1);
 }
+#endif
 }

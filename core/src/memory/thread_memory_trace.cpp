@@ -8,6 +8,12 @@
 #include "memory_trace.h"
 
 namespace omniruntime::mem {
+ThreadMemoryTrace::ThreadMemoryTrace()
+{
+    MemoryTrace *globalMemoryTrace = GetMemoryTrace();
+    globalMemoryTrace->AddThreadMemoryTrace(this);
+}
+
 ThreadMemoryTrace::~ThreadMemoryTrace()
 {
     MemoryTrace *globalMemoryTrace = GetMemoryTrace();
@@ -195,15 +201,5 @@ void ThreadMemoryTrace::Clear()
 
     vectorTracedWithLog.clear();
     arenaTracedWithLog.clear();
-}
-
-void ThreadMemoryTrace::SetInsertGlobalFlag()
-{
-    insertGlobalFlag = true;
-}
-
-bool ThreadMemoryTrace::GetInsertGlobalFlag()
-{
-    return insertGlobalFlag;
 }
 }
