@@ -13,11 +13,12 @@ using namespace omniruntime::vec;
 void testMemoryTraceWithinMultipleThreads(int32_t size)
 {
     auto threadMemoryTrace = mem::ThreadMemoryTrace::GetThreadMemoryTrace();
-    auto vector = std::make_unique<Vector<int32_t >> (size);
+    auto vector = std::make_unique<Vector<int32_t>>(size);
     EXPECT_EQ(threadMemoryTrace->GetVectorTraced().size(), 1);
     EXPECT_EQ(threadMemoryTrace->GetArenaTraced().size(), 2);
 }
 
+#ifdef TRACE
 // test: thread memory trace under multiple threads
 TEST(MemoryTrace, testMemoryTraceWithinMultipleThreads)
 {
@@ -41,4 +42,5 @@ TEST(MemoryTrace, testMemoryTraceWithinMultipleThreads)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
+#endif
 }
