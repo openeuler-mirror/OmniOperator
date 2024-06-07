@@ -901,9 +901,8 @@ extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, boo
     int32_t *outLen)
 {
     Date32 date(value);
-    *outLen = static_cast<int32_t>(11);
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    date.ToString(ret, 11);
+    auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DAY_ONLY_LENGTH);
+    *outLen = static_cast<int32_t>(date.ToString(ret, MAX_DAY_ONLY_LENGTH));
     return ret;
 }
 
@@ -913,9 +912,8 @@ extern "C" DLLEXPORT const char *CastDateToString(int64_t contextPtr, int32_t va
         return nullptr;
     }
     Date32 date(value);
-    *outLen = static_cast<int32_t>(11);
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    date.ToString(ret, 11);
+    auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DAY_ONLY_LENGTH);
+    *outLen = static_cast<int32_t>(date.ToString(ret, MAX_DAY_ONLY_LENGTH));
     return ret;
 }
 
