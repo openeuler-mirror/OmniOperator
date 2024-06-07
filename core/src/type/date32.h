@@ -29,6 +29,7 @@ constexpr const int32_t MIN_YEAR{-292275055};
 constexpr const int32_t MAX_YEAR{292278994};
 constexpr const int32_t YEAR_INTERVAL{400};
 constexpr const int32_t DAYS_PER_YEAR_INTERVAL{146097};
+constexpr const int32_t MAX_DAY_ONLY_LENGTH{17};
 
 constexpr int32_t CUMULATIVE_YEAR_DAYS[] = {
     0, 365, 730, 1096, 1461, 1826, 2191, 2557, 2922, 3287, 3652, 4018, 4383, 4748, 5113, 5479, 5844, 6209, 6574, 6940,
@@ -117,7 +118,7 @@ public:
     // The result might overflow, so use int64_t to store the intermediate result.
     static Status StringToDate32(const char *s, int32_t strLen, int64_t &result);
 
-    void ToString(char *res, int32_t len) const;
+    size_t ToString(char *res, int32_t len) const;
 
     int32_t Value() const
     {

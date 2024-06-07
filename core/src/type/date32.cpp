@@ -270,11 +270,11 @@ Status Date32::StringToDate32(const char *buf, int32_t len, int64_t &result)
     return Status::IS_NOT_A_NUMBER;
 }
 
-void Date32::ToString(char *res, int32_t len) const
+size_t Date32::ToString(char *res, int32_t len) const
 {
     std::time_t timeStamp = value * SECOND_OF_DAY;
     std::tm *timeInfo = std::localtime(&timeStamp);
-    std::strftime(res, len, "%04Y-%m-%d", timeInfo);
+    return std::strftime(res, len, "%04Y-%m-%d", timeInfo);
 }
 
 bool Date32::ValidDate(int64_t daysSinceEpoch)
