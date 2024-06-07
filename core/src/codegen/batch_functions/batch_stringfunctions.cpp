@@ -7,6 +7,7 @@
 #include <regex>
 #include "type/data_operations.h"
 #include "type/date32.h"
+#include "codegen/functions/md5.h"
 
 #ifdef _WIN32
 #else
@@ -1153,6 +1154,23 @@ extern "C" DLLEXPORT void BatchEndsWithStr(char **srcStrs, int32_t *srcLens, cha
             continue;
         }
         output[i] = memcmp(srcStrs[i] + srcLen - matchLen, matchStrs[i], matchLen) == 0;
+    }
+}
+
+extern "C" DLLEXPORT void BatchMd5Str(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    uint8_t **output, int32_t *outLen, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; i++) {
+        if (isAnyNull[i]) {
+            outLen[i] = 0;
+            output[i] = nullptr;
+            continue;
+        }
+        Md5Function md5(reinterpret_cast<const char *>(str[i]), strLen[i]);
+        outLen[i] = 32;
+        char *mdString = ArenaAllocatorMalloc(contextPtr, 32);
+        md5.FinishHex(mdString);
+        output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(mdString));
     }
 }
 }

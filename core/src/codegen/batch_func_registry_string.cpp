@@ -30,6 +30,7 @@ const std::string CAST_FN_STR_RETNULL = "batch_CAST_null";
 const std::string INSTR_FN_STR = "batch_instr";
 const std::string STARTS_WITH_FN_STR = "batch_StartsWith";
 const std::string ENDS_WITH_FN_STR = "batch_EndsWith";
+const std::string MD5_STR = "batch_Md5";
 }
 
 std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
@@ -134,7 +135,9 @@ std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchStartsWithStr), STARTS_WITH_FN_STR, {}, { OMNI_VARCHAR, OMNI_VARCHAR },
             OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchEndsWithStr), ENDS_WITH_FN_STR, {}, { OMNI_VARCHAR, OMNI_VARCHAR },
-            OMNI_BOOLEAN, INPUT_DATA)};
+            OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchMd5Str), MD5_STR, {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
+            INPUT_DATA, true)};
 
     return batchStringFnRegistry;
 }

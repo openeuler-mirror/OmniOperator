@@ -408,6 +408,9 @@ extern "C" DLLEXPORT void BatchStartsWithStr(char **srcStrs, int32_t *srcLens, c
 
 extern "C" DLLEXPORT void BatchEndsWithStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
     bool *isAnyNull, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchMd5Str(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
+    uint8_t **output, int32_t *outLen, int32_t rowCnt);
 }
 
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

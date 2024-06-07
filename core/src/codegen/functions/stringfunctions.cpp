@@ -901,15 +901,8 @@ extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, boo
     int32_t *outLen)
 {
     Date32 date(value);
-    char buf[MAX_DAY_ONLY_LENGTH];
-    *outLen = static_cast<int32_t>(date.ToString(buf, MAX_DAY_ONLY_LENGTH));
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, buf, *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
+    auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DAY_ONLY_LENGTH);
+    *outLen = static_cast<int32_t>(date.ToString(ret, MAX_DAY_ONLY_LENGTH));
     return ret;
 }
 
@@ -919,15 +912,8 @@ extern "C" DLLEXPORT const char *CastDateToString(int64_t contextPtr, int32_t va
         return nullptr;
     }
     Date32 date(value);
-    char buf[MAX_DAY_ONLY_LENGTH];
-    *outLen = static_cast<int32_t>(date.ToString(buf, MAX_DAY_ONLY_LENGTH));
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, buf, *outLen);
-    if (res != EOK) {
-        SetError(contextPtr, "cast failed");
-        *outLen = 0;
-        return nullptr;
-    }
+    auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DAY_ONLY_LENGTH);
+    *outLen = static_cast<int32_t>(date.ToString(ret, MAX_DAY_ONLY_LENGTH));
     return ret;
 }
 
