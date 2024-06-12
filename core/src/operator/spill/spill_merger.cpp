@@ -31,17 +31,20 @@ ErrorCode SpillReader::ReadVecBatch(std::unique_ptr<vec::VectorBatch> &vectorBat
     if (file == nullptr) {
         file = fopen(filePath.c_str(), "r");
         if (file == nullptr) {
+            auto errorNum = errno;
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Open file %s when read failed since %s.", filePath.c_str(), errorBuf);
             isEnd = true;
-            LogError("Open file %s when read failed since %s.", filePath.c_str(), strerror(errno));
             return ErrorCode::READ_FAILED;
         }
     }
 
     int32_t rowCount = 0;
-    if (fread(&rowCount, sizeof(int32_t), NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
+    if (Read(&rowCount, sizeof(int32_t)) != ErrorCode::SUCCESS) {
         isEnd = true;
         fclose(file);
-        LogError("Read row count from %s failed since %s.", filePath.c_str(), strerror(errno));
+        LogError("Read row count from %s failed.", filePath.c_str());
         return ErrorCode::READ_FAILED;
     }
 
@@ -117,16 +120,16 @@ template <typename T> ErrorCode SpillReader::ReadVector(BaseVector *vector, int3
 
         // read nulls
         bool *nulls = unsafe::UnsafeBaseVector::GetNulls(resultVector);
-        if (fread(nulls, rowCount, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
-            LogError("Read value nulls from %s failed since %s.", filePath.c_str(), strerror(errno));
+        if (Read(nulls, rowCount) != ErrorCode::SUCCESS) {
+            LogError("Read value nulls from %s failed.", filePath.c_str());
             return ErrorCode::READ_FAILED;
         }
 
         // read offsets
         auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
         auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(resultVector));
-        if (fread(offsets, offsetSize, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
-            LogError("Read value offsets from %s failed since %s.", filePath.c_str(), strerror(errno));
+        if (Read(offsets, offsetSize) != ErrorCode::SUCCESS) {
+            LogError("Read value offsets from %s failed.", filePath.c_str());
             return ErrorCode::READ_FAILED;
         }
 
@@ -139,8 +142,8 @@ template <typename T> ErrorCode SpillReader::ReadVector(BaseVector *vector, int3
             } else {
                 valuesBuffer = unsafe::UnsafeStringVector::ExpandStringBuffer(resultVector, length);
             }
-            if (fread(valuesBuffer, length, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
-                LogError("Read values from %s failed since %s.", filePath.c_str(), strerror(errno));
+            if (Read(valuesBuffer, length) != ErrorCode::SUCCESS) {
+                LogError("Read values from %s failed.", filePath.c_str());
                 return ErrorCode::READ_FAILED;
             }
         }
@@ -149,18 +152,30 @@ template <typename T> ErrorCode SpillReader::ReadVector(BaseVector *vector, int3
 
         // read valueNulls
         bool *nulls = unsafe::UnsafeBaseVector::GetNulls(resultVector);
-        if (fread(nulls, rowCount, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
-            LogError("Read value nulls from %s failed since %s.", filePath.c_str(), strerror(errno));
+        if (Read(nulls, rowCount) != ErrorCode::SUCCESS) {
+            LogError("Read value nulls from %s failed.", filePath.c_str());
             return ErrorCode::READ_FAILED;
         }
 
         // read values
         T *values = unsafe::UnsafeVector::GetRawValues(resultVector);
         auto length = static_cast<ssize_t>(rowCount * sizeof(T));
-        if (fread(values, length, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
-            LogError("Read values from %s failed since %s.", filePath.c_str(), strerror(errno));
+        if (Read(values, length) != ErrorCode::SUCCESS) {
+            LogError("Read values from %s failed.", filePath.c_str());
             return ErrorCode::READ_FAILED;
         }
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode SpillReader::Read(void *buf, size_t bufSize)
+{
+    if (fread(buf, bufSize, NUMBER_OF_ELEMENTS, file) < NUMBER_OF_ELEMENTS) {
+        auto errorNum = errno;
+        char errorBuf[ERROR_BUFFER_SIZE];
+        GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+        LogError("Read from %s failed since %s.", filePath.c_str(), errorBuf);
+        return ErrorCode::READ_FAILED;
     }
     return ErrorCode::SUCCESS;
 }

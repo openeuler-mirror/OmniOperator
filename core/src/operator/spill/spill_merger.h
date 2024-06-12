@@ -14,6 +14,15 @@
 
 namespace omniruntime {
 namespace op {
+static constexpr int32_t ERROR_BUFFER_SIZE = 128;
+
+static void GetErrorMsg(int32_t errorCode, char *buffer, int32_t bufferLen)
+{
+    if (strerror_r(errorCode, buffer, bufferLen) == nullptr) {
+        throw exception::OmniException("SPILL FAILED", "strerror failed.");
+    }
+}
+
 class SortOrder {
 public:
     SortOrder() = default;
@@ -61,6 +70,8 @@ public:
 
 private:
     template <typename T> ErrorCode ReadVector(vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode Read(void *buf, size_t bufSize);
 
     DataTypes dataTypes;
     std::string filePath;

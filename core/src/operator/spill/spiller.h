@@ -36,7 +36,7 @@ public:
         return file;
     }
 
-    void Close();
+    ErrorCode Close();
 
 private:
     ErrorCode CreateTempFile();
@@ -49,6 +49,8 @@ private:
     ErrorCode WriteVecBatchToFile(vec::VectorBatch *vectorBatch);
 
     template <typename T> ErrorCode WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount);
+
+    ErrorCode Write(void *buf, size_t length);
 
     type::DataTypes dataTypes;
     std::string dirPath;
