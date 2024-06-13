@@ -2,14 +2,161 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
  */
 
-#include "date32.h"
 #include <limits>
-
+#include <optional>
+#include <memory>
+#include "huawei_secure_c/include/securec.h"
+#include "util/compiler_util.h"
+#include "date32.h"
 
 namespace omniruntime::type {
 static inline int32_t GetNextDateForDayOfWeek(int32_t startDay, int32_t dayOfWeek)
 {
     return startDay + 1 + ((dayOfWeek - 1 - startDay) % 7 + 7) % 7;
+}
+
+ALWAYS_INLINE int CountDigits(__uint128_t n)
+{
+    int count = 1;
+    for (;;) {
+        if (n < 10) {
+            return count;
+        }
+        if (n < 100) {
+            return count + 1;
+        }
+        if (n < 1000) {
+            return count + 2;
+        }
+        if (n < 10000) {
+            return count + 3;
+        }
+        n /= 10000u;
+        count += 4;
+    }
+}
+
+ALWAYS_INLINE char *IntToChars(char *first, char *last, int value)
+{
+    const int base = 10;
+    char *current = last;
+    bool isNegative = value < 0;
+
+    // Handle the negative value by converting it to positive
+    unsigned int absValue = isNegative ? -value : value;
+
+    do {
+        *--current = static_cast<char>(absValue % base) + '0';
+        absValue /= base;
+    } while (absValue != 0);
+
+    if (isNegative) {
+        *--current = '-';
+    }
+
+    // Copy the result to the beginning of the buffer
+    char *ptr = first;
+    while (current != last) {
+        *ptr++ = *current++;
+    }
+    return ptr;
+}
+
+inline int64_t LeapThroughEndOf(int64_t y)
+{
+    // Add a large offset to make the calculation for negative years correct.
+    y += LEAP_YEAR_OFFSET;
+    return y / 4 - y / 100 + y / 400;
+}
+
+bool Timestamp::EpochToUtc(int64_t epoch, std::tm &tm)
+{
+    static constexpr int secondsPerHour = 3600;
+    static constexpr int secondsPerDay = 24 * secondsPerHour;
+    static constexpr int daysPerYear = 365;
+    int64_t days = epoch / secondsPerDay;
+    int64_t rem = epoch % secondsPerDay;
+    while (rem < 0) {
+        rem += secondsPerDay;
+        --days;
+    }
+    tm.tm_hour = static_cast<int>(rem / secondsPerHour);
+    rem = rem % secondsPerHour;
+    tm.tm_min = static_cast<int>(rem / 60);
+    tm.tm_sec = static_cast<int>(rem % 60);
+    tm.tm_wday = static_cast<int>((4 + days) % 7);
+    if (tm.tm_wday < 0) {
+        tm.tm_wday += 7;
+    }
+    int64_t y = 1970;
+    if (y + days / daysPerYear <= -LEAP_YEAR_OFFSET + 10) {
+        return false;
+    }
+    bool leapYear;
+    while (days < 0 || days >= daysPerYear + (leapYear = Date32::IsLeapYear(static_cast<int>(y)))) {
+        auto newY = y + days / daysPerYear - (days < 0);
+        days -= (newY - y) * daysPerYear + LeapThroughEndOf(newY - 1) - LeapThroughEndOf(y - 1);
+        y = newY;
+    }
+    y -= TM_YEAR_BASE;
+    if (y > std::numeric_limits<decltype(tm.tm_year)>::max() || y < std::numeric_limits<decltype(tm.tm_year)>::min()) {
+        return false;
+    }
+    tm.tm_year = static_cast<int>(y);
+    tm.tm_yday = static_cast<int>(days);
+    auto *ip = MONTH_LENGTHS[leapYear];
+    for (tm.tm_mon = 0; days >= ip[tm.tm_mon]; ++tm.tm_mon) {
+        days = days - ip[tm.tm_mon];
+    }
+    tm.tm_mday = static_cast<int>(days + 1);
+    tm.tm_isdst = 0;
+    return true;
+}
+
+int64_t Timestamp::TmToStringView(const std::tm &tmValue, char *const startPosition)
+{
+    const auto appendDigits = [](const int value,
+        const std::optional<uint32_t> minWidth,
+        char *const position) {
+        const auto numDigits = CountDigits(value);
+        uint32_t offset = 0;
+        // Append leading zeros when there is the requirement for minumum width.
+        if (minWidth.has_value() && numDigits < minWidth.value()) {
+            const auto leadingZeros = minWidth.value() - numDigits;
+            memset_s(position, leadingZeros, '0', leadingZeros);
+            offset += leadingZeros;
+        }
+
+        auto const endPosition = IntToChars(position + offset, position + offset + numDigits, value);
+        offset += numDigits;
+        return offset;
+    };
+
+    char *writePosition = startPosition;
+    int year = TM_YEAR_BASE + tmValue.tm_year;
+    const bool leadingPositiveSign = year > 9999;
+    const bool negative = year < 0;
+
+    // Sign.
+    if (negative) {
+        *writePosition++ = '-';
+        year = -year;
+    } else if (leadingPositiveSign) {
+        *writePosition++ = '+';
+    }
+
+    // Year.
+    writePosition += appendDigits(year, std::optional<uint32_t>(4), writePosition);
+
+    // Month.
+    *writePosition++ = '-';
+    writePosition += appendDigits(1 + tmValue.tm_mon, 2, writePosition);
+
+    // Day.
+    *writePosition++ = '-';
+    writePosition += appendDigits(tmValue.tm_mday, 2, writePosition);
+    
+    return (writePosition - startPosition);
 }
 
 Date32 &Date32::operator = (const Date32 &right)
@@ -270,11 +417,14 @@ Status Date32::StringToDate32(const char *buf, int32_t len, int64_t &result)
     return Status::IS_NOT_A_NUMBER;
 }
 
+// Do not use the standard library function std::localtime,
+// which is not thread-safe.
 size_t Date32::ToString(char *res, int32_t len) const
 {
-    std::time_t timeStamp = value * SECOND_OF_DAY;
-    std::tm *timeInfo = std::localtime(&timeStamp);
-    return std::strftime(res, len, "%04Y-%m-%d", timeInfo);
+    int64_t daySeconds = value * static_cast<int64_t>(86400);
+    std::tm tmValue{};
+    Timestamp::EpochToUtc(daySeconds, tmValue);
+    return Timestamp::TmToStringView(tmValue, res);
 }
 
 bool Date32::ValidDate(int64_t daysSinceEpoch)

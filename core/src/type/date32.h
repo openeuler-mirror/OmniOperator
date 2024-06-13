@@ -30,6 +30,13 @@ constexpr const int32_t MAX_YEAR{292278994};
 constexpr const int32_t YEAR_INTERVAL{400};
 constexpr const int32_t DAYS_PER_YEAR_INTERVAL{146097};
 constexpr const int32_t MAX_DAY_ONLY_LENGTH{17};
+constexpr int64_t LEAP_YEAR_OFFSET = 4000000000LL;
+constexpr int TM_YEAR_BASE = 1900;
+
+constexpr int MONTH_LENGTHS[][12] = {
+    {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+    {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+};
 
 constexpr int32_t CUMULATIVE_YEAR_DAYS[] = {
     0, 365, 730, 1096, 1461, 1826, 2191, 2557, 2922, 3287, 3652, 4018, 4383, 4748, 5113, 5479, 5844, 6209, 6574, 6940,
@@ -78,6 +85,13 @@ enum class DateTruncMode {
     TRUNC_TO_MONTH = 7,
     TRUNC_TO_QUARTER = 8,
     TRUNC_TO_YEAR = 9,
+};
+
+struct Timestamp {
+public:
+    static bool EpochToUtc(int64_t epoch, std::tm &tm);
+
+    static int64_t TmToStringView(const std::tm &tmValue, char *const startPosition);
 };
 
 class Date32 : public BasicDate {
