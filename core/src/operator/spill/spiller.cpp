@@ -53,8 +53,7 @@ ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
         }
         totalRowOffset += rowCount;
     }
-    writer->Close();
-    return ErrorCode::SUCCESS;
+    return writer->Close();
 }
 
 ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRadixSort)
@@ -95,8 +94,7 @@ ErrorCode Spiller::Spill(PagesIndex *pagesIndex, bool canInplaceSort, bool canRa
         totalRowOffset += rowCount;
     }
 
-    writer->Close();
-    return ErrorCode::SUCCESS;
+    return writer->Close();
 }
 
 uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
@@ -164,19 +162,28 @@ ErrorCode SpillWriter::CreateTempFile()
     auto dirPathChars = dirPath.c_str();
     char filePathChars[fileNameLen];
     if (snprintf_s(filePathChars, fileNameLen, fileNameLen, "%s%s", dirPathChars, SPILL_TEMPLATE_CHARS) < 0) {
-        LogError("Snprintf for %s and %s failed since %s.", dirPathChars, SPILL_TEMPLATE_CHARS, strerror(errno));
+        auto errorNum = errno;
+        char errorBuf[ERROR_BUFFER_SIZE];
+        GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+        LogError("Snprintf for %s and %s failed since %s.", dirPathChars, SPILL_TEMPLATE_CHARS, errorBuf);
         return ErrorCode::WRITE_FAILED;
     }
 
     // it will open the file and the file permission is 600
     int32_t tempFd = mkstemp(const_cast<char *>(filePathChars));
     if (tempFd == -1) {
-        LogError("Mkstemp in %s for %s failed since %s.", dirPathChars, filePathChars, strerror(errno));
+        auto errorNum = errno;
+        char errorBuf[ERROR_BUFFER_SIZE];
+        GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+        LogError("Mkstemp in %s for %s failed since %s.", dirPathChars, filePathChars, errorBuf);
         return ErrorCode::MKSTEMP_FAILED;
     }
     // set the file permission to 600
     if (fchmod(tempFd, S_IRUSR | S_IWUSR) == -1) {
-        LogError("Fchmod %s failed since %s.", filePathChars, strerror(errno));
+        auto errorNum = errno;
+        char errorBuf[ERROR_BUFFER_SIZE];
+        GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+        LogError("Fchmod %s failed since %s.", filePathChars, errorBuf);
         return ErrorCode::WRITE_FAILED;
     }
     filePath = filePathChars;
@@ -196,8 +203,8 @@ ErrorCode SpillWriter::WriteVecBatch(vec::VectorBatch *vectorBatch, uint64_t vec
 
     if (writeBufferSize != 0) {
         if (writeBufferOffset + vectorBatchSize > writeBufferSize) {
-            if (write(fd, writeBuffer, writeBufferOffset) < static_cast<ssize_t>(writeBufferOffset)) {
-                LogError("Write buffer to file %s failed since %s.", filePath.c_str(), strerror(errno));
+            if (Write(writeBuffer, writeBufferOffset) != ErrorCode::SUCCESS) {
+                LogError("Write buffer to file %s failed.", filePath.c_str());
                 return ErrorCode::WRITE_FAILED;
             }
             fileLength += writeBufferOffset;
@@ -282,7 +289,10 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
     bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
     errno_t ret = memcpy_s(writeBuffer + writeOffset, rowCount, nulls, rowCount);
     if (ret != EOK) {
-        LogError("Write value nulls to buffer failed since %s.", strerror(errno));
+        auto errorNum = errno;
+        char errorBuf[ERROR_BUFFER_SIZE];
+        GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+        LogError("Write value nulls to buffer failed since %s.", errorBuf);
         return ErrorCode::WRITE_FAILED;
     }
     writeOffset += rowCount;
@@ -293,7 +303,10 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
         auto offsetLength = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
         ret = memcpy_s(writeBuffer + writeOffset, offsetLength, valueOffsets, offsetLength);
         if (ret != EOK) {
-            LogError("Write value offsets to buffer failed since %s.", strerror(errno));
+            auto errorNum = errno;
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Write value offsets to buffer failed since %s.", errorBuf);
             return op::ErrorCode::WRITE_FAILED;
         }
         writeOffset += offsetLength;
@@ -303,7 +316,10 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
         auto valueLength = static_cast<ssize_t>(valueOffsets[rowCount] - valueOffsets[0]);
         ret = valueLength == 0 ? EOK : memcpy_s(writeBuffer + writeOffset, valueLength, values, valueLength);
         if (ret != EOK) {
-            LogError("Write values to buffer failed since %s.", strerror(errno));
+            auto errorNum = errno;
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Write values to buffer failed since %s.", errorBuf);
             return op::ErrorCode::WRITE_FAILED;
         }
         writeOffset += valueLength;
@@ -313,7 +329,10 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
         T *values = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
         ret = memcpy_s(writeBuffer + writeOffset, length, values, length);
         if (ret != EOK) {
-            LogError("Write values to buffer failed since %s.", strerror(errno));
+            auto errorNum = errno;
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Write values to buffer failed since %s.", errorBuf);
             return ErrorCode::WRITE_FAILED;
         }
         writeOffset += length;
@@ -324,8 +343,8 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
 ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
 {
     int32_t rowCount = vectorBatch->GetRowCount();
-    if (write(fd, &rowCount, sizeof(rowCount)) < static_cast<ssize_t>(sizeof(rowCount))) {
-        LogError("Write row count to %s failed since %s.", filePath.c_str(), strerror(errno));
+    if (Write(&rowCount, sizeof(rowCount)) != ErrorCode::SUCCESS) {
+        LogError("Write row count to %s failed.", filePath.c_str());
         return ErrorCode::WRITE_FAILED;
     }
 
@@ -385,8 +404,8 @@ ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
 template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount)
 {
     bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
-    if (write(fd, nulls, rowCount) < rowCount) {
-        LogError("Write value nulls to %s failed since %s.", filePath.c_str(), strerror(errno));
+    if (Write(nulls, rowCount) != ErrorCode::SUCCESS) {
+        LogError("Write value nulls to %s failed.", filePath.c_str());
         return ErrorCode::WRITE_FAILED;
     }
 
@@ -394,8 +413,8 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
         // write offsets
         auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
         auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
-        if (write(fd, offsets, offsetSize) < offsetSize) {
-            LogError("Write value offsets to %s failed since %s.", filePath.c_str(), strerror(errno));
+        if (Write(offsets, offsetSize) != ErrorCode::SUCCESS) {
+            LogError("Write value offsets to %s failed.", filePath.c_str());
             return op::ErrorCode::WRITE_FAILED;
         }
 
@@ -403,8 +422,8 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
         if (valueLength > 0) {
             // write values
             char *values = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector));
-            if (write(fd, values, valueLength) < valueLength) {
-                LogError("Write values to %s failed since %s.", filePath.c_str(), strerror(errno));
+            if (Write(values, valueLength) != ErrorCode::SUCCESS) {
+                LogError("Write values to %s failed.", filePath.c_str());
                 return op::ErrorCode::WRITE_FAILED;
             }
         }
@@ -412,24 +431,47 @@ template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseV
     } else {
         auto length = static_cast<ssize_t>(rowCount * sizeof(T));
         T *values = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
-        if (write(fd, values, length) < length) {
-            LogError("Write values to %s failed since %s.", filePath.c_str(), strerror(errno));
+        if (Write(values, length) != ErrorCode::SUCCESS) {
+            LogError("Write values to %s failed.", filePath.c_str());
             return ErrorCode::WRITE_FAILED;
         }
         return ErrorCode::SUCCESS;
     }
 }
 
-void SpillWriter::Close()
+ErrorCode SpillWriter::Write(void *buf, size_t length)
 {
-    if (writeBufferOffset != 0) {
-        if (write(fd, writeBuffer, writeBufferOffset) < static_cast<ssize_t>(writeBufferOffset)) {
-            LogError("Write buffer to %s failed since %s.", filePath.c_str(), strerror(errno));
+    size_t bytesWritten = 0;
+    while (bytesWritten < length) {
+        auto expectBytes = length - bytesWritten;
+        ssize_t actualBytes = write(fd, static_cast<char *>(buf) + bytesWritten, expectBytes);
+        if (actualBytes <= 0) {
+            auto errorNum = errno;
+            char errorBuf[ERROR_BUFFER_SIZE];
+            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
+            LogError("Write to %s failed since %s, expect write bytes is %lld but actual write bytes is %lld.",
+                filePath.c_str(), errorBuf, expectBytes, actualBytes);
+            return ErrorCode::WRITE_FAILED;
         }
-        fileLength += writeBufferOffset;
+        bytesWritten += actualBytes;
+    }
+    return ErrorCode::SUCCESS;
+}
+
+ErrorCode SpillWriter::Close()
+{
+    ErrorCode result = ErrorCode::SUCCESS;
+    if (writeBufferOffset != 0) {
+        if (Write(writeBuffer, writeBufferOffset) != ErrorCode::SUCCESS) {
+            LogError("Write buffer to %s failed.", filePath.c_str());
+            result = ErrorCode::WRITE_FAILED;
+        } else {
+            fileLength += writeBufferOffset;
+        }
         writeBufferOffset = 0;
     }
     close(fd);
+    return result;
 }
 }
 }
