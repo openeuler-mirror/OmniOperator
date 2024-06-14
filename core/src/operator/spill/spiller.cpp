@@ -14,9 +14,12 @@ namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
 using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
-static std::string SPILL_TEMPLATE("/spill-XXXXXX");
+static std::string SPILL_TEMPLATE("spill-XXXXXX");
 static const char *SPILL_TEMPLATE_CHARS = SPILL_TEMPLATE.c_str();
 static int32_t SPILL_TEMPLATE_SIZE = static_cast<int32_t>(SPILL_TEMPLATE.size());
+// When PID and TID is converted into a character string, the maximum length is 10.
+constexpr int PID_LENGTH = 10;
+constexpr int TID_LENGTH = 10;
 
 ErrorCode Spiller::Spill(AggregationSort *aggregationSort)
 {
@@ -158,10 +161,13 @@ template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vecto
 ErrorCode SpillWriter::CreateTempFile()
 {
     // the spill directory will be created when CheckOperatorConfig if it does not exist
-    int32_t fileNameLen = dirPath.size() + SPILL_TEMPLATE_SIZE + 1;
+    int32_t fileNameLen = dirPath.size() + SPILL_TEMPLATE_SIZE + PID_LENGTH + TID_LENGTH + 1;
     auto dirPathChars = dirPath.c_str();
     char filePathChars[fileNameLen];
-    if (snprintf_s(filePathChars, fileNameLen, fileNameLen, "%s%s", dirPathChars, SPILL_TEMPLATE_CHARS) < 0) {
+    auto pid = static_cast<int>(getpid());
+    auto tid = static_cast<uint32_t>(pthread_self());
+    if (snprintf_s(filePathChars, fileNameLen, fileNameLen, "%s/%d-%u-%s", dirPathChars, pid, tid,
+        SPILL_TEMPLATE_CHARS) < 0) {
         auto errorNum = errno;
         char errorBuf[ERROR_BUFFER_SIZE];
         GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
