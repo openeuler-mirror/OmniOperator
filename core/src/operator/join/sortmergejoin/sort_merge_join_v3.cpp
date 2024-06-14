@@ -397,10 +397,10 @@ OmniStatus SortMergeJoinOperatorV3::GetOutput(VectorBatch **outputVecBatch)
 
     if (!skipNullRange) {
         // second probe null range for stream and buffer
-        auto status = ProbeNullRange();
+        status = ProbeNullRange();
         if (status == OMNI_STATUS_FINISHED) {
             if (probeRowCount > 0) {
-                BuildOutput(outputVecBatch);
+                BuildOutput(outputVecBatch, probeRowCount);
             }
             return OMNI_STATUS_FINISHED;
         }
@@ -411,18 +411,30 @@ OmniStatus SortMergeJoinOperatorV3::GetOutput(VectorBatch **outputVecBatch)
         curStreamRangeIdx = 1;
         preStreamRangeIdx = 0;
         curBufferRangeIdx = 1;
-        if (IsFull()) {
-            BuildOutput(outputVecBatch);
-            return status;
-        }
     }
 
-    // third probe non null ranges for stream and buffer
-    auto status = ProbeNonNullRanges(simpleFilter != nullptr);
-    if (probeRowCount > 0) {
-        BuildOutput(outputVecBatch);
+    if (IsFull()) {
+        BuildOutput(outputVecBatch, maxRowCount);
+        if (status != OMNI_STATUS_FINISHED) {
+            return OMNI_STATUS_NORMAL;
+        } else if (probeRowCount <= 0) {
+            return OMNI_STATUS_FINISHED;
+        } else {
+            return OMNI_STATUS_NORMAL;
+        }
     }
-    return status;
+    // third probe non null ranges for stream and buffer
+    if (status == OMNI_STATUS_NORMAL) {
+        status = ProbeNonNullRanges(simpleFilter != nullptr);
+    }
+
+    if (probeRowCount > 0) {
+        BuildOutput(outputVecBatch, std::min(probeRowCount, maxRowCount));
+    }
+    if (probeRowCount == 0 && status == OMNI_STATUS_FINISHED) {
+        return OMNI_STATUS_FINISHED;
+    }
+    return OMNI_STATUS_NORMAL;
 }
 
 void SortMergeJoinOperatorV3::Prepare()
@@ -1169,24 +1181,28 @@ void SortMergeJoinOperatorV3::HandleMatchForLeftAntiJoin(uint64_t *streamAddress
     curBufferRangeIdx++;
 }
 
-void SortMergeJoinOperatorV3::BuildOutput(VectorBatch **outputVecBatch)
+void SortMergeJoinOperatorV3::BuildOutput(VectorBatch **outputVecBatch, int32_t rowCount)
 {
-    auto output = std::make_unique<VectorBatch>(probeRowCount);
+    auto output = std::make_unique<VectorBatch>(rowCount);
 
     if (streamOutputColCount > 0) {
-        ConstructResultColumns(true, output.get());
+        ConstructResultColumns(true, output.get(), rowCount);
     }
     if (bufferOutputColCount > 0) {
-        ConstructResultColumns(false, output.get());
+        ConstructResultColumns(false, output.get(), rowCount);
     }
     *outputVecBatch = output.release();
 
-    streamIndexes.clear();
-    bufferIndexes.clear();
-    probeRowCount = 0;
+    probeRowCount -= rowCount;
+    probeOffset += rowCount;
+    if (probeRowCount == 0) {
+        streamIndexes.clear();
+        bufferIndexes.clear();
+        probeOffset = 0;
+    }
 }
 
-void SortMergeJoinOperatorV3::ConstructResultColumns(bool isStream, VectorBatch *output)
+void SortMergeJoinOperatorV3::ConstructResultColumns(bool isStream, VectorBatch *output, int32_t rowCount)
 {
     BaseVector ***outputColumns;
     uint64_t *outputAddresses;
@@ -1197,7 +1213,7 @@ void SortMergeJoinOperatorV3::ConstructResultColumns(bool isStream, VectorBatch 
     if (isStream) {
         outputColumns = streamOutputColumns;
         outputAddresses = streamPagesIndex->GetValueAddresses();
-        outputIndexes = streamIndexes.data();
+        outputIndexes = streamIndexes.data() + probeOffset;
         outputColCount = streamOutputColCount;
         outputTypeIds = streamOutputColTypeIds;
         if (joinType == OMNI_JOIN_TYPE_RIGHT || joinType == OMNI_JOIN_TYPE_FULL) {
@@ -1206,7 +1222,7 @@ void SortMergeJoinOperatorV3::ConstructResultColumns(bool isStream, VectorBatch 
     } else {
         outputColumns = bufferOutputColumns;
         outputAddresses = bufferPagesIndex->GetValueAddresses();
-        outputIndexes = bufferIndexes.data();
+        outputIndexes = bufferIndexes.data() + probeOffset;
         outputColCount = bufferOutputColCount;
         outputTypeIds = bufferOutputColTypeIds;
         if (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL) {
@@ -1216,7 +1232,7 @@ void SortMergeJoinOperatorV3::ConstructResultColumns(bool isStream, VectorBatch 
     if (outputColumns == nullptr) {
         // the input no data
         for (int32_t colIdx = 0; colIdx < outputColCount; colIdx++) {
-            auto resultColumn = DYNAMIC_TYPE_DISPATCH(ConstructNullColumn, outputTypeIds[colIdx], probeRowCount);
+            auto resultColumn = DYNAMIC_TYPE_DISPATCH(ConstructNullColumn, outputTypeIds[colIdx], rowCount);
             output->Append(resultColumn);
         }
         return;
@@ -1226,14 +1242,14 @@ void SortMergeJoinOperatorV3::ConstructResultColumns(bool isStream, VectorBatch 
         for (int32_t colIdx = 0; colIdx < outputColCount; colIdx++) {
             auto givenColumns = outputColumns[colIdx];
             auto resultColumn = DYNAMIC_TYPE_DISPATCH(ConstructColumnWithNullIndex, outputTypeIds[colIdx], givenColumns,
-                outputAddresses, outputIndexes, probeRowCount);
+                outputAddresses, outputIndexes, rowCount);
             output->Append(resultColumn);
         }
     } else {
         for (int32_t colIdx = 0; colIdx < outputColCount; colIdx++) {
             auto givenColumns = outputColumns[colIdx];
             auto resultColumn = DYNAMIC_TYPE_DISPATCH(ConstructColumnWithoutNullIndex, outputTypeIds[colIdx],
-                givenColumns, outputAddresses, outputIndexes, probeRowCount);
+                givenColumns, outputAddresses, outputIndexes, rowCount);
             output->Append(resultColumn);
         }
     }
