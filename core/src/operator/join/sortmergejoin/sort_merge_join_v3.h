@@ -109,8 +109,8 @@ private:
     template <bool hasJoinFilter> void HandleMatchForFullJoin(uint64_t *streamAddresses, uint64_t *bufferAddresses);
     template <bool hasJoinFilter> void HandleMatchForLeftSemiJoin(uint64_t *streamAddresses, uint64_t *bufferAddresses);
     template <bool hasJoinFilter> void HandleMatchForLeftAntiJoin(uint64_t *streamAddresses, uint64_t *bufferAddresses);
-    void BuildOutput(vec::VectorBatch **outputVecBatch);
-    void ConstructResultColumns(bool isStream, VectorBatch *output);
+    void BuildOutput(vec::VectorBatch **outputVecBatch, int32_t rowCount);
+    void ConstructResultColumns(bool isStream, VectorBatch *output, int32_t rowCount);
 
     int32_t CompareJoinKeys()
     {
@@ -277,6 +277,7 @@ private:
     std::vector<int32_t> bufferIndexes;
     int32_t maxRowCount = 0;
     int32_t probeRowCount = 0;
+    int32_t probeOffset = 0;
 
     // for join filter
     std::string filter;
@@ -296,6 +297,8 @@ private:
 
     bool isFirst = true;
     bool skipNullRange = false;
+
+    OmniStatus status = OMNI_STATUS_NORMAL;
 };
 }
 
