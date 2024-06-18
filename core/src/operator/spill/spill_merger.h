@@ -68,6 +68,11 @@ public:
         return fileLength;
     }
 
+    std::string GetFilePath() const
+    {
+        return filePath;
+    }
+
 private:
     template <typename T> ErrorCode ReadVector(vec::BaseVector *vector, int32_t rowCount);
 
@@ -149,7 +154,11 @@ public:
     void Pop()
     {
         if (++currentRowIdx >= currentRowCount) {
-            GetNextBatch();
+            auto result = GetNextBatch();
+            if (result != ErrorCode::SUCCESS) {
+                std::string errMsg = "Read from spill file " + reader->GetFilePath() + " failed.";
+                throw omniruntime::exception::OmniException("SPILL_READ_FAILED", errMsg);
+            }
         }
     }
 

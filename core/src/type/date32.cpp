@@ -15,9 +15,9 @@ static inline int32_t GetNextDateForDayOfWeek(int32_t startDay, int32_t dayOfWee
     return startDay + 1 + ((dayOfWeek - 1 - startDay) % 7 + 7) % 7;
 }
 
-ALWAYS_INLINE int CountDigits(__uint128_t n)
+ALWAYS_INLINE uint32_t CountDigits(__uint128_t n)
 {
-    int count = 1;
+    uint32_t count = 1;
     for (;;) {
         if (n < 10) {
             return count;
@@ -127,7 +127,7 @@ int64_t Timestamp::TmToStringView(const std::tm &tmValue, char *const startPosit
             offset += leadingZeros;
         }
 
-        auto const endPosition = IntToChars(position + offset, position + offset + numDigits, value);
+        IntToChars(position + offset, position + offset + numDigits, value);
         offset += numDigits;
         return offset;
     };
