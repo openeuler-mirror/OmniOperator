@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -54,17 +53,6 @@ public class OmniHashBuilderWithExprOperatorFactory
      * the key is the build plan node id.
      */
     private static Map<Integer, AtomicInteger> ref = new HashMap<>();
-
-    /**
-     * The hashmap stores the partition id each task.
-     * the key is the build plan node id.
-     */
-    private static Map<Integer, Integer> partitionCache = new HashMap<>();
-
-    /**
-     * The signal is used for multi thread communication
-     */
-    private final Condition signal = gLock.newCondition();
 
     /**
      * Instantiates a new Omni hash builder with expression operator factory.
@@ -105,62 +93,20 @@ public class OmniHashBuilderWithExprOperatorFactory
     }
 
     /**
-     * Attempts to clear the operator and factory objects. If the value of refCount is not 0, the thread waits.
-     *
-     * @param builderNodeId the build plan node id
-     * @throws InterruptedException thread await
-     */
-    public void tryCloseOperatorAndFactory(Integer builderNodeId) throws InterruptedException {
-        gLock.lock();
-        int refCount = OmniHashBuilderWithExprOperatorFactory.dereferenceHashBuilderOperatorAndFactory(builderNodeId);
-        try {
-            while (refCount != 0) {
-                signal.await();
-                refCount = ref.get(builderNodeId).get();
-            }
-            OmniHashBuilderWithExprOperatorFactory.removeHashBuilderOperatorAndFactory(builderNodeId);
-        } finally {
-            gLock.unlock();
-        }
-    }
-
-    /**
-     * Attempts to reduce the recCount of the operator and factory objects.
-     * If the value is 0, wake up the suspended thread.
-     *
-     * @param builderNodeId the build plan node id
-     */
-    public void tryDereferenceOperatorAndFactory(Integer builderNodeId) {
-        gLock.lock();
-        try {
-            int refCount = OmniHashBuilderWithExprOperatorFactory.dereferenceHashBuilderOperatorAndFactory(
-                    builderNodeId);
-            if (refCount == 0) {
-                // wakes up suspends task thread when the ref count is 0.
-                signal.signal();
-            }
-        } finally {
-            gLock.unlock();
-        }
-    }
-
-    /**
      * save a new shared hash builder operator and factory into cache
      *
      * @param builderNodeId the build plan node id
-     * @param partitionId the partition id where the shared object created
      * @param factory the shared hash builder operator factory
      * @param operator the shared hash builder operator
      */
-    public static void saveHashBuilderOperatorAndFactory(Integer builderNodeId, Integer partitionId,
+    public static void saveHashBuilderOperatorAndFactory(Integer builderNodeId,
             OmniHashBuilderWithExprOperatorFactory factory, OmniOperator operator) {
         operatorCache.put(builderNodeId, operator);
         factoryCache.put(builderNodeId, factory);
-        partitionCache.put(builderNodeId, partitionId);
     }
 
     /**
-     * get a shared hash builder factory from cache
+     * try get a shared hash builder factory form cache
      *
      * @param builderNodeId the build plan node id
      * @return the shared hash builder operator factory
@@ -172,33 +118,12 @@ public class OmniHashBuilderWithExprOperatorFactory
     }
 
     /**
-     * get the partition index from cache
-     *
-     * @param builderNodeId the build plan node id
-     * @return the partition index of the current build plan node id
-     */
-    public static Integer getPartitionId(Integer builderNodeId) {
-        return partitionCache.get(builderNodeId);
-    }
-
-    /**
-     * reduce the refCount of the operator and factory objects.
-     *
-     * @param builderNodeId the build plan node id
-     * @return the refCount of the current build plan node id
-     */
-    public static Integer dereferenceHashBuilderOperatorAndFactory(Integer builderNodeId) {
-        return ref.get(builderNodeId).decrementAndGet();
-    }
-
-    /**
-     * close and remove a shared hash builder factory from cache
+     * try close and remove a shared hash builder factory form cache
      *
      * @param builderNodeId the build plan node id
      */
-    public static void removeHashBuilderOperatorAndFactory(Integer builderNodeId) {
-        if (ref.get(builderNodeId).get() == 0) {
-            partitionCache.remove(builderNodeId);
+    public static void dereferenceHashBuilderOperatorAndFactory(Integer builderNodeId) {
+        if (ref.get(builderNodeId).decrementAndGet() == 0) {
             ref.remove(builderNodeId);
             operatorCache.get(builderNodeId).close();
             operatorCache.remove(builderNodeId);

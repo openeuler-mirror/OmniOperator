@@ -217,7 +217,7 @@ TEST(omni_row, fill_buffer_and_deserial_to_vector)
 
     VectorBatch *result = CreateVectorBatch(dataTypes, rowNumber, fakeData1, fakeData2, fakeData3, fakeData4);
     BaseVector *vecs[types.size()];
-    for (int32_t i = 0; i < types.size(); ++i) {
+    for (int32_t i = 0; i < static_cast<int32_t>(types.size()); ++i) {
         vecs[i] = result->Get(i);
     }
 
@@ -317,7 +317,7 @@ TEST(omni_row, fill_bool_buffer_and_deserial_to_vector)
 
     VectorBatch *result = CreateVectorBatch(dataTypes, rowNumber, fakedata1);
     BaseVector *vecs[types.size()];
-    for (int32_t i = 0; i < types.size(); ++i) {
+    for (int32_t i = 0; i < static_cast<int32_t>(types.size()); ++i) {
         vecs[i] = result->Get(i);
     }
 
