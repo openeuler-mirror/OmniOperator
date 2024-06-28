@@ -106,7 +106,7 @@ protected:
     bool isNull = false;
 };
 
-template <typename T> class SerializedValue : public BaseSerialize {
+template <typename T, Encoding encoding = OMNI_FLAT> class SerializedValue : public BaseSerialize {
 public:
     // only 1 Bytes represent following coding :
     // 'isVarchar(1bit 1) + isNull(1bit) + sizeLength(3bit)  + pad (3bit)'
@@ -118,7 +118,15 @@ public:
             SetNull();
         } else {
             isNull = false;
-            value = reinterpret_cast<VectorType *>(baseVector)->GetValue(rowIndex);
+            if constexpr (encoding == OMNI_FLAT) {
+                value = reinterpret_cast<VectorType *>(baseVector)->GetValue(rowIndex);
+            } else if constexpr (encoding == OMNI_DICTIONARY) {
+                value = reinterpret_cast<DicVectorType *>(baseVector)->GetValue(rowIndex);
+            } else {
+                // OMNI_ENCODING_CONTAINER is only used for the agg avg partial in olk. row shuffle is not supported.
+                std::string message = encoding + "encoding type is not supported for omni row";
+                throw omniruntime::exception::OmniException("Encoding Unsupported", message);
+            }
         }
     }
 
@@ -267,6 +275,7 @@ private:
 
     using VectorType = std::conditional_t<std::is_same_v<T, std::string_view>,
         Vector<LargeStringContainer<std::string_view>>, Vector<T>>;
+    using DicVectorType = Vector<DictionaryContainer<T>>;
     T value;
 };
 }
