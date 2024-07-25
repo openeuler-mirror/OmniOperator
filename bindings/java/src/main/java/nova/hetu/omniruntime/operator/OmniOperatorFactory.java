@@ -86,9 +86,7 @@ public abstract class OmniOperatorFactory<T extends OmniOperatorFactoryContext> 
      * release operator factory
      */
     public void close() {
-        if (context.isNeedCache()) {
-            FACTORY_CACHE.invalidate(context);
-        } else {
+        if (!context.isNeedCache()) {
             closeNativeOperatorFactory(nativeOperatorFactory);
         }
     }
