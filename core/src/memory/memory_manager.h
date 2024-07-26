@@ -61,38 +61,18 @@ public:
 
     ~MemoryManager();
 
-    /* *
-     * A unified interface for updating memory usage.
-     * AccountMemory() interface is called when the untrackedMemory exceeds the threshold range [-THRESHOLD, THRESHOLD].
-     * Note that untrackedMemory could be less than -THRESHOLD. That is, the memory is continuously allocated,
-     * and then be continuously freed.
-    *  */
-    void AccountMemory(int64_t size)
-    {
-        int64_t newMemoryAmount = memoryAmount.fetch_add(size, std::memory_order_relaxed) + size;
-        int64_t limit = memoryLimit.load(std::memory_order_relaxed);
-        if (limit == UNLIMIT || newMemoryAmount < limit) {
-            isBlocked.store(false, std::memory_order_relaxed);
-        } else {
-            /* *
-             * A thread cannot throw multiple exceptions in the case of multiple threads.
-             * The If statement is used to avoid the following case: When the thread exceeds the limit,
-             * the destructor of the thread is called and the AccountMemory interface is executed again,
-             * which may cause the OmniException to be thrown again.
-            *  */
-            if (!isBlocked.load(std::memory_order_relaxed)) {
-                isBlocked.store(true, std::memory_order_relaxed);
+    /**
+     * reportedMemory is a positive size, indicate the memory manager need to be added.
+     * curAllocateSize indicate the size of memory to be allocated of one object, which triggers the statistical event.
+     * AddMemory() interface is called when the reportedMemory exceeds the untracked memory threshold like 1MB
+     * */
+    void AddMemory(int64_t reportedMemory, int64_t curAllocateSize = 0);
 
-                auto message =
-                        op::GetErrorMessage(op::ErrorCode::MEM_CAP_EXCEEDED) + std::to_string(limit / 1024 / 1024);
-                throw OmniException(GetErrorCode(op::ErrorCode::MEM_CAP_EXCEEDED), message);
-            }
-        }
-
-        if (auto parentMemoryManager = parent.load(std::memory_order_relaxed)) {
-            parentMemoryManager->AccountMemory(size);
-        }
-    }
+    /**
+     * reclaimedMemory is a negative size.
+     * SubMemory() interface is called when the reclaimedMemory exceeds the threshold '-THRESHOLD'.
+     * */
+    void SubMemory(int64_t reclaimedMemory);
 
     // memoryPeak seems to lack actual application scenario, so memoryPeak is not worth ensuring thread safety.
     void UpdatePeak(int64_t size);

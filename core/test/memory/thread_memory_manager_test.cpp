@@ -46,6 +46,28 @@ TEST(ThreadMemoryManager, testReportMemoryUsageReachThreshold)
     EXPECT_EQ(threadAccount, size);
 }
 
+// test: report memory usage and reach the globalMemoryThreshold, then throw an exception.
+// expect that untracked memory is 0.
+TEST(ThreadMemoryManager, testReportMemoryUsageReachThresholdWithException)
+{
+    auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
+    threadMemoryManager->Clear();
+
+    mem::MemoryManager::SetGlobalMemoryLimit(THRESHOLD);
+    int64_t size1 = THRESHOLD / 2;
+    threadMemoryManager->ReportMemoryUsage(size1);
+    int64_t untrackedMemory = threadMemoryManager->GetUntrackedMemory();
+    EXPECT_EQ(untrackedMemory, size1);
+
+    int64_t size2 = THRESHOLD + 1;
+    EXPECT_ANY_THROW(threadMemoryManager->ReportMemoryUsage(size2));
+    untrackedMemory = threadMemoryManager->GetUntrackedMemory();
+    EXPECT_EQ(untrackedMemory, 0);
+    MemoryManager *globalMemoryManager = MemoryManager::GetGlobalMemoryManager();
+    int64_t memoryAccount = globalMemoryManager->GetMemoryAmount();
+    EXPECT_EQ(memoryAccount, size1);
+}
+
 // test: reclaim memory usage and reach the untrackedMemoryThreshold->
 TEST(ThreadMemoryManager, testReclaimMemoryUsageReachThreshold)
 {

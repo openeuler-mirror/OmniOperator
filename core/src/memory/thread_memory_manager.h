@@ -47,11 +47,13 @@ public:
         untrackedMemory += size;
         allocMemory += size;
         if (currentMemoryManager && untrackedMemory > untrackedMemoryThreshold) {
-            currentMemoryManager->AccountMemory(untrackedMemory);
+            // AddMemory maybe throw an exception, so untrackedMemory needs to be set to 0 in advance.
+            int64_t toReportedMemory = untrackedMemory;
+            untrackedMemory = 0;
+            currentMemoryManager->AddMemory(toReportedMemory, size);
 #ifdef DEBUG
             currentMemoryManager->AddScopeAmount(currentScope, untrackedMemory);
 #endif
-            untrackedMemory = 0;
         }
     }
 
@@ -60,11 +62,12 @@ public:
         untrackedMemory -= size;
         freeMemory += size;
         if (currentMemoryManager && labs(untrackedMemory) > untrackedMemoryThreshold) {
-            currentMemoryManager->AccountMemory(untrackedMemory);
+            int64_t toReclaimedMemory = untrackedMemory;
+            untrackedMemory = 0;
+            currentMemoryManager->SubMemory(toReclaimedMemory);
 #ifdef DEBUG
             currentMemoryManager->SubScopeAmount(currentScope, untrackedMemory);
 #endif
-            untrackedMemory = 0;
         }
     }
 

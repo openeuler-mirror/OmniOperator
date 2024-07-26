@@ -143,6 +143,15 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_getAlloc
  */
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_memoryClearNative(JNIEnv *env,
     jclass jcls);
+
+/*
+ * Class:     Java_nova_hetu_omniruntime_memory_MemoryManager
+ * Method:    memoryReclamationNative
+ * Signature: (V)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_memoryReclamationNative(JNIEnv *env,
+    jclass jcls);
+
 /*
  * Class:     nova_hetu_omniruntime_vector_VecBatch
  * Method:    newVectorBatchNative
