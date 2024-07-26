@@ -223,16 +223,19 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_getAlloc
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_memoryClearNative(JNIEnv *env, jclass jcls)
 {
-    ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
-    if (threadMemoryTrace->HasMemoryLeak()) {
-        threadMemoryTrace->FreeLeakedMemory();
-    }
-
     auto threadMemoryManager = omniruntime::mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
 }
 
-jlong Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *env, jclass jcls,
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_memoryReclamationNative(JNIEnv *env, jclass jcls)
+{
+    ThreadMemoryTrace *threadMemoryTrace = ThreadMemoryTrace::GetThreadMemoryTrace();
+    if (threadMemoryTrace->HasMemoryLeak()) {
+        threadMemoryTrace->FreeLeakedMemory();
+    }
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *env, jclass jcls,
     jlongArray jVectorAddresses, jint rRowCount)
 {
     jlong *vecAddresses = env->GetLongArrayElements(jVectorAddresses, JNI_FALSE);
@@ -245,7 +248,8 @@ jlong Java_nova_hetu_omniruntime_vector_VecBatch_newVectorBatchNative(JNIEnv *en
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vecBatch));
 }
 
-void Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative(JNIEnv *env, jclass jcls, jlong jVecBatchAddress)
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_VecBatch_freeVectorBatchNative(JNIEnv *env, jclass jcls,
+    jlong jVecBatchAddress)
 {
     VectorBatch *vecBatch = reinterpret_cast<VectorBatch *>(jVecBatchAddress);
     vecBatch->ClearVectors();

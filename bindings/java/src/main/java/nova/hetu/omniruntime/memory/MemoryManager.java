@@ -54,10 +54,17 @@ public class MemoryManager implements AutoCloseable {
     }
 
     /**
-     * clear memory of current task
+     * clear memory of current task and current executor
      * */
     public static void clearMemory() {
         memoryClearNative();
+    }
+
+    /**
+     * Reclaim memory of current task if memory leak exists
+     * */
+    public static void reclaimMemory() {
+        memoryReclamationNative();
     }
 
     @Override
@@ -68,4 +75,6 @@ public class MemoryManager implements AutoCloseable {
     private static native long getAllocatedMemoryNative();
 
     private static native long memoryClearNative();
+
+    private static native long memoryReclamationNative();
 }

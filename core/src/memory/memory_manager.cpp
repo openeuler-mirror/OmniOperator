@@ -29,6 +29,47 @@ MemoryManager::MemoryManager(MemoryManager *parentMemoryManager)
 MemoryManager::~MemoryManager()
 {}
 
+void MemoryManager::AddMemory(int64_t reportedMemory, int64_t curAllocateSize)
+{
+    int64_t newMemoryAmount = memoryAmount.fetch_add(reportedMemory, std::memory_order_relaxed) + reportedMemory;
+    int64_t limit = memoryLimit.load(std::memory_order_relaxed);
+    if (limit == UNLIMIT || newMemoryAmount < limit) {
+        isBlocked.store(false, std::memory_order_relaxed);
+    } else {
+        /* *
+         * A thread cannot throw multiple exceptions in the case of multiple threads.
+         * The If statement is used to avoid the following case: When the thread exceeds the limit,
+         * the other thread is called and the AddMemory interface is executed again,
+         * which may cause the OmniException to be thrown again.
+         * Note: Only global memory manager can throw the MEM_CAP_EXCEEDED exception.
+        *  */
+        if (!isBlocked.load(std::memory_order_relaxed)) {
+            isBlocked.store(true, std::memory_order_relaxed);
+            memoryAmount.fetch_sub(curAllocateSize, std::memory_order_relaxed);
+
+            if (parent.load(std::memory_order_relaxed) == nullptr) {
+                auto message =
+                        op::GetErrorMessage(op::ErrorCode::MEM_CAP_EXCEEDED) + std::to_string(limit / 1024 / 1024)
+                        + "; current Memory Usage Total: " + std::to_string(newMemoryAmount / 1024 / 1024)
+                        + "MB; current Memory Allocate Size: " + std::to_string(curAllocateSize) + "B";
+                throw OmniException(GetErrorCode(op::ErrorCode::MEM_CAP_EXCEEDED), message);
+            }
+        }
+    }
+
+    if (auto parentMemoryManager = parent.load(std::memory_order_relaxed)) {
+        parentMemoryManager->AddMemory(reportedMemory, curAllocateSize);
+    }
+}
+
+void MemoryManager::SubMemory(int64_t reclaimedMemory)
+{
+    memoryAmount.fetch_add(reclaimedMemory, std::memory_order_relaxed);
+    if (auto parentMemoryManager = parent.load(std::memory_order_relaxed)) {
+        parentMemoryManager->SubMemory(reclaimedMemory);
+    }
+}
+
 void MemoryManager::UpdatePeak(int64_t size)
 {
     int64_t peak = memoryPeak.load(std::memory_order_relaxed);

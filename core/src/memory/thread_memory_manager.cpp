@@ -16,7 +16,7 @@ ThreadMemoryManager::ThreadMemoryManager() noexcept
 
 ThreadMemoryManager::~ThreadMemoryManager() noexcept
 {
-    currentMemoryManager->AccountMemory(untrackedMemory);
+    currentMemoryManager->SubMemory(untrackedMemory);
     untrackedMemory = 0;
 #ifdef DEBUG
     DeleteScope(currentScope);
