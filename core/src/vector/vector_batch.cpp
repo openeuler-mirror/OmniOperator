@@ -86,4 +86,9 @@ void VectorBatch::ClearVectors()
 {
     vectors.clear();
 }
+
+size_t VectorBatch::GetCapacity()
+{
+    return capacity;
+}
 }
