@@ -52,6 +52,8 @@ public:
 
     void ClearVectors();
 
+    size_t GetCapacity();
+
 private:
     size_t capacity; // max row count that can be held
     size_t rowCnt;
