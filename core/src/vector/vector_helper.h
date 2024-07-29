@@ -17,12 +17,15 @@ class VectorHelper {
 public:
     static RowBatch *TransRowBatchFromVectorBatch(VectorBatch *vecBatch)
     {
-        std::vector<type::DataTypeId> outputTypeIds;
-        for (int i = 0; i < vecBatch->GetVectorCount(); i++) {
-            outputTypeIds.push_back(vecBatch->Get(i)->GetTypeId());
+        int32_t vecCount = vecBatch->GetVectorCount();
+        std::vector<type::DataTypeId> typeIds;
+        std::vector<Encoding> encodings;
+        for (int i = 0; i < vecCount; i++) {
+            typeIds.push_back(vecBatch->Get(i)->GetTypeId());
+            encodings.push_back(vecBatch->Get(i)->GetEncoding());
         }
 
-        auto rowBuffer = std::make_unique<RowBuffer>(outputTypeIds, outputTypeIds.size() - 1);
+        auto rowBuffer = std::make_unique<RowBuffer>(typeIds, encodings, typeIds.size() - 1);
 
         auto rowBatch = new RowBatch(vecBatch->GetRowCount());
         for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {

@@ -253,18 +253,22 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_newRowBatchNa
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVectorBatch(JNIEnv *env, jclass jcls,
     jlong vectorBatch)
 {
-    auto *outputVecBatch = reinterpret_cast<VectorBatch *>(vectorBatch);
-    std::vector<type::DataTypeId> outputTypeIds;
-    for (int i = 0; i < outputVecBatch->GetVectorCount(); i++) {
-        outputTypeIds.push_back(outputVecBatch->Get(i)->GetTypeId());
+    auto *vecBatch = reinterpret_cast<VectorBatch *>(vectorBatch);
+    int32_t vecCount = vecBatch->GetVectorCount();
+    std::vector<type::DataTypeId> typeIds;
+    std::vector<Encoding> encodings;
+    for (int i = 0; i < vecCount; i++) {
+        BaseVector *vector = vecBatch->Get(i);
+        typeIds.push_back(vector->GetTypeId());
+        encodings.push_back(vector->GetEncoding());
     }
 
-    auto rowBuffer = std::make_unique<RowBuffer>(outputTypeIds, outputTypeIds.size() - 1);
+    auto rowBuffer = std::make_unique<RowBuffer>(typeIds, encodings, typeIds.size() - 1);
 
-    auto rowBatch = std::make_unique<RowBatch>(outputVecBatch->GetRowCount(), outputTypeIds);
-    for (int32_t i = 0; i < outputVecBatch->GetRowCount(); ++i) {
+    auto rowBatch = std::make_unique<RowBatch>(vecBatch->GetRowCount(), typeIds);
+    for (int32_t i = 0; i < vecBatch->GetRowCount(); ++i) {
         // 1.get value from vector batch
-        rowBuffer->TransValueFromVectorBatch(outputVecBatch, i);
+        rowBuffer->TransValueFromVectorBatch(vecBatch, i);
 
         // 2.generate one buffer of one row
         auto oneRowLen = rowBuffer->FillBuffer();

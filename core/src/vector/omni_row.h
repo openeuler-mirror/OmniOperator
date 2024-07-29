@@ -22,16 +22,18 @@
 
 namespace omniruntime {
 namespace vec {
-template <type::DataTypeId id> void TransToValue(BaseVector *vec, int32_t rowIndex, BaseSerialize *value)
+template <type::DataTypeId id, Encoding encoding>
+void TransToValue(BaseVector *vec, int32_t rowIndex, BaseSerialize *value)
 {
     using T = typename NativeType<id>::type;
-    reinterpret_cast<SerializedValue<T> *>(value)->TransValue(vec, rowIndex);
+    reinterpret_cast<SerializedValue<T, encoding> *>(value)->TransValue(vec, rowIndex);
 }
 
-template <type::DataTypeId id> std::unique_ptr<BaseSerialize> GenerateSerValue()
+template <type::DataTypeId id, Encoding encoding>
+std::unique_ptr<BaseSerialize> GenerateSerValue()
 {
     using T = typename NativeType<id>::type;
-    return std::make_unique<SerializedValue<T>>();
+    return std::make_unique<SerializedValue<T, encoding>>();
 }
 
 template <typename IntLikeType>
@@ -243,6 +245,46 @@ template <type::DataTypeId id> uint8_t *PrintRow(uint8_t *row)
         TMP_FUNC_PTR<type::OMNI_VARCHAR>,                     \
         nullptr }
 
+#define FUNC_CENTER_FLAT_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                 \
+    static std::vector<FUNC_NAME> CENTER_NAME = { nullptr,                         \
+        TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_FLAT>,                         \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_FLAT>,                        \
+        TMP_FUNC_PTR<type::OMNI_DOUBLE, Encoding::OMNI_FLAT>,                      \
+        TMP_FUNC_PTR<type::OMNI_BOOLEAN, Encoding::OMNI_FLAT>,                     \
+        TMP_FUNC_PTR<type::OMNI_SHORT, Encoding::OMNI_FLAT>,                       \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_FLAT>,                        \
+        TMP_FUNC_PTR<type::OMNI_DECIMAL128, Encoding::OMNI_FLAT>,                  \
+        TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_FLAT>,                         \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_FLAT>,                        \
+        TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_FLAT>,                         \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_FLAT>,                        \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_FLAT>,                     \
+        TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_FLAT>,                     \
+        nullptr }
+
+#define FUNC_CENTER_DICT_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                 \
+    static std::vector<FUNC_NAME> CENTER_NAME = { nullptr,                         \
+        TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_DICTIONARY>,                   \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_DICTIONARY>,                  \
+        TMP_FUNC_PTR<type::OMNI_DOUBLE, Encoding::OMNI_DICTIONARY>,                \
+        TMP_FUNC_PTR<type::OMNI_BOOLEAN, Encoding::OMNI_DICTIONARY>,               \
+        TMP_FUNC_PTR<type::OMNI_SHORT, Encoding::OMNI_DICTIONARY>,                 \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_DICTIONARY>,                  \
+        TMP_FUNC_PTR<type::OMNI_DECIMAL128, Encoding::OMNI_DICTIONARY>,            \
+        TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_DICTIONARY>,                   \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_DICTIONARY>,                  \
+        TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_DICTIONARY>,                   \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_DICTIONARY>,                  \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_DICTIONARY>,               \
+        TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_DICTIONARY>,               \
+        nullptr }
+
 using TransFuncPtr = void (*)(BaseVector *vec, int32_t rowIndex, BaseSerialize *value);
 using GenFuncPtr = std::unique_ptr<BaseSerialize> (*)();
 using RowToVecFuncPtr = uint8_t *(*)(uint8_t *row, BaseVector *vec, int32_t rowIndex);
@@ -250,9 +292,10 @@ using PrintRowFuncPtr = uint8_t *(*)(uint8_t *row);
 
 FUNC_CENTER_DEF(Row2VecFuncCenter, RowToVecFuncPtr, RowToVec);
 FUNC_CENTER_DEF(PrintRowFuncCenter, PrintRowFuncPtr, PrintRow);
-FUNC_CENTER_DEF(GenerateValueFuncCenter, GenFuncPtr, GenerateSerValue);
-FUNC_CENTER_DEF(TransFuncCenter, TransFuncPtr, TransToValue);
-
+FUNC_CENTER_FLAT_DEF(GenerateFlatValueFuncCenter, GenFuncPtr, GenerateSerValue);
+FUNC_CENTER_FLAT_DEF(TransFlatValueFuncCenter, TransFuncPtr, TransToValue);
+FUNC_CENTER_DICT_DEF(GenerateDictValueFuncCenter, GenFuncPtr, GenerateSerValue);
+FUNC_CENTER_DICT_DEF(TransDictValueFuncCenter, TransFuncPtr, TransToValue);
 /*
  * Row buffer is used to trans one row of VectorBatch to row
  * the basic usage of RowBuffer:
@@ -264,6 +307,7 @@ FUNC_CENTER_DEF(TransFuncCenter, TransFuncPtr, TransToValue);
  */
 class RowBuffer {
 public:
+    // used for test
     explicit RowBuffer(std::vector<DataTypePtr> &types, int32_t keyColumnSize = 0)
         : columnSize(types.size()), keyColumn(keyColumnSize)
     {
@@ -274,13 +318,13 @@ public:
         }
     }
 
-    RowBuffer(std::vector<type::DataTypeId> types, int32_t keyColumnSize = 0)
+    RowBuffer(std::vector<type::DataTypeId> &types, std::vector<Encoding> &encodings, int32_t keyColumnSize = 0)
         : columnSize(types.size()), keyColumn(keyColumnSize)
     {
         oneRow.resize(columnSize);
         transFuns.resize(columnSize);
         for (int i = 0; i < types.size(); i++) {
-            ConstructFuncById(i, types[i]);
+            ConstructFuncById(i, types[i], encodings[i]);
         }
     }
 
@@ -353,10 +397,19 @@ public:
     }
 
 private:
-    void ConstructFuncById(int32_t i, DataTypeId id)
+    void ConstructFuncById(int32_t i, DataTypeId id, Encoding encoding = OMNI_FLAT)
     {
-        oneRow[i] = GenerateValueFuncCenter[id]();
-        transFuns[i] = TransFuncCenter[id];
+        if (LIKELY(encoding == OMNI_FLAT)) {
+            oneRow[i] = GenerateFlatValueFuncCenter[id]();
+            transFuns[i] = TransFlatValueFuncCenter[id];
+        } else if (encoding == OMNI_DICTIONARY) {
+            oneRow[i] = GenerateDictValueFuncCenter[id]();
+            transFuns[i] = TransDictValueFuncCenter[id];
+        } else {
+            // OMNI_ENCODING_CONTAINER is only used for the agg avg partial in olk. row shuffle is not supported.
+            std::string message = encoding + "encoding type is not supported for omni row";
+            throw omniruntime::exception::OmniException("Encoding Unsupported", message);
+        }
     }
 
     std::vector<std::unique_ptr<BaseSerialize>> oneRow;
