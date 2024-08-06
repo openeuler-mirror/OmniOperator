@@ -13,6 +13,7 @@ constexpr double DOUBLE_DEFAULT_VALUE = 0.000;
 constexpr bool BOOL_DEFAULT_VALUE = true;
 constexpr char CHAR_DEFAULT_VALUE[] = "NULL";
 constexpr char DECIMAL128_DEFAULT_VALUE[] = "0";
+constexpr int32_t CHAR_DEFAULT_WIDTH = 50;
 
 omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(DataTypeId destTypeId, int32_t precision,
     int32_t scale)
@@ -43,8 +44,11 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
             case OMNI_BOOLEAN:
                 return new LiteralExpr(BOOL_DEFAULT_VALUE, std::move(destType));
             case OMNI_CHAR:
+                return new LiteralExpr(new string(CHAR_DEFAULT_VALUE),
+                                       std::make_shared<CharDataType>(CHAR_DEFAULT_WIDTH));
             case OMNI_VARCHAR:
-                return new LiteralExpr(new string(CHAR_DEFAULT_VALUE), std::move(destType));
+                return new LiteralExpr(new string(CHAR_DEFAULT_VALUE),
+                                       std::make_shared<VarcharDataType>(CHAR_DEFAULT_WIDTH));
             case OMNI_NONE:
                 return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
             default:

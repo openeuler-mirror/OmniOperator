@@ -26,6 +26,7 @@ const std::string EQUAL_FN_STR = "batch_equal";
 const std::string NOT_EQUAL_FN_STR = "batch_notEqual";
 const std::string PMOD_FN_STR = "batch_pmod";
 const std::string NORMALIZE_ZERO_FN_STR = "batch_NormalizeNaNAndZero";
+const std::string GREATEST_NUM_FN_STR = "batch_Greatest";
 }
 
 std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
@@ -113,7 +114,15 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchRound<int64_t>), ROUND_FN_STR, {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,
             INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchRound<double>), ROUND_FN_STR, {}, { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE,
-            INPUT_DATA)
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchGreatest<int32_t>), GREATEST_NUM_FN_STR, {}, { OMNI_INT, OMNI_INT },
+            OMNI_INT, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchGreatest<int64_t>), GREATEST_NUM_FN_STR, {}, { OMNI_LONG, OMNI_LONG },
+            OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchGreatest<bool>), GREATEST_NUM_FN_STR, {}, { OMNI_BOOLEAN, OMNI_BOOLEAN },
+            OMNI_BOOLEAN, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchGreatest<double>), GREATEST_NUM_FN_STR, {}, { OMNI_DOUBLE, OMNI_DOUBLE },
+            OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
     };
 
     return batchMathFunctions;

@@ -151,6 +151,9 @@ private:
     llvm::Value *CreateHiveUdfArgTypes(const FuncExpr &fExpr);
 
     void CallHiveUdfFunction(const FuncExpr &fExpr);
+
+    Value *PushAndGetNullFlagArray(const FuncExpr &fExpr, std::vector<llvm::Value *> &argVals, Value *nullFlagArray,
+        bool needAdd);
 };
 }
 #endif // OMNI_RUNTIME_BATCH_EXPRESSION_CODEGEN_H

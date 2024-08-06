@@ -168,7 +168,9 @@ std::vector<Function> FunctionRegistry::InitializeRowFunc()
                 LogWarn("Trying to register functions with same signature: %s", signature.ToString().c_str());
             }
             functionRegistry->insert(std::make_pair(&signature, &function));
-            if (function.GetNullableResultType() == INPUT_DATA_AND_OVERFLOW_NULL) {
+            if (function.GetNullableResultType() == INPUT_DATA_AND_OVERFLOW_NULL ||
+                (function.GetNullableResultType() == INPUT_DATA_AND_NULL_AND_RETURN_NULL &&
+                 signature.GetName().find("_null") != string::npos)) {
                 functionNullRegistry->insert(std::make_pair(&signature, &function));
             }
         }
@@ -198,7 +200,9 @@ std::vector<Function> FunctionRegistry::InitializeBatchFunc()
                 LogWarn("Trying to register functions with same signature: %s", signature.ToString().c_str());
             }
             functionRegistry->insert(std::make_pair(&signature, &function));
-            if (function.GetNullableResultType() == INPUT_DATA_AND_OVERFLOW_NULL) {
+            if (function.GetNullableResultType() == INPUT_DATA_AND_OVERFLOW_NULL ||
+                (function.GetNullableResultType() == INPUT_DATA_AND_NULL_AND_RETURN_NULL &&
+                 signature.GetName().find("_null") != string::npos)) {
                 functionNullRegistry->insert(std::make_pair(&signature, &function));
             }
         }

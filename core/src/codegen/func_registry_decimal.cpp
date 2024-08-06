@@ -22,6 +22,18 @@ const std::string DecimalCastNullFnStr()
     return decimalCastNullFnStr;
 }
 
+const std::string DecimalGreatestFnStr()
+{
+    const std::string decimalGreatestFnStr = "Greatest";
+    return decimalGreatestFnStr;
+}
+
+const std::string DecimalGreatestNullFnStr()
+{
+    const std::string decimalGreatestNullFnStr = "Greatest_null";
+    return decimalGreatestNullFnStr;
+}
+
 const std::string DecimalAbsFnStr()
 {
     const std::string decimalAbsFnStr = "abs";
@@ -354,6 +366,15 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             INPUT_DATA, true),
         Function(reinterpret_cast<void *>(MakeDecimal64RetNull), MakeDecimalNullFnStr(), {}, { OMNI_LONG },
             OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
+        // DecimalGreatest
+        Function(reinterpret_cast<void *>(GreatestDecimal64), DecimalGreatestFnStr(), {}, paramTypes64, retType64,
+            INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(GreatestDecimal128), DecimalGreatestFnStr(), {}, paramTypes128, retType128,
+            INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(GreatestDecimal64RetNull), DecimalGreatestNullFnStr(), {}, paramTypes64,
+            retType64, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(GreatestDecimal128RetNull), DecimalGreatestNullFnStr(), {}, paramTypes128,
+            retType128, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
     };
 
     return decimalFnRegistry;

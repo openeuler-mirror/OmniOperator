@@ -167,6 +167,35 @@ public:
         str.erase(0, str.find_first_not_of(' '));
         str.erase(str.find_last_not_of(' ') + 1);
     }
+
+    static inline bool StrContainsStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen)
+    {
+        int next[matchLen];
+        next[0] = -1;
+        int i = 0, j = -1;
+        while (i < matchLen - 1) {
+            if (j == -1 || matchStr[i] == matchStr[j]) {
+                i++;
+                j++;
+                next[i] = j;
+            } else {
+                j = next[j];
+            }
+        }
+
+        i = 0;
+        j = 0;
+        while (i < srcLen && j < matchLen) {
+            if (j == -1 || srcStr[i] == matchStr[j]) {
+                i++;
+                j++;
+            } else {
+                j = next[j];
+            }
+        }
+
+        return j == matchLen;
+    }
 }; // class stringUtils
 } // namespace codegen function
 

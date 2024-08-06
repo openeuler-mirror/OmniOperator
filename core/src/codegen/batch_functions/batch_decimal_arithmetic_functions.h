@@ -446,6 +446,22 @@ extern "C" DLLEXPORT void BatchRoundDecimal128RetNull(bool *isNull, type::Decima
 
 extern "C" DLLEXPORT void BatchRoundDecimal64RetNull(bool *isNull, int64_t *x, int32_t xPrecision, int32_t xScale,
     int32_t *round, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreatestDecimal64(int64_t contextPtr, int64_t *xValue, int32_t xPrecision,
+    int32_t xScale, bool *xIsNull, int64_t *yValue, int32_t yPrecision, int32_t yScale, bool *yIsNull, bool *retIsNull,
+    int64_t *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreatestDecimal128(int64_t contextPtr, type::Decimal128 *xValue, int32_t xPrecision,
+    int32_t xScale, bool *xIsNull, type::Decimal128 *yValue, int32_t yPrecision, int32_t yScale, bool *yIsNull,
+    bool *retIsNull, type::Decimal128 *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreatestDecimal64RetNull(bool *isNull, int64_t *xValue, int32_t xPrecision,
+    int32_t xScale, bool *xIsNull, int64_t *yValue, int32_t yPrecision, int32_t yScale, bool *yIsNull, bool *retIsNull,
+    int64_t *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreatestDecimal128RetNull(bool *isNull, type::Decimal128 *xValue, int32_t xPrecision,
+    int32_t xScale, bool *xIsNull, type::Decimal128 *yValue, int32_t yPrecision, int32_t yScale, bool *yIsNull,
+    bool *retIsNull, type::Decimal128 *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt);
 }
 
 #endif // OMNI_RUNTIME_BATCH_DECIMAL_ARITHMETIC_FUNCTIONS_H

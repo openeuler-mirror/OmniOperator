@@ -111,6 +111,18 @@ const std::string Md5FnStr()
     return md5FnStr;
 }
 
+const std::string ContainsFnStr()
+{
+    const std::string containsFnStr = "Contains";
+    return containsFnStr;
+}
+
+const std::string GreatestStrFnStr()
+{
+    const std::string greatestStrFnStr = "Greatest";
+    return greatestStrFnStr;
+}
+
 std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = { // concat functions
@@ -217,6 +229,10 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(Md5Str), Md5FnStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ContainsStr), ContainsFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
+            OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(GreatestStr), GreatestStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
+            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
     };
 
     return stringFnRegistry;

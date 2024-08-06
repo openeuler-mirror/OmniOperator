@@ -804,6 +804,7 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetFunctionArgValues(const omnirun
         case INPUT_DATA:
             return GetDataArgs(fExpr, isAnyNull, isInvalidExpr);
         case INPUT_DATA_AND_NULL:
+        case INPUT_DATA_AND_NULL_AND_RETURN_NULL:
             return GetDataAndNullArgs(fExpr, isAnyNull, isInvalidExpr);
         default:
             return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
@@ -1037,11 +1038,11 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
     bool isInvalidExpr = false;
 
     auto argVals = GetFunctionArgValues(fExpr, &isAnyNull, isInvalidExpr);
-    argVals.push_back(isAnyNull);
     if (isInvalidExpr) {
         this->value = CreateInvalidCodeGenValue();
         return;
     }
+    Value *isNull = PushAndGetNullFlag(fExpr, argVals, isAnyNull, true);
     Value *ret = nullptr;
     Value *outputLen = nullptr;
     AllocaInst *outputLenPtr = nullptr;
@@ -1054,7 +1055,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
         auto outputValuePtr = BuildDecimalValue(nullptr, *(fExpr.GetReturnType()));
         ret = CallDecimalFunction(fExpr.function->GetId(), llvmTypes->ToLLVMType(funcRetType), argVals);
         outputValuePtr->data = ret;
-        outputValuePtr->isNull = isAnyNull;
+        outputValuePtr->isNull = LoadNullFlag(fExpr, isNull);
         outputValuePtr->length = outputLen;
         this->value = std::move(outputValuePtr);
         return;
@@ -1083,7 +1084,7 @@ void ExpressionCodeGen::Visit(const FuncExpr &fExpr)
             return;
         }
     }
-    this->value = std::make_shared<CodeGenValue>(ret, isAnyNull, outputLen);
+    this->value = std::make_shared<CodeGenValue>(ret, LoadNullFlag(fExpr, isNull), outputLen);
 }
 
 static std::string ChangeFuncNameToNull(const FuncExpr &fExpr)
@@ -1143,6 +1144,9 @@ std::vector<llvm::Value *> ExpressionCodeGen::GetDataAndOverflowNullArgs(
             argVals.push_back(llvmTypes->CreateConstantInt(
                 dynamic_cast<DecimalDataType *>(fExpr.arguments[i]->GetReturnType().get())->GetScale()));
         }
+        if (fExpr.function->GetNullableResultType() == INPUT_DATA_AND_NULL_AND_RETURN_NULL) {
+            argVals.push_back(this->value->isNull);
+        }
     }
     return argVals;
 }
@@ -1163,6 +1167,7 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
         this->value = CreateInvalidCodeGenValue();
         return;
     }
+    auto isNull = PushAndGetNullFlag(fExpr, argVals, isAnyNull, false);
     Value *ret = nullptr;
     Value *outputLen = nullptr;
     AllocaInst *outputLenPtr = nullptr;
@@ -1178,7 +1183,8 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
         auto outputValuePtr = BuildDecimalValue(nullptr, *(fExpr.GetReturnType()));
         ret = CallDecimalFunction(functionName, llvmTypes->ToLLVMType(funcRetType), argVals);
         outputValuePtr->data = ret;
-        outputValuePtr->isNull = builder->CreateOr(isAnyNull, builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
+        outputValuePtr->isNull =
+            builder->CreateOr(LoadNullFlag(fExpr, isNull), builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
         outputValuePtr->length = outputLen;
         this->value = std::move(outputValuePtr);
         return;
@@ -1199,7 +1205,8 @@ void ExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
             InlineFunctionInfo inlineFunctionInfo;
             llvm::InlineFunction(*((CallInst *)ret), inlineFunctionInfo);
             outputLen = (outputLenPtr == nullptr) ? nullptr : builder->CreateLoad(llvmTypes->I32Type(), outputLenPtr);
-            Value *finalNull = builder->CreateOr(isAnyNull, builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
+            Value *finalNull =
+                builder->CreateOr(LoadNullFlag(fExpr, isNull), builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
             this->value = std::make_shared<CodeGenValue>(ret, finalNull, outputLen);
             return;
         } else {
@@ -2006,5 +2013,28 @@ void ExpressionCodeGen::CoalesceExprDecimalHelper(CodeGenValue &v1, CodeGenValue
     scalePhi->addIncoming(value2Scale, &isNullBlock);
 
     this->value = std::make_shared<DecimalValue>(&pn, &pnNull, precisionPhi, scalePhi);
+}
+
+Value *ExpressionCodeGen::PushAndGetNullFlag(const FuncExpr &fExpr, std::vector<llvm::Value *> &argVals,
+    Value *nullFlag, bool needAdd)
+{
+    if (fExpr.function->GetNullableResultType() == INPUT_DATA_AND_NULL_AND_RETURN_NULL) {
+        AllocaInst *isNullPtr = builder->CreateAlloca(builder->getInt1Ty(), nullptr, "is_null");
+        builder->CreateStore(llvmTypes->CreateConstantBool(false), isNullPtr);
+        argVals.push_back(isNullPtr);
+        return isNullPtr;
+    }
+    if (needAdd) {
+        argVals.push_back(nullFlag);
+    }
+    return nullFlag;
+}
+
+Value *ExpressionCodeGen::LoadNullFlag(const FuncExpr &fExpr, Value *nullFlag)
+{
+    if (fExpr.function->GetNullableResultType() == INPUT_DATA_AND_NULL_AND_RETURN_NULL) {
+        return builder->CreateLoad(builder->getInt1Ty(), nullFlag);
+    }
+    return nullFlag;
 }
 }

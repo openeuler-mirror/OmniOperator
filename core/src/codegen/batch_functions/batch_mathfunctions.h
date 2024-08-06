@@ -137,5 +137,23 @@ extern DLLEXPORT void BatchRound(T *num, int32_t *decimals, bool *isAnyNull, T *
         output[i] = std::round(num[i] * factor) / factor;
     }
 }
+
+template <typename T>
+extern DLLEXPORT void BatchGreatest(T *xValue, bool *xIsNull, T *yValue, bool *yIsNull, bool *retIsNull, T *output,
+    int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        if (xIsNull[i] && yIsNull[i]) {
+            retIsNull[i] = true;
+            output[i] = xValue[i];
+            continue;
+        }
+        if (xIsNull[i] || (!yIsNull[i] && yValue[i] > xValue[i])) {
+            output[i] = yValue[i];
+            continue;
+        }
+        output[i] = xValue[i];
+    }
+}
 }
 #endif // OMNI_RUNTIME_BATCH_MATHFUNCTIONS_H
