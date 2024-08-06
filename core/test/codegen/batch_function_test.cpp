@@ -2491,3 +2491,153 @@ TEST(BatchFunctionTest, BatchFromUnixTimeRetNull)
     AssertStringEquals(expect, result, resultLen);
     delete context;
 }
+
+TEST(BatchFunctionTest, BatchContainsStr)
+{
+    std::vector<std::string> srcStrVec{ "", "ab", "", "abc", "abc", "abcd", "", "ab", "" };
+    std::vector<std::string> matchStrVec{ "ab", "", "", "ab", "bc", "bc", "ab", "", "" };
+    int32_t rowCnt = static_cast<int32_t>(srcStrVec.size());
+    char *srcStrs[rowCnt];
+    int32_t srcLens[rowCnt];
+    char *matchStrs[rowCnt];
+    int32_t matchLens[rowCnt];
+    bool isAnyNull[] = {true, true, true, false, false, false, false, false, false};
+    bool output[rowCnt];
+    for (int32_t row = 0; row < rowCnt; row++) {
+        srcStrs[row] = const_cast<char *>(srcStrVec[row].c_str());
+        srcLens[row] = srcStrVec[row].length();
+        matchStrs[row] = const_cast<char *>(matchStrVec[row].c_str());
+        matchLens[row] = matchStrVec[row].length();
+    }
+    BatchContainsStr(srcStrs, srcLens, matchStrs, matchLens, isAnyNull, output, rowCnt);
+    std::vector<bool> expect{ false, false, false, true, true, true, false, true, true };
+    AssertBoolEquals(expect, output);
+}
+
+TEST(BatchFunctionTest, BatchGreatestStr)
+{
+    std::vector<std::string> xStrVec{ "abc", "abcd", "abc", "", "", "abc", "", "", "1234" };
+    std::vector<std::string> yStrVec{ "abcd", "abc", "", "abc", "", "", "abc", "", "2" };
+    int32_t rowCnt = static_cast<int32_t>(xStrVec.size());
+    uint8_t *xStrs[rowCnt];
+    int32_t xLens[rowCnt];
+    uint8_t *yStrs[rowCnt];
+    int32_t yLens[rowCnt];
+    bool xIsNull[] = { false, false, false, false, false, false, true, true, false };
+    bool yIsNull[] = { false, false, false, false, false, true, false, true, false };
+    bool retIsNull[] = { false, false, false, false, false, false, false, false, false };
+    std::vector<uint8_t *> output(rowCnt);
+    std::vector<int32_t> outLens(rowCnt);
+    for (int32_t row = 0; row < rowCnt; row++) {
+        xStrs[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(xStrVec[row].c_str()));
+        xLens[row] = xStrVec[row].length();
+        yStrs[row] = reinterpret_cast<uint8_t *>(const_cast<char *>(yStrVec[row].c_str()));
+        yLens[row] = yStrVec[row].length();
+    }
+    BatchGreatestStr(xStrs, xLens, xIsNull, yStrs, yLens, yIsNull, retIsNull, output.data(), outLens.data(), rowCnt);
+    std::vector<std::string> expect = { "abcd", "abcd", "abc", "abc", "", "abc", "abc", "", "2" };
+    std::vector<bool> expectRetNull{ false, false, false, false, false, false, false, true, false };
+    AssertStringEquals(expect, output, outLens);
+    AssertBoolEquals(expectRetNull, retIsNull);
+}
+
+TEST(BatchFunctionTest, BatchGreatest)
+{
+    int32_t xValue[] = {10, 5, 0, 10, 0};
+    bool xIsNull[] = {false, false, true, false, true};
+    int32_t yValue[] = {5, 10, 10, 0, 0};
+    bool yIsNull[] = {false, false, false, true, true};
+    bool retIsNull[] = {false, false, false, false, false};
+    int32_t rowCnt = sizeof(xValue) / sizeof(int32_t);
+    int32_t output[rowCnt];
+    BatchGreatest<int32_t>(xValue, xIsNull, yValue, yIsNull, retIsNull, output, rowCnt);
+    int32_t expect[] = {10, 10, 10, 10, 0};
+    EXPECT_TRUE(CmpArray<int32_t>(output, expect, rowCnt));
+    bool expectRetNull[] = {false, false, false, false, true};
+    EXPECT_TRUE(CmpArray<bool>(retIsNull, expectRetNull, rowCnt));
+
+    bool xBool[] = {true, false, true, false, true, false, false};
+    bool xBoolIsNull[] = {false, false, false, false, false, true, true};
+    bool yBool[] = {false, true, true, false, false, true, false};
+    bool yBoolIsNull[] = {false, false, false, false, true, false, true};
+    bool boolRetIsNull[] = {false, false, false, false, false, false, false};
+    int32_t boolRowCnt = sizeof(xBool) / sizeof(bool);
+    bool boolOutput[boolRowCnt];
+    BatchGreatest<bool>(xBool, xBoolIsNull, yBool, yBoolIsNull, boolRetIsNull, boolOutput, boolRowCnt);
+    bool boolExpect[] = {true, true, true, false, true, true, false};
+    bool boolExpectRetNull[] = {false, false, false, false, false, false, true};
+    EXPECT_TRUE(CmpArray<bool>(boolOutput, boolExpect, boolRowCnt));
+    EXPECT_TRUE(CmpArray<bool>(boolRetIsNull, boolExpectRetNull, boolRowCnt));
+}
+
+TEST(BatchFunctionTest, BatchGreatestDecimal64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t xValue[] = {127, 0, 128, 0, 12800};
+    bool xIsNull[] = {false, true, false, true, false};
+    int64_t yValue[] = {128, 128, 0, 0, 12708};
+    bool yIsNull[] = {false, false, true, true, false};
+    bool retIsNull[] = {false, false, false, false, false};
+    int32_t rowCnt = sizeof(xValue) / sizeof(int64_t);
+    int64_t output[] = {0, 0, 0, 0, 0};
+    BatchGreatestDecimal64(contextPtr, xValue, 18, 1, xIsNull, yValue, 18, 1, yIsNull, retIsNull, output, 18, 1,
+        rowCnt);
+    int64_t expect[] = {128, 128, 128, 0, 12800};
+    bool expectRetNull[] = {false, false, false, true, false};
+    EXPECT_TRUE(CmpArray<int64_t>(output, expect, rowCnt));
+    EXPECT_TRUE(CmpArray<bool>(retIsNull, expectRetNull, rowCnt));
+
+    for (int i = 0; i < rowCnt; i++) {
+        retIsNull[i] = false;
+        output[i] = 0;
+    }
+    bool overflowNull[] = {false, false, false, false, false};
+    BatchGreatestDecimal64RetNull(overflowNull, xValue, 18, 1, xIsNull, yValue, 18, 1, yIsNull, retIsNull, output, 18,
+        1, rowCnt);
+    int64_t expectRet[] = {128, 128, 128, 0, 12800};
+    bool expectRetNull2[] = {false, false, false, true, false};
+    bool expectOverflowNull[] = {false, false, false, false, false};
+    EXPECT_TRUE(CmpArray<int64_t>(output, expectRet, rowCnt));
+    EXPECT_TRUE(CmpArray<bool>(retIsNull, expectRetNull2, rowCnt));
+    EXPECT_TRUE(CmpArray<bool>(overflowNull, expectOverflowNull, rowCnt));
+    delete context;
+}
+
+TEST(BatchFunctionTest, BatchGreatestDecimal128)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    Decimal128 xValue[] = {Decimal128(0, 127), Decimal128(0, 0), Decimal128(0, 128), Decimal128(0, 0),
+                           Decimal128(0, 12800)};
+    bool xIsNull[] = {false, true, false, true, false};
+    Decimal128 yValue[] = {Decimal128(0, 128), Decimal128(0, 128), Decimal128(0, 0), Decimal128(0, 0),
+                           Decimal128(0, 12708)};
+    bool yIsNull[] = {false, false, true, true, false};
+    bool retIsNull[] = {false, false, false, false, false};
+    int32_t rowCnt = sizeof(xValue) / sizeof(Decimal128);
+    Decimal128 output[] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0)};
+    BatchGreatestDecimal128(contextPtr, xValue, 38, 1, xIsNull, yValue, 38, 1, yIsNull, retIsNull, output, 38, 1,
+        rowCnt);
+    Decimal128 expect[] = {Decimal128(0, 128), Decimal128(0, 128), Decimal128(0, 128), Decimal128(0, 0),
+                           Decimal128(0, 12800)};
+    bool expectRetNull[] = {false, false, false, true, false};
+    EXPECT_TRUE(CmpArray<Decimal128>(output, expect, rowCnt));
+    EXPECT_TRUE(CmpArray<bool>(retIsNull, expectRetNull, rowCnt));
+
+    for (int i = 0; i < rowCnt; i++) {
+        retIsNull[i] = false;
+        output[i] = Decimal128(0, 0);
+    }
+    bool overflowNull[] = {false, false, false, false, false};
+    BatchGreatestDecimal128RetNull(overflowNull, xValue, 38, 1, xIsNull, yValue, 38, 1, yIsNull, retIsNull, output, 38,
+        1, rowCnt);
+    Decimal128 expectRet[] = {Decimal128(0, 128), Decimal128(0, 128), Decimal128(0, 128), Decimal128(0, 0),
+                              Decimal128(0, 12800)};
+    bool expectRetNull2[] = {false, false, false, true, false};
+    bool expectOverflowNull[] = {false, false, false, false, false};
+    EXPECT_TRUE(CmpArray<Decimal128>(output, expectRet, rowCnt));
+    EXPECT_TRUE(CmpArray<bool>(retIsNull, expectRetNull2, rowCnt));
+    EXPECT_TRUE(CmpArray<bool>(overflowNull, expectOverflowNull, rowCnt));
+    delete context;
+}

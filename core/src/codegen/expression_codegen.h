@@ -198,6 +198,11 @@ private:
 
     void CoalesceExprDecimalHelper(CodeGenValue &v1, CodeGenValue &v2, BasicBlock &isNotNullBlock,
         BasicBlock &isNullBlock, PHINode &pn, PHINode &pnNull);
+
+    Value *PushAndGetNullFlag(const FuncExpr &fExpr, std::vector<llvm::Value *> &argVals, Value *nullFlag,
+        bool needAdd);
+
+    Value *LoadNullFlag(const FuncExpr &fExpr, Value *nullFlag);
 };
 }
 

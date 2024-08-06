@@ -320,5 +320,11 @@ extern "C" DLLEXPORT const char *CastDateToStringRetNull(int64_t contextPtr, boo
 extern "C" DLLEXPORT const char *CastDateToString(int64_t contextPtr, int32_t value, bool isNull, int32_t *outLen);
 
 extern "C" DLLEXPORT char *Md5Str(int64_t contextPtr, const char *str, int32_t len, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT bool ContainsStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
+    bool isNull);
+
+extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen);
 }
 #endif

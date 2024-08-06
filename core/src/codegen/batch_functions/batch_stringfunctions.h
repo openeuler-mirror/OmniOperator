@@ -411,6 +411,12 @@ extern "C" DLLEXPORT void BatchEndsWithStr(char **srcStrs, int32_t *srcLens, cha
 
 extern "C" DLLEXPORT void BatchMd5Str(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     uint8_t **output, int32_t *outLen, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchContainsStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
+    bool *isAnyNull, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreatestStr(uint8_t **xStr, int32_t *xStrLen, bool *xIsNull, uint8_t **yStr,
+    int32_t *yStrLen, bool *yIsNull, bool *retIsNull, uint8_t **outStr, int32_t *outStrLen, int32_t rowCnt);
 }
 
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

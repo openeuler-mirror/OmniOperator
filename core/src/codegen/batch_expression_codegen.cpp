@@ -596,7 +596,7 @@ void BatchExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
         this->value = CreateInvalidCodeGenValue();
         return;
     }
-
+    Value *isNullArray = PushAndGetNullFlagArray(fExpr, argVals, isAnyNull, false);
     AllocaInst *resultArray = GetResultArray(funcRetType, this->batchCodegenContext->rowCnt);
     argVals.push_back(resultArray);
     AllocaInst *outputLenPtr = nullptr;
@@ -633,14 +633,14 @@ void BatchExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
     }
 
     CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN,
-        { isAnyNull, overflowNull, this->batchCodegenContext->rowCnt }, nullptr);
+        { isNullArray, overflowNull, this->batchCodegenContext->rowCnt }, nullptr);
 
     if (TypeUtil::IsDecimalType(funcRetType)) {
-        this->value = std::make_shared<DecimalValue>(resultArray, isAnyNull,
+        this->value = std::make_shared<DecimalValue>(resultArray, isNullArray,
             llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetPrecision()),
             llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetScale()));
     } else {
-        this->value = std::make_shared<CodeGenValue>(resultArray, isAnyNull, outputLenPtr);
+        this->value = std::make_shared<CodeGenValue>(resultArray, isNullArray, outputLenPtr);
     }
 }
 
@@ -695,6 +695,9 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndOverflowNullArgs(
             argVals.push_back(
                 llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(argN->GetReturnType().get())->GetScale()));
         }
+        if (fExpr.function->GetNullableResultType() == INPUT_DATA_AND_NULL_AND_RETURN_NULL) {
+            argVals.push_back(this->value->isNull);
+        }
     }
     return argVals;
 }
@@ -748,6 +751,7 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetFunctionArgValues(const om
         case INPUT_DATA:
             return GetDataArgs(fExpr, isAnyNull, isInvalidExpr);
         case INPUT_DATA_AND_NULL:
+        case INPUT_DATA_AND_NULL_AND_RETURN_NULL:
             return GetDataAndNullArgs(fExpr, isAnyNull, isInvalidExpr);
         default:
             return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
@@ -922,7 +926,7 @@ void BatchExpressionCodeGen::Visit(const FuncExpr &fExpr)
     }
 
     AllocaInst *resultArray = GetResultArray(funcRetType, this->batchCodegenContext->rowCnt);
-    argVals.push_back(isAnyNull);
+    Value *isNullArray = PushAndGetNullFlagArray(fExpr, argVals, isAnyNull, true);
     argVals.push_back(resultArray);
     AllocaInst *outputLenPtr = nullptr;
 
@@ -958,11 +962,11 @@ void BatchExpressionCodeGen::Visit(const FuncExpr &fExpr)
     }
 
     if (TypeUtil::IsDecimalType(funcRetType)) {
-        this->value = std::make_shared<DecimalValue>(resultArray, isAnyNull,
+        this->value = std::make_shared<DecimalValue>(resultArray, isNullArray,
             llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetPrecision()),
             llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetScale()));
     } else {
-        this->value = std::make_shared<CodeGenValue>(resultArray, isAnyNull, outputLenPtr);
+        this->value = std::make_shared<CodeGenValue>(resultArray, isNullArray, outputLenPtr);
     }
 }
 
@@ -1717,5 +1721,23 @@ void BatchExpressionCodeGen::BatchVisitBetweenExprHelper(BetweenExpr &bExpr, con
 
     LogError("Unsupported data type for BETWEEN expr %d", bExpr.value->GetReturnTypeId());
     this->value = CreateInvalidCodeGenValue();
+}
+
+Value *BatchExpressionCodeGen::PushAndGetNullFlagArray(const FuncExpr &fExpr, std::vector<llvm::Value *> &argVals,
+    Value *nullFlagArray, bool needAdd)
+{
+    if (fExpr.function->GetNullableResultType() == INPUT_DATA_AND_NULL_AND_RETURN_NULL) {
+        AllocaInst *isNullArrPtr =
+            builder->CreateAlloca(llvmTypes->I1Type(), this->batchCodegenContext->rowCnt, "IS_RET_NULL_PTR");
+        CallExternFunction("batch_fill_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
+            { isNullArrPtr, llvmTypes->CreateConstantBool(false), this->batchCodegenContext->rowCnt }, nullptr,
+            "fill_ret_null_array");
+        argVals.push_back(isNullArrPtr);
+        return isNullArrPtr;
+    }
+    if (needAdd) {
+        argVals.push_back(nullFlagArray);
+    }
+    return nullFlagArray;
 }
 }

@@ -104,6 +104,12 @@ const std::string NormalizeNaNAndZeroFnStr()
     return normalizeNaNAndZeroFnStr;
 }
 
+const std::string GreatestFnStr()
+{
+    const std::string greatestFnStr = "Greatest";
+    return greatestFnStr;
+}
+
 std::vector<Function> MathFunctionRegistry::GetFunctions()
 {
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
@@ -182,6 +188,14 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(Round<double>), RoundFnStr(), {}, { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE,
             INPUT_DATA),
+        Function(reinterpret_cast<void *>(Greatest<int32_t>), GreatestFnStr(), {}, { OMNI_INT, OMNI_INT }, OMNI_INT,
+            INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(Greatest<int64_t>), GreatestFnStr(), {}, { OMNI_LONG, OMNI_LONG }, OMNI_LONG,
+            INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(Greatest<bool>), GreatestFnStr(), {}, { OMNI_BOOLEAN, OMNI_BOOLEAN },
+            OMNI_BOOLEAN, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(Greatest<double>), GreatestFnStr(), {}, { OMNI_DOUBLE, OMNI_DOUBLE },
+            OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
     };
 
     return mathFnRegistry;

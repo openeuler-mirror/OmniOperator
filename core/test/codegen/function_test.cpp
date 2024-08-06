@@ -2090,4 +2090,206 @@ TEST(FunctionTest, Date32Trunc)
     Date32TruncTest("0086-03-14", "ww", "0086-03-11", true);
     Date32TruncTest("0987-12-27", "weeek", "0987-12-24", true);
 }
+
+TEST(FunctionTest, ContainsStr)
+{
+    std::string src = std::string("abc");
+    std::string match = std::string("abc");
+    bool result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), true);
+    EXPECT_EQ(result, false);
+
+    src = std::string("");
+    match = std::string("abc");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, false);
+
+    src = std::string("abc");
+    match = std::string("abd");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, false);
+
+    src = std::string("abcd");
+    match = std::string("abd");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, false);
+
+    src = std::string("abcd");
+    match = std::string("acd");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, false);
+
+    src = std::string("");
+    match = std::string("");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, true);
+
+    src = std::string("abc");
+    match = std::string("");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, true);
+
+    src = std::string("abc");
+    match = std::string("abc");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, true);
+
+    src = std::string("abcd");
+    match = std::string("abc");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, true);
+
+    src = std::string("abcd");
+    match = std::string("bcd");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, true);
+
+    src = std::string("abcde");
+    match = std::string("bcd");
+    result = ContainsStr(src.c_str(), src.length(), match.c_str(), match.length(), false);
+    EXPECT_EQ(result, true);
+}
+
+TEST(FunctionTest, GreatestStr)
+{
+    const char* lValue = "abc";
+    const char* rValue = "abcd";
+    bool retIsNull = false;
+    int32_t outLen = 0;
+    const char* result = GreatestStr(lValue, strlen(lValue), false, rValue, strlen(rValue), false, &retIsNull, &outLen);
+    EXPECT_EQ(result, rValue);
+    EXPECT_EQ(outLen, strlen(rValue));
+    EXPECT_FALSE(retIsNull);
+
+    lValue = "abcd";
+    rValue = "abc";
+    retIsNull = false;
+    outLen = 0;
+    result = GreatestStr(lValue, strlen(lValue), false, rValue, strlen(rValue), false, &retIsNull, &outLen);
+    EXPECT_EQ(result, lValue);
+    EXPECT_EQ(outLen, strlen(lValue));
+    EXPECT_FALSE(retIsNull);
+
+    lValue = "abc";
+    rValue = "";
+    retIsNull = false;
+    outLen = 0;
+    result = GreatestStr(lValue, strlen(lValue), false, rValue, strlen(rValue), false, &retIsNull, &outLen);
+    EXPECT_EQ(result, lValue);
+    EXPECT_EQ(outLen, strlen(lValue));
+    EXPECT_FALSE(retIsNull);
+
+    lValue = "";
+    rValue = "abc";
+    retIsNull = false;
+    outLen = 0;
+    result = GreatestStr(lValue, strlen(lValue), false, rValue, strlen(rValue), false, &retIsNull, &outLen);
+    EXPECT_EQ(result, rValue);
+    EXPECT_EQ(outLen, strlen(rValue));
+    EXPECT_FALSE(retIsNull);
+
+    lValue = "";
+    rValue = "";
+    retIsNull = false;
+    outLen = 0;
+    result = GreatestStr(lValue, strlen(lValue), false, rValue, strlen(rValue), false, &retIsNull, &outLen);
+    EXPECT_EQ(result, lValue);
+    EXPECT_EQ(outLen, strlen(lValue));
+    EXPECT_FALSE(retIsNull);
+
+    lValue = "abc";
+    rValue = nullptr;
+    retIsNull = false;
+    outLen = 0;
+    result = GreatestStr(lValue, strlen(lValue), false, rValue, 0, true, &retIsNull, &outLen);
+    EXPECT_EQ(result, lValue);
+    EXPECT_EQ(outLen, strlen(lValue));
+    EXPECT_FALSE(retIsNull);
+
+    lValue = nullptr;
+    rValue = "abc";
+    retIsNull = false;
+    outLen = 0;
+    result = GreatestStr(lValue, 0, true, rValue, strlen(rValue), false, &retIsNull, &outLen);
+    EXPECT_EQ(result, rValue);
+    EXPECT_EQ(outLen, strlen(rValue));
+    EXPECT_FALSE(retIsNull);
+
+    lValue = nullptr;
+    rValue = nullptr;
+    retIsNull = false;
+    outLen = 0;
+    result = GreatestStr(lValue, 0, true, rValue, 0, true, &retIsNull, &outLen);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outLen, 0);
+    EXPECT_TRUE(retIsNull);
+
+    lValue = "1234";
+    rValue = "2";
+    retIsNull = false;
+    outLen = 0;
+    result = GreatestStr(lValue, strlen(lValue), false, rValue, strlen(rValue), false, &retIsNull, &outLen);
+    EXPECT_EQ(result, rValue);
+    EXPECT_EQ(outLen, strlen(rValue));
+    EXPECT_FALSE(retIsNull);
+}
+
+TEST(FunctionTest, Greatest)
+{
+    int32_t lInt32 = 10;
+    int32_t rInt32 = 5;
+    bool retIsNull = false;
+    auto resultInt32 = Greatest<int32_t>(lInt32, false, rInt32, false, &retIsNull);
+    EXPECT_EQ(resultInt32, lInt32);
+    EXPECT_FALSE(retIsNull);
+
+    lInt32 = 5;
+    rInt32 = 10;
+    retIsNull = false;
+    resultInt32 = Greatest<int32_t>(lInt32, false, rInt32, false, &retIsNull);
+    EXPECT_EQ(resultInt32, rInt32);
+    EXPECT_FALSE(retIsNull);
+
+    lInt32 = 0;
+    rInt32 = 10;
+    retIsNull = false;
+    resultInt32 = Greatest<int32_t>(lInt32, true, rInt32, false, &retIsNull);
+    EXPECT_EQ(resultInt32, rInt32);
+    EXPECT_FALSE(retIsNull);
+
+    lInt32 = 10;
+    rInt32 = 0;
+    retIsNull = false;
+    resultInt32 = Greatest<int32_t>(lInt32, false, rInt32, true, &retIsNull);
+    EXPECT_EQ(resultInt32, lInt32);
+    EXPECT_FALSE(retIsNull);
+
+    lInt32 = 0;
+    rInt32 = 0;
+    retIsNull = false;
+    resultInt32 = Greatest<int32_t>(lInt32, true, rInt32, true, &retIsNull);
+    EXPECT_EQ(resultInt32, 0);
+    EXPECT_TRUE(retIsNull);
+
+    int64_t lInt64 = 10;
+    int64_t rInt64 = 5;
+    retIsNull = false;
+    auto resultInt64 = Greatest<int64_t>(lInt64, false, rInt64, false, &retIsNull);
+    EXPECT_EQ(resultInt64, lInt64);
+    EXPECT_FALSE(retIsNull);
+
+    bool lBool = true;
+    bool rBool = false;
+    retIsNull = false;
+    auto resultBool = Greatest<bool>(lBool, false, rBool, false, &retIsNull);
+    EXPECT_EQ(resultBool, lBool);
+    EXPECT_FALSE(retIsNull);
+
+    double lDouble = 10.00;
+    double rDouble = 5.00;
+    retIsNull = false;
+    auto resultDouble = Greatest<double>(lDouble, false, rDouble, false, &retIsNull);
+    EXPECT_EQ(resultDouble, lDouble);
+    EXPECT_FALSE(retIsNull);
+}
+
 }

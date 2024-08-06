@@ -1173,4 +1173,51 @@ extern "C" DLLEXPORT void BatchMd5Str(int64_t contextPtr, uint8_t **str, int32_t
         output[i] = reinterpret_cast<uint8_t *>(const_cast<char *>(mdString));
     }
 }
+
+extern "C" DLLEXPORT void BatchContainsStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
+    bool *isAnyNull, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        auto srcLen = srcLens[i];
+        auto matchLen = matchLens[i];
+        if (isAnyNull[i] || matchLen > srcLen) {
+            output[i] = false;
+            continue;
+        }
+        if (matchLen == 0) {
+            output[i] = true;
+            continue;
+        }
+        output[i] = StringUtil::StrContainsStr(srcStrs[i], srcLen, matchStrs[i], matchLen);
+    }
+}
+
+extern "C" DLLEXPORT void BatchGreatestStr(uint8_t **xStr, int32_t *xStrLen, bool *xIsNull, uint8_t **yStr,
+    int32_t *yStrLen, bool *yIsNull, bool *retIsNull, uint8_t **outStr, int32_t *outStrLen, int32_t rowCnt)
+{
+    int32_t cmpRet;
+    for (int i = 0; i < rowCnt; ++i) {
+        if (xIsNull[i] && yIsNull[i]) {
+            retIsNull[i] = true;
+            outStr[i] = nullptr;
+            outStrLen[i] = 0;
+            continue;
+        }
+        if (xIsNull[i]) {
+            outStr[i] = yStr[i];
+            outStrLen[i] = yStrLen[i];
+            continue;
+        }
+        if (!yIsNull[i]) {
+            cmpRet = memcmp(xStr[i], yStr[i], std::min(xStrLen[i], yStrLen[i]));
+            if (cmpRet < 0 || (cmpRet == 0 && yStrLen[i] > xStrLen[i])) {
+                outStr[i] = yStr[i];
+                outStrLen[i] = yStrLen[i];
+                continue;
+            }
+        }
+        outStr[i] = xStr[i];
+        outStrLen[i] = xStrLen[i];
+    }
+}
 }

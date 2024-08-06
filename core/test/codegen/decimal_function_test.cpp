@@ -1272,4 +1272,162 @@ TEST(FunctionTest, CastDecimal128ToInt_roundingRule_is_down)
     ConfigUtil::SetRoundingRule(RoundingRule::HALF_UP);
     delete context;
 }
+
+TEST(FunctionTest, GreatestDecimal64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t x64Value = 12708;
+    int64_t y64Value = 12800;
+    bool retIsNull = false;
+    auto ret = GreatestDecimal64(contextPtr, x64Value, 18, 1, false, y64Value, 18, 1, false, &retIsNull, 18, 1);
+    EXPECT_EQ(ret, 12800);
+    EXPECT_FALSE(retIsNull);
+
+    x64Value = 0;
+    y64Value = 12800;
+    retIsNull = false;
+    ret = GreatestDecimal64(contextPtr, x64Value, 18, 1, true, y64Value, 18, 1, false, &retIsNull, 18, 1);
+    EXPECT_EQ(ret, 12800);
+    EXPECT_FALSE(retIsNull);
+
+    x64Value = 12800;
+    y64Value = 0;
+    retIsNull = false;
+    ret = GreatestDecimal64(contextPtr, x64Value, 18, 1, false, y64Value, 18, 1, true, &retIsNull, 18, 1);
+    EXPECT_EQ(ret, 12800);
+    EXPECT_FALSE(retIsNull);
+
+    x64Value = 0;
+    y64Value = 0;
+    retIsNull = false;
+    ret = GreatestDecimal64(contextPtr, x64Value, 18, 1, true, y64Value, 18, 1, true, &retIsNull, 18, 1);
+    EXPECT_EQ(ret, 0);
+    EXPECT_TRUE(retIsNull);
+
+    x64Value = 12708;
+    y64Value = 12800;
+    retIsNull = false;
+    ret = GreatestDecimal64(contextPtr, x64Value, 18, 2, false, y64Value, 18, 1, false, &retIsNull, 4, 2);
+    EXPECT_TRUE(context->HasError());
+
+    delete context;
+}
+
+TEST(FunctionTest, GreatestDecimal64RetNull)
+{
+    bool isNull = false;
+    int64_t x64Value = 12708;
+    int64_t y64Value = 12800;
+    bool retIsNull = false;
+    auto ret = GreatestDecimal64RetNull(&isNull, x64Value, 18, 1, false, y64Value, 18, 1, false, &retIsNull, 18, 1);
+    EXPECT_EQ(ret, 12800);
+    EXPECT_FALSE(isNull);
+    EXPECT_FALSE(retIsNull);
+
+    x64Value = 0;
+    y64Value = 12800;
+    retIsNull = false;
+    ret = GreatestDecimal64RetNull(&isNull, x64Value, 18, 1, true, y64Value, 18, 1, false, &retIsNull, 18, 1);
+    EXPECT_EQ(ret, 12800);
+    EXPECT_FALSE(isNull);
+    EXPECT_FALSE(retIsNull);
+
+    x64Value = 12800;
+    y64Value = 0;
+    retIsNull = false;
+    ret = GreatestDecimal64RetNull(&isNull, x64Value, 18, 1, false, y64Value, 18, 1, true, &retIsNull, 18, 1);
+    EXPECT_EQ(ret, 12800);
+    EXPECT_FALSE(isNull);
+    EXPECT_FALSE(retIsNull);
+
+    x64Value = 0;
+    y64Value = 0;
+    retIsNull = false;
+    ret = GreatestDecimal64RetNull(&isNull, x64Value, 18, 1, true, y64Value, 18, 1, true, &retIsNull, 18, 1);
+    EXPECT_EQ(ret, 0);
+    EXPECT_FALSE(isNull);
+    EXPECT_TRUE(retIsNull);
+
+    x64Value = 12708;
+    y64Value = 12800;
+    retIsNull = false;
+    ret = GreatestDecimal64RetNull(&isNull, x64Value, 18, 2, false, y64Value, 18, 1, false, &retIsNull, 4, 2);
+    EXPECT_TRUE(isNull);
+}
+
+TEST(FunctionTest, GreatestDecimal128)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int64_t high = 0;
+    uint64_t low = 0;
+    bool retIsNull = false;
+    GreatestDecimal128(contextPtr, 0, 128, 38, 1, false, 0, 127, 38, 1, false, &retIsNull, 38, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 128);
+    EXPECT_FALSE(retIsNull);
+
+    retIsNull = false;
+    GreatestDecimal128(contextPtr, 0, 128, 38, 1, false, 0, 0, 38, 1, true, &retIsNull, 38, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 128);
+    EXPECT_FALSE(retIsNull);
+
+    retIsNull = false;
+    GreatestDecimal128(contextPtr, 0, 0, 38, 1, true, 0, 128, 38, 1, false, &retIsNull, 38, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 128);
+    EXPECT_FALSE(retIsNull);
+
+    retIsNull = false;
+    GreatestDecimal128(contextPtr, 0, 0, 38, 1, true, 0, 0, 38, 1, true, &retIsNull, 38, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 0);
+    EXPECT_TRUE(retIsNull);
+
+    retIsNull = false;
+    GreatestDecimal128(contextPtr, 0, 1280, 38, 1, false, 0, 1270, 38, 0, false, &retIsNull, 3, 1, &high, &low);
+    EXPECT_TRUE(context->HasError());
+
+    delete context;
+}
+
+TEST(FunctionTest, GreatestDecimal128RetNull)
+{
+    bool isNull = false;
+    int64_t high = 0;
+    uint64_t low = 0;
+    bool retIsNull = false;
+    GreatestDecimal128RetNull(&isNull, 0, 128, 38, 1, false, 0, 127, 38, 1, false, &retIsNull, 38, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 128);
+    EXPECT_FALSE(isNull);
+    EXPECT_FALSE(retIsNull);
+
+    retIsNull = false;
+    GreatestDecimal128RetNull(&isNull, 0, 128, 38, 1, false, 0, 0, 38, 1, true, &retIsNull, 38, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 128);
+    EXPECT_FALSE(isNull);
+    EXPECT_FALSE(retIsNull);
+
+    retIsNull = false;
+    GreatestDecimal128RetNull(&isNull, 0, 0, 38, 1, true, 0, 128, 38, 1, false, &retIsNull, 38, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 128);
+    EXPECT_FALSE(isNull);
+    EXPECT_FALSE(retIsNull);
+
+    retIsNull = false;
+    GreatestDecimal128RetNull(&isNull, 0, 0, 38, 1, true, 0, 0, 38, 1, true, &retIsNull, 38, 1, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 0);
+    EXPECT_FALSE(isNull);
+    EXPECT_TRUE(retIsNull);
+
+    retIsNull = false;
+    GreatestDecimal128RetNull(&isNull, 0, 1280, 38, 1, false, 0, 1270, 38, 0, false, &retIsNull, 3, 1, &high, &low);
+    EXPECT_TRUE(isNull);
+}
 }

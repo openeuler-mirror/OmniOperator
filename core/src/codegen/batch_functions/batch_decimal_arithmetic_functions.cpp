@@ -1667,4 +1667,164 @@ extern "C" DLLEXPORT void BatchRoundDecimal64RetNull(bool *isNull, int64_t *x, i
         output[i] = input.GetValue();
     }
 }
+
+extern "C" DLLEXPORT void BatchGreatestDecimal64(int64_t contextPtr, int64_t *xValue, int32_t xPrecision,
+    int32_t xScale, bool *xIsNull, int64_t *yValue, int32_t yPrecision, int32_t yScale, bool *yIsNull, bool *retIsNull,
+    int64_t *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt)
+{
+    if (xPrecision == yPrecision && xScale == yScale) {
+        for (int i = 0; i < rowCnt; i++) {
+            if (xIsNull[i] && yIsNull[i]) {
+                retIsNull[i] = true;
+                continue;
+            }
+            auto x = xValue[i];
+            auto y = yValue[i];
+            if (xIsNull[i] || (!yIsNull[i] && x < y)) {
+                output[i] = y;
+                continue;
+            }
+            output[i] = x;
+        }
+    } else {
+        for (int i = 0; i < rowCnt; i++) {
+            if (xIsNull[i] && yIsNull[i]) {
+                retIsNull[i] = true;
+                continue;
+            }
+            Decimal64 x(xValue[i]);
+            x.SetScale(xScale);
+            Decimal64 y(yValue[i]);
+            y.SetScale(yScale);
+            if (xIsNull[i] || (!yIsNull[i] && x.Compare(y) < 0)) {
+                y.ReScale(newScale);
+                CHECK_OVERFLOW_CONTINUE(y, newPrecision);
+                output[i] = y.GetValue();
+                continue;
+            }
+            x.ReScale(newScale);
+            CHECK_OVERFLOW_CONTINUE(x, newPrecision);
+            output[i] = x.GetValue();
+        }
+    }
+}
+
+extern "C" DLLEXPORT void BatchGreatestDecimal128(int64_t contextPtr, type::Decimal128 *xValue, int32_t xPrecision,
+    int32_t xScale, bool *xIsNull, type::Decimal128 *yValue, int32_t yPrecision, int32_t yScale, bool *yIsNull,
+    bool *retIsNull, type::Decimal128 *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt)
+{
+    if (xPrecision == yPrecision && xScale == yScale) {
+        for (int i = 0; i < rowCnt; i++) {
+            if (xIsNull[i] && yIsNull[i]) {
+                retIsNull[i] = true;
+                continue;
+            }
+            if (xIsNull[i] || (!yIsNull[i] && xValue[i] < yValue[i])) {
+                output[i] = yValue[i];
+                continue;
+            }
+            output[i] = xValue[i];
+        }
+    } else {
+        for (int i = 0; i < rowCnt; i++) {
+            if (xIsNull[i] && yIsNull[i]) {
+                retIsNull[i] = true;
+                continue;
+            }
+            Decimal128Wrapper x(xValue[i]);
+            x.SetScale(xScale);
+            Decimal128Wrapper y(yValue[i]);
+            y.SetScale(yScale);
+            if (xIsNull[i] || (!yIsNull[i] && x.Compare(y) < 0)) {
+                y.ReScale(newScale);
+                CHECK_OVERFLOW_CONTINUE(y, newPrecision);
+                output[i] = y.ToDecimal128();
+                continue;
+            }
+            x.ReScale(newScale);
+            CHECK_OVERFLOW_CONTINUE(x, newPrecision);
+            output[i] = x.ToDecimal128();
+        }
+    }
+}
+
+extern "C" DLLEXPORT void BatchGreatestDecimal64RetNull(bool *isNull, int64_t *xValue, int32_t xPrecision,
+    int32_t xScale, bool *xIsNull, int64_t *yValue, int32_t yPrecision, int32_t yScale, bool *yIsNull, bool *retIsNull,
+    int64_t *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt)
+{
+    if (xPrecision == yPrecision && xScale == yScale) {
+        for (int i = 0; i < rowCnt; i++) {
+            if (yIsNull[i] && xIsNull[i]) {
+                retIsNull[i] = true;
+                continue;
+            }
+            auto x = xValue[i];
+            auto y = yValue[i];
+            if (xIsNull[i] || (!yIsNull[i] && x < y)) {
+                output[i] = y;
+                continue;
+            }
+            output[i] = x;
+        }
+    } else {
+        for (int i = 0; i < rowCnt; i++) {
+            if (yIsNull[i] && xIsNull[i]) {
+                retIsNull[i] = true;
+                continue;
+            }
+            Decimal64 x(xValue[i]);
+            x.SetScale(xScale);
+            Decimal64 y(yValue[i]);
+            y.SetScale(yScale);
+            if (xIsNull[i] || (!yIsNull[i] && x.Compare(y) < 0)) {
+                y.ReScale(newScale);
+                CHECK_OVERFLOW_CONTINUE_NULL(y, newPrecision);
+                output[i] = y.GetValue();
+                continue;
+            }
+            x.ReScale(newScale);
+            CHECK_OVERFLOW_CONTINUE_NULL(x, newPrecision);
+            output[i] = x.GetValue();
+        }
+    }
+}
+
+extern "C" DLLEXPORT void BatchGreatestDecimal128RetNull(bool *isNull, type::Decimal128 *xValue, int32_t xPrecision,
+    int32_t xScale, bool *xIsNull, type::Decimal128 *yValue, int32_t yPrecision, int32_t yScale, bool *yIsNull,
+    bool *retIsNull, type::Decimal128 *output, int32_t newPrecision, int32_t newScale, int32_t rowCnt)
+{
+    if (xPrecision == yPrecision && xScale == yScale) {
+        for (int i = 0; i < rowCnt; i++) {
+            if (yIsNull[i] && xIsNull[i]) {
+                retIsNull[i] = true;
+                continue;
+            }
+            if (xIsNull[i] || (!yIsNull[i] && xValue[i] < yValue[i])) {
+                output[i] = yValue[i];
+                continue;
+            }
+            output[i] = xValue[i];
+        }
+    } else {
+        for (int i = 0; i < rowCnt; i++) {
+            if (yIsNull[i] && xIsNull[i]) {
+                retIsNull[i] = true;
+                continue;
+            }
+            Decimal128Wrapper x(xValue[i]);
+            x.SetScale(xScale);
+            Decimal128Wrapper y(yValue[i]);
+            y.SetScale(yScale);
+            if (xIsNull[i] || (!yIsNull[i] && x.Compare(y) < 0)) {
+                y.ReScale(newScale);
+                CHECK_OVERFLOW_CONTINUE_NULL(y, newPrecision);
+                output[i] = y.ToDecimal128();
+                continue;
+            }
+            x.ReScale(newScale);
+            CHECK_OVERFLOW_CONTINUE_NULL(x, newPrecision);
+            output[i] = x.ToDecimal128();
+        }
+    }
+}
 }

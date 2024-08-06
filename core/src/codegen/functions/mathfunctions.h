@@ -124,6 +124,18 @@ template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
 
     return std::round(num * factor) / factor;
 }
+
+template <typename T> extern DLLEXPORT T Greatest(T lValue, bool lIsNull, T rValue, bool rIsNull, bool *retIsNull)
+{
+    if (lIsNull && rIsNull) {
+        *retIsNull = true;
+        return lValue;
+    }
+    if (lIsNull || (!rIsNull && rValue > lValue)) {
+        return rValue;
+    }
+    return lValue;
+}
 }
 
 #endif

@@ -928,4 +928,39 @@ extern "C" DLLEXPORT char *Md5Str(int64_t contextPtr, const char *str, int32_t l
     md5.FinishHex(mdString);
     return mdString;
 }
+
+extern "C" DLLEXPORT bool ContainsStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
+    bool isNull)
+{
+    if (isNull || matchLen > srcLen) {
+        return false;
+    }
+    if (matchLen == 0) {
+        return true;
+    }
+    return StringUtil::StrContainsStr(srcStr, srcLen, matchStr, matchLen);
+}
+
+extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, bool lIsNull, const char *rValue,
+    int32_t rLen, bool rIsNull, bool *retIsNull, int32_t *outLen)
+{
+    if (lIsNull && rIsNull) {
+        *retIsNull = true;
+        *outLen = 0;
+        return nullptr;
+    }
+    if (lIsNull) {
+        *outLen = rLen;
+        return rValue;
+    }
+    if (!rIsNull) {
+        int32_t cmpRet = memcmp(lValue, rValue, std::min(lLen, rLen));
+        if (cmpRet < 0 || (cmpRet == 0 && rLen > lLen)) {
+            *outLen = rLen;
+            return rValue;
+        }
+    }
+    *outLen = lLen;
+    return lValue;
+}
 }

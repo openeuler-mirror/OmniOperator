@@ -37,6 +37,8 @@ const std::string MAKE_DECIMAL_NULL_FN_STR = "batch_MakeDecimal_null";
 const std::string BATCH_DECIMAL128_COMPARE_STR = "batch_Decimal128Compare";
 const std::string BATCH_DECIMAL64_COMPARE_STR = "batch_Decimal64Compare";
 const std::string BATCH_UNSCALED_VALUE_STR = "batch_UnscaledValue";
+const std::string GREATEST_DECIMAL_FN_STR = "batch_Greatest";
+const std::string GREATEST_DECIMAL_NULL_FN_STR = "batch_Greatest_null";
 }
 
 std::vector<Function> BatchDecimalFunctionRegistry::GetFunctions()
@@ -234,6 +236,15 @@ std::vector<Function> BatchDecimalFunctionRegistry::GetFunctions()
             OMNI_DECIMAL64, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(BatchModDec64Dec128Dec128RetNull), MODULUS_NULL_FN_STR, {}, paramTypes64Op128,
             OMNI_DECIMAL128, INPUT_DATA_AND_OVERFLOW_NULL),
+        // BatchDecimalGreatest
+        Function(reinterpret_cast<void *>(BatchGreatestDecimal64), GREATEST_DECIMAL_FN_STR, {}, paramTypes64,
+            OMNI_DECIMAL64, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(BatchGreatestDecimal128), GREATEST_DECIMAL_FN_STR, {}, paramTypes128,
+            OMNI_DECIMAL128, INPUT_DATA_AND_NULL_AND_RETURN_NULL, true),
+        Function(reinterpret_cast<void *>(BatchGreatestDecimal64RetNull), GREATEST_DECIMAL_NULL_FN_STR, {},
+            paramTypes64, OMNI_DECIMAL64, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchGreatestDecimal128RetNull), GREATEST_DECIMAL_NULL_FN_STR, {},
+            paramTypes128, OMNI_DECIMAL128, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
     };
 
     return batchDecimalFunctions;
