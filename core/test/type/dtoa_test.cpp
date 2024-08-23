@@ -9,16 +9,23 @@
 
 using namespace omniruntime::codegen::function;
 namespace DtoaTest {
+
+void ExpectEq(int *res, int *expect, int len)
+{
+    for (int i = 0; i < len; i++) {
+        EXPECT_EQ(res[i], expect[i]);
+    }
+}
 TEST(FDBigInteger, Mul)
 {
     char digit[] = "4237896478126318254871286731";
     FDBigInteger a(4, digit, 0, 28);
-    std::vector<int> expect1{1073222603, 1669324860, -1896826123, 0};
-    EXPECT_EQ(expect1, a.GetData());
+    int expect1[] = {1073222603, 1669324860, -1896826123, 0};
+    ExpectEq(expect1, a.GetData(), 4);
 
     FDBigInteger a2 = a.MulBy10();
-    std::vector<int> expect2{2142291438, -486620582, -1788392043, 5};
-    EXPECT_EQ(expect2, a2.GetData());
+    int expect2[] = {2142291438, -486620582, -1788392043, 5};
+    ExpectEq(expect2, a2.GetData(), 4);
 }
 
 TEST(FDBigInteger, LeftShift)
@@ -26,8 +33,8 @@ TEST(FDBigInteger, LeftShift)
     char digit[] = "4237896478126318254871286731";
     FDBigInteger a(4, digit, 0, 28);
     FDBigInteger a2 = a.LeftShift(123);
-    std::vector<int> expect2{1476395008, -503332706, -1424228607, 74941911};
-    EXPECT_EQ(expect2, a2.GetData());
+    int expect2[] = {1476395008, -503332706, -1424228607, 74941911};
+    ExpectEq(expect2, a2.GetData(), 4);
 }
 
 TEST(FDBigInteger, AddAndCmp)

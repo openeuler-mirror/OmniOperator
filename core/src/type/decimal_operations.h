@@ -143,7 +143,8 @@ static constexpr double DOUBLE_10_POW[] = {
 };
 
 template<bool allowDecimalRoundUp = false>
-inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_t &scale, int32_t &precision)
+inline OpStatus DecimalFromString(const char *s, std::size_t len, int128_t &result, int32_t &scale,
+    int32_t &precision)
 {
     result = 0;
     bool isDot = false;
@@ -152,7 +153,6 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
     bool isSpace = false;
     const int roundChecked = 5;
     int32_t exponent = 0;
-    uint64_t len = s.size();
     int32_t offset = 0;
     while (offset < len && s[offset] == ' ') offset++;
     if (offset == len) return OpStatus::FAIL;
@@ -268,6 +268,12 @@ inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_
     return OpStatus::SUCCESS;
 }
 
+template<bool allowDecimalRoundUp = false>
+inline OpStatus DecimalFromString(const std::string &s, int128_t &result, int32_t &scale, int32_t &precision)
+{
+    return DecimalFromString<allowDecimalRoundUp>(s.data(), s.size(), result, scale, precision);
+}
+
 inline std::string ToStringWithScale(std::string inputString, int scale)
 {
     std::string unscaledValueString = std::move(inputString);
@@ -366,7 +372,32 @@ public:
         }
     }
 
-    Decimal128Wrapper(const char *s)
+    Decimal128Wrapper(const char *s, std::size_t length)
+    {
+        int32_t inputScale = 0;
+        int32_t precision = 0;
+        int128_t result = 0;
+        overflow = DecimalFromString<allowDecimalRoundUp>(s, length, result, inputScale, precision);
+        if (result == 0) {
+            signum = 0;
+            val = 0;
+            scale = inputScale;
+            return;
+        }
+        if (result > 0) {
+            signum = 1;
+            val = static_cast<uint128_t>(result);
+        } else {
+            signum = -1;
+            val = static_cast<uint128_t>(-result);
+        }
+        scale = inputScale;
+    }
+
+    Decimal128Wrapper(const std::string &s) : Decimal128Wrapper(s.c_str(), s.size())
+    {}
+
+    Decimal128Wrapper(const char* s)
     {
         int32_t inputScale = 0;
         int32_t precision = 0;
@@ -388,7 +419,7 @@ public:
         scale = inputScale;
     }
 
-    template<typename T>
+    template<typename T, typename = std::enable_if_t<!std::is_same_v<T, const char*>>>
     Decimal128Wrapper(T value)
     {
         if (value == 0) {
@@ -406,9 +437,12 @@ public:
         }
     }
 
-    explicit Decimal128Wrapper(double value) : Decimal128Wrapper(
-        codegen::function::DoubleToString::DoubleToStringConverter(value).c_str())
-    {}
+    explicit Decimal128Wrapper(double value)
+    {
+        char s[codegen::function::MAX_DATA_LENGTH] = {0};
+        auto length = codegen::function::DoubleToString::DoubleToStringConverter(value, s);
+        new(this)Decimal128Wrapper(s, length);
+    }
 
     Decimal128Wrapper &operator=(const Decimal128Wrapper &rhs) = default;
 
@@ -1110,16 +1144,17 @@ public:
 
     Decimal64(double inputVal)
     {
-        auto s = codegen::function::DoubleToString::DoubleToStringConverter(inputVal);
-        new(this)Decimal64(s);
+        char s[codegen::function::MAX_DATA_LENGTH];
+        auto length = codegen::function::DoubleToString::DoubleToStringConverter(inputVal, s);
+        new(this)Decimal64(s, length);
     }
 
-    Decimal64(const std::string &s)
+    Decimal64(const char *s, std::size_t length)
     {
         int32_t inputScale = 0;
         int32_t precision = 0;
         int128_t result = 0;
-        if (DecimalFromString<allowDecimalRoundUp>(s, result, inputScale, precision) != OpStatus::SUCCESS) {
+        if (DecimalFromString<allowDecimalRoundUp>(s, length, result, inputScale, precision) != OpStatus::SUCCESS) {
             overflow = OpStatus::OP_OVERFLOW;
         }
         if (precision - inputScale > 18) {
@@ -1134,6 +1169,9 @@ public:
         scale = inputScale;
         val = static_cast<int64_t>(result);
     }
+
+    Decimal64(const std::string &s) : Decimal64(s.data(), s.size())
+    {}
 
     Decimal64(const uint128_t &input)
     {

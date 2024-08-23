@@ -349,15 +349,8 @@ extern "C" DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double v
     if (isNull) {
         return nullptr;
     }
-    auto result = DoubleToString::DoubleToStringConverter(value);
-    *outLen = result.size();
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, result.c_str(), *outLen);
-    if (res != EOK) {
-        SetError(contextPtr, "cast failed");
-        *outLen = 0;
-        return nullptr;
-    }
+    auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DATA_LENGTH);
+    *outLen = static_cast<int32_t >(DoubleToString::DoubleToStringConverter(value, ret));
     return ret;
 }
 
@@ -686,15 +679,8 @@ extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, boo
 extern "C" DLLEXPORT const char *CastDoubleToStringRetNull(int64_t contextPtr, bool *isNull, double value,
     int32_t *outLen)
 {
-    auto result = DoubleToString::DoubleToStringConverter(value);
-    *outLen = result.size();
-    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, result.c_str(), *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
+    auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DATA_LENGTH);
+    *outLen = static_cast<int32_t >(DoubleToString::DoubleToStringConverter(value, ret));
     return ret;
 }
 
