@@ -272,6 +272,10 @@ public:
 
     uint64_t GetSpilledBytes() override;
 
+    uint64_t GetHashMapUniqueKeys() override;
+
+    VectorBatch *AlignSchema(VectorBatch *inputVecBatch) override;
+
     void SetRowCountPerBatch(int32_t rowCount)
     {
         this->rowsPerBatch = rowCount;

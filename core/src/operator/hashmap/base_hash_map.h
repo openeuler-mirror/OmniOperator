@@ -693,6 +693,12 @@ public:
         return hasher(key);
     }
 
+    // get the number of hash keys
+    uint64_t GetHashKeys()
+    {
+        return elementsSize;
+    }
+
     ~BaseHashMap()
     {
         if constexpr (not std::is_trivially_destructible<Slot>::value) {
@@ -904,9 +910,9 @@ private:
     ctrl_t *identifiers = EmptyGroup();
     uint8_t *ctrlAddress = nullptr;
     Slot *nullSlot = nullptr;
-    size_t elementsSize = 0;
+    size_t elementsSize = 0; // the number of hash keys
     HashType hasher;
-    uint64_t capacity = 0;
+    uint64_t capacity = 0; // the number of hashmap capacity
     static constexpr uint8_t defaultDegreeSize = 15;
     GrowStrategy grower;
 };

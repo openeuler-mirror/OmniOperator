@@ -205,6 +205,29 @@ public:
         }
     }
 
+    // adaptive partial aggregation
+    void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch, const int32_t filterIndex) override
+    {
+        BaseVector *originVector = inputVecBatch->Get(channels[0]);
+        auto *filterVector = reinterpret_cast<Vector<bool> *>(inputVecBatch->Get(filterIndex));
+        int rowCount = filterVector->GetSize();
+        bool needFilterJude = DoNeedHandleAggFilter(filterVector, 0, rowCount);
+        if (needFilterJude) {
+            for (int index = 0; index < rowCount; ++index) {
+                if (filterVector->IsNull(index)) {
+                    originVector->SetNull(index);
+                }
+            }
+        }
+        ProcessAlignAggSchema(result, originVector);
+    }
+
+    void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override
+    {
+        BaseVector *originVector = inputVecBatch->Get(channels[0]);
+        ProcessAlignAggSchema(result, originVector);
+    }
+
     bool IsTypedAggregator() override
     {
         return true;
@@ -220,6 +243,8 @@ protected:
 
     virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap) = 0;
+
+    virtual void ProcessAlignAggSchema(VectorBatch *vecBatch, BaseVector *originVector) {}
 
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, const int index, const char *errorMsg)

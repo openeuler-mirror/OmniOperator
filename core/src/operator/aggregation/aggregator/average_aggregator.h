@@ -123,6 +123,8 @@ public:
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
         int32_t &vectorIndex) override;
 
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) override;
+
 protected:
     AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);

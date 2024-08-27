@@ -249,6 +249,40 @@ public:
             }
         }
     }
+
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) override
+    {
+        int rowCount = originVector->GetSize();
+        // opt
+        if (std::is_same_v<InType, ResultType>) {
+            auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+            result->Append(sumVector);
+            return;
+        }
+
+        auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+        if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+            auto vector = reinterpret_cast<Vector<DictionaryContainer<InType>> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetNull(index);
+                } else {
+                    sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                }
+            }
+        } else {
+            // The varchar type is converted to the double type in advance.
+            auto vector = reinterpret_cast<Vector<InType> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetNull(index);
+                } else {
+                    sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                }
+            }
+        }
+        result->Append(sumVector);
+    }
 };
 }
 }

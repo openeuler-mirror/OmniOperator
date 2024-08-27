@@ -218,6 +218,44 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInf
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) {
+    int rowCount = originVector->GetSize();
+    if constexpr (std::is_same_v<InType, OutType>) {
+        auto maxVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+        result->Append(maxVector);
+        return;
+    }
+
+    auto maxVector = reinterpret_cast<OutVector *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+    if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+        auto vector = reinterpret_cast<Vector<DictionaryContainer<InType>> *>(originVector);
+        for (int index = 0; index < rowCount; ++index) {
+            if (vector->IsNull(index)) {
+                maxVector->SetNull(index);
+            } else {
+                InType val = vector->GetValue(index);
+                bool overflow = false;
+                OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+                maxVector->SetValue(index, out);
+            }
+        }
+    } else {
+        auto vector = reinterpret_cast<Vector<InType> *>(originVector);
+        for (int index = 0; index < rowCount; ++index) {
+            if (vector->IsNull(index)) {
+                maxVector->SetNull(index);
+            } else {
+                InType val = vector->GetValue(index);
+                bool overflow = false;
+                OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+                maxVector->SetValue(index, out);
+            }
+        }
+    }
+    result->Append(maxVector);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 MaxAggregator<IN_ID, OUT_ID>::MaxAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
     std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
     : TypedAggregator(OMNI_AGGREGATION_TYPE_MAX, inputTypes, outputTypes, channels, inputRaw, outputPartial,

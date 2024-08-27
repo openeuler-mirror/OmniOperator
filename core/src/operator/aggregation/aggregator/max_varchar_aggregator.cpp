@@ -129,6 +129,14 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<Unspil
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) {
+    int rowCount = originVector->GetSize();
+    // (IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR) && (OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)
+    auto *maxVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+    result->Append(maxVector);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::SaveState(AggregateState &state)
 {
     if ((state.count & UPDATE_FLAG) == 0) {

@@ -539,6 +539,46 @@ uint64_t HashAggregationOperator::GetSpilledBytes()
     return spilledBytes;
 }
 
+uint64_t HashAggregationOperator::GetHashMapUniqueKeys()
+{
+    return serialize->hashmap.GetHashKeys();
+}
+
+VectorBatch *HashAggregationOperator::AlignSchema(VectorBatch *inputVecBatch)
+{
+    int32_t rowCount = inputVecBatch->GetRowCount();
+    VectorBatch *result = new VectorBatch(rowCount);
+    // handle group columns
+    auto groupColNum = static_cast<int32_t>(this->groupByCols.size());
+    for (int i = 0; i < groupColNum; ++i) {
+        auto &groupByCol = this->groupByCols[i];
+        auto curVector = inputVecBatch->Get(groupByCol.idx);
+        result->Append(VectorHelper::SliceVector(curVector, 0, rowCount));
+    }
+
+    // handle agg columns
+    auto aggNum = static_cast<int32_t>(aggregators.size());
+    if (aggFiltersCount > 0) {
+        int32_t filterOffset = inputVecBatch->GetVectorCount() - aggFiltersCount;
+        for (size_t aggIdx = 0; aggIdx < aggNum; ++aggIdx) {
+            auto &aggregator = aggregators[aggIdx];
+            if (hasAggFilters[aggIdx] == 1) {
+                aggregator->AlignAggSchemaWithFilter(result, inputVecBatch, filterOffset);
+                filterOffset++;
+            } else {
+                aggregator->AlignAggSchema(result, inputVecBatch);
+            }
+        }
+    } else {
+        for (size_t aggIdx = 0; aggIdx < aggNum; ++aggIdx) {
+            auto &aggregator = aggregators[aggIdx];
+            aggregator->AlignAggSchema(result, inputVecBatch);
+        }
+    }
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    return result;
+}
+
 void HashAggregationOperator::SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum,
     int32_t aggNum)
 {

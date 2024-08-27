@@ -428,7 +428,7 @@ public:
             return;
         }
         if (value > 0) {
-            val = value;
+            val = static_cast<uint128_t>(value);
             signum = 1;
         } else {
             int128_t tmp = value;

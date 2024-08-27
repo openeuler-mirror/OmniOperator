@@ -254,6 +254,81 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInf
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) {
+    int rowCount = originVector->GetSize();
+    // opt branch
+    if (std::is_same_v<InType, OutType>) {
+        auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+        result->Append(sumVector);
+        return;
+    }
+
+    auto sumVector = reinterpret_cast<OutVector *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+    if constexpr (IN_ID == OMNI_VARCHAR) {
+        // olk final agg pause, so throw an exception
+        throw OmniException("OPERATOR_RUNTIME_ERROR", "this interface only be called in partial agg pause.");
+    } else if constexpr (OUT_ID == OMNI_VARCHAR) {
+        // olk branch, decimal128 is stored in DecimalPartialResult object, and then be converted to std::string_view type.
+        if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+            auto vector = reinterpret_cast<Vector<DictionaryContainer<Decimal128>> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetNull(index);
+                } else {
+                    OutType out;
+                    out.sum = vector->GetValue(index);
+                    out.count = 1;
+                    std::string_view decimal2Str(reinterpret_cast<char *>(&out), sizeof(OutType));
+                    sumVector->SetValue(index, decimal2Str);
+                }
+            }
+        } else {
+            auto vector = reinterpret_cast<Vector<Decimal128> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetNull(index);
+                } else {
+                    OutType out;
+                    out.sum = vector->GetValue(index);
+                    out.count = 1;
+                    std::string_view decimal2Str(reinterpret_cast<char *>(&result), sizeof(OutType));
+                    sumVector->SetValue(index, decimal2Str);
+                }
+            }
+        }
+    } else {
+        // hive or spark branch
+        if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+            auto vector = reinterpret_cast<Vector<DictionaryContainer<InType>> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetNull(index);
+                } else {
+                    InType val = vector->GetValue(index);
+                    bool overflow = false;
+                    OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+                    sumVector->SetValue(index, out);
+                }
+            }
+        } else {
+            // The varchar type is converted to the double type in advance.
+            auto vector = reinterpret_cast<Vector<InType> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetNull(index);
+                } else {
+                    InType val = vector->GetValue(index);
+                    bool overflow = false;
+                    OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+                    sumVector->SetValue(index, out);
+                }
+            }
+        }
+    }
+    result->Append(sumVector);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 SumAggregator<IN_ID, OUT_ID>::SumAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
     std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
     : TypedAggregator(OMNI_AGGREGATION_TYPE_SUM, inputTypes, outputTypes, channels, inputRaw, outputPartial,

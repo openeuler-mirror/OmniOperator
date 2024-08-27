@@ -6,6 +6,8 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
+import nova.hetu.omniruntime.constants.FunctionType;
+import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
@@ -44,6 +46,13 @@ public final class OmniOperator implements AutoCloseable {
     // getSpilledBytes
     private static native long getSpilledBytesNative(long nativeOperator);
 
+    // getHashMapUniqueKeys called by the adaptive partial hashagg optimization
+    private static native long getHashMapUniqueKeysNative(long nativeOperator);
+
+    // called by the adaptive partial hashagg optimization
+    private static native VecBatch alignSchemaNative(long nativeOperator, long inputVecBatchNative);
+
+
     /**
      * Add input.
      *
@@ -81,6 +90,15 @@ public final class OmniOperator implements AutoCloseable {
      */
     public long getSpilledBytes() {
         return getSpilledBytesNative(nativeOperator);
+    }
+
+    public long getHashMapUniqueKeys() {
+        return getHashMapUniqueKeysNative(nativeOperator);
+    }
+
+    public VecBatch alignSchema(VecBatch inputVecBatch) {
+        VecBatch outputVecBatch = alignSchemaNative(nativeOperator, inputVecBatch.getNativeVectorBatch());
+        return outputVecBatch;
     }
 
     private class VecBatchIterator implements Iterator<VecBatch> {

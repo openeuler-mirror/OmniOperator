@@ -227,6 +227,51 @@ public:
             }
         }
     }
+
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) override
+    {
+        int rowCount = originVector->GetSize();
+        // opt branch
+        if (std::is_same_v<RawInputType, ResultType> && !originVector->HasNull()) {
+            auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+            auto countVector = VectorHelper::CreateFlatVector(OMNI_LONG, rowCount);
+            int64_t *valueAddr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+            std::fill_n(valueAddr, rowCount, 1);
+            result->Append(sumVector);
+            result->Append(countVector);
+            return;
+        }
+
+        auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+        auto countVector = reinterpret_cast<Vector<int64_t> *>(VectorHelper::CreateFlatVector(OMNI_LONG, rowCount));
+
+        if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+            auto vector = reinterpret_cast<Vector<DictionaryContainer<RawInputType>> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetValue(index, 0);
+                    countVector->SetValue(index, 0);
+                } else {
+                    sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                    countVector->SetValue(index, 1);
+                }
+            }
+        } else {
+            auto vector = reinterpret_cast<Vector<RawInputType> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetValue(index, 0);
+                    countVector->SetValue(index, 0);
+                } else {
+                    sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                    countVector->SetValue(index, 1);
+                }
+            }
+        }
+
+        result->Append(sumVector);
+        result->Append(countVector);
+    }
 };
 }
 }

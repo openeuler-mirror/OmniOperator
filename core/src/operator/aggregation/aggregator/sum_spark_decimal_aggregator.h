@@ -480,6 +480,70 @@ public:
         }
     }
 
+    // opt: if InRawType and ResultType are decimal128 type, directly setValue
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) override
+    {
+        int rowCount = originVector->GetSize();
+        // opt
+        if (std::is_same_v<InRawType, ResultType>) {
+            auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+            auto emptyVector = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowCount));
+            bool *valueAddr = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(emptyVector));
+            if (!originVector->HasNull()) {
+                std::fill_n(valueAddr, rowCount, false);
+            } else {
+                for (int index = 0; index < rowCount; ++index) {
+                    if (originVector->IsNull(index)) {
+                        emptyVector->SetValue(index, true);
+                    } else {
+                        emptyVector->SetValue(index, false);
+                    }
+                }
+            }
+            result->Append(sumVector);
+            result->Append(emptyVector);
+            return;
+        }
+
+        auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OutDecimalId, rowCount));
+        auto emptyVector = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowCount));
+        if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+            auto vector = reinterpret_cast<Vector<DictionaryContainer<InRawType>> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetValue(index, (ResultType)(0));
+                    emptyVector->SetValue(index, true);
+                } else {
+                    if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                        Decimal128 d = Decimal128(vector->GetValue(index));
+                        sumVector->SetValue(index, d);
+                    } else {
+                        sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                    }
+                    emptyVector->SetValue(index, false);
+                }
+            }
+        } else {
+            auto vector = reinterpret_cast<Vector<InRawType> *>(originVector);
+            for (int index = 0; index < rowCount; ++index) {
+                if (vector->IsNull(index)) {
+                    sumVector->SetValue(index, (ResultType)(0));
+                    emptyVector->SetValue(index, true);
+                } else {
+                    if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                        Decimal128 d = Decimal128(vector->GetValue(index));
+                        sumVector->SetValue(index, d);
+                    } else {
+                        sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                    }
+                    emptyVector->SetValue(index, false);
+                }
+            }
+        }
+        result->Append(sumVector);
+        result->Append(emptyVector);
+    }
+
 private:
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, int index)
