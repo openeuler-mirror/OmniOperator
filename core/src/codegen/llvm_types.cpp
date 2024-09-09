@@ -158,6 +158,7 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
         case OMNI_DATE32:
             return I32PtrType();
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return I64PtrType();
         case OMNI_DOUBLE:
@@ -182,6 +183,7 @@ llvm::Type *LLVMTypes::ToBatchDataPointerType(DataTypeId typeId)
         case OMNI_DATE32:
             return I32PtrType();
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return I64PtrType();
         case OMNI_DOUBLE:

@@ -846,6 +846,7 @@ void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
             case omniruntime::type::OMNI_SHORT:
                 CalculateColHashes<int16_t>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
+            case omniruntime::type::OMNI_TIMESTAMP:
             case omniruntime::type::OMNI_LONG:
                 CalculateColHashes<int64_t>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
@@ -1013,6 +1014,7 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
         BaseVector *buildColumn = nullptr;
         switch (buildOutputTypes[j]) {
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
                 buildColumn = ConstructBuildColumn<int64_t>(buildTemp, outputCol, rowCount);
                 break;

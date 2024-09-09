@@ -113,7 +113,7 @@ static std::vector<EqualFunc> equalFromFlatFuncs = {
     EqualValueIgnoreNull<OMNI_DATE64>,     // OMNI_DATE64
     EqualValueIgnoreNull<OMNI_TIME32>,     // OMNI_TIME32
     EqualValueIgnoreNull<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                               // OMNI_TIMESTAMP
+    EqualValueIgnoreNull<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                               // OMNI_INTERVAL_MONTHS
     nullptr,                               // OMNI_INTERVAL_DAY_TIME
     EqualValueIgnoreNull<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -134,7 +134,7 @@ static std::vector<CompareFunc> compareFromFlatFuncs = {
     CompareValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
     CompareValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
     CompareValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                               // OMNI_TIMESTAMP
+    CompareValueFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                               // OMNI_INTERVAL_MONTHS
     nullptr,                               // OMNI_INTERVAL_DAY_TIME
     CompareValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR

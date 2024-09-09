@@ -126,6 +126,7 @@ bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint3
         case OMNI_SHORT:
             return ValueEqualsValueIgnoreNulls<int16_t>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return ValueEqualsValueIgnoreNulls<int64_t>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_DOUBLE:

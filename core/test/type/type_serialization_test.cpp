@@ -26,7 +26,8 @@ TEST(DataTypeSerializer, serialization)
         CharType(512),
         Decimal128Type(30, 20),
         Decimal64Type(20, 10),
-        ContainerType(fieldTypes) };
+        ContainerType(fieldTypes),
+        TimestampType()};
     std::string typesJson = omniruntime::type::Serialize(types);
     DataTypes deserializedDataTypes = omniruntime::type::Deserialize(typesJson);
     auto &dataTypes = deserializedDataTypes.Get();
@@ -54,6 +55,7 @@ TEST(DataTypeSerializer, serialization)
     EXPECT_EQ(static_cast<Decimal64DataType &>(*dataTypes[11]).GetPrecision(), 20);
     EXPECT_EQ(static_cast<Decimal64DataType &>(*dataTypes[11]).GetScale(), 10);
     EXPECT_EQ(dataTypes[12]->GetId(), OMNI_CONTAINER);
+    EXPECT_EQ(dataTypes[13]->GetId(), OMNI_TIMESTAMP);
     auto containerDataType = static_cast<ContainerDataType &>(*dataTypes[12]);
     EXPECT_EQ(containerDataType.GetFieldType(0)->GetId(), OMNI_INT);
     EXPECT_EQ(containerDataType.GetFieldType(1)->GetId(), OMNI_DECIMAL128);

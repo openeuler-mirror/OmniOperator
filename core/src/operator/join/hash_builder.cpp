@@ -39,6 +39,7 @@ HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashCols
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int32_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType };
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
             case OMNI_DOUBLE:
             case OMNI_DATE64:

@@ -237,6 +237,7 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
                 outputPartial, isOverflowAsNull);
         }
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             return CreateFirstAggregatorHelper<int64_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, isOverflowAsNull);

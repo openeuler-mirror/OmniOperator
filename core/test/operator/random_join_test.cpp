@@ -680,6 +680,7 @@ Expr *GetFilter(DataTypes &buildTypes)
             right = new LiteralExpr(300, IntType());
             break;
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
         case OMNI_DATE64:
         case OMNI_DOUBLE:

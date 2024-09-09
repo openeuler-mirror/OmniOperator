@@ -33,6 +33,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Int16";
         case OMNI_LONG:
             return "Int64";
+        case OMNI_TIMESTAMP:
+            return "Timestamp";
         case OMNI_VARCHAR:
             return "String";
         case OMNI_CHAR:
@@ -73,6 +75,8 @@ std::string TypeUtil::TypeToStringLog(omniruntime::type::DataTypeId id)
             return "int16";
         case OMNI_LONG:
             return "int64";
+        case OMNI_TIMESTAMP:
+            return "Timestamp (int64)";
         case OMNI_VARCHAR:
             return "string";
         case OMNI_CHAR:
@@ -155,6 +159,11 @@ std::shared_ptr<DataType> Time64Type(omniruntime::type::TimeUnit timeUnit)
 std::shared_ptr<DataType> LongType()
 {
     return LongDataType::Instance();
+}
+
+std::shared_ptr<omniruntime::type::DataType> TimestampType()
+{
+    return TimestampDataType::Instance();
 }
 
 std::shared_ptr<DataType> DoubleType()

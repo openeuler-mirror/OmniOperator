@@ -27,6 +27,7 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
         case OMNI_CHAR:
         case OMNI_VARCHAR:
@@ -47,6 +48,7 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
         case OMNI_CHAR:
         case OMNI_VARCHAR:
@@ -107,7 +109,8 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
         binaryExpr.left->GetReturnTypeId() == OMNI_DATE32 || binaryExpr.left->GetReturnTypeId() == OMNI_DOUBLE) {
         this->supportedFlag = true;
         return;
-    } else if (TypeUtil::IsStringType(binaryExpr.left->GetReturnTypeId())) {
+    } else if (TypeUtil::IsStringType(binaryExpr.left->GetReturnTypeId()) ||
+        binaryExpr.left->GetReturnTypeId() == OMNI_TIMESTAMP) {
         switch (binaryExpr.op) {
             case omniruntime::expressions::Operator::LT:
             case omniruntime::expressions::Operator::GT:
@@ -136,6 +139,7 @@ void ExprVerifier::Visit(const InExpr &inExpr)
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
         case OMNI_CHAR:
         case OMNI_VARCHAR:

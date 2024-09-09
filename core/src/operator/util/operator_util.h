@@ -49,6 +49,7 @@ public:
         switch (dataTypePtr->GetId()) {
             case OMNI_INT:
                 return OperatorUtil::SIZE_OF_INT;
+            case OMNI_TIMESTAMP:
             case OMNI_LONG:
                 return OperatorUtil::SIZE_OF_LONG;
             case OMNI_DOUBLE:
@@ -132,6 +133,7 @@ public:
             case OMNI_SHORT:
                 return CompareTemplate<int16_t>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
                 return CompareTemplate<int64_t>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_DOUBLE:

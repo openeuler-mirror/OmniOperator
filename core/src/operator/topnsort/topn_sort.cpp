@@ -225,7 +225,7 @@ static std::vector<GetValueFunc> getValueFromFlatFuncs = {
     GetValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
     GetValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
     GetValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                           // OMNI_TIMESTAMP
+    GetValueFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                           // OMNI_INTERVAL_MONTHS
     nullptr,                           // OMNI_INTERVAL_DAY_TIME
     GetValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -246,7 +246,7 @@ static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
     CompareValueOptimizeFromFlat<OMNI_DATE64>,     // OMNI_DATE64
     CompareValueOptimizeFromFlat<OMNI_TIME32>,     // OMNI_TIME32
     CompareValueOptimizeFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                                       // OMNI_TIMESTAMP
+    CompareValueOptimizeFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                                       // OMNI_INTERVAL_MONTHS
     nullptr,                                       // OMNI_INTERVAL_DAY_TIME
     CompareValueOptimizeFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -267,7 +267,7 @@ static std::vector<CompareFunc> compareFromFlatFuncs = {
     CompareValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
     CompareValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
     CompareValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                               // OMNI_TIMESTAMP
+    CompareValueFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                               // OMNI_INTERVAL_MONTHS
     nullptr,                               // OMNI_INTERVAL_DAY_TIME
     CompareValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -288,7 +288,7 @@ static std::vector<CompareFunc> compareFromDictionaryFuncs = {
     CompareValueFromDictionary<OMNI_DATE64>,     // OMNI_DATE64
     CompareValueFromDictionary<OMNI_TIME32>,     // OMNI_TIME32
     CompareValueFromDictionary<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                                     // OMNI_TIMESTAMP
+    CompareValueFromDictionary<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                                     // OMNI_INTERVAL_MONTHS
     nullptr,                                     // OMNI_INTERVAL_DAY_TIME
     CompareValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -309,7 +309,7 @@ static std::vector<EqualFunc> equalFromFlatFuncs = {
     EqualValueTemplate<OMNI_DATE64>,     // OMNI_DATE64
     EqualValueTemplate<OMNI_TIME32>,     // OMNI_TIME32
     EqualValueTemplate<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                             // OMNI_TIMESTAMP
+    EqualValueTemplate<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                             // OMNI_INTERVAL_MONTHS
     nullptr,                             // OMNI_INTERVAL_DAY_TIME
     EqualValueTemplate<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -330,7 +330,7 @@ static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
     CreateVectorFromFlat<OMNI_DATE64>,     // OMNI_DATE64
     CreateVectorFromFlat<OMNI_TIME32>,     // OMNI_TIME32
     CreateVectorFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                               // OMNI_TIMESTAMP
+    CreateVectorFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                               // OMNI_INTERVAL_MONTHS
     nullptr,                               // OMNI_INTERVAL_DAY_TIME
     CreateVectorFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -351,7 +351,7 @@ static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
     CreateVectorFromDictionary<OMNI_DATE64>,     // OMNI_DATE64
     CreateVectorFromDictionary<OMNI_TIME32>,     // OMNI_TIME32
     CreateVectorFromDictionary<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                                     // OMNI_TIMESTAMP
+    CreateVectorFromDictionary<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                                     // OMNI_INTERVAL_MONTHS
     nullptr,                                     // OMNI_INTERVAL_DAY_TIME
     CreateVectorFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -372,7 +372,7 @@ static std::vector<SetValueFunc> setValueFromFlatFuncs = {
     SetValueFromFlat<OMNI_DATE64>,     // OMNI_DATE64
     SetValueFromFlat<OMNI_TIME32>,     // OMNI_TIME32
     SetValueFromFlat<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                           // OMNI_TIMESTAMP
+    SetValueFromFlat<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                           // OMNI_INTERVAL_MONTHS
     nullptr,                           // OMNI_INTERVAL_DAY_TIME
     SetValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -393,7 +393,7 @@ static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
     SetValueFromDictionary<OMNI_DATE64>,     // OMNI_DATE64
     SetValueFromDictionary<OMNI_TIME32>,     // OMNI_TIME32
     SetValueFromDictionary<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                                 // OMNI_TIMESTAMP
+    SetValueFromDictionary<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                                 // OMNI_INTERVAL_MONTHS
     nullptr,                                 // OMNI_INTERVAL_DAY_TIME
     SetValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR

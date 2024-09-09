@@ -296,6 +296,7 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTyp
             return new LiteralExpr(dec128String, std::move(currType));
         }
         case OMNI_DECIMAL64:
+        case OMNI_TIMESTAMP:
         case OMNI_LONG: {
             return new LiteralExpr(stol(literalStr), std::move(currType));
         }

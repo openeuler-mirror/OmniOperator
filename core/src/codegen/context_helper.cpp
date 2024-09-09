@@ -60,6 +60,9 @@ extern "C" DLLEXPORT
             case OMNI_LONG:
                 errorMessage << "BIGINT";
                 break;
+            case OMNI_TIMESTAMP:
+                errorMessage << "TIMESTAMP";
+                break;
             case OMNI_DOUBLE:
                 errorMessage << "DOUBLE";
                 break;

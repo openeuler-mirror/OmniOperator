@@ -64,6 +64,7 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
                 keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<int16_t, true, false, true>);
                 break;
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
                 keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<int64_t, true, false, true>);
                 break;

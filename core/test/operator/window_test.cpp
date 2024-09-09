@@ -51,6 +51,7 @@ BaseVector *BuildVectorInput(const DataTypePtr sourceType, int32_t rowPerVecBatc
             return col;
         }
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             auto col = new vec::Vector<int64_t>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {

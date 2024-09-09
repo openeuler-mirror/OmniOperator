@@ -111,7 +111,7 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypeCheck)
         Date64Type(),
         Time32Type(),
         Time64Type(),
-        std::make_shared<DataType>(), // OMNI_TIMESTAMP
+        TimestampType(),              // OMNI_TIMESTAMP
         std::make_shared<DataType>(), // OMNI_INTERVAL_MONTHS
         std::make_shared<DataType>(), // OMNI_INTERVAL_DAY_TIME
         VarcharType(10),
@@ -131,7 +131,7 @@ TEST(NativeOmniDistinctLimitOperator, TestDistinctLimitTypeCheck)
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_DATE64, false);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_TIME32, false);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_TIME64, false);
-    TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_TIMESTAMP, false);
+    TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_TIMESTAMP, true);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_INTERVAL_MONTHS, false);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_INTERVAL_DAY_TIME, false);
     TestDistinctLimitTypeCheckAction(sourceTypes, OMNI_VARCHAR, true);

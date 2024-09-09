@@ -264,6 +264,7 @@ void SetValue(BaseVector *vector, int32_t index, void *value)
             static_cast<Vector<int16_t> *>(vector)->SetValue(index, *static_cast<int16_t *>(value));
             break;
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             static_cast<Vector<int64_t> *>(vector)->SetValue(index, *static_cast<int64_t *>(value));
             break;
@@ -453,6 +454,7 @@ void AssertDictionaryVectorEquals(BaseVector *vector, va_list &args)
             AssertDictionaryVectorIntEquals(vector, va_arg(args, int32_t *));
             break;
         case omniruntime::type::OMNI_LONG:
+        case omniruntime::type::OMNI_TIMESTAMP:
         case omniruntime::type::OMNI_DECIMAL64:
             AssertDictionaryVectorLongEquals(vector, va_arg(args, int64_t *));
             break;
@@ -501,6 +503,7 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
                 AssertVectorEquals<int16_t>(vector, va_arg(args, int16_t *));
                 break;
             case omniruntime::type::OMNI_LONG:
+            case omniruntime::type::OMNI_TIMESTAMP:
             case omniruntime::type::OMNI_DECIMAL64:
                 AssertVectorEquals<int64_t>(vector, va_arg(args, int64_t *));
                 break;
@@ -729,6 +732,7 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
             break;
         }
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             isMatched = CompareUnorderedRows<int64_t, Vector<int64_t>>(resultVector, expectedVector, error);
             break;

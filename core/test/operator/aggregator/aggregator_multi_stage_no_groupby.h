@@ -384,6 +384,8 @@ inline DataTypePtr GetType(DataTypeId typeId)
             return IntType();
         case OMNI_LONG:
             return LongType();
+        case OMNI_TIMESTAMP:
+            return TimestampType();
         case OMNI_DOUBLE:
             return DoubleType();
         case OMNI_DECIMAL64:
@@ -585,6 +587,7 @@ public:
                         this->isDict);
                     break;
                 case OMNI_DECIMAL64:
+                case OMNI_TIMESTAMP:
                 case OMNI_LONG:
                     vector = CreateFixedSizeVector<OMNI_LONG>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
                         this->isDict);
