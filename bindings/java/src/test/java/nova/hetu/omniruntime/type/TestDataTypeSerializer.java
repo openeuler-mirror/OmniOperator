@@ -20,7 +20,7 @@ public class TestDataTypeSerializer {
                 LongDataType.LONG, DoubleDataType.DOUBLE, Decimal64DataType.DECIMAL64, Decimal128DataType.DECIMAL128,
                 Date32DataType.DATE32, Date64DataType.DATE64, VarcharDataType.VARCHAR, CharDataType.CHAR,
                 new ContainerDataType(new DataType[]{IntDataType.INTEGER, CharDataType.CHAR}), InvalidDataType.INVALID,
-                NoneDataType.NONE};
+                NoneDataType.NONE, TimestampDataType.TIMESTAMP};
         String[] serializeds = new String[types.length];
         for (int i = 0; i < types.length; i++) {
             serializeds[i] = DataTypeSerializer.serializeSingle(types[i]);

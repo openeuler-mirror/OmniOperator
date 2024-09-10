@@ -25,14 +25,7 @@ import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
-import nova.hetu.omniruntime.type.CharDataType;
-import nova.hetu.omniruntime.type.ContainerDataType;
-import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.type.Decimal128DataType;
-import nova.hetu.omniruntime.type.DoubleDataType;
-import nova.hetu.omniruntime.type.IntDataType;
-import nova.hetu.omniruntime.type.LongDataType;
-import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.*;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
@@ -192,29 +185,32 @@ public class OmniAggregationOperatorTest {
     @Test
     public void testExecuteMinMax() {
         DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE, new CharDataType(20),
-                new VarcharDataType(20), new Decimal128DataType(20, 5)};
+                new VarcharDataType(20), new Decimal128DataType(20, 5), TimestampDataType.TIMESTAMP};
         FunctionType minFn = OMNI_AGGREGATION_TYPE_MIN;
         FunctionType maxFn = OMNI_AGGREGATION_TYPE_MAX;
-        FunctionType[] aggFunctionTypes = {minFn, minFn, minFn, minFn, minFn, minFn, maxFn, maxFn, maxFn, maxFn, maxFn,
-                maxFn};
-        int[] aggInputChannels = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5};
-        int[] maskChannels = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+        FunctionType[] aggFunctionTypes = {minFn, minFn, minFn, minFn, minFn, minFn, minFn, maxFn, maxFn, maxFn, maxFn,
+                maxFn, maxFn, maxFn};
+        int[] aggInputChannels = {0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6};
+        int[] maskChannels = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
         DataType[] aggOutputTypes = {IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE,
-                new CharDataType(20), new VarcharDataType(20), new Decimal128DataType(20, 5), IntDataType.INTEGER,
-                LongDataType.LONG, DoubleDataType.DOUBLE, new CharDataType(20), new VarcharDataType(20),
-                new Decimal128DataType(20, 5)};
+                new CharDataType(20), new VarcharDataType(20), new Decimal128DataType(20, 5),
+                TimestampDataType.TIMESTAMP, IntDataType.INTEGER, LongDataType.LONG, DoubleDataType.DOUBLE,
+                new CharDataType(20), new VarcharDataType(20), new Decimal128DataType(20, 5),
+                TimestampDataType.TIMESTAMP};
         OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
                 aggInputChannels, maskChannels, aggOutputTypes, true, false);
 
         Object[][] sampleDatas = {{2, 1, 5, 3, 1}, {3L, 10L, 2L, 7L, 3L}, {12.3, 7.2, 20.5, 6.1, 12.3},
                 {"hello", "world", "c++", "shell", "golang"}, {"operator", "vectorBatch", "udf", "expression", "omni"}};
         Object[][] decimalDatas = {{4000L, 0L}, {2000L, 0L}, {1000L, 0L}, {2000L, 0L}, {5000L, 0L}};
+        Object[] timestampDatas = {3000L, 1000L, 5000L, 2000L, 4000L};
 
         Vec[] buildVecs = new Vec[sourceTypes.length];
         for (int i = 0; i < 5; i++) {
             buildVecs[i] = createVec(sourceTypes[i], sampleDatas[i]);
         }
         buildVecs[5] = createVec(sourceTypes[5], decimalDatas);
+        buildVecs[6] = createVec(sourceTypes[6], timestampDatas);
 
         VecBatch inputData = new VecBatch(buildVecs);
         OmniOperator omniOperator = factory.createOperator();
@@ -238,12 +234,14 @@ public class OmniAggregationOperatorTest {
             assertEquals(new String(((VarcharVec) vectors[3]).get(0)), "c++");
             assertEquals(new String(((VarcharVec) vectors[4]).get(0)), "expression");
             assertEquals(((Decimal128Vec) vectors[5]).get(0), new Object[]{1000L, 0L});
-            assertEquals(((IntVec) vectors[6]).get(0), 5);
-            assertEquals(((LongVec) vectors[7]).get(0), 10L);
-            assertEquals(((DoubleVec) vectors[8]).get(0), 20.5);
-            assertEquals(new String(((VarcharVec) vectors[9]).get(0)), "world");
-            assertEquals(new String(((VarcharVec) vectors[10]).get(0)), "vectorBatch");
-            assertEquals(((Decimal128Vec) vectors[11]).get(0), new Object[]{5000L, 0L});
+            assertEquals(((LongVec) vectors[6]).get(0), 1000L);
+            assertEquals(((IntVec) vectors[7]).get(0), 5);
+            assertEquals(((LongVec) vectors[8]).get(0), 10L);
+            assertEquals(((DoubleVec) vectors[9]).get(0), 20.5);
+            assertEquals(new String(((VarcharVec) vectors[10]).get(0)), "world");
+            assertEquals(new String(((VarcharVec) vectors[11]).get(0)), "vectorBatch");
+            assertEquals(((Decimal128Vec) vectors[12]).get(0), new Object[]{5000L, 0L});
+            assertEquals(((LongVec) vectors[13]).get(0), 5000L);
 
             freeVecBatch(vecBatch);
         }

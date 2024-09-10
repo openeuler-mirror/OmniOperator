@@ -122,6 +122,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         switch (dataType.getId()) {
             case OMNI_INT:
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_SHORT:
             case OMNI_BOOLEAN:
             case OMNI_DOUBLE:
@@ -272,6 +273,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 vec = new IntVec(vecSize);
                 break;
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DATE64:
             case OMNI_DECIMAL64:
                 vec = new LongVec(vecSize);

@@ -101,6 +101,7 @@ public class DictionaryVec extends FixedWidthVec {
                 setValue(size, (IntVec) vector);
                 break;
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DATE64:
             case OMNI_DECIMAL64:
                 setValue(size, (LongVec) vector);
