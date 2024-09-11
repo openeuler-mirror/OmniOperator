@@ -12,43 +12,41 @@ package nova.hetu.omniruntime.vector.serialize;
 public class OmniRowDeserializer {
     private long nativeParser = 0L;
 
-    public OmniRowDeserializer(int[] types) {
-        nativeParser = newOmniRowDeserializer(types);
+    public OmniRowDeserializer(int[] types, long[] vecs) {
+        nativeParser = newOmniRowDeserializer(types, vecs);
     }
 
     public long getNativeParser() {
         return nativeParser;
     }
 
-    private static native long newOmniRowDeserializer(int[] types);
+    private static native long newOmniRowDeserializer(int[] types, long[] vecs);
 
     private static native long freeOmniRowDeserializer(long addr);
 
-    private static native void parseOneRow(long nativeParserAddr, byte[] bytes, long[] vecs, int rowIdx);
+    private static native void parseOneRow(long nativeParserAddr, byte[] bytes, int rowIdx);
 
-    private static native void parseOneRowByAddr(long nativeParserAddr, long rowAddress, long[] vecs, int rowIdx);
+    private static native void parseOneRowByAddr(long nativeParserAddr, long rowAddress, int rowIdx);
 
-    private static native void parseAllRow(long nativeParserAddr, long rowBatchAddr, long[] vecs);
+    private static native void parseAllRow(long nativeParserAddr, long rowBatchAddr);
 
     /**
      * used when shuffle read
      *
      * @param bytes one row 's bytes
-     * @param vecs all vector
      * @param rowIdx vector 's index
      */
-    public void parse(byte[] bytes, long[] vecs, int rowIdx) {
-        parseOneRow(getNativeParser(), bytes, vecs, rowIdx);
+    public void parse(byte[] bytes, int rowIdx) {
+        parseOneRow(getNativeParser(), bytes, rowIdx);
     }
 
     /**
      * used to parse native row to vector batch.
      *
      * @param rowBatchAddr address of native row batch
-     * @param vecs vec array
      */
-    public void parseAll(long rowBatchAddr, long[] vecs) {
-        parseAllRow(getNativeParser(), rowBatchAddr, vecs);
+    public void parseAll(long rowBatchAddr) {
+        parseAllRow(getNativeParser(), rowBatchAddr);
     }
 
     /**

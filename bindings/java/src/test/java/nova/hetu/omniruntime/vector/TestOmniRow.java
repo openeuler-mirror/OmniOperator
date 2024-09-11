@@ -89,23 +89,19 @@ public class TestOmniRow {
         }
 
         VecBatch expectVecBatch = new VecBatch(vecArray, rowCount);
-
         RowBatch rowBatch = new RowBatch(expectVecBatch);
 
         int[] types = new int[vecCount];
         Arrays.fill(types, type);
 
         VecBatch resultVb = new VecBatch(vecArray, rowCount);
-
-        OmniRowDeserializer deserializer = new OmniRowDeserializer(types);
-
         long[] vecAddresses = new long[vecCount];
-
         for (int i = 0; i < vecCount; i++) {
             vecAddresses[i] = resultVb.getVector(i).nativeVector;
         }
+        OmniRowDeserializer deserializer = new OmniRowDeserializer(types, vecAddresses);
 
-        deserializer.parseAll(rowBatch.getNativeRowBatch(), vecAddresses);
+        deserializer.parseAll(rowBatch.getNativeRowBatch());
 
         assertVecBatchEquals(resultVb, expectVecBatch);
         deserializer.close();

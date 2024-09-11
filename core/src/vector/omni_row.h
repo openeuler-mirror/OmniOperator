@@ -433,12 +433,13 @@ public:
         }
     }
 
-    RowParser(DataTypeId *types, int32_t len)
+    RowParser(DataTypeId *types, long *vecs, int32_t len)
     {
         ResizeFuncs(len);
         for (int i = 0; i < len; ++i) {
             PushBackFunc(types[i]);
         }
+        this->vecs = vecs;
     }
 
     RowParser(std::vector<DataTypePtr> &typeIds)
@@ -458,7 +459,7 @@ public:
     }
 
     // friendly to jni
-    void ParseOnRow(uint8_t *row, long *vecs, int32_t rowIndex)
+    void ParseOnRow(uint8_t *row, int32_t rowIndex)
     {
         for (int i = 0; i < typeParser.size(); ++i) {
             auto parseFunc = typeParser[i];
@@ -474,22 +475,10 @@ public:
         }
     }
 
-    void ReserveBuffer(int32_t bufSize)
+    ~RowParser()
     {
-        if (capacity >= bufSize) {
-            return;
-        } else {
-            mem::Allocator::GetAllocator()->Free(reuseBuffer, capacity);
-            reuseBuffer = reinterpret_cast<uint8_t *>(mem::Allocator::GetAllocator()->Alloc(capacity));
-        }
+        delete[] vecs;
     }
-
-    uint8_t *GetBuffer()
-    {
-        return reuseBuffer;
-    }
-
-    ~RowParser() = default;
 
 private:
     void ResizeFuncs(int32_t size)
@@ -506,8 +495,7 @@ private:
 
     std::vector<RowToVecFuncPtr> typeParser;
     std::vector<PrintRowFuncPtr> printParser;
-    uint8_t *reuseBuffer = nullptr;
-    int32_t capacity;
+    long *vecs = nullptr;
 };
 
 class RowInfo {

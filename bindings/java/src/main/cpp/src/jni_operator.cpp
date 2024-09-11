@@ -305,12 +305,13 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_transFromVect
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_newOmniRowDeserializer(
-    JNIEnv *env, jclass jcls, jintArray typeArray)
+    JNIEnv *env, jclass jcls, jintArray typeArray, jlongArray vecArray)
 {
     jboolean isCopy = false;
     auto *types = env->GetIntArrayElements(typeArray, &isCopy);
+    auto *vecs = env->GetLongArrayElements(vecArray, &isCopy);
     auto len = env->GetArrayLength(typeArray);
-    auto *parser = new RowParser((type::DataTypeId *)types, len);
+    auto *parser = new RowParser((type::DataTypeId *)types, vecs, len);
     env->ReleaseIntArrayElements(typeArray, types, 0);
     return reinterpret_cast<intptr_t>(parser);
 }
@@ -323,39 +324,30 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeseri
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_parseOneRow(JNIEnv *env,
-    jclass jcls, jlong parserAddr, jbyteArray bytes, jlongArray vecArray, jint rowIndex)
+    jclass jcls, jlong parserAddr, jbyteArray bytes, jint rowIndex)
 {
-    auto *parser = reinterpret_cast<RowParser *>(parserAddr);
     jboolean isCopy = false;
-    auto *vecs = env->GetLongArrayElements(vecArray, &isCopy);
     auto *row = env->GetByteArrayElements(bytes, &isCopy);
-    parser->ParseOnRow(reinterpret_cast<uint8_t *>(row), vecs, rowIndex);
-    env->ReleaseLongArrayElements(vecArray, vecs, 0);
+    auto *parser = reinterpret_cast<RowParser *>(parserAddr);
+    parser->ParseOnRow(reinterpret_cast<uint8_t *>(row), rowIndex);
     env->ReleaseByteArrayElements(bytes, row, 0);
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_parseOneRowByAddr(JNIEnv *env,
-    jclass jcls, jlong parserAddr, jlong rowAddr, jlongArray vecArray, jint rowIndex)
+    jclass jcls, jlong parserAddr, jlong rowAddr, jint rowIndex)
 {
     auto *parser = reinterpret_cast<RowParser *>(parserAddr);
-    jboolean isCopy = false;
-    auto *vecs = env->GetLongArrayElements(vecArray, &isCopy);
     auto *row = reinterpret_cast<uint8_t *>(rowAddr);
-    parser->ParseOnRow(row, vecs, rowIndex);
-    env->ReleaseLongArrayElements(vecArray, vecs, 0);
+    parser->ParseOnRow(row, rowIndex);
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_parseAllRow(JNIEnv *env,
-    jclass jcls, jlong parserAddr, jlong rowBatchAddr, jlongArray vecArray)
+    jclass jcls, jlong parserAddr, jlong rowBatchAddr)
 {
     auto *parser = reinterpret_cast<RowParser *>(parserAddr);
-    jboolean isCopy = false;
-    auto *vecs = env->GetLongArrayElements(vecArray, &isCopy);
     auto *rowBatch = reinterpret_cast<RowBatch *>(rowBatchAddr);
 
     for (int i = 0; i < rowBatch->GetRowCount(); ++i) {
-        parser->ParseOnRow(rowBatch->Get(i)->row, vecs, i);
+        parser->ParseOnRow(rowBatch->Get(i)->row, i);
     }
-
-    env->ReleaseLongArrayElements(vecArray, vecs, 0);
 }
