@@ -119,6 +119,11 @@ extern "C" DLLEXPORT double NormalizeNaNAndZero(double value)
     return (std::fabs(-0.0 - value) < DBL_EPSILON) ? 0.0 : value;
 }
 
+extern "C" DLLEXPORT double PowerDouble(double base, double exponent)
+{
+    return pow(base, exponent);
+}
+
 // long functions
 
 extern "C" DLLEXPORT int64_t AddInt64(int64_t left, int64_t right)
