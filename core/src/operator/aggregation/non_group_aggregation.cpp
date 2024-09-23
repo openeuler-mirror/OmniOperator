@@ -6,7 +6,6 @@
 #include "vector/vector_common.h"
 #include "operator/status.h"
 #include "util/type_util.h"
-#include "agg_util.h"
 #include "vector_getter.h"
 
 namespace omniruntime {
@@ -88,15 +87,15 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
         int32_t filterOffset = vecBatch->GetVectorCount() - aggFiltersCount;
         for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
             if (hasAggFilters[aggIdx] == 1) {
-                aggregators[aggIdx]->ProcessGroupFilter(aggsStates[aggIdx], vecBatch, 0, filterOffset);
+                aggregators[aggIdx]->ProcessGroupFilter(aggsStates.get(), vecBatch, 0, filterOffset);
                 filterOffset++;
             } else {
-                aggregators[aggIdx]->ProcessGroup(aggsStates[aggIdx], vecBatch, 0, rowCount);
+                aggregators[aggIdx]->ProcessGroup(aggsStates.get(), vecBatch, 0, rowCount);
             }
         }
     } else {
         for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
-            aggregators[aggIdx]->ProcessGroup(aggsStates[aggIdx], vecBatch, 0, rowCount);
+            aggregators[aggIdx]->ProcessGroup(aggsStates.get(), vecBatch, 0, rowCount);
         }
     }
 
@@ -134,7 +133,7 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
     int32_t aggOutputColsStart = 0;
     for (size_t aggIdx = 0; aggIdx < aggregators.size(); ++aggIdx) {
         auto aggregator = aggregators[aggIdx].get();
-        auto &state = aggsStates[aggIdx];
+        auto *state = aggsStates.get();
         std::vector<BaseVector *> extractVectors;
         for (int32_t i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
             extractVectors.push_back(outputPtr->Get(aggOutputColsStart + i));

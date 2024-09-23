@@ -9,69 +9,69 @@
 
 namespace omniruntime {
 namespace op {
-template <typename IN, typename MID, bool CareOverFlow = true>
-SIMD_ALWAYS_INLINE void SumOp(MID *res, int64_t &flag, const IN &in, const int64_t cnt)
+template <typename IN, typename MID, typename FLAG, typename FLAG_HADNLER, bool CareOverFlow = true>
+SIMD_ALWAYS_INLINE void SumOp(MID *res, FLAG &flag, const IN &in, const int64_t cnt)
 {
     if constexpr (std::is_same_v<MID, Decimal128>) {
-        if (flag >= 0) {
+        if (FLAG_HADNLER::IsValid(flag)) {
             int128_t result = 0;
             bool isOverflow = false;
 
             if constexpr (std::is_same_v<IN, DecimalPartialResult>) {
                 isOverflow = AddCheckedOverflow(res->ToInt128(), in.sum.ToInt128(), result);
-                flag += in.count;
+                FLAG_HADNLER::Update(flag, in.count);
             } else if constexpr (std::is_same_v<IN, Decimal128>) {
                 isOverflow = AddCheckedOverflow(res->ToInt128(), in.ToInt128(), result);
-                flag += cnt;
+                FLAG_HADNLER::Update(flag, cnt);
             } else {
                 isOverflow = AddCheckedOverflow(res->ToInt128(), Decimal128(in).ToInt128(), result);
-                flag += cnt;
+                FLAG_HADNLER::Update(flag, cnt);
             }
 
             *res = Decimal128(result);
             if (isOverflow) {
-                flag = -1;
+                flag = FLAG_HADNLER::Overflowed();
             }
         }
     } else if constexpr (std::is_same_v<IN, int64_t>) {
-        if (flag >= 0) {
+        if (FLAG_HADNLER::IsValid(flag)) {
             if constexpr (std::is_same_v<MID, double> || std::is_same_v<MID, float>) {
                 // output is double
                 *res += in;
-                flag += cnt;
+                FLAG_HADNLER::Update(flag, cnt);
             } else {
                 if constexpr (CareOverFlow) {
                     if (__builtin_add_overflow(*res, in, res)) {
-                        flag = -1;
+                        flag = FLAG_HADNLER::Overflowed();
                     } else {
-                        flag += cnt;
+                        FLAG_HADNLER::Update(flag, cnt);
                     }
                 } else {
                     *res += in;
-                    flag += cnt;
+                    FLAG_HADNLER::Update(flag, cnt);
                 }
             }
         }
     } else {
         const MID v = in;
         *res += v;
-        flag += cnt;
+        FLAG_HADNLER::Update(flag, cnt);
     }
 }
 
-template <typename IN, typename MID, bool addIf, bool CareOverFlow = true>
-SIMD_ALWAYS_INLINE void SumConditionalOp(MID *res, int64_t &flag, const IN &in, const int64_t cnt,
+template <typename IN, typename MID, typename FLAG, typename FLAG_HADNLER, bool addIf, bool CareOverFlow = true>
+SIMD_ALWAYS_INLINE void SumConditionalOp(MID *res, FLAG &flag, const IN &in, const int64_t cnt,
     const uint8_t &condition)
 {
     if constexpr (std::is_same_v<MID, Decimal128> || std::is_same_v<IN, int64_t> || std::is_floating_point_v<IN>) {
         if (condition == addIf) {
-            SumOp<IN, MID, CareOverFlow>(res, flag, in, cnt);
+            SumOp<IN, MID, FLAG, FLAG_HADNLER, CareOverFlow>(res, flag, in, cnt);
         }
     } else {
         const IN mask = (!condition == addIf) - 1;
         *res += (in & mask);
         const int64_t cntMask = (!condition == addIf) - 1;
-        flag += (cnt & cntMask);
+        FLAG_HADNLER::Update(flag, cnt & cntMask);
     }
 }
 
@@ -166,16 +166,52 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class SumAggregator : public Type
         int64_t, std::conditional_t<IN_ID == OMNI_DOUBLE || IN_ID == OMNI_CONTAINER, double, Decimal128>>;
 
 public:
+#pragma pack(push, 1)
+    struct SumState : public BaseCountState<ResultType> {
+        static const SumAggregator<IN_ID, OUT_ID>::SumState *ConstCastState(const AggregateState *state)
+        {
+            return reinterpret_cast<const SumAggregator<IN_ID, OUT_ID>::SumState *>(state);
+        }
+
+        static SumAggregator<IN_ID, OUT_ID>::SumState *CastState(AggregateState *state)
+        {
+            return reinterpret_cast<SumAggregator<IN_ID, OUT_ID>::SumState *>(state);
+        }
+
+        template <typename TypeIn, typename TypeOut> static void UpdateState(AggregateState *state, const TypeIn &in)
+        {
+            auto *sumState = CastState(state);
+            //            if constexpr (std::is_same_v<TypeOut, Decimal128> || std::is_floating_point_v<TypeOut>) {
+            //                SumOp<TypeIn, TypeOut, int64_t, StateCountHandler>(
+            //                        reinterpret_cast<TypeOut *>(sumState->value), sumState->count, in, 1ull);
+            //            } else {
+            SumOp<TypeIn, TypeOut, int64_t, StateCountHandler>(&(sumState->value), sumState->count, in, 1ULL);
+            //            }
+        }
+
+        template <typename TypeIn, typename TypeOut, bool addIf>
+        static void UpdateStateWithCondition(AggregateState *state, const TypeIn &in, const uint8_t &condition)
+        {
+            if (condition == addIf) {
+                UpdateState<TypeIn, TypeOut>(state, in);
+            }
+        }
+    };
+#pragma pack(pop)
     ~SumAggregator() override = default;
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override;
-    void InitState(AggregateState &state) override;
-    void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx) override;
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override;
+    void InitState(AggregateState *state) override;
+    void InitStates(std::vector<AggregateState *> &groupStates) override;
     std::vector<DataTypePtr> GetSpillType() override;
+
+    virtual int32_t GetStateSize() override
+    {
+        return sizeof(SumState);
+    }
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool rawIn, bool partialOut, bool isOverflowAsNull)
@@ -213,8 +249,7 @@ public:
         }
     }
 
-    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
-        int32_t &vectorIndex) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
         const bool aggFilter) override;
@@ -226,13 +261,13 @@ protected:
     SumAggregator(FunctionType aggregateType, const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
-    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap) override;
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap) override;
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
+        const uint8_t *nullMap) override;
 
-    void ExtractValuesInternal(const AggregateState &state, OutVector *vector, int32_t rowIndex);
+    void ExtractValuesInternal(const AggregateState *state, OutVector *vector, int32_t rowIndex);
 
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,
         const DataTypeId inId, const DataTypeId outId)
@@ -258,8 +293,8 @@ protected:
     void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
 
 private:
-    static constexpr ResultType SPILL_EMPTY_VALUE { 0 };
-    static constexpr ResultType SPILL_OVERFLOW_VALUE { -1 };
+    static constexpr ResultType SPILL_EMPTY_VALUE{ 0 };
+    static constexpr ResultType SPILL_OVERFLOW_VALUE{ -1 };
 };
 }
 }

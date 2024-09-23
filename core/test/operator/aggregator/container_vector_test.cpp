@@ -80,8 +80,7 @@ TEST(ContainerVector, appendVector)
     auto *doubleVector = new Vector<double>(rows);
     doubleVector->SetValues(0, data1, 5);
 
-    std::vector<int64_t> vectorAddresses = { reinterpret_cast<int64_t>(doubleVector),
-                                               reinterpret_cast<int64_t>(src1) };
+    std::vector<int64_t> vectorAddresses = { reinterpret_cast<int64_t>(doubleVector), reinterpret_cast<int64_t>(src1) };
     std::vector<DataTypePtr> vectorTypes = { DoubleType(), LongType() };
     auto *vector = new ContainerVector(rows, vectorAddresses, vectorTypes);
 
@@ -99,7 +98,7 @@ TEST(ContainerVector, appendVector)
     auto *appendedDouble = new Vector<double>(10);
     auto *appendedLong = new Vector<int64_t>(10);
     std::vector<int64_t> appendedAddr = { reinterpret_cast<int64_t>(appendedDouble),
-                                            reinterpret_cast<int64_t>(appendedLong) };
+        reinterpret_cast<int64_t>(appendedLong) };
     std::vector<DataTypePtr> appendedDataType = { DoubleType(), LongType() };
     auto *appended = new ContainerVector(rows * 2, appendedAddr, appendedDataType);
     appended->Append(vector, 0, 5);

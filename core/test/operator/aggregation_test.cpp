@@ -60,8 +60,9 @@ using namespace TestUtil;
 VectorBatch *ConstructSimpleBuildData()
 {
     const int32_t dataSize = 3;
-    std::vector<DataTypePtr> types { LongType(),   LongType(), IntType(), ShortType(),
-        DoubleType(), LongType(), LongType() };
+    std::vector<DataTypePtr> types{
+        LongType(), LongType(), IntType(), ShortType(), DoubleType(), LongType(), LongType()
+    };
     DataTypes outTypes(types);
     int64_t buildData0[dataSize] = {2, 1, 0};
     int64_t buildData1[dataSize] = {2, 1, 0};
@@ -1538,6 +1539,7 @@ TEST(AggregationOperatorTest, min_max_varchar_dict_withoutnull)
 
 TEST(AggregationOperatorTest, sum_avg)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     const int32_t dataSize = 5;
     const int32_t resultDataSize = 1;
 
@@ -1596,6 +1598,7 @@ TEST(AggregationOperatorTest, sum_avg)
 
 TEST(AggregationOperatorTest, decimal128)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     const int32_t dataSize = 5;
     const int32_t resultDataSize = 1;
 
@@ -1638,7 +1641,7 @@ TEST(AggregationOperatorTest, decimal128)
     EXPECT_EQ(tableCount, 1);
 
     // STAGE2:
-    std::vector<DataTypePtr> finalOutputTypes { Decimal128Type(38, 0), Decimal128Type(38, 0), Decimal128Type(38, 0),
+    std::vector<DataTypePtr> finalOutputTypes{ Decimal128Type(38, 0), Decimal128Type(38, 0), Decimal128Type(38, 0),
         Decimal128Type(38, 0), Decimal128Type(38, 0), Decimal128Type(38, 0),
         Decimal128Type(38, 0), Decimal128Type(38, 0) };
     auto aggFinalFactory =
@@ -1677,6 +1680,7 @@ TEST(AggregationOperatorTest, decimal128)
 
 TEST(HashAggregationOperatorTest, group_by_agg_same_cols)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     // create 10 vecBatches
     const int vecBatchNum = 10;
     const int dataSize = 10;
@@ -1754,6 +1758,7 @@ TEST(HashAggregationOperatorTest, varchar_vector_correctness)
 
 TEST(AggregationOperatorTest, verify_correctness)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     // create 10 vecBatches
     const int vecBatchNum = 10;
     const int cardinality = 4;
@@ -1815,6 +1820,7 @@ TEST(AggregationOperatorTest, verify_correctness)
 
 TEST(AggregationOperatorTest, verify_agg_distinct)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     // construct data
     const int32_t dataSize = 4;
     const int32_t resultDataSize = 1;
@@ -2522,8 +2528,23 @@ TEST(HashAggregationOperatorTest, test_hashagg_same_key_cross_spill_file)
     VectorHelper::FreeVecBatch(expectVecBatch2);
 }
 
+template <typename T> T *ExtractValueFromState(AggregateState *state)
+{
+    return reinterpret_cast<T *>(state);
+}
+
+// set offset 0
+std::unique_ptr<AggregateState[]> NewAndInitState(Aggregator *agg, int32_t off = 0)
+{
+    auto state = std::make_unique<AggregateState[]>(agg->GetStateSize());
+    agg->SetStateOffset(off);
+    agg->InitState(state.get());
+    return state;
+}
+
 TEST(AggregatorTest, sum_test)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     int32_t rowPerVecBatch = 200;
     auto sumFactory = new SumAggregatorFactory();
     std::vector<int32_t> channal0 = { 0 };
@@ -2560,30 +2581,28 @@ TEST(AggregatorTest, sum_test)
     EXPECT_EQ(rowPerVecBatch, vecBatch->GetRowCount());
 
     // process long
-    AggregateState state { 0 };
-    sumLong->InitState(state);
-    sumLong->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
-    EXPECT_EQ(200, state.val);
-    state.Reset();
+    auto state = NewAndInitState(sumLong.get());
+    sumLong->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
+    auto retLong = ExtractValueFromState<BaseState<int64_t>>(state.get());
+    EXPECT_EQ(200, retLong->value);
+
 
     // process null
-    sumNull->InitState(state);
-    sumNull->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
+    state = NewAndInitState(sumNull.get());
+    sumNull->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
     // use state.count = 0 to determine null in sum
-    EXPECT_EQ(0, state.count);
-    state.Reset();
+    retLong = ExtractValueFromState<BaseState<int64_t>>(state.get());
+    EXPECT_TRUE(retLong->IsEmpty());
 
     // process short decimal
-    sumShortDecimal->InitState(state);
-    sumShortDecimal->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
+    state = NewAndInitState(sumShortDecimal.get());
+    sumShortDecimal->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
+    auto *retDecimal = ExtractValueFromState<BaseCountState<Decimal128>>(state.get());
 
     Decimal128 expected = 200L;
-    Decimal128 actual = *reinterpret_cast<Decimal128 *>(state.val);
     // use state.count < 0 to determine if sum overflow
-    EXPECT_TRUE(state.count >= 0);
-    EXPECT_EQ(expected, actual);
-
-    state.Reset();
+    EXPECT_TRUE(retDecimal->count >= 0);
+    EXPECT_EQ(expected, retDecimal->value);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete sumFactory;
@@ -2621,17 +2640,16 @@ TEST(AggregatorTest, count_column_test)
     vecBatch->Append(nullInputVec);
 
     // process long
-    AggregateState state { 0 };
-    countLong->InitState(state);
-    countLong->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
-    EXPECT_EQ(200, state.count);
-    state.Reset();
+    auto state = NewAndInitState(countLong.get());
+    countLong->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
+    auto count = ExtractValueFromState<int64_t>(state.get());
+    EXPECT_EQ(200, *count);
 
     // process null
-    countNull->InitState(state);
-    countNull->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
-    EXPECT_EQ(0, state.count);
-    state.Reset();
+    state = NewAndInitState(countNull.get());
+    countNull->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
+    count = ExtractValueFromState<int64_t>(state.get());
+    EXPECT_EQ(0, *count);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete countFactory;
@@ -2660,17 +2678,16 @@ TEST(AggregatorTest, count_all_test)
     vecBatch->Append(nullInputVec);
 
     // process long
-    AggregateState state { 0 };
-    countLong->InitState(state);
-    countLong->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
-    EXPECT_EQ(200, state.count);
-    state.Reset();
+    auto state = NewAndInitState(countLong.get());
+    countLong->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
+    auto count = ExtractValueFromState<int64_t>(state.get());
+    EXPECT_EQ(200, *count);
 
     // process null
-    countNull->InitState(state);
-    countNull->ProcessGroup(state, vecBatch, 0, vecBatch->GetRowCount());
-    EXPECT_EQ(200, state.count);
-    state.Reset();
+    state = NewAndInitState(countNull.get());
+    countNull->ProcessGroup(state.get(), vecBatch, 0, vecBatch->GetRowCount());
+    count = ExtractValueFromState<int64_t>(state.get());
+    EXPECT_EQ(200, *count);
 
     VectorHelper::FreeVecBatch(vecBatch);
     delete countAllFactory;
@@ -2741,63 +2758,58 @@ TEST(AggregatorTest, min_test)
     std::vector<BaseVector *> result(1);
 
     // process long
-    AggregateState state { 0 };
-    minLong->InitState(state);
-    minLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    auto state = NewAndInitState(minLong.get());
+    minLong->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
     Vector<int64_t> longResult(1);
     result.clear();
     result.push_back(&longResult);
-    minLong->ExtractValues(state, result, 0);
+    minLong->ExtractValues(state.get(), result, 0);
     EXPECT_EQ(1, longResult.GetValue(0));
-    state.Reset();
 
     // process null
-    minNull->InitState(state);
-    minNull->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-    minNull->ExtractValues(state, result, 0);
+    state = NewAndInitState(minNull.get());
+    minNull->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+    minNull->ExtractValues(state.get(), result, 0);
     EXPECT_TRUE(longResult.IsNull(0));
-    state.Reset();
 
     // process varchar
-    minVarchar->InitState(state);
-    minVarchar->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    state = NewAndInitState(minVarchar.get());
+    minVarchar->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
     std::string expectedStr = "1";
-    EXPECT_EQ(1, state.count);
-    EXPECT_EQ(0, std::memcmp(reinterpret_cast<void *>(state.val), expectedStr.c_str(), 1));
+    auto strPtrAddr = *ExtractValueFromState<int64_t>(state.get());
+    auto len = *ExtractValueFromState<int32_t>(state.get() + sizeof(int64_t));
+    EXPECT_EQ(1, len);
+    EXPECT_EQ(0, std::memcmp(reinterpret_cast<const char *>(strPtrAddr), expectedStr.c_str(), 1));
     Vector<LargeStringContainer<std::string_view>> minVarcharOutput(1);
     std::vector<BaseVector *> minVarcharOutputVector;
     minVarcharOutputVector.push_back(&minVarcharOutput);
-    minVarchar->ExtractValues(state, minVarcharOutputVector, 0);
+    minVarchar->ExtractValues(state.get(), minVarcharOutputVector, 0);
     auto strRes = minVarcharOutput.GetValue(0);
     EXPECT_EQ(1, strRes.size());
     EXPECT_EQ(0, std::memcmp(strRes.data(), expectedStr.c_str(), 1));
-    state.Reset();
 
     // process int to long
-    minIntLong->InitState(state);
-    minIntLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-    minIntLong->ExtractValues(state, result, 0);
+    state = NewAndInitState(minIntLong.get());
+    minIntLong->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+    minIntLong->ExtractValues(state.get(), result, 0);
     EXPECT_EQ(1, longResult.GetValue(0));
-    state.Reset();
 
     // process long to int
-    minLongInt->InitState(state);
-    minLongInt->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    state = NewAndInitState(minLongInt.get());
+    minLongInt->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
     Vector<int32_t> intResult(1);
     result.clear();
     result.push_back(&intResult);
-    minLongInt->ExtractValues(state, result, 0);
+    minLongInt->ExtractValues(state.get(), result, 0);
     EXPECT_EQ(1, intResult.GetValue(0));
-    state.Reset();
 
-    minBoolean->InitState(state);
-    minBoolean->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    state = NewAndInitState(minBoolean.get());
+    minBoolean->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
     Vector<bool> booleanResult(1);
     result.clear();
     result.push_back(&booleanResult);
-    minBoolean->ExtractValues(state, result, 0);
+    minBoolean->ExtractValues(state.get(), result, 0);
     EXPECT_EQ(true, booleanResult.GetValue(0));
-    state.Reset();
 
     VectorHelper::FreeVecBatch(vectorBatch);
     delete minFactory;
@@ -2866,59 +2878,59 @@ TEST(AggregatorTest, max_test)
     vectorBatch->Append(boolInputVec);
 
     // process long
-    AggregateState state { 0 };
-    maxLong->InitState(state);
-    maxLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-    EXPECT_EQ(1, state.val);
-    state.Reset();
+    auto state = NewAndInitState(maxLong.get());
+    maxLong->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+    auto value = ExtractValueFromState<int64_t>(state.get());
+    EXPECT_EQ(1, *value);
 
     // process null
-    maxNull->InitState(state);
-    maxNull->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    state = NewAndInitState(maxNull.get());
+    maxNull->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
     // use state.count = 0 to determine null
-    EXPECT_EQ(0, state.count);
-    state.Reset();
+    auto maxNullState = ExtractValueFromState<BaseState<int64_t>>(state.get());
+    EXPECT_TRUE(maxNullState->IsEmpty());
 
     // process varchar
-    maxVarchar->InitState(state);
-    maxVarchar->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    state = NewAndInitState(maxVarchar.get());
+    maxVarchar->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
     std::string expectedStr = "1";
-    EXPECT_EQ(1, state.count);
-    EXPECT_EQ(0, std::memcmp(reinterpret_cast<void *>(state.val), expectedStr.c_str(), 1));
+
+    auto strPtrAddr = *ExtractValueFromState<int64_t>(state.get());
+    auto len = *ExtractValueFromState<int32_t>(state.get() + sizeof(int64_t));
+    EXPECT_EQ(1, len);
+    EXPECT_EQ(0, std::memcmp(reinterpret_cast<const char *>(strPtrAddr), expectedStr.c_str(), 1));
     Vector<LargeStringContainer<std::string_view>> maxVarcharOutput(1);
     std::vector<BaseVector *> maxVarcharOutputVector;
     maxVarcharOutputVector.push_back(&maxVarcharOutput);
-    maxVarchar->ExtractValues(state, maxVarcharOutputVector, 0);
+    maxVarchar->ExtractValues(state.get(), maxVarcharOutputVector, 0);
     std::string_view strRes = maxVarcharOutput.GetValue(0);
     EXPECT_EQ(1, strRes.size());
     EXPECT_EQ(0, std::memcmp(strRes.data(), expectedStr.c_str(), 1));
-    state.Reset();
 
     // process decimal
-    maxDecimal->InitState(state);
-    maxDecimal->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    state = NewAndInitState(maxDecimal.get());
+    maxDecimal->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+    auto decimalValue = ExtractValueFromState<Decimal128>(state.get());
     Decimal128 expected(1);
-    EXPECT_EQ(expected, *reinterpret_cast<Decimal128 *>(state.val));
-    state.Reset();
+    EXPECT_EQ(expected, *decimalValue);
 
     // process int to long
-    maxIntLong->InitState(state);
-    maxIntLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-    auto int64Value = state.val;
-    int64Value &= 0x0000FFFF;
-    EXPECT_EQ(1, int64Value);
-    state.Reset();
+    state = NewAndInitState(maxIntLong.get());
+    maxIntLong->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+    auto int64Value = ExtractValueFromState<int64_t>(state.get());
+    *int64Value &= 0x0000FFFF;
+    EXPECT_EQ(1, *int64Value);
 
     // process long to int
-    maxLongInt->InitState(state);
-    maxLongInt->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-    EXPECT_EQ(1, static_cast<int32_t>(state.val));
-    state.Reset();
+    state = NewAndInitState(maxLongInt.get());
+    maxLongInt->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+    auto int32Value = ExtractValueFromState<int32_t>(state.get());
+    EXPECT_EQ(1, *int32Value);
 
-    maxBoolean->InitState(state);
-    maxBoolean->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-    EXPECT_EQ(true, static_cast<bool>(state.val));
-    state.Reset();
+    state = NewAndInitState(maxBoolean.get());
+    maxBoolean->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+    auto boolValue = ExtractValueFromState<bool>(state.get());
+    EXPECT_EQ(true, *boolValue);
 
     VectorHelper::FreeVecBatch(vectorBatch);
     delete maxFactory;
@@ -2954,10 +2966,9 @@ TEST(AggregatorTest, verify_decimal_presision_improvement)
 
     auto *resultVec1 = new Vector<Decimal128>(1);
     std::vector<BaseVector *> extractVec1 = { resultVec1 };
-    AggregateState state1 { 0 };
-    avgDeciAgg1->InitState(state1);
-    avgDeciAgg1->ProcessGroup(state1, vecBatch, 0, 3);
-    avgDeciAgg1->ExtractValues(state1, extractVec1, 0);
+    auto state1 = NewAndInitState(avgDeciAgg1.get());
+    avgDeciAgg1->ProcessGroup(state1.get(), vecBatch, 0, 3);
+    avgDeciAgg1->ExtractValues(state1.get(), extractVec1, 0);
 
     Decimal128Wrapper expected1("33333333333333333.3333333333");
     EXPECT_EQ(expected1.ToDecimal128().ToString(), Decimal128Wrapper(resultVec1->GetValue(0)).ToString());
@@ -2969,17 +2980,14 @@ TEST(AggregatorTest, verify_decimal_presision_improvement)
     avgDeciAgg2->SetExecutionContext(executionContext.get());
     auto *resultVec2 = new Vector<Decimal128>(1);
     std::vector<BaseVector *> extractVec2 = { resultVec2 };
-    AggregateState state2 { 0 };
-    avgDeciAgg2->InitState(state2);
-    avgDeciAgg2->ProcessGroup(state2, vecBatch, 0, 3);
-    avgDeciAgg2->ExtractValues(state2, extractVec2, 0);
+    auto state2 = NewAndInitState(avgDeciAgg2.get());
+    avgDeciAgg2->ProcessGroup(state2.get(), vecBatch, 0, 3);
+    avgDeciAgg2->ExtractValues(state2.get(), extractVec2, 0);
 
     Decimal128Wrapper expected2("33333333333333333.3333333300");
     EXPECT_EQ(expected2.ToDecimal128().ToString(), Decimal128Wrapper(resultVec2->GetValue(0)).ToString());
     EXPECT_EQ(expected2.ToDecimal128(), resultVec2->GetValue(0));
 
-    state1.val = 0;
-    state2.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec1;
     delete resultVec2;
@@ -3027,25 +3035,22 @@ TEST(AggregatorTest, avg_test)
     vectorBatch->Append(nullInputVec);
 
     // process long
-    AggregateState state { 0 };
-    avgLong->InitState(state);
-    avgLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    auto state = NewAndInitState(avgLong.get());
+    avgLong->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
     Vector<double> avgLongOutput(1);
     std::vector<BaseVector *> avgLongOutputVector;
     avgLongOutputVector.push_back(&avgLongOutput);
-    avgLong->ExtractValues(state, avgLongOutputVector, 0);
+    avgLong->ExtractValues(state.get(), avgLongOutputVector, 0);
     EXPECT_TRUE(avgLongOutput.GetValue(0) - 1 <= DBL_EPSILON);
-    state.Reset();
 
     // process null
-    avgNull->InitState(state);
-    avgNull->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
+    state = NewAndInitState(avgNull.get());
+    avgNull->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
     Vector<double> avgNullOutput(1);
     std::vector<BaseVector *> avgNullOutputVector;
     avgNullOutputVector.push_back(&avgNullOutput);
-    avgNull->ExtractValues(state, avgNullOutputVector, 0);
+    avgNull->ExtractValues(state.get(), avgNullOutputVector, 0);
     EXPECT_TRUE(avgNullOutput.IsNull(0));
-    state.Reset();
 
     VectorHelper::FreeVecBatch(vectorBatch);
     delete avgFactory;
@@ -3079,10 +3084,9 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
     vecBatch->Append(deci18_6Vec);
     vecBatch->Append(isOverflowVec);
 
-    AggregateState state { 0 };
-    sumDeciAggPartial->InitState(state);
-    sumDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumDeciAggPartial.get());
+    sumDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128Wrapper expected1("999999999999.999999");
 
@@ -3090,18 +3094,18 @@ TEST(AggregatorTest, spark_sum_decimal64_normal)
     EXPECT_EQ(expected1.ToDecimal128(), resultVec->GetValue(0));
     EXPECT_FALSE(isOverflowVec->GetValue(0));
 
-    sumDeciAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    sumDeciAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
     auto sumDeciAggFinal =
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)).get()), channal0, false, false);
 
-    sumDeciAggFinal->ExtractValues(state, extractVec, 0);
+    sumDeciAggFinal->SetStateOffset(0);
+    sumDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128Wrapper expected2("2999999999999.999997");
     EXPECT_EQ(expected2.ToDecimal128(), resultVec->GetValue(0));
     EXPECT_EQ(expected2.ToDecimal128(), resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3136,10 +3140,9 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
     vecBatch->Append(deci25_8Vec);
     vecBatch->Append(isOverflowVec);
 
-    AggregateState state { 0 };
-    sumDeciAggPartial->InitState(state);
-    sumDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumDeciAggPartial.get());
+    sumDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128 expected1("99999999999999999.99999999");
 
@@ -3150,14 +3153,14 @@ TEST(AggregatorTest, spark_sum_decimal128_normal)
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()), channal0, false, false);
     sumDeciAggFinal->SetExecutionContext(executionContext.get());
-    sumDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
-    sumDeciAggFinal->ExtractValues(state, extractVec, 0);
+    sumDeciAggFinal->SetStateOffset(0);
+    sumDeciAggFinal->ProcessGroup(state.get(), vecBatch, 1, 2);
+    sumDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128Wrapper expected2("299999999999999999.99999997");
     EXPECT_EQ(expected2.ToDecimal128().ToString(), Decimal128Wrapper(resultVec->GetValue(0)).ToString());
     EXPECT_EQ(expected2.ToDecimal128(), resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3192,10 +3195,9 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
     vecBatch->Append(deci38_0Vec);
     vecBatch->Append(isOverflowVec);
 
-    AggregateState state { 0 };
-    sumDeciAggPartial->InitState(state);
-    sumDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumDeciAggPartial.get());
+    sumDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128 expected1("99999999999999999999999999999999999999");
 
@@ -3207,18 +3209,17 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_throw_exception_when_isOverfl
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()), channal0, false, false, false);
     sumDeciAggFinal->SetExecutionContext(executionContext.get());
-
-    sumDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
+    sumDeciAggFinal->SetStateOffset(0);
+    sumDeciAggFinal->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     bool isThrowException = false;
     try {
-        sumDeciAggFinal->ExtractValues(state, extractVec, 0);
+        sumDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
     } catch (OmniException &e) {
         isThrowException = true;
     }
     EXPECT_TRUE(isThrowException);
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3253,10 +3254,9 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
     vecBatch->Append(deci38_0Vec);
     vecBatch->Append(isOverflowVec);
 
-    AggregateState state { 0 };
-    sumDeciAggPartial->InitState(state);
-    sumDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumDeciAggPartial.get());
+    sumDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128 expected1("99999999999999999999999999999999999999");
 
@@ -3268,13 +3268,12 @@ TEST(AggregatorTest, spark_sum_decimal128_overflow_return_null_when_isOverflowAs
         sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()), channal0, false, false, true);
     sumDeciAggFinal->SetExecutionContext(executionContext.get());
-
-    sumDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
-    sumDeciAggFinal->ExtractValues(state, extractVec, 0);
+    sumDeciAggFinal->SetStateOffset(0);
+    sumDeciAggFinal->ProcessGroup(state.get(), vecBatch, 1, 2);
+    sumDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
 
     EXPECT_TRUE(resultVec->IsNull(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3308,28 +3307,27 @@ TEST(AggregatorTest, spark_avg_decimal64_normal)
     vecBatch->Append(deci18_6Vec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgDeciAggPartial->InitState(state);
-    avgDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgDeciAggPartial.get());
+    avgDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128Wrapper expected1("999999999999.999999");
 
     EXPECT_EQ(expected1.ToDecimal128().ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected1, resultVec->GetValue(0));
 
-    avgDeciAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    avgDeciAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
     auto avgDeciAggFinal =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(28, 6)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(22, 10)).get()), channal0, false, false);
     avgDeciAggFinal->SetExecutionContext(executionContext.get());
-
-    EXPECT_EQ(3, state.count);
-    AggregateState stateFinal { 0 };
-    avgDeciAggFinal->InitState(stateFinal);
-    *((int128_t *)(stateFinal.val)) = *((int64_t *)(state.val));
-    stateFinal.count = state.count;
-    avgDeciAggFinal->ExtractValues(stateFinal, extractVec, 0);
+    auto countState = ExtractValueFromState<BaseCountState<Decimal128>>(state.get());
+    EXPECT_EQ(3, countState->count);
+    auto stateFinal = NewAndInitState(avgDeciAggFinal.get());
+    auto finalState = ExtractValueFromState<BaseCountState<Decimal128>>(stateFinal.get());
+    finalState->value = countState->value;
+    finalState->count = countState->count;
+    avgDeciAggFinal->ExtractValues(stateFinal.get(), extractVec, 0);
 
     Decimal128Wrapper expected2 = Decimal128Wrapper("999999999999.9999990000");
     EXPECT_EQ(expected2.ToDecimal128().ToString(), resultVec->GetValue(0).ToString());
@@ -3371,10 +3369,9 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
     vecBatch->Append(deci25_8Vec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgDeciAggPartial->InitState(state);
-    avgDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgDeciAggPartial.get());
+    avgDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128Wrapper expected1("99999999999999999.99999999");
     EXPECT_EQ(expected1.ToDecimal128().ToString(), Decimal128Wrapper(resultVec->GetValue(0)).ToString());
@@ -3384,15 +3381,15 @@ TEST(AggregatorTest, spark_avg_decimal128_normal)
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(35, 8)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(29, 12)).get()), channal0, false, false);
     avgDeciAggFinal->SetExecutionContext(executionContext.get());
+    avgDeciAggFinal->SetStateOffset(0);
 
-    avgDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
-    avgDeciAggFinal->ExtractValues(state, extractVec, 0);
+    avgDeciAggFinal->ProcessGroup(state.get(), vecBatch, 1, 2);
+    avgDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128Wrapper expected2("99999999999999999.999999990000");
     EXPECT_EQ(expected2.ToDecimal128().ToString(), Decimal128Wrapper(resultVec->GetValue(0)).ToString());
     EXPECT_EQ(expected2.ToDecimal128(), resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -3423,10 +3420,9 @@ TEST(AggregatorTest, spark_avg_decimal128_result_decimal64)
     vecBatch->Append(deci19_8Vec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgDeciAggPartial->InitState(state);
-    avgDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgDeciAggPartial.get());
+    avgDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     // 9999999999.99999999 + 10 =
     int64_t expect = 100000000000000000LL;
@@ -3466,10 +3462,9 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverfl
     vecBatch->Append(deci38_0Vec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgDeciAggPartial->InitState(state);
-    avgDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgDeciAggPartial.get());
+    avgDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128 expected1("99999999999999999999999999999999999999");
 
@@ -3480,18 +3475,17 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_throw_exception_when_isOverfl
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 0)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 4)).get()), channal0, false, false, false);
     avgDeciAggFinal->SetExecutionContext(executionContext.get());
-
-    avgDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
+    avgDeciAggFinal->SetStateOffset(0);
+    avgDeciAggFinal->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     bool isThrowException = false;
     try {
-        avgDeciAggFinal->ExtractValues(state, extractVec, 0);
+        avgDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
     } catch (OmniException &e) {
         isThrowException = true;
     }
     EXPECT_TRUE(isThrowException);
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -3526,10 +3520,9 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
     vecBatch->Append(deci38_0Vec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgDeciAggPartial->InitState(state);
-    avgDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgDeciAggPartial.get());
+    avgDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128 expected1("99999999999999999999999999999999999999");
 
@@ -3541,11 +3534,11 @@ TEST(AggregatorTest, spark_avg_decimal128_overflow_return_null_when_isOverflowAs
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 4)).get()), channal0, false, false, true);
     avgDeciAggFinal->SetExecutionContext(executionContext.get());
 
-    avgDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
-    avgDeciAggFinal->ExtractValues(state, extractVec, 0);
+    avgDeciAggFinal->SetStateOffset(0);
+    avgDeciAggFinal->ProcessGroup(state.get(), vecBatch, 1, 2);
+    avgDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_TRUE(resultVec->IsNull(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -3587,21 +3580,19 @@ TEST(AggregatorTest, spark_avg_decimal128_count_cast_to_wider_type_overflow_retu
     vecBatch->Append(deci38_38Vec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgDeciAggPartial->InitState(state);
-    avgDeciAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgDeciAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgDeciAggPartial.get());
+    avgDeciAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgDeciAggPartial->ExtractValues(state.get(), extractVec, 0);
 
     auto avgDeciAggFinal =
         avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)).get()),
         *(AggregatorUtil::WrapWithDataTypes(Decimal128Type(38, 38)).get()), channal0, false, false, true);
     avgDeciAggFinal->SetExecutionContext(executionContext.get());
-
-    avgDeciAggFinal->ProcessGroup(state, vecBatch, 1, 2);
-    avgDeciAggFinal->ExtractValues(state, extractVec, 0);
+    avgDeciAggFinal->SetStateOffset(0);
+    avgDeciAggFinal->ProcessGroup(state.get(), vecBatch, 1, 2);
+    avgDeciAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_TRUE(resultVec->IsNull(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -3638,17 +3629,15 @@ TEST(AggregatorTest, spark_avg_decimal128_normal_when_inputRaw_is_true_and_outpu
     vecBatch->Append(deci22_0Vec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgDeciWindow->InitState(state);
-    avgDeciWindow->ProcessGroup(state, vecBatch, 0, 2);
-    avgDeciWindow->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgDeciWindow.get());
+    avgDeciWindow->ProcessGroup(state.get(), vecBatch, 0, 2);
+    avgDeciWindow->ExtractValues(state.get(), extractVec, 0);
 
     Decimal128 expected("5617283945061728394505.5000");
 
     EXPECT_EQ(expected.ToString(), resultVec->GetValue(0).ToString());
     EXPECT_EQ(expected, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -3674,21 +3663,20 @@ TEST(AggregatorTest, spark_sum_short_normal)
     auto *vecBatch = new VectorBatch(1);
     vecBatch->Append(shortVec);
 
-    AggregateState state { 0 };
-    sumShortAggPartial->InitState(state);
-    sumShortAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumShortAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumShortAggPartial.get());
+    sumShortAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumShortAggPartial->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(12345, resultVec->GetValue(0));
 
-    sumShortAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    sumShortAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     auto sumShortAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
+    sumShortAggFinal->SetStateOffset(0);
     sumShortAggFinal->SetExecutionContext(executionContext.get());
-    sumShortAggFinal->ExtractValues(state, extractVec, 0);
+    sumShortAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(48141, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3714,21 +3702,20 @@ TEST(AggregatorTest, spark_sum_int_normal)
     auto *vecBatch = new VectorBatch(1);
     vecBatch->Append(intVec);
 
-    AggregateState state { 0 };
-    sumIntAggPartial->InitState(state);
-    sumIntAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumIntAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumIntAggPartial.get());
+    sumIntAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumIntAggPartial->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(1234567890, resultVec->GetValue(0));
 
-    sumIntAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    sumIntAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     auto sumIntAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
+    sumIntAggFinal->SetStateOffset(0);
     sumIntAggFinal->SetExecutionContext(executionContext.get());
-    sumIntAggFinal->ExtractValues(state, extractVec, 0);
+    sumIntAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(4514814681, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3754,21 +3741,20 @@ TEST(AggregatorTest, spark_sum_long_normal)
     auto *vecBatch = new VectorBatch(1);
     vecBatch->Append(longVec);
 
-    AggregateState state { 0 };
-    sumLongAggPartial->InitState(state);
-    sumLongAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumLongAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumLongAggPartial.get());
+    sumLongAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumLongAggPartial->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(1234567890123456789, resultVec->GetValue(0));
 
-    sumLongAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    sumLongAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     auto sumLongAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
     sumLongAggFinal->SetExecutionContext(executionContext.get());
-    sumLongAggFinal->ExtractValues(state, extractVec, 0);
+    sumLongAggFinal->SetStateOffset(0);
+    sumLongAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(7037035803703703592, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3794,20 +3780,19 @@ TEST(AggregatorTest, spark_sum_long_overflow)
     auto *vecBatch = new VectorBatch(1);
     vecBatch->Append(longVec);
 
-    AggregateState state { 0 };
-    sumLongAggPartial->InitState(state);
-    sumLongAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumLongAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumLongAggPartial.get());
+    sumLongAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumLongAggPartial->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(9223372036854774807, resultVec->GetValue(0));
 
-    sumLongAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    sumLongAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     auto sumLongAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
-    sumLongAggFinal->ExtractValues(state, extractVec, 0);
+    sumLongAggFinal->SetStateOffset(0);
+    sumLongAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(9223372036854772805, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3832,15 +3817,13 @@ TEST(AggregatorTest, spark_sum_long_final_stage)
     auto *vecBatch1 = new VectorBatch(1);
     vecBatch1->Append(longVec1);
 
-    AggregateState state { 0 };
-
     auto executionContext = std::make_unique<ExecutionContext>();
     auto sumLongAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channal0, false, false);
     sumLongAggFinal->SetExecutionContext(executionContext.get());
-    sumLongAggFinal->InitState(state);
-    sumLongAggFinal->ProcessGroup(state, vecBatch1, 0, 2);
-    sumLongAggFinal->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumLongAggFinal.get());
+    sumLongAggFinal->ProcessGroup(state.get(), vecBatch1, 0, 2);
+    sumLongAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(-9223372036853924358, resultVec->GetValue(0));
 
     auto *longVec2 = new Vector<int64_t>(2);
@@ -3849,9 +3832,9 @@ TEST(AggregatorTest, spark_sum_long_final_stage)
 
     auto *vecBatch2 = new VectorBatch(1);
     vecBatch2->Append(longVec2);
-    sumLongAggFinal->InitState(state);
-    sumLongAggFinal->ProcessGroup(state, vecBatch2, 0, 2);
-    sumLongAggFinal->ExtractValues(state, extractVec, 0);
+    state = NewAndInitState(sumLongAggFinal.get());
+    sumLongAggFinal->ProcessGroup(state.get(), vecBatch2, 0, 2);
+    sumLongAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(9223372036854775553, resultVec->GetValue(0));
 
     VectorHelper::FreeVecBatch(vecBatch1);
@@ -3880,21 +3863,20 @@ TEST(AggregatorTest, spark_sum_double_normal)
     auto *vecBatch = new VectorBatch(1);
     vecBatch->Append(doubleVec);
 
-    AggregateState state { 0 };
-    sumDoubleAggPartial->InitState(state);
-    sumDoubleAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    sumDoubleAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(sumDoubleAggPartial.get());
+    sumDoubleAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    sumDoubleAggPartial->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(123456789012.3456789, resultVec->GetValue(0));
 
-    sumDoubleAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    sumDoubleAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     auto sumDoubleAggFinal = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
     sumDoubleAggFinal->SetExecutionContext(executionContext.get());
-    sumDoubleAggFinal->ExtractValues(state, extractVec, 0);
+    sumDoubleAggFinal->SetStateOffset(0);
+    sumDoubleAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(7.037035803703704E11, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete sumFactory;
@@ -3927,20 +3909,18 @@ TEST(AggregatorTest, spark_avg_short_normal)
     vecBatch->Append(shortVec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgShortAggPartial->InitState(state);
-    avgShortAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgShortAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgShortAggPartial.get());
+    avgShortAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgShortAggPartial->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(12345.0, resultVec->GetValue(0));
 
-    avgShortAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    avgShortAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     auto avgShortAggFinal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
-    avgShortAggFinal->ExtractValues(state, extractVec, 0);
+    avgShortAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(16047.0, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -3972,21 +3952,20 @@ TEST(AggregatorTest, spark_avg_int_normal)
     vecBatch->Append(intVec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgIntAggPartial->InitState(state);
-    avgIntAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgIntAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgIntAggPartial.get());
+    avgIntAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgIntAggPartial->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(1234567890.0, resultVec->GetValue(0));
 
-    avgIntAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    avgIntAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     auto avgIntAggFinal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
     avgIntAggFinal->SetExecutionContext(executionContext.get());
-    avgIntAggFinal->ExtractValues(state, extractVec, 0);
+    avgIntAggFinal->SetStateOffset(0);
+    avgIntAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(1.504938227E9, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -4018,21 +3997,20 @@ TEST(AggregatorTest, spark_avg_long_normal)
     vecBatch->Append(longVec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgLongAggPartial->InitState(state);
-    avgLongAggPartial->ProcessGroup(state, vecBatch, 0, 1);
-    avgLongAggPartial->ExtractValues(state, extractVec, 0);
+    auto state = NewAndInitState(avgLongAggPartial.get());
+    avgLongAggPartial->ProcessGroup(state.get(), vecBatch, 0, 1);
+    avgLongAggPartial->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(9.2233720368547748E18, resultVec->GetValue(0));
 
-    avgLongAggPartial->ProcessGroup(state, vecBatch, 1, 2);
+    avgLongAggPartial->ProcessGroup(state.get(), vecBatch, 1, 2);
 
     auto avgLongAggFinal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
     avgLongAggFinal->SetExecutionContext(executionContext.get());
-    avgLongAggFinal->ExtractValues(state, extractVec, 0);
+    avgLongAggFinal->SetStateOffset(0);
+    avgLongAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(9.2233720368547748E18, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -4064,17 +4042,16 @@ TEST(AggregatorTest, spark_avg_double_normal)
     vecBatch->Append(doubleVec);
     vecBatch->Append(avgCountVec);
 
-    AggregateState state { 0 };
-    avgDoubleAggPartial->InitState(state);
-    avgDoubleAggPartial->ProcessGroup(state, vecBatch, 0, 3);
+    auto state = NewAndInitState(avgDoubleAggPartial.get());
+    avgDoubleAggPartial->ProcessGroup(state.get(), vecBatch, 0, 3);
 
     auto avgDoubleAggFinal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
+    avgDoubleAggFinal->SetStateOffset(0);
     avgDoubleAggFinal->SetExecutionContext(executionContext.get());
-    avgDoubleAggFinal->ExtractValues(state, extractVec, 0);
+    avgDoubleAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(2.345678601234568E11, resultVec->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch);
     delete resultVec;
     delete avgFactory;
@@ -4103,32 +4080,31 @@ TEST(AggregatorTest, first_short_ignorenull_test)
     auto *resultValueSetVec1 = new Vector<bool>(1);
     std::vector<BaseVector *> extractVecs = { resultfirstVec1, resultValueSetVec1 };
 
-    AggregateState state { 0 };
+    auto state = NewAndInitState(firstIgnoreNullIntAggPartial.get());
 
     // add first VectorBatch
-    firstIgnoreNullIntAggPartial->InitState(state);
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 0);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 0);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 1);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 1);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 2);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 2);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 3);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 3);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 4);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 4);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
@@ -4140,22 +4116,21 @@ TEST(AggregatorTest, first_short_ignorenull_test)
     auto *vecBatch2 = new VectorBatch(1);
     vecBatch2->Append(inputShortVec2);
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 0);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch2, 0);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 1);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch2, 1);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_EQ(211, resultfirstVec1->GetValue(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 2);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch2, 2);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_EQ(211, resultfirstVec1->GetValue(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch1);
     VectorHelper::FreeVecBatch(vecBatch2);
     delete resultfirstVec1;
@@ -4186,32 +4161,31 @@ TEST(AggregatorTest, first_int_ignorenull_test)
     auto *resultValueSetVec1 = new Vector<bool>(1);
     std::vector<BaseVector *> extractVecs = { resultfirstVec1, resultValueSetVec1 };
 
-    AggregateState state { 0 };
+    auto state = NewAndInitState(firstIgnoreNullIntAggPartial.get());
 
     // add first VectorBatch
-    firstIgnoreNullIntAggPartial->InitState(state);
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 0);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 0);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 1);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 1);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 2);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 2);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 3);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 3);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch1, 4);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 4);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
@@ -4223,22 +4197,21 @@ TEST(AggregatorTest, first_int_ignorenull_test)
     auto *vecBatch2 = new VectorBatch(1);
     vecBatch2->Append(inputIntVec2);
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 0);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch2, 0);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 1);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch2, 1);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_EQ(211, resultfirstVec1->GetValue(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(state, vecBatch2, 2);
-    firstIgnoreNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(state.get(), vecBatch2, 2);
+    firstIgnoreNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_EQ(211, resultfirstVec1->GetValue(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch1);
     VectorHelper::FreeVecBatch(vecBatch2);
     delete resultfirstVec1;
@@ -4271,34 +4244,32 @@ TEST(AggregatorTest, first_int_includenull_test)
     auto *resultValueSetVec1 = new Vector<bool>(1);
     std::vector<BaseVector *> extractVecs = { resultfirstVec1, resultValueSetVec1 };
 
-    AggregateState state { 0 };
-    firstWithNullIntAggPartial->InitState(state);
-    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 0);
-    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    auto state = NewAndInitState(firstWithNullIntAggPartial.get());
+    firstWithNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 0);
+    firstWithNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 1);
-    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstWithNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 1);
+    firstWithNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 2);
-    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstWithNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 2);
+    firstWithNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 3);
-    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstWithNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 3);
+    firstWithNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    firstWithNullIntAggPartial->ProcessGroup(state, vecBatch1, 4);
-    firstWithNullIntAggPartial->ExtractValues(state, extractVecs, 0);
+    firstWithNullIntAggPartial->ProcessGroup(state.get(), vecBatch1, 4);
+    firstWithNullIntAggPartial->ExtractValues(state.get(), extractVecs, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_TRUE(resultValueSetVec1->GetValue(0));
 
-    state.val = 0;
     VectorHelper::FreeVecBatch(vecBatch1);
     delete resultfirstVec1;
     delete resultValueSetVec1;
@@ -4329,15 +4300,14 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     std::vector<BaseVector *> extractVecs1 = { resultfirstVec1, resultValueSetVec1 };
 
     // add first VectorBatch
-    AggregateState partialState { 0 };
-    firstIgnoreNullIntAggPartial->InitState(partialState);
-    firstIgnoreNullIntAggPartial->ProcessGroup(partialState, vecBatch1, 0);
-    firstIgnoreNullIntAggPartial->ExtractValues(partialState, extractVecs1, 0);
+    auto partialState = NewAndInitState(firstIgnoreNullIntAggPartial.get());
+    firstIgnoreNullIntAggPartial->ProcessGroup(partialState.get(), vecBatch1, 0);
+    firstIgnoreNullIntAggPartial->ExtractValues(partialState.get(), extractVecs1, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
-    firstIgnoreNullIntAggPartial->ProcessGroup(partialState, vecBatch1, 1);
-    firstIgnoreNullIntAggPartial->ExtractValues(partialState, extractVecs1, 0);
+    firstIgnoreNullIntAggPartial->ProcessGroup(partialState.get(), vecBatch1, 1);
+    firstIgnoreNullIntAggPartial->ExtractValues(partialState.get(), extractVecs1, 0);
     EXPECT_TRUE(resultfirstVec1->IsNull(0));
     EXPECT_FALSE(resultValueSetVec1->GetValue(0));
 
@@ -4370,24 +4340,23 @@ TEST(AggregatorTest, first_int_ignorenull_2steps_test)
     auto *resultfirstVec2 = new Vector<int64_t>(1);
     std::vector<BaseVector *> extractVecs2 = { resultfirstVec2 };
 
-    AggregateState finalState { 0 };
-    firstIgnoreNullIntAggFinal->InitState(finalState);
-    firstIgnoreNullIntAggFinal->ProcessGroup(finalState, vecBatch2, 0);
-    firstIgnoreNullIntAggFinal->ExtractValues(finalState, extractVecs2, 0);
+    auto finalState = NewAndInitState(firstIgnoreNullIntAggFinal.get());
+    firstIgnoreNullIntAggFinal->ProcessGroup(finalState.get(), vecBatch2, 0);
+    firstIgnoreNullIntAggFinal->ExtractValues(finalState.get(), extractVecs2, 0);
     EXPECT_TRUE(resultfirstVec2->IsNull(0));
 
-    firstIgnoreNullIntAggFinal->ProcessGroup(finalState, vecBatch2, 1);
-    firstIgnoreNullIntAggFinal->ExtractValues(finalState, extractVecs2, 0);
+    firstIgnoreNullIntAggFinal->ProcessGroup(finalState.get(), vecBatch2, 1);
+    firstIgnoreNullIntAggFinal->ExtractValues(finalState.get(), extractVecs2, 0);
     EXPECT_FALSE(resultfirstVec2->IsNull(0));
     EXPECT_EQ(111, resultfirstVec2->GetValue(0));
 
-    firstIgnoreNullIntAggFinal->ProcessGroup(finalState, vecBatch2, 2);
-    firstIgnoreNullIntAggFinal->ExtractValues(finalState, extractVecs2, 0);
+    firstIgnoreNullIntAggFinal->ProcessGroup(finalState.get(), vecBatch2, 2);
+    firstIgnoreNullIntAggFinal->ExtractValues(finalState.get(), extractVecs2, 0);
     EXPECT_FALSE(resultfirstVec2->IsNull(0));
     EXPECT_EQ(111, resultfirstVec2->GetValue(0));
 
-    firstIgnoreNullIntAggFinal->ProcessGroup(finalState, vecBatch2, 3);
-    firstIgnoreNullIntAggFinal->ExtractValues(finalState, extractVecs2, 0);
+    firstIgnoreNullIntAggFinal->ProcessGroup(finalState.get(), vecBatch2, 3);
+    firstIgnoreNullIntAggFinal->ExtractValues(finalState.get(), extractVecs2, 0);
     EXPECT_FALSE(resultfirstVec2->IsNull(0));
     EXPECT_EQ(111, resultfirstVec2->GetValue(0));
 
@@ -4410,21 +4379,37 @@ TEST(AggregatorTest, typed_aggregator_test)
             isOverflowAsNull)
         {}
 
+        virtual void InitState(AggregateState *state) override
+        {
+            return;
+        }
+
+        virtual int32_t GetStateSize()
+        {
+            return 0;
+        };
+
+        virtual void InitStates(std::vector<AggregateState *> &groupStates)
+        {
+            for (auto state : groupStates) {
+                InitState(state);
+            }
+        };
+
         BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
             uint8_t **nullMap, const size_t channelIdx)
         {
             return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, channelIdx);
         }
-        void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) {}
+        void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) {}
 
-        void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-            std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
+        void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+            int32_t rowOffset, int32_t rowCount)
         {}
 
-        void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-            std::vector<BaseVector *> &vectors)
-        {}
+        void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) {}
 
+        virtual void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
             const bool aggFilter) override
         {}
@@ -4439,13 +4424,13 @@ TEST(AggregatorTest, typed_aggregator_test)
             return;
         }
 
-        virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-            BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
+        virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
+            const int32_t rowOffset, const uint8_t *nullMap)
         {
             return;
         }
-        virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-            BaseVector *vector, Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap)
+        virtual void ProcessGroupInternalFilter(std::vector<AggregateState *> &rowStates, BaseVector *vector,
+            Vector<bool> *booleanVector, const int32_t rowOffset, const uint8_t *nullMap)
         {
             return;
         }
@@ -4453,7 +4438,7 @@ TEST(AggregatorTest, typed_aggregator_test)
     // just used to produce vector
     auto inputType = DoubleType();
     DataTypes inputTypes({ inputType }), outputTypes({ inputType });
-    std::vector<int32_t> channels { 0 };
+    std::vector<int32_t> channels{ 0 };
     bool rawIn = false, partialOut = false, isOverflowAsNull = false;
 
     const int dataSize = 6;
@@ -4471,7 +4456,6 @@ TEST(AggregatorTest, typed_aggregator_test)
     BaseVector *vector = VectorHelper::CreateDictionaryVector(ids, dataSize, doubleVector, inputType->GetId());
     vectorBatch->Append(vector);
     delete doubleVector;
-    AggregateState state;
     auto rawVectorBatch = CreateVectorBatch(inputTypes, dataSize, datas[0]);
     std::vector<DataTypePtr> typesPtr = {
         nullptr,         IntType(),        LongType(), DoubleType(),    BooleanType(),   ShortType(),
@@ -4522,10 +4506,12 @@ public:
         ret.emplace_back(MaxValue);
         return ret;
     }
+
     std::vector<T> ProduceOnlyMinimum(int32_t totoalNum)
     {
         return std::vector<T>(totoalNum, MinValue);
     }
+
     std::vector<T> ProduceOnlyMaximum(int32_t totoalNum)
     {
         return std::vector<T>(totoalNum, MaxValue);
@@ -4537,12 +4523,14 @@ public:
         auto dataPtr = const_cast<T *>(value.data());
         return TestUtil::CreateVector<T>(totoalNum, dataPtr);
     }
+
     vec::BaseVector *ProduceVecButOnlyMinimum(int32_t totoalNum)
     {
         auto value = ProduceOnlyMinimum(totoalNum);
         auto dataPtr = const_cast<T *>(value.data());
         return TestUtil::CreateVector<T>(totoalNum, dataPtr);
     }
+
     vec::BaseVector *ProduceVecButOnlyMaximum(int32_t totoalNum)
     {
         auto value = ProduceOnlyMaximum(totoalNum);
@@ -4568,10 +4556,12 @@ public:
         ret.emplace_back(MaxValue);
         return ret;
     }
+
     std::vector<Decimal128> ProduceOnlyMinimum(int32_t totoalNum)
     {
         return std::vector<Decimal128>(totoalNum, MinValue);
     }
+
     std::vector<Decimal128> ProduceOnlyMaximum(int32_t totoalNum)
     {
         return std::vector<Decimal128>(totoalNum, MaxValue);
@@ -4707,211 +4697,193 @@ TEST(AggregatorTest, max_agg_extrame_value_test)
     maxVectorBatch->Append(maxDecimalVector);
 
     {
-        AggregateState state { 0 };
-        maxBoolean->InitState(state);
+        auto state = NewAndInitState(maxBoolean.get());
         // process bool
-        maxBoolean->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto maxValue = static_cast<int8_t>(state.val);
-        EXPECT_EQ(int8Creator.MaxValue, maxValue);
+        maxBoolean->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<int8_t>(state.get());
+
+        EXPECT_EQ(int8Creator.MaxValue, *maxState);
     }
     {
         // process short
-        AggregateState state { 0 };
-        maxShort->InitState(state);
-        maxShort->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto maxValue = static_cast<int16_t>(state.val);
-        EXPECT_EQ(int16Creator.MaxValue, maxValue);
-    }
-    {
-        // process short
-        AggregateState state { 0 };
-        maxShort->InitState(state);
-        maxShort->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto maxValue = static_cast<int16_t>(state.val);
-        EXPECT_EQ(int16Creator.MaxValue, maxValue);
+        auto state = NewAndInitState(maxShort.get());
+        maxShort->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<int16_t>(state.get());
+
+        EXPECT_EQ(int16Creator.MaxValue, *maxState);
     }
     {
         // process int
-        AggregateState state { 0 };
-        maxInt->InitState(state);
-        maxInt->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto int64Value = state.val;
+        auto state = NewAndInitState(maxInt.get());
+        maxInt->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<int64_t>(state.get());
+        auto int64Value = *maxState;
         int32_t value = (int32_t)(int64Value);
         EXPECT_EQ(int32Creator.MaxValue, value);
     }
     {
         // process int64
-        AggregateState state { 0 };
-        maxLong->InitState(state);
-        maxLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto int64Value = state.val;
+        auto state = NewAndInitState(maxLong.get());
+        maxLong->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<int64_t>(state.get());
+        auto int64Value = *maxState;
         EXPECT_EQ(int64Creator.MaxValue, int64Value);
     }
     {
         // process double
-        AggregateState state { 0 };
-        maxDouble->InitState(state);
-        maxDouble->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto maxValue = *reinterpret_cast<double *>(state.val);
-        EXPECT_EQ(doubleCreator.MaxValue, maxValue);
+        auto state = NewAndInitState(maxDouble.get());
+        maxDouble->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<double>(state.get());
+
+        EXPECT_EQ(doubleCreator.MaxValue, *maxState);
     }
     {
         // process decimal
-        AggregateState state { 0 };
-        maxDecimal->InitState(state);
-        maxDecimal->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        EXPECT_EQ(decimalCreator.MaxValue, *reinterpret_cast<Decimal128 *>(state.val));
+        auto state = NewAndInitState(maxDecimal.get());
+        maxDecimal->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<Decimal128>(state.get());
+
+        EXPECT_EQ(decimalCreator.MaxValue, *maxState);
     }
     // test maxAggregator but only min value
     {
-        AggregateState state { 0 };
-        maxBoolean->InitState(state);
+        auto state = NewAndInitState(maxBoolean.get());
         // process bool
-        maxBoolean->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
-        auto maxValue = static_cast<int8_t>(state.val);
+        maxBoolean->ProcessGroup(state.get(), minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<int8_t>(state.get());
+        auto maxValue = static_cast<int8_t>(*maxState);
         EXPECT_EQ(int8Creator.MinValue, maxValue);
     }
     {
-        AggregateState state { 0 };
-        maxShort->InitState(state);
-        maxShort->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
-        auto maxValue = static_cast<int16_t>(state.val);
+        auto state = NewAndInitState(maxShort.get());
+        maxShort->ProcessGroup(state.get(), minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<int16_t>(state.get());
+        auto maxValue = *maxState;
         EXPECT_EQ(int16Creator.MinValue, maxValue);
     }
     {
-        AggregateState state { 0 };
-        maxInt->InitState(state);
+        auto state = NewAndInitState(maxInt.get());
         // process bool
-        maxInt->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
-        auto int64Value = static_cast<int64_t>(state.val);
+        maxInt->ProcessGroup(state.get(), minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<int64_t>(state.get());
+        auto int64Value = static_cast<int64_t>(*maxState);
         int32_t value = (int32_t)(int64Value);
         EXPECT_EQ(int32Creator.MinValue, value);
     }
     {
-        AggregateState state { 0 };
-        maxLong->InitState(state);
-        maxLong->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
-        auto maxValue = static_cast<int64_t>(state.val);
+        auto state = NewAndInitState(maxLong.get());
+        maxLong->ProcessGroup(state.get(), minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<int64_t>(state.get());
+        auto maxValue = static_cast<int64_t>(*maxState);
         EXPECT_EQ(int64Creator.MinValue, maxValue);
     }
     {
-        AggregateState state { 0 };
-        maxDouble->InitState(state);
-        maxDouble->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
-        auto maxValue = *reinterpret_cast<double *>(state.val);
+        auto state = NewAndInitState(maxDouble.get());
+        maxDouble->ProcessGroup(state.get(), minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<double>(state.get());
+        auto maxValue = *maxState;
         EXPECT_EQ(doubleCreator.MinValue, maxValue);
     }
     {
-        AggregateState state { 0 };
-        maxDecimal->InitState(state);
-        maxDecimal->ProcessGroup(state, minVectorBatch, 0, minVectorBatch->GetRowCount());
-        auto maxValue = *reinterpret_cast<Decimal128 *>(state.val);
-        EXPECT_EQ(decimalCreator.MinValue, maxValue);
+        auto state = NewAndInitState(maxDecimal.get());
+        maxDecimal->ProcessGroup(state.get(), minVectorBatch, 0, minVectorBatch->GetRowCount());
+        auto maxState = ExtractValueFromState<Decimal128>(state.get());
+
+        EXPECT_EQ(decimalCreator.MinValue, *maxState);
     }
 
 
     // test min aggregator
     {
-        AggregateState state { 0 };
-        minBoolean->InitState(state);
-        minBoolean->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto minValue = static_cast<int8_t>(state.val);
+        auto state = NewAndInitState(minBoolean.get());
+        minBoolean->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<int8_t>(state.get());
+        auto minValue = static_cast<int8_t>(*minState);
         EXPECT_EQ(int8Creator.MinValue, minValue);
     }
     {
         // process short
-        AggregateState state { 0 };
-        minShort->InitState(state);
-        minShort->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto minValue = static_cast<int16_t>(state.val);
+        auto state = NewAndInitState(minShort.get());
+        minShort->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<int16_t>(state.get());
+        auto minValue = static_cast<int16_t>(*minState);
         EXPECT_EQ(int16Creator.MinValue, minValue);
     }
-    {
-        // process short
-        AggregateState state { 0 };
-        minShort->InitState(state);
-        minShort->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto minValue = static_cast<int16_t>(state.val);
-        EXPECT_EQ(int16Creator.MinValue, minValue);
-    }
+
     {
         // process int
-        AggregateState state { 0 };
-        minInt->InitState(state);
-        minInt->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto int64Value = static_cast<int64_t>(state.val);
+        auto state = NewAndInitState(minInt.get());
+        minInt->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<int64_t>(state.get());
+        auto int64Value = static_cast<int64_t>(*minState);
         int32_t value = (int32_t)(int64Value);
         EXPECT_EQ(int32Creator.MinValue, value);
     }
     {
         // process int64
-        AggregateState state { 0 };
-        minLong->InitState(state);
-        minLong->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto int64Value = static_cast<int64_t>(state.val);
+        auto state = NewAndInitState(minLong.get());
+        minLong->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<int64_t>(state.get());
+        auto int64Value = static_cast<int64_t>(*minState);
         EXPECT_EQ(int64Creator.MinValue, int64Value);
     }
     {
         // process double
-        AggregateState state { 0 };
-        minDouble->InitState(state);
-        minDouble->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        auto minValue = *reinterpret_cast<double *>(state.val);
+        auto state = NewAndInitState(minDouble.get());
+        minDouble->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<double>(state.get());
+        auto minValue = *minState;
         EXPECT_EQ(doubleCreator.MinValue, minValue);
     }
     {
         // process decimal
-        AggregateState state { 0 };
-        minDecimal->InitState(state);
-        minDecimal->ProcessGroup(state, vectorBatch, 0, vectorBatch->GetRowCount());
-        EXPECT_EQ(decimalCreator.MinValue, *reinterpret_cast<Decimal128 *>(state.val));
+        auto state = NewAndInitState(minDecimal.get());
+        minDecimal->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<Decimal128>(state.get());
+        EXPECT_EQ(decimalCreator.MinValue, *minState);
     }
 
     // test minAggregator but only max value
     {
-        AggregateState state { 0 };
-        minBoolean->InitState(state);
+        auto state = NewAndInitState(minBoolean.get());
         // process bool
-        minBoolean->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
-        auto minValue = static_cast<int8_t>(state.val);
+        minBoolean->ProcessGroup(state.get(), maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<int8_t>(state.get());
+        auto minValue = static_cast<int8_t>(*minState);
         EXPECT_EQ(int8Creator.MaxValue, minValue);
     }
     {
-        AggregateState state { 0 };
-        minShort->InitState(state);
+        auto state = NewAndInitState(minShort.get());
         // process bool
-        minShort->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
-        auto minValue = static_cast<int16_t>(state.val);
+        minShort->ProcessGroup(state.get(), maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<int16_t>(state.get());
+        auto minValue = static_cast<int16_t>(*minState);
         EXPECT_EQ(int16Creator.MaxValue, minValue);
     }
     {
-        AggregateState state { 0 };
-        minInt->InitState(state);
-        // process bool
-        minInt->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
-        auto int64Value = static_cast<int64_t>(state.val);
+        auto state = NewAndInitState(minInt.get());
+        minInt->ProcessGroup(state.get(), maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto int64Value = *reinterpret_cast<int64_t *>(state.get());
         int32_t value = (int32_t)(int64Value);
         EXPECT_EQ(int32Creator.MaxValue, value);
     }
     {
-        AggregateState state { 0 };
-        minLong->InitState(state);
-        minLong->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
-        auto minValue = static_cast<int64_t>(state.val);
+        auto state = NewAndInitState(minLong.get());
+        minLong->ProcessGroup(state.get(), maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minValue = *reinterpret_cast<int64_t *>(state.get());
         EXPECT_EQ(int64Creator.MaxValue, minValue);
     }
     {
-        AggregateState state { 0 };
-        minDouble->InitState(state);
-        minDouble->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
-        auto minValue = *reinterpret_cast<double *>(state.val);
+        auto state = NewAndInitState(minDouble.get());
+        minDouble->ProcessGroup(state.get(), maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minValue = *reinterpret_cast<double *>(state.get());
         EXPECT_EQ(doubleCreator.MaxValue, minValue);
     }
     {
-        AggregateState state { 0 };
-        minDecimal->InitState(state);
-        minDecimal->ProcessGroup(state, maxVectorBatch, 0, maxVectorBatch->GetRowCount());
-        auto minValue = *reinterpret_cast<Decimal128 *>(state.val);
+        auto state = NewAndInitState(minDecimal.get());
+        minDecimal->ProcessGroup(state.get(), maxVectorBatch, 0, maxVectorBatch->GetRowCount());
+        auto minState = ExtractValueFromState<Decimal128>(state.get());
+        auto minValue = *minState;
         EXPECT_EQ(decimalCreator.MaxValue, minValue);
     }
 

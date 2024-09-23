@@ -16,6 +16,7 @@
 #include "operator/util/function_type.h"
 #include "util/type_util.h"
 #include "src/util/config_util.h"
+#include "state_flag_operation.h"
 
 namespace omniruntime {
 namespace op {
@@ -28,24 +29,7 @@ struct ColumnIndex {
     type::DataTypePtr output;
 };
 
-struct AggregateState {
-    // for sum/avg/min/max holds latest aggregatred value
-    // for stringMin/stringMax holds pointer to latestes aggregated value
-    // for bool/short/int/long/decimal64, the val is the real value
-    // for double/decimal128/char/varchar, the val is the value pointer
-    int64_t val = 0;
-
-    // for sum/avg holds number of rows aggregated so far (not including null rows), or -1 if overflow happened.
-    // for min/max it is 1 when at leats there is one not-null row in aggregation, otherwise 0.
-    // for count holds number of counted rows
-    int64_t count = 0;
-
-    void Reset()
-    {
-        val = 0;
-        count = 0;
-    }
-};
+using AggregateState = uint8_t;
 
 struct DecimalAverageState {
     int64_t count;
@@ -56,12 +40,6 @@ struct DecimalAverageState {
 struct DecimalSumState {
     int64_t overflow;
     type::int128_t val;
-};
-
-struct FirstState {
-    void *val = nullptr;
-    bool valIsNull = true;
-    bool valueSet = false;
 };
 
 struct KeyValue {
@@ -135,7 +113,7 @@ public:
         this->arenaAllocator = executionContext->GetArena();
     }
 
-    virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex)
+    virtual void ProcessGroup(AggregateState *state, VectorBatch *vectorBatch, int32_t rowIndex)
     {
         throw OmniException("Not implemented",
             "ProcessGroup(AggregateState &, VectorBatch *, int32_t) not implemented for " +
@@ -149,7 +127,7 @@ public:
     }
 
     // for no groupby aggregation
-    virtual void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+    virtual void ProcessGroup(AggregateState *state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount)
     {
 #ifdef DEBUG
@@ -157,7 +135,7 @@ public:
 #endif
         int32_t end = rowOffset + rowCount;
         for (int32_t i = rowOffset; i < end; ++i) {
-            ProcessGroup(state, vectorBatch, i);
+            ProcessGroup(state + aggStateOffset, vectorBatch, i);
         }
     }
 
@@ -178,7 +156,7 @@ public:
     }
 
     // for no groupby aggregation  with filter
-    virtual void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+    virtual void ProcessGroupFilter(AggregateState *state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t filterIndex)
     {
 #ifdef DEBUG
@@ -191,18 +169,18 @@ public:
         if (needFilterJude) {
             for (int32_t i = rowOffset; i < rowEnd; ++i) {
                 if (filterVec->GetValue(i)) {
-                    ProcessGroup(state, vectorBatch, i);
+                    ProcessGroup(state + aggStateOffset, vectorBatch, i);
                 }
             }
         } else {
             for (int32_t i = rowOffset; i < rowEnd; ++i) {
-                ProcessGroup(state, vectorBatch, i);
+                ProcessGroup(state + aggStateOffset, vectorBatch, i);
             }
         }
     }
 
     // for groupby hash aggregation
-    virtual void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
+    virtual void ProcessGroup(std::vector<AggregateState *> &rowStates, VectorBatch *vectorBatch,
         const int32_t rowOffset)
     {
 #ifdef DEBUG
@@ -213,12 +191,11 @@ public:
         size_t rowCount = rowStates.size();
 
         for (size_t i = 0; i < rowCount; ++i) {
-            ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
+            ProcessGroup(rowStates[i] + aggStateOffset, vectorBatch, rowIndex++);
         }
     }
 
-    virtual void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
-        int32_t &vectorIndex)
+    virtual void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex)
     {
         throw OmniException("UNSUPPORTED_ERROR",
             "ProcessGroupUnspill not implemented for " + std::to_string(as_integer(type)));
@@ -240,41 +217,43 @@ public:
         if (needFilterJude) {
             for (int32_t i = 0; i < rowCount; ++i) {
                 if (filterVec->GetValue(i)) {
-                    ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
+                    ProcessGroup(rowStates[i] + aggStateOffset, vectorBatch, rowIndex++);
                     continue;
                 }
                 rowIndex++;
             }
         } else {
             for (int32_t i = 0; i < rowCount; ++i) {
-                ProcessGroup(rowStates[i][aggIdx], vectorBatch, rowIndex++);
+                ProcessGroup(rowStates[i] + aggStateOffset, vectorBatch, rowIndex++);
             }
         }
     }
 
-    virtual void InitState(AggregateState &state)
+    virtual void InitState(AggregateState *state)
     {
-        state.val = 0;
-        state.count = 0;
+        throw OmniException("not implement", "InitState");
     }
 
-    virtual void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx)
+    virtual void SetStateOffset(int32_t offset)
     {
-        for (auto groupState : groupStates) {
-            auto &state = groupState[aggIdx];
-            state.val = 0;
-            state.count = 0;
-        }
+        aggStateOffset = offset;
     }
+
+    virtual int32_t GetStateSize() = 0;
+
+    virtual void InitStates(std::vector<AggregateState *> &groupStates)
+    {
+        throw OmniException("not implement", "InitStates");
+    };
 
     // set result to output vector
-    virtual void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+    virtual void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors,
         const int32_t rowIndex) = 0;
 
-    virtual void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) = 0;
+    virtual void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) = 0;
 
-    virtual void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+    virtual void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
         std::vector<BaseVector *> &vectors) = 0;
 
     virtual bool IsTypedAggregator()
@@ -335,6 +314,7 @@ protected:
     const std::vector<int32_t> channels;
     ExecutionContext *executionContext = nullptr;
     SimpleArenaAllocator *arenaAllocator = nullptr;
+    int32_t aggStateOffset;
 };
 } // end of namespace op
 } // end of namespace omniruntime

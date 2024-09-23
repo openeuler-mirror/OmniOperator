@@ -32,7 +32,7 @@ void AggregationSort::SetSpillVectorBatch(vec::VectorBatch *spillVecBatch, uint6
             }
             aggOutputStartIndex += oneAggOutputCols;
 
-            aggregators[aggIndex]->ExtractValuesForSpill(groupStates, aggIndex, oneAggOutputVecs);
+            aggregators[aggIndex]->ExtractValuesForSpill(groupStates, oneAggOutputVecs);
         }
     }
 }

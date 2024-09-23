@@ -122,9 +122,9 @@ public:
 
     virtual ~WindowFunction() = default;
 
-    virtual void Reset(WindowIndex *windowIndex) {};
+    virtual void Reset(WindowIndex *windowIndex){};
     virtual void ProcessRow(VectorBatch *inputVecBatchForAgg, BaseVector *column, int32_t index, int32_t peerGroupStart,
-        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) {};
+        int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd){};
 
     WindowFrameInfo *GetWindowFrameInfo()
     {
@@ -144,9 +144,9 @@ public:
     void Reset(WindowIndex *pWindowIndex) override;
     void ProcessRow(VectorBatch *vectorBatch, BaseVector *column, int32_t index, int32_t peerGroupStart,
         int32_t peerGroupEnd, int32_t frameStart, int32_t frameEnd) override;
-    virtual void Reset() {};
+    virtual void Reset(){};
     virtual void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
-        int32_t currentPositionIndex) {};
+        int32_t currentPositionIndex){};
     RankingWindowFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType);
     ~RankingWindowFunction() override;
 
@@ -174,7 +174,7 @@ private:
 class RowNumberFunction : public RankingWindowFunction {
 public:
     RowNumberFunction(std::unique_ptr<WindowFrameInfo> frame, DataTypePtr inputType, DataTypePtr outputType)
-        : RankingWindowFunction(std::move(frame), std::move(inputType), std::move(outputType)) {};
+        : RankingWindowFunction(std::move(frame), std::move(inputType), std::move(outputType)){};
     ~RowNumberFunction() override = default;
     void RankingProcessRow(BaseVector *column, int32_t index, bool newPeerGroup, int32_t peerGroupCount,
         int32_t currentPositionIndex) override;
@@ -198,7 +198,7 @@ private:
     int32_t currentStart;
     int32_t currentEnd;
     std::unique_ptr<Aggregator> aggregator;
-    std::unique_ptr<AggregateState> aggregateState;
+    AggregateState *aggregateState;
     ExecutionContext *executionContext;
     bool isOverflowAsNull;
 

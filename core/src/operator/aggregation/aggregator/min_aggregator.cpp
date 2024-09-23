@@ -9,17 +9,18 @@
 namespace omniruntime {
 namespace op {
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)
 {
+    auto *minState = MinState::ConstCastState(state + aggStateOffset);
     auto v = static_cast<OutVector *>(vectors[0]);
-    if (state.count == 0) {
+    if (minState->IsEmpty()) {
         v->SetNull(rowIndex);
         return;
     }
 
-    bool overflow = state.count < 0;
-    auto result = CastWithOverflowEntry<ResultType, OutType>(state.val, overflow);
+    bool overflow = minState->IsOverFlowed();
+    auto result = CastWithOverflow<ResultType, OutType>(minState->value, overflow);
     v->SetValue(rowIndex, result);
     if (overflow) {
         this->SetNullOrThrowException(v, rowIndex, "min_aggregator overflow.");
@@ -27,20 +28,20 @@ void MinAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, st
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+void MinAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates,
     std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
 {
     auto v = static_cast<OutVector *>(vectors[0]);
     for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-        auto &state = groupStates[rowIndex][aggIdx];
-        if (state.count == 0) {
+        auto *state = MinState::CastState(groupStates[rowIndex] + aggStateOffset);
+        if (state->IsEmpty()) {
             v->SetNull(rowIndex);
-        } else if (state.count < 0) {
+        } else if (state->IsOverFlowed()) {
             this->SetNullOrThrowException(v, rowIndex, "min_aggregator overflow.");
         } else {
             OutType result;
             bool isOverflow = false;
-            result = CastWithOverflowEntry<ResultType, OutType>(state.val, isOverflow);
+            result = CastWithOverflow<ResultType, OutType>(state->value, isOverflow);
             if (isOverflow) {
                 this->SetNullOrThrowException(v, rowIndex, "min_aggregator overflow.");
             } else {
@@ -63,81 +64,61 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> std::vector<DataTypePtr> MinAggre
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
-    const size_t aggIdx, std::vector<BaseVector *> &vectors)
+    std::vector<BaseVector *> &vectors)
 {
     auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
     auto rowCount = static_cast<int32_t>(groupStates.size());
     for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-        auto &state = groupStates[rowIndex][aggIdx];
-        if (state.count == 0) {
+        auto *state = MinState::CastState(groupStates[rowIndex] + aggStateOffset);
+        if (state->IsEmpty()) {
             spillValueVec->SetNull(rowIndex);
         } else {
-            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                spillValueVec->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-            } else {
-                spillValueVec->SetValue(rowIndex, static_cast<ResultType>(state.val));
-            }
+            spillValueVec->SetValue(rowIndex, state->value);
         }
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID> void MinAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
+template <DataTypeId IN_ID, DataTypeId OUT_ID> void MinAggregator<IN_ID, OUT_ID>::InitState(AggregateState *state)
 {
-    if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-        state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(sizeof(ResultType)));
-        *reinterpret_cast<ResultType *>(state.val) = GetMax<ResultType>();
-    } else {
-        state.val = GetMax<ResultType>();
-    }
-
-    state.count = 0;
+    auto *minState = MinState::CastState(state + aggStateOffset);
+    minState->value = GetMax<ResultType>();
+    minState->valueState = AggValueState::EMPTY_VALUE;
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx)
+void MinAggregator<IN_ID, OUT_ID>::InitStates(std::vector<AggregateState *> &groupStates)
 {
     ResultType maxVal = GetMax<ResultType>();
     for (auto groupState : groupStates) {
-        auto &state = groupState[aggIdx];
-        if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-            state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(sizeof(ResultType)));
-            *reinterpret_cast<ResultType *>(state.val) = maxVal;
-        } else {
-            state.val = maxVal;
-        }
-
-        state.count = 0;
+        auto *state = MinState::CastState(groupState + aggStateOffset);
+        state->value = maxVal;
+        state->valueState = AggValueState::EMPTY_VALUE;
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
+void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
+    auto *minState = MinState::CastState(state);
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
-                Add<InType, ResultType, MinOp<InType, ResultType>>(reinterpret_cast<ResultType *>(state.val),
-                    state.count, ptr, rowCount);
-            } else if constexpr (std::is_floating_point_v<ResultType>) {
-                simd::SIMDAdd<InType, ResultType, simd::BasicOp::Min>(reinterpret_cast<ResultType *>(state.val),
-                    state.count, ptr, rowCount);
+                Add<InType, ResultType, AggValueState, MinOp<InType, ResultType>>(&minState->value,
+                    minState->valueState, ptr, rowCount);
             } else {
-                simd::SIMDAdd<InType, ResultType, simd::BasicOp::Min>(reinterpret_cast<ResultType *>(&state.val),
-                    state.count, ptr, rowCount);
+                simd::SIMDAdd<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Min>(
+                    &minState->value, minState->valueState, ptr, rowCount);
             }
         } else {
             if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
-                AddConditional<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(
-                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
-            } else if constexpr (std::is_floating_point_v<ResultType>) {
-                simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Min>(
-                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
+                AddConditional<InType, ResultType, AggValueState, MinConditionalOp<InType, ResultType, false>>(
+                    &minState->value, minState->valueState, ptr, rowCount, nullMap);
             } else {
-                simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Min>(
-                    reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
+                simd::SIMDAddConditional<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Min>(
+                    &minState->value, minState->valueState, ptr, rowCount, nullMap);
             }
         }
     } else {
@@ -145,58 +126,54 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, 
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
             if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
-                AddDict<InType, ResultType, MinOp<InType, ResultType>>(reinterpret_cast<ResultType *>(state.val),
-                    state.count, ptr, rowCount, indexMap);
-            } else if constexpr (std::is_floating_point_v<ResultType>) {
-                simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Min>(reinterpret_cast<ResultType *>(state.val),
-                    state.count, ptr, rowCount, indexMap);
+                AddDict<InType, ResultType, AggValueState, MinOp<InType, ResultType>>(&minState->value,
+                    minState->valueState, ptr, rowCount, indexMap);
             } else {
-                simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Min>(reinterpret_cast<ResultType *>(&state.val),
-                    state.count, ptr, rowCount, indexMap);
+                simd::SIMDAddDict<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Min>(
+                    &minState->value, minState->valueState, ptr, rowCount, indexMap);
             }
         } else {
             if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
-                AddDictConditional<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(
-                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
-            } else if constexpr (std::is_floating_point_v<ResultType>) {
-                simd::SIMDAddDictConditional<InType, ResultType, simd::BasicOp::Min>(
-                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
+                AddDictConditional<InType, ResultType, AggValueState, MinConditionalOp<InType, ResultType, false>>(
+                    &minState->value, minState->valueState, ptr, rowCount, nullMap, indexMap);
             } else {
-                simd::SIMDAddDictConditional<InType, ResultType, simd::BasicOp::Min>(
-                    reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap, indexMap);
+                simd::SIMDAddDictConditional<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Min>(
+                    &minState->value, minState->valueState, ptr, rowCount, nullMap, indexMap);
             }
         }
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
+void MinAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
+    const int32_t rowOffset, const uint8_t *nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            AddUseRowIndex<InType, ResultType, MinOp<InType, ResultType>>(rowStates, aggIdx, ptr);
+            AddUseRowIndex<InType, MinState::template UpdateState<InType, ResultType>>(rowStates, aggStateOffset, ptr);
         } else {
-            AddConditionalUseRowIndex<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(rowStates,
-                aggIdx, ptr, nullMap);
+            AddConditionalUseRowIndex<InType, MinState::template UpdateStateWithCondition<InType, ResultType, false>>(
+                rowStates, aggStateOffset, ptr, nullMap);
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
-            AddDictUseRowIndex<InType, ResultType, MinOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
+            AddDictUseRowIndex<InType, MinState::template UpdateState<InType, ResultType>>(rowStates, aggStateOffset,
+                ptr, indexMap);
         } else {
-            AddDictConditionalUseRowIndex<InType, ResultType, MinConditionalOp<InType, ResultType, false>>(rowStates,
-                aggIdx, ptr, nullMap, indexMap);
+            AddDictConditionalUseRowIndex<InType, ResultType,
+                MinState::template UpdateStateWithCondition<InType, ResultType, false>>(rowStates, aggStateOffset, ptr,
+                nullMap, indexMap);
         }
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount,
-    const size_t aggIdx, int32_t &vectorIndex)
+    int32_t &vectorIndex)
 {
     auto firstVecIdx = vectorIndex++;
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
@@ -205,13 +182,9 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInf
         auto index = row.rowIdx;
         auto vectorPtr = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
         if (!vectorPtr->IsNull(index)) {
-            auto &state = row.state[aggIdx];
+            auto *state = MinState::CastState(row.state + aggStateOffset);
             auto value = vectorPtr->GetValue(index);
-            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                MinOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, value, 1LL);
-            } else {
-                MinOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, value, 1LL);
-            }
+            MinOp<ResultType, ResultType>(&state->value, state->valueState, value, 1LL);
         }
     }
 }

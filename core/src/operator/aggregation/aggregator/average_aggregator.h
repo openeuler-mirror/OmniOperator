@@ -59,14 +59,16 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class AverageAggregator : public 
 public:
     ~AverageAggregator() override = default;
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
+    // we use sum state as avg state
+    using AvgState = typename SumAggregator<IN_ID, OUT_ID>::SumState;
+
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override;
     std::vector<DataTypePtr> GetSpillType() override;
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override;
     template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT>
-    void ExtractValuesFunction(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex);
+    void ExtractValuesFunction(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex);
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inRaw, bool outPartial, bool isOverflowAsNull)
@@ -120,8 +122,7 @@ public:
         }
     }
 
-    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
-        int32_t &vectorIndex) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
         const bool aggFilter) override;
@@ -130,25 +131,25 @@ protected:
     AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
-    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap) override;
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap) override;
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
+        const uint8_t *nullMap) override;
 
     template<typename T>
     void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
 
 private:
-    void (AverageAggregator<IN_ID, OUT_ID>::*extractValuesFuncPointer)(const AggregateState &state,
+    void (AverageAggregator<IN_ID, OUT_ID>::*extractValuesFuncPointer)(const AggregateState *state,
         std::vector<BaseVector *> &vectors, int32_t rowIndex) = nullptr;
 
     template <bool PARTIAL_OUT, bool DECIMAL_PRECISION_IMPROVEMENT, bool IS_OVERFLOW_AS_NULL>
-    void ExtractValuesBatchInternal(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount);
+    void ExtractValuesBatchInternal(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount);
 
     template <bool DECIMAL_PRECISION_IMPROVEMENT>
-    void DivideWithOverflow(const AggregateState &state, OutType &result, bool &overflow);
+    void DivideWithOverflow(const AvgState *state, OutType &result, bool &overflow);
 };
 }
 }

@@ -42,7 +42,7 @@ std::vector<std::vector<int32_t>> AggregatorUtil::WrapWithVector(std::vector<int
 
 std::unique_ptr<DataTypes> AggregatorUtil::WrapWithDataTypes(const DataTypePtr &value)
 {
-    return std::make_unique<DataTypes>(std::vector<DataTypePtr>{value});
+    return std::make_unique<DataTypes>(std::vector<DataTypePtr>{ value });
 }
 } // end of namespace op
 } // end of namespace omniruntime

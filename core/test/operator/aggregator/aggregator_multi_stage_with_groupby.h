@@ -168,7 +168,7 @@ public:
                     }
                     int32_t *filterValuePtr = groups->IsNull(i) ? nullptr : &filterValue;
                     int64_t count = 0;
-                    Decimal128 result {};
+                    Decimal128 result{};
                     bool overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, Decimal128, Decimal128>(vvb,
                         valueIndex, maskIndex, SumFunc<T_IN, Decimal128>, count, result, filterValuePtr, 0);
 
@@ -193,7 +193,7 @@ public:
                     }
                     int32_t *filterValuePtr = groups->IsNull(i) ? nullptr : &filterValue;
                     int64_t count = 0;
-                    double result {};
+                    double result{};
                     bool overflow = GenerateExpectedResultNumeric<GroupByFilter, IN_ID, double, double>(vvb, valueIndex,
                         maskIndex, SumFunc<T_IN, double>, count, result, filterValuePtr, 0);
 
@@ -308,7 +308,7 @@ public:
                             valueIndex, maskIndex, SumFunc<Decimal128, Decimal128>, validCount, result, filterValuePtr,
                             0);
                     } else {
-                        Decimal128 result128 {};
+                        Decimal128 result128{};
                         overflow =
                             GenerateExpectedResultNumeric<GroupByFilter, OMNI_DECIMAL128, Decimal128, Decimal128>(vvb,
                             valueIndex, maskIndex, SumFunc<Decimal128, Decimal128>, validCount, result128,
@@ -325,7 +325,7 @@ public:
                     overflow = GenerateExpectedResultNumeric<GroupByFilter, OUT_ID, T_OUT, T_MID>(vvb, valueIndex,
                         maskIndex, SumFunc<T_OUT, T_MID>, validCount, result, filterValuePtr, 0);
                 } else if (this->aggFunc == OMNI_AGGREGATION_TYPE_AVG) {
-                    double resultDouble {};
+                    double resultDouble{};
                     overflow = GenerateExpectedResultNumeric<GroupByFilter, OMNI_DOUBLE, double, double>(vvb,
                         valueIndex, maskIndex, SumFunc<double, double>, validCount, resultDouble, filterValuePtr, 0);
                     if (!overflow && validCount > 0) {
@@ -418,7 +418,7 @@ protected:
 
             static_cast<Vector<int64_t> *>(expectedResult->Get(2))->SetValue(i, count);
             if (count > 0) {
-                std::string_view str((char *) result, resultLen);
+                std::string_view str((char *)result, resultLen);
                 static_cast<Vector<LargeStringContainer<std::string_view>> *>(expectedResult->Get(1))->SetValue(i, str);
             } else {
                 static_cast<Vector<LargeStringContainer<std::string_view>> *>(expectedResult->Get(1))->SetNull(i);

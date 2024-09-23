@@ -463,7 +463,7 @@ ErrorCode WindowOperator::SpillToDisk()
         size_t sortColsCount = sortCols.size();
         std::vector<SortOrder> sortOrders;
         for (size_t i = 0; i < sortColsCount; i++) {
-            SortOrder sortOrder { sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
+            SortOrder sortOrder{ sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
             sortOrders.emplace_back(sortOrder);
         }
         spiller = new Spiller(sourceTypes, sortCols, sortOrders, spillConfig->GetSpillPath(),

@@ -7,8 +7,8 @@
 
 namespace omniruntime {
 namespace op {
-template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void Add(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size_t rowCount)
+template <typename IN, typename OUT, typename FLAG, void (*OP)(OUT *, FLAG &, const IN &, const int64_t)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void Add(OUT *res_, FLAG &flag_, const IN *__restrict ptr, const size_t rowCount)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -18,7 +18,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void Add(OUT *res_, int64_t &flag_, const IN 
 #endif
         ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         OUT res = *res_;
-        int64_t flag = flag_;
+        FLAG flag = flag_;
         for (size_t i = 0; i < rowCount; ++i) {
             OP(&res, flag, ptr[i], 1LL);
         }
@@ -27,9 +27,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void Add(OUT *res_, int64_t &flag_, const IN 
     }
 }
 
-template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDict(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
-    const size_t rowCount, const int32_t *__restrict indexMap)
+template <typename IN, typename OUT, typename FLAG, void (*OP)(OUT *, FLAG &, const IN &, const int64_t)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDict(OUT *res_, FLAG &flag_, const IN *__restrict ptr, const size_t rowCount,
+    const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
 #ifdef DEBUG
@@ -43,7 +43,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDict(OUT *res_, int64_t &flag_, const
         ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
         OUT res = *res_;
-        int64_t flag = flag_;
+        FLAG flag = flag_;
         for (size_t i = 0; i < rowCount; ++i) {
             OP(&res, flag, ptr[indexMap[i]], 1LL);
         }
@@ -52,8 +52,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDict(OUT *res_, int64_t &flag_, const
     }
 }
 
-template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t, const uint8_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditional(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+template <typename IN, typename OUT, typename FLAG,
+    void (*OP)(OUT *, FLAG &, const IN &, const int64_t, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditional(OUT *res_, FLAG &flag_, const IN *__restrict ptr,
     const size_t rowCount, const uint8_t *__restrict condition)
 {
     if (rowCount > 0) {
@@ -69,7 +70,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditional(OUT *res_, int64_t &flag_
         condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
-        int64_t flag = flag_;
+        FLAG flag = flag_;
         for (size_t i = 0; i < rowCount; ++i) {
             OP(&res, flag, ptr[i], 1LL, condition[i]);
         }
@@ -78,8 +79,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddConditional(OUT *res_, int64_t &flag_
     }
 }
 
-template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t, const uint8_t &)>
-VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditional(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
+template <typename IN, typename OUT, typename FLAG,
+    void (*OP)(OUT *, FLAG &, const IN &, const int64_t, const uint8_t &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditional(OUT *res_, FLAG &flag_, const IN *__restrict ptr,
     const size_t rowCount, const uint8_t *__restrict condition, const int32_t *__restrict indexMap)
 {
     if (rowCount > 0) {
@@ -99,7 +101,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditional(OUT *res_, int64_t &f
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         OUT res = *res_;
-        int64_t flag = flag_;
+        FLAG flag = flag_;
         for (size_t i = 0; i < rowCount; ++i) {
             OP(&res, flag, ptr[indexMap[i]], 1LL, condition[i]);
         }
@@ -108,6 +110,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditional(OUT *res_, int64_t &f
     }
 }
 
+// following xx_AVG apis have another important parameter cntPtr, all operation depend on this param
 template <typename IN, typename OUT, void (*OP)(OUT *, int64_t &, const IN &, const int64_t)>
 VECTORIZE_LOOP FAST_MATH NO_INLINE void AddAvg(OUT *res_, int64_t &flag_, const IN *__restrict ptr,
     const int64_t *__restrict cntPtr, const size_t rowCount)
