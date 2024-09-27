@@ -110,6 +110,12 @@ const std::string GreatestFnStr()
     return greatestFnStr;
 }
 
+const std::string PowerFnStr()
+{
+    const std::string powerFnStr = "power";
+    return powerFnStr;
+}
+
 std::vector<Function> MathFunctionRegistry::GetFunctions()
 {
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
@@ -147,6 +153,7 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(NotEqualDouble), NotEqualFnStr(), {}, doubleParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(NormalizeNaNAndZero), NormalizeNaNAndZeroFnStr(), {}, { OMNI_DOUBLE },
             OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(PowerDouble), PowerFnStr(), {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
 
         // insert native function for each long operations
         Function(reinterpret_cast<void *>(AddInt64), AddFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),

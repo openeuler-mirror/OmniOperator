@@ -160,6 +160,13 @@ extern "C" DLLEXPORT void BatchNormalizeNaNAndZero(double *input, bool *isAnyNul
     }
 }
 
+extern "C" DLLEXPORT void BatchPowerDouble(double *base, double *exponent, double *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; i++) {
+        output[i] = pow(base[i], exponent[i]);
+    }
+}
+
 extern "C" DLLEXPORT void BatchAddInt64(int64_t *left, int64_t *right, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {

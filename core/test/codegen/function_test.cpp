@@ -392,6 +392,14 @@ TEST(FunctionTest, NormalizeNaNAndZero)
     EXPECT_EQ(3.5, NormalizeNaNAndZero(3.5));
 }
 
+TEST(FunctionTest, PowerDouble)
+{
+    for (int i = -10; i <= 10; ++i) {
+        double b = i;
+        EXPECT_EQ(b * b, PowerDouble(b, 2.0));
+    }
+}
+
 TEST(FunctionTest, Pmod)
 {
     EXPECT_EQ(0, Pmod(4589732, 0));
