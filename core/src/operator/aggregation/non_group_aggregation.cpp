@@ -104,11 +104,10 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-static ALWAYS_INLINE void GenerateAggVector(VectorBatch *vectorBatch, std::vector<DataTypePtr> &dataTypes, int size)
+static ALWAYS_INLINE void GenerateAggVector(VectorBatch *vectorBatch, std::vector<DataTypeId> &dataTypes, int size)
 {
-    for (auto &type : dataTypes) {
-        auto omniId = type->GetId();
-        auto &newFunc = newUniqueVectorFunctions[omniId];
+    for (auto &typeId : dataTypes) {
+        auto &newFunc = newUniqueVectorFunctions[typeId];
         newFunc(vectorBatch, size);
     }
 }
@@ -117,17 +116,17 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     // always output one row
     int32_t aggsCount = 0;
-    std::vector<DataTypePtr> aggsOutputDataTypePtrs;
-    for (auto aggOutputTypes : aggsOutputTypes) {
+    std::vector<DataTypeId> aggsOutputDataTypeIds;
+    for (auto &aggOutputTypes : aggsOutputTypes) {
         auto aggSize = aggOutputTypes.GetSize();
         aggsCount += aggSize;
         for (int i = 0; i < aggSize; ++i) {
-            aggsOutputDataTypePtrs.push_back(aggOutputTypes.GetType(i));
+            aggsOutputDataTypeIds.push_back(aggOutputTypes.GetType(i)->GetId());
         }
     }
     auto output = std::make_unique<VectorBatch>(1);
     auto outputPtr = output.get();
-    GenerateAggVector(outputPtr, aggsOutputDataTypePtrs, 1);
+    GenerateAggVector(outputPtr, aggsOutputDataTypeIds, 1);
 
     // set result value
     int32_t aggOutputColsStart = 0;

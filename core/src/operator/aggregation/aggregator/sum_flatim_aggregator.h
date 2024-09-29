@@ -30,8 +30,8 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class SumFlatIMAggregator : publi
         template <typename TypeIn, typename TypeOut> static void UpdateState(AggregateState *state, const TypeIn &in)
         {
             auto *maxState = CastState(state);
-            SumOp<TypeIn, TypeOut, AggValueState, StateValueHandler>(&(maxState->value), maxState->valueState, in,
-                1ULL);
+            SumOp<TypeIn, TypeOut, AggValueState, StateValueHandler, false>(&(maxState->value),
+                                                                            maxState->valueState, in, 1ULL);
         }
 
         template <typename TypeIn, typename TypeOut, bool addIf>
@@ -178,7 +178,7 @@ public:
         }
     }
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(SumFlatState);
     }

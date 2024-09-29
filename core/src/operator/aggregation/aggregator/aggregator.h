@@ -239,7 +239,7 @@ public:
         aggStateOffset = offset;
     }
 
-    virtual int32_t GetStateSize() = 0;
+    virtual size_t GetStateSize() = 0;
 
     virtual void InitStates(std::vector<AggregateState *> &groupStates)
     {

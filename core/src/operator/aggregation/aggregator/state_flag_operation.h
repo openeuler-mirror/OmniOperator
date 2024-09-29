@@ -23,7 +23,7 @@ template <typename ResultType> struct BaseState {
 
     bool IsValid() const
     {
-        return valueState == AggValueState::NORMAL || valueState == AggValueState::EMPTY_VALUE;
+        return valueState != AggValueState::OVERFLOWED;
     }
 
     bool IsOverFlowed() const
@@ -121,7 +121,7 @@ struct StateCountHandler {
         return -1;
     }
 
-    static void setOverFlowed(CountType &state)
+    static void SetOverFlowed(CountType &state)
     {
         state = -1;
     }

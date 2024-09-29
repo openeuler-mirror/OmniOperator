@@ -109,8 +109,7 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateSt
             spillValueVec->SetNull(rowIndex);
             spillValueVec->SetValue(rowIndex, SPILL_EMPTY_VALUE);
         } else {
-            ResultType result;
-            result = static_cast<ResultType>(state->value);
+            ResultType result = static_cast<ResultType>(state->value);
             spillValueVec->SetValue(rowIndex, result);
         }
     }

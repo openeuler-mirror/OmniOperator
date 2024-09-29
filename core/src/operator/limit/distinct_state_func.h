@@ -131,14 +131,14 @@ void HashDecimalVectFuncProxy(BaseVector *vector, const uint32_t start, const ui
 template <typename V, typename D>
 void IsSameNodeFuncImpl(BaseVector *vector, const uint32_t offset, const ValueState &slot, bool &isSame)
 {
-    bool isIntermediateNull = slot.count == 0;
+    bool isIntermediateNull = (slot.count == 0);
     bool isInputNull = vector->IsNull(offset);
     if (!isInputNull && !isIntermediateNull) {
         auto intTmp = static_cast<V *>(vector)->GetValue(offset);
         if constexpr (std::is_same_v<D, Decimal128> || std::is_floating_point_v<D>) {
-            isSame = intTmp == *reinterpret_cast<D *>(slot.val);
+            isSame = (intTmp == *reinterpret_cast<D *>(slot.val));
         } else {
-            isSame = intTmp == static_cast<D>(slot.val);
+            isSame = (intTmp == static_cast<D>(slot.val));
         }
 
         return;
@@ -154,7 +154,7 @@ void IsSameNodeFuncImpl(BaseVector *vector, const uint32_t offset, const ValueSt
 template <typename V = Vector<LargeStringContainer<std::string_view>>>
 void IsSameNodeFuncVarcharImpl(BaseVector *vector, const uint32_t offset, const ValueState &slot, bool &isSame)
 {
-    bool isIntermediateNull = slot.val == 0;
+    bool isIntermediateNull = (slot.val == 0);
     bool isInputNull = vector->IsNull(offset);
     if (!isInputNull && !isIntermediateNull) {
         std::string_view str = static_cast<V *>(vector)->GetValue(offset);

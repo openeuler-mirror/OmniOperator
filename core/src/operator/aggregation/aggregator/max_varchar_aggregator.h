@@ -41,12 +41,12 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxVarcharAggregator : publ
 public:
     ~MaxVarcharAggregator() override = default;
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(VarcharState);
     }
 
-    void InitState(AggregateState *state)
+    void InitState(AggregateState *state) override
     {
         auto *maxState = VarcharState::CastState(state + aggStateOffset);
         maxState->realValue = 0;
@@ -54,7 +54,7 @@ public:
         maxState->needUpdate = false;
     }
 
-    void InitStates(std::vector<AggregateState *> &groupStates)
+    void InitStates(std::vector<AggregateState *> &groupStates) override
     {
         for (auto groupState : groupStates) {
             InitState(groupState);

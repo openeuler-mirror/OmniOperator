@@ -31,7 +31,7 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID = OMNI_DOUBLE> class AverageFlatIM
         template <typename TypeIn, typename TypeOut> static void UpdateState(AggregateState *state, const TypeIn &in)
         {
             auto *avgState = CastState(state);
-            SumOp<TypeIn, TypeOut, int64_t, StateCountHandler>(&(avgState->value), avgState->count, in, 1ULL);
+            SumOp<TypeIn, TypeOut, int64_t, StateCountHandler, false>(&(avgState->value), avgState->count, in, 1ULL);
         }
 
         template <typename TypeIn, typename TypeOut, bool addIf>
@@ -53,7 +53,7 @@ public:
 
     ~AverageFlatIMAggregator() override = default;
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(AvgFlatState);
     }

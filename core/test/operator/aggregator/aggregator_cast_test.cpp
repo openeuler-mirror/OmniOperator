@@ -32,7 +32,7 @@ public:
         partialOut, isOverflowAsNull)
     {}
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return 0;
     }

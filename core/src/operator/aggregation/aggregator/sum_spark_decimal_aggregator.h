@@ -129,7 +129,7 @@ public:
         return spillTypes;
     }
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(SumSparkDecimalState);
     }
@@ -143,7 +143,6 @@ public:
             SumSparkDecimalState *state = SumSparkDecimalState::CastState(groupStates[rowIndex] + aggStateOffset);
             bool isOverflow = (state->IsOverFlowed());
             bool isEmpty = (state->IsEmpty());
-
             // use null and value to distinguish empty group, overflow and other normal case
             if (isEmpty) {
                 // set null for empty group(all rows are NULL) when spill to ensure skip empty group when unspill
@@ -460,7 +459,7 @@ public:
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
-        SumSparkDecimalState *sumSparkDecimalState = SumSparkDecimalState::CastState(state + aggStateOffset);
+        SumSparkDecimalState *sumSparkDecimalState = SumSparkDecimalState::CastState(state);
         if (inputRaw) {
             if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
@@ -490,7 +489,7 @@ public:
                 }
             }
         } else {
-            ProcessSingleInternalFinal(state + aggStateOffset, vector, rowOffset, rowCount, nullMap);
+            ProcessSingleInternalFinal(state, vector, rowOffset, rowCount, nullMap);
         }
     }
 

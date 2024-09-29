@@ -75,7 +75,7 @@ public:
         }
     }
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(AvgSparkDecimalState);
     }

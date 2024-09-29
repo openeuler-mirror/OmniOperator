@@ -104,7 +104,7 @@ public:
     void InitStates(std::vector<AggregateState *> &groupStates) override;
     std::vector<DataTypePtr> GetSpillType() override;
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(MinState);
     }
@@ -150,7 +150,6 @@ protected:
 
     template <typename T>
     void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
-
 };
 }
 }

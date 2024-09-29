@@ -96,7 +96,7 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxAggregator : public Type
 public:
     ~MaxAggregator() override = default;
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(MaxState);
     }

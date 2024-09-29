@@ -301,19 +301,6 @@ protected:
         }
     }
 
-    //    template <typename InType, typename OutType> OutType CastWithOverflowEntry(InType val, bool &overflow)
-    //    {
-    //        OutType result {};
-    //        if constexpr (std::is_same_v<InType, Decimal128>) {
-    //            result = CastWithOverflow<InType, OutType>(*reinterpret_cast<Decimal128 *>(address), overflow);
-    //        } else if constexpr (std::is_floating_point_v<InType>) {
-    //            result = CastWithOverflow<InType, OutType>(*reinterpret_cast<InType *>(address), overflow);
-    //        } else {
-    //            result = CastWithOverflow<InType, OutType>(*reinterpret_cast<InType*>(address), overflow);
-    //        }
-    //        return result;
-    //    }
-
     Allocator *allocator = Allocator::GetAllocator();
 
     static inline bool CheckType(const DataTypeId actual, const DataTypeId expected)

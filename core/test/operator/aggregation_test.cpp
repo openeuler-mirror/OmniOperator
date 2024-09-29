@@ -2917,8 +2917,7 @@ TEST(AggregatorTest, max_test)
     // process int to long
     state = NewAndInitState(maxIntLong.get());
     maxIntLong->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
-    auto int64Value = ExtractValueFromState<int64_t>(state.get());
-    *int64Value &= 0x0000FFFF;
+    auto int64Value = ExtractValueFromState<int32_t>(state.get());
     EXPECT_EQ(1, *int64Value);
 
     // process long to int
@@ -3918,6 +3917,7 @@ TEST(AggregatorTest, spark_avg_short_normal)
 
     auto avgShortAggFinal = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()),
         *(AggregatorUtil::WrapWithDataTypes(DoubleType()).get()), channal0, false, false);
+    avgShortAggFinal->SetStateOffset(0);
     avgShortAggFinal->ExtractValues(state.get(), extractVec, 0);
     EXPECT_EQ(16047.0, resultVec->GetValue(0));
 
@@ -4379,17 +4379,17 @@ TEST(AggregatorTest, typed_aggregator_test)
             isOverflowAsNull)
         {}
 
-        virtual void InitState(AggregateState *state) override
+        void InitState(AggregateState *state) override
         {
             return;
         }
 
-        virtual int32_t GetStateSize()
+        size_t GetStateSize() override
         {
             return 0;
         };
 
-        virtual void InitStates(std::vector<AggregateState *> &groupStates)
+        void InitStates(std::vector<AggregateState *> &groupStates) override
         {
             for (auto state : groupStates) {
                 InitState(state);
@@ -4409,12 +4409,11 @@ TEST(AggregatorTest, typed_aggregator_test)
 
         void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) {}
 
-        virtual void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-            const bool aggFilter) override
+        void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+                                   const uint8_t *nullMap, const bool aggFilter) override
         {}
 
-        virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+        virtual void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
             const int32_t rowCount, const uint8_t *nullMap)
         {}
 
@@ -4716,9 +4715,8 @@ TEST(AggregatorTest, max_agg_extrame_value_test)
         // process int
         auto state = NewAndInitState(maxInt.get());
         maxInt->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
-        auto maxState = ExtractValueFromState<int64_t>(state.get());
-        auto int64Value = *maxState;
-        int32_t value = (int32_t)(int64Value);
+        auto maxState = ExtractValueFromState<int32_t>(state.get());
+        auto value = *maxState;
         EXPECT_EQ(int32Creator.MaxValue, value);
     }
     {
@@ -4765,9 +4763,8 @@ TEST(AggregatorTest, max_agg_extrame_value_test)
         auto state = NewAndInitState(maxInt.get());
         // process bool
         maxInt->ProcessGroup(state.get(), minVectorBatch, 0, minVectorBatch->GetRowCount());
-        auto maxState = ExtractValueFromState<int64_t>(state.get());
-        auto int64Value = static_cast<int64_t>(*maxState);
-        int32_t value = (int32_t)(int64Value);
+        auto maxState = ExtractValueFromState<int32_t>(state.get());
+        int32_t value = *maxState;
         EXPECT_EQ(int32Creator.MinValue, value);
     }
     {
@@ -4814,9 +4811,8 @@ TEST(AggregatorTest, max_agg_extrame_value_test)
         // process int
         auto state = NewAndInitState(minInt.get());
         minInt->ProcessGroup(state.get(), vectorBatch, 0, vectorBatch->GetRowCount());
-        auto minState = ExtractValueFromState<int64_t>(state.get());
-        auto int64Value = static_cast<int64_t>(*minState);
-        int32_t value = (int32_t)(int64Value);
+        auto minState = ExtractValueFromState<int32_t>(state.get());
+        int32_t value = *minState;
         EXPECT_EQ(int32Creator.MinValue, value);
     }
     {
@@ -4863,8 +4859,8 @@ TEST(AggregatorTest, max_agg_extrame_value_test)
     {
         auto state = NewAndInitState(minInt.get());
         minInt->ProcessGroup(state.get(), maxVectorBatch, 0, maxVectorBatch->GetRowCount());
-        auto int64Value = *reinterpret_cast<int64_t *>(state.get());
-        int32_t value = (int32_t)(int64Value);
+        auto* int32Value = reinterpret_cast<int32_t *>(state.get());
+        int32_t value = *int32Value;
         EXPECT_EQ(int32Creator.MaxValue, value);
     }
     {

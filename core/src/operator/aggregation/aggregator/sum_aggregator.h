@@ -181,12 +181,7 @@ public:
         template <typename TypeIn, typename TypeOut> static void UpdateState(AggregateState *state, const TypeIn &in)
         {
             auto *sumState = CastState(state);
-            //            if constexpr (std::is_same_v<TypeOut, Decimal128> || std::is_floating_point_v<TypeOut>) {
-            //                SumOp<TypeIn, TypeOut, int64_t, StateCountHandler>(
-            //                        reinterpret_cast<TypeOut *>(sumState->value), sumState->count, in, 1ull);
-            //            } else {
             SumOp<TypeIn, TypeOut, int64_t, StateCountHandler>(&(sumState->value), sumState->count, in, 1ULL);
-            //            }
         }
 
         template <typename TypeIn, typename TypeOut, bool addIf>
@@ -208,7 +203,7 @@ public:
     void InitStates(std::vector<AggregateState *> &groupStates) override;
     std::vector<DataTypePtr> GetSpillType() override;
 
-    virtual int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(SumState);
     }

@@ -33,17 +33,16 @@ void SetVarcharVector(VectorBatch *vecBatch, int32_t rowCount)
 
 void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount)
 {
-    auto doubleVector = std::make_unique<Vector<double>>(rowCount);
-    auto longVector = std::make_unique<Vector<int64_t>>(rowCount);
+    auto doubleVector = new Vector<double>(rowCount);
+    auto longVector = new Vector<int64_t>(rowCount);
     std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
-    vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector.get());
-    vectorAddresses[1] = reinterpret_cast<int64_t>(longVector.get());
+    vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
     std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
     auto containerVector = new ContainerVector(rowCount, vectorAddresses, dataTypes);
-    doubleVector.release();
-    longVector.release();
     vecBatch->Append(containerVector);
 }
+
 static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     nullptr,
     SetVectorImpl<Vector<int32_t>>,
@@ -63,6 +62,8 @@ static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     SetVarcharVector,
     SetVarcharVector,
     SetContainerVector,
+    nullptr,
+    nullptr,
 };
 
 OmniStatus HashAggregationOperatorFactory::Init()

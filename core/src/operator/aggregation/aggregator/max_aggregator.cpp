@@ -14,7 +14,6 @@ void MaxAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *state, st
 {
     auto v = static_cast<OutVector *>(vectors[0]);
     auto maxState = MaxState::ConstCastState(state + aggStateOffset);
-
     if (maxState->IsEmpty()) {
         v->SetNull(rowIndex);
         return;

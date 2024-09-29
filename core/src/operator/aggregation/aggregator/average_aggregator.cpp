@@ -222,8 +222,7 @@ void AverageAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<Aggrega
             // set null for empty group(all rows are NULL) when spill to ensure skip empty group when unspill
             spillCountVec->SetValue(rowIndex, 0);
         } else {
-            ResultType result;
-            result = static_cast<ResultType>(state->value);
+            ResultType result = static_cast<ResultType>(state->value);
             spillValueVec->SetValue(rowIndex, result);
             spillCountVec->SetValue(rowIndex, count);
         }
@@ -345,8 +344,8 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRo
         } else {
             auto sumVector = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
             auto value = sumVector->GetValue(index);
-            SumOp<ResultType, ResultType, int64_t, StateCountHandler>(reinterpret_cast<ResultType *>(&state->value),
-                state->count, value, count);
+            SumOp<ResultType, ResultType, int64_t, StateCountHandler>(&state->value,
+                                                                      state->count, value, count);
         }
     }
 }

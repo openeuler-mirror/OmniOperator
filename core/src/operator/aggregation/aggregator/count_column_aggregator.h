@@ -56,7 +56,7 @@ public:
         return spillTypes;
     }
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return sizeof(CountState);
     }

@@ -26,7 +26,7 @@ public:
         realAggregator->SetExecutionContext(executionContext);
     }
 
-    int32_t GetStateSize() override
+    size_t GetStateSize() override
     {
         return realAggregator->GetStateSize();
     }
