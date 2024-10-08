@@ -161,19 +161,10 @@ public:
         }
     }
 
-    virtual void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch, const int32_t filterIndex)
-    {
-        throw OmniException("Not implemented",
-                            "AlignAggSchemaWithFilter(VectorBatch *, VectorBatch *, int32_t, int32_t) not implemented for " +
-                            std::to_string(as_integer(type)));
-    }
+    virtual void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+        const int32_t filterIndex) = 0;
 
-    virtual void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch)
-    {
-        throw OmniException("Not implemented",
-                            "AlignAggSchema(VectorBatch *, VectorBatch *, int32_t) not implemented for " +
-                            std::to_string(as_integer(type)));
-    }
+    virtual void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) = 0;
 
     static bool DoNeedHandleAggFilter(Vector<bool> *filterVec, const int32_t rowOffset, const int32_t size)
     {

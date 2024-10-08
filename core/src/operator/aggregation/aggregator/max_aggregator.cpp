@@ -218,19 +218,34 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInf
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) {
+void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const uint8_t *nullMap, const bool aggFilter)
+{
     int rowCount = originVector->GetSize();
-    if constexpr (std::is_same_v<InType, OutType>) {
+    if (std::is_same_v<InType, OutType> && !aggFilter) {
         auto maxVector = VectorHelper::SliceVector(originVector, 0, rowCount);
         result->Append(maxVector);
         return;
     }
 
-    auto maxVector = reinterpret_cast<OutVector *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
     if (originVector->GetEncoding() == OMNI_DICTIONARY) {
-        auto vector = reinterpret_cast<Vector<DictionaryContainer<InType>> *>(originVector);
+        ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<InType>>>(result, originVector, nullMap);
+    } else {
+        ProcessAlignAggSchemaInternal<Vector<InType>>(result, originVector, nullMap);
+    }
+}
+
+template<DataTypeId IN_ID, DataTypeId OUT_ID>
+template<typename T>
+void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+    const uint8_t *nullMap)
+{
+    int rowCount = originVector->GetSize();
+    auto maxVector = reinterpret_cast<OutVector *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+    auto vector = reinterpret_cast<T *>(originVector);
+    if (nullMap != nullptr) {
         for (int index = 0; index < rowCount; ++index) {
-            if (vector->IsNull(index)) {
+            if (nullMap[index]) {
                 maxVector->SetNull(index);
             } else {
                 InType val = vector->GetValue(index);
@@ -240,16 +255,11 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, Ba
             }
         }
     } else {
-        auto vector = reinterpret_cast<Vector<InType> *>(originVector);
         for (int index = 0; index < rowCount; ++index) {
-            if (vector->IsNull(index)) {
-                maxVector->SetNull(index);
-            } else {
-                InType val = vector->GetValue(index);
-                bool overflow = false;
-                OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
-                maxVector->SetValue(index, out);
-            }
+            InType val = vector->GetValue(index);
+            bool overflow = false;
+            OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+            maxVector->SetValue(index, out);
         }
     }
     result->Append(maxVector);

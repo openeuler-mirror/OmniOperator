@@ -219,7 +219,7 @@ uint64_t HashAggregationWithExprOperator::GetHashMapUniqueKeys()
 VectorBatch *HashAggregationWithExprOperator::AlignSchema(VectorBatch *inputVecBatch)
 {
     VectorBatch *newInputVecBatch =
-            AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext.get());
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext.get());
 
     // if hasAggFilter is false, then skip AddFilterColumn
     if (hasAggFilter) {

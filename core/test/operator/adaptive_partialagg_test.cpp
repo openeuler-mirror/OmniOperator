@@ -15,22 +15,24 @@
 #include "type/decimal128.h"
 
 namespace omniruntime {
-    using namespace omniruntime::vec;
-    using namespace omniruntime::op;
+using namespace omniruntime::vec;
+using namespace omniruntime::op;
 
-    std::unique_ptr<OperatorFactory> CreateFactory(std::vector<uint32_t> &groupByColIdxVec, DataTypes groupByInputTypes,
-                                                   std::vector<std::vector<uint32_t>> &aggColIdxVec,
-                                                   std::vector<DataTypes> &aggInputTypes, std::vector<DataTypes> &outputTypes,
-                                                   std::vector<uint32_t> &aggFuncVec,
-                                                   std::vector<uint32_t> &aggMaskVec, const bool inputRaw,
-                                                   const bool outputPartial)
+std::unique_ptr<OperatorFactory> CreateFactory(std::vector<uint32_t> &groupByColIdxVec,
+                                               DataTypes &groupByInputTypes,
+                                               std::vector<std::vector<uint32_t>> &aggColIdxVec,
+                                               std::vector<DataTypes> &aggInputTypes,
+                                               std::vector<DataTypes> &outputTypes,
+                                               std::vector<uint32_t> &aggFuncVec,
+                                               std::vector<uint32_t> &aggMaskVec,
+                                               const bool inputRaw,
+                                               const bool outputPartial)
 {
     auto aggSize = aggFuncVec.size();
     auto inputRawWrap = std::vector<bool>(aggSize, inputRaw);
     auto outputPartialWrap = std::vector<bool>(aggSize, outputPartial);
     auto factory = std::make_unique<HashAggregationOperatorFactory>(groupByColIdxVec, groupByInputTypes, aggColIdxVec,
-                                                                    aggInputTypes, outputTypes, aggFuncVec, aggMaskVec, inputRawWrap, outputPartialWrap,
-                                                                    false);
+        aggInputTypes, outputTypes, aggFuncVec, aggMaskVec, inputRawWrap, outputPartialWrap, false);
 
     if (factory == nullptr) {
         return nullptr;
@@ -46,13 +48,15 @@ TEST(AdaptivePartialAggregationTest, verify_spark_short)
     const int rowSize = 10;
     std::vector<DataTypePtr> groupByInputTypePtr = { IntType() };
     std::vector<DataTypePtr> aggInputTypePtr = { ShortType(), ShortType(), ShortType(), ShortType(), ShortType() };
-    std::vector<DataTypePtr> sourceTypePtr = { IntType(), ShortType(), ShortType(), ShortType(), ShortType(), ShortType() };
+    std::vector<DataTypePtr> sourceTypePtr = { IntType(), ShortType(), ShortType(), ShortType(), ShortType(),
+                                               ShortType() };
     DataTypes groupByInputTypes(groupByInputTypePtr);
     std::vector<DataTypes> aggInputTypes = AggregatorUtil::WrapWithVector(DataTypes(aggInputTypePtr));
     DataTypes sourceTypes = DataTypes(sourceTypePtr);
 
     std::vector<DataTypes> outputTypes = { DataTypes({LongType()}),
                                            DataTypes({DoubleType(), LongType()}),
+                                           DataTypes({LongType()}),
                                            DataTypes({LongType()}),
                                            DataTypes({ShortType()}),
                                            DataTypes({ShortType()}) };
@@ -64,10 +68,18 @@ TEST(AdaptivePartialAggregationTest, verify_spark_short)
     // First stage (partial)
     std::vector<uint32_t> groupByIdxCols({ 0 });
     std::vector<std::vector<uint32_t>> aggColIdxVec({{1}, {2}, {3}, {4}, {5}});
-    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1), static_cast<unsigned int>(-1),
-                                        static_cast<unsigned int>(-1), static_cast<unsigned int>(-1), static_cast<unsigned int>(-1)};
-    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
-                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
+    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1)};
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM,
+                                           OMNI_AGGREGATION_TYPE_AVG,
+                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                           OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                                           OMNI_AGGREGATION_TYPE_MIN,
+                                           OMNI_AGGREGATION_TYPE_MAX };
 
     auto aggPartialFactory = CreateFactory(groupByIdxCols, groupByInputTypes, aggColIdxVec,
                                            aggInputTypes, outputTypes, aggFuncTypes, aggMaskVec,
@@ -80,15 +92,16 @@ TEST(AdaptivePartialAggregationTest, verify_spark_short)
     VectorBatch *outputVecBatch = aggPartial->AlignSchema(input);
 
     EXPECT_EQ(outputVecBatch->GetRowCount(), rowSize);
-    EXPECT_EQ(outputVecBatch->GetVectorCount(), 7);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 8);
 
     op::Operator::DeleteOperator(aggPartial);
 
 
-    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1}, {2, 3}, {4}, {5}, {6}});
+    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1}, {2, 3}, {4}, {5}, {6}, {7}});
     std::vector<DataTypes> finalAggInputTypes = outputTypes;
     std::vector<DataTypes> finalOutputTypes = { DataTypes({LongType()}),
                                                 DataTypes({DoubleType()}),
+                                                DataTypes({LongType()}),
                                                 DataTypes({LongType()}),
                                                 DataTypes({ShortType()}),
                                                 DataTypes({ShortType()}) };
@@ -107,15 +120,16 @@ TEST(AdaptivePartialAggregationTest, verify_spark_short)
     op::Operator::DeleteOperator(aggFinal);
 
     // construct the output data
-    DataTypes expectTypes({ IntType(), LongType(), DoubleType(), LongType(), ShortType(), ShortType() });
+    DataTypes expectTypes({ IntType(), LongType(), DoubleType(), LongType(), LongType(), ShortType(), ShortType() });
     int32_t expectData1[5] = {1, 2, 3, 4, 5}; // group
     int64_t expectData2[5] = {2, 4, 6, 8, 10}; // sum
     double expectData3[5] = {1.0, 2.0, 3.0, 4.0, 5.0}; // avg
     int64_t expectData4[5] = {2, 2, 2, 2, 2}; // count
-    short expectData5[5] = {1, 2, 3, 4, 5}; // min
-    short expectData6[5] = {1, 2, 3, 4, 5}; // max
-    VectorBatch *expectVecBatch = TestUtil::CreateVectorBatch(expectTypes, 5, expectData1, expectData2,
-                                                              expectData3, expectData4, expectData5, expectData6);
+    int64_t expectData5[5] = {2, 2, 2, 2, 2}; // count
+    short expectData6[5] = {1, 2, 3, 4, 5}; // min
+    short expectData7[5] = {1, 2, 3, 4, 5}; // max
+    VectorBatch *expectVecBatch = TestUtil::CreateVectorBatch(expectTypes, 5, expectData1, expectData2, expectData3,
+          expectData4, expectData5, expectData6, expectData7);
 
     EXPECT_TRUE(TestUtil::VecBatchMatchIgnoreOrder(outputVecBatch1, expectVecBatch));
 
@@ -129,13 +143,14 @@ TEST(AdaptivePartialAggregationTest, verify_spark_int)
     const int rowSize = 10;
     std::vector<DataTypePtr> groupByInputTypePtr = { IntType() };
     std::vector<DataTypePtr> aggInputTypePtr = { IntType(), IntType(), IntType(), IntType(), IntType() };
-    std::vector<DataTypePtr> sourceTypePtr = { IntType(), IntType(), IntType(), IntType(), IntType(), IntType() };
+    std::vector<DataTypePtr> sourceTypePtr = { IntType(), IntType(), IntType(), IntType(), IntType(), IntType()};
     DataTypes groupByInputTypes(groupByInputTypePtr);
     std::vector<DataTypes> aggInputTypes = AggregatorUtil::WrapWithVector(DataTypes(aggInputTypePtr));
     DataTypes sourceTypes = DataTypes(sourceTypePtr);
 
     std::vector<DataTypes> outputTypes = { DataTypes({LongType()}),
                                                 DataTypes({DoubleType(), LongType()}),
+                                                DataTypes({LongType()}),
                                                 DataTypes({LongType()}),
                                                 DataTypes({IntType()}),
                                                 DataTypes({IntType()}) };
@@ -147,10 +162,18 @@ TEST(AdaptivePartialAggregationTest, verify_spark_int)
     // First stage (partial)
     std::vector<uint32_t> groupByIdxCols({ 0 });
     std::vector<std::vector<uint32_t>> aggColIdxVec({{1}, {2}, {3}, {4}, {5}});
-    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1), static_cast<unsigned int>(-1),
-                                        static_cast<unsigned int>(-1), static_cast<unsigned int>(-1), static_cast<unsigned int>(-1)};
-    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
-                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
+    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1)};
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM,
+                                           OMNI_AGGREGATION_TYPE_AVG,
+                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                           OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                                           OMNI_AGGREGATION_TYPE_MIN,
+                                           OMNI_AGGREGATION_TYPE_MAX };
 
     auto aggPartialFactory = CreateFactory(groupByIdxCols, groupByInputTypes, aggColIdxVec,
                                            aggInputTypes, outputTypes, aggFuncTypes, aggMaskVec,
@@ -163,15 +186,16 @@ TEST(AdaptivePartialAggregationTest, verify_spark_int)
     VectorBatch *outputVecBatch = aggPartial->AlignSchema(input);
 
     EXPECT_EQ(outputVecBatch->GetRowCount(), rowSize);
-    EXPECT_EQ(outputVecBatch->GetVectorCount(), 7);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 8);
 
     op::Operator::DeleteOperator(aggPartial);
 
 
-    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1}, {2, 3}, {4}, {5}, {6}});
+    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1}, {2, 3}, {4}, {5}, {6}, {7}});
     std::vector<DataTypes> finalAggInputTypes = outputTypes;
     std::vector<DataTypes> finalOutputTypes = { DataTypes({LongType()}),
                                                 DataTypes({DoubleType()}),
+                                                DataTypes({LongType()}),
                                                 DataTypes({LongType()}),
                                                 DataTypes({IntType()}),
                                                 DataTypes({IntType()}) };
@@ -190,15 +214,16 @@ TEST(AdaptivePartialAggregationTest, verify_spark_int)
     op::Operator::DeleteOperator(aggFinal);
 
     // construct the output data
-    DataTypes expectTypes({ IntType(), LongType(), DoubleType(), LongType(), IntType(), IntType() });
+    DataTypes expectTypes({ IntType(), LongType(), DoubleType(), LongType(), LongType(), IntType(), IntType() });
     int32_t expectData1[5] = {1, 2, 3, 4, 5}; // group
     int64_t expectData2[5] = {2, 4, 6, 8, 10}; // sum
     double expectData3[5] = {1.0, 2.0, 3.0, 4.0, 5.0}; // avg
     int64_t expectData4[5] = {2, 2, 2, 2, 2}; // count
-    int32_t expectData5[5] = {1, 2, 3, 4, 5}; // min
-    int32_t expectData6[5] = {1, 2, 3, 4, 5}; // max
+    int64_t expectData5[5] = {2, 2, 2, 2, 2}; // count
+    int32_t expectData6[5] = {1, 2, 3, 4, 5}; // min
+    int32_t expectData7[5] = {1, 2, 3, 4, 5}; // max
     VectorBatch *expectVecBatch = TestUtil::CreateVectorBatch(expectTypes, 5, expectData1, expectData2,
-                                                              expectData3, expectData4, expectData5, expectData6);
+          expectData3, expectData4, expectData5, expectData6, expectData7);
 
     EXPECT_TRUE(TestUtil::VecBatchMatchIgnoreOrder(outputVecBatch1, expectVecBatch));
 
@@ -221,6 +246,7 @@ TEST(AdaptivePartialAggregationTest, verify_spark_long)
                                            DataTypes({DoubleType(), LongType()}),
                                            DataTypes({LongType()}),
                                            DataTypes({LongType()}),
+                                           DataTypes({LongType()}),
                                            DataTypes({LongType()}) };
 
     int32_t group1[rowSize] = {1, 2, 3, 4, 5, 1, 2, 3, 4, 5};
@@ -230,10 +256,18 @@ TEST(AdaptivePartialAggregationTest, verify_spark_long)
     // First stage (partial)
     std::vector<uint32_t> groupByIdxCols({ 0 });
     std::vector<std::vector<uint32_t>> aggColIdxVec({{1}, {2}, {3}, {4}, {5}});
-    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1), static_cast<unsigned int>(-1),
-                                        static_cast<unsigned int>(-1), static_cast<unsigned int>(-1), static_cast<unsigned int>(-1)};
-    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
-                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
+    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1)};
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM,
+                                           OMNI_AGGREGATION_TYPE_AVG,
+                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                           OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                                           OMNI_AGGREGATION_TYPE_MIN,
+                                           OMNI_AGGREGATION_TYPE_MAX };
 
     auto aggPartialFactory = CreateFactory(groupByIdxCols, groupByInputTypes, aggColIdxVec,
                                            aggInputTypes, outputTypes, aggFuncTypes, aggMaskVec,
@@ -246,15 +280,16 @@ TEST(AdaptivePartialAggregationTest, verify_spark_long)
     VectorBatch *outputVecBatch = aggPartial->AlignSchema(input);
 
     EXPECT_EQ(outputVecBatch->GetRowCount(), rowSize);
-    EXPECT_EQ(outputVecBatch->GetVectorCount(), 7);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 8);
 
     op::Operator::DeleteOperator(aggPartial);
 
 
-    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1}, {2, 3}, {4}, {5}, {6}});
+    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1}, {2, 3}, {4}, {5}, {6}, {7}});
     std::vector<DataTypes> finalAggInputTypes = outputTypes;
     std::vector<DataTypes> finalOutputTypes = { DataTypes({LongType()}),
                                                 DataTypes({DoubleType()}),
+                                                DataTypes({LongType()}),
                                                 DataTypes({LongType()}),
                                                 DataTypes({LongType()}),
                                                 DataTypes({LongType()}) };
@@ -273,15 +308,16 @@ TEST(AdaptivePartialAggregationTest, verify_spark_long)
     op::Operator::DeleteOperator(aggFinal);
 
     // construct the output data
-    DataTypes expectTypes({ IntType(), LongType(), DoubleType(), LongType(), LongType(), LongType() });
+    DataTypes expectTypes({ IntType(), LongType(), DoubleType(), LongType(), LongType(), LongType(), LongType() });
     int32_t expectData1[5] = {1, 2, 3, 4, 5}; // group
     int64_t expectData2[5] = {2, 4, 6, 8, 10}; // sum
     double expectData3[5] = {1.0, 2.0, 3.0, 4.0, 5.0}; // avg
     int64_t expectData4[5] = {2, 2, 2, 2, 2}; // count
-    int64_t expectData5[5] = {1, 2, 3, 4, 5}; // min
-    int64_t expectData6[5] = {1, 2, 3, 4, 5}; // max
+    int64_t expectData5[5] = {2, 2, 2, 2, 2}; // count
+    int64_t expectData6[5] = {1, 2, 3, 4, 5}; // min
+    int64_t expectData7[5] = {1, 2, 3, 4, 5}; // max
     VectorBatch *expectVecBatch = TestUtil::CreateVectorBatch(expectTypes, 5, expectData1, expectData2,
-                                                              expectData3, expectData4, expectData5, expectData6);
+        expectData3, expectData4, expectData5, expectData6, expectData7);
 
     EXPECT_TRUE(TestUtil::VecBatchMatchIgnoreOrder(outputVecBatch1, expectVecBatch));
 
@@ -294,14 +330,16 @@ TEST(AdaptivePartialAggregationTest, verify_spark_double)
     ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
     const int rowSize = 10;
     std::vector<DataTypePtr> groupByInputTypePtr = { IntType() };
-    std::vector<DataTypePtr> aggInputTypePtr = { DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType() };
-    std::vector<DataTypePtr> sourceTypePtr = { IntType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType() };
+    std::vector<DataTypePtr> aggInputTypePtr = { DoubleType(), DoubleType(), DoubleType(), DoubleType(), DoubleType()};
+    std::vector<DataTypePtr> sourceTypePtr = { IntType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(),
+                                               DoubleType() };
     DataTypes groupByInputTypes(groupByInputTypePtr);
     std::vector<DataTypes> aggInputTypes = AggregatorUtil::WrapWithVector(DataTypes(aggInputTypePtr));
     DataTypes sourceTypes = DataTypes(sourceTypePtr);
 
     std::vector<DataTypes> outputTypes = { DataTypes({DoubleType()}),
                                            DataTypes({DoubleType(), LongType()}),
+                                           DataTypes({LongType()}),
                                            DataTypes({LongType()}),
                                            DataTypes({DoubleType()}),
                                            DataTypes({DoubleType()}) };
@@ -313,10 +351,18 @@ TEST(AdaptivePartialAggregationTest, verify_spark_double)
     // First stage (partial)
     std::vector<uint32_t> groupByIdxCols({ 0 });
     std::vector<std::vector<uint32_t>> aggColIdxVec({{1}, {2}, {3}, {4}, {5}});
-    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1), static_cast<unsigned int>(-1),
-                                        static_cast<unsigned int>(-1), static_cast<unsigned int>(-1), static_cast<unsigned int>(-1)};
-    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
-                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
+    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1)};
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM,
+                                           OMNI_AGGREGATION_TYPE_AVG,
+                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                           OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                                           OMNI_AGGREGATION_TYPE_MIN,
+                                           OMNI_AGGREGATION_TYPE_MAX };
 
     auto aggPartialFactory = CreateFactory(groupByIdxCols, groupByInputTypes, aggColIdxVec,
                                            aggInputTypes, outputTypes, aggFuncTypes, aggMaskVec,
@@ -329,15 +375,16 @@ TEST(AdaptivePartialAggregationTest, verify_spark_double)
     VectorBatch *outputVecBatch = aggPartial->AlignSchema(input);
 
     EXPECT_EQ(outputVecBatch->GetRowCount(), rowSize);
-    EXPECT_EQ(outputVecBatch->GetVectorCount(), 7);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 8);
 
     op::Operator::DeleteOperator(aggPartial);
 
 
-    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1}, {2, 3}, {4}, {5}, {6}});
+    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1}, {2, 3}, {4}, {5}, {6}, {7}});
     std::vector<DataTypes> finalAggInputTypes = outputTypes;
     std::vector<DataTypes> finalOutputTypes = { DataTypes({DoubleType()}),
                                                 DataTypes({DoubleType()}),
+                                                DataTypes({LongType()}),
                                                 DataTypes({LongType()}),
                                                 DataTypes({DoubleType()}),
                                                 DataTypes({DoubleType()}) };
@@ -356,15 +403,17 @@ TEST(AdaptivePartialAggregationTest, verify_spark_double)
     op::Operator::DeleteOperator(aggFinal);
 
     // construct the output data
-    DataTypes expectTypes({ IntType(), DoubleType(), DoubleType(), LongType(), DoubleType(), DoubleType() });
+    DataTypes expectTypes({ IntType(), DoubleType(), DoubleType(), LongType(), LongType(), DoubleType(),
+                            DoubleType() });
     int32_t expectData1[5] = {1, 2, 3, 4, 5}; // group
     double expectData2[5] = {2.02, 4.04, 6.06, 8.08, 10.10}; // sum
     double expectData3[5] = {1.01, 2.02, 3.03, 4.04, 5.05}; // avg
     int64_t expectData4[5] = {2, 2, 2, 2, 2}; // count
-    double expectData5[5] = {1.01, 2.02, 3.03, 4.04, 5.05}; // min
-    double expectData6[5] = {1.01, 2.02, 3.03, 4.04, 5.05}; // max
+    int64_t expectData5[5] = {2, 2, 2, 2, 2}; // count
+    double expectData6[5] = {1.01, 2.02, 3.03, 4.04, 5.05}; // min
+    double expectData7[5] = {1.01, 2.02, 3.03, 4.04, 5.05}; // max
     VectorBatch *expectVecBatch = TestUtil::CreateVectorBatch(expectTypes, 5, expectData1, expectData2,
-                                                              expectData3, expectData4, expectData5, expectData6);
+          expectData3, expectData4, expectData5, expectData6, expectData7);
 
     EXPECT_TRUE(TestUtil::VecBatchMatchIgnoreOrder(outputVecBatch1, expectVecBatch));
 
@@ -377,17 +426,27 @@ TEST(AdaptivePartialAggregationTest, verify_spark_decimal64)
     ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
     const int rowSize = 10;
     std::vector<DataTypePtr> groupByInputTypePtr = { IntType() };
-    std::vector<DataTypePtr> aggInputTypePtr = { Decimal64Type(10,2), Decimal64Type(10,2), Decimal64Type(10,2), Decimal64Type(10,2), Decimal64Type(10,2) };
-    std::vector<DataTypePtr> sourceTypePtr = { IntType(), Decimal64Type(10,2), Decimal64Type(10,2), Decimal64Type(10,2), Decimal64Type(10,2), Decimal64Type(10,2) };
+    std::vector<DataTypePtr> aggInputTypePtr = { Decimal64Type(10, 2),
+                                                 Decimal64Type(10, 2),
+                                                 Decimal64Type(10, 2),
+                                                 Decimal64Type(10, 2),
+                                                 Decimal64Type(10, 2) };
+    std::vector<DataTypePtr> sourceTypePtr = { IntType(),
+                                               Decimal64Type(10, 2),
+                                               Decimal64Type(10, 2),
+                                               Decimal64Type(10, 2),
+                                               Decimal64Type(10, 2),
+                                               Decimal64Type(10, 2) };
     DataTypes groupByInputTypes(groupByInputTypePtr);
     std::vector<DataTypes> aggInputTypes = AggregatorUtil::WrapWithVector(DataTypes(aggInputTypePtr));
     DataTypes sourceTypes = DataTypes(sourceTypePtr);
 
-    std::vector<DataTypes> outputTypes = { DataTypes({Decimal128Type(20,2), BooleanType()}),
-                                           DataTypes({Decimal128Type(20,2), LongType()}),
-                                           DataTypes({LongType()}),
-                                           DataTypes({Decimal64Type(10,2)}),
-                                           DataTypes({Decimal64Type(10,2)}) };
+    std::vector<DataTypes> outputTypes = { DataTypes({ Decimal128Type(20, 2), BooleanType() }),
+                                           DataTypes({ Decimal128Type(20, 2), LongType() }),
+                                           DataTypes({ LongType() }),
+                                           DataTypes({ LongType() }),
+                                           DataTypes({ Decimal64Type(10, 2) }),
+                                           DataTypes({ Decimal64Type(10, 2) }) };
 
     int32_t group1[rowSize] = {1, 2, 3, 4, 5, 1, 2, 3, 4, 5};
     int64_t agg1[rowSize] = {101, 202, 303, 404, 505, 101, 202, 303, 404, 505};
@@ -396,10 +455,18 @@ TEST(AdaptivePartialAggregationTest, verify_spark_decimal64)
     // First stage (partial)
     std::vector<uint32_t> groupByIdxCols({ 0 });
     std::vector<std::vector<uint32_t>> aggColIdxVec({{1}, {2}, {3}, {4}, {5}});
-    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1), static_cast<unsigned int>(-1),
-                                        static_cast<unsigned int>(-1), static_cast<unsigned int>(-1), static_cast<unsigned int>(-1)};
-    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
-                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
+    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1)};
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM,
+                                           OMNI_AGGREGATION_TYPE_AVG,
+                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                           OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                                           OMNI_AGGREGATION_TYPE_MIN,
+                                           OMNI_AGGREGATION_TYPE_MAX };
 
     auto aggPartialFactory = CreateFactory(groupByIdxCols, groupByInputTypes, aggColIdxVec,
                                            aggInputTypes, outputTypes, aggFuncTypes, aggMaskVec,
@@ -412,18 +479,19 @@ TEST(AdaptivePartialAggregationTest, verify_spark_decimal64)
     VectorBatch *outputVecBatch = aggPartial->AlignSchema(input);
 
     EXPECT_EQ(outputVecBatch->GetRowCount(), rowSize);
-    EXPECT_EQ(outputVecBatch->GetVectorCount(), 8);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 9);
 
     op::Operator::DeleteOperator(aggPartial);
 
 
-    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1, 2}, {3, 4}, {5}, {6}, {7}});
+    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1, 2}, {3, 4}, {5}, {6}, {7}, {8}});
     std::vector<DataTypes> finalAggInputTypes = outputTypes;
-    std::vector<DataTypes> finalOutputTypes = { DataTypes({Decimal128Type(20,2)}),
-                                                DataTypes({Decimal64Type(10,2)}),
-                                                DataTypes({LongType()}),
-                                                DataTypes({Decimal64Type(10,2)}),
-                                                DataTypes({Decimal64Type(10,2)}) };
+    std::vector<DataTypes> finalOutputTypes = { DataTypes({ Decimal128Type(20, 2) }),
+                                                DataTypes({ Decimal64Type(10, 2) }),
+                                                DataTypes({ LongType() }),
+                                                DataTypes({ LongType() }),
+                                                DataTypes({ Decimal64Type(10, 2) }),
+                                                DataTypes({ Decimal64Type(10, 2) }) };
     // Second stage (final)
     auto aggFinalFactory = CreateFactory(groupByIdxCols, groupByInputTypes, finalAggColIdxVec,
                                          finalAggInputTypes, finalOutputTypes, aggFuncTypes, aggMaskVec,
@@ -439,15 +507,22 @@ TEST(AdaptivePartialAggregationTest, verify_spark_decimal64)
     op::Operator::DeleteOperator(aggFinal);
 
     // construct the output data
-    DataTypes expectTypes({ IntType(), Decimal128Type(20,2), Decimal64Type(10,2), LongType(), Decimal64Type(10,2), Decimal64Type(10,2) });
+    DataTypes expectTypes({ IntType(),
+                            Decimal128Type(20, 2),
+                            Decimal64Type(10, 2),
+                            LongType(),
+                            LongType(),
+                            Decimal64Type(10, 2),
+                            Decimal64Type(10, 2) });
     int32_t expectData1[5] = {1, 2, 3, 4, 5}; // group
     Decimal128 expectData2[5] = {202, 404, 606, 808, 1010}; // sum
     int64_t expectData3[5] = {101, 202, 303, 404, 505}; // avg
     int64_t expectData4[5] = {2, 2, 2, 2, 2}; // count
-    int64_t expectData5[5] = {101, 202, 303, 404, 505}; // min
-    int64_t expectData6[5] = {101, 202, 303, 404, 505}; // max
+    int64_t expectData5[5] = {2, 2, 2, 2, 2}; // count
+    int64_t expectData6[5] = {101, 202, 303, 404, 505}; // min
+    int64_t expectData7[5] = {101, 202, 303, 404, 505}; // max
     VectorBatch *expectVecBatch = TestUtil::CreateVectorBatch(expectTypes, 5, expectData1, expectData2,
-                                                              expectData3, expectData4, expectData5, expectData6);
+          expectData3, expectData4, expectData5, expectData6, expectData7);
 
     EXPECT_TRUE(TestUtil::VecBatchMatchIgnoreOrder(outputVecBatch1, expectVecBatch));
 
@@ -460,17 +535,27 @@ TEST(AdaptivePartialAggregationTest, verify_spark_decimal128)
     ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
     const int rowSize = 10;
     std::vector<DataTypePtr> groupByInputTypePtr = { IntType() };
-    std::vector<DataTypePtr> aggInputTypePtr = { Decimal64Type(20,2), Decimal64Type(20,2), Decimal64Type(20,2), Decimal64Type(20,2), Decimal64Type(20,2) };
-    std::vector<DataTypePtr> sourceTypePtr = { IntType(), Decimal64Type(20,2), Decimal64Type(20,2), Decimal64Type(20,2), Decimal64Type(20,2), Decimal64Type(20,2) };
+    std::vector<DataTypePtr> aggInputTypePtr = { Decimal64Type(10, 2),
+                                                 Decimal64Type(10, 2),
+                                                 Decimal64Type(10, 2),
+                                                 Decimal64Type(10, 2),
+                                                 Decimal64Type(10, 2) };
+    std::vector<DataTypePtr> sourceTypePtr = { IntType(),
+                                               Decimal64Type(10, 2),
+                                               Decimal64Type(10, 2),
+                                               Decimal64Type(10, 2),
+                                               Decimal64Type(10, 2),
+                                               Decimal64Type(10, 2) };
     DataTypes groupByInputTypes(groupByInputTypePtr);
     std::vector<DataTypes> aggInputTypes = AggregatorUtil::WrapWithVector(DataTypes(aggInputTypePtr));
     DataTypes sourceTypes = DataTypes(sourceTypePtr);
 
-    std::vector<DataTypes> outputTypes = { DataTypes({Decimal128Type(20,2), BooleanType()}),
-                                           DataTypes({Decimal128Type(20,2), LongType()}),
+    std::vector<DataTypes> outputTypes = { DataTypes({Decimal128Type(20, 2), BooleanType()}),
+                                           DataTypes({Decimal128Type(20, 2), LongType()}),
                                            DataTypes({LongType()}),
-                                           DataTypes({Decimal64Type(20,2)}),
-                                           DataTypes({Decimal64Type(20,2)}) };
+                                           DataTypes({LongType()}),
+                                           DataTypes({Decimal64Type(10, 2)}),
+                                           DataTypes({Decimal64Type(10, 2)}) };
 
     int32_t group1[rowSize] = {1, 2, 3, 4, 5, 1, 2, 3, 4, 5};
     int64_t agg1[rowSize] = {101, 202, 303, 404, 505, 101, 202, 303, 404, 505};
@@ -479,10 +564,18 @@ TEST(AdaptivePartialAggregationTest, verify_spark_decimal128)
     // First stage (partial)
     std::vector<uint32_t> groupByIdxCols({ 0 });
     std::vector<std::vector<uint32_t>> aggColIdxVec({{1}, {2}, {3}, {4}, {5}});
-    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1), static_cast<unsigned int>(-1),
-                                        static_cast<unsigned int>(-1), static_cast<unsigned int>(-1), static_cast<unsigned int>(-1)};
-    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
-                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MAX };
+    std::vector<uint32_t> aggMaskVec = {static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1),
+                                        static_cast<unsigned int>(-1)};
+    std::vector<uint32_t> aggFuncTypes = { OMNI_AGGREGATION_TYPE_SUM,
+                                           OMNI_AGGREGATION_TYPE_AVG,
+                                           OMNI_AGGREGATION_TYPE_COUNT_COLUMN,
+                                           OMNI_AGGREGATION_TYPE_COUNT_ALL,
+                                           OMNI_AGGREGATION_TYPE_MIN,
+                                           OMNI_AGGREGATION_TYPE_MAX };
 
     auto aggPartialFactory = CreateFactory(groupByIdxCols, groupByInputTypes, aggColIdxVec,
                                            aggInputTypes, outputTypes, aggFuncTypes, aggMaskVec,
@@ -495,18 +588,19 @@ TEST(AdaptivePartialAggregationTest, verify_spark_decimal128)
     VectorBatch *outputVecBatch = aggPartial->AlignSchema(input);
 
     EXPECT_EQ(outputVecBatch->GetRowCount(), rowSize);
-    EXPECT_EQ(outputVecBatch->GetVectorCount(), 8);
+    EXPECT_EQ(outputVecBatch->GetVectorCount(), 9);
 
     op::Operator::DeleteOperator(aggPartial);
 
 
-    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1, 2}, {3, 4}, {5}, {6}, {7}});
+    std::vector<std::vector<uint32_t>> finalAggColIdxVec({{1, 2}, {3, 4}, {5}, {6}, {7}, {8}});
     std::vector<DataTypes> finalAggInputTypes = outputTypes;
-    std::vector<DataTypes> finalOutputTypes = { DataTypes({Decimal128Type(20,2)}),
-                                                DataTypes({Decimal128Type(20,2)}),
+    std::vector<DataTypes> finalOutputTypes = { DataTypes({Decimal128Type(20, 2)}),
+                                                DataTypes({Decimal128Type(20, 2)}),
                                                 DataTypes({LongType()}),
-                                                DataTypes({Decimal128Type(20,2)}),
-                                                DataTypes({Decimal128Type(20,2)}) };
+                                                DataTypes({LongType()}),
+                                                DataTypes({Decimal128Type(20, 2)}),
+                                                DataTypes({Decimal128Type(20, 2)}) };
     // Second stage (final)
     auto aggFinalFactory = CreateFactory(groupByIdxCols, groupByInputTypes, finalAggColIdxVec,
                                          finalAggInputTypes, finalOutputTypes, aggFuncTypes, aggMaskVec,
@@ -522,15 +616,22 @@ TEST(AdaptivePartialAggregationTest, verify_spark_decimal128)
     op::Operator::DeleteOperator(aggFinal);
 
     // construct the output data
-    DataTypes expectTypes({ IntType(), Decimal128Type(20,2), Decimal128Type(20,2), LongType(), Decimal128Type(20,2), Decimal128Type(20,2) });
+    DataTypes expectTypes({ IntType(),
+                            Decimal128Type(20, 2),
+                            Decimal128Type(20, 2),
+                            LongType(),
+                            LongType(),
+                            Decimal128Type(20, 2),
+                            Decimal128Type(20, 2) });
     int32_t expectData1[5] = {1, 2, 3, 4, 5}; // group
     Decimal128 expectData2[5] = {202, 404, 606, 808, 1010}; // sum
     Decimal128 expectData3[5] = {101, 202, 303, 404, 505}; // avg
     int64_t expectData4[5] = {2, 2, 2, 2, 2}; // count
-    Decimal128 expectData5[5] = {101, 202, 303, 404, 505}; // min
-    Decimal128 expectData6[5] = {101, 202, 303, 404, 505}; // max
+    int64_t expectData5[5] = {2, 2, 2, 2, 2}; // count
+    Decimal128 expectData6[5] = {101, 202, 303, 404, 505}; // min
+    Decimal128 expectData7[5] = {101, 202, 303, 404, 505}; // max
     VectorBatch *expectVecBatch = TestUtil::CreateVectorBatch(expectTypes, 5, expectData1, expectData2,
-                                                              expectData3, expectData4, expectData5, expectData6);
+          expectData3, expectData4, expectData5, expectData6, expectData7);
 
     EXPECT_TRUE(TestUtil::VecBatchMatchIgnoreOrder(outputVecBatch1, expectVecBatch));
 

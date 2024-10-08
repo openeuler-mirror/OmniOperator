@@ -426,45 +426,14 @@ public:
 
     void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch, const int32_t filterIndex) override
     {
-        BaseVector *originVector = inputVecBatch->Get(channels[0]);
-        auto *filterVector = reinterpret_cast<Vector<bool> *>(inputVecBatch->Get(filterIndex));
-        int rowCount = filterVector->GetSize();
-        bool needFilterJude = DoNeedHandleAggFilter(filterVector, 0, rowCount);
-        if (needFilterJude) {
-            for (int index = 0; index < rowCount; ++index) {
-                if (filterVector->IsNull(index)) {
-                    originVector->SetNull(index);
-                }
-            }
-        }
-        AlignAggSchema(result, inputVecBatch);
+        std::string message = "the interface don't support first aggregator";
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
     }
 
     void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override
     {
-        BaseVector *originVector = inputVecBatch->Get(channels[0]);
-        int rowCount = originVector->GetSize();
-        auto firstVector = VectorHelper::SliceVector(originVector, 0, rowCount);
-        auto valueSetVector = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowCount));
-        if constexpr (IGNORE_NULL) {
-            if (originVector->HasNull()) {
-                for (int i = 0; i < rowCount; ++i) {
-                    if (originVector->IsNull(i)) {
-                        valueSetVector->SetValue(i, false);
-                    } else {
-                        valueSetVector->SetValue(i, true);
-                    }
-                }
-            } else {
-                bool *valueAddr = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(valueSetVector));
-                std::fill_n(valueAddr, rowCount, true);
-            }
-        } else {
-            bool *valueAddr = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(valueSetVector));
-            std::fill_n(valueAddr, rowCount, true);
-        }
-        result->Append(firstVector);
-        result->Append(valueSetVector);
+        std::string message = "the interface don't support first aggregator";
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
     }
 };
 }

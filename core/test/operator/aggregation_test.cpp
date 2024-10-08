@@ -4425,6 +4425,10 @@ TEST(AggregatorTest, typed_aggregator_test)
             std::vector<BaseVector *> &vectors)
         {}
 
+        void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+            const bool aggFilter) override
+        {}
+
         virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
             const int32_t rowCount, const uint8_t *nullMap)
         {}

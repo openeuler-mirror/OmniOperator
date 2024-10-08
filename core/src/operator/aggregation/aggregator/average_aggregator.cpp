@@ -372,50 +372,59 @@ void AverageAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRo
 
 // olk interface
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void AverageAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector)
+void AverageAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const uint8_t *nullMap, const bool aggFilter)
 {
-    int rowCount = originVector->GetSize();
     if constexpr (OUT_ID == OMNI_VARCHAR) {
-        SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(result, originVector);
+        SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(result, originVector, nullMap, aggFilter);
     } else if constexpr (OUT_ID == OMNI_CONTAINER) {
-        auto containerVector = reinterpret_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, 2));
-        auto sumVector = reinterpret_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
-        auto countVector = reinterpret_cast<Vector<int64_t> *>(VectorHelper::CreateFlatVector(OMNI_LONG, rowCount));
-
         if (originVector->GetEncoding() == OMNI_DICTIONARY) {
-            auto vector = reinterpret_cast<Vector<DictionaryContainer<InType>> *>(originVector);
-            for (int index = 0; index < rowCount; ++index) {
-                if (vector->IsNull(index)) {
-                    sumVector->SetValue(index, 0);
-                    countVector->SetValue(index, 0);
-                } else {
-                    InType val = vector->GetValue(index);
-                    bool overflow = false;
-                    OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
-                    sumVector->SetValue(index, out);
-                    countVector->SetValue(index, 1);
-                }
-            }
+            ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<InType>>>(result, originVector, nullMap);
         } else {
-            auto vector = reinterpret_cast<Vector<InType> *>(originVector);
-            for (int index = 0; index < rowCount; ++index) {
-                if (vector->IsNull(index)) {
-                    sumVector->SetValue(index, 0);
-                    countVector->SetValue(index, 0);
-                } else {
-                    InType val = vector->GetValue(index);
-                    bool overflow = false;
-                    OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
-                    sumVector->SetValue(index, out);
-                    countVector->SetValue(index, 1);
-                }
-            }
+            ProcessAlignAggSchemaInternal<Vector<InType>>(result, originVector, nullMap);
         }
-        containerVector->SetValue(0, reinterpret_cast<uintptr_t>(sumVector));
-        containerVector->SetValue(1, reinterpret_cast<uintptr_t>(countVector));
     } else {
         throw OmniException("Unreachable code", "Reached unreachable code in average aggregator extract partial");
     }
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
+template <typename T>
+void AverageAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+    const uint8_t *nullMap)
+{
+    int rowCount = originVector->GetSize();
+    auto containerVector = reinterpret_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, 2));
+    auto sumVector = reinterpret_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
+    auto countVector = reinterpret_cast<Vector<int64_t> *>(VectorHelper::CreateFlatVector(OMNI_LONG, rowCount));
+
+    auto vector = reinterpret_cast<T *>(originVector);
+    if (nullMap != nullptr) {
+        for (int index = 0; index < rowCount; ++index) {
+            if (nullMap[index]) {
+                sumVector->SetValue(index, 0);
+                countVector->SetValue(index, 0);
+            } else {
+                InType val = vector->GetValue(index);
+                bool overflow = false;
+                OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+                sumVector->SetValue(index, out);
+                countVector->SetValue(index, 1);
+            }
+        }
+    } else {
+        for (int index = 0; index < rowCount; ++index) {
+            InType val = vector->GetValue(index);
+            bool overflow = false;
+            OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+            sumVector->SetValue(index, out);
+            countVector->SetValue(index, 1);
+        }
+    }
+
+    containerVector->SetValue(0, reinterpret_cast<uintptr_t>(sumVector));
+    containerVector->SetValue(1, reinterpret_cast<uintptr_t>(countVector));
+    result->Append(containerVector);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>

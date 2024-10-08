@@ -128,10 +128,43 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<Unspil
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) {
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+                                                                const uint8_t *nullMap, const bool aggFilter)
+{
+    // note: type relationship matches only (IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR) and
+    // (OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)
+    if (!aggFilter) {
+        int rowCount = originVector->GetSize();
+        auto *minVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+        result->Append(minVector);
+        return;
+    }
+
+    // handle agg filter, nullMap != nullptr
+    if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+        ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<std::string_view>>>(result, originVector, nullMap);
+    } else {
+        ProcessAlignAggSchemaInternal<Vector<std::string_view>>(result, originVector, nullMap);
+    }
+}
+
+template<DataTypeId IN_ID, DataTypeId OUT_ID>
+template<typename T>
+void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+                                                                        const uint8_t *nullMap)
+{
     int rowCount = originVector->GetSize();
-    // (IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR) && (OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)
-    auto *minVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+    auto minVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
+            VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+    auto vector = reinterpret_cast<T *>(originVector);
+    for (int index = 0; index < rowCount; ++index) {
+        if (nullMap[index]) {
+            minVector->SetNull(index);
+        } else {
+            std::string_view val = vector->GetValue(index);
+            minVector->SetValue(index, val);
+        }
+    }
     result->Append(minVector);
 }
 

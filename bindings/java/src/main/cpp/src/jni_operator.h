@@ -52,7 +52,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpil
  * Signature: (JJ)[Lnova/hetu/omniruntime/vector/VecBatch
  */
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_alignSchemaNative(JNIEnv *, jobject,
-   jlong, jlong);
+    jlong, jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperator
@@ -60,7 +60,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_align
  * Signature: (J)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getHashMapUniqueKeysNative(JNIEnv *, jobject,
-   jlong);
+    jlong);
 
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_freeRowBatchNative(JNIEnv *env, jclass jcls,

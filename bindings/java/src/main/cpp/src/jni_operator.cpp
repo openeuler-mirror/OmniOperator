@@ -243,7 +243,7 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_align
  * Signature: (J)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getHashMapUniqueKeysNative(JNIEnv *env,
-   jobject jObj, jlong jOperatorAddr)
+    jobject jObj, jlong jOperatorAddr)
 {
     auto *nativeOperator = (op::Operator *)jOperatorAddr;
     return static_cast<jlong>(nativeOperator->GetHashMapUniqueKeys());

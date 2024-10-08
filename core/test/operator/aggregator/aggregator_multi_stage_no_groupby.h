@@ -27,6 +27,7 @@ inline static std::map<std::string, FunctionType> aggFuncs = { { "sum", OMNI_AGG
 inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForSum{ { OMNI_BOOLEAN, {} },
     { OMNI_SHORT, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_INT, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DATE32, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_LONG, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_DOUBLE, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_DECIMAL64, { OMNI_BOOLEAN, OMNI_CHAR, OMNI_VARCHAR } },
@@ -35,12 +36,20 @@ inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForSum{ {
     { OMNI_VARCHAR, {} } };
 
 inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForAvg{ { OMNI_BOOLEAN, {} },
-    { OMNI_SHORT, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
-    { OMNI_INT, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
-    { OMNI_LONG, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
-    { OMNI_DOUBLE, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
-    { OMNI_DECIMAL64, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
-    { OMNI_DECIMAL128, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_SHORT, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_CHAR,
+           OMNI_VARCHAR } },
+    { OMNI_INT, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_CHAR,
+           OMNI_VARCHAR } },
+    { OMNI_DATE32, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_CHAR,
+           OMNI_VARCHAR } },
+    { OMNI_LONG, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_CHAR,
+           OMNI_VARCHAR } },
+    { OMNI_DOUBLE, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_CHAR,
+           OMNI_VARCHAR } },
+    { OMNI_DECIMAL64, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_CHAR,
+           OMNI_VARCHAR } },
+    { OMNI_DECIMAL128, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_CHAR,
+           OMNI_VARCHAR } },
     { OMNI_CHAR, {} },
     { OMNI_VARCHAR, {} } };
 
@@ -48,14 +57,15 @@ inline static std::map<DataTypeId, std::vector<DataTypeId>> unsupportedForMin{ {
     { OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_SHORT, { OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_INT, { OMNI_CHAR, OMNI_VARCHAR } },
+    { OMNI_DATE32, { OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_LONG, { OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_DOUBLE, { OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_DECIMAL64, { OMNI_CHAR, OMNI_VARCHAR } },
     { OMNI_DECIMAL128, { OMNI_CHAR, OMNI_VARCHAR } },
-    { OMNI_CHAR,
-    { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR } },
-    { OMNI_VARCHAR,
-    { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR } } };
+    { OMNI_CHAR, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_DOUBLE,
+          OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR } },
+    { OMNI_VARCHAR, { OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_LONG, OMNI_DOUBLE,
+          OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_CHAR } } };
 
 inline static std::map<std::string, std::map<DataTypeId, std::vector<DataTypeId>>> unsupported{ { "sum",
     unsupportedForSum },
@@ -381,8 +391,11 @@ inline DataTypePtr GetType(DataTypeId typeId)
         case OMNI_SHORT:
             return ShortType();
         case OMNI_INT:
+        case OMNI_DATE32:
             return IntType();
         case OMNI_LONG:
+        case OMNI_DATE64:
+        case OMNI_TIME64:
             return LongType();
         case OMNI_TIMESTAMP:
             return TimestampType();
@@ -583,11 +596,14 @@ public:
                         CreateFixedSizeVector<OMNI_SHORT>(rowPerVecBatch, this->nullPercent, 256 * 256, this->isDict);
                     break;
                 case OMNI_INT:
+                case OMNI_DATE32:
                     vector = CreateFixedSizeVector<OMNI_INT>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
                         this->isDict);
                     break;
                 case OMNI_DECIMAL64:
                 case OMNI_TIMESTAMP:
+                case OMNI_DATE64:
+                case OMNI_TIME64:
                 case OMNI_LONG:
                     vector = CreateFixedSizeVector<OMNI_LONG>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
                         this->isDict);

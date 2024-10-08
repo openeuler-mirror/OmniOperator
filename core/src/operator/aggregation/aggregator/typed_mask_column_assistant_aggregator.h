@@ -234,6 +234,12 @@ public:
         realAggregator->ExtractValuesBatch(groupStates, aggIdx, vectors, rowOffset, rowCount);
     }
 
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override
+    {
+        realAggregator->ProcessAlignAggSchema(result, originVector, nullMap, aggFilter);
+    }
+
     bool IsInputRaw() const override
     {
         return realAggregator->IsInputRaw();

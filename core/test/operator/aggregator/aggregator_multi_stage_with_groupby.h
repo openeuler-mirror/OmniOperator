@@ -100,6 +100,7 @@ public:
                         CreateFixedSizeVector<OMNI_SHORT>(rowPerVecBatch, this->nullPercent, 256 * 256, this->isDict);
                     break;
                 case OMNI_INT:
+                case OMNI_DATE32:
                     vector = CreateFixedSizeVector<OMNI_INT>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
                         this->isDict);
                     break;

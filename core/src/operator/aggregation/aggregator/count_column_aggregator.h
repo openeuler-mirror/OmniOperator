@@ -69,7 +69,8 @@ public:
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
         int32_t &vectorIndex) override;
 
-    virtual void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) override;
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override;
 
 protected:
     CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels, const bool inputRaw,

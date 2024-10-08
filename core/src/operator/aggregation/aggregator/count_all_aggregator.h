@@ -35,9 +35,10 @@ public:
         }
     }
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) override 
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override
     {
-        int rowCount = originVector->GetSize();
+        int rowCount = result->GetRowCount();
         auto countVector = reinterpret_cast<Vector<int64_t> *>(VectorHelper::CreateFlatVector(OMNI_LONG, rowCount));
         int64_t *valueAddr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
         // each element is initialized to 1.

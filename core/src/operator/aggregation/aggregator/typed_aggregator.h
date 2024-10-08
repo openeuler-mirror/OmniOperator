@@ -208,24 +208,42 @@ public:
     // adaptive partial aggregation
     void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch, const int32_t filterIndex) override
     {
-        BaseVector *originVector = inputVecBatch->Get(channels[0]);
-        auto *filterVector = reinterpret_cast<Vector<bool> *>(inputVecBatch->Get(filterIndex));
-        int rowCount = filterVector->GetSize();
-        bool needFilterJude = DoNeedHandleAggFilter(filterVector, 0, rowCount);
+        int32_t rowCount = inputVecBatch->GetRowCount();
+        uint8_t *nullMap = nullptr;
+        BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap, 0);
+
+        Vector<bool> *booleanVector = static_cast<Vector<bool> *>(inputVecBatch->Get(filterIndex));
+        bool needFilterJude = DoNeedHandleAggFilter(booleanVector, 0, rowCount);
         if (needFilterJude) {
-            for (int index = 0; index < rowCount; ++index) {
-                if (filterVector->IsNull(index)) {
-                    originVector->SetNull(index);
+            auto *filterPtr = unsafe::UnsafeVector::GetRawValues(booleanVector);
+            // notSatisfiedArray can filter row which no need to aggregate
+            // the nullMap: true means null
+            // booleanVector: false means one row has been filtered
+            std::vector<uint8_t> notSatisfiedArray;
+            notSatisfiedArray.resize(rowCount);
+            if (nullMap == nullptr) {
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    notSatisfiedArray[i] = not filterPtr[i];
+                }
+            } else {
+                auto *nullmapPtr = nullMap;
+                for (int32_t i = 0; i < rowCount; ++i) {
+                    notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
+            ProcessAlignAggSchema(result, originVector, notSatisfiedArray.data(), true);
+        } else {
+            ProcessAlignAggSchema(result, originVector, nullMap, false);
         }
-        ProcessAlignAggSchema(result, originVector);
     }
 
+    // adaptive partial aggregation
     void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override
     {
-        BaseVector *originVector = inputVecBatch->Get(channels[0]);
-        ProcessAlignAggSchema(result, originVector);
+        int32_t rowCount = inputVecBatch->GetRowCount();
+        uint8_t *nullMap = nullptr;
+        BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap, 0);
+        ProcessAlignAggSchema(result, originVector, nullMap, false);
     }
 
     bool IsTypedAggregator() override
@@ -244,7 +262,8 @@ protected:
     virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap) = 0;
 
-    virtual void ProcessAlignAggSchema(VectorBatch *vecBatch, BaseVector *originVector) {}
+    virtual void ProcessAlignAggSchema(VectorBatch *vecBatch, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) = 0;
 
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, const int index, const char *errorMsg)

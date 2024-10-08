@@ -182,12 +182,14 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<Unspi
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void CountColumnAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector) {
+void CountColumnAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const uint8_t *nullMap, const bool aggFilter)
+{
     int rowCount = originVector->GetSize();
     auto countVector = reinterpret_cast<Vector<int64_t> *>(VectorHelper::CreateFlatVector(OMNI_LONG, rowCount));
-    if (originVector->HasNull()) {
+    if (nullMap != nullptr) {
         for (int index = 0; index < rowCount; ++index) {
-            if (originVector->IsNull(index)) {
+            if (nullMap[index]) {
                 countVector->SetValue(index, 0);
             } else {
                 countVector->SetValue(index, 1);
@@ -195,7 +197,7 @@ void CountColumnAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *re
         }
     } else {
         int64_t *valueAddr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-        // each element is initialized to 1.
+        // each element is initialized to 1 directly.
         std::fill_n(valueAddr, rowCount, 1);
     }
     result->Append(countVector);

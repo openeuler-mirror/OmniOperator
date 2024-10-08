@@ -541,11 +541,14 @@ uint64_t HashAggregationOperator::GetSpilledBytes()
 
 uint64_t HashAggregationOperator::GetHashMapUniqueKeys()
 {
-    return serialize->hashmap.GetHashKeys();
+    return serialize->hashmap.GetElementsSize();
 }
 
 VectorBatch *HashAggregationOperator::AlignSchema(VectorBatch *inputVecBatch)
 {
+    // release hashmap memory
+    executionContext->GetArena()->Reset();
+
     int32_t rowCount = inputVecBatch->GetRowCount();
     VectorBatch *result = new VectorBatch(rowCount);
     // handle group columns
@@ -560,7 +563,7 @@ VectorBatch *HashAggregationOperator::AlignSchema(VectorBatch *inputVecBatch)
     auto aggNum = static_cast<int32_t>(aggregators.size());
     if (aggFiltersCount > 0) {
         int32_t filterOffset = inputVecBatch->GetVectorCount() - aggFiltersCount;
-        for (size_t aggIdx = 0; aggIdx < aggNum; ++aggIdx) {
+        for (int32_t aggIdx = 0; aggIdx < aggNum; ++aggIdx) {
             auto &aggregator = aggregators[aggIdx];
             if (hasAggFilters[aggIdx] == 1) {
                 aggregator->AlignAggSchemaWithFilter(result, inputVecBatch, filterOffset);
@@ -570,7 +573,7 @@ VectorBatch *HashAggregationOperator::AlignSchema(VectorBatch *inputVecBatch)
             }
         }
     } else {
-        for (size_t aggIdx = 0; aggIdx < aggNum; ++aggIdx) {
+        for (int32_t aggIdx = 0; aggIdx < aggNum; ++aggIdx) {
             auto &aggregator = aggregators[aggIdx];
             aggregator->AlignAggSchema(result, inputVecBatch);
         }

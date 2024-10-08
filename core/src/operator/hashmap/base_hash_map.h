@@ -694,7 +694,7 @@ public:
     }
 
     // get the number of hash keys
-    uint64_t GetHashKeys()
+    uint64_t GetElementsSize()
     {
         return elementsSize;
     }

@@ -6,8 +6,6 @@ package nova.hetu.omniruntime.operator;
 
 import static nova.hetu.omniruntime.constants.Status.OMNI_STATUS_NORMAL;
 
-import nova.hetu.omniruntime.constants.FunctionType;
-import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.vector.VecBatch;
 
 import java.util.Iterator;
@@ -92,13 +90,23 @@ public final class OmniOperator implements AutoCloseable {
         return getSpilledBytesNative(nativeOperator);
     }
 
+    /**
+     * Get the number of hashmap unique key.
+     *
+     * @return the unique key number
+     */
     public long getHashMapUniqueKeys() {
         return getHashMapUniqueKeysNative(nativeOperator);
     }
 
+    /**
+     * The input vecBatch is aligned based on the operator schema.
+     *
+     * @param inputVecBatch the input vec batch
+     * @return aligned vecBatch
+     */
     public VecBatch alignSchema(VecBatch inputVecBatch) {
-        VecBatch outputVecBatch = alignSchemaNative(nativeOperator, inputVecBatch.getNativeVectorBatch());
-        return outputVecBatch;
+        return alignSchemaNative(nativeOperator, inputVecBatch.getNativeVectorBatch());
     }
 
     private class VecBatchIterator implements Iterator<VecBatch> {
