@@ -14,20 +14,9 @@ namespace TypeSerializationTest {
 TEST(DataTypeSerializer, serialization)
 {
     std::vector<DataTypePtr> fieldTypes { IntType(), Decimal128Type(20, 10), VarcharType(256) };
-    std::vector<DataTypePtr> types = { IntType(),
-        DoubleType(),
-        BooleanType(),
-        LongType(),
-        Date32Type(MILLI),
-        Date64Type(DAY),
-        Time32Type(SEC),
-        Time64Type(MICROSEC),
-        VarcharType(1024),
-        CharType(512),
-        Decimal128Type(30, 20),
-        Decimal64Type(20, 10),
-        ContainerType(fieldTypes),
-        TimestampType()};
+    std::vector<DataTypePtr> types = { IntType(), DoubleType(), BooleanType(), LongType(), Date32Type(MILLI),
+        Date64Type(DAY), Time32Type(SEC), Time64Type(MICROSEC), VarcharType(1024), CharType(512),
+        Decimal128Type(30, 20), Decimal64Type(20, 10), ContainerType(fieldTypes), TimestampType() };
     std::string typesJson = omniruntime::type::Serialize(types);
     DataTypes deserializedDataTypes = omniruntime::type::Deserialize(typesJson);
     auto &dataTypes = deserializedDataTypes.Get();

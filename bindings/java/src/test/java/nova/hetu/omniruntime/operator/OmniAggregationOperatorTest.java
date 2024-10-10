@@ -25,7 +25,15 @@ import nova.hetu.omniruntime.constants.FunctionType;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
-import nova.hetu.omniruntime.type.*;
+import nova.hetu.omniruntime.type.CharDataType;
+import nova.hetu.omniruntime.type.ContainerDataType;
+import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.Decimal128DataType;
+import nova.hetu.omniruntime.type.DoubleDataType;
+import nova.hetu.omniruntime.type.IntDataType;
+import nova.hetu.omniruntime.type.LongDataType;
+import nova.hetu.omniruntime.type.TimestampDataType;
+import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.vector.Decimal128Vec;
 import nova.hetu.omniruntime.vector.DoubleVec;
 import nova.hetu.omniruntime.vector.IntVec;
@@ -226,7 +234,7 @@ public class OmniAggregationOperatorTest {
             }
 
             assertNotNull(vecBatch);
-            assertEquals(vecBatch.getVectors().length, 12);
+            assertEquals(vecBatch.getVectors().length, 14);
             Vec[] vectors = vecBatch.getVectors();
             assertEquals(((IntVec) vectors[0]).get(0), 1);
             assertEquals(((LongVec) vectors[1]).get(0), 2L);

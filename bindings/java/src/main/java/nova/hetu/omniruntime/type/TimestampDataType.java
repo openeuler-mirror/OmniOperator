@@ -4,8 +4,6 @@
 
 package nova.hetu.omniruntime.type;
 
-import java.io.Serializable;
-
 /**
  * timestamp data type.
  *
