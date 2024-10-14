@@ -45,6 +45,7 @@ public class VecFactory {
                 return new IntVec(nativeVector);
             case OMNI_LONG:
             case OMNI_DATE64:
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
                 return new LongVec(nativeVector);
             case OMNI_DOUBLE:
@@ -103,6 +104,7 @@ public class VecFactory {
             case OMNI_DATE32:
                 return new IntVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DATE64:
             case OMNI_DECIMAL64:
                 return new LongVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
@@ -135,6 +137,7 @@ public class VecFactory {
             case OMNI_INT:
             case OMNI_DATE32:
                 return new IntVec(size);
+            case OMNI_TIMESTAMP:
             case OMNI_LONG:
             case OMNI_DATE64:
             case OMNI_DECIMAL64:

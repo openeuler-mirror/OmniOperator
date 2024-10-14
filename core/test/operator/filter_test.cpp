@@ -2750,6 +2750,7 @@ VectorBatch *CreateSequenceVectorBatch(const std::vector<DataTypePtr> &types, in
                     static_cast<Vector<int32_t> *>(vector)->SetValue(index, index);
                     break;
                 case OMNI_LONG:
+                case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
                     static_cast<Vector<int64_t> *>(vector)->SetValue(index, index);
                     break;
@@ -2791,6 +2792,7 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
                     static_cast<Vector<int32_t> *>(inner)->SetValue(index, index);
                     break;
                 case OMNI_LONG:
+                case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
                     static_cast<Vector<int64_t> *>(inner)->SetValue(index, index);
                     break;

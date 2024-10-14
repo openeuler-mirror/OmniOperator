@@ -126,6 +126,7 @@ BaseVector *BuildHashInput(const DataTypePtr groupType, int32_t rowPerVecBatch, 
             return col;
         }
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             Vector<int64_t> *col = new Vector<int64_t>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {
@@ -201,6 +202,7 @@ BaseVector *BuildAggregateInput(const DataTypePtr aggType, int32_t rowPerVecBatc
             return col;
         }
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             Vector<int64_t> *col = new Vector<int64_t>(rowPerVecBatch);
             for (int32_t j = 0; j < rowPerVecBatch; ++j) {

@@ -180,6 +180,7 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
                 SetValueForSingleRowVecBatch<OMNI_SHORT>(singleRowVecBatch, i, vector, position);
                 break;
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
                 SetValueForSingleRowVecBatch<OMNI_LONG>(singleRowVecBatch, i, vector, position);
                 break;

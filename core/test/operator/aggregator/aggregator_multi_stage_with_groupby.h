@@ -104,6 +104,7 @@ public:
                         this->isDict);
                     break;
                 case OMNI_DECIMAL64:
+                case OMNI_TIMESTAMP:
                 case OMNI_LONG:
                     vector = CreateFixedSizeVector<OMNI_LONG>(rowPerVecBatch, this->nullPercent, 256 * 256 * 256,
                         this->isDict);

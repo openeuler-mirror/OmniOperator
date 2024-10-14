@@ -23,6 +23,7 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
             return reinterpret_cast<int64_t>(
                 unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(colVec)));
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return reinterpret_cast<int64_t>(
                 unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(colVec)));

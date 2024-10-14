@@ -116,6 +116,9 @@ public class DataTypeSerializer {
                 case OMNI_DOUBLE:
                     subType = DoubleDataType.class;
                     break;
+                case OMNI_TIMESTAMP:
+                    subType = TimestampDataType.class;
+                    break;
                 case OMNI_BOOLEAN:
                     subType = BooleanDataType.class;
                     break;

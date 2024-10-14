@@ -154,7 +154,17 @@ static constexpr DistinctLimitFuncSet DISTINCT_LIMIT_FUNC_SET[DATA_TYPE_MAX_COUN
     {OMNI_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_TIME64, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_TIMESTAMP,
+     DuplicateKeyValueImpl<Vector<int64_t>, int64_t>,
+     HashFuncImpl<Vector<int64_t>, int64_t>,
+     HashFuncVectImplProxy<Vector<int64_t>, int64_t>,
+     IsSameNodeFuncImpl<Vector<int64_t>, int64_t>,
+     FillOutputFuncImp<Vector<int64_t>, int64_t>,
+     DuplicateKeyValueImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     HashFuncImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     HashFuncVectImplProxy<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     IsSameNodeFuncImpl<Vector<DictionaryContainer<int64_t>>, int64_t>,
+     FillOutputFuncImp<Vector<DictionaryContainer<int64_t>>, int64_t>},
     {OMNI_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_VARCHAR,
@@ -237,6 +247,7 @@ void FillPrecomputedHash(VectorBatch *vectorBatch, const int32_t *inputTypeIds, 
             break;
         }
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             for (int i = 0; i < rowCount; ++i) {
                 if (vectorBatch->Get(preComputedHashCol)->GetEncoding() != OMNI_DICTIONARY) {

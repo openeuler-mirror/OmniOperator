@@ -16,6 +16,7 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
             return reinterpret_cast<int64_t>(
                 unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(colVec)));
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return reinterpret_cast<int64_t>(
                 unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int64_t> *>(colVec)));
@@ -356,6 +357,7 @@ BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t sel
         case OMNI_SHORT:
             return ColumnProjectionHelper<int16_t>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return ColumnProjectionHelper<int64_t>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_DOUBLE:

@@ -204,7 +204,8 @@ bool SortOperator::CanUseRadixSort()
     }
     const auto &sortDataType = sourceTypes.GetType(sortCols[0])->GetId();
     bool isAllowedDataType = (sortDataType == OMNI_LONG || sortDataType == OMNI_DATE32 || sortDataType == OMNI_INT ||
-        sortDataType == OMNI_SHORT || sortDataType == OMNI_BOOLEAN || sortDataType == OMNI_DECIMAL64);
+        sortDataType == OMNI_SHORT || sortDataType == OMNI_BOOLEAN || sortDataType == OMNI_DECIMAL64 ||
+        sortDataType == OMNI_TIMESTAMP);
     return isAllowedDataType;
 }
 
@@ -227,6 +228,7 @@ void SortOperator::PrepareSort()
         LogDebug("radix Sort size threshold is %d\n", radixSortSizeThreshold);
         auto typeId = sourceTypes.GetType(sortCols[0])->GetId();
         switch (typeId) {
+            case OMNI_TIMESTAMP:
             case OMNI_LONG:
                 pagesIndex->PrepareRadixSort<OMNI_LONG>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
                 break;

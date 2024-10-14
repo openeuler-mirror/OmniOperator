@@ -138,6 +138,7 @@ CodeGenValue *BatchExpressionCodeGen::BatchLiteralExprConstantHelper(const Liter
             literalValue = llvmTypes->CreateConstantInt(lExpr.intVal);
             break;
         }
+        case OMNI_TIMESTAMP:
         case OMNI_LONG: {
             literalValue = llvmTypes->CreateConstantLong(lExpr.longVal);
             break;
@@ -400,7 +401,7 @@ void BatchExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
     }
 
     if (bExpr->left->GetReturnTypeId() == OMNI_INT || bExpr->left->GetReturnTypeId() == OMNI_DATE32 ||
-        bExpr->left->GetReturnTypeId() == OMNI_LONG) {
+        bExpr->left->GetReturnTypeId() == OMNI_LONG || bExpr->left->GetReturnTypeId() == OMNI_TIMESTAMP) {
         this->BatchBinaryExprIntLongHelper(bExpr, leftValue, rightValue, leftNull, rightNull);
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DOUBLE) {
@@ -523,6 +524,7 @@ llvm::AllocaInst *BatchExpressionCodeGen::GetResultArray(omniruntime::type::Data
             resultArray = builder->CreateAlloca(llvmTypes->I32Type(), rowCnt, "DATA_PTR");
             break;
         }
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
         case OMNI_LONG: {
             resultArray = builder->CreateAlloca(llvmTypes->I64Type(), rowCnt, "DATA_PTR");
@@ -772,6 +774,7 @@ Value *BatchExpressionCodeGen::GetTypeSize(DataTypeId dataTypeId)
         case OMNI_DATE32:
             typeSize = sizeof(int32_t);
             break;
+        case OMNI_TIMESTAMP:
         case OMNI_LONG:
         case OMNI_DECIMAL64:
             typeSize = sizeof(int64_t);
@@ -1006,6 +1009,7 @@ void BatchExpressionCodeGen::Visit(const IfExpr &ifExpr)
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
         case OMNI_BOOLEAN: {
             CallExternFunction("batch_if", { baseType }, baseType,
@@ -1066,7 +1070,7 @@ void BatchExpressionCodeGen::Visit(const CoalesceExpr &cExpr)
 
     if (cExpr.GetReturnTypeId() == OMNI_BOOLEAN || cExpr.GetReturnTypeId() == OMNI_INT ||
         cExpr.GetReturnTypeId() == OMNI_LONG || cExpr.GetReturnTypeId() == OMNI_DOUBLE ||
-        cExpr.GetReturnTypeId() == OMNI_DATE32) {
+        cExpr.GetReturnTypeId() == OMNI_DATE32 || cExpr.GetReturnTypeId() == OMNI_TIMESTAMP) {
         CallExternFunction("batch_coalesce", { cExpr.GetReturnTypeId(), cExpr.GetReturnTypeId() },
             cExpr.GetReturnTypeId(),
             { value1->data, value1->isNull, value2->data, value2->isNull, this->batchCodegenContext->rowCnt }, nullptr);
@@ -1135,6 +1139,7 @@ void BatchExpressionCodeGen::Visit(const InExpr &inExpr)
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128: {
@@ -1240,6 +1245,7 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
         case OMNI_BOOLEAN:
         case OMNI_DATE32:
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DOUBLE: {
             args = { llvmTypes->CreateConstantInt(size),
                 whenClauses,
@@ -1666,6 +1672,8 @@ void BatchExpressionCodeGen::BatchVisitBetweenExprHelper(BetweenExpr &bExpr, con
         params = { OMNI_VARCHAR, OMNI_VARCHAR };
     } else if (bExpr.value->GetReturnTypeId() == type::OMNI_DATE32) {
         params = { OMNI_INT, OMNI_INT };
+    } else if (bExpr.value->GetReturnTypeId() == type::OMNI_TIMESTAMP) {
+        params = { OMNI_LONG, OMNI_LONG };
     } else {
         params = { bExpr.value->GetReturnTypeId(), bExpr.value->GetReturnTypeId() };
     }
@@ -1674,7 +1682,8 @@ void BatchExpressionCodeGen::BatchVisitBetweenExprHelper(BetweenExpr &bExpr, con
     bool isSupportedType = false;
 
     if (bExpr.value->GetReturnTypeId() == OMNI_INT || bExpr.value->GetReturnTypeId() == OMNI_LONG ||
-        bExpr.value->GetReturnTypeId() == OMNI_DATE32 || bExpr.value->GetReturnTypeId() == OMNI_DOUBLE) {
+        bExpr.value->GetReturnTypeId() == OMNI_DATE32 || bExpr.value->GetReturnTypeId() == OMNI_DOUBLE ||
+        bExpr.value->GetReturnTypeId() == type::OMNI_TIMESTAMP) {
         logicalFuncParams1 = { lowerVal->data, val->data, *cmpLeft, this->batchCodegenContext->rowCnt };
         logicalFuncParams2 = { val->data, upperVal->data, *cmpRight, this->batchCodegenContext->rowCnt };
         isSupportedType = true;

@@ -76,6 +76,10 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
             auto longVal = jsonExpr["value"].get<int64_t>();
             return new LiteralExpr(longVal, std::make_shared<LongDataType>());
         }
+        case OMNI_TIMESTAMP: {
+            auto timestampVal = jsonExpr["value"].get<int64_t>();
+            return new LiteralExpr(timestampVal, std::make_shared<TimestampDataType>());
+        }
         case OMNI_DOUBLE: {
             auto doubleVal = jsonExpr["value"].get<double>();
             return new LiteralExpr(doubleVal, std::make_shared<DoubleDataType>());

@@ -215,6 +215,7 @@ public:
             case type::OMNI_SHORT:
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int16_t> *>(vector));
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int64_t> *>(vector));
@@ -254,6 +255,7 @@ public:
                     reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)));
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
@@ -301,6 +303,7 @@ public:
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(vector)));
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<void *>(
@@ -360,6 +363,7 @@ public:
                 return reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)->Slice(positionOffset, length);
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)->Slice(positionOffset, length);
@@ -412,6 +416,7 @@ public:
                 return reinterpret_cast<Vector<int16_t> *>(vector)->Slice(positionOffset, length);
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<int64_t> *>(vector)->Slice(positionOffset, length);
@@ -452,6 +457,7 @@ public:
                     offset, length);
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(vector)->CopyPositions(positions,
@@ -497,6 +503,7 @@ public:
                 return reinterpret_cast<Vector<int16_t> *>(vector)->CopyPositions(positions, offset, length);
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<Vector<int64_t> *>(vector)->CopyPositions(positions, offset, length);
@@ -539,6 +546,7 @@ public:
                     static_cast<Vector<DictionaryContainer<int16_t>> *>(vector)));
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
@@ -584,6 +592,7 @@ public:
                 break;
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 reinterpret_cast<Vector<int64_t> *>(destVector)->Append(srcVector, offset, length);
@@ -689,6 +698,7 @@ public:
                 return DecodeFlatDictionaryVector<int16_t>(vector);
             }
             case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
             case type::OMNI_DECIMAL64: {
                 return DecodeFlatDictionaryVector<int64_t>(vector);

@@ -48,7 +48,8 @@ public class BenchmarkDataTypeSerializer {
     public List<DataType[]> dataTypeSerializeBenchmark() {
         DataType[] dataTypes = new DataType[]{BooleanDataType.BOOLEAN, ShortDataType.SHORT, IntDataType.INTEGER,
                 LongDataType.LONG, DoubleDataType.DOUBLE, Decimal64DataType.DECIMAL64, Decimal128DataType.DECIMAL128,
-                Date32DataType.DATE32, Date64DataType.DATE64, VarcharDataType.VARCHAR, CharDataType.CHAR};
+                Date32DataType.DATE32, Date64DataType.DATE64, VarcharDataType.VARCHAR, CharDataType.CHAR,
+                TimestampDataType.TIMESTAMP};
         List<DataType[]> list = new ArrayList<>();
         for (int i = 0; i < times; i++) {
             String allSerializedTypes = DataTypeSerializer.serialize(dataTypes);

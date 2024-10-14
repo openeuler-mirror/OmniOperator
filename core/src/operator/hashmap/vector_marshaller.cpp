@@ -287,7 +287,7 @@ std::vector<VectorSerializer> vectorSerializerCenter = {
     SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
     SerializeValueIntoArena<type::OMNI_INT>,        // OMNI_TIME32
     SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                        // OMNI_TIMESTAMP
+    SerializeValueIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                        // OMNI_INTERVAL_MONTHS
     nullptr,                                        // OMNI_INTERVAL_DAY_TIME
     SerializeValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -308,7 +308,7 @@ std::vector<VectorSerializer> dicVectorSerializerCenter = {
     SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
     SerializeDictionaryValueIntoArena<type::OMNI_INT>,        // OMNI_TIME32
     SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                                  // OMNI_TIMESTAMP
+    SerializeDictionaryValueIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                                  // OMNI_INTERVAL_MONTHS
     nullptr,                                                  // OMNI_INTERVAL_DAY_TIME
     SerializeDictionaryValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -329,7 +329,7 @@ std::vector<VectorDeSerializer> vectorDeSerializerCenter = {
     DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_DATE64
     DeserializeFromPointer<type::OMNI_INT>,        // /OMNI_TIME32
     DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                       // OMNI_TIMESTAMP
+    DeserializeFromPointer<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                       // OMNI_INTERVAL_MONTHS
     nullptr,                                       // OMNI_INTERVAL_DAY_TIME
     DeserializeFromPointer<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -440,7 +440,7 @@ std::vector<VectorSerializerIgnoreNull> vectorSerializerIgnoreNullCenter = {
     SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
     SerializeValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
     SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                                  // OMNI_TIMESTAMP
+    SerializeValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                                  // OMNI_INTERVAL_MONTHS
     nullptr,                                                  // OMNI_INTERVAL_DAY_TIME
     SerializeValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -461,7 +461,7 @@ std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter = {
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                                            // OMNI_TIMESTAMP
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                                            // OMNI_INTERVAL_MONTHS
     nullptr,                                                            // OMNI_INTERVAL_DAY_TIME
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
@@ -519,7 +519,7 @@ std::vector<FixedKeyVectorSerializerIgnoreNull> vectorSerializerFixedKeysIgnoreN
     SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
     SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
     SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                                      // OMNI_TIMESTAMP
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                                      // OMNI_INTERVAL_MONTHS
     nullptr,                                                      // OMNI_INTERVAL_DAY_TIME
     nullptr,                                                      // OMNI_VARCHAR
@@ -540,7 +540,7 @@ std::vector<FixedKeyVectorSerializerIgnoreNull> dicVectorSerializerFixedKeysIgno
     SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_DATE64
     SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
     SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                                                // OMNI_TIMESTAMP
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                                                // OMNI_INTERVAL_MONTHS
     nullptr,                                                                // OMNI_INTERVAL_DAY_TIME
     nullptr,                                                                // OMNI_VARCHAR

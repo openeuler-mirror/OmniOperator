@@ -87,6 +87,7 @@ public class TestUtils {
             case OMNI_SHORT:
                 return createShortVec(data);
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
                 return createLongVec(data);
             case OMNI_DOUBLE:
@@ -327,6 +328,7 @@ public class TestUtils {
                     assertEquals(((ShortVec) vec).get(i), expectedData[i]);
                     break;
                 case OMNI_LONG:
+                case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
                     assertEquals(((LongVec) vec).get(i), expectedData[i]);
                     break;
@@ -366,6 +368,7 @@ public class TestUtils {
                     assertEquals(((ShortVec) vec).get(i), ((ShortVec) expectedVec).get(i));
                     break;
                 case OMNI_LONG:
+                case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
                     assertEquals(((LongVec) vec).get(i), ((LongVec) expectedVec).get(i));
                     break;
@@ -434,6 +437,7 @@ public class TestUtils {
                     assertEquals(vec.getShort(i), expectedData[i]);
                     break;
                 case OMNI_LONG:
+                case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
                     assertEquals(vec.getLong(i), expectedData[i]);
                     break;
@@ -479,6 +483,7 @@ public class TestUtils {
                     assertEquals(vec.getShort(i), expectedVec.getShort(i));
                     break;
                 case OMNI_LONG:
+                case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
                     assertEquals(vec.getLong(i), expectedVec.getLong(i));
                     break;

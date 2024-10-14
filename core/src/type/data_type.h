@@ -103,6 +103,10 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
     using type = int64_t;
 };
 
+template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
+    using type = int64_t;
+};
+
 #define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
     [&]() {                                                                                   \
         switch (typeId) {                                                                     \
@@ -138,6 +142,9 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
             }                                                                                 \
             case OMNI_VARCHAR: {                                                              \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_VARCHAR>(__VA_ARGS__);    \
+            }                                                                                 \
+            case OMNI_TIMESTAMP: {                                                            \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_TIMESTAMP>(__VA_ARGS__);  \
             }                                                                                 \
             default:                                                                          \
                 LogError("Can not handle this type %d", typeId);                              \
@@ -232,6 +239,7 @@ using ShortDataType = FixedWidthDataType<OMNI_SHORT>;
 using DoubleDataType = FixedWidthDataType<OMNI_DOUBLE>;
 using LongDataType = FixedWidthDataType<OMNI_LONG>;
 using BooleanDataType = FixedWidthDataType<OMNI_BOOLEAN>;
+using TimestampDataType = FixedWidthDataType<OMNI_TIMESTAMP>;
 using InvalidDataType = FixedWidthDataType<OMNI_INVALID>;
 using NoneDataType = FixedWidthDataType<OMNI_NONE>;
 

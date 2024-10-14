@@ -1094,6 +1094,7 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
             break;
         }
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
             ColumnarSort<int64_t>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from,
                 to, currentCol);
@@ -1266,6 +1267,7 @@ void PagesIndex::GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount
                     radixRowWidth, outputVector);
                 break;
             case OMNI_LONG:
+            case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
                 ConstructVectorRadixSort<OMNI_LONG>(vaStart, length, inputVectors, hasNull, hasDictionary,
                     radixRowWidth, outputVector);

@@ -86,7 +86,7 @@ const std::vector<NewUniqueVectorFunction> newUniqueVectorFunctions {
     NewUniqueVector<OMNI_DATE64>,     // OMNI_DATE64
     NewUniqueVector<OMNI_TIME32>,     // OMNI_TIME32
     NewUniqueVector<OMNI_TIME64>,     // OMNI_TIME64
-    nullptr,                          // OMNI_TIMESTAMP
+    NewUniqueVector<OMNI_TIMESTAMP>,  // OMNI_TIMESTAMP
     nullptr,                          // OMNI_INTERVAL_MONTHS
     nullptr,                          // OMNI_INTERVAL_DAY_TIME
     NewUniqueVector<OMNI_VARCHAR>,    // OMNI_VARCHAR

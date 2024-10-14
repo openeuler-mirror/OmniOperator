@@ -70,7 +70,10 @@ static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
     {OMNI_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_TIME64, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_TIMESTAMP, nullptr, nullptr, nullptr, nullptr, nullptr},
+    {OMNI_TIMESTAMP, HashFuncImpl<Vector<int64_t>, int64_t>, HashFuncVectImplProxy<Vector<int64_t>, int64_t>,
+     IsSameNodeFuncImpl<Vector<int64_t>, int64_t>, DuplicateKeyValueImpl<Vector<int64_t>, int64_t>,
+     SetVectorImpl<Vector<int64_t>>, FillValueImpl<Vector<int64_t>, int64_t>
+    },
     {OMNI_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
     {OMNI_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl,

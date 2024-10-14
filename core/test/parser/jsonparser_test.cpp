@@ -66,6 +66,13 @@ string GetInt64TestJson(int64_t val)
     return ss.str();
 }
 
+string GetTimestampTestJson(int64_t val)
+{
+    ss.str("");
+    ss << R"({ "exprType": "LITERAL", "dataType": 12, "isNull": false, "value": )" << val << R"(})";
+    return ss.str();
+}
+
 string GetDec64TestJson(int64_t val, int32_t precision, int32_t scale)
 {
     ss.str("");
@@ -670,6 +677,15 @@ TEST(JSONParserTest, Literal_Long)
     TestLiteralExpr expectedExpr(INT64_VAL, LongType());
     expectedExpr.isEqual(longExpr);
     delete longExpr;
+}
+
+TEST(JSONParserTest, Literal_Timestamp)
+{
+    string unparsedTimestampJson = GetTimestampTestJson(INT64_VAL);
+    Expr *timestampExpr = JSONParser::ParseJSON(nlohmann::json::parse(unparsedTimestampJson));
+    TestLiteralExpr expectedExpr(INT64_VAL, TimestampType());
+    expectedExpr.isEqual(timestampExpr);
+    delete timestampExpr;
 }
 
 TEST(JSONParserTest, Literal_Double)

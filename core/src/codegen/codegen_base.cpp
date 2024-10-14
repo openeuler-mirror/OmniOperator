@@ -52,6 +52,7 @@ Value *CodegenBase::GetPtrTypeFromInt(omniruntime::type::DataTypeId dataTypeId, 
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I32PtrType());
             break;
         case OMNI_LONG:
+        case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I64PtrType());
             break;

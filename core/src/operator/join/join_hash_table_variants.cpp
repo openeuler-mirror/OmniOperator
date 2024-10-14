@@ -51,6 +51,7 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
                     fixedKeysSize += OperatorUtil::SIZE_OF_INT;
                     break;
                 case OMNI_LONG:
+                case OMNI_TIMESTAMP:
                 case OMNI_DECIMAL64:
                 case OMNI_DOUBLE:
                 case OMNI_DATE64:
@@ -518,6 +519,7 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTable(int32_t part
                     TryToBuildArrayTable(buildHashCols[0], min, max, lengthOfArrayHT, partitionIndex);
                 break;
             }
+            case omniruntime::type::OMNI_TIMESTAMP:
             case omniruntime::type::OMNI_LONG: {
                 int64_t min;
                 int64_t max;
