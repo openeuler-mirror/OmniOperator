@@ -8,25 +8,25 @@
 
 namespace omniruntime::codegen::function {
 template<class Dest, class Source>
-static inline Dest BitCast(const Source &source)
+static ALWAYS_INLINE Dest BitCast(const Source &source)
 {
     Dest dest;
     memmove_s(&dest, sizeof(dest), &source, sizeof(dest));
     return dest;
 }
 
-static inline int64_t Unsigned64RightShift(int64_t input, int32_t shift)
+static ALWAYS_INLINE int64_t Unsigned64RightShift(int64_t input, int32_t shift)
 {
     return static_cast<int64_t>(static_cast<uint64_t>(input) >> shift);
 }
 
-static inline int32_t Unsigned32RightShift(int32_t input, int32_t shift)
+static ALWAYS_INLINE int32_t Unsigned32RightShift(int32_t input, int32_t shift)
 {
     return static_cast<int32_t>(static_cast<uint32_t>(input) >> shift);
 }
 
 template<class T>
-static inline int32_t NumberOfLeadingZeros(T input)
+static ALWAYS_INLINE int32_t NumberOfLeadingZeros(T input)
 {
     if constexpr (std::is_same_v<T, int64_t>) {
         return __builtin_clzl(input);
@@ -36,7 +36,7 @@ static inline int32_t NumberOfLeadingZeros(T input)
 }
 
 template<class T>
-static inline int32_t NumberOfTrailingZeros(T input)
+static ALWAYS_INLINE int32_t NumberOfTrailingZeros(T input)
 {
     if constexpr (std::is_same_v<T, int64_t>) {
         return __builtin_ctzl(input);
@@ -45,12 +45,10 @@ static inline int32_t NumberOfTrailingZeros(T input)
     }
 }
 
-FDBigInteger FDBigInteger::ZERO = GetZero();
-std::vector<FDBigInteger> FDBigInteger::POW_5_CACHE = GetPow5Cache();
-
 static FDBigInteger GetZero() noexcept
 {
-    auto zero = FDBigInteger({0}, 0);
+    int temp[] = {0};
+    auto zero = FDBigInteger(temp, 0, 1);
     zero.MakeImmutable();
     return zero;
 }
@@ -60,7 +58,8 @@ static std::vector<FDBigInteger> GetPow5Cache() noexcept
     static std::vector<FDBigInteger> pow5Cache(FDBigInteger::MAX_FIVE_POW);
     int i = 0;
     while (i < FDBigInteger::SMALL_5_POW_SIZE) {
-        FDBigInteger pow5 = FDBigInteger({FDBigInteger::SMALL_5_POW[i]}, 0);
+        int temp[] = {FDBigInteger::SMALL_5_POW[i]};
+        FDBigInteger pow5 = FDBigInteger(temp, 0, 1);
         pow5.MakeImmutable();
         pow5Cache[i] = pow5;
         i++;
@@ -78,8 +77,6 @@ static std::vector<FDBigInteger> GetPow5Cache() noexcept
 FDBigInteger::FDBigInteger(long lValue, const char *digits, int kDigits, int nDigits)
 {
     int n = std::max((nDigits + 8) / 9, 2); // estimate size needed.8 mean long bits size
-    this->dataVector = std::make_shared<std::vector<int>>(DataVector(n));
-    data = dataVector->data(); // allocate enough space
     data[0] = static_cast<int>(lValue); // starting value
     data[1] = static_cast<int>(Unsigned64RightShift(lValue, 32));
     offset = 0;
@@ -106,6 +103,9 @@ FDBigInteger::FDBigInteger(long lValue, const char *digits, int kDigits, int nDi
     }
     TrimLeadingZeros();
 }
+
+FDBigInteger FDBigInteger::ZERO = GetZero();
+std::vector<FDBigInteger> FDBigInteger::POW_5_CACHE = GetPow5Cache();
 
 void FDBigInteger::TrimLeadingZeros()
 {
@@ -158,9 +158,9 @@ FDBigInteger FDBigInteger::Mul(int i)
     if (nWords == 0) {
         return *this;
     }
-    DataVector r(nWords + 1);
-    Mul(data, nWords, i, r.data());
-    return {r, offset};
+    int r[MAX_DATA_LENGTH]{0};
+    Mul(data, nWords, i, r);
+    return {r, offset, nWords + 1};
 }
 
 FDBigInteger FDBigInteger::LeftShift(int shift)
@@ -172,24 +172,25 @@ FDBigInteger FDBigInteger::LeftShift(int shift)
     int bitCount = shift & 0x1f;
     if (isImmutable) {
         if (bitCount == 0) {
-            DataVector newData(nWords);
+            int newData[MAX_DATA_LENGTH]{0};
             int count = nWords * static_cast<int>(sizeof(int));
-            memcpy_s(newData.data(), count, data, count);
-            return {newData, offset + wordCount};
+            memcpy_s(newData, count * sizeof(int), data, count * sizeof(int));
+            return {newData, offset + wordCount, nWords};
         } else {
             int antiCount = 32 - bitCount;
             int idx = nWords - 1;
             int prev = data[idx];
             int hi = Unsigned32RightShift(prev, antiCount);
-            DataVector result;
+            int result[MAX_DATA_LENGTH]{0};
+            int tmpLen = 0;
             if (hi != 0) {
-                result = DataVector(nWords + 1);
+                tmpLen = nWords + 1;
                 result[nWords] = hi;
             } else {
-                result = DataVector(nWords);
+                tmpLen = nWords;
             }
-            LeftShift(data, idx, result.data(), bitCount, antiCount, prev);
-            return {result, offset + wordCount};
+            LeftShift(data, idx, result, bitCount, antiCount, prev);
+            return {result, offset + wordCount, tmpLen};
         }
     } else {
         if (bitCount != 0) {
@@ -213,15 +214,15 @@ FDBigInteger FDBigInteger::LeftShift(int shift)
                 int idx = nWords - 1;
                 int prev = data[idx];
                 int hi = Unsigned32RightShift(prev, antiCount);
-                auto src = *dataVector;
+                int src[MAX_DATA_LENGTH]{0};
+                memcpy_s(src, nWords * sizeof(int), data, nWords * sizeof(int));
                 if (hi != 0) {
                     if (nWords == DataSize()) {
-                        dataVector->resize(nWords + 1);
-                        data = dataVector->data();
+                        Resize(nWords + 1);
                     }
                     data[nWords++] = hi;
                 }
-                LeftShift(src.data(), idx, data, bitCount, antiCount, prev);
+                LeftShift(src, idx, data, bitCount, antiCount, prev);
             }
         }
         offset += wordCount;
@@ -303,20 +304,19 @@ FDBigInteger FDBigInteger::MulBy10()
         return *this;
     }
     if (isImmutable) {
-        DataVector res(nWords + 1);
-        res[nWords] = MulAndCarryBy10(data, nWords, res.data());
-        return {res, offset};
+        int res[MAX_DATA_LENGTH]{0};
+        res[nWords] = MulAndCarryBy10(data, nWords, res);
+        return {res, offset, nWords + 1};
     } else {
         int p = MulAndCarryBy10(data, nWords, data);
         if (p != 0) {
             if (nWords == DataSize()) {
                 if (data[0] == 0) {
                     auto l = --nWords;
-                    memcpy_s(data, l, data + 1, l);
+                    memcpy_s(data, l * sizeof(int), data + 1, l * sizeof(int));
                     offset++;
                 } else {
-                    dataVector->resize(DataSize() + 1, 0);
-                    data = dataVector->data();
+                    Resize(DataSize() + 1);
                 }
             }
             data[nWords++] = p;
@@ -342,7 +342,7 @@ void FDBigInteger::Mul(const int *src, int srcLen, int value, int *dst)
 FDBigInteger FDBigInteger::Big5PowRec(int p)
 {
     if (p < MAX_FIVE_POW) {
-        return {*(POW_5_CACHE[p].dataVector), POW_5_CACHE[p].offset};
+        return POW_5_CACHE[p];
     }
     // construct the value.
     // recursively.
@@ -364,7 +364,7 @@ FDBigInteger FDBigInteger::Big5PowRec(int p)
 FDBigInteger FDBigInteger::Big5Pow(int p)
 {
     if (p < MAX_FIVE_POW) {
-        return {*(POW_5_CACHE[p].dataVector), POW_5_CACHE[p].offset};
+        return POW_5_CACHE[p];
     }
     return Big5PowRec(p);
 }
@@ -379,9 +379,11 @@ FDBigInteger FDBigInteger::ValueOfPow52(int p5, int p2)
             int wordcount = p2 >> 5;
             int bitCount = p2 & 0x1f;
             if (bitCount == 0) {
-                return FDBigInteger({pow5}, wordcount);
+                int temp[] = {pow5};
+                return {temp, wordcount, 1};
             } else {
-                return FDBigInteger({pow5 << bitCount, Unsigned32RightShift(pow5, 32 - bitCount)}, wordcount);
+                int temp[] = {pow5 << bitCount, Unsigned32RightShift(pow5, 32 - bitCount)};
+                return {temp, wordcount, 2};
             }
         } else {
             return Big5Pow(p5).LeftShift(p2);
@@ -407,33 +409,39 @@ FDBigInteger FDBigInteger::ValueOfMulPow52(long value, int p5, int p2)
             v1 = static_cast<int>(carry);
             int v2 = static_cast<int>(Unsigned64RightShift(carry, 32));
             if (bitCount == 0) {
-                return FDBigInteger({v0, v1, v2}, wordcount);
+                int temp[] = {v0, v1, v2};
+                return {temp, wordcount, 3};
             } else {
-                return FDBigInteger({v0 << bitCount, (v1 << bitCount) | Unsigned32RightShift(v0, 32 - bitCount),
-                    (v2 << bitCount) | Unsigned32RightShift(v1, 32 - bitCount),
-                    Unsigned32RightShift(v2, 32 - bitCount)}, wordcount);
+                int temp[] = {v0 << bitCount, (v1 << bitCount) | Unsigned32RightShift(v0, 32 - bitCount),
+                              (v2 << bitCount) | Unsigned32RightShift(v1, 32 - bitCount),
+                              Unsigned32RightShift(v2, 32 - bitCount)};
+                return {temp, wordcount, 4};
             }
         } else {
             FDBigInteger pow5 = Big5Pow(p5);
-            DataVector r;
+            int r[MAX_DATA_LENGTH]{0};
+            int len = 0;
             if (v1 == 0) {
-                r = DataVector(pow5.nWords + 1 + ((p2 != 0) ? 1 : 0));
-                Mul(pow5.data, pow5.nWords, v0, r.data());
+                len = pow5.nWords + 1 + ((p2 != 0) ? 1 : 0);
+                Mul(pow5.data, pow5.nWords, v0, r);
             } else {
-                r = DataVector(pow5.nWords + 2 + ((p2 != 0) ? 1 : 0));
-                Mul(pow5.data, pow5.nWords, v0, v1, r.data());
+                len = pow5.nWords + 2 + ((p2 != 0) ? 1 : 0);
+                Mul(pow5.data, pow5.nWords, v0, v1, r);
             }
-            return (FDBigInteger(r, pow5.offset)).LeftShift(p2);
+            return (FDBigInteger(r, pow5.offset, len)).LeftShift(p2);
         }
     } else if (p2 != 0) {
         if (bitCount == 0) {
-            return FDBigInteger({v0, v1}, wordcount);
+            int temp[] = {v0, v1};
+            return {temp, wordcount, 2};
         } else {
-            return FDBigInteger({v0 << bitCount, (v1 << bitCount) | Unsigned32RightShift(v0, 32 - bitCount),
-                Unsigned32RightShift(v1, 32 - bitCount)}, wordcount);
+            int temp[] = {v0 << bitCount, (v1 << bitCount) | Unsigned32RightShift(v0, 32 - bitCount),
+                          Unsigned32RightShift(v1, 32 - bitCount)};
+            return {temp, wordcount, 3};
         }
     }
-    return FDBigInteger({v0, v1}, 0);
+    int temp[] = {v0, v1};
+    return {temp, 0, 2};
 }
 
 int FDBigInteger::MulAndCarryBy10(const int *src, int srcLen, int *dst)
@@ -592,7 +600,7 @@ FDBigInteger FDBigInteger::Add(const FDBigInteger &other)
         small = *this;
         smallLen = tSize;
     }
-    DataVector r(bigLen + 1);
+    int r[MAX_DATA_LENGTH]{0};
     int i = 0;
     long carry = 0L;
     for (; i < smallLen; i++) {
@@ -607,7 +615,7 @@ FDBigInteger FDBigInteger::Add(const FDBigInteger &other)
         carry >>= 32; // signed shift.
     }
     r[bigLen] = static_cast<int>(carry);
-    return {r, 0};
+    return {r, 0, bigLen + 1};
 }
 
 long FDBigInteger::MulDiffMe(long q, FDBigInteger &s)
@@ -625,8 +633,7 @@ long FDBigInteger::MulDiffMe(long q, FDBigInteger &s)
             }
         } else {
             deltaSize = -deltaSize;
-            DataVectorPtr rdv = std::make_shared<DataVector>(DataVector(nWords + deltaSize));
-            int *rd = rdv->data();
+            int rd[MAX_DATA_LENGTH]{0};
             int sIndex = 0;
             int rIndex = 0;
             int *sd = s.data;
@@ -644,7 +651,7 @@ long FDBigInteger::MulDiffMe(long q, FDBigInteger &s)
             }
             nWords += deltaSize;
             offset -= deltaSize;
-            UpdateDataVector(rdv);
+            UpdateDataVector(rd);
         }
     }
     return diff;
@@ -664,9 +671,9 @@ FDBigInteger FDBigInteger::Mul(FDBigInteger other)
     if (other.Size() == 1) {
         return Mul(other.data[0]);
     }
-    DataVector r(nWords + other.nWords);
-    Mul(data, nWords, other.data, other.nWords, r.data());
-    return {r, offset + other.offset};
+    int r[MAX_DATA_LENGTH]{0};
+    Mul(data, nWords, other.data, other.nWords, r);
+    return {r, offset + other.offset, nWords + other.nWords};
 }
 
 void FDBigInteger::MulAddMe(int iv, int addend)
@@ -1146,18 +1153,27 @@ int DoubleToString::EstimateDecExp(long fractBits, int binExp)
     }
 }
 
-std::string DoubleToString::DoubleToStringConverter(double d)
+std::size_t DoubleToString::DoubleToStringConverter(double d, char *result)
 {
     long dBits = BitCast<long>(d);
     bool isNeg = (dBits & DoubleConsts::SIGN_BIT_MASK) != 0; // discover sign
     long fractBits = dBits & DoubleConsts::SIGNIF_BIT_MASK;
     int binExp = static_cast<int>((dBits & DoubleConsts::EXP_BIT_MASK) >> EXP_SHIFT);
+
+    auto setValueAndGetSize = [&result](const std::string &inputString) -> std::size_t {
+        auto size = inputString.size();
+        memcpy_s(result, size, inputString.c_str(), size);
+        return size;
+    };
     // Discover obvious special cases of NaN and Infinity.
     if (binExp == static_cast<int>(DoubleConsts::EXP_BIT_MASK >> EXP_SHIFT)) {
         if (fractBits == 0L) {
-            return isNeg ? "-Infinity" : "Infinity";
+            if (isNeg) {
+                return setValueAndGetSize("-Infinity");
+            }
+            return setValueAndGetSize("Infinity");
         } else {
-            return "NaN";
+            return setValueAndGetSize("NaN");
         }
     }
     // Finish unpacking
@@ -1166,8 +1182,10 @@ std::string DoubleToString::DoubleToStringConverter(double d)
     int nSignificantBits;
     if (binExp == 0) {
         if (fractBits == 0L) {
-            // not a denorm, just a 0!
-            return isNeg ? "-0.0" : "0.0";
+            if (isNeg) {
+                return setValueAndGetSize("-0.0");
+            }
+            return setValueAndGetSize("0.0");
         }
         int leadingZeros = NumberOfLeadingZeros(fractBits);
         int shift = leadingZeros - (63 - EXP_SHIFT);
@@ -1184,6 +1202,14 @@ std::string DoubleToString::DoubleToStringConverter(double d)
     buf.setSign(isNeg);
     // call the routine that actually does all the hard work.
     buf.Dtoa(binExp, fractBits, nSignificantBits, true);
-    return buf.ToString();
+    return buf.ToString(result);
+}
+
+// just for ut test
+std::string DoubleToString::DoubleToStringConverter(double d)
+{
+    char result[MAX_DATA_LENGTH];
+    auto length = DoubleToStringConverter(d, result);
+    return std::string{result, length};
 }
 }

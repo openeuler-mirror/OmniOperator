@@ -211,15 +211,8 @@ extern "C" DLLEXPORT void BatchCastDoubleToString(int64_t contextPtr, double *va
     int32_t *outLen, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; ++i) {
-        auto result = DoubleToString::DoubleToStringConverter(value[i]);
-        outLen[i] = result.size();
-        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        errno_t res = memcpy_s(ret, outLen[i], result.c_str(), outLen[i]);
-        if (res != EOK) {
-            SetError(contextPtr, "cast failed");
-            output[i] = nullptr;
-            continue;
-        }
+        auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DATA_LENGTH);
+        outLen[i] = static_cast<int32_t >(DoubleToString::DoubleToStringConverter(value[i], ret));
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }
@@ -558,15 +551,8 @@ extern "C" DLLEXPORT void BatchCastDoubleToStringRetNull(bool *isNull, int64_t c
     uint8_t **output, int32_t *outLen, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; ++i) {
-        auto result = DoubleToString::DoubleToStringConverter(value[i]);
-        outLen[i] = result.size();
-        auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        errno_t res = memcpy_s(ret, outLen[i], result.c_str(), outLen[i]);
-        if (res != EOK) {
-            output[i] = nullptr;
-            isNull[i] = true;
-            continue;
-        }
+        auto ret = ArenaAllocatorMalloc(contextPtr, MAX_DATA_LENGTH);
+        outLen[i] = static_cast<int32_t >(DoubleToString::DoubleToStringConverter(value[i], ret));
         isNull[i] = false;
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }

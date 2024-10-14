@@ -14,25 +14,32 @@
 #include <cstring>
 #include <memory>
 #include "util/omni_exception.h"
+#include "util/compiler_util.h"
 
 namespace omniruntime::codegen::function {
+constexpr std::size_t MAX_DATA_LENGTH = 27;
+
 class FDBigInteger {
 public:
-    using DataVectorPtr = std::shared_ptr<std::vector<int>>;
-    using DataVector = std::vector<int>;
-
     FDBigInteger() = default;
 
-    FDBigInteger(const std::vector<int> &data, int offset)
+    FDBigInteger(int *data, int offset, int length)
     {
-        this->dataVector = std::make_shared<std::vector<int>>(data);
-        this->data = dataVector->data();
         this->offset = offset;
-        this->nWords = static_cast<int>(data.size());
+        this->nWords = length;
+        this->length = length;
+        memcpy_s(this->data, nWords * sizeof(int), data, nWords * sizeof(int));
         this->TrimLeadingZeros();
     }
 
     FDBigInteger(long lValue, const char *digits, int kDigits, int nDigits);
+
+    ~FDBigInteger() = default;
+
+    void Resize(int size)
+    {
+        nWords = size;
+    }
 
     /**
      * Removes all leading zeros from this <code>FDBigInteger</code> adjusting
@@ -66,7 +73,7 @@ public:
      * @param value The constant factor by which to multiply.
      * @param dst The product array.
      */
-    static void Mul(const int *src, int srcLen, int value, int *dst);
+    ALWAYS_INLINE static void Mul(const int *src, int srcLen, int value, int *dst);
 
     /**
      * Multiplies this <code>FDBigInteger</code> by an integer.
@@ -100,7 +107,7 @@ public:
      * @param p The exponent of 5.
      * @return <code>5<sup>p</sup></code>.
      */
-    static FDBigInteger Big5Pow(int p);
+    ALWAYS_INLINE static FDBigInteger Big5Pow(int p);
 
     /**
      * Returns an <code>FDBigInteger</code> with the numerical value
@@ -110,7 +117,7 @@ public:
      * @param p2 The exponent of the power-of-two factor.
      * @return <code>5<sup>p5</sup> * 2<sup>p2</sup></code>
      */
-    static FDBigInteger ValueOfPow52(int p5, int p2);
+    ALWAYS_INLINE static FDBigInteger ValueOfPow52(int p5, int p2);
 
     /**
      * Compares this <code>FDBigInteger</code> with <code>x + y</code>. Returns a
@@ -173,11 +180,11 @@ public:
      * @param p2 The exponent of the power-of-two factor.
      * @return <code>value * 5<sup>p5</sup> * 2<sup>p2</sup></code>
      */
-    static FDBigInteger ValueOfMulPow52(long value, int p5, int p2);
+    ALWAYS_INLINE static FDBigInteger ValueOfMulPow52(long value, int p5, int p2);
 
-    DataVector GetData()
+    int *GetData()
     {
-        return *dataVector.get();
+        return data;
     }
 
     constexpr static int SMALL_5_POW[] = {
@@ -205,7 +212,7 @@ private:
 
     int DataSize() const
     {
-        return (int)dataVector->size();
+        return static_cast<int>(this->length);
     }
 
     /**
@@ -225,21 +232,21 @@ private:
      * @param p2 The exponent of 2.
      * @return <code>2<sup>p2</sup></code>
      */
-    static FDBigInteger ValueOfPow2(int p2)
+    ALWAYS_INLINE static FDBigInteger ValueOfPow2(int p2)
     {
         int wordcount = p2 >> 5;
         int bitCount = p2 & 0x1f;
-        return FDBigInteger({1 << bitCount}, wordcount);
+        int temp[] = {1 << bitCount};
+        return {temp, wordcount, 1};
     }
 
     FDBigInteger Add(const FDBigInteger &other);
 
-    static int MulAndCarryBy10(const int *src, int srcLen, int *dst);
+    ALWAYS_INLINE static int MulAndCarryBy10(const int *src, int srcLen, int *dst);
 
-    void UpdateDataVector(DataVectorPtr newData)
+    void UpdateDataVector(int *newData)
     {
-        dataVector = std::move(newData);
-        data = dataVector->data();
+        memcpy_s(this->data, nWords * sizeof(int), newData, nWords * sizeof(int));
     }
 
     /**
@@ -297,16 +304,12 @@ private:
 
     void MulAddMe(int iv, int addend);
 
-    DataVectorPtr dataVector = nullptr;
-    int *data = nullptr;
+    int data[MAX_DATA_LENGTH]{0};
     int offset = 0;
     int nWords = 0;
+    int length = 0;
     bool isImmutable = false;
 };
-
-static FDBigInteger GetZero() noexcept;
-
-static std::vector<FDBigInteger> GetPow5Cache() noexcept;
 
 class DoubleConsts {
 public:
@@ -364,13 +367,21 @@ public:
 
     int GetChars(char *result) const;
 
+    // just for ut test
     static std::string DoubleToStringConverter(double d);
+
+    static std::size_t DoubleToStringConverter(double d, char *result);
 
     std::string ToString()
     {
         int len = GetChars(buffer);
         auto res = std::string(buffer, len);
         return res;
+    }
+
+    std::size_t ToString(char *result)
+    {
+        return GetChars(result);
     }
 
     static constexpr int SIGNIFICAND_WIDTH = 53;
