@@ -15,16 +15,20 @@
 #endif
 
 namespace omniruntime::codegen::function {
-extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32_t *timeLens, const char **fmtStrs,
-    int32_t *fmtLens, bool *isAnyNull, int64_t *output, int32_t rowCnt);
+extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32_t *timeLens, bool *isNullTimeStr,
+    const char **fmtStrs, int32_t *fmtLens, bool *isNullFmtStr,
+    const char **tzStrs, int32_t *tzLens, bool *isNullTzStr,
+    bool *retIsNull, int64_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchUnixTimestampFromDate(int32_t *dates, const char **fmtStrs, int32_t *fmtLens,
-    bool *isAnyNull, int64_t *output, int32_t rowCnt);
+    const char **tzStrs, int32_t *tzLens, bool *isAnyNull, int64_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchFromUnixTime(bool *outputNull, int64_t contextPtr, int64_t *timestamps,
-    const char **fmtStrs, int32_t *fmtLens, char **output, int32_t *outLens, int32_t rowCnt);
+    const char **fmtStrs, int32_t *fmtLens, const char **tzStrs, int32_t *tzLens,
+    char **output, int32_t *outLens, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchFromUnixTimeRetNull(bool *outputNull, int64_t contextPtr, int64_t *timestamps,
-    const char **fmtStrs, int32_t *fmtLens, char **output, int32_t *outLens, int32_t rowCnt);
+    const char **fmtStrs, int32_t *fmtLens, const char **tzStrs, int32_t *tzLens,
+    char **output, int32_t *outLens, int32_t rowCnt);
 }
 #endif // OMNI_RUNTIME_BATCH_DATETIME_FUNCTIONS_H

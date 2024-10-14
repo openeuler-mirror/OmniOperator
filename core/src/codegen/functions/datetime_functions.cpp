@@ -6,51 +6,84 @@
 #include "datetime_functions.h"
 #include "codegen/context_helper.h"
 #include "type/date32.h"
+#include "codegen/time_util.h"
 
 namespace omniruntime::codegen::function {
-extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, const char *fmtStr,
-    int32_t fmtLen, bool isNull)
+extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, bool isNullTimeStr,
+    const char *fmtStr, int32_t fmtLen, bool isNullFmtStr, const char *tzStr, int32_t tzLen,
+    bool isNullTzStr, bool *retIsNull)
 {
-    if (isNull || fmtLen == 0 || timeLen == 0) {
+    if (isNullTimeStr || isNullFmtStr || isNullTzStr || fmtLen == 0 || timeLen == 0) {
+        *retIsNull = true;
         return 0;
     }
-
+    if (!TimeUtil::IsTimeValid(timeStr, timeLen, fmtStr, fmtLen)) {
+        *retIsNull = true;
+        return 0;
+    }
     struct tm timeInfo = { 0 };
-    strptime(timeStr, fmtStr, &timeInfo);
+    char timeStr1[timeLen + 1];
+    char fmtStr1[fmtLen + 1];
+    int retTimeStr1 = memcpy_s(timeStr1, timeLen + 1, timeStr, timeLen);
+    int retFmtStr1 = memcpy_s(fmtStr1, fmtLen + 1, fmtStr, fmtLen);
+    if (retTimeStr1 != 0 || retFmtStr1 != 0) {
+        *retIsNull = true;
+        return 0;
+    }
+    timeStr1[timeLen] = '\0';
+    fmtStr1[fmtLen] = '\0';
+    strptime(timeStr1, fmtStr1, &timeInfo);
     time_t timeStamp = mktime(&timeInfo);
-    timeStamp -= timeInfo.tm_isdst ? 3600 : 0;
+    if (TimeZoneUtil::JudgeDSTByUnixTimestampFromStr(tzStr, tzLen, &timeInfo, timeStr, timeLen, fmtStr, fmtLen)) {
+        timeStamp -= type::SECOND_OF_HOUR;
+    }
     return timeStamp;
 }
 
-extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmtStr, int32_t fmtLen, bool isNull)
+extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmtStr, int32_t fmtLen,
+                                                   const char *tzStr, int32_t tzLen, bool isNull)
 {
     if (isNull) {
         return 0;
     }
     time_t desiredTime = type::SECOND_OF_DAY * date;
     struct tm ltm;
-    ltm = *localtime(&desiredTime);
+    localtime_r(&desiredTime, &ltm);
     time_t result = desiredTime - ltm.tm_gmtoff;
+    result += TimeZoneUtil::AdjustDSTByUnixTimestampFromDate(tzStr, tzLen, &ltm, desiredTime) * type::SECOND_OF_HOUR;
     return static_cast<int64_t>(result);
 }
 
 extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_t timestamp, const char *fmtStr,
-    int32_t fmtLen, int32_t *outLen)
+    int32_t fmtLen, const char *tzStr, int32_t tzLen, int32_t *outLen)
 {
     time_t timeStampVal = timestamp;
-    struct tm *ltm = localtime(&timeStampVal);
+    struct tm ltm;
+    localtime_r(&timeStampVal, &ltm);
+    if (!TimeZoneUtil::JudgeDSTByFromUnixTime(tzStr, tzLen, &ltm)) {
+        timeStampVal -= type::SECOND_OF_HOUR;
+        localtime_r(&timeStampVal, &ltm);
+    }
     int32_t resultLen = fmtLen + 3;
     auto result = ArenaAllocatorMalloc(contextPtr, resultLen);
-    auto ret = strftime(result, resultLen, fmtStr, ltm);
+    char fmtStr1[fmtLen + 1];
+    int retFmtStr1 = memcpy_s(fmtStr1, fmtLen + 1, fmtStr, fmtLen);
+    if (retFmtStr1 != 0) {
+        *isNull = true;
+        *outLen = 0;
+        return "";
+    }
+    fmtStr1[fmtLen] = '\0';
+    auto ret = strftime(result, resultLen, fmtStr1, &ltm);
     *isNull = static_cast<int32_t>(ret) == 0;
     *outLen = ret;
     return result;
 }
 
 extern "C" DLLEXPORT char *FromUnixTimeRetNull(int64_t contextPtr, bool *isNull, int64_t timestamp, const char *fmtStr,
-    int32_t fmtLen, int32_t *outLen)
+    int32_t fmtLen, const char *tzStr, int32_t tzLen, int32_t *outLen)
 {
-    return FromUnixTime(contextPtr, isNull, timestamp, fmtStr, fmtLen, outLen);
+    return FromUnixTime(contextPtr, isNull, timestamp, fmtStr, fmtLen, tzStr, tzLen, outLen);
 }
 
 extern "C" DLLEXPORT int32_t DateTrunc(int64_t contextPtr, int32_t days, const char *levelStr, int32_t len)

@@ -6,27 +6,48 @@
 #include <ctime>
 #include "codegen/context_helper.h"
 #include "type/date32.h"
+#include "codegen/time_util.h"
 
 namespace omniruntime::codegen::function {
-extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32_t *timeLens, const char **fmtStrs,
-    int32_t *fmtLens, bool *isAnyNull, int64_t *output, int32_t rowCnt)
+extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32_t *timeLens, bool *isNullTimeStr,
+    const char **fmtStrs, int32_t *fmtLens, bool *isNullFmtStr, const char **tzStrs, int32_t *tzLens,
+    bool *isNullTzStr, bool *retIsNull, int64_t *output, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; i++) {
-        if (isAnyNull[i] || fmtLens[i] == 0 || timeLens[i] == 0) {
+        if (isNullTimeStr[i] || isNullFmtStr[i] || isNullTzStr[i] || fmtLens[i] == 0 || timeLens[i] == 0) {
+            retIsNull[i] = true;
             output[i] = 0;
             continue;
         }
-
+        if (!TimeUtil::IsTimeValid(timeStrs[i], timeLens[i], fmtStrs[i], fmtLens[i])) {
+            retIsNull[i] = true;
+            output[i] = 0;
+            continue;
+        }
         struct tm timeInfo = { 0 };
-        strptime(timeStrs[i], fmtStrs[i], &timeInfo);
+        char timeStr1[timeLens[i] + 1];
+        char fmtStr1[fmtLens[i] + 1];
+        int retTimeStr1 = memcpy_s(timeStr1, timeLens[i] + 1, timeStrs[i], timeLens[i]);
+        int retFmtStr1 = memcpy_s(fmtStr1, fmtLens[i] + 1, fmtStrs[i], fmtLens[i]);
+        if (retTimeStr1 != 0 || retFmtStr1 != 0) {
+            retIsNull[i] = true;
+            output[i] = 0;
+            continue;
+        }
+        timeStr1[timeLens[i]] = '\0';
+        fmtStr1[fmtLens[i]] = '\0';
+        strptime(timeStr1, fmtStr1, &timeInfo);
         time_t timeStamp = mktime(&timeInfo);
-        timeStamp -= timeInfo.tm_isdst ? 3600 : 0;
+        if (TimeZoneUtil::JudgeDSTByUnixTimestampFromStr(tzStrs[i], tzLens[i], &timeInfo,
+                                                        timeStrs[i], timeLens[i], fmtStrs[i], fmtLens[i])) {
+            timeStamp -= type::SECOND_OF_HOUR;
+        }
         output[i] = timeStamp;
     }
 }
 
 extern "C" DLLEXPORT void BatchUnixTimestampFromDate(int32_t *dates, const char **fmtStrs, int32_t *fmtLens,
-    bool *isAnyNull, int64_t *output, int32_t rowCnt)
+    const char **tzStrs, int32_t *tzLens, bool *isAnyNull, int64_t *output, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; i++) {
         if (isAnyNull[i]) {
@@ -35,21 +56,36 @@ extern "C" DLLEXPORT void BatchUnixTimestampFromDate(int32_t *dates, const char 
         }
         time_t desiredTime = type::SECOND_OF_DAY * dates[i];
         struct tm ltm;
-        ltm = *localtime(&desiredTime);
+        localtime_r(&desiredTime, &ltm);
         time_t result = desiredTime - ltm.tm_gmtoff;
+        result += TimeZoneUtil::AdjustDSTByUnixTimestampFromDate(tzStrs[i], tzLens[i], &ltm, desiredTime) * 3600;
         output[i] = static_cast<int64_t>(result);
     }
 }
 
 extern "C" DLLEXPORT void BatchFromUnixTime(bool *outputNull, int64_t contextPtr, int64_t *timestamps,
-    const char **fmtStrs, int32_t *fmtLens, char **output, int32_t *outLens, int32_t rowCnt)
+    const char **fmtStrs, int32_t *fmtLens, const char **tzStrs, int32_t *tzLens,
+    char **output, int32_t *outLens, int32_t rowCnt)
 {
     for (int32_t i = 0; i < rowCnt; i++) {
         time_t timeStampVal = timestamps[i];
-        struct tm *ltm = localtime(&timeStampVal);
+        struct tm ltm;
+        localtime_r(&timeStampVal, &ltm);
+        if (!TimeZoneUtil::JudgeDSTByFromUnixTime(tzStrs[i], tzLens[i], &ltm)) {
+            timeStampVal -= type::SECOND_OF_HOUR;
+            localtime_r(&timeStampVal, &ltm);
+        }
         int32_t resultLen = fmtLens[i] + 3;
         auto result = ArenaAllocatorMalloc(contextPtr, resultLen);
-        auto ret = strftime(result, resultLen, fmtStrs[i], ltm);
+        char fmtStr[fmtLens[i] + 1];
+        int retFmtStr = memcpy_s(fmtStr, fmtLens[i] + 1, fmtStrs[i], fmtLens[i]);
+        if (retFmtStr != 0) {
+            outputNull[i] = true;
+            output[i] = "";
+            outLens[i] = 0;
+        }
+        fmtStr[fmtLens[i]] = '\0';
+        auto ret = strftime(result, resultLen, fmtStr, &ltm);
         outputNull[i] = (ret == 0);
         output[i] = result;
         outLens[i] = ret;
@@ -57,8 +93,9 @@ extern "C" DLLEXPORT void BatchFromUnixTime(bool *outputNull, int64_t contextPtr
 }
 
 extern "C" DLLEXPORT void BatchFromUnixTimeRetNull(bool *outputNull, int64_t contextPtr, int64_t *timestamps,
-    const char **fmtStrs, int32_t *fmtLens, char **output, int32_t *outLens, int32_t rowCnt)
+    const char **fmtStrs, int32_t *fmtLens, const char **tzStrs, int32_t *tzLen,
+    char **output, int32_t *outLens, int32_t rowCnt)
 {
-    return BatchFromUnixTime(outputNull, contextPtr, timestamps, fmtStrs, fmtLens, output, outLens, rowCnt);
+    BatchFromUnixTime(outputNull, contextPtr, timestamps, fmtStrs, fmtLens, tzStrs, tzLen, output, outLens, rowCnt);
 }
 }

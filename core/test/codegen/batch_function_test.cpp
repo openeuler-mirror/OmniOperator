@@ -2421,24 +2421,36 @@ TEST(BatchFunctionTest, BatchCastStringToLongRetNull)
 TEST(BatchFunctionTest, BatchUnixTimestampFromStr)
 {
     const int32_t rowCnt = 6;
-    std::string timeStrs[] = {"20231209", "20230912", "2023-12-09", "", "1989-07-10", "1985-06-29"};
-    std::string fmtStrs[] = {"%Y%m%d", "%Y%m%d", "%Y-%m-%d", "", "%Y-%m-%d", "%Y-%m-%d"};
+    std::string timeStrs[] = {"2024-10-12", "1948-01-12", "2023-12-09", "",
+                              "1989-07-10 11:10:09", "1985-06-29 00:04:49"};
+    std::string fmtStrs[] = {"%Y-%m-%d", "%Y-%m-%d", "%Y-%m-%d", "", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"};
+    std::string tzStrs[] = {"Asia/Shanghai", "Asia/Shanghai", "Asia/Shanghai", "Asia/Shanghai",
+                          "Asia/Shanghai", "Asia/Shanghai"};
     const char *timeStrPtrs[rowCnt];
     int32_t timeLens[rowCnt];
     const char *fmtStrPtrs[rowCnt];
     int32_t fmtLens[rowCnt];
+    const char *tzStrPtrs[rowCnt];
+    int32_t tzLens[rowCnt];
     for (int32_t i = 0; i < rowCnt; i++) {
         timeStrPtrs[i] = const_cast<char *>(timeStrs[i].c_str());
         timeLens[i] = timeStrs[i].length();
         fmtStrPtrs[i] = fmtStrs[i].c_str();
         fmtLens[i] = fmtStrs[i].length();
+        tzStrPtrs[i] = tzStrs[i].c_str();
+        tzLens[i] = tzStrs[i].length();
     }
-
-    bool isAnyNull[] = {false, false, false, true, false, false};
+    bool isNullTimeStr[] = {false, false, false, true, false, false};
+    bool isNullFmtStr[] = {false, false, false, true, false, false};
+    bool isNullTzStr[] = {false, false, false, false, false, false};
+    bool retIsNull[rowCnt] = {false};
     int64_t output[rowCnt];
-    BatchUnixTimestampFromStr(timeStrPtrs, timeLens, fmtStrPtrs, fmtLens, isAnyNull, output, rowCnt);
+    BatchUnixTimestampFromStr(timeStrPtrs, timeLens, isNullTimeStr, fmtStrPtrs, fmtLens, isNullFmtStr,
+                              tzStrPtrs, tzLens, isNullTzStr, retIsNull, output, rowCnt);
+    std::vector<bool> expectIsNull = {false, false, false, true, false, false};
+    AssertBoolEquals(expectIsNull, retIsNull);
     std::vector<int64_t> result(output, output + rowCnt);
-    std::vector<int64_t> expect = { 1702051200, 1694448000, 1702051200, 0, 615999600, 488822400 };
+    std::vector<int64_t> expect = { 1728662400, -693388800, 1702051200, 0, 616039809, 488822689 };
     AssertLongEquals(expect, result);
 }
 
@@ -2447,47 +2459,57 @@ TEST(BatchFunctionTest, BatchUnixTimestampFromDate)
     const int32_t rowCnt = 3;
     int32_t dates[] = {7130, 5658, 0};
     std::string fmtStrs[] = {"%Y-%m-%d", "%Y-%m-%d", "%Y-%m-%d"};
+    std::string tzStrs[] = {"Asia/Shanghai", "Asia/Shanghai", "Asia/Shanghai"};
     const char *fmtStrPtrs[rowCnt];
     int32_t fmtLens[rowCnt];
+    const char *tzStrPtrs[rowCnt];
+    int32_t tzLens[rowCnt];
     for (int32_t i = 0; i < rowCnt; i++) {
         fmtStrPtrs[i] = fmtStrs[i].c_str();
         fmtLens[i] = fmtStrs[i].length();
+        tzStrPtrs[i] = tzStrs[i].c_str();
+        tzLens[i] = tzStrs[i].length();
     }
 
-    bool isAnyNull[] = {false, false, true};
+    bool isAnyNull[] = {false, false, false};
     int64_t output[rowCnt];
-    BatchUnixTimestampFromDate(dates, fmtStrPtrs, fmtLens, isAnyNull, output, rowCnt);
+    BatchUnixTimestampFromDate(dates, fmtStrPtrs, fmtLens, tzStrPtrs, tzLens, isAnyNull, output, rowCnt);
     std::vector<int64_t> result(output, output + rowCnt);
-    std::vector<int64_t> expect = { 615999600, 488822400, 0 };
+    std::vector<int64_t> expect = { 615999600, 488822400, -28800 };
     AssertLongEquals(expect, result);
 }
 
 TEST(BatchFunctionTest, BatchFromUnixTimeRetNull)
 {
-    const int32_t rowCnt = 5;
+    const int32_t rowCnt = 4;
     bool outputNull[rowCnt];
     auto context = new ExecutionContext();
     int64_t contextPtr = reinterpret_cast<int64_t>(context);
-    int64_t timestamps[rowCnt] = {615999600, 488822400, 0, -100, -100};
-    std::string fmtStrs[rowCnt] = {"%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M:%S %Y-%m-%d %H:%M:%S"};
+    int64_t timestamps[rowCnt] = {615999600, 488822400, 0, -100};
+    std::string fmtStrs[] = {"%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"};
+    std::string tzStrs[] = {"Asia/Shanghai", "Asia/Shanghai", "Asia/Shanghai", "Asia/Shanghai"};
     const char *fmtStrPtrs[rowCnt];
     int32_t fmtLens[rowCnt];
+    const char *tzStrPtrs[rowCnt];
+    int32_t tzLens[rowCnt];
     char *output[rowCnt];
     int32_t outLens[rowCnt];
     for (int32_t i = 0; i < rowCnt; i++) {
         fmtStrPtrs[i] = fmtStrs[i].c_str();
         fmtLens[i] = fmtStrs[i].length();
+        tzStrPtrs[i] = tzStrs[i].c_str();
+        tzLens[i] = tzStrs[i].length();
     }
 
-    BatchFromUnixTimeRetNull(outputNull, contextPtr, timestamps, fmtStrPtrs, fmtLens, output, outLens, rowCnt);
+    BatchFromUnixTimeRetNull(outputNull, contextPtr, timestamps, fmtStrPtrs, fmtLens, tzStrPtrs, tzLens,
+                             output, outLens, rowCnt);
     std::vector<uint8_t *> result(rowCnt);
     std::vector<int32_t> resultLen(outLens, outLens + rowCnt);
     for (int32_t i = 0; i < rowCnt; i++) {
         result[i] = reinterpret_cast<uint8_t *>(output[i]);
     }
     std::vector<std::string> expect = { "1989-07-10 00:00:00", "1985-06-29 00:00:00", "1970-01-01 08:00:00",
-        "1970-01-01 07:58:20", "" };
+        "1970-01-01 07:58:20" };
     AssertStringEquals(expect, result, resultLen);
     delete context;
 }

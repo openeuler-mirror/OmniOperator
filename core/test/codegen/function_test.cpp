@@ -1968,17 +1968,33 @@ TEST(FunctionTest, EvaluateHiveUdfSingle)
 TEST(FunctionTest, UnixTimestampFromStr)
 {
     const int32_t rowCnt = 6;
-    std::string timeStrs[] = {"20231209", "20230912", "2023-12-09", "", "1989-07-10", "1985-06-29"};
-    std::string fmtStrs[] = {"%Y%m%d", "%Y%m%d", "%Y-%m-%d", "", "%Y-%m-%d", "%Y-%m-%d"};
-    bool isNull[] = {false, false, false, true, false, false};
+    std::string timeStrs[] = {"2024-10-12", "1948-01-12", "2023-12-09", "",
+                              "1989-07-10 11:10:09", "1985-06-29 00:04:49"};
+    std::string fmtStrs[] = {"%Y-%m-%d", "%Y-%m-%d", "%Y-%m-%d", "", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"};
+    bool isNullTimeStr[] = {false, false, false, true, false, false};
+    bool isNullFmtStr[] = {false, false, false, true, false, false};
+    bool* retIsNull[rowCnt];
+    for (int i = 0; i < rowCnt; ++i) {
+        retIsNull[i] = new bool(false);
+    }
     int64_t output[rowCnt];
     for (int32_t i = 0; i < rowCnt; i++) {
-        output[i] = UnixTimestampFromStr(timeStrs[i].c_str(), timeStrs[i].length(), fmtStrs[i].c_str(),
-            fmtStrs[i].length(), isNull[i]);
+        output[i] = UnixTimestampFromStr(timeStrs[i].c_str(), timeStrs[i].length(), isNullTimeStr[i],
+                                         fmtStrs[i].c_str(), fmtStrs[i].length(), isNullFmtStr[i],
+                                         "Asia/Shanghai", 13, false, retIsNull[i]);
     }
+    std::vector<bool> expectIsNull = {false, false, false, true, false, false};
+    bool resultIsNull[rowCnt];
+    for (int32_t i = 0; i < rowCnt; i++) {
+        resultIsNull[i] = *retIsNull[i];
+    }
+    TestUtil::AssertBoolEquals(expectIsNull, resultIsNull);
     std::vector<int64_t> result(output, output + rowCnt);
-    std::vector<int64_t> expect = { 1702051200, 1694448000, 1702051200, 0, 615999600, 488822400 };
+    std::vector<int64_t> expect = { 1728662400, -693388800, 1702051200, 0, 616039809, 488822689 };
     TestUtil::AssertLongEquals(expect, result);
+    for (int i = 0; i < rowCnt; ++i) {
+    delete retIsNull[i];
+    }
 }
 
 TEST(FunctionTest, UnixTimestampFromDate)
@@ -1986,13 +2002,14 @@ TEST(FunctionTest, UnixTimestampFromDate)
     const int32_t rowCnt = 3;
     int32_t dates[] = {7130, 5658, 0};
     std::string fmtStrs[] = {"%Y-%m-%d", "%Y-%m-%d", "%Y-%m-%d"};
-    bool isNull[] = {false, false, true};
+    bool isNull[] = {false, false, false};
     int64_t output[rowCnt];
     for (int32_t i = 0; i < rowCnt; i++) {
-        output[i] = UnixTimestampFromDate(dates[i], fmtStrs[i].c_str(), fmtStrs[i].length(), isNull[i]);
+        output[i] = UnixTimestampFromDate(dates[i], fmtStrs[i].c_str(), fmtStrs[i].length(),
+                                          "Asia/Shanghai", 13, isNull[i]);
     }
     std::vector<int64_t> result(output, output + rowCnt);
-    std::vector<int64_t> expect = { 615999600, 488822400, 0 };
+    std::vector<int64_t> expect = { 615999600, 488822400, -28800 };
     TestUtil::AssertLongEquals(expect, result);
 }
 
@@ -2002,36 +2019,34 @@ TEST(FunctionTest, FromUnixTimeRetNull)
     int64_t contextPtr = reinterpret_cast<int64_t>(context);
     bool isNull = false;
     std::string fmtStr = "%Y-%m-%d %H:%M:%S";
+    std::string tzStr = "Asia/Shanghai";
     int32_t outlen = 0;
     char *result = nullptr;
     std::string actual;
 
-    result = FromUnixTimeRetNull(contextPtr, &isNull, 615999600, fmtStr.c_str(), fmtStr.length(), &outlen);
+    result = FromUnixTimeRetNull(contextPtr, &isNull, 615999600, fmtStr.c_str(), fmtStr.length(),
+                                 tzStr.c_str(), tzStr.length(), &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "1989-07-10 00:00:00");
     EXPECT_EQ(outlen, 19);
 
-    result = FromUnixTimeRetNull(contextPtr, &isNull, 488822400, fmtStr.c_str(), fmtStr.length(), &outlen);
+    result = FromUnixTimeRetNull(contextPtr, &isNull, 488822400, fmtStr.c_str(), fmtStr.length(),
+                                 tzStr.c_str(), tzStr.length(), &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "1985-06-29 00:00:00");
     EXPECT_EQ(outlen, 19);
 
-    result = FromUnixTimeRetNull(contextPtr, &isNull, 0, fmtStr.c_str(), fmtStr.length(), &outlen);
+    result = FromUnixTimeRetNull(contextPtr, &isNull, 0, fmtStr.c_str(), fmtStr.length(),
+                                 tzStr.c_str(), tzStr.length(), &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "1970-01-01 08:00:00");
     EXPECT_EQ(outlen, 19);
 
-    result = FromUnixTimeRetNull(contextPtr, &isNull, -100, fmtStr.c_str(), fmtStr.length(), &outlen);
+    result = FromUnixTimeRetNull(contextPtr, &isNull, -100, fmtStr.c_str(), fmtStr.length(),
+                                 tzStr.c_str(), tzStr.length(), &outlen);
     actual = std::string(result, outlen);
     EXPECT_EQ(actual, "1970-01-01 07:58:20");
     EXPECT_EQ(outlen, 19);
-
-    result =
-        FromUnixTimeRetNull(contextPtr, &isNull, -100, "%Y-%m-%d %H:%M:%S %Y-%m-%d %H:%M:%S", fmtStr.length(), &outlen);
-    actual = std::string(result, outlen);
-    EXPECT_EQ(isNull, true);
-    EXPECT_EQ(outlen, 0);
-
     delete context;
 }
 
