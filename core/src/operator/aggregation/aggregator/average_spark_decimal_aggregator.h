@@ -332,14 +332,16 @@ public:
     {
         int rowCount = originVector->GetSize();
         // opt branch
-        if (std::is_same_v<InRawType, ResultType> && nullMap == nullptr) {
-            auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
-            auto countVector = VectorHelper::CreateFlatVector(OMNI_LONG, rowCount);
-            int64_t *valueAddr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
-            std::fill_n(valueAddr, rowCount, 1);
-            result->Append(sumVector);
-            result->Append(countVector);
-            return;
+        if constexpr (std::is_same_v<InRawType, ResultType>) {
+            if (nullMap == nullptr) {
+                auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+                auto countVector = VectorHelper::CreateFlatVector(OMNI_LONG, rowCount);
+                int64_t *valueAddr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+                std::fill_n(valueAddr, rowCount, 1);
+                result->Append(sumVector);
+                result->Append(countVector);
+                return;
+            }
         }
 
         if (originVector->GetEncoding() == OMNI_DICTIONARY) {

@@ -386,17 +386,24 @@ inline void PrintVectorBatches(std::vector<VectorBatch *> &vvb, const std::strin
 inline DataTypePtr GetType(DataTypeId typeId)
 {
     switch (typeId) {
+        case OMNI_NONE:
+            return NoneType();
         case OMNI_BOOLEAN:
             return BooleanType();
         case OMNI_SHORT:
             return ShortType();
         case OMNI_INT:
-        case OMNI_DATE32:
             return IntType();
+        case OMNI_DATE32:
+            return Date32Type();
+        case OMNI_TIME32:
+            return Time32Type();
         case OMNI_LONG:
-        case OMNI_DATE64:
-        case OMNI_TIME64:
             return LongType();
+        case OMNI_DATE64:
+            return Date64Type();
+        case OMNI_TIME64:
+            return Time64Type();
         case OMNI_TIMESTAMP:
             return TimestampType();
         case OMNI_DOUBLE:
@@ -406,8 +413,9 @@ inline DataTypePtr GetType(DataTypeId typeId)
         case OMNI_DECIMAL128:
             return Decimal128Type();
         case OMNI_VARCHAR:
-        case OMNI_CHAR:
             return VarcharType(MAX_VARCHAR_LENGTH);
+        case OMNI_CHAR:
+            return CharType(MAX_VARCHAR_LENGTH);
         default:
             throw OmniException("Invalid Argument", "Invalid type " + TypeUtil::TypeToStringLog(typeId));
     }

@@ -325,6 +325,9 @@ private:
 class SingleStageCompleteTest : public ::testing::TestWithParam<
     std::tuple<std::string, DataTypeId, DataTypeId, int32_t, bool, bool, bool, bool>> {};
 
+class CreateFacotoryTest : public ::testing::TestWithParam<
+        std::tuple<DataTypeId, DataTypeId>> {};
+
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 static std::unique_ptr<AggregatorTester> CreateKnowInputOutput(const std::string aggFuncName, const int32_t nullPercent,
     const bool isDict, const bool hasMask, const bool nullWhenOverflow, const bool groupby)
@@ -534,5 +537,50 @@ INSTANTIATE_TEST_CASE_P(AggregatorTest, SingleStageCompleteTest,
             (std::get<4>(info.param) ? "dict_" : "flat_") + (std::get<5>(info.param) ? "withMask_" : "noMask_") +
             (std::get<6>(info.param) ? "overflowNull_" : "overflowExcep_") +
             (std::get<7>(info.param) ? "withGroupBy" : "noGroupBy");
+    });
+
+TEST_P(CreateFacotoryTest, verify_branch)
+{
+    DataTypeId inId = std::get<0>(GetParam());
+    DataTypeId outId = std::get<1>(GetParam());
+
+    auto maxFactory = new MaxAggregatorFactory();
+    auto minFactory = new MinAggregatorFactory();
+    auto sumFactory = new SumAggregatorFactory();
+    auto avgFactory = new AverageAggregatorFactory();
+    auto countColumnFactory = new CountColumnAggregatorFactory();
+    auto countAllFactory = new CountAllAggregatorFactory();
+    std::vector<int32_t> channal0 = { 0 };
+
+    auto max = maxFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(GetType(inId)).get()),
+            *(AggregatorUtil::WrapWithDataTypes(GetType(outId)).get()), channal0, true, true, false);
+    auto min = minFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(GetType(inId)).get()),
+            *(AggregatorUtil::WrapWithDataTypes(GetType(outId)).get()), channal0, true, true, false);
+    auto sum = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(GetType(inId)).get()),
+            *(AggregatorUtil::WrapWithDataTypes(GetType(outId)).get()), channal0, true, true, false);
+    auto avg = avgFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(GetType(inId)).get()),
+            *(AggregatorUtil::WrapWithDataTypes(GetType(outId)).get()), channal0, true, true, false);
+    auto count1 = countColumnFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(GetType(inId)).get()),
+            *(AggregatorUtil::WrapWithDataTypes(GetType(outId)).get()), channal0, true, true, false);
+    auto count2 = countAllFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(GetType(inId)).get()),
+            *(AggregatorUtil::WrapWithDataTypes(GetType(outId)).get()), channal0, true, true, false);
+
+    delete maxFactory;
+    delete minFactory;
+    delete sumFactory;
+    delete avgFactory;
+    delete countColumnFactory;
+    delete countAllFactory;
+}
+
+INSTANTIATE_TEST_CASE_P(AggregatorTest, CreateFacotoryTest,
+    ::testing::Combine(::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_TIME32, OMNI_LONG,
+        OMNI_DATE64, OMNI_TIME64, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR, OMNI_CHAR),
+    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_DATE32, OMNI_TIME32, OMNI_LONG,
+        OMNI_DATE64, OMNI_TIME64, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR, OMNI_CHAR)
+    ),
+    [](const testing::TestParamInfo<CreateFacotoryTest::ParamType> &info) {
+        return "CreateFactory_" + TypeUtil::TypeToString(std::get<0>(info.param)) + "_" +
+               TypeUtil::TypeToString(std::get<1>(info.param));
     });
 }

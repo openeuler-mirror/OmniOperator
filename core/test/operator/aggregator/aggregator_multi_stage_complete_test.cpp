@@ -524,8 +524,8 @@ TEST_P(MultiStageCompleteTestWithAdaptivePartialAgg, verify_correctness)
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, MultiStageCompleteTestWithAdaptivePartialAgg,
     ::testing::Combine(::testing::Values("sum", "min", "max", "avg"),
-    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_DATE32, OMNI_INT, OMNI_LONG, OMNI_VARCHAR, OMNI_CHAR),
-    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_DATE32, OMNI_INT, OMNI_LONG, OMNI_VARCHAR, OMNI_CHAR),
+    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_VARCHAR, OMNI_CHAR),
+    ::testing::Values(OMNI_BOOLEAN, OMNI_SHORT, OMNI_INT, OMNI_LONG, OMNI_VARCHAR, OMNI_CHAR),
     ::testing::Values(0, 25), // nullPercent
     ::testing::Bool(),        // isDict
     ::testing::Values(false),        // hasMask

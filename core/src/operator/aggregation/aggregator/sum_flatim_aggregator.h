@@ -255,10 +255,12 @@ public:
     {
         int rowCount = originVector->GetSize();
         // opt branch
-        if (std::is_same_v<InType, ResultType> && !aggFilter) {
-            auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
-            result->Append(sumVector);
-            return;
+        if constexpr (std::is_same_v<InType, ResultType>) {
+            if (!aggFilter) {
+                auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+                result->Append(sumVector);
+                return;
+            }
         }
 
         if (originVector->GetEncoding() == OMNI_DICTIONARY) {

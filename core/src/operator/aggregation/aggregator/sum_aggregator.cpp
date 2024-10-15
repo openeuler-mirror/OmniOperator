@@ -259,10 +259,12 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, Ba
 {
     int rowCount = originVector->GetSize();
     // opt branch
-    if (std::is_same_v<InType, OutType> && !aggFilter) {
-        auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
-        result->Append(sumVector);
-        return;
+    if constexpr (std::is_same_v<InType, OutType>) {
+        if (!aggFilter) {
+            auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+            result->Append(sumVector);
+            return;
+        }
     }
 
     if constexpr (IN_ID == OMNI_VARCHAR) {

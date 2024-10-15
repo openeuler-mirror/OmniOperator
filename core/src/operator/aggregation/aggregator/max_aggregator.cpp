@@ -222,10 +222,12 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, Ba
     const uint8_t *nullMap, const bool aggFilter)
 {
     int rowCount = originVector->GetSize();
-    if (std::is_same_v<InType, OutType> && !aggFilter) {
-        auto maxVector = VectorHelper::SliceVector(originVector, 0, rowCount);
-        result->Append(maxVector);
-        return;
+    if constexpr (std::is_same_v<InType, OutType>) {
+        if (!aggFilter) {
+            auto maxVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+            result->Append(maxVector);
+            return;
+        }
     }
 
     if (originVector->GetEncoding() == OMNI_DICTIONARY) {
