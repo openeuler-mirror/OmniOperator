@@ -17,6 +17,7 @@
 
 namespace omniruntime {
 namespace type {
+constexpr int64_t SECOND_OF_HOUR = 3600;
 constexpr int64_t SECOND_OF_DAY = 86400;
 constexpr int32_t MONDAY = 4;
 

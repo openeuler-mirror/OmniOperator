@@ -56,6 +56,10 @@ public:
 
     static SupportDecimalPrecisionImprovementRule GetSupportDecimalPrecisionImprovementRule();
 
+    static void SetTimeParserRule(TimeParserRule rule);
+
+    static TimeParserRule GetTimeParserRule();
+
     static Policy *GetPolicy();
 
     // for test
@@ -89,6 +93,8 @@ private:
     static void InitSupportDecimalPrecisionImprovementRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitStringToDecimalRule(Policy *policy, const std::string &ruleValueStr);
+
+    static void InitTimeParserRule(Policy *policy, const std::string &ruleValueStr);
 
     static Policy *InitializePolicy();
 };

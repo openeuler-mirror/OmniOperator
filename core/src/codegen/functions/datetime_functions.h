@@ -16,16 +16,18 @@
 #endif
 
 namespace omniruntime::codegen::function {
-extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, const char *fmtStr,
-    int32_t fmtLen, bool isNull);
+extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, bool isNullTimeStr,
+    const char *fmtStr, int32_t fmtLen, bool isNullFmtStr, const char *tzStr, int32_t tzLen,
+    bool isNullTzStr, bool *retIsNull);
 
-extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmtStr, int32_t fmtLen, bool isNull);
+extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmtStr, int32_t fmtLen,
+    const char *tzStr, int32_t tzLen, bool isNull);
 
 extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_t timestamp, const char *fmtStr,
-    int32_t fmtLen, int32_t *outLen);
+    int32_t fmtLen, const char *tzStr, int32_t tzLen, int32_t *outLen);
 
 extern "C" DLLEXPORT char *FromUnixTimeRetNull(int64_t contextPtr, bool *isNull, int64_t timestamp, const char *fmtStr,
-    int32_t fmtLen, int32_t *outLen);
+    int32_t fmtLen, const char *tzStr, int32_t tzLen, int32_t *outLen);
 
 extern "C" DLLEXPORT int32_t DateTrunc(int64_t contextPtr, int32_t days, const char *levelStr, int32_t len);
 

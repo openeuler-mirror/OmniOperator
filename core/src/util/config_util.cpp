@@ -244,6 +244,16 @@ SupportDecimalPrecisionImprovementRule ConfigUtil::GetSupportDecimalPrecisionImp
     return g_properties.GetPolicy()->GetSupportDecimalPrecisionImprovementRule();
 }
 
+static void SetTimeParserRule(TimeParserRule rule)
+{
+    g_properties.GetPolicy()->SetTimeParserRule(rule);
+}
+
+static TimeParserRule GetTimeParserRule()
+{
+    return g_properties.GetPolicy()->GetTimeParserRule();
+}
+
 Policy *ConfigUtil::GetPolicy()
 {
     return g_properties.GetPolicy();
@@ -262,7 +272,8 @@ Policy *ConfigUtil::InitializePolicy()
         { "SupportContainerVecRule", InitSupportContainerVecRule },
         { "StringToDateFormatRule", InitStringToDateFormatRule },
         { "StringToDecimalRule", InitStringToDecimalRule },
-        { "SupportDecimalPrecisionImprovementRule", InitSupportDecimalPrecisionImprovementRule } };
+        { "SupportDecimalPrecisionImprovementRule", InitSupportDecimalPrecisionImprovementRule },
+        { "TimeParserRule", InitTimeParserRule}};
     std::string ruleValueStr;
     for (const auto &item : initFunctionMap) {
         const char *ruleKeyStr = item.first;
@@ -341,5 +352,14 @@ void ConfigUtil::InitStringToDecimalRule(Policy *policy, const std::string &rule
 {
     if (ruleValueStr == "OVERFLOW_AS_ROUND_UP") {
         policy->SetStringToDecimalRule(StringToDecimalRule::OVERFLOW_AS_ROUND_UP);
+    }
+}
+
+void ConfigUtil::InitTimeParserRule(Policy *policy, const std::string &ruleValueStr)
+{
+    if (ruleValueStr == "LEGACY") {
+        policy->SetTimeParserRule(TimeParserRule::LEGACY);
+    } else if (ruleValueStr == "CORRECTED") {
+        policy->SetTimeParserRule(TimeParserRule::CORRECTED);
     }
 }
