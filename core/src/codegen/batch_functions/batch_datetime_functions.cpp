@@ -25,18 +25,9 @@ extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32
             continue;
         }
         struct tm timeInfo = { 0 };
-        char timeStr1[timeLens[i] + 1];
-        char fmtStr1[fmtLens[i] + 1];
-        int retTimeStr1 = memcpy_s(timeStr1, timeLens[i] + 1, timeStrs[i], timeLens[i]);
-        int retFmtStr1 = memcpy_s(fmtStr1, fmtLens[i] + 1, fmtStrs[i], fmtLens[i]);
-        if (retTimeStr1 != 0 || retFmtStr1 != 0) {
-            retIsNull[i] = true;
-            output[i] = 0;
-            continue;
-        }
-        timeStr1[timeLens[i]] = '\0';
-        fmtStr1[fmtLens[i]] = '\0';
-        strptime(timeStr1, fmtStr1, &timeInfo);
+        std::string timeStr(timeStrs[i], timeLens[i]);
+        std::string fmtStr(fmtStrs[i], fmtLens[i]);
+        strptime(timeStr.c_str(), fmtStr.c_str(), &timeInfo);
         time_t timeStamp = mktime(&timeInfo);
         if (TimeZoneUtil::JudgeDSTByUnixTimestampFromStr(tzStrs[i], tzLens[i], &timeInfo,
                                                         timeStrs[i], timeLens[i], fmtStrs[i], fmtLens[i])) {
@@ -77,15 +68,8 @@ extern "C" DLLEXPORT void BatchFromUnixTime(bool *outputNull, int64_t contextPtr
         }
         int32_t resultLen = fmtLens[i] + 3;
         auto result = ArenaAllocatorMalloc(contextPtr, resultLen);
-        char fmtStr[fmtLens[i] + 1];
-        int retFmtStr = memcpy_s(fmtStr, fmtLens[i] + 1, fmtStrs[i], fmtLens[i]);
-        if (retFmtStr != 0) {
-            outputNull[i] = true;
-            output[i] = "";
-            outLens[i] = 0;
-        }
-        fmtStr[fmtLens[i]] = '\0';
-        auto ret = strftime(result, resultLen, fmtStr, &ltm);
+        std::string fmtStr(fmtStrs[i], fmtLens[i]);
+        auto ret = strftime(result, resultLen, fmtStr.c_str(), &ltm);
         outputNull[i] = (ret == 0);
         output[i] = result;
         outLens[i] = ret;

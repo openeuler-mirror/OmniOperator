@@ -22,17 +22,9 @@ extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t t
         return 0;
     }
     struct tm timeInfo = { 0 };
-    char timeStr1[timeLen + 1];
-    char fmtStr1[fmtLen + 1];
-    int retTimeStr1 = memcpy_s(timeStr1, timeLen + 1, timeStr, timeLen);
-    int retFmtStr1 = memcpy_s(fmtStr1, fmtLen + 1, fmtStr, fmtLen);
-    if (retTimeStr1 != 0 || retFmtStr1 != 0) {
-        *retIsNull = true;
-        return 0;
-    }
-    timeStr1[timeLen] = '\0';
-    fmtStr1[fmtLen] = '\0';
-    strptime(timeStr1, fmtStr1, &timeInfo);
+    std::string timeStr1(timeStr, timeLen);
+    std::string fmtStr1(fmtStr, fmtLen);
+    strptime(timeStr1.c_str(), fmtStr1.c_str(), &timeInfo);
     time_t timeStamp = mktime(&timeInfo);
     if (TimeZoneUtil::JudgeDSTByUnixTimestampFromStr(tzStr, tzLen, &timeInfo, timeStr, timeLen, fmtStr, fmtLen)) {
         timeStamp -= type::SECOND_OF_HOUR;
@@ -66,15 +58,8 @@ extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_
     }
     int32_t resultLen = fmtLen + 3;
     auto result = ArenaAllocatorMalloc(contextPtr, resultLen);
-    char fmtStr1[fmtLen + 1];
-    int retFmtStr1 = memcpy_s(fmtStr1, fmtLen + 1, fmtStr, fmtLen);
-    if (retFmtStr1 != 0) {
-        *isNull = true;
-        *outLen = 0;
-        return "";
-    }
-    fmtStr1[fmtLen] = '\0';
-    auto ret = strftime(result, resultLen, fmtStr1, &ltm);
+    std::string fmtStr1(fmtStr, fmtLen);
+    auto ret = strftime(result, resultLen, fmtStr1.c_str(), &ltm);
     *isNull = static_cast<int32_t>(ret) == 0;
     *outLen = ret;
     return result;
