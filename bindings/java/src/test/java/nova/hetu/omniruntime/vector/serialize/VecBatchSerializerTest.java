@@ -10,7 +10,6 @@ import static nova.hetu.omniruntime.type.Date64DataType.DATE64;
 import static nova.hetu.omniruntime.type.Decimal64DataType.DECIMAL64;
 import static nova.hetu.omniruntime.type.InvalidDataType.INVALID;
 import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
-import static nova.hetu.omniruntime.util.TestUtils.assertVecEquals;
 import static nova.hetu.omniruntime.util.TestUtils.freeVecBatch;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;

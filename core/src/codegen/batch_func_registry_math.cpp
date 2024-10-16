@@ -27,6 +27,7 @@ const std::string NOT_EQUAL_FN_STR = "batch_notEqual";
 const std::string PMOD_FN_STR = "batch_pmod";
 const std::string NORMALIZE_ZERO_FN_STR = "batch_NormalizeNaNAndZero";
 const std::string GREATEST_NUM_FN_STR = "batch_Greatest";
+const std::string POWER_FN_STR = "batch_power";
 }
 
 std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
@@ -69,6 +70,7 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchNormalizeNaNAndZero), NORMALIZE_ZERO_FN_STR, {}, { OMNI_DOUBLE },
             OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchPowerDouble), POWER_FN_STR, {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
 
         Function(reinterpret_cast<void *>(BatchAddInt64), ADD_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchSubtractInt64), SUBTRACT_FN_STR, {}, longParams, OMNI_LONG, INPUT_DATA),

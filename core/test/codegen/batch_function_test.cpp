@@ -326,6 +326,17 @@ TEST(BatchFunctionTest, BatchNormalizeNaNAndZero)
     }
 }
 
+TEST(BatchFunctionTest, BatchPowerDouble)
+{
+    int32_t rowCnt = 2;
+    double base[2] = { -10.0, 10.0 };
+    double exponent[2] = { 2.0, 3.0 };
+    double output[2];
+    double expect[2] = { 100.0, 1000.0 };
+    BatchPowerDouble(base, exponent, output, rowCnt);
+    EXPECT_TRUE(CmpArray<double>(output, expect, rowCnt));
+}
+
 TEST(BatchFunctionTest, Mm3Hash)
 {
     int32_t rowCnt = 1;

@@ -18,6 +18,11 @@ public class VarcharVec extends VariableWidthVec {
     public static final int INIT_CAPACITY_IN_BYTES = 32 * 1024; // 32K
     private static final int EXPAND_FACTOR = 2;
 
+    /**
+     * Warning: If this constructor is called, consider the capacity expansion scenario and update the vector info.
+     *
+     * @param size row count
+     */
     public VarcharVec(int size) {
         super(4 * 1024, size, VarcharDataType.VARCHAR);
     }
@@ -165,10 +170,13 @@ public class VarcharVec extends VariableWidthVec {
     public void append(Vec other, int offset, int length) {
         super.append(other, offset, length);
         int newCapacityInBytes = getCapacityInBytesNative(nativeVector);
-        // check expand
+        // check expand, update initial value if expansion happened.
         if (newCapacityInBytes != capacityInBytes) {
             capacityInBytes = newCapacityInBytes;
+            size = getSizeNative(nativeVector);
+            nullsBuf = OmniBufferFactory.create(getValueNullsNative(nativeVector), size);
             valuesBuf = OmniBufferFactory.create(getValuesNative(nativeVector), capacityInBytes);
+            offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(nativeVector), (size + 1) * Integer.BYTES);
         }
     }
 

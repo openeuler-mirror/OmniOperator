@@ -63,6 +63,8 @@ extern "C" DLLEXPORT bool NotEqualDouble(double left, double right);
 
 extern "C" DLLEXPORT double NormalizeNaNAndZero(double value);
 
+extern "C" DLLEXPORT double PowerDouble(double base, double exponent);
+
 // long binary operations
 
 extern "C" DLLEXPORT int64_t AddInt64(int64_t left, int64_t right);

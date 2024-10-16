@@ -40,7 +40,7 @@ public abstract class Vec implements Closeable {
     /**
      * The nulls of vector, it is a bitmap.
      */
-    protected final OmniBuffer nullsBuf;
+    protected OmniBuffer nullsBuf;
 
     /**
      * The native vector address.
@@ -189,7 +189,13 @@ public abstract class Vec implements Closeable {
      */
     protected static native int getCapacityInBytesNative(long nativeVector);
 
-    private static native int getSizeNative(long nativeVector);
+    /**
+     * get size of native vector.
+     *
+     * @param nativeVector native vector
+     * @return size
+     */
+    protected static native int getSizeNative(long nativeVector);
 
     private static native int setSizeNative(long nativeVector, int valueCount);
 
@@ -209,7 +215,13 @@ public abstract class Vec implements Closeable {
      */
     protected static native int getVecEncodingNative(long nativeVector);
 
-    private static native long getValueNullsNative(long nativeVector);
+    /**
+     * get null address of native vector.
+     *
+     * @param nativeVector native vector
+     * @return null address of native vector
+     */
+    protected static native long getValueNullsNative(long nativeVector);
 
     /**
      * merge two vectors.
