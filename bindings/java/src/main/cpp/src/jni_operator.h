@@ -46,6 +46,23 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpilledBytesNative(JNIEnv *, jobject,
     jlong);
 
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    alignSchemaNative
+ * Signature: (JJ)[Lnova/hetu/omniruntime/vector/VecBatch
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_alignSchemaNative(JNIEnv *, jobject,
+    jlong, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_OmniOperator
+ * Method:    getHashMapUniqueKeysNative
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getHashMapUniqueKeysNative(JNIEnv *, jobject,
+    jlong);
+
+
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_RowBatch_freeRowBatchNative(JNIEnv *env, jclass jcls,
     jlong jVecBatchAddress);
 

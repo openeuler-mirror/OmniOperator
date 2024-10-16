@@ -336,6 +336,9 @@ public:
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
         int32_t &vectorIndex) override;
 
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override;
+
 protected:
     MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
@@ -348,6 +351,9 @@ protected:
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
         const int32_t rowOffset, const uint8_t *nullMap) override;
+
+    template<typename T>
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
 
 private:
     ALWAYS_INLINE void SaveState(AggregateState &state);

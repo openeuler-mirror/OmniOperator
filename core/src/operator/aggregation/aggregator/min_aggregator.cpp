@@ -217,6 +217,56 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInf
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
+void MinAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+    const uint8_t *nullMap, const bool aggFilter)
+{
+    int rowCount = originVector->GetSize();
+    if constexpr (std::is_same_v<InType, OutType>) {
+        if (!aggFilter) {
+            auto minVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+            result->Append(minVector);
+            return;
+        }
+    }
+
+    if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+        ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<InType>>>(result, originVector, nullMap);
+    } else {
+        ProcessAlignAggSchemaInternal<Vector<InType>>(result, originVector, nullMap);
+    }
+}
+
+template<DataTypeId IN_ID, DataTypeId OUT_ID>
+template<typename T>
+void MinAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+    const uint8_t *nullMap)
+{
+    int rowCount = originVector->GetSize();
+    auto minVector = reinterpret_cast<OutVector *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+    auto vector = reinterpret_cast<T *>(originVector);
+    if (nullMap != nullptr) {
+        for (int index = 0; index < rowCount; ++index) {
+            if (nullMap[index]) {
+                minVector->SetNull(index);
+            } else {
+                InType val = vector->GetValue(index);
+                bool overflow = false;
+                OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+                minVector->SetValue(index, out);
+            }
+        }
+    } else {
+        for (int index = 0; index < rowCount; ++index) {
+            InType val = vector->GetValue(index);
+            bool overflow = false;
+            OutType out = this->template CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
+            minVector->SetValue(index, out);
+        }
+    }
+    result->Append(minVector);
+}
+
+template <DataTypeId IN_ID, DataTypeId OUT_ID>
 MinAggregator<IN_ID, OUT_ID>::MinAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
     std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull)
     : TypedAggregator(OMNI_AGGREGATION_TYPE_MIN, inputTypes, outputTypes, channels, inputRaw, outputPartial,

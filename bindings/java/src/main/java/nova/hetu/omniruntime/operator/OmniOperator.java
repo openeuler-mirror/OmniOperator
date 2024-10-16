@@ -44,6 +44,13 @@ public final class OmniOperator implements AutoCloseable {
     // getSpilledBytes
     private static native long getSpilledBytesNative(long nativeOperator);
 
+    // getHashMapUniqueKeys called by the adaptive partial hashagg optimization
+    private static native long getHashMapUniqueKeysNative(long nativeOperator);
+
+    // called by the adaptive partial hashagg optimization
+    private static native VecBatch alignSchemaNative(long nativeOperator, long inputVecBatchNative);
+
+
     /**
      * Add input.
      *
@@ -81,6 +88,25 @@ public final class OmniOperator implements AutoCloseable {
      */
     public long getSpilledBytes() {
         return getSpilledBytesNative(nativeOperator);
+    }
+
+    /**
+     * Get the number of hashmap unique key.
+     *
+     * @return the unique key number
+     */
+    public long getHashMapUniqueKeys() {
+        return getHashMapUniqueKeysNative(nativeOperator);
+    }
+
+    /**
+     * The input vecBatch is aligned based on the operator schema.
+     *
+     * @param inputVecBatch the input vec batch
+     * @return aligned vecBatch
+     */
+    public VecBatch alignSchema(VecBatch inputVecBatch) {
+        return alignSchemaNative(nativeOperator, inputVecBatch.getNativeVectorBatch());
     }
 
     private class VecBatchIterator implements Iterator<VecBatch> {

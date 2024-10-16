@@ -227,6 +227,62 @@ public:
             }
         }
     }
+
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override
+    {
+        int rowCount = originVector->GetSize();
+        // opt branch
+        if constexpr (std::is_same_v<RawInputType, ResultType>) {
+            if (nullMap == nullptr) {
+                auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+                auto countVector = VectorHelper::CreateFlatVector(OMNI_LONG, rowCount);
+                int64_t *valueAddr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+                std::fill_n(valueAddr, rowCount, 1);
+                result->Append(sumVector);
+                result->Append(countVector);
+                return;
+            }
+        }
+
+        if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+            ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<RawInputType>>>(result, originVector, nullMap);
+        } else {
+            ProcessAlignAggSchemaInternal<Vector<RawInputType>>(result, originVector, nullMap);
+        }
+    }
+
+protected:
+    // logic: Template-based vector encoding type, to avoid long functions and high depth.
+    template<typename T>
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap)
+    {
+        int rowCount = originVector->GetSize();
+        auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+        auto countVector = reinterpret_cast<Vector<int64_t> *>(VectorHelper::CreateFlatVector(OMNI_LONG, rowCount));
+
+        auto vector = reinterpret_cast<T *>(originVector);
+        if (nullMap != nullptr) {
+            for (int index = 0; index < rowCount; ++index) {
+                if (nullMap[index]) {
+                    sumVector->SetValue(index, 0);
+                    countVector->SetValue(index, 0);
+                } else {
+                    sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                    countVector->SetValue(index, 1);
+                }
+            }
+        } else {
+            for (int index = 0; index < rowCount; ++index) {
+                sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+            }
+            int64_t *valueAddr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+            std::fill_n(valueAddr, rowCount, 1);
+        }
+
+        result->Append(sumVector);
+        result->Append(countVector);
+    }
 };
 }
 }

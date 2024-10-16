@@ -55,6 +55,18 @@ public:
         realAggregator->ExtractValuesBatch(groupStates, aggIdx, vectors, rowOffset, rowCount);
     }
 
+    // adaptive partial aggregation
+    void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch, const int32_t filterIndex) override
+    {
+        realAggregator->AlignAggSchemaWithFilter(result, inputVecBatch, filterIndex);
+    }
+
+    // adaptive partial aggregation
+    void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override
+    {
+        realAggregator->AlignAggSchema(result, inputVecBatch);
+    }
+
     bool IsInputRaw() const override
     {
         return realAggregator->IsInputRaw();

@@ -33,6 +33,10 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Int16";
         case OMNI_LONG:
             return "Int64";
+        case OMNI_DATE64:
+            return "Date64";
+        case OMNI_TIME64:
+            return "Time64";
         case OMNI_TIMESTAMP:
             return "Timestamp";
         case OMNI_VARCHAR:

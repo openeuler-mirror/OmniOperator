@@ -62,6 +62,17 @@ public:
         return 0;
     }
 
+    // Obtains the number of keys in the hashmap object.
+    virtual uint64_t GetHashMapUniqueKeys()
+    {
+        return 0;
+    }
+
+    virtual VectorBatch *AlignSchema(VectorBatch *inputVecBatch)
+    {
+        return inputVecBatch;
+    }
+
     omniruntime::vec::VectorBatch *GetInputVecBatch()
     {
         return inputVecBatch;

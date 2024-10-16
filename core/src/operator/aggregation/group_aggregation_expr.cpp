@@ -211,6 +211,36 @@ uint64_t HashAggregationWithExprOperator::GetSpilledBytes()
     return hashAggOperator->GetSpilledBytes();
 }
 
+uint64_t HashAggregationWithExprOperator::GetHashMapUniqueKeys()
+{
+    return hashAggOperator->GetHashMapUniqueKeys();
+}
+
+VectorBatch *HashAggregationWithExprOperator::AlignSchema(VectorBatch *inputVecBatch)
+{
+    VectorBatch *newInputVecBatch =
+        AggUtil::AggFilterRequiredVectors(inputVecBatch, originTypes, sourceTypes, projections, executionContext.get());
+
+    // if hasAggFilter is false, then skip AddFilterColumn
+    if (hasAggFilter) {
+        try {
+            // do filter and update newInputVecBatch
+            AggUtil::AddFilterColumn(inputVecBatch, newInputVecBatch, aggSimpleFilters, executionContext.get(),
+                                     originTypes);
+        } catch (const std::exception &e) {
+            VectorHelper::FreeVecBatch(inputVecBatch);
+            ResetInputVecBatch();
+            VectorHelper::FreeVecBatch(newInputVecBatch);
+            throw e;
+        }
+    }
+    VectorHelper::FreeVecBatch(inputVecBatch);
+    ResetInputVecBatch();
+
+    VectorBatch *result = hashAggOperator->AlignSchema(newInputVecBatch);
+    return result;
+}
+
 OmniStatus HashAggregationWithExprOperator::Init(const std::vector<type::DataTypeId> &dataTypeIds)
 {
     oneRowAdaptor.Init(dataTypeIds);

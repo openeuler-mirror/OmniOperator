@@ -216,6 +216,9 @@ public:
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
         int32_t &vectorIndex) override;
 
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override;
+
 protected:
     SumAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
@@ -247,6 +250,12 @@ protected:
 
         return true;
     }
+
+    template<typename T>
+    void ProcessAlignAggSchemaInternalForDecimal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
+
+    template<typename T>
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
 
 private:
     static constexpr ResultType SPILL_EMPTY_VALUE { 0 };

@@ -35,6 +35,17 @@ public:
         }
     }
 
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override
+    {
+        int rowCount = result->GetRowCount();
+        auto countVector = reinterpret_cast<Vector<int64_t> *>(VectorHelper::CreateFlatVector(OMNI_LONG, rowCount));
+        int64_t *valueAddr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(countVector));
+        // each element is initialized to 1.
+        std::fill_n(valueAddr, rowCount, 1);
+        result->Append(countVector);
+    }
+
 protected:
     CountAllAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels, const bool inputRaw,
         const bool outputPartial, const bool isOverflowAsNull)

@@ -59,6 +59,10 @@ public:
 
     uint64_t GetSpilledBytes() override;
 
+    uint64_t GetHashMapUniqueKeys() override;
+
+    VectorBatch *AlignSchema(VectorBatch *inputVecBatch) override;
+
 private:
     OneRowAdaptor oneRowAdaptor;
     DataTypes originTypes;

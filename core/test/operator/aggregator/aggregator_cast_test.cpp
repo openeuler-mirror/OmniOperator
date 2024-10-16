@@ -51,6 +51,10 @@ public:
         std::vector<BaseVector *> &vectors) override
     {}
 
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override
+    {}
+
     template <typename InType, typename OutType> OutType TestCastWithOverflow(const InType val, bool &overflow)
     {
         return TypedAggregator::CastWithOverflow<InType, OutType>(val, overflow);

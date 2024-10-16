@@ -480,6 +480,77 @@ public:
         }
     }
 
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override
+    {
+        int rowCount = originVector->GetSize();
+        // opt: if InRawType and ResultType are same type, directly setValue
+        if constexpr (std::is_same_v<InRawType, ResultType>) {
+            auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+            auto emptyVector = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowCount));
+            if (nullMap == nullptr) {
+                bool *valueAddr = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(emptyVector));
+                std::fill_n(valueAddr, rowCount, false);
+            } else {
+                for (int index = 0; index < rowCount; ++index) {
+                    if (nullMap[index]) {
+                        emptyVector->SetValue(index, true);
+                    } else {
+                        emptyVector->SetValue(index, false);
+                    }
+                }
+            }
+            result->Append(sumVector);
+            result->Append(emptyVector);
+            return;
+        }
+
+        if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+            ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<InRawType>>>(result, originVector, nullMap);
+        } else {
+            ProcessAlignAggSchemaInternal<Vector<InRawType>>(result, originVector, nullMap);
+        }
+    }
+
+    // logic: Template-based vector encoding type, to avoid long functions and high depth.
+    template<typename T>
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap)
+    {
+        int rowCount = originVector->GetSize();
+        auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OutDecimalId, rowCount));
+        auto emptyVector = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowCount));
+        auto vector = reinterpret_cast<T *>(originVector);
+        if (nullMap != nullptr) {
+            for (int index = 0; index < rowCount; ++index) {
+                if (nullMap[index]) {
+                    sumVector->SetValue(index, (ResultType)(0));
+                    emptyVector->SetValue(index, true);
+                } else {
+                    if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                        Decimal128 d = Decimal128(vector->GetValue(index));
+                        sumVector->SetValue(index, d);
+                    } else {
+                        sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                    }
+                    emptyVector->SetValue(index, false);
+                }
+            }
+        } else {
+            for (int index = 0; index < rowCount; ++index) {
+                if constexpr (std::is_same_v<ResultType, Decimal128>) {
+                    Decimal128 d = Decimal128(vector->GetValue(index));
+                    sumVector->SetValue(index, d);
+                } else {
+                    sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                }
+            }
+            bool *valueAddr = reinterpret_cast<bool *>(GetValuesFromVector<OMNI_BOOLEAN>(emptyVector));
+            std::fill_n(valueAddr, rowCount, false);
+        }
+        result->Append(sumVector);
+        result->Append(emptyVector);
+    }
+
 private:
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, int index)

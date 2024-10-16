@@ -249,6 +249,49 @@ public:
             }
         }
     }
+
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
+        const bool aggFilter) override
+    {
+        int rowCount = originVector->GetSize();
+        // opt branch
+        if constexpr (std::is_same_v<InType, ResultType>) {
+            if (!aggFilter) {
+                auto sumVector = VectorHelper::SliceVector(originVector, 0, rowCount);
+                result->Append(sumVector);
+                return;
+            }
+        }
+
+        if (originVector->GetEncoding() == OMNI_DICTIONARY) {
+            ProcessAlignAggSchemaInternal<Vector<DictionaryContainer<InType>>>(result, originVector, nullMap);
+        } else {
+            ProcessAlignAggSchemaInternal<Vector<InType>>(result, originVector, nullMap);
+        }
+    }
+
+    template<typename T>
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap)
+    {
+        int rowCount = originVector->GetSize();
+        auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
+        // The varchar type is converted to the double type in advance, so InType can't be the varchar type.
+        auto vector = reinterpret_cast<T *>(originVector);
+        if (nullMap != nullptr) {
+            for (int index = 0; index < rowCount; ++index) {
+                if (nullMap[index]) {
+                    sumVector->SetNull(index);
+                } else {
+                    sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+                }
+            }
+        } else {
+            for (int index = 0; index < rowCount; ++index) {
+                sumVector->SetValue(index, (ResultType)vector->GetValue(index));
+            }
+        }
+        result->Append(sumVector);
+    }
 };
 }
 }

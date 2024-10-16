@@ -423,6 +423,18 @@ public:
             InitState(state);
         }
     }
+
+    void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch, const int32_t filterIndex) override
+    {
+        std::string message = "the interface don't support first aggregator";
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
+    }
+
+    void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override
+    {
+        std::string message = "the interface don't support first aggregator";
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
+    }
 };
 }
 }

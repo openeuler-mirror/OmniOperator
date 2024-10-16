@@ -161,6 +161,11 @@ public:
         }
     }
 
+    virtual void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch,
+        const int32_t filterIndex) = 0;
+
+    virtual void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) = 0;
+
     static bool DoNeedHandleAggFilter(Vector<bool> *filterVec, const int32_t rowOffset, const int32_t size)
     {
         int32_t rowEnd = rowOffset + size;

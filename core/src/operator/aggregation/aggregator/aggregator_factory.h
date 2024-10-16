@@ -43,8 +43,8 @@ protected:
             case OMNI_DATE64:
             case OMNI_TIME64:
             case OMNI_TIMESTAMP:
-                return FromKnownOutput<OMNI_LONG>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
-                    outputPartial, isOverflowAsNull);
+                return FromKnownOutput<OMNI_LONG>(std::move(inputTypes), std::move(outputTypes), channels,
+                    inputRaw, outputPartial, isOverflowAsNull);
             case OMNI_DOUBLE:
                 return FromKnownOutput<OMNI_DOUBLE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
