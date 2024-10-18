@@ -12,6 +12,7 @@
 #include <map>
 #include <stdlib.h>
 #include "util/config_util.h"
+#include "type/date_time_utils.h"
 
 namespace omniruntime::codegen::function {
 static const int YEAR_LENGTH = 4;
@@ -43,7 +44,6 @@ static const int MAX_MINUTE = 59;
 static const int MIN_SECOND = 0;
 static const int MAX_SECOND = 59;
 static const int GREGORIAN_CALENDAR_START_YEAR = 1582;
-
 
 static const std::set<time_t> UNIX_TIMESTAMP_FROM_DATE_SHANGHAI_NON_DST_SET = {
     -18526 * type::SECOND_OF_DAY, -10806 * type::SECOND_OF_DAY,
@@ -138,96 +138,78 @@ public:
                 (timeLen != DATE_LENGTH || fmtLen != DATE_FORMAT_LENGTH)) {
             return false;
         }
-        try {
-            int year, month, day, hour, minute, second;
-            char yearStr[YEAR_LENGTH + 1];
-            char monthStr[MONTH_LENGTH + 1];
-            char dayStr[DAY_LENGTH + 1];
-            int retYearStr = memcpy_s(yearStr, YEAR_LENGTH + 1, timeStr, YEAR_LENGTH);
-            int offset = YEAR_LENGTH + 1;
-            int retMouthStr = memcpy_s(monthStr, MONTH_LENGTH + 1, timeStr + offset, MONTH_LENGTH);
-            offset += MONTH_LENGTH + 1;
-            int retDayStr = memcpy_s(dayStr, DAY_LENGTH + 1, timeStr + offset, DAY_LENGTH);
-            if (retYearStr != 0 || retMouthStr != 0 || retDayStr != 0) {
-                return false;
-            }
-            yearStr[YEAR_LENGTH] = '\0';
-            monthStr[MONTH_LENGTH] = '\0';
-            dayStr[DAY_LENGTH] = '\0';
-            if (!(IsPositiveInteger(yearStr) && IsPositiveInteger(monthStr) && IsPositiveInteger(dayStr))) {
-                return false;
-            }
-            year = atoi(yearStr);
-            month = atoi(monthStr);
-            day = atoi(dayStr);
-            if (year < MIN_YEAR || year > MAX_YEAR || month < MIN_MONTH || month > MAX_MONTH) {
-                return false;
-            }
-            if (month == FEBRUARY && IsLeapYear(year)) {
-                if (day < MIN_DAY || day > FEBRUARY_DAY_IN_LEAP_YEAR) {
-                    return false;
-                }
-            } else {
-                if (day < MIN_DAY || day > DAYS_PER_MONTH[month-1]) {
-                    return false;
-                }
-            }
-            // It means that the format is "%Y-%m-%d %H:%M:%S“
-            if (fmtLen == TIME_FORMAT_LENGTH) {
-                char hourStr[HOUR_LENGTH + 1];
-                char minuteStr[MINUTE_LENGTH + 1];
-                char secondStr[SECOND_LENGTH + 1];
-                offset += DAY_LENGTH + 1;
-                int retHourStr = memcpy_s(hourStr, HOUR_LENGTH + 1, timeStr + offset, HOUR_LENGTH);
-                offset += HOUR_LENGTH + 1;
-                int retMinuteStr = memcpy_s(minuteStr, MINUTE_LENGTH + 1, timeStr + offset, MINUTE_LENGTH);
-                offset += MINUTE_LENGTH + 1;
-                int retSecondStr = memcpy_s(secondStr, SECOND_LENGTH + 1, timeStr + offset, SECOND_LENGTH);
-                if (retHourStr != 0 || retMinuteStr != 0 || retSecondStr != 0) {
-                    return false;
-                }
-                hourStr[HOUR_LENGTH] = '\0';
-                minuteStr[MINUTE_LENGTH] = '\0';
-                secondStr[SECOND_LENGTH] = '\0';
-                if (!(IsPositiveInteger(hourStr) && IsPositiveInteger(minuteStr) && IsPositiveInteger(secondStr))) {
-                    return false;
-                }
-                hour = atoi(hourStr);
-                minute = atoi(minuteStr);
-                second = atoi(secondStr);
-                if (hour < MIN_HOUR || hour > MAX_HOUR || minute < MIN_MINUTE || minute > MAX_MINUTE ||
-                    second < MIN_SECOND || second > MAX_SECOND) {
-                    return false;
-                }
-            }
-        } catch (...) {
+        int year = 0;
+        int month = 0;
+        int day = 0;
+        int offset = 0;
+        bool retYear = CheckAndGetNonNegativeInteger(timeStr, timeLen, offset, YEAR_LENGTH, year);
+        if (!retYear || year < MIN_YEAR || year > MAX_YEAR) {
             return false;
+        }
+        offset = YEAR_LENGTH + 1;
+        bool retMonth = CheckAndGetNonNegativeInteger(timeStr, timeLen, offset, MONTH_LENGTH, month);
+        if (!retMonth || month < MIN_MONTH || month > MAX_MONTH) {
+            return false;
+        }
+        offset += MONTH_LENGTH + 1;
+        bool retDay = CheckAndGetNonNegativeInteger(timeStr, timeLen, offset, DAY_LENGTH, day);
+        if (!retDay) {
+            return false;
+        }
+        if (month == FEBRUARY && IsLeapYearByTimeParserRule(year)) {
+            if (day < MIN_DAY || day > FEBRUARY_DAY_IN_LEAP_YEAR) {
+                return false;
+            }
+        } else {
+            if (day < MIN_DAY || day > DAYS_PER_MONTH[month-1]) {
+                return false;
+            }
+        }
+        // It means that the format is "%Y-%m-%d %H:%M:%S“
+        if (fmtLen == TIME_FORMAT_LENGTH) {
+            int hour = 0;
+            int minute = 0;
+            int second = 0;
+            offset += DAY_LENGTH + 1;
+            bool retHour = CheckAndGetNonNegativeInteger(timeStr, timeLen, offset, HOUR_LENGTH, hour);
+            if (!retHour || hour < MIN_HOUR || hour > MAX_HOUR) {
+                return false;
+            }
+            offset += HOUR_LENGTH + 1;
+            bool retMinute = CheckAndGetNonNegativeInteger(timeStr, timeLen, offset, MINUTE_LENGTH, minute);
+            if (!retMinute || minute < MIN_MINUTE || minute > MAX_MINUTE) {
+                return false;
+            }
+            offset += MINUTE_LENGTH + 1;
+            bool retSecond = CheckAndGetNonNegativeInteger(timeStr, timeLen, offset, SECOND_LENGTH, second);
+            if (!retSecond || second < MIN_SECOND || second > MAX_SECOND) {
+                return false;
+            }
         }
         return true;
     }
 
 private:
-    static bool IsLeapYear(int year)
+    static bool IsLeapYearByTimeParserRule(int year)
     {
         auto policy = GetProperties().GetPolicy();
-        if (policy->GetTimeParserRule() == TimeParserRule::LEGACY) {
-            if (year > GREGORIAN_CALENDAR_START_YEAR) {
-                return (year & 3) == 0 && (year % 100 != 0 || year % 400 == 0);
-            } else {
-                return (year & 3) == 0;
-            }
+        if (policy->GetTimeParserRule() == TimeParserRule::LEGACY && year < GREGORIAN_CALENDAR_START_YEAR) {
+            return LocalDate::IsJulianLeapYear(year);
         } else {
-            return (year & 3) == 0 && (year % 100 != 0 || year % 400 == 0);
+            return LocalDate::IsGregorianLeapYear(year);
         }
     }
 
-    static bool IsPositiveInteger(char *str)
+    static bool CheckAndGetNonNegativeInteger(const char *str, int strLen, int start, int substrLen, int &outValue)
     {
-        while (*str) {
-            if (!isdigit(*str)) {
+        outValue = 0;
+        auto ptr = str + start;
+        for (int i = 0; i < substrLen; i++) {
+            auto value = ptr[i] - '0';
+            if (value < 0 || value > 9) {
                 return false;
             }
-            str++;
+            outValue = outValue * 10 + value;
         }
         return true;
     }

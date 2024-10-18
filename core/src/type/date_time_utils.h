@@ -13,6 +13,16 @@ public:
     constexpr static int DAYS_PER_CYCLE = 146097;
     constexpr static long DAYS_0000_TO_1970 = (DAYS_PER_CYCLE * 5L) - (30L * 365L + 7L);
 
+    static inline bool IsJulianLeapYear(int year)
+    {
+        return (year & 3) == 0;
+    }
+
+    static inline bool IsGregorianLeapYear(int year)
+    {
+        return (year & 3) == 0 && (year % 100 != 0 || year % 400 == 0);
+    }
+
     LocalDate(int32_t year, int16_t month, int16_t day) : year_(year), month_(month), day_(day)
     {}
 
@@ -70,7 +80,7 @@ public:
 
     bool IsLeapYear() const
     {
-        return (year_ & 3) == 0 && (year_ % 100 != 0 || year_ % 400 == 0);
+        return LocalDate::IsGregorianLeapYear(static_cast<int>(year_));
     }
 
     LocalDate &SetQuarter()
