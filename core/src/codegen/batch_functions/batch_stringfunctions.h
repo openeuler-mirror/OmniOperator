@@ -412,6 +412,9 @@ extern "C" DLLEXPORT void BatchEndsWithStr(char **srcStrs, int32_t *srcLens, cha
 extern "C" DLLEXPORT void BatchMd5Str(int64_t contextPtr, uint8_t **str, int32_t *strLen, bool *isAnyNull,
     uint8_t **output, int32_t *outLen, int32_t rowCnt);
 
+extern "C" DLLEXPORT void BatchEmptyToNull(char **str, int32_t *strLen, bool *isAnyNull, char **output, int32_t *outLen,
+    int32_t rowCnt);
+
 extern "C" DLLEXPORT void BatchContainsStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
     bool *isAnyNull, bool *output, int32_t rowCnt);
 

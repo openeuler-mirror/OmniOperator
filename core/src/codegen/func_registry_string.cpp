@@ -75,6 +75,12 @@ const std::string ReplaceFnStr()
     return replaceFnStr;
 }
 
+const std::string EmptyToNullStr()
+{
+    const std::string empty2nullFnStr = "empty2null";
+    return empty2nullFnStr;
+}
+
 const std::string SubstrFnStr()
 {
     const std::string substrFnStr = "substr";
@@ -232,7 +238,9 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(ContainsStr), ContainsFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
             OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(GreatestStr), GreatestStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
-            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
+            OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(EmptyToNull), EmptyToNullStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
+            INPUT_DATA, false),
     };
 
     return stringFnRegistry;

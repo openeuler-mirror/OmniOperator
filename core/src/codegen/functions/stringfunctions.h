@@ -91,7 +91,9 @@ extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char 
 extern "C" DLLEXPORT void CastStringToDecimal128RoundUp(int64_t contextPtr, const char *str, int32_t strLen,
     bool isNull, int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr);
 
-/**
+extern "C" DLLEXPORT const char *EmptyToNull(const char *str, int32_t len, bool isNull, int32_t *outLen);
+
+/* *
  * If isSupportNegativeIndex is false,the result of substr is "" when start index is negative
  * If isSupportNegativeIndex is true,the substr rule is as follows:
  * e.g., str="apple", strLength=5, startIndex=-7, subStringLength=3, Result="a".

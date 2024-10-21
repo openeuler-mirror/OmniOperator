@@ -2674,3 +2674,27 @@ TEST(BatchFunctionTest, BatchGreatestDecimal128)
     EXPECT_TRUE(CmpArray<bool>(overflowNull, expectOverflowNull, rowCnt));
     delete context;
 }
+
+TEST(BatchFunctionTest, BatchEmptyToNull)
+{
+    std::vector<std::string> inString{ "", "abc", "abc123", "", "国家" };
+    int32_t rowCnt = static_cast<int32_t>(inString.size());
+    bool isAnyNull[] = {false, false, false, false, true};
+    int32_t inLens[rowCnt];
+    std::vector<char *> strAddr(rowCnt);
+    for (int i = 0; i < rowCnt; ++i) {
+        inLens[i] = inString[i].size();
+        strAddr[i] = reinterpret_cast<char *>(const_cast<char *>(inString[i].c_str()));
+    }
+    strAddr[3] = nullptr;
+    std::vector<int32_t> outLen(rowCnt);
+    std::vector<char *> outResult(rowCnt);
+
+    BatchEmptyToNull(strAddr.data(), inLens, isAnyNull, outResult.data(), outLen.data(), rowCnt);
+    EXPECT_EQ(outResult[0], nullptr);
+    EXPECT_EQ(outLen[0], 0);
+    EXPECT_EQ("abc", std::string(outResult[1], outLen[1]));
+    EXPECT_EQ("abc123", std::string(outResult[2], outLen[2]));
+    EXPECT_EQ(outResult[3], nullptr);
+    EXPECT_EQ(outLen[3], 0);
+}
