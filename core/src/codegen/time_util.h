@@ -128,11 +128,20 @@ public:
         auto it = JudgeDSTByFromUnixTimeMap.find(timeZoneStr);
         return it->second(timeInfo);
     }
+
+    static inline const char* GetTZ(const char *tzStr)
+    {
+        if (strcmp(tzStr, "GMT+08:00") == 0) {
+            return "Asia/Beijing";
+        } else {
+            return tzStr;
+        }
+    }
 }; // class TimeZoneUtil
 class TimeUtil {
 public:
     // Verify that the format is %Y-%m-%d %H:%M:%S and %Y-%m-%d in the blue zone.
-    static bool IsTimeValid(const char *timeStr, int timeLen, const char *fmtStr, int fmtLen)
+    static bool IsTimeValid(const char *timeStr, int timeLen, const char *fmtStr, int fmtLen, const char *policyStr)
     {
         if ((timeLen != TIME_LENGTH || fmtLen != TIME_FORMAT_LENGTH) &&
                 (timeLen != DATE_LENGTH || fmtLen != DATE_FORMAT_LENGTH)) {
@@ -156,9 +165,19 @@ public:
         if (!retDay) {
             return false;
         }
-        if (month == FEBRUARY && IsLeapYearByTimeParserRule(year)) {
-            if (day < MIN_DAY || day > FEBRUARY_DAY_IN_LEAP_YEAR) {
-                return false;
+        bool hasException = false;
+        if (month == FEBRUARY) {
+            if (LocalDate::IsGregorianLeapYear(year)) {
+                if (day < MIN_DAY || day > FEBRUARY_DAY_IN_LEAP_YEAR) {
+                    return false;
+                }
+            } else if (strcmp(policyStr, "EXCEPTION") == 0 && LocalDate::IsJulianLeapYear(year) &&
+                year < GREGORIAN_CALENDAR_START_YEAR && year > 0 && day == FEBRUARY_DAY_IN_LEAP_YEAR) {
+                hasException = true;
+            } else {
+                if (day < MIN_DAY || day > DAYS_PER_MONTH[month-1]) {
+                    return false;
+                }
             }
         } else {
             if (day < MIN_DAY || day > DAYS_PER_MONTH[month-1]) {
@@ -186,20 +205,14 @@ public:
                 return false;
             }
         }
+        if (hasException) {
+            throw exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                "Invalid date 'February 29' as '" + std::to_string(year) + "' is not a leap year");
+        }
         return true;
     }
 
 private:
-    static bool IsLeapYearByTimeParserRule(int year)
-    {
-        auto policy = GetProperties().GetPolicy();
-        if (policy->GetTimeParserRule() == TimeParserRule::LEGACY && year < GREGORIAN_CALENDAR_START_YEAR) {
-            return LocalDate::IsJulianLeapYear(year);
-        } else {
-            return LocalDate::IsGregorianLeapYear(year);
-        }
-    }
-
     static bool CheckAndGetNonNegativeInteger(const char *str, int strLen, int start, int substrLen, int &outValue)
     {
         outValue = 0;

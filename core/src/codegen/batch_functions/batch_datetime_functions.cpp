@@ -11,15 +11,19 @@
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32_t *timeLens, bool *isNullTimeStr,
     const char **fmtStrs, int32_t *fmtLens, bool *isNullFmtStr, const char **tzStrs, int32_t *tzLens,
-    bool *isNullTzStr, bool *retIsNull, int64_t *output, int32_t rowCnt)
+    bool *isNullTzStr, const char **policyStrs, int32_t *policyLens, bool *isNullPolStr,
+    bool *retIsNull, int64_t *output, int32_t rowCnt)
 {
+    std::string tzStr(tzStrs[0], tzLens[0]);
+    setenv("TZ", TimeZoneUtil::GetTZ(tzStr.c_str()), 1);
+    tzset();
     for (int32_t i = 0; i < rowCnt; i++) {
-        if (isNullTimeStr[i] || isNullFmtStr[i] || isNullTzStr[i] || fmtLens[i] == 0 || timeLens[i] == 0) {
+        if (isNullTimeStr[i] || isNullFmtStr[i] || fmtLens[i] == 0 || timeLens[i] == 0) {
             retIsNull[i] = true;
             output[i] = 0;
             continue;
         }
-        if (!TimeUtil::IsTimeValid(timeStrs[i], timeLens[i], fmtStrs[i], fmtLens[i])) {
+        if (!TimeUtil::IsTimeValid(timeStrs[i], timeLens[i], fmtStrs[i], fmtLens[i], policyStrs[i])) {
             retIsNull[i] = true;
             output[i] = 0;
             continue;
@@ -40,6 +44,9 @@ extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32
 extern "C" DLLEXPORT void BatchUnixTimestampFromDate(int32_t *dates, const char **fmtStrs, int32_t *fmtLens,
     const char **tzStrs, int32_t *tzLens, bool *isAnyNull, int64_t *output, int32_t rowCnt)
 {
+    std::string tzStr(tzStrs[0], tzLens[0]);
+    setenv("TZ", TimeZoneUtil::GetTZ(tzStr.c_str()), 1);
+    tzset();
     for (int32_t i = 0; i < rowCnt; i++) {
         if (isAnyNull[i]) {
             output[i] = 0;
@@ -58,6 +65,9 @@ extern "C" DLLEXPORT void BatchFromUnixTime(bool *outputNull, int64_t contextPtr
     const char **fmtStrs, int32_t *fmtLens, const char **tzStrs, int32_t *tzLens,
     char **output, int32_t *outLens, int32_t rowCnt)
 {
+    std::string tzStr(tzStrs[0], tzLens[0]);
+    setenv("TZ", TimeZoneUtil::GetTZ(tzStr.c_str()), 1);
+    tzset();
     for (int32_t i = 0; i < rowCnt; i++) {
         time_t timeStampVal = timestamps[i];
         struct tm ltm;

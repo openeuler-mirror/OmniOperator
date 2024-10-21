@@ -2014,7 +2014,7 @@ TEST(FunctionTest, UnixTimestampFromStr)
     for (int32_t i = 0; i < rowCnt; i++) {
         output[i] = UnixTimestampFromStr(timeStrs[i].c_str(), timeStrs[i].length(), isNullTimeStr[i],
                                          fmtStrs[i].c_str(), fmtStrs[i].length(), isNullFmtStr[i],
-                                         "Asia/Shanghai", 13, false, retIsNull[i]);
+                                         "Asia/Shanghai", 13, false, "CORRECTED", 9, false, retIsNull[i]);
     }
     std::vector<bool> expectIsNull = {false, false, false, true, false, false};
     bool resultIsNull[rowCnt];
