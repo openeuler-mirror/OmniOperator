@@ -120,6 +120,31 @@ TEST(FunctionTest, Md5String)
         "03f2ace2c433c4b743787d96b41ed1b6");
 }
 
+static void EmptyToNullTest(const std::string &input)
+{
+    int32_t outLen;
+    const char *res = EmptyToNull(input.c_str(), input.size(), true, &outLen);
+    EXPECT_EQ(nullptr, res);
+    EXPECT_EQ(outLen, 0);
+    res = EmptyToNull(input.c_str(), input.size(), false, &outLen);
+    EXPECT_EQ(outLen, 0);
+}
+
+static void EmptyToNullNotNullTest(const std::string &input, const std::string &expect)
+{
+    int32_t outLen;
+    const char *res = EmptyToNull(input.c_str(), input.size(), false, &outLen);
+    EXPECT_EQ(expect, std::string(res, outLen));
+}
+
+TEST(FunctionTest, EmptyToNull)
+{
+    EmptyToNullNotNullTest("hellow world!", "hellow world!");
+    EmptyToNullNotNullTest("123412345892376487612983", "123412345892376487612983");
+    EmptyToNullNotNullTest("   ", "   ");
+    EmptyToNullTest("");
+}
+
 /*
  * XxHash64 hash tests
  */

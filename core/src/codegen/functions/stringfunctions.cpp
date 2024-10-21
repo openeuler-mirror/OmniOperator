@@ -949,4 +949,15 @@ extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, b
     *outLen = lLen;
     return lValue;
 }
+
+extern "C" DLLEXPORT const char *EmptyToNull(const char *str, int32_t len, bool isNull, int32_t *outLen)
+{
+    if (len == 0 || isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+
+    *outLen = len;
+    return str;
+}
 }

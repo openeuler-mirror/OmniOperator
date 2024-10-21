@@ -1160,6 +1160,20 @@ extern "C" DLLEXPORT void BatchMd5Str(int64_t contextPtr, uint8_t **str, int32_t
     }
 }
 
+extern "C" DLLEXPORT void BatchEmptyToNull(char **str, int32_t *strLen, bool *isAnyNull, char **output, int32_t *outLen,
+    int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; i++) {
+        if (strLen[i] == 0 || isAnyNull[i]) {
+            output[i] = nullptr;
+            outLen[i] = 0;
+            continue;
+        }
+        output[i] = str[i];
+        outLen[i] = strLen[i];
+    }
+}
+
 extern "C" DLLEXPORT void BatchContainsStr(char **srcStrs, int32_t *srcLens, char **matchStrs, int32_t *matchLens,
     bool *isAnyNull, bool *output, int32_t rowCnt)
 {
