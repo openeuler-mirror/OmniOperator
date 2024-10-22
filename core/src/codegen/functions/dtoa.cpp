@@ -174,7 +174,7 @@ FDBigInteger FDBigInteger::LeftShift(int shift)
         if (bitCount == 0) {
             int newData[MAX_DATA_LENGTH]{0};
             int count = nWords * static_cast<int>(sizeof(int));
-            memcpy_s(newData, count * sizeof(int), data, count * sizeof(int));
+            memcpy_s(newData, count, data, count);
             return {newData, offset + wordCount, nWords};
         } else {
             int antiCount = 32 - bitCount;
