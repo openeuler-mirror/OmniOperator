@@ -4655,7 +4655,6 @@ template <class V> OMNI_API auto Le(V a, V b) -> decltype(a == b)
 
 #undef OMNI_GENERIC_IF_EMULATED_D
 
-// NOLINTNEXTLINE(google-readability-namespace-comments)
 } // namespace omni
 
 #endif // OMNI_GENERIC_OPS_H

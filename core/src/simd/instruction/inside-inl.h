@@ -611,7 +611,6 @@ OMNI_API VFromD<D> PromoteOddTo(D d, V v)
 
 #ifdef OMNI_INSIDE_END_NAMESPACE
 #undef OMNI_INSIDE_END_NAMESPACE
-// NOLINTNEXTLINE(google-readability-namespace-comments)
 } // namespace omni
 OMNI_AFTER_NAMESPACE();
 #endif

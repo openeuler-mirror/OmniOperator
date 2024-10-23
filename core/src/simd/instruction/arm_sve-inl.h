@@ -1,7 +1,8 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  */
-
+#ifndef ARM_SVE_INL_H
+#define ARM_SVE_INL_H
 #include <arm_sve.h>
 #include "simd/instruction/shared-inl.h"
 
@@ -250,7 +251,6 @@ OMNI_API svbool_t PFalse()
 }
 
 // Returns all-true if d is OMNI_FULL or FirstN(N) after capping N.
-//
 // This is used in functions that load/store memory; other functions (e.g.
 // arithmetic) can ignore d and use PTrue instead.
 template <class D> svbool_t MakeMask(D d)
@@ -3062,7 +3062,6 @@ template <class D, OMNI_IF_T_SIZE_D(D, 8)> OMNI_API VFromD<D> Reverse4(D d, cons
     if (detail::IsFull(d)) {
         return detail::ReverseFull(v);
     }
-    // TODO(janwas): is this approach faster than Shuffle0123?
     const RebindToUnsigned<decltype(d)> du;
     const auto idx = detail::XorN(Iota(du, 0), 3);
     return TableLookupLanes(v, idx);
@@ -3938,7 +3937,6 @@ template <class V, OMNI_IF_NOT_FLOAT_NOR_SPECIAL_V(V)> OMNI_API V AverageRound(c
 // `p` points to at least 8 readable bytes, not all of which need be valid.
 template <class D, OMNI_IF_T_SIZE_D(D, 1)> OMNI_INLINE svbool_t LoadMaskBits(D d, const uint8_t *OMNI_RESTRICT bits)
 {
-    // TODO(janwas): with SVE2.1, load to vector, then PMOV
     const RebindToUnsigned<D> du;
     const svuint8_t iota = Iota(du, 0);
 
@@ -4119,7 +4117,6 @@ OMNI_INLINE svuint64_t BitsFromBool(svuint8_t x)
     const ScalableTag<uint16_t> d16;
     const ScalableTag<uint32_t> d32;
     const ScalableTag<uint64_t> d64;
-    // TODO(janwas): could use SVE2 BDEP, but it's optional.
     x = Or(x, BitCast(d8, ShiftRight<7>(BitCast(d16, x))));
     x = Or(x, BitCast(d8, ShiftRight<14>(BitCast(d32, x))));
     x = Or(x, BitCast(d8, ShiftRight<28>(BitCast(d64, x))));
@@ -4670,9 +4667,6 @@ OMNI_API VFromD<DU32> SumOfMulQuadAccumulate(DU32 /* du32 */, svuint8_t a, svuin
 template <class DI32, OMNI_IF_I32_D(DI32)>
 OMNI_API VFromD<DI32> SumOfMulQuadAccumulate(DI32 di32, svuint8_t a_u, svint8_t b_i, svint32_t sum)
 {
-    // TODO: use svusdot_u32 on SVE targets that require support for both SVE2
-    // and SVE I8MM.
-
     const RebindToUnsigned<decltype(di32)> du32;
     const Repartition<uint8_t, decltype(di32)> du8;
 
@@ -4924,5 +4918,5 @@ template <typename T, size_t N> OMNI_API uint64_t FindMatchMask(T value, const T
 #undef OMNI_SVE_UNDEFINED
 #undef OMNI_SVE_V
 
-// NOLINTNEXTLINE(google-readability-namespace-comments)
 } // namespace omni
+#endif

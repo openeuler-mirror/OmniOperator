@@ -556,7 +556,6 @@ template <class D, typename T> OMNI_API bool IsAligned(D d, T *ptr)
 #define OMNI_IF_LANE_SIZE_D(D, bytes) OMNI_IF_T_SIZE_D(D, bytes)
 #define OMNI_IF_NOT_LANE_SIZE_D(D, bytes) OMNI_IF_NOT_T_SIZE_D(D, bytes)
 
-// NOLINTNEXTLINE(google-readability-namespace-comments)
 } // namespace omni
 
 #endif // OMNI_SHARED_INL_H
