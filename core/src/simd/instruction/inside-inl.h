@@ -1,0 +1,618 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+ */
+#ifndef OMNI_INSIDE_INL_H
+#define OMNI_INSIDE_INL_H
+
+// On SVE and RVV, Vec2..4 are aliases to built-in types. Also exclude the
+// fixed-size SVE targets.
+#if (!OMNI_HAVE_SCALABLE && !OMNI_TARGET_IS_SVE)
+
+// NOTE: these are used inside arm_neon-inl.h, hence they cannot be defined in
+// generic_ops-inl.h, which is included after that.
+template <class D> struct Vec2 {
+    VFromD<D> v0;
+    VFromD<D> v1;
+};
+
+template <class D> struct Vec3 {
+    VFromD<D> v0;
+    VFromD<D> v1;
+    VFromD<D> v2;
+};
+
+template <class D> struct Vec4 {
+    VFromD<D> v0;
+    VFromD<D> v1;
+    VFromD<D> v2;
+    VFromD<D> v3;
+};
+
+// D arg is unused but allows deducing D.
+template <class D> OMNI_API Vec2<D> Create2(D /* tag */, VFromD<D> v0, VFromD<D> v1)
+{
+    return Vec2<D>{ v0, v1 };
+}
+
+template <class D> OMNI_API Vec3<D> Create3(D /* tag */, VFromD<D> v0, VFromD<D> v1, VFromD<D> v2)
+{
+    return Vec3<D>{ v0, v1, v2 };
+}
+
+template <class D> OMNI_API Vec4<D> Create4(D /* tag */, VFromD<D> v0, VFromD<D> v1, VFromD<D> v2, VFromD<D> v3)
+{
+    return Vec4<D>{ v0, v1, v2, v3 };
+}
+
+template <size_t kIndex, class D> OMNI_API VFromD<D> Get2(Vec2<D> tuple)
+{
+    static_assert(kIndex < 2, "Tuple index out of bounds");
+    return kIndex == 0 ? tuple.v0 : tuple.v1;
+}
+
+template <size_t kIndex, class D> OMNI_API VFromD<D> Get3(Vec3<D> tuple)
+{
+    static_assert(kIndex < 3, "Tuple index out of bounds");
+    return kIndex == 0 ? tuple.v0 : kIndex == 1 ? tuple.v1 : tuple.v2;
+}
+
+template <size_t kIndex, class D> OMNI_API VFromD<D> Get4(Vec4<D> tuple)
+{
+    static_assert(kIndex < 4, "Tuple index out of bounds");
+    return kIndex == 0 ? tuple.v0 : kIndex == 1 ? tuple.v1 : kIndex == 2 ? tuple.v2 : tuple.v3;
+}
+
+template <size_t kIndex, class D> OMNI_API Vec2<D> Set2(Vec2<D> tuple, VFromD<D> val)
+{
+    static_assert(kIndex < 2, "Tuple index out of bounds");
+    if (kIndex == 0) {
+        tuple.v0 = val;
+    } else {
+        tuple.v1 = val;
+    }
+    return tuple;
+}
+
+template <size_t kIndex, class D> OMNI_API Vec3<D> Set3(Vec3<D> tuple, VFromD<D> val)
+{
+    static_assert(kIndex < 3, "Tuple index out of bounds");
+    if (kIndex == 0) {
+        tuple.v0 = val;
+    } else if (kIndex == 1) {
+        tuple.v1 = val;
+    } else {
+        tuple.v2 = val;
+    }
+    return tuple;
+}
+
+template <size_t kIndex, class D> OMNI_API Vec4<D> Set4(Vec4<D> tuple, VFromD<D> val)
+{
+    static_assert(kIndex < 4, "Tuple index out of bounds");
+    if (kIndex == 0) {
+        tuple.v0 = val;
+    } else if (kIndex == 1) {
+        tuple.v1 = val;
+    } else if (kIndex == 2) {
+        tuple.v2 = val;
+    } else {
+        tuple.v3 = val;
+    }
+    return tuple;
+}
+
+#endif // !OMNI_HAVE_SCALABLE || OMNI_IDE
+
+// ------------------------------ Rol/Ror (And, Or, Neg, Shl, Shr)
+#if (defined(OMNI_NATIVE_ROL_ROR_8) == defined(OMNI_TARGET_TOGGLE))
+#ifdef OMNI_NATIVE_ROL_ROR_8
+#undef OMNI_NATIVE_ROL_ROR_8
+#else
+#define OMNI_NATIVE_ROL_ROR_8
+#endif
+
+template <class V, OMNI_IF_UI8(TFromV<V>)> OMNI_API V Rol(V a, V b)
+{
+    const DFromV<decltype(a)> d;
+    const RebindToSigned<decltype(d)> di;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const auto shift_amt_mask = Set(du, uint8_t{ 7 });
+    const auto shl_amt = And(BitCast(du, b), shift_amt_mask);
+    const auto shr_amt = And(BitCast(du, Neg(BitCast(di, b))), shift_amt_mask);
+
+    const auto vu = BitCast(du, a);
+    return BitCast(d, Or(Shl(vu, shl_amt), Shr(vu, shr_amt)));
+}
+
+template <class V, OMNI_IF_UI8(TFromV<V>)> OMNI_API V Ror(V a, V b)
+{
+    const DFromV<decltype(a)> d;
+    const RebindToSigned<decltype(d)> di;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const auto shift_amt_mask = Set(du, uint8_t{ 7 });
+    const auto shr_amt = And(BitCast(du, b), shift_amt_mask);
+    const auto shl_amt = And(BitCast(du, Neg(BitCast(di, b))), shift_amt_mask);
+
+    const auto vu = BitCast(du, a);
+    return BitCast(d, Or(Shl(vu, shl_amt), Shr(vu, shr_amt)));
+}
+
+#endif // OMNI_NATIVE_ROL_ROR_8
+
+#if (defined(OMNI_NATIVE_ROL_ROR_16) == defined(OMNI_TARGET_TOGGLE))
+#ifdef OMNI_NATIVE_ROL_ROR_16
+#undef OMNI_NATIVE_ROL_ROR_16
+#else
+#define OMNI_NATIVE_ROL_ROR_16
+#endif
+
+template <class V, OMNI_IF_UI16(TFromV<V>)> OMNI_API V Rol(V a, V b)
+{
+    const DFromV<decltype(a)> d;
+    const RebindToSigned<decltype(d)> di;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const auto shift_amt_mask = Set(du, uint16_t{ 15 });
+    const auto shl_amt = And(BitCast(du, b), shift_amt_mask);
+    const auto shr_amt = And(BitCast(du, Neg(BitCast(di, b))), shift_amt_mask);
+
+    const auto vu = BitCast(du, a);
+    return BitCast(d, Or(Shl(vu, shl_amt), Shr(vu, shr_amt)));
+}
+
+template <class V, OMNI_IF_UI16(TFromV<V>)> OMNI_API V Ror(V a, V b)
+{
+    const DFromV<decltype(a)> d;
+    const RebindToSigned<decltype(d)> di;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const auto shift_amt_mask = Set(du, uint16_t{ 15 });
+    const auto shr_amt = And(BitCast(du, b), shift_amt_mask);
+    const auto shl_amt = And(BitCast(du, Neg(BitCast(di, b))), shift_amt_mask);
+
+    const auto vu = BitCast(du, a);
+    return BitCast(d, Or(Shl(vu, shl_amt), Shr(vu, shr_amt)));
+}
+
+#endif // OMNI_NATIVE_ROL_ROR_16
+
+#if (defined(OMNI_NATIVE_ROL_ROR_32_64) == defined(OMNI_TARGET_TOGGLE))
+#ifdef OMNI_NATIVE_ROL_ROR_32_64
+#undef OMNI_NATIVE_ROL_ROR_32_64
+#else
+#define OMNI_NATIVE_ROL_ROR_32_64
+#endif
+
+template <class V, OMNI_IF_UI32(TFromV<V>)> OMNI_API V Rol(V a, V b)
+{
+    const DFromV<decltype(a)> d;
+    const RebindToSigned<decltype(d)> di;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const auto shift_amt_mask = Set(du, uint32_t{ 31 });
+    const auto shl_amt = And(BitCast(du, b), shift_amt_mask);
+    const auto shr_amt = And(BitCast(du, Neg(BitCast(di, b))), shift_amt_mask);
+
+    const auto vu = BitCast(du, a);
+    return BitCast(d, Or(Shl(vu, shl_amt), Shr(vu, shr_amt)));
+}
+
+template <class V, OMNI_IF_UI32(TFromV<V>)> OMNI_API V Ror(V a, V b)
+{
+    const DFromV<decltype(a)> d;
+    const RebindToSigned<decltype(d)> di;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const auto shift_amt_mask = Set(du, uint32_t{ 31 });
+    const auto shr_amt = And(BitCast(du, b), shift_amt_mask);
+    const auto shl_amt = And(BitCast(du, Neg(BitCast(di, b))), shift_amt_mask);
+
+    const auto vu = BitCast(du, a);
+    return BitCast(d, Or(Shl(vu, shl_amt), Shr(vu, shr_amt)));
+}
+
+#if OMNI_HAVE_INTEGER64
+
+template <class V, OMNI_IF_UI64(TFromV<V>)> OMNI_API V Rol(V a, V b)
+{
+    const DFromV<decltype(a)> d;
+    const RebindToSigned<decltype(d)> di;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const auto shift_amt_mask = Set(du, uint64_t{ 63 });
+    const auto shl_amt = And(BitCast(du, b), shift_amt_mask);
+    const auto shr_amt = And(BitCast(du, Neg(BitCast(di, b))), shift_amt_mask);
+
+    const auto vu = BitCast(du, a);
+    return BitCast(d, Or(Shl(vu, shl_amt), Shr(vu, shr_amt)));
+}
+
+template <class V, OMNI_IF_UI64(TFromV<V>)> OMNI_API V Ror(V a, V b)
+{
+    const DFromV<decltype(a)> d;
+    const RebindToSigned<decltype(d)> di;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const auto shift_amt_mask = Set(du, uint64_t{ 63 });
+    const auto shr_amt = And(BitCast(du, b), shift_amt_mask);
+    const auto shl_amt = And(BitCast(du, Neg(BitCast(di, b))), shift_amt_mask);
+
+    const auto vu = BitCast(du, a);
+    return BitCast(d, Or(Shl(vu, shl_amt), Shr(vu, shr_amt)));
+}
+
+#endif // OMNI_HAVE_INTEGER64
+
+#endif // OMNI_NATIVE_ROL_ROR_32_64
+
+// ------------------------------ RotateLeftSame/RotateRightSame
+
+#if (defined(OMNI_NATIVE_ROL_ROR_SAME_8) == defined(OMNI_TARGET_TOGGLE))
+#ifdef OMNI_NATIVE_ROL_ROR_SAME_8
+#undef OMNI_NATIVE_ROL_ROR_SAME_8
+#else
+#define OMNI_NATIVE_ROL_ROR_SAME_8
+#endif
+
+template <class V, OMNI_IF_UI8(TFromV<V>)> OMNI_API V RotateLeftSame(V v, int bits)
+{
+    const DFromV<decltype(v)> d;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const int shl_amt = bits & 7;
+    const int shr_amt = static_cast<int>((0u - static_cast<unsigned>(bits)) & 7u);
+
+    const auto vu = BitCast(du, v);
+    return BitCast(d, Or(ShiftLeftSame(vu, shl_amt), ShiftRightSame(vu, shr_amt)));
+}
+
+template <class V, OMNI_IF_UI8(TFromV<V>)> OMNI_API V RotateRightSame(V v, int bits)
+{
+    const DFromV<decltype(v)> d;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const int shr_amt = bits & 7;
+    const int shl_amt = static_cast<int>((0u - static_cast<unsigned>(bits)) & 7u);
+
+    const auto vu = BitCast(du, v);
+    return BitCast(d, Or(ShiftLeftSame(vu, shl_amt), ShiftRightSame(vu, shr_amt)));
+}
+
+#endif // OMNI_NATIVE_ROL_ROR_SAME_8
+
+#if (defined(OMNI_NATIVE_ROL_ROR_SAME_16) == defined(OMNI_TARGET_TOGGLE))
+#ifdef OMNI_NATIVE_ROL_ROR_SAME_16
+#undef OMNI_NATIVE_ROL_ROR_SAME_16
+#else
+#define OMNI_NATIVE_ROL_ROR_SAME_16
+#endif
+
+template <class V, OMNI_IF_UI16(TFromV<V>)> OMNI_API V RotateLeftSame(V v, int bits)
+{
+    const DFromV<decltype(v)> d;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const int shl_amt = bits & 15;
+    const int shr_amt = static_cast<int>((0u - static_cast<unsigned>(bits)) & 15u);
+
+    const auto vu = BitCast(du, v);
+    return BitCast(d, Or(ShiftLeftSame(vu, shl_amt), ShiftRightSame(vu, shr_amt)));
+}
+
+template <class V, OMNI_IF_UI16(TFromV<V>)> OMNI_API V RotateRightSame(V v, int bits)
+{
+    const DFromV<decltype(v)> d;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const int shr_amt = bits & 15;
+    const int shl_amt = static_cast<int>((0u - static_cast<unsigned>(bits)) & 15u);
+
+    const auto vu = BitCast(du, v);
+    return BitCast(d, Or(ShiftLeftSame(vu, shl_amt), ShiftRightSame(vu, shr_amt)));
+}
+
+#endif // OMNI_NATIVE_ROL_ROR_SAME_16
+
+#if (defined(OMNI_NATIVE_ROL_ROR_SAME_32_64) == defined(OMNI_TARGET_TOGGLE))
+#ifdef OMNI_NATIVE_ROL_ROR_SAME_32_64
+#undef OMNI_NATIVE_ROL_ROR_SAME_32_64
+#else
+#define OMNI_NATIVE_ROL_ROR_SAME_32_64
+#endif
+
+template <class V, OMNI_IF_UI32(TFromV<V>)> OMNI_API V RotateLeftSame(V v, int bits)
+{
+    const DFromV<decltype(v)> d;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const int shl_amt = bits & 31;
+    const int shr_amt = static_cast<int>((0u - static_cast<unsigned>(bits)) & 31u);
+
+    const auto vu = BitCast(du, v);
+    return BitCast(d, Or(ShiftLeftSame(vu, shl_amt), ShiftRightSame(vu, shr_amt)));
+}
+
+template <class V, OMNI_IF_UI32(TFromV<V>)> OMNI_API V RotateRightSame(V v, int bits)
+{
+    const DFromV<decltype(v)> d;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const int shr_amt = bits & 31;
+    const int shl_amt = static_cast<int>((0u - static_cast<unsigned>(bits)) & 31u);
+
+    const auto vu = BitCast(du, v);
+    return BitCast(d, Or(ShiftLeftSame(vu, shl_amt), ShiftRightSame(vu, shr_amt)));
+}
+
+#if OMNI_HAVE_INTEGER64
+
+template <class V, OMNI_IF_UI64(TFromV<V>)> OMNI_API V RotateLeftSame(V v, int bits)
+{
+    const DFromV<decltype(v)> d;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const int shl_amt = bits & 63;
+    const int shr_amt = static_cast<int>((0u - static_cast<unsigned>(bits)) & 63u);
+
+    const auto vu = BitCast(du, v);
+    return BitCast(d, Or(ShiftLeftSame(vu, shl_amt), ShiftRightSame(vu, shr_amt)));
+}
+
+template <class V, OMNI_IF_UI64(TFromV<V>)> OMNI_API V RotateRightSame(V v, int bits)
+{
+    const DFromV<decltype(v)> d;
+    const RebindToUnsigned<decltype(d)> du;
+
+    const int shr_amt = bits & 63;
+    const int shl_amt = static_cast<int>((0u - static_cast<unsigned>(bits)) & 63u);
+
+    const auto vu = BitCast(du, v);
+    return BitCast(d, Or(ShiftLeftSame(vu, shl_amt), ShiftRightSame(vu, shr_amt)));
+}
+
+#endif // OMNI_HAVE_INTEGER64
+
+#endif // OMNI_NATIVE_ROL_ROR_SAME_32_64
+
+// ------------------------------ PromoteEvenTo/PromoteOddTo
+
+// These are used by target-specific headers for ReorderWidenMulAccumulate etc.
+
+#if OMNI_TARGET != OMNI_SCALAR || OMNI_IDE
+namespace detail {
+// Tag dispatch is used in detail::PromoteEvenTo and detail::PromoteOddTo as
+// there are target-specific specializations for some of the
+// detail::PromoteEvenTo and detail::PromoteOddTo cases on
+// SVE/PPC/SSE2/SSSE3/SSE4/AVX2.
+
+// All targets except OMNI_SCALAR use the implementations of
+// detail::PromoteEvenTo and detail::PromoteOddTo in generic_ops-inl.h for at
+// least some of the PromoteEvenTo and PromoteOddTo cases.
+
+// Signed to signed PromoteEvenTo/PromoteOddTo
+template <size_t kToLaneSize, class D, class V>
+OMNI_INLINE VFromD<D> PromoteEvenTo(simd::SignedTag /* to_type_tag */,
+    simd::SizeTag<kToLaneSize> /* to_lane_size_tag */, simd::SignedTag /* from_type_tag */, D d_to, V v)
+{
+#if OMNI_TARGET_IS_SVE
+    // The intrinsic expects the wide lane type.
+    return NativePromoteEvenTo(BitCast(d_to, v));
+#else
+#if OMNI_IS_LITTLE_ENDIAN
+    // On little-endian targets, need to shift each lane of the bitcasted
+    // vector left by kToLaneSize * 4 bits to get the bits of the even
+    // source lanes into the upper kToLaneSize * 4 bits of even_in_hi.
+    const auto even_in_hi = ShiftLeft<kToLaneSize * 4>(BitCast(d_to, v));
+#else
+    // On big-endian targets, the bits of the even source lanes are already
+    // in the upper kToLaneSize * 4 bits of the lanes of the bitcasted
+    // vector.
+    const auto even_in_hi = BitCast(d_to, v);
+#endif
+
+    // Right-shift even_in_hi by kToLaneSize * 4 bits
+    return ShiftRight<kToLaneSize * 4>(even_in_hi);
+#endif // OMNI_TARGET_IS_SVE
+}
+
+// Unsigned to unsigned PromoteEvenTo/PromoteOddTo
+template <size_t kToLaneSize, class D, class V>
+OMNI_INLINE VFromD<D> PromoteEvenTo(simd::UnsignedTag /* to_type_tag */,
+    simd::SizeTag<kToLaneSize> /* to_lane_size_tag */, simd::UnsignedTag /* from_type_tag */, D d_to, V v)
+{
+#if OMNI_TARGET_IS_SVE
+    // The intrinsic expects the wide lane type.
+    return NativePromoteEvenTo(BitCast(d_to, v));
+#else
+#if OMNI_IS_LITTLE_ENDIAN
+    // On little-endian targets, the bits of the even source lanes are already
+    // in the lower kToLaneSize * 4 bits of the lanes of the bitcasted vector.
+
+    // Simply need to zero out the upper bits of each lane of the bitcasted
+    // vector.
+    return And(BitCast(d_to, v), Set(d_to, static_cast<TFromD<D>>(LimitsMax<TFromV<V>>())));
+#else
+    // On big-endian targets, need to shift each lane of the bitcasted vector
+    // right by kToLaneSize * 4 bits to get the bits of the even source lanes into
+    // the lower kToLaneSize * 4 bits of the result.
+
+    // The right shift below will zero out the upper kToLaneSize * 4 bits of the
+    // result.
+    return ShiftRight<kToLaneSize * 4>(BitCast(d_to, v));
+#endif
+#endif // OMNI_TARGET_IS_SVE
+}
+
+template <size_t kToLaneSize, class D, class V>
+OMNI_INLINE VFromD<D> PromoteOddTo(simd::SignedTag /* to_type_tag */, simd::SizeTag<kToLaneSize> /* to_lane_size_tag */,
+    simd::SignedTag /* from_type_tag */, D d_to, V v)
+{
+#if OMNI_IS_LITTLE_ENDIAN
+    // On little-endian targets, the bits of the odd source lanes are already in
+    // the upper kToLaneSize * 4 bits of the lanes of the bitcasted vector.
+    const auto odd_in_hi = BitCast(d_to, v);
+#else
+    // On big-endian targets, need to shift each lane of the bitcasted vector
+    // left by kToLaneSize * 4 bits to get the bits of the odd source lanes into
+    // the upper kToLaneSize * 4 bits of odd_in_hi.
+    const auto odd_in_hi = ShiftLeft<kToLaneSize * 4>(BitCast(d_to, v));
+#endif
+
+    // Right-shift odd_in_hi by kToLaneSize * 4 bits
+    return ShiftRight<kToLaneSize * 4>(odd_in_hi);
+}
+
+template <size_t kToLaneSize, class D, class V>
+OMNI_INLINE VFromD<D> PromoteOddTo(simd::UnsignedTag /* to_type_tag */,
+    simd::SizeTag<kToLaneSize> /* to_lane_size_tag */, simd::UnsignedTag /* from_type_tag */, D d_to, V v)
+{
+#if OMNI_IS_LITTLE_ENDIAN
+    // On little-endian targets, need to shift each lane of the bitcasted vector
+    // right by kToLaneSize * 4 bits to get the bits of the odd source lanes into
+    // the lower kToLaneSize * 4 bits of the result.
+
+    // The right shift below will zero out the upper kToLaneSize * 4 bits of the
+    // result.
+    return ShiftRight<kToLaneSize * 4>(BitCast(d_to, v));
+#else
+    // On big-endian targets, the bits of the even source lanes are already
+    // in the lower kToLaneSize * 4 bits of the lanes of the bitcasted vector.
+
+    // Simply need to zero out the upper bits of each lane of the bitcasted
+    // vector.
+    return And(BitCast(d_to, v), Set(d_to, static_cast<TFromD<D>>(LimitsMax<TFromV<V>>())));
+#endif
+}
+
+// Unsigned to signed: Same as unsigned->unsigned PromoteEvenTo/PromoteOddTo
+// followed by BitCast to signed
+template <size_t kToLaneSize, class D, class V>
+OMNI_INLINE VFromD<D> PromoteEvenTo(simd::SignedTag /* to_type_tag */,
+    simd::SizeTag<kToLaneSize> /* to_lane_size_tag */, simd::UnsignedTag /* from_type_tag */, D d_to, V v)
+{
+    const RebindToUnsigned<decltype(d_to)> du_to;
+    return BitCast(d_to,
+        PromoteEvenTo(simd::UnsignedTag(), simd::SizeTag<kToLaneSize>(), simd::UnsignedTag(), du_to, v));
+}
+
+template <size_t kToLaneSize, class D, class V>
+OMNI_INLINE VFromD<D> PromoteOddTo(simd::SignedTag /* to_type_tag */, simd::SizeTag<kToLaneSize> /* to_lane_size_tag */,
+    simd::UnsignedTag /* from_type_tag */, D d_to, V v)
+{
+    const RebindToUnsigned<decltype(d_to)> du_to;
+    return BitCast(d_to,
+        PromoteOddTo(simd::UnsignedTag(), simd::SizeTag<kToLaneSize>(), simd::UnsignedTag(), du_to, v));
+}
+
+// BF16->F32 PromoteEvenTo
+
+// NOTE: It is possible for FromTypeTag to be simd::SignedTag or simd::UnsignedTag
+// instead of simd::FloatTag on targets that use scalable vectors.
+
+// VBF16 is considered to be a bfloat16_t vector if TFromV<VBF16> is the same
+// type as TFromV<VFromD<Repartition<bfloat16_t, DF32>>>
+
+// The BF16->F32 PromoteEvenTo overload is only enabled if VBF16 is considered
+// to be a bfloat16_t vector.
+template <class FromTypeTag, class DF32, class VBF16, class VBF16_2 = VFromD<Repartition<bfloat16_t, DF32>>,
+    simd::EnableIf<IsSame<TFromV<VBF16>, TFromV<VBF16_2>>()> * = nullptr>
+OMNI_INLINE VFromD<DF32> PromoteEvenTo(simd::FloatTag /* to_type_tag */, simd::SizeTag<4> /* to_lane_size_tag */,
+    FromTypeTag /* from_type_tag */, DF32 d_to, VBF16 v)
+{
+    const RebindToUnsigned<decltype(d_to)> du_to;
+#if OMNI_IS_LITTLE_ENDIAN
+    // On little-endian platforms, need to shift left each lane of the bitcasted
+    // vector by 16 bits.
+    return BitCast(d_to, ShiftLeft<16>(BitCast(du_to, v)));
+#else
+    // On big-endian platforms, the even lanes of the source vector are already
+    // in the upper 16 bits of the lanes of the bitcasted vector.
+
+    // Need to simply zero out the lower 16 bits of each lane of the bitcasted
+    // vector.
+    return BitCast(d_to, And(BitCast(du_to, v), Set(du_to, uint32_t{ 0xFFFF0000u })));
+#endif
+}
+
+// BF16->F32 PromoteOddTo
+
+// NOTE: It is possible for FromTypeTag to be simd::SignedTag or simd::UnsignedTag
+// instead of simd::FloatTag on targets that use scalable vectors.
+
+// VBF16 is considered to be a bfloat16_t vector if TFromV<VBF16> is the same
+// type as TFromV<VFromD<Repartition<bfloat16_t, DF32>>>
+
+// The BF16->F32 PromoteEvenTo overload is only enabled if VBF16 is considered
+// to be a bfloat16_t vector.
+template <class FromTypeTag, class DF32, class VBF16, class VBF16_2 = VFromD<Repartition<bfloat16_t, DF32>>,
+    simd::EnableIf<IsSame<TFromV<VBF16>, TFromV<VBF16_2>>()> * = nullptr>
+OMNI_INLINE VFromD<DF32> PromoteOddTo(simd::FloatTag /* to_type_tag */, simd::SizeTag<4> /* to_lane_size_tag */,
+    FromTypeTag /* from_type_tag */, DF32 d_to, VBF16 v)
+{
+    const RebindToUnsigned<decltype(d_to)> du_to;
+#if OMNI_IS_LITTLE_ENDIAN
+    // On little-endian platforms, the odd lanes of the source vector are already
+    // in the upper 16 bits of the lanes of the bitcasted vector.
+
+    // Need to simply zero out the lower 16 bits of each lane of the bitcasted
+    // vector.
+    return BitCast(d_to, And(BitCast(du_to, v), Set(du_to, uint32_t{ 0xFFFF0000u })));
+#else
+    // On big-endian platforms, need to shift left each lane of the bitcasted
+    // vector by 16 bits.
+    return BitCast(d_to, ShiftLeft<16>(BitCast(du_to, v)));
+#endif
+}
+
+// Default PromoteEvenTo/PromoteOddTo implementations
+template <class ToTypeTag, size_t kToLaneSize, class FromTypeTag, class D, class V, OMNI_IF_LANES_D(D, 1)>
+OMNI_INLINE VFromD<D> PromoteEvenTo(ToTypeTag /* to_type_tag */, simd::SizeTag<kToLaneSize> /* to_lane_size_tag */,
+    FromTypeTag /* from_type_tag */, D d_to, V v)
+{
+    return PromoteLowerTo(d_to, v);
+}
+
+template <class ToTypeTag, size_t kToLaneSize, class FromTypeTag, class D, class V, OMNI_IF_LANES_GT_D(D, 1)>
+OMNI_INLINE VFromD<D> PromoteEvenTo(ToTypeTag /* to_type_tag */, simd::SizeTag<kToLaneSize> /* to_lane_size_tag */,
+    FromTypeTag /* from_type_tag */, D d_to, V v)
+{
+    const DFromV<decltype(v)> d;
+    return PromoteLowerTo(d_to, ConcatEven(d, v, v));
+}
+
+template <class ToTypeTag, size_t kToLaneSize, class FromTypeTag, class D, class V>
+OMNI_INLINE VFromD<D> PromoteOddTo(ToTypeTag /* to_type_tag */, simd::SizeTag<kToLaneSize> /* to_lane_size_tag */,
+    FromTypeTag /* from_type_tag */, D d_to, V v)
+{
+    const DFromV<decltype(v)> d;
+    return PromoteLowerTo(d_to, ConcatOdd(d, v, v));
+}
+} // namespace detail
+
+template <class D, class V, OMNI_IF_T_SIZE_D(D, 2 * sizeof(TFromV<V>)), class V2 = VFromD<Repartition<TFromV<V>, D>>,
+    OMNI_IF_LANES_D(DFromV<V>, OMNI_MAX_LANES_V(V2))>
+OMNI_API VFromD<D> PromoteEvenTo(D d, V v)
+{
+    return detail::PromoteEvenTo(simd::TypeTag<TFromD<D>>(), simd::SizeTag<sizeof(TFromD<D>)>(),
+        simd::TypeTag<TFromV<V>>(), d, v);
+}
+
+template <class D, class V, OMNI_IF_T_SIZE_D(D, 2 * sizeof(TFromV<V>)), class V2 = VFromD<Repartition<TFromV<V>, D>>,
+    OMNI_IF_LANES_D(DFromV<V>, OMNI_MAX_LANES_V(V2))>
+OMNI_API VFromD<D> PromoteOddTo(D d, V v)
+{
+    return detail::PromoteOddTo(simd::TypeTag<TFromD<D>>(), simd::SizeTag<sizeof(TFromD<D>)>(),
+        simd::TypeTag<TFromV<V>>(), d, v);
+}
+
+#endif // OMNI_TARGET != OMNI_SCALAR
+
+#ifdef OMNI_INSIDE_END_NAMESPACE
+#undef OMNI_INSIDE_END_NAMESPACE
+} // namespace omni
+OMNI_AFTER_NAMESPACE();
+#endif
+
+#endif // OMNI_INSIDE_INL_H
