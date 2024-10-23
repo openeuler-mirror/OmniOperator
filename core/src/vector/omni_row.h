@@ -238,11 +238,12 @@ template <type::DataTypeId id> uint8_t *PrintRow(uint8_t *row)
         TMP_FUNC_PTR<type::OMNI_LONG>,                        \
         TMP_FUNC_PTR<type::OMNI_INT>,                         \
         TMP_FUNC_PTR<type::OMNI_LONG>,                        \
-        nullptr,                                              \
+        TMP_FUNC_PTR<type::OMNI_LONG>,                        \
         nullptr,                                              \
         nullptr,                                              \
         TMP_FUNC_PTR<type::OMNI_VARCHAR>,                     \
         TMP_FUNC_PTR<type::OMNI_VARCHAR>,                     \
+        nullptr,                                              \
         nullptr }
 
 #define FUNC_CENTER_FLAT_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                 \
@@ -258,11 +259,12 @@ template <type::DataTypeId id> uint8_t *PrintRow(uint8_t *row)
         TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_FLAT>,                        \
         TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_FLAT>,                         \
         TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_FLAT>,                        \
-        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_FLAT>,                        \
         nullptr,                                                                   \
         nullptr,                                                                   \
         TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_FLAT>,                     \
         TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_FLAT>,                     \
+        nullptr,                                                                   \
         nullptr }
 
 #define FUNC_CENTER_DICT_DEF(CENTER_NAME, FUNC_NAME, TMP_FUNC_PTR)                 \
@@ -278,11 +280,12 @@ template <type::DataTypeId id> uint8_t *PrintRow(uint8_t *row)
         TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_DICTIONARY>,                  \
         TMP_FUNC_PTR<type::OMNI_INT, Encoding::OMNI_DICTIONARY>,                   \
         TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_DICTIONARY>,                  \
-        nullptr,                                                                   \
+        TMP_FUNC_PTR<type::OMNI_LONG, Encoding::OMNI_DICTIONARY>,                  \
         nullptr,                                                                   \
         nullptr,                                                                   \
         TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_DICTIONARY>,               \
         TMP_FUNC_PTR<type::OMNI_VARCHAR, Encoding::OMNI_DICTIONARY>,               \
+        nullptr,                                                                   \
         nullptr }
 
 using TransFuncPtr = void (*)(BaseVector *vec, int32_t rowIndex, BaseSerialize *value);
