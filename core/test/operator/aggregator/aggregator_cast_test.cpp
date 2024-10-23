@@ -32,23 +32,39 @@ public:
         partialOut, isOverflowAsNull)
     {}
 
-    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    size_t GetStateSize() override
+    {
+        return 0;
+    }
+
+    void InitState(AggregateState *state) override
+    {
+        return;
+    }
+
+    void InitStates(std::vector<AggregateState *> &states) override
+    {
+        for (auto state : states) {
+            InitState(state);
+        }
+    }
+
+    void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap) override
     {}
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap) override
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
+        const uint8_t *nullMap) override
     {}
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) override
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) override
     {}
 
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override
     {}
 
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override
     {}
 
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
@@ -1215,7 +1231,7 @@ TEST_P(AggregatorCastTest, verify_cast)
     }
 }
 
-static std::vector<DataTypeId> testTypes { OMNI_SHORT,     OMNI_INT,        OMNI_LONG,   OMNI_DOUBLE,
+static std::vector<DataTypeId> testTypes{ OMNI_SHORT,     OMNI_INT,        OMNI_LONG,   OMNI_DOUBLE,
     OMNI_DECIMAL64, OMNI_DECIMAL128, OMNI_VARCHAR };
 
 INSTANTIATE_TEST_CASE_P(AggregatorTest, AggregatorCastTest,

@@ -91,7 +91,7 @@ public:
         realAggregator->SetExecutionContext(executionContext);
     }
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+    void ProcessGroup(AggregateState *state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount) override
     {
         const uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
@@ -105,10 +105,10 @@ public:
             vector = vectorBatch->Get(aggChannels[0]);
         }
 
-        realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
+        realAggregator->ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, nullMap);
     }
 
-    void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+    void ProcessGroupFilter(AggregateState *state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t filterIndex) override
     {
         int32_t rowCount = vectorBatch->GetRowCount();
@@ -146,10 +146,10 @@ public:
             }
         }
 
-        realAggregator->ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
+        realAggregator->ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, nullMap);
     }
 
-    void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
+    void ProcessGroup(std::vector<AggregateState *> &rowStates, VectorBatch *vectorBatch,
         const int32_t rowOffset) override
     {
         const size_t rowCount = rowStates.size();
@@ -164,7 +164,7 @@ public:
             vector = vectorBatch->Get(aggChannels[0]);
         }
 
-        realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
+        realAggregator->ProcessGroupInternal(rowStates, vector, rowOffset, nullMap);
     }
 
     void ProcessGroupFilter(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
@@ -204,34 +204,44 @@ public:
             }
         }
 
-        realAggregator->ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
+        realAggregator->ProcessGroupInternal(rowStates, vector, rowOffset, nullMap);
     }
 
-    void InitState(AggregateState &state) override
+    virtual void SetStateOffset(int32_t offset)
+    {
+        Aggregator::SetStateOffset(offset);
+        realAggregator->SetStateOffset(offset);
+    }
+
+    size_t GetStateSize() override
+    {
+        return realAggregator->GetStateSize();
+    }
+
+    void InitState(AggregateState *state) override
     {
         realAggregator->InitState(state);
     }
 
-    void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx) override
+    void InitStates(std::vector<AggregateState *> &groupStates) override
     {
-        realAggregator->InitStates(groupStates, aggIdx);
+        realAggregator->InitStates(groupStates);
     }
 
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override
     {
-        realAggregator->ExtractValuesForSpill(groupStates, aggIdx, vectors);
+        realAggregator->ExtractValuesForSpill(groupStates, vectors);
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);
     }
 
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override
     {
-        realAggregator->ExtractValuesBatch(groupStates, aggIdx, vectors, rowOffset, rowCount);
+        realAggregator->ExtractValuesBatch(groupStates, vectors, rowOffset, rowCount);
     }
 
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
@@ -292,12 +302,12 @@ protected:
             std::unique_ptr<TypedAggregator>(static_cast<TypedAggregator *>(realAggregator.release()));
     }
 
-    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {}
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap)
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
+        const uint8_t *nullMap)
     {}
 
 private:

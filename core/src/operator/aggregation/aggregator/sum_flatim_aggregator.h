@@ -14,6 +14,36 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class SumFlatIMAggregator : publi
     using InType = typename AggNativeAndVectorType<IN_ID>::type;
     using ResultType = typename AggNativeAndVectorType<OUT_ID>::type;
 
+    // inner class for aggregate state, the member depends on ResultType of Aggregator
+#pragma pack(push, 1)
+    struct SumFlatState : BaseState<ResultType> {
+        static const SumFlatIMAggregator<IN_ID, OUT_ID>::SumFlatState *ConstCastState(const AggregateState *state)
+        {
+            return reinterpret_cast<const SumFlatIMAggregator<IN_ID, OUT_ID>::SumFlatState *>(state);
+        }
+
+        static SumFlatIMAggregator<IN_ID, OUT_ID>::SumFlatState *CastState(AggregateState *state)
+        {
+            return reinterpret_cast<SumFlatIMAggregator<IN_ID, OUT_ID>::SumFlatState *>(state);
+        }
+
+        template <typename TypeIn, typename TypeOut> static void UpdateState(AggregateState *state, const TypeIn &in)
+        {
+            auto *maxState = CastState(state);
+            SumOp<TypeIn, TypeOut, AggValueState, StateValueHandler, false>(&(maxState->value),
+                                                                            maxState->valueState, in, 1ULL);
+        }
+
+        template <typename TypeIn, typename TypeOut, bool addIf>
+        static void UpdateStateWithCondition(AggregateState *state, const TypeIn &in, const uint8_t &condition)
+        {
+            if (condition == addIf) {
+                UpdateState<TypeIn, TypeOut>(state, in);
+            }
+        }
+    };
+#pragma pack(pop)
+
 public:
     SumFlatIMAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         bool inputRaw, bool outputPartial, bool isOverflowAsNull)
@@ -26,52 +56,56 @@ public:
     {}
     ~SumFlatIMAggregator() override = default;
 
-    void ProcessGroupInternalFinal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
+    void ProcessGroupInternalFinal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap)
     {
         // final stage : input vector will be Vector<ResultType>
         auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            AddUseRowIndex<ResultType, ResultType, SumOp<ResultType, ResultType, false>>(rowStates, aggIdx, ptr);
+            AddUseRowIndex<ResultType, SumFlatState::template UpdateState<ResultType, ResultType>>(rowStates,
+                aggStateOffset, ptr);
         } else {
-            AddConditionalUseRowIndex<ResultType, ResultType, SumConditionalOp<ResultType, ResultType, false, false>>(
-                rowStates, aggIdx, ptr, nullMap);
+            AddConditionalUseRowIndex<ResultType,
+                SumFlatState::template UpdateStateWithCondition<ResultType, ResultType, false>>(rowStates,
+                aggStateOffset, ptr, nullMap);
         }
     }
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap)
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
+        const uint8_t *nullMap)
     {
         if (inputRaw) {
             if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    AddUseRowIndex<InType, ResultType, SumOp<InType, ResultType, false>>(rowStates, aggIdx, ptr);
+                    AddUseRowIndex<InType, SumFlatState::template UpdateState<InType, ResultType>>(rowStates,
+                        aggStateOffset, ptr);
                 } else {
-                    AddConditionalUseRowIndex<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
-                        rowStates, aggIdx, ptr, nullMap);
+                    AddConditionalUseRowIndex<InType,
+                        SumFlatState::template UpdateStateWithCondition<InType, ResultType, false>>(rowStates,
+                        aggStateOffset, ptr, nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    AddDictUseRowIndex<InType, ResultType, SumOp<InType, ResultType, false>>(rowStates, aggIdx, ptr,
-                        indexMap);
+                    AddDictUseRowIndex<InType, SumFlatState::template UpdateState<InType, ResultType>>(rowStates,
+                        aggStateOffset, ptr, indexMap);
                 } else {
                     AddDictConditionalUseRowIndex<InType, ResultType,
-                        SumConditionalOp<InType, ResultType, false, false>>(rowStates, aggIdx, ptr, nullMap, indexMap);
+                        SumFlatState::template UpdateStateWithCondition<InType, ResultType, false>>(rowStates,
+                        aggStateOffset, ptr, nullMap, indexMap);
                 }
             }
         } else {
             // no dictionary in input when stage is not partial
-            ProcessGroupInternalFinal(rowStates, aggIdx, vector, rowOffset, nullMap);
+            ProcessGroupInternalFinal(rowStates, vector, rowOffset, nullMap);
         }
     }
 
-    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
-        int32_t &vectorIndex) override
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override
     {
         auto firstVecIdx = vectorIndex++;
         for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
@@ -79,85 +113,64 @@ public:
             auto index = row.rowIdx;
             auto sumVector = static_cast<Vector<ResultType> *>(row.batch->Get(firstVecIdx));
             if (!sumVector->IsNull(index)) {
-                auto &state = row.state[aggIdx];
+                SumFlatState *state = SumFlatState::CastState(row.state + aggStateOffset);
                 auto value = sumVector->GetValue(index);
-                if constexpr (std::is_floating_point_v<ResultType>) {
-                    SumOp<ResultType, ResultType, false>(reinterpret_cast<ResultType *>(state.val), state.count, value,
-                        1LL);
-                } else {
-                    SumOp<ResultType, ResultType, false>((ResultType *)(&state.val), state.count, value, 1LL);
-                }
+                SumOp<ResultType, ResultType, AggValueState, StateValueHandler, false>((ResultType *)(&state->value),
+                    state->valueState, value, 1LL);
             }
         }
     }
 
-    void ProcessSingleInternalFinal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    void ProcessSingleInternalFinal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
+        SumFlatState *sumFlatState = SumFlatState::CastState(state);
         auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
             if constexpr (std::is_floating_point_v<ResultType>) {
-                simd::SIMDAdd<ResultType, ResultType, simd::BasicOp::Sum>(reinterpret_cast<ResultType *>(state.val),
-                    state.count, ptr, rowCount);
+                simd::SIMDAdd<ResultType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
+                    &sumFlatState->value, sumFlatState->valueState, ptr, rowCount);
             } else {
-                simd::SIMDAdd<ResultType, ResultType, simd::BasicOp::Sum>(reinterpret_cast<ResultType *>(&state.val),
-                    state.count, ptr, rowCount);
+                simd::SIMDAdd<ResultType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
+                    &sumFlatState->value, sumFlatState->valueState, ptr, rowCount);
             }
         } else {
             if constexpr (std::is_floating_point_v<ResultType>) {
-                simd::SIMDAddConditional<ResultType, ResultType, simd::BasicOp::Sum>(
-                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
+                simd::SIMDAddConditional<ResultType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
+                    &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
             } else {
-                simd::SIMDAddConditional<ResultType, ResultType, simd::BasicOp::Sum>(
-                    reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
+                simd::SIMDAddConditional<ResultType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
+                    &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
             }
         }
     }
 
-    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
+        SumFlatState *sumFlatState = SumFlatState::CastState(state);
         if (inputRaw) {
             if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    if constexpr (std::is_floating_point_v<ResultType>) {
-                        simd::SIMDAdd<InType, ResultType, simd::BasicOp::Sum>(reinterpret_cast<ResultType *>(state.val),
-                            state.count, ptr, rowCount);
-                    } else {
-                        simd::SIMDAdd<InType, ResultType, simd::BasicOp::Sum>(
-                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount);
-                    }
+                    simd::SIMDAdd<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
+                        &sumFlatState->value, sumFlatState->valueState, ptr, rowCount);
                 } else {
-                    if constexpr (std::is_floating_point_v<ResultType>) {
-                        simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Sum>(
-                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
-                    } else {
-                        simd::SIMDAddConditional<InType, ResultType, simd::BasicOp::Sum>(
-                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
-                    }
+                    simd::SIMDAddConditional<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
+                        &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    if constexpr (std::is_floating_point_v<ResultType>) {
-                        simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Sum>(
-                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, indexMap);
-                    } else {
-                        simd::SIMDAddDict<InType, ResultType, simd::BasicOp::Sum>(
-                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, indexMap);
-                    }
+                    simd::SIMDAddDict<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
+                        &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, indexMap);
                 } else {
-                    if constexpr (std::is_floating_point_v<ResultType>) {
-                        AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
-                            reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
-                    } else {
-                        AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false, false>>(
-                            reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap, indexMap);
-                    }
+                    AddDictConditional<InType, ResultType, AggValueState,
+                        SumConditionalOp<InType, ResultType, AggValueState, StateValueHandler, false, false>>(
+                        &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap, indexMap);
                 }
             }
         } else {
@@ -165,22 +178,22 @@ public:
         }
     }
 
-    void InitState(AggregateState &state) override
+    size_t GetStateSize() override
     {
-        if constexpr (std::is_floating_point_v<ResultType>) {
-            state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(sizeof(ResultType)));
-            *reinterpret_cast<ResultType *>(state.val) = ResultType {};
-        } else {
-            state.val = 0;
-        }
-        state.count = 0;
+        return sizeof(SumFlatState);
     }
 
-    void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx) override
+    void InitState(AggregateState *state) override
+    {
+        SumFlatState *sumFlatState = SumFlatState::CastState(state + aggStateOffset);
+        sumFlatState->value = ResultType{};
+        sumFlatState->valueState = AggValueState::EMPTY_VALUE;
+    }
+
+    void InitStates(std::vector<AggregateState *> &groupStates) override
     {
         for (auto groupState : groupStates) {
-            auto &state = groupState[aggIdx];
-            InitState(state);
+            InitState(groupState);
         }
     }
 
@@ -191,62 +204,50 @@ public:
         return spillTypes;
     }
 
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override
     {
         auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
         auto rowCount = static_cast<int32_t>(groupStates.size());
         for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            auto &state = groupStates[rowIndex][aggIdx];
-            auto count = state.count;
-            if (count == 0) {
+            SumFlatState *state = SumFlatState::CastState(groupStates[rowIndex] + aggStateOffset);
+            if (state->valueState == AggValueState::EMPTY_VALUE) {
                 // set null for empty group(all rows are NULL) when spill to ensure skip empty group when unspill
                 spillValueVec->SetNull(rowIndex);
             } else {
-                if constexpr (std::is_floating_point_v<ResultType>) {
-                    spillValueVec->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-                } else {
-                    spillValueVec->SetValue(rowIndex, static_cast<ResultType>(state.val));
-                }
+                spillValueVec->SetValue(rowIndex, state->value);
             }
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         auto v = static_cast<Vector<ResultType> *>(vectors[0]);
+        const SumFlatState *sumFlatState = SumFlatState::ConstCastState(state + aggStateOffset);
 
         // state.count == 0 means all data is null or no data be accumulated,
         // we will set null
-        if (state.count == 0) {
+        if (sumFlatState->valueState == AggValueState::EMPTY_VALUE) {
             v->SetNull(rowIndex);
             return;
         }
 
-        // we can not distinguish whether value is overflow when stage.val is null
-        if constexpr (std::is_floating_point_v<ResultType>) {
-            v->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-        } else {
-            v->SetValue(rowIndex, static_cast<ResultType>(state.val));
-        }
+        // we can not distinguish whether value is overflow when stage.value is null
+        v->SetValue(rowIndex, sumFlatState->value);
     }
 
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override
     {
         auto v = static_cast<Vector<ResultType> *>(vectors[0]);
         for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            auto &state = groupStates[rowIndex][aggIdx];
-            if (state.count <= 0) {
+            SumFlatState *sumFlatState = SumFlatState::CastState(groupStates[rowIndex] + aggStateOffset);
+            if (sumFlatState->valueState == AggValueState::EMPTY_VALUE ||
+                sumFlatState->valueState == AggValueState::OVERFLOWED) {
                 v->SetNull(rowIndex);
                 continue;
             }
-            // we can not distinguish whether value is overflow when stage.val is null
-            if constexpr (std::is_floating_point_v<ResultType>) {
-                v->SetValue(rowIndex, *reinterpret_cast<ResultType *>(state.val));
-            } else {
-                v->SetValue(rowIndex, static_cast<ResultType>(state.val));
-            }
+            // we can not distinguish whether value is overflow when stage.value is null
+            v->SetValue(rowIndex, static_cast<ResultType>(sumFlatState->value));
         }
     }
 

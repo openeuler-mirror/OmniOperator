@@ -26,7 +26,12 @@ public:
         realAggregator->SetExecutionContext(executionContext);
     }
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    size_t GetStateSize() override
+    {
+        return realAggregator->GetStateSize();
+    }
+
+    void ProcessGroup(AggregateState *state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
         BaseVector *maskVector = vectorBatch->Get(maskColumnId);
         if (maskVector->IsNull(rowIndex)) {
@@ -38,21 +43,20 @@ public:
         }
     }
 
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override
     {
-        realAggregator->ExtractValuesForSpill(groupStates, aggIdx, vectors);
+        realAggregator->ExtractValuesForSpill(groupStates, vectors);
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         realAggregator->ExtractValues(state, vectors, rowIndex);
     }
 
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override
     {
-        realAggregator->ExtractValuesBatch(groupStates, aggIdx, vectors, rowOffset, rowCount);
+        realAggregator->ExtractValuesBatch(groupStates, vectors, rowOffset, rowCount);
     }
 
     // adaptive partial aggregation

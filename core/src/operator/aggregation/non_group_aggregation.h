@@ -21,10 +21,9 @@ public:
           aggsOutputTypes(aggsOutputTypes),
           hasAggFilters(hasAggFilters)
     {
-        aggsStates.reserve(aggregators.size());
+        CalcAndSetStatesSize();
         for (uint32_t i = 0; i < aggregators.size(); i++) {
-            aggsStates.push_back(AggregateState());
-            aggregators[i]->InitState(aggsStates[i]);
+            aggregators[i]->InitState(aggsStates.get());
         }
         for (auto hasFilter : hasAggFilters) {
             if (hasFilter == 1) {
@@ -41,9 +40,20 @@ public:
 
 private:
     std::vector<omniruntime::type::DataTypes> aggsOutputTypes;
-    std::vector<AggregateState> aggsStates;
+    std::unique_ptr<AggregateState[]> aggsStates;
     std::vector<int8_t> hasAggFilters;
     int32_t aggFiltersCount = 0;
+    int32_t totalAggStatesSize = 0;
+
+    void CalcAndSetStatesSize()
+    {
+        totalAggStatesSize = 0;
+        for (auto &agg : aggregators) {
+            agg->SetStateOffset(totalAggStatesSize);
+            totalAggStatesSize += agg->GetStateSize();
+        }
+        aggsStates = std::make_unique<AggregateState[]>(totalAggStatesSize);
+    }
 };
 
 class AggregationOperatorFactory : public AggregationCommonOperatorFactory {

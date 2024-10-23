@@ -9,37 +9,31 @@
 
 namespace omniruntime {
 namespace op {
-inline const char *MaxCharOp(const char *res, int64_t &lenAndFlag, BaseVector *vector, const int32_t idx)
+inline void MaxCharOp(VarcharState *state, BaseVector *vector, const int32_t idx)
 {
     auto *rawStringVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
     auto strView = rawStringVector->GetValue(idx);
     int32_t curLen = strView.size();
     auto *curVal = strView.data();
-    int32_t len = static_cast<int32_t>(lenAndFlag & VALUE_FLAG);
-    auto result = memcmp(res, curVal, std::min(len, curLen));
-    if (result < 0 || (result == 0 && len < curLen)) {
-        lenAndFlag = curLen;
-        lenAndFlag |= UPDATE_FLAG;
-        return curVal;
-    } else {
-        return res;
+    auto result = memcmp(reinterpret_cast<const char *>(state->realValue), curVal, std::min(state->len, curLen));
+    if (result < 0 || (result == 0 && state->len < curLen)) {
+        state->len = curLen;
+        state->needUpdate = true;
+        state->realValue = reinterpret_cast<int64_t>(curVal);
     }
 }
 
-inline const char *MaxDictCharOp(const char *res, int64_t &lenAndFlag, BaseVector *vector, const int32_t idx)
+inline void MaxDictCharOp(VarcharState *state, BaseVector *vector, const int32_t idx)
 {
     auto *rawStringVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
     auto strView = rawStringVector->GetValue(idx);
     int32_t curLen = strView.size();
     auto *curVal = strView.data();
-    int32_t len = static_cast<int32_t>(lenAndFlag & VALUE_FLAG);
-    auto result = memcmp(res, curVal, std::min(len, curLen));
-    if (result < 0 || (result == 0 && len < curLen)) {
-        lenAndFlag = curLen;
-        lenAndFlag |= UPDATE_FLAG;
-        return curVal;
-    } else {
-        return res;
+    auto result = memcmp(reinterpret_cast<const char *>(state->realValue), curVal, std::min(state->len, curLen));
+    if (result < 0 || (result == 0 && state->len < curLen)) {
+        state->len = curLen;
+        state->needUpdate = true;
+        state->realValue = reinterpret_cast<int64_t>(curVal);
     }
 }
 
@@ -47,11 +41,30 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxVarcharAggregator : publ
 public:
     ~MaxVarcharAggregator() override = default;
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override;
+    size_t GetStateSize() override
+    {
+        return sizeof(VarcharState);
+    }
+
+    void InitState(AggregateState *state) override
+    {
+        auto *maxState = VarcharState::CastState(state + aggStateOffset);
+        maxState->realValue = 0;
+        maxState->len = 0;
+        maxState->needUpdate = false;
+    }
+
+    void InitStates(std::vector<AggregateState *> &groupStates) override
+    {
+        for (auto groupState : groupStates) {
+            InitState(groupState);
+        }
+    }
+
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override;
 
     std::vector<DataTypePtr> GetSpillType() override
     {
@@ -86,8 +99,7 @@ public:
         }
     }
 
-    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
-        int32_t &vectorIndex) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
         const bool aggFilter) override;
@@ -99,17 +111,18 @@ protected:
         isOverflowAsNull)
     {}
 
-    void ProcessSingleInternal(AggregateState &state, BaseVector *v, const int32_t rowOffset, const int32_t rowCount,
+    void ProcessSingleInternal(AggregateState *state, BaseVector *v, const int32_t rowOffset, const int32_t rowCount,
         const uint8_t *nullMap) override;
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *v,
-        const int32_t rowOffset, const uint8_t *nullMap) override;
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *v, const int32_t rowOffset,
+        const uint8_t *nullMap) override;
 
     template<typename T>
     void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
 
 private:
-    void SaveState(AggregateState &state);
+    void SaveState(VarcharState *state);
+    void SaveState(AggregateState *state);
 };
 }
 }

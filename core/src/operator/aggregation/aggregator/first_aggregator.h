@@ -18,8 +18,6 @@
 
 namespace omniruntime {
 namespace op {
-static constexpr int32_t PARTIAL_FIRST_OUTPUT_LENGTH = sizeof(FirstState);
-
 // First Aggregator date type information:
 // input: InputType
 // intermediate: InputType + bool(wrap with ContainerDataType and ContainerVector)
@@ -27,6 +25,30 @@ static constexpr int32_t PARTIAL_FIRST_OUTPUT_LENGTH = sizeof(FirstState);
 template <bool INPUT_RAW, bool OUT_PARTIAL, bool IGNORE_NULL, typename InputType>
 class FirstAggregator : public Aggregator {
 public:
+    using ResultType = InputType;
+
+#pragma pack(push, 1)
+    struct FirstState {
+        ResultType val;
+        bool valueSet = false;
+        bool valIsNull = true;
+
+        static const FirstAggregator<INPUT_RAW, OUT_PARTIAL, IGNORE_NULL, InputType>::FirstState *ConstCastState(
+            const AggregateState *state)
+        {
+            return reinterpret_cast<
+                const FirstAggregator<INPUT_RAW, OUT_PARTIAL, IGNORE_NULL, InputType>::FirstState *>(state);
+        }
+
+        static FirstAggregator<INPUT_RAW, OUT_PARTIAL, IGNORE_NULL, InputType>::FirstState *CastState(
+            AggregateState *state)
+        {
+            return reinterpret_cast<FirstAggregator<INPUT_RAW, OUT_PARTIAL, IGNORE_NULL, InputType>::FirstState *>(
+                state);
+        }
+    };
+#pragma pack(pop)
+
     FirstAggregator(FunctionType aggregateType, const DataTypes &in, const DataTypes &out,
         std::vector<int32_t> &channels)
         : Aggregator(aggregateType, in, out, channels)
@@ -39,21 +61,16 @@ public:
 
     ~FirstAggregator() override = default;
 
-    int64_t UpdateFirstStateVarcharVal(FirstState *firstState, int64_t length, std::string_view &firstVarcharValue)
+    // For varchar: update value and length in firstState
+    void UpdateFirstStateVarcharVal(FirstState *firstState, const std::string_view &firstVarcharValue)
     {
-        auto firstValueLength = static_cast<int64_t>(firstVarcharValue.size());
-        if (firstValueLength > length) {
-            auto ptr = arenaAllocator->Allocate(firstValueLength);
-            memcpy_s(ptr, firstValueLength, firstVarcharValue.data(), firstValueLength);
-            firstState->val = ptr;
-        } else {
-            auto ptr = firstState->val;
-            memcpy_s(ptr, firstValueLength, firstVarcharValue.data(), firstValueLength);
-        }
-        return firstValueLength;
+        auto size = firstVarcharValue.size();
+        auto ptr = arenaAllocator->Allocate(size);
+        memcpy_s(ptr, size, firstVarcharValue.data(), size);
+        firstState->val = std::string_view(reinterpret_cast<const char *>(ptr), size);
     }
 
-    int64_t UpdateFirstStateVarchar(FirstState *firstState, int64_t length, BaseVector *vector, int32_t rowIndex)
+    void UpdateFirstStateVarchar(FirstState *firstState, BaseVector *vector, int32_t rowIndex)
     {
         if constexpr (INPUT_RAW) {
             if constexpr (IGNORE_NULL) {
@@ -66,11 +83,11 @@ public:
                     auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
                     varcharVal = varcharVector->GetValue(rowIndex);
                 }
-                return UpdateFirstStateVarcharVal(firstState, length, varcharVal);
+                return UpdateFirstStateVarcharVal(firstState, varcharVal);
             } else {
                 firstState->valIsNull = vector->IsNull(rowIndex);
                 if (firstState->valIsNull) {
-                    return 0;
+                    return;
                 }
                 std::string_view varcharVal;
                 if (vector->GetEncoding() == OMNI_DICTIONARY) {
@@ -80,7 +97,7 @@ public:
                     auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
                     varcharVal = varcharVector->GetValue(rowIndex);
                 }
-                return UpdateFirstStateVarcharVal(firstState, length, varcharVal);
+                return UpdateFirstStateVarcharVal(firstState, varcharVal);
             }
         } else {
             if constexpr (IGNORE_NULL) {
@@ -89,11 +106,11 @@ public:
                 firstState->valIsNull = vector->IsNull(rowIndex);
             }
             if (firstState->valIsNull) {
-                return 0;
+                return;
             } else {
                 auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
                 auto varcharVal = varcharVector->GetValue(rowIndex);
-                return UpdateFirstStateVarcharVal(firstState, length, varcharVal);
+                return UpdateFirstStateVarcharVal(firstState, varcharVal);
             }
         }
     }
@@ -104,44 +121,39 @@ public:
             if constexpr (IGNORE_NULL) {
                 firstState->valIsNull = false;
                 if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                    *reinterpret_cast<InputType *>(firstState->val) =
-                        static_cast<Vector<DictionaryContainer<InputType>> *>(vector)->GetValue(rowIndex);
+                    firstState->val = static_cast<Vector<DictionaryContainer<InputType>> *>(vector)->GetValue(rowIndex);
                 } else {
-                    *reinterpret_cast<InputType *>(firstState->val) =
-                        static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
+                    firstState->val = static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
                 }
             } else {
                 firstState->valIsNull = vector->IsNull(rowIndex);
                 if (vector->GetEncoding() == OMNI_DICTIONARY) {
-                    *reinterpret_cast<InputType *>(firstState->val) =
-                        static_cast<Vector<DictionaryContainer<InputType>> *>(vector)->GetValue(rowIndex);
+                    firstState->val = static_cast<Vector<DictionaryContainer<InputType>> *>(vector)->GetValue(rowIndex);
                 } else {
-                    *reinterpret_cast<InputType *>(firstState->val) =
-                        static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
+                    firstState->val = static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
                 }
             }
         } else {
             firstState->valIsNull = vector->IsNull(rowIndex);
-            *reinterpret_cast<InputType *>(firstState->val) =
-                static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
+            firstState->val = static_cast<Vector<InputType> *>(vector)->GetValue(rowIndex);
         }
     }
 
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, int32_t rowIndex) override
+    void ProcessGroup(AggregateState *state, VectorBatch *vectorBatch, int32_t rowIndex) override
     {
-        auto firstState = reinterpret_cast<FirstState *>(state.val);
+        auto firstState = FirstState::CastState(state);
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             if constexpr (INPUT_RAW) {
                 BaseVector *vector = vectorBatch->Get(channels[0]);
                 if constexpr (IGNORE_NULL) {
                     if (!firstState->valueSet && !vector->IsNull(rowIndex)) {
                         firstState->valueSet = true;
-                        state.count = UpdateFirstStateVarchar(firstState, state.count, vector, rowIndex);
+                        UpdateFirstStateVarchar(firstState, vector, rowIndex);
                     }
                 } else {
                     if (!firstState->valueSet) {
                         firstState->valueSet = true;
-                        state.count = UpdateFirstStateVarchar(firstState, state.count, vector, rowIndex);
+                        UpdateFirstStateVarchar(firstState, vector, rowIndex);
                     }
                 }
             } else {
@@ -149,7 +161,7 @@ public:
                 BaseVector *valueSetVector = vectorBatch->Get(channels[1]);
 
                 if (!firstState->valueSet) {
-                    state.count = UpdateFirstStateVarchar(firstState, state.count, firstVector, rowIndex);
+                    UpdateFirstStateVarchar(firstState, firstVector, rowIndex);
                 }
                 bool intermediateState = reinterpret_cast<Vector<bool> *>(valueSetVector)->GetValue(rowIndex);
                 firstState->valueSet = firstState->valueSet || intermediateState;
@@ -181,8 +193,7 @@ public:
         }
     }
 
-    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
-        int32_t &vectorIndex) override
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override
     {
         auto firstVecIdx = vectorIndex++;
         if constexpr (OUT_PARTIAL) {
@@ -192,10 +203,10 @@ public:
             auto &row = unspillRows[rowIdx];
             auto batch = row.batch;
             auto index = row.rowIdx;
-            auto &state = row.state[aggIdx];
+            auto *state = row.state + aggStateOffset;
 
             auto firstVector = batch->Get(firstVecIdx);
-            auto firstState = reinterpret_cast<FirstState *>(state.val);
+            auto firstState = FirstState::CastState(state);
             if constexpr (std::is_same_v<InputType, std::string_view>) {
                 if constexpr (IGNORE_NULL) {
                     if (!firstState->valueSet && !firstVector->IsNull(index)) {
@@ -203,19 +214,17 @@ public:
                         firstState->valIsNull = false;
                         auto varcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(firstVector);
                         auto varcharVal = varcharVector->GetValue(index);
-                        state.count = UpdateFirstStateVarcharVal(firstState, state.count, varcharVal);
+                        UpdateFirstStateVarcharVal(firstState, varcharVal);
                     }
                 } else {
                     if (!firstState->valueSet) {
                         firstState->valIsNull = firstVector->IsNull(index);
                         firstState->valueSet = true;
-                        if (firstState->valIsNull) {
-                            state.count = 0;
-                        } else {
+                        if (not firstState->valIsNull) {
                             auto varcharVector =
                                 static_cast<Vector<LargeStringContainer<std::string_view>> *>(firstVector);
                             auto varcharVal = varcharVector->GetValue(index);
-                            state.count = UpdateFirstStateVarcharVal(firstState, state.count, varcharVal);
+                            UpdateFirstStateVarcharVal(firstState, varcharVal);
                         }
                     }
                 }
@@ -224,16 +233,14 @@ public:
                     if (!firstState->valueSet && !firstVector->IsNull(index)) {
                         firstState->valueSet = true;
                         firstState->valIsNull = false;
-                        *reinterpret_cast<InputType *>(firstState->val) =
-                            static_cast<Vector<InputType> *>(firstVector)->GetValue(index);
+                        firstState->val = static_cast<Vector<InputType> *>(firstVector)->GetValue(index);
                     }
                 } else {
                     if (!firstState->valueSet) {
                         firstState->valueSet = true;
                         firstState->valIsNull = firstVector->IsNull(index);
                         if (not firstState->valIsNull) {
-                            *reinterpret_cast<InputType *>(firstState->val) =
-                                static_cast<Vector<InputType> *>(firstVector)->GetValue(index);
+                            firstState->val = static_cast<Vector<InputType> *>(firstVector)->GetValue(index);
                         }
                     }
                 }
@@ -256,20 +263,17 @@ public:
         return spillTypes;
     }
 
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override
     {
         auto rowCount = static_cast<int32_t>(groupStates.size());
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             auto firstVarcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-                auto &state = groupStates[rowIndex][aggIdx];
-                auto firstState = reinterpret_cast<FirstState *>(state.val);
+                auto *firstState = FirstState::CastState(groupStates[rowIndex] + aggStateOffset);
                 if (firstState->valIsNull) {
                     firstVarcharVector->SetNull(rowIndex);
                 } else {
-                    std::string_view firstValue(reinterpret_cast<char *>(firstState->val), state.count);
-                    firstVarcharVector->SetValue(rowIndex, firstValue);
+                    firstVarcharVector->SetValue(rowIndex, firstState->val);
                 }
 
                 if constexpr (OUT_PARTIAL) {
@@ -280,12 +284,11 @@ public:
         } else {
             auto firstVector = reinterpret_cast<Vector<InputType> *>(vectors[0]);
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-                auto &state = groupStates[rowIndex][aggIdx];
-                auto firstState = reinterpret_cast<FirstState *>(state.val);
+                auto *firstState = FirstState::CastState(groupStates[rowIndex] + aggStateOffset);
                 if (firstState->valIsNull) {
                     firstVector->SetNull(rowIndex);
                 } else {
-                    firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
+                    firstVector->SetValue(rowIndex, firstState->val);
                 }
 
                 if constexpr (OUT_PARTIAL) {
@@ -296,18 +299,17 @@ public:
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             auto firstVarcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
-            auto firstState = reinterpret_cast<FirstState *>(state.val);
+            const auto *firstState = FirstState::ConstCastState(state + aggStateOffset);
             if constexpr (OUT_PARTIAL) {
                 if (firstState->valIsNull) {
                     firstVarcharVector->SetNull(rowIndex);
                 } else {
                     firstVarcharVector->SetNotNull(rowIndex);
-                    std::string_view firstValue(reinterpret_cast<char *>(firstState->val), state.count);
-                    firstVarcharVector->SetValue(rowIndex, firstValue);
+                    firstVarcharVector->SetValue(rowIndex, const_cast<ResultType &>(firstState->val));
                 }
 
                 auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
@@ -317,19 +319,18 @@ public:
                     firstVarcharVector->SetNull(rowIndex);
                 } else {
                     firstVarcharVector->SetNotNull(rowIndex);
-                    std::string_view firstValue(reinterpret_cast<char *>(firstState->val), state.count);
-                    firstVarcharVector->SetValue(rowIndex, firstValue);
+                    firstVarcharVector->SetValue(rowIndex, const_cast<ResultType &>(firstState->val));
                 }
             }
         } else {
             auto firstVector = reinterpret_cast<Vector<InputType> *>(vectors[0]);
-            auto firstState = reinterpret_cast<FirstState *>(state.val);
+            const auto *firstState = FirstState::ConstCastState(state + aggStateOffset);
             if constexpr (OUT_PARTIAL) {
                 if (firstState->valIsNull) {
                     firstVector->SetNull(rowIndex);
                 } else {
                     firstVector->SetNotNull(rowIndex);
-                    firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
+                    firstVector->SetValue(rowIndex, const_cast<ResultType &>(firstState->val));
                 }
 
                 auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
@@ -339,28 +340,27 @@ public:
                     firstVector->SetNull(rowIndex);
                 } else {
                     firstVector->SetNotNull(rowIndex);
-                    firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
+                    firstVector->SetValue(rowIndex, const_cast<ResultType &>(firstState->val));
                 }
             }
         }
     }
 
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override
     {
         if constexpr (std::is_same_v<InputType, std::string_view>) {
             auto firstVarcharVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vectors[0]);
             auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-                auto &state = groupStates[rowIndex][aggIdx];
-                auto firstState = reinterpret_cast<FirstState *>(state.val);
+                auto *firstState = FirstState::CastState(groupStates[rowIndex] + aggStateOffset);
                 if constexpr (OUT_PARTIAL) {
                     if (firstState->valIsNull) {
                         firstVarcharVector->SetNull(rowIndex);
                     } else {
                         firstVarcharVector->SetNotNull(rowIndex);
-                        std::string_view firstValue(reinterpret_cast<char *>(firstState->val), state.count);
-                        firstVarcharVector->SetValue(rowIndex, firstValue);
+                        ;
+                        firstVarcharVector->SetValue(rowIndex, firstState->val);
                     }
 
                     valueSetVector->SetValue(rowIndex, firstState->valueSet);
@@ -369,8 +369,7 @@ public:
                         firstVarcharVector->SetNull(rowIndex);
                     } else {
                         firstVarcharVector->SetNotNull(rowIndex);
-                        std::string_view firstValue(reinterpret_cast<char *>(firstState->val), state.count);
-                        firstVarcharVector->SetValue(rowIndex, firstValue);
+                        firstVarcharVector->SetValue(rowIndex, firstState->val);
                     }
                 }
             }
@@ -378,14 +377,13 @@ public:
             auto firstVector = reinterpret_cast<Vector<InputType> *>(vectors[0]);
             auto valueSetVector = reinterpret_cast<Vector<bool> *>(vectors[1]);
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-                auto &state = groupStates[rowIndex][aggIdx];
-                auto firstState = reinterpret_cast<FirstState *>(state.val);
+                auto firstState = FirstState::CastState(groupStates[rowIndex] + aggStateOffset);
                 if constexpr (OUT_PARTIAL) {
                     if (firstState->valIsNull) {
                         firstVector->SetNull(rowIndex);
                     } else {
                         firstVector->SetNotNull(rowIndex);
-                        firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
+                        firstVector->SetValue(rowIndex, firstState->val);
                     }
 
                     valueSetVector->SetValue(rowIndex, firstState->valueSet);
@@ -394,34 +392,31 @@ public:
                         firstVector->SetNull(rowIndex);
                     } else {
                         firstVector->SetNotNull(rowIndex);
-                        firstVector->SetValue(rowIndex, *static_cast<InputType *>(firstState->val));
+                        firstVector->SetValue(rowIndex, firstState->val);
                     }
                 }
             }
         }
     }
 
-    void InitState(AggregateState &state) override
+    void InitState(AggregateState *state) override
     {
-        state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(PARTIAL_FIRST_OUTPUT_LENGTH));
-        state.count = 0;
-        auto firstState = reinterpret_cast<FirstState *>(state.val);
-        if constexpr (std::is_same_v<InputType, std::string_view>) {
-            // allocate 1 byte for varchar default
-            firstState->val = arenaAllocator->Allocate(1);
-        } else {
-            firstState->val = arenaAllocator->Allocate(sizeof(InputType));
-        }
+        auto *firstState = FirstState::CastState(state + aggStateOffset);
+        firstState->val = ResultType{};
         firstState->valueSet = false;
         firstState->valIsNull = true;
     }
 
-    void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx) override
+    void InitStates(std::vector<AggregateState *> &groupStates) override
     {
-        for (auto groupState : groupStates) {
-            auto &state = groupState[aggIdx];
-            InitState(state);
+        for (auto *groupState : groupStates) {
+            InitState(groupState);
         }
+    }
+
+    size_t GetStateSize() override
+    {
+        return sizeof(FirstState);
     }
 
     void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch, const int32_t filterIndex) override

@@ -133,8 +133,10 @@ void AggregateWindowFunction::ResetAccumulator()
         aggregator = aggregatorFactory->CreateAggregator(*DataTypes::GenerateDataTypes(inputType),
             *DataTypes::GenerateDataTypes(outputType), winChannels, true, false, isOverflowAsNull);
         aggregator->SetExecutionContext(executionContext);
-        aggregateState = std::make_unique<omniruntime::op::AggregateState>();
-        aggregator->InitState(*aggregateState);
+        auto aggStateSize = aggregator->GetStateSize();
+        aggregateState = executionContext->GetArena()->Allocate(aggStateSize);
+        aggregator->SetStateOffset(0);
+        aggregator->InitState(aggregateState);
         currentStart = -1;
         currentEnd = -1;
     }
@@ -145,7 +147,7 @@ void AggregateWindowFunction::EvaluateFinal(unique_ptr<omniruntime::op::Aggregat
 {
     std::vector<BaseVector *> extractVectors;
     extractVectors.push_back(pColumn);
-    pAggregator->ExtractValues(aggregateState.operator*(), extractVectors, index);
+    pAggregator->ExtractValues(aggregateState, extractVectors, index);
 }
 
 void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVecBatchForAgg, int32_t start, int32_t end)
@@ -158,7 +160,7 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
     if (aggregator->GetType() == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
         auto vector = std::make_unique<Vector<int64_t>>(rowCount);
         inputVecBatchForAgg->SetVector(0, vector.get());
-        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, start, rowCount);
+        aggregator->ProcessGroup(aggregateState, inputVecBatchForAgg, start, rowCount);
         return;
     }
 
@@ -175,8 +177,7 @@ void AggregateWindowFunction::Accumulate(omniruntime::vec::VectorBatch *inputVec
             inputVecBatchForAgg->SetVector(0, vector);
         }
         uint32_t vectorPosition = DecodePosition(sliceAddress);
-        aggregator->ProcessGroup(aggregateState.operator*(), inputVecBatchForAgg, static_cast<int32_t>(vectorPosition),
-            1);
+        aggregator->ProcessGroup(aggregateState, inputVecBatchForAgg, static_cast<int32_t>(vectorPosition), 1);
     }
 }
 }

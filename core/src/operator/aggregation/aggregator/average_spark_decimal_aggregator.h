@@ -13,49 +13,123 @@ namespace omniruntime {
 namespace op {
 static constexpr int32_t PARTIAL_AVG_OUTPUT_LENGTH = sizeof(DecimalAverageState);
 template <DataTypeId InDecimalId, DataTypeId OutDecimalId>
-class AverageSparkDecimalAggregator : public SumSparkDecimalAggregator<InDecimalId, OutDecimalId> {
+class AverageSparkDecimalAggregator : public TypedAggregator {
 public:
     using ResultType = typename AggNativeAndVectorType<OutDecimalId>::type;
     using InRawType = typename AggNativeAndVectorType<InDecimalId>::type;
     using ResultIntType = std::conditional_t<std::is_same_v<ResultType, Decimal128>, int128_t, int64_t>;
 
+#pragma pack(push, 1)
+    struct AvgSparkDecimalState : BaseCountState<ResultType> {
+        static const AverageSparkDecimalAggregator<InDecimalId, OutDecimalId>::AvgSparkDecimalState *ConstCastState(
+            const AggregateState *state)
+        {
+            return reinterpret_cast<
+                const AverageSparkDecimalAggregator<InDecimalId, OutDecimalId>::AvgSparkDecimalState *>(state);
+        }
+
+        static AverageSparkDecimalAggregator<InDecimalId, OutDecimalId>::AvgSparkDecimalState *CastState(
+            AggregateState *state)
+        {
+            return reinterpret_cast<AverageSparkDecimalAggregator<InDecimalId, OutDecimalId>::AvgSparkDecimalState *>(
+                state);
+        }
+
+        template <typename TypeIn, typename TypeOut> static void UpdateState(AggregateState *state, const TypeIn &in)
+        {
+            auto *avgState = CastState(state);
+            SumOp<TypeIn, TypeOut, int64_t, StateCountHandler>(&(avgState->value), avgState->count, in, 1ULL);
+        }
+
+        template <typename TypeIn, typename TypeOut, bool addIf>
+        static void UpdateStateWithCondition(AggregateState *state, const TypeIn &in, const uint8_t &condition)
+        {
+            if (condition == addIf) {
+                UpdateState<TypeIn, TypeOut>(state, in);
+            }
+        }
+    };
+#pragma pack(pop)
+
     AverageSparkDecimalAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
         std::vector<int32_t> &channels, bool inputRaw, bool outputPartial, bool isOverflowAsNull)
-        : SumSparkDecimalAggregator<InDecimalId, OutDecimalId>(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes,
-        channels, inputRaw, outputPartial, isOverflowAsNull)
+        : TypedAggregator(OMNI_AGGREGATION_TYPE_AVG, inputTypes, outputTypes, channels, inputRaw, outputPartial,
+        isOverflowAsNull)
     {}
 
     ~AverageSparkDecimalAggregator() override {}
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap)
+    void InitState(AggregateState *state) override
     {
-        if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
-            SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::ProcessGroupInternal(rowStates, aggIdx, vector,
-                rowOffset, nullMap);
+        AvgSparkDecimalState *avgSparkDecimalState = AvgSparkDecimalState::CastState(state + aggStateOffset);
+        avgSparkDecimalState->count = 0;
+        avgSparkDecimalState->value = ResultType{};
+    }
+
+    // groupState will offset aggStateOffset in initState()
+    void InitStates(std::vector<AggregateState *> &groupStates) override
+    {
+        for (auto groupState : groupStates) {
+            // Init state will change state to state + aggStateOffset
+            InitState(groupState);
+        }
+    }
+
+    size_t GetStateSize() override
+    {
+        return sizeof(AvgSparkDecimalState);
+    }
+
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
+        const uint8_t *nullMap)
+    {
+        if (inputRaw) {
+            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+                auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
+                ptr += rowOffset;
+                if (nullMap == nullptr) {
+                    AddUseRowIndex<InRawType, AvgSparkDecimalState::template UpdateState<InRawType, ResultType>>(
+                        rowStates, aggStateOffset, ptr);
+                } else {
+                    // Reza: can we use customize float operation similar to sumConditionalFloat
+                    AddConditionalUseRowIndex<InRawType,
+                        AvgSparkDecimalState::template UpdateStateWithCondition<InRawType, ResultType, false>>(
+                        rowStates, aggStateOffset, ptr, nullMap);
+                }
+            } else {
+                auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
+                auto *indexMap = GetIdsFromDict<InDecimalId>(vector) + rowOffset;
+                if (nullMap == nullptr) {
+                    AddDictUseRowIndex<InRawType, AvgSparkDecimalState::template UpdateState<InRawType, ResultType>>(
+                        rowStates, aggStateOffset, ptr, indexMap);
+                } else {
+                    AddDictConditionalUseRowIndex<InRawType, ResultType,
+                        AvgSparkDecimalState::template UpdateStateWithCondition<InRawType, ResultType, false>>(
+                        rowStates, aggStateOffset, ptr, nullMap, indexMap);
+                }
+            }
         } else {
-            auto *sumVector = SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::curVectorBatch->Get(
-                SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::channels[0]);
+            auto *sumVector = curVectorBatch->Get(channels[0]);
             auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(sumVector));
 
-            auto *avgCountVector = SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::curVectorBatch->Get(
-                SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::channels[1]);
+            auto *avgCountVector = curVectorBatch->Get(channels[1]);
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(avgCountVector));
             ptr += rowOffset;
             cntPtr += rowOffset;
 
             if (nullMap == nullptr) {
-                AddUseRowIndexAvg<InRawType, ResultType, SumOp<InRawType, ResultType>>(rowStates, aggIdx, ptr, cntPtr);
+                AddUseRowIndexAvg<InRawType, ResultType, AvgSparkDecimalState,
+                    SumOp<InRawType, ResultType, int64_t, StateCountHandler>>(rowStates, aggStateOffset, ptr, cntPtr);
             } else {
                 // Reza: can we use customize float operation similar to sumConditionalFloat
-                AddConditionalUseRowIndexAvg<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
-                    rowStates, aggIdx, ptr, cntPtr, nullMap);
+                AddConditionalUseRowIndexAvg<InRawType, ResultType, AvgSparkDecimalState,
+                    SumConditionalOp<InRawType, ResultType, int64_t, StateCountHandler, false>>(rowStates,
+                    aggStateOffset, ptr, cntPtr, nullMap);
             }
         }
     }
 
-    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
-        int32_t &vectorIndex) override
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override
     {
         auto firstVecIdx = vectorIndex++;
         auto secondVecIdx = vectorIndex++;
@@ -63,61 +137,68 @@ public:
             auto &row = unspillRows[rowIdx];
             auto batch = row.batch;
             auto index = row.rowIdx;
-            auto &state = row.state[aggIdx];
+            auto *state = AvgSparkDecimalState::CastState(row.state + aggStateOffset);
             auto countVector = static_cast<Vector<int64_t> *>(batch->Get(secondVecIdx));
             auto count = countVector->GetValue(index);
             if (count < 0) {
                 // overflow
-                state.count = -1;
+                state->SetOverFlow();
             } else if (count == 0) {
                 // we skipped in empty group case
                 continue;
             } else {
                 auto sumVector = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
                 auto value = sumVector->GetValue(index);
-                if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                    SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, value, count);
-                } else {
-                    SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, value,
-                        count);
-                }
+                SumOp<ResultType, ResultType, int64_t, StateCountHandler>(&state->value, state->count, value, count);
             }
         }
     }
 
-    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap)
     {
-        if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw) {
-            SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::ProcessSingleInternal(state, vector, rowOffset,
-                rowCount, nullMap);
+        AvgSparkDecimalState *avgSparkDecimalState = AvgSparkDecimalState::CastState(state);
+        if (inputRaw) {
+            if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
+                auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
+                ptr += rowOffset;
+                if (nullMap == nullptr) {
+                    Add<InRawType, ResultType, int64_t, SumOp<InRawType, ResultType, int64_t, StateCountHandler>>(
+                        reinterpret_cast<ResultType *>(&avgSparkDecimalState->value), avgSparkDecimalState->count, ptr,
+                        rowCount);
+                } else {
+                    AddConditional<InRawType, ResultType, int64_t,
+                        SumConditionalOp<InRawType, ResultType, int64_t, StateCountHandler, false>>(
+                        &avgSparkDecimalState->value, avgSparkDecimalState->count, ptr, rowCount, nullMap);
+                }
+            } else {
+                auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
+                auto *indexMap = GetIdsFromDict<InDecimalId>(vector) + rowOffset;
+                if (nullMap == nullptr) {
+                    AddDict<InRawType, ResultType, int64_t, SumOp<InRawType, ResultType, int64_t, StateCountHandler>>(
+                        &avgSparkDecimalState->value, avgSparkDecimalState->count, ptr, rowCount, indexMap);
+                } else {
+                    AddDictConditional<InRawType, ResultType, int64_t,
+                        SumConditionalOp<InRawType, ResultType, int64_t, StateCountHandler, false>>(
+                        &avgSparkDecimalState->value, avgSparkDecimalState->count, ptr, rowCount, nullMap, indexMap);
+                }
+            }
         } else {
-            auto *sumVector = SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::curVectorBatch->Get(
-                SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::channels[0]);
+            auto *sumVector = curVectorBatch->Get(channels[0]);
             auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(sumVector));
 
-            auto *avgCountVector = SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::curVectorBatch->Get(
-                SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::channels[1]);
+            auto *avgCountVector = curVectorBatch->Get(channels[1]);
             auto *cntPtr = reinterpret_cast<int64_t *>(GetValuesFromVector<OMNI_LONG>(avgCountVector));
             ptr += rowOffset;
             cntPtr += rowOffset;
 
             if (nullMap == nullptr) {
-                if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                    AddAvg<InRawType, ResultType, SumOp<InRawType, ResultType>>(
-                        reinterpret_cast<ResultType *>(state.val), state.count, ptr, cntPtr, rowCount);
-                } else {
-                    AddAvg<InRawType, ResultType, SumOp<InRawType, ResultType>>(
-                        reinterpret_cast<ResultType *>(&state.val), state.count, ptr, cntPtr, rowCount);
-                }
+                AddAvg<InRawType, ResultType, SumOp<InRawType, ResultType, int64_t, StateCountHandler>>(
+                    &avgSparkDecimalState->value, avgSparkDecimalState->count, ptr, cntPtr, rowCount);
             } else {
-                if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                    AddConditionalAvg<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
-                        reinterpret_cast<ResultType *>(state.val), state.count, ptr, cntPtr, rowCount, nullMap);
-                } else {
-                    AddConditionalAvg<InRawType, ResultType, SumConditionalOp<InRawType, ResultType, false>>(
-                        reinterpret_cast<ResultType *>(&state.val), state.count, ptr, cntPtr, rowCount, nullMap);
-                }
+                AddConditionalAvg<InRawType, ResultType,
+                    SumConditionalOp<InRawType, ResultType, int64_t, StateCountHandler, false>>(
+                    &avgSparkDecimalState->value, avgSparkDecimalState->count, ptr, cntPtr, rowCount, nullMap);
             }
         }
     }
@@ -134,30 +215,29 @@ public:
         return spillTypes;
     }
 
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override
     {
         auto avgValVector = static_cast<Vector<ResultType> *>(vectors[0]);
         auto avgCountVector = static_cast<Vector<int64_t> *>(vectors[1]);
         auto rowCount = static_cast<int32_t>(groupStates.size());
         for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-            auto &state = groupStates[rowIndex][aggIdx];
+            auto *state = AvgSparkDecimalState::CastState(groupStates[rowIndex] + aggStateOffset);
 
-            if (state.count < 0) {
+            if (state->IsOverFlowed()) {
                 // overflow
                 if (!this->IsOverflowAsNull()) {
                     throw OmniException("OPERATOR_RUNTIME_ERROR", "average_aggregator overflow.");
                 }
                 avgCountVector->SetValue(rowIndex, -1);
-            } else if (state.count == 0) {
+            } else if (state->IsEmpty()) {
                 // set count to zero for empty group when spill to ensure skip empty group when unspill
                 avgCountVector->SetValue(rowIndex, 0);
             } else {
                 int128_t decodedDec;
                 if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                    decodedDec = (reinterpret_cast<ResultType *>(state.val))->ToInt128();
+                    decodedDec = state->value.ToInt128();
                 } else {
-                    decodedDec = static_cast<ResultType>(state.val);
+                    decodedDec = state->value;
                 }
 
                 if constexpr (std::is_same_v<ResultType, Decimal128>) {
@@ -166,36 +246,34 @@ public:
                 } else {
                     avgValVector->SetValue(rowIndex, static_cast<int64_t>(decodedDec));
                 }
-                avgCountVector->SetValue(rowIndex, state.count);
+                avgCountVector->SetValue(rowIndex, state->count);
             }
         }
     }
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override
     {
         BaseVector *vector = vectors[0];
-
+        const AvgSparkDecimalState *avgSparkDecimalState = AvgSparkDecimalState::ConstCastState(state + aggStateOffset);
         int128_t decodedDec;
         if constexpr (std::is_same_v<ResultType, Decimal128>) {
-            decodedDec = (reinterpret_cast<ResultType *>(state.val))->ToInt128();
+            decodedDec = avgSparkDecimalState->value.ToInt128();
         } else {
-            decodedDec = static_cast<ResultType>(state.val);
+            decodedDec = static_cast<ResultType>(avgSparkDecimalState->value);
         }
 
-        int128_t countDec = state.count;
+        int128_t countDec = avgSparkDecimalState->count;
 
-        auto outputDecimalType = static_cast<DecimalDataType *>(
-            SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::outputTypes.GetType(0).get());
-        auto inputDecimalType = static_cast<DecimalDataType *>(
-            SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputTypes.GetType(0).get());
+        auto outputDecimalType = static_cast<DecimalDataType *>(outputTypes.GetType(0).get());
+        auto inputDecimalType = static_cast<DecimalDataType *>(inputTypes.GetType(0).get());
 
-        if (state.count < 0) {
+        if (avgSparkDecimalState->IsOverFlowed()) {
             // overflow
             this->SetNullOrThrowException(vector, rowIndex);
             return;
         }
 
-        if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::outputPartial) {
+        if (outputPartial) {
             int32_t scaleDiff = outputDecimalType->GetScale() - inputDecimalType->GetScale();
             int128_t resultDec;
             // rescale dividend and divisor to output scale.
@@ -214,7 +292,7 @@ public:
             }
 
             BaseVector *avgCountVector = vectors[1];
-            reinterpret_cast<Vector<int64_t> *>(avgCountVector)->SetValue(rowIndex, state.count);
+            reinterpret_cast<Vector<int64_t> *>(avgCountVector)->SetValue(rowIndex, avgSparkDecimalState->count);
         } else {
             int128_t finalResultDec;
             // if count is zero, it means all input is null
@@ -231,7 +309,7 @@ public:
             // for average, Decimal128 / n = Decimal64 is possible,
             // but all intermediate types such as ResultType are Decimal128,
             // so we have to get type from outputTypes , rather than ResultTyp
-            if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::outputTypes.GetIds()[0] == OMNI_DECIMAL128) {
+            if (outputTypes.GetIds()[0] == OMNI_DECIMAL128) {
                 Decimal128 decimal128Result(finalResultDec);
                 static_cast<Vector<Decimal128> *>(vector)->SetValue(rowIndex, decimal128Result);
             } else {
@@ -241,19 +319,19 @@ public:
         }
     }
 
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override
     {
         auto outputDecimalType = static_cast<DecimalDataType *>(this->outputTypes.GetType(0).get());
         auto inputDecimalType = static_cast<DecimalDataType *>(this->inputTypes.GetType(0).get());
         BaseVector *vector = vectors[0];
 
-        if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::outputPartial) {
+        if (outputPartial) {
             int32_t scaleDiff = outputDecimalType->GetScale() - inputDecimalType->GetScale();
             auto scaleNum = TenOfInt128[scaleDiff];
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-                auto &state = groupStates[rowIndex][aggIdx];
-                if (state.count < 0) {
+                auto *state = AvgSparkDecimalState::CastState(groupStates[rowIndex] + aggStateOffset);
+                if (state->IsOverFlowed()) {
                     // overflow
                     this->SetNullOrThrowException(vector, rowIndex);
                     continue;
@@ -261,9 +339,9 @@ public:
 
                 int128_t decodedDec;
                 if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                    decodedDec = (reinterpret_cast<ResultType *>(state.val))->ToInt128();
+                    decodedDec = state->value.ToInt128();
                 } else {
-                    decodedDec = static_cast<ResultType>(state.val);
+                    decodedDec = state->value;
                 }
                 int128_t resultDec;
                 // rescale dividend and divisor to output scale.
@@ -282,12 +360,12 @@ public:
                 }
 
                 BaseVector *avgCountVector = vectors[1];
-                reinterpret_cast<Vector<int64_t> *>(avgCountVector)->SetValue(rowIndex, state.count);
+                reinterpret_cast<Vector<int64_t> *>(avgCountVector)->SetValue(rowIndex, state->count);
             }
         } else {
             for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-                auto &state = groupStates[rowIndex][aggIdx];
-                if (state.count < 0) {
+                auto *state = AvgSparkDecimalState::CastState(groupStates[rowIndex] + aggStateOffset);
+                if (state->IsOverFlowed()) {
                     // overflow
                     this->SetNullOrThrowException(vector, rowIndex);
                     continue;
@@ -295,12 +373,12 @@ public:
 
                 int128_t decodedDec;
                 if constexpr (std::is_same_v<ResultType, Decimal128>) {
-                    decodedDec = (reinterpret_cast<ResultType *>(state.val))->ToInt128();
+                    decodedDec = state->value.ToInt128();
                 } else {
-                    decodedDec = static_cast<ResultType>(state.val);
+                    decodedDec = state->value;
                 }
 
-                int128_t countDec = state.count;
+                int128_t countDec = state->count;
                 int128_t finalResultDec;
                 // if count is zero, it means all input is null
                 if (countDec == 0) {
@@ -403,8 +481,7 @@ private:
         // for raw input type Decimal(p,s)
         // in final mode, aggregator's input type(sumType) is Decimal(p+10,s)
         // window operator only has one stage, and it's input type(sumType) is Decimal(p,s), so precision need to +10
-        if (SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::inputRaw &&
-            !SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::outputPartial) {
+        if (inputRaw && !outputPartial) {
             sumPrec += 10;
             sumPrec = std::min(sumPrec, MAX_PRECISION);
         }
@@ -435,7 +512,7 @@ private:
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, int index)
     {
-        if (!SumSparkDecimalAggregator<InDecimalId, OutDecimalId>::IsOverflowAsNull()) {
+        if (!IsOverflowAsNull()) {
             throw OmniException("OPERATOR_RUNTIME_ERROR", "Overflow in avg of decimals");
         }
         vector->SetNull(index);

@@ -13,7 +13,7 @@
 
 namespace omniruntime {
 namespace op {
-template <typename T> T GetMin()
+template <typename T> constexpr T GetMin()
 {
     if constexpr (std::is_same_v<T, int8_t>) {
         return std::numeric_limits<int8_t>::lowest();
@@ -37,21 +37,21 @@ template <typename T> T GetMin()
 }
 
 template <typename IN, typename OUT>
-SIMD_ALWAYS_INLINE void MaxOp(OUT *res, int64_t &flag, const IN &in, const int64_t notUsed)
+SIMD_ALWAYS_INLINE void MaxOp(OUT *res, AggValueState &flag, const IN &in, const int64_t notUsed)
 {
     const OUT cur = static_cast<OUT>(in);
     *res = std::max(*res, cur);
-    flag |= 1;
+    flag = AggValueState::NORMAL;
 }
 
 template <typename IN, typename OUT, bool addIf>
-SIMD_ALWAYS_INLINE void MaxConditionalOp(OUT *res, int64_t &flag, const IN &in, const int64_t notUsed,
+SIMD_ALWAYS_INLINE void MaxConditionalOp(OUT *res, AggValueState &flag, const IN &in, const int64_t notUsed,
     const uint8_t &condition)
 {
     if (condition == addIf) {
         const OUT cur = static_cast<OUT>(in);
         *res = std::max(*res, cur);
-        flag |= 1;
+        flag = AggValueState::NORMAL;
     }
 }
 
@@ -65,16 +65,48 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> class MaxAggregator : public Type
     // once we figure out how to resolve this issue in g++m we can set ResultType = InType
     using ResultType = std::conditional_t<IN_ID == OMNI_SHORT, int32_t, InType>;
 
+    // inner class for aggregate state, the member depends on ResultType of Aggregator
+#pragma pack(push, 1)
+    struct MaxState : BaseState<ResultType> {
+        static const MaxAggregator<IN_ID, OUT_ID>::MaxState *ConstCastState(const AggregateState *state)
+        {
+            return reinterpret_cast<const MaxAggregator<IN_ID, OUT_ID>::MaxState *>(state);
+        }
+
+        static MaxAggregator<IN_ID, OUT_ID>::MaxState *CastState(AggregateState *state)
+        {
+            return reinterpret_cast<MaxAggregator<IN_ID, OUT_ID>::MaxState *>(state);
+        }
+
+        template <typename TypeIn, typename TypeOut> static void UpdateState(AggregateState *state, const TypeIn &in)
+        {
+            auto *maxState = CastState(state);
+            MaxOp<TypeIn, TypeOut>(&(maxState->value), maxState->valueState, in, 1ULL);
+        }
+
+        template <typename TypeIn, typename TypeOut, bool addIf>
+        static void UpdateStateWithCondition(AggregateState *state, const TypeIn &in, const uint8_t &condition)
+        {
+            if (condition == addIf) {
+                UpdateState<TypeIn, TypeOut>(state, in);
+            }
+        }
+    };
+#pragma pack(pop)
 public:
     ~MaxAggregator() override = default;
 
-    void ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
-    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount) override;
-    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
-        std::vector<BaseVector *> &vectors) override;
-    void InitState(AggregateState &state) override;
-    void InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx) override;
+    size_t GetStateSize() override
+    {
+        return sizeof(MaxState);
+    }
+
+    void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, int32_t rowIndex) override;
+    void ExtractValuesBatch(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors,
+        int32_t rowOffset, int32_t rowCount) override;
+    void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override;
+    void InitState(AggregateState *state) override;
+    void InitStates(std::vector<AggregateState *> &groupStates) override;
     std::vector<DataTypePtr> GetSpillType() override;
 
     static std::unique_ptr<Aggregator> Create(const DataTypes &inputTypes, const DataTypes &outputTypes,
@@ -101,8 +133,7 @@ public:
         }
     }
 
-    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, const size_t aggIdx,
-        int32_t &vectorIndex) override;
+    void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
     void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
         const bool aggFilter) override;
@@ -111,11 +142,11 @@ protected:
     MaxAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
-    void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap) override;
 
-    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap) override;
+    void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
+        const uint8_t *nullMap) override;
 
     template<typename T>
     void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);

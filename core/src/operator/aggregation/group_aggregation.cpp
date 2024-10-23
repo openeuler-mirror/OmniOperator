@@ -20,67 +20,50 @@ using namespace omniruntime::type;
 
 static constexpr int32_t UNSPILL_ROW_COUNT_ONE_BATCH = 128;
 
-template void HashFuncImpl<Vector<bool>, bool>(BaseVector *vector, const uint32_t rowCount, const int32_t *rowIndexes,
-    uint64_t *combinedHash);
+using SetVector = void (*)(VectorBatch *vecBatch, int32_t rowCount);
+template <typename V> void SetVectorImpl(VectorBatch *vecBatch, int32_t rowCount)
+{
+    vecBatch->Append(new V(rowCount));
+}
 
-template void HashFuncVectImpl<Vector<bool>, bool>(BaseVector *vector, const uint32_t start, const uint32_t rowCount,
-    uint64_t *combinedHash);
+void SetVarcharVector(VectorBatch *vecBatch, int32_t rowCount)
+{
+    vecBatch->Append(new Vector<LargeStringContainer<std::string_view>>(rowCount));
+}
 
-template void DuplicateKeyValueImpl<Vector<bool>, bool>(AggregateState &state, BaseVector *vector,
-    const uint32_t offset, ExecutionContext *context);
+void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount)
+{
+    auto doubleVector = new Vector<double>(rowCount);
+    auto longVector = new Vector<int64_t>(rowCount);
+    std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
+    vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector);
+    vectorAddresses[1] = reinterpret_cast<int64_t>(longVector);
+    std::vector<DataTypePtr> dataTypes{ DoubleType(), LongType() };
+    auto containerVector = new ContainerVector(rowCount, vectorAddresses, dataTypes);
+    vecBatch->Append(containerVector);
+}
 
-template void IsSameNodeFuncImpl<Vector<bool>, bool>(BaseVector *vector, const uint32_t offset,
-    const AggregateState &slot, bool &isSame);
-
-static constexpr FunctionByDataType GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
-    {OMNI_NONE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INT, HashFuncImpl<Vector<int32_t>, int32_t>, HashFuncVectImplProxy<Vector<int32_t>, int32_t>,
-     IsSameNodeFuncImpl<Vector<int32_t>, int32_t>, DuplicateKeyValueImpl<Vector<int32_t>, int32_t>,
-     SetVectorImpl<Vector<int32_t>>, FillValueImpl<Vector<int32_t>, int32_t>
-    },
-    {OMNI_LONG, HashFuncImpl<Vector<int64_t>, int64_t>, HashFuncVectImplProxy<Vector<int64_t>, int64_t>,
-     IsSameNodeFuncImpl<Vector<int64_t>, int64_t>, DuplicateKeyValueImpl<Vector<int64_t>, int64_t>,
-     SetVectorImpl<Vector<int64_t>>, FillValueImpl<Vector<int64_t>, int64_t>
-    },
-    {
-        OMNI_DOUBLE, HashFuncImpl<Vector<double>, double>, HashFuncVectImplProxy<Vector<double>, double>,
-        IsSameNodeFuncImpl<Vector<double>, double>, DuplicateKeyValueImpl<Vector<double>, double>,
-        SetVectorImpl<Vector<double>>, FillValueImpl<Vector<double>, double>
-    },
-    {
-        OMNI_BOOLEAN, HashFuncImpl<Vector<bool>, bool>, HashFuncVectImplProxy<Vector<bool>, bool>,
-        IsSameNodeFuncImpl<Vector<bool>, bool>, DuplicateKeyValueImpl<Vector<bool>, bool>,
-        SetVectorImpl<Vector<bool>>, FillValueImpl<Vector<bool>, bool>
-    },
-    {OMNI_SHORT, HashFuncImpl<Vector<short>, int16_t>, HashFuncVectImplProxy<Vector<short>, int16_t>,
-     IsSameNodeFuncImpl<Vector<short>, int16_t>, DuplicateKeyValueImpl<Vector<short>, int16_t>,
-     SetVectorImpl<Vector<short>>, FillValueImpl<Vector<short>, int16_t>},
-    {OMNI_DECIMAL64, HashFuncImpl<Vector<int64_t>, int64_t>, HashFuncVectImplProxy<Vector<int64_t>, int64_t>,
-     IsSameNodeFuncImpl<Vector<int64_t>, int64_t>, DuplicateKeyValueImpl<Vector<int64_t>, int64_t>,
-     SetVectorImpl<Vector<int64_t>>, FillValueImpl<Vector<int64_t>, int64_t>
-    },
-    {OMNI_DECIMAL128, HashDecimalFunc, HashDecimalVectFuncProxy,
-     IsSameNodeFuncImpl<Vector<Decimal128>, Decimal128>, DuplicateKeyValueImpl<Vector<Decimal128>, Decimal128>,
-     SetVectorImpl<Vector<Decimal128>>, FillValueImpl<Vector<Decimal128>, Decimal128>
-    },
-    {OMNI_DATE32, HashFuncImpl<Vector<int32_t>, int32_t>, HashFuncVectImplProxy<Vector<int32_t>, int32_t>,
-     IsSameNodeFuncImpl<Vector<int32_t>, int32_t>, DuplicateKeyValueImpl<Vector<int32_t>, int32_t>,
-     SetVectorImpl<Vector<int32_t>>, FillValueImpl<Vector<int32_t>, int32_t>
-    },
-    {OMNI_DATE64, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_TIME32, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_TIME64, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_TIMESTAMP, HashFuncImpl<Vector<int64_t>, int64_t>, HashFuncVectImplProxy<Vector<int64_t>, int64_t>,
-     IsSameNodeFuncImpl<Vector<int64_t>, int64_t>, DuplicateKeyValueImpl<Vector<int64_t>, int64_t>,
-     SetVectorImpl<Vector<int64_t>>, FillValueImpl<Vector<int64_t>, int64_t>
-    },
-    {OMNI_INTERVAL_MONTHS, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_INTERVAL_DAY_TIME, nullptr, nullptr, nullptr, nullptr, nullptr},
-    {OMNI_VARCHAR, HashVarcharFuncImpl, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl,
-     DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue },
-    {OMNI_CHAR, HashVarcharFuncImpl, HashVarcharVectFuncImplProxy, IsSameNodeFuncVarcharImpl,
-     DuplicateVarcharKeyValue, SetVarcharVector, FillVarcharValue },
-    {OMNI_CONTAINER, nullptr, nullptr, nullptr, nullptr, SetContainerVector, nullptr},
+static constexpr SetVector GROUP_AGG_FUNCTIONS[DATA_TYPE_MAX_COUNT] = {
+    nullptr,
+    SetVectorImpl<Vector<int32_t>>,
+    SetVectorImpl<Vector<int64_t>>,
+    SetVectorImpl<Vector<double>>,
+    SetVectorImpl<Vector<bool>>,
+    SetVectorImpl<Vector<short>>,
+    SetVectorImpl<Vector<int64_t>>,
+    SetVectorImpl<Vector<Decimal128>>,
+    SetVectorImpl<Vector<int32_t>>,
+    SetVectorImpl<Vector<int64_t>>,
+    SetVectorImpl<Vector<int32_t>>,
+    SetVectorImpl<Vector<int64_t>>,
+    SetVectorImpl<Vector<int64_t>>,
+    nullptr,
+    nullptr,
+    SetVarcharVector,
+    SetVarcharVector,
+    SetContainerVector,
+    nullptr,
+    nullptr,
 };
 
 OmniStatus HashAggregationOperatorFactory::Init()
@@ -173,11 +156,16 @@ void HashAggregationOperator::SetGroupByColumnsHandleType(HandleType t)
 
 OmniStatus HashAggregationOperator::Init()
 {
+    // 1. avoid init more than once
     if (isInited) {
         return OMNI_STATUS_NORMAL;
     }
     isInited = true;
+
+    // 2. set op name for metrics
     SetOperatorName(metricsNameHashAgg);
+
+    // 3. check group by handle methcd
     // put at beginning so that we do not allocate memory if there is error
     if (groupByColumnsHandleType == HandleType::serialize) {
         serialize = std::make_unique<decltype(serialize)::element_type>();
@@ -190,6 +178,7 @@ OmniStatus HashAggregationOperator::Init()
         throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
     }
 
+    // 4. init group by column and aggregator column
     auto colSize = groupByCols.size() + aggInputColsSize;
     sourceTypes = new int32_t[colSize];
     // group by source types
@@ -214,8 +203,12 @@ OmniStatus HashAggregationOperator::Init()
     memoryChunkSize += static_cast<int64_t>(aggregators.size() * sizeof(AggregateState));
     executionContext->GetArena()->SetMinChunkSize(memoryChunkSize * 8);
 
+    // 5 init max row when getoutput
     int32_t rowByteSize = InitMaxRowCountAndOutputTypes();
     rowsPerBatch = OperatorUtil::GetMaxRowCount(rowByteSize);
+
+    // 6 calculate every aggregator's size and set offset of aggregator
+    CalcAndSetStatesSize();
     return OMNI_STATUS_NORMAL;
 }
 
@@ -310,7 +303,7 @@ void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<
     auto colSize = types.size();
     for (size_t colIndex = 0; colIndex < colSize; ++colIndex) {
         const DataTypePtr &type = types[colIndex];
-        GROUP_AGG_FUNCTIONS[type->GetId()].setVector(output, rowCount);
+        GROUP_AGG_FUNCTIONS[type->GetId()](output, rowCount);
     }
 }
 
@@ -345,34 +338,6 @@ OmniStatus HashAggregationOperator::Close()
     return OMNI_STATUS_NORMAL;
 }
 
-void SetVarcharVector(VectorBatch *vecBatch, int32_t rowCount)
-{
-    vecBatch->Append(new Vector<LargeStringContainer<std::string_view>>(rowCount));
-}
-
-void SetContainerVector(VectorBatch *vecBatch, int32_t rowCount)
-{
-    auto doubleVector = std::make_unique<Vector<double>>(rowCount);
-    auto longVector = std::make_unique<Vector<int64_t>>(rowCount);
-    std::vector<int64_t> vectorAddresses(AVG_VECTOR_COUNT);
-    vectorAddresses[0] = reinterpret_cast<int64_t>(doubleVector.get());
-    vectorAddresses[1] = reinterpret_cast<int64_t>(longVector.get());
-    std::vector<DataTypePtr> dataTypes { DoubleType(), LongType() };
-    auto containerVector = new ContainerVector(rowCount, vectorAddresses, dataTypes);
-    doubleVector.release();
-    longVector.release();
-    vecBatch->Append(containerVector);
-}
-
-void FillVarcharValue(BaseVector *vector, int32_t rowIndex, AggregateState &state)
-{
-    if (state.val == 0) {
-        static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetNull(rowIndex);
-    } else {
-        std::string_view str(reinterpret_cast<char *>(state.val), state.count);
-        static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->SetValue(rowIndex, str);
-    }
-}
 
 template <typename Serialize>
 void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, BaseVector **groupVectors,
@@ -391,14 +356,13 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
 
     // aggNum > 0
     std::vector<AggregateState *> currentRowStates(rowCount);
-    auto currentGroupStateSize = static_cast<int64_t>(aggNum * sizeof(AggregateState));
     AggregateState *currentGroupStates = nullptr;
     std::vector<AggregateState *> newGroupStates;
 
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         auto ret = emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
         if (ret.IsInsert()) {
-            currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(currentGroupStateSize));
+            currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(totalAggStatesSize));
             ret.SetValue(currentGroupStates);
             newGroupStates.emplace_back(currentGroupStates);
         } else {
@@ -413,22 +377,22 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
         for (size_t aggIdx = 0; aggIdx < aggNum; ++aggIdx) {
             auto &aggregator = aggregators[aggIdx];
             if (!newGroupStates.empty()) {
-                aggregator->InitStates(newGroupStates, aggIdx);
+                aggregator->InitStates(newGroupStates);
             }
             if (hasAggFilters[aggIdx] == 1) {
                 aggregator->ProcessGroupFilter(currentRowStates, aggIdx, vecBatch, filterOffset, 0);
                 filterOffset++;
             } else {
-                aggregator->ProcessGroup(currentRowStates, aggIdx, vecBatch, 0);
+                aggregator->ProcessGroup(currentRowStates, vecBatch, 0);
             }
         }
     } else {
         for (size_t aggIdx = 0; aggIdx < aggNum; ++aggIdx) {
             auto &aggregator = aggregators[aggIdx];
             if (!newGroupStates.empty()) {
-                aggregator->InitStates(newGroupStates, aggIdx);
+                aggregator->InitStates(newGroupStates);
             }
-            aggregator->ProcessGroup(currentRowStates, aggIdx, vecBatch, 0);
+            aggregator->ProcessGroup(currentRowStates, vecBatch, 0);
         }
     }
 }
@@ -475,7 +439,7 @@ void HashAggregationOperator::TraverseHashmapToGetOneResult(Deserialize &deseria
                 adaptAggVectors[j] = output->Get(aggOutputStartIndex + j);
             }
             aggOutputStartIndex += oneAggOutputCols;
-            aggregator->ExtractValuesBatch(groupStates, aggIndex, adaptAggVectors, 0, expectSize);
+            aggregator->ExtractValuesBatch(groupStates, adaptAggVectors, 0, expectSize);
         }
     }
 
@@ -596,7 +560,7 @@ void HashAggregationOperator::SetStateOutputVecBatch(VectorBatch *outputVecBatch
         }
         aggOutputStartIndex += oneAggOutputCols;
         try {
-            aggregator->ExtractValuesBatch(rowStates, aggIndex, adaptAggVectors, 0, rowCount);
+            aggregator->ExtractValuesBatch(rowStates, adaptAggVectors, 0, rowCount);
         } catch (const OmniException &oneException) {
             // release VectorBatch when aggregator.ExtractValues throw exception
             // when spark hash agg sum/avg decimal overflow, it will throw exception when
@@ -684,14 +648,14 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
         if (currentVecBatch == nullptr) {
             if (!newGroupStates.empty()) {
                 for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
-                    aggregators[aggIdx]->InitStates(newGroupStates, aggIdx);
+                    aggregators[aggIdx]->InitStates(newGroupStates);
                 }
                 newGroupStates.clear();
             }
             if (offset > 0) {
                 int32_t vectorIndex = 1;
                 for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
-                    aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, aggIdx, vectorIndex);
+                    aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, vectorIndex);
                 }
             }
 
@@ -712,7 +676,7 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
             StringRef keyRef(const_cast<char *>(key.data()), key.size());
             serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, rowIdx);
 
-            currentGroupStates = groupStatesPtr + rowIdx * aggNum;
+            currentGroupStates = groupStatesPtr + rowIdx * totalAggStatesSize;
             newGroupStates.emplace_back(currentGroupStates);
             rowStates[rowIdx] = currentGroupStates;
             rowIdx++;
@@ -725,13 +689,13 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
         if (offset >= UNSPILL_ROW_COUNT_ONE_BATCH || isLastRow) {
             if (!newGroupStates.empty()) {
                 for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
-                    aggregators[aggIdx]->InitStates(newGroupStates, aggIdx);
+                    aggregators[aggIdx]->InitStates(newGroupStates);
                 }
                 newGroupStates.clear();
             }
             int32_t vectorIndex = 1;
             for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
-                aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, aggIdx, vectorIndex);
+                aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, vectorIndex);
             }
             offset = 0;
         }
@@ -742,14 +706,14 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
         if (nextKeyIsNew && rowIdx >= rowCount) {
             if (!newGroupStates.empty()) {
                 for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
-                    aggregators[aggIdx]->InitStates(newGroupStates, aggIdx);
+                    aggregators[aggIdx]->InitStates(newGroupStates);
                 }
                 newGroupStates.clear();
             }
             if (offset > 0) {
                 int32_t vectorIndex = 1;
                 for (int32_t aggIdx = 0; aggIdx < aggNum; aggIdx++) {
-                    aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, aggIdx, vectorIndex);
+                    aggregators[aggIdx]->ProcessGroupUnspill(unspillRows, offset, vectorIndex);
                 }
             }
 
@@ -783,7 +747,7 @@ void HashAggregationOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         spillTotalRowCount = spillMerger->GetTotalRowCount();
 
         if (!aggregators.empty()) {
-            groupStates = std::make_unique<AggregateState[]>(aggregators.size() * rowsPerBatch);
+            groupStates = std::make_unique<AggregateState[]>(totalAggStatesSize * rowsPerBatch);
         }
     }
 
@@ -803,6 +767,15 @@ void HashAggregationOperator::GetOutputFromDisk(VectorBatch **outputVecBatch)
         result = output.release();
     }
     *outputVecBatch = result;
+}
+
+void HashAggregationOperator::CalcAndSetStatesSize()
+{
+    totalAggStatesSize = 0;
+    for (auto &agg : aggregators) {
+        agg->SetStateOffset(totalAggStatesSize);
+        totalAggStatesSize += agg->GetStateSize();
+    }
 }
 
 template <typename Deserialize>

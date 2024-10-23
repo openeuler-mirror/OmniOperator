@@ -106,18 +106,18 @@ public:
     ~TypedAggregator() override = default;
 
     // for no groupby aggregation
-    void ProcessGroup(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+    void ProcessGroup(AggregateState *state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount) override
     {
         curVectorBatch = vectorBatch;
         uint8_t *nullMap = nullptr;
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
 
-        ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
+        ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, nullMap);
     }
 
     // for no groupby aggregation with filter
-    void ProcessGroupFilter(AggregateState &state, VectorBatch *vectorBatch, const int32_t rowOffset,
+    void ProcessGroupFilter(AggregateState *state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t filterIndex) override
     {
         curVectorBatch = vectorBatch;
@@ -147,23 +147,23 @@ public:
                     notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
-            ProcessSingleInternal(state, vector, rowOffset, rowCount, notSatisfiedArray.data());
+            ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, notSatisfiedArray.data());
         } else {
             // true/false meaning in nullmap is same with notSatisfiedArray
             // true means one row no need to aggregate
-            ProcessSingleInternal(state, vector, rowOffset, rowCount, nullMap);
+            ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, nullMap);
         }
     }
 
     // for groupby hash aggregation
-    void ProcessGroup(std::vector<AggregateState *> &rowStates, const size_t aggIdx, VectorBatch *vectorBatch,
+    void ProcessGroup(std::vector<AggregateState *> &rowStates, VectorBatch *vectorBatch,
         const int32_t rowOffset) override
     {
         curVectorBatch = vectorBatch;
         uint8_t *nullMap = nullptr;
 
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, 0);
-        ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
+        ProcessGroupInternal(rowStates, vector, rowOffset, nullMap);
     }
 
     // for groupby hash aggregation with Filter
@@ -197,11 +197,11 @@ public:
                     notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
                 }
             }
-            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, notSatisfiedArray.data());
+            ProcessGroupInternal(rowStates, vector, rowOffset, notSatisfiedArray.data());
         } else {
             // true/false meaning in nullmap is same with notSatisfiedArray
             // true means one row no need to aggregate
-            ProcessGroupInternal(rowStates, aggIdx, vector, rowOffset, nullMap);
+            ProcessGroupInternal(rowStates, vector, rowOffset, nullMap);
         }
     }
 
@@ -256,10 +256,13 @@ protected:
         const std::vector<int32_t> &channels, const bool inputRaw, const bool outputPartial,
         const bool isOverflowAsNull);
 
-    virtual void ProcessSingleInternal(AggregateState &state, BaseVector *vector, const int32_t rowOffset,
+    /*
+     * The state pointer has offset aggStateOffset bytes.
+     */
+    virtual void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
         const int32_t rowCount, const uint8_t *nullMap) = 0;
 
-    virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx, BaseVector *vector,
+    virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
         const int32_t rowOffset, const uint8_t *nullMap) = 0;
 
     virtual void ProcessAlignAggSchema(VectorBatch *vecBatch, BaseVector *originVector, const uint8_t *nullMap,
@@ -296,19 +299,6 @@ protected:
         } else {
             return CastWithOverflowNonDecimal<InType, OutType>(val, overflow);
         }
-    }
-
-    template <typename InType, typename OutType> OutType CastWithOverflowEntry(int64_t val, bool &overflow)
-    {
-        OutType result {};
-        if constexpr (std::is_same_v<InType, Decimal128>) {
-            result = CastWithOverflow<InType, OutType>(*reinterpret_cast<Decimal128 *>(val), overflow);
-        } else if constexpr (std::is_floating_point_v<InType>) {
-            result = CastWithOverflow<InType, OutType>(*reinterpret_cast<InType *>(val), overflow);
-        } else {
-            result = CastWithOverflow<InType, OutType>(static_cast<InType>(val), overflow);
-        }
-        return result;
     }
 
     Allocator *allocator = Allocator::GetAllocator();

@@ -814,21 +814,21 @@ TEST(HashAggregationWithExprOperatorTest, test_agg_min_max_avg)
     // aggKeys
     std::vector<Expr *> aggKeys0 = { new FieldExpr(3, IntType()) };
     std::vector<Expr *> aggKeys1 = { new FieldExpr(3, IntType()) };
-    std::vector<Expr *> aggKeys2 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(3, IntType()) },
+    std::vector<Expr *> aggKeys2 = { new FuncExpr("CAST", std::vector<Expr *>{ new FieldExpr(3, IntType()) },
         LongType()) };
     std::vector<Expr *> aggKeys3 = { new FieldExpr(4, IntType()) };
     std::vector<Expr *> aggKeys4 = { new FieldExpr(4, IntType()) };
-    std::vector<Expr *> aggKeys5 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(4, IntType()) },
+    std::vector<Expr *> aggKeys5 = { new FuncExpr("CAST", std::vector<Expr *>{ new FieldExpr(4, IntType()) },
         LongType()) };
     std::vector<Expr *> aggKeys6 = { new FieldExpr(5, IntType()) };
     std::vector<Expr *> aggKeys7 = { new FieldExpr(5, IntType()) };
-    std::vector<Expr *> aggKeys8 = { new FuncExpr("CAST", std::vector<Expr *> { new FieldExpr(5, IntType()) },
+    std::vector<Expr *> aggKeys8 = { new FuncExpr("CAST", std::vector<Expr *>{ new FieldExpr(5, IntType()) },
         LongType()) };
     std::vector<std::vector<omniruntime::expressions::Expr *>> aggAllKeys = { aggKeys0, aggKeys1, aggKeys2,
         aggKeys3, aggKeys4, aggKeys5,
         aggKeys6, aggKeys7, aggKeys8 };
 
-    std::vector<omniruntime::expressions::Expr *> aggFilters {};
+    std::vector<omniruntime::expressions::Expr *> aggFilters{};
     DataTypes aggOutputTypes0(std::vector<DataTypePtr>({ IntType() }));
     DataTypes aggOutputTypes1(std::vector<DataTypePtr>({ IntType() }));
     DataTypes aggOutputTypes2(std::vector<DataTypePtr>({ DoubleType(), LongType() }));
@@ -1304,7 +1304,7 @@ VectorBatch *TestHashAggMultiRecords(DataTypes &sourceTypes, std::vector<uint32_
         Expr::DeleteExprs(aggAllKeys);
     } else {
         std::vector<uint32_t> groupByCols({ 0, 1 });
-        DataTypes groupInputTypes(std::vector<DataTypePtr> { sourceTypes.GetType(0), sourceTypes.GetType(1) });
+        DataTypes groupInputTypes(std::vector<DataTypePtr>{ sourceTypes.GetType(0), sourceTypes.GetType(1) });
         std::vector<std::vector<uint32_t>> aggsCols;
         std::vector<DataTypes> aggInputTypes;
         SetAggKeys<SupportContainerVecRule>(sourceTypes.Get(), aggFuncTypes, aggsCols, aggInputTypes);
@@ -1507,6 +1507,7 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_avg_spill)
 
 TEST(HashAggregationWithExprOperatorTest, test_hashagg_avg_container_support_spill)
 {
+    ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     DataTypes partialInputTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType(), ShortType(),
         BooleanType(), DoubleType(), VarcharType(10), Decimal64Type(), Decimal128Type(8, 2) }));
     std::vector<DataTypes> partialAggOutputTypes;

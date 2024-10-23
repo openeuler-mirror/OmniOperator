@@ -12,8 +12,8 @@
 namespace omniruntime {
 namespace simd {
 template <typename T> using CurUnderlyingSimd = SimdTemplateDispatcher<NeonSimd, T>;
-template <typename IN, typename OUT, BasicOp op>
-void SIMDAdd(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size_t rowCount)
+template <typename IN, typename OUT, typename FLAG, typename FLAG_HANDLER, BasicOp op>
+void SIMDAdd(OUT *res_, FLAG &flag_, const IN *__restrict ptr, const size_t rowCount)
 {
     auto basicValue = BinaryOperation<op, IN, OUT>::InitValue();
     auto simdValue = CurUnderlyingSimd<OUT>::InitFunc(basicValue);
@@ -31,7 +31,7 @@ void SIMDAdd(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size_t r
     // sum all value
     simdRet = BinaryOperation<op, OUT, OUT>::BasicHandleFunc(simdRet, remainRet);
     *res_ = BinaryOperation<op, OUT, OUT>::BasicHandleFunc(simdRet, *res_);
-    flag_ += rowCount;
+    FLAG_HANDLER::Update(flag_, rowCount);
 }
 
 
@@ -53,9 +53,9 @@ template <> struct BytesType<16> {
     using type = __uint128_t;
 };
 
-template <BasicOp op, typename IN, typename OUT>
+template <BasicOp op, typename IN, typename OUT, typename FLAG, typename FLAG_HANDLER>
 inline typename CurUnderlyingSimd<OUT>::SimdType GatherFlatWithNullValues(const uint8_t *__restrict *nulls,
-    const IN *__restrict *ptr, int64_t &flag_, uint32_t &off, const size_t rowCount)
+    const IN *__restrict *ptr, FLAG &flag_, uint32_t &off, const size_t rowCount)
 {
     OUT data[CurUnderlyingSimd<OUT>::HandleNumOnce];
     uint32_t assignIndex = 0;
@@ -65,15 +65,15 @@ inline typename CurUnderlyingSimd<OUT>::SimdType GatherFlatWithNullValues(const 
         (*nulls) += CurUnderlyingSimd<OUT>::HandleNumOnce;
         (*ptr) += CurUnderlyingSimd<OUT>::HandleNumOnce;
         off += CurUnderlyingSimd<OUT>::HandleNumOnce;
-        flag_ += CurUnderlyingSimd<OUT>::HandleNumOnce;
+        FLAG_HANDLER::Update(flag_, CurUnderlyingSimd<OUT>::HandleNumOnce);
         // output out type data from in type value
         return CurUnderlyingSimd<IN>::template LoadFunc<OUT>(retPtr);
     }
     // vector有null，一次性处理的n个数据中有null
     while (assignIndex < CurUnderlyingSimd<OUT>::HandleNumOnce) {
-        if (not *(*nulls)) {
+        if (not*(*nulls)) {
             data[assignIndex++] = *(*ptr);
-            ++flag_;
+            FLAG_HANDLER::Update(flag_, 1ULL);
         }
         (++off);
         if (off == rowCount) {
@@ -100,9 +100,9 @@ inline typename CurUnderlyingSimd<OUT>::SimdType GatherDictValues(const IN *__re
     return CurUnderlyingSimd<OUT>::template LoadFunc<OUT>(data);
 }
 
-template <BasicOp op, typename IN, typename OUT>
+template <BasicOp op, typename IN, typename OUT, typename FLAG, typename FLAG_HANDLER>
 inline typename CurUnderlyingSimd<OUT>::SimdType GatherDictWithNullValues(const uint8_t *__restrict *nulls,
-    const IN *__restrict ptr, const int32_t *__restrict *indexMap, int64_t &flag_, uint32_t &off, uint32_t rowCount)
+    const IN *__restrict ptr, const int32_t *__restrict *indexMap, FLAG &flag_, uint32_t &off, uint32_t rowCount)
 {
     OUT data[CurUnderlyingSimd<OUT>::HandleNumOnce];
 
@@ -112,7 +112,7 @@ inline typename CurUnderlyingSimd<OUT>::SimdType GatherDictWithNullValues(const 
     if (*(typename BytesType<CurUnderlyingSimd<OUT>::HandleNumOnce>::type *)(*nulls) == 0) {
         (*nulls) += CurUnderlyingSimd<OUT>::HandleNumOnce;
         off += CurUnderlyingSimd<OUT>::HandleNumOnce;
-        flag_ += CurUnderlyingSimd<OUT>::HandleNumOnce;
+        FLAG_HANDLER::Update(flag_, CurUnderlyingSimd<OUT>::HandleNumOnce);
         for (; assignIndex < CurUnderlyingSimd<OUT>::HandleNumOnce; ++assignIndex, ++(*indexMap)) {
             data[assignIndex] = (ptr)[*(*indexMap)];
         }
@@ -121,9 +121,9 @@ inline typename CurUnderlyingSimd<OUT>::SimdType GatherDictWithNullValues(const 
     }
 
     while (assignIndex < CurUnderlyingSimd<OUT>::HandleNumOnce) {
-        if (not *(*nulls)) {
+        if (not*(*nulls)) {
             data[assignIndex++] = (ptr)[*(*indexMap)];
-            ++flag_;
+            FLAG_HANDLER::Update(flag_, 1ULL);
         }
         ++off;
         if (off == rowCount) {
@@ -139,8 +139,8 @@ inline typename CurUnderlyingSimd<OUT>::SimdType GatherDictWithNullValues(const 
     return CurUnderlyingSimd<OUT>::template LoadFunc<OUT>(data);
 }
 
-template <typename IN, typename OUT, BasicOp op>
-inline void SIMDAddConditional(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size_t rowCount,
+template <typename IN, typename OUT, typename FLAG, typename FLAG_HANDLER, BasicOp op>
+inline void SIMDAddConditional(OUT *res_, FLAG &flag_, const IN *__restrict ptr, const size_t rowCount,
     const uint8_t *__restrict condition)
 {
     uint32_t i = 0;
@@ -148,14 +148,14 @@ inline void SIMDAddConditional(OUT *res_, int64_t &flag_, const IN *__restrict p
     auto simdValue = CurUnderlyingSimd<OUT>::InitFunc(basicValue);
     auto gatherValue = CurUnderlyingSimd<OUT>::InitFunc(basicValue);
     while (i + CurUnderlyingSimd<OUT>::HandleNumOnce <= rowCount) {
-        gatherValue = GatherFlatWithNullValues<op, IN, OUT>(&condition, &ptr, flag_, i, rowCount);
+        gatherValue = GatherFlatWithNullValues<op, IN, OUT, FLAG, FLAG_HANDLER>(&condition, &ptr, flag_, i, rowCount);
         simdValue = BinarySimdFunc<op, OUT>::CalcSimd(simdValue, gatherValue);
     }
     auto simdRet = CurUnderlyingSimd<OUT>::template BasicConvert<op>(simdValue);
     for (; i < rowCount; ++i) {
-        if (not *condition) {
+        if (not*condition) {
             simdRet = BinaryOperation<op, IN, OUT>::BasicHandleFunc(*ptr, simdRet);
-            ++flag_;
+            FLAG_HANDLER::Update(flag_, 1ULL);
         }
         ++ptr;
         ++condition;
@@ -163,8 +163,8 @@ inline void SIMDAddConditional(OUT *res_, int64_t &flag_, const IN *__restrict p
     *res_ = BinaryOperation<op, IN, OUT>::BasicHandleFunc(*res_, simdRet);
 }
 
-template <typename IN, typename OUT, BasicOp op>
-void SIMDAddDict(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size_t rowCount,
+template <typename IN, typename OUT, typename FLAG, typename FLAG_HANDLER, BasicOp op>
+void SIMDAddDict(OUT *res_, FLAG &flag_, const IN *__restrict ptr, const size_t rowCount,
     const int32_t *__restrict indexMap)
 {
     uint32_t i = 0;
@@ -182,28 +182,29 @@ void SIMDAddDict(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size
     }
 
     *res_ = BinaryOperation<op, IN, OUT>::BasicHandleFunc(*res_, simdRet);
-    flag_ += rowCount;
+    FLAG_HANDLER::Update(flag_, rowCount);
 }
 
-template <typename IN, typename OUT, BasicOp op>
-void SIMDAddDictConditional(OUT *res_, int64_t &flag_, const IN *__restrict ptr, const size_t rowCount,
+template <typename IN, typename OUT, typename FLAG, typename FLAG_HANDLER, BasicOp op>
+void SIMDAddDictConditional(OUT *res_, FLAG &flag_, const IN *__restrict ptr, const size_t rowCount,
     const uint8_t *__restrict condition, const int32_t *__restrict indexMap)
 {
     uint32_t i = 0;
     auto basicValue = BinaryOperation<op, IN, OUT>::InitValue();
     auto simdValue = CurUnderlyingSimd<OUT>::InitFunc(basicValue);
     while (i + CurUnderlyingSimd<OUT>::HandleNumOnce <= rowCount) {
-        auto gatherValue = GatherDictWithNullValues<op, IN, OUT>(&condition, ptr, &indexMap, flag_, i, rowCount);
+        auto gatherValue =
+            GatherDictWithNullValues<op, IN, OUT, FLAG, FLAG_HANDLER>(&condition, ptr, &indexMap, flag_, i, rowCount);
         simdValue = BinarySimdFunc<op, OUT>::CalcSimd(simdValue, gatherValue);
     }
     auto simdRet = CurUnderlyingSimd<OUT>::template BasicConvert<op>(simdValue);
     for (; i < rowCount; ++i) {
-        if (not *condition) {
+        if (not*condition) {
             simdRet = BinaryOperation<op, IN, OUT>::BasicHandleFunc(ptr[*(indexMap)], simdRet);
         }
         ++indexMap;
         ++condition;
-        ++flag_;
+        FLAG_HANDLER::Update(flag_, CurUnderlyingSimd<OUT>::HandleNumOnce);
     }
 
     *res_ = BinaryOperation<op, IN, OUT>::BasicHandleFunc(*res_, simdRet);

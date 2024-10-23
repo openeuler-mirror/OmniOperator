@@ -8,33 +8,34 @@
 namespace omniruntime {
 namespace op {
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ExtractValuesInternal(const AggregateState &state, OutVector *vector,
+void SumAggregator<IN_ID, OUT_ID>::ExtractValuesInternal(const AggregateState *state, OutVector *vector,
     int32_t rowIndex)
 {
-    bool isOverflow = state.count < 0;
-    bool isEmpty = state.count == 0;
+    auto *sumState = SumState::ConstCastState(state);
+    bool isOverflow = sumState->count < 0;
+    bool isEmpty = sumState->count == 0;
     if (isOverflow && !this->IsOverflowAsNull()) {
         throw OmniException("OPERATOR_RUNTIME_ERROR", "sum_aggregator overflow.");
     }
 
-    OutType result {};
+    OutType result{};
     if constexpr (OUT_ID == OMNI_VARCHAR) {
         if (isOverflow || isEmpty) {
             std::string_view decimal2Str(reinterpret_cast<char *>(&result), sizeof(OutType));
             vector->SetValue(rowIndex, decimal2Str);
         } else {
-            result.sum =
-                CastWithOverflow<Decimal128, Decimal128>(*reinterpret_cast<Decimal128 *>(state.val), isOverflow);
+            result.sum = CastWithOverflow<Decimal128, Decimal128>(
+                *reinterpret_cast<Decimal128 *>((int64_t)(&sumState->value)), isOverflow);
             if (isOverflow) {
                 if (!this->IsOverflowAsNull()) {
                     throw OmniException("OPERATOR_RUNTIME_ERROR", "sum_aggregator overflow.");
                 } else {
-                    OutType overflowValue {};
+                    OutType overflowValue{};
                     std::string_view decimal2Str(reinterpret_cast<char *>(&overflowValue), sizeof(OutType));
                     vector->SetValue(rowIndex, decimal2Str);
                 }
             } else {
-                result.count = state.count;
+                result.count = sumState->count;
                 std::string_view decimal2Str(reinterpret_cast<char *>(&result), sizeof(OutType));
                 vector->SetValue(rowIndex, decimal2Str);
             }
@@ -45,7 +46,7 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValuesInternal(const AggregateState &s
         } else if (isEmpty) {
             vector->SetNull(rowIndex);
         } else {
-            result = CastWithOverflowEntry<ResultType, OutType>(state.val, isOverflow);
+            result = this->template CastWithOverflow<ResultType, OutType>(sumState->value, isOverflow);
             if (isOverflow) {
                 this->SetNullOrThrowException(vector, rowIndex, "sum_aggregator overflow.");
             } else {
@@ -56,20 +57,19 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValuesInternal(const AggregateState &s
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState &state, std::vector<BaseVector *> &vectors,
+void SumAggregator<IN_ID, OUT_ID>::ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors,
     int32_t rowIndex)
 {
-    ExtractValuesInternal(state, static_cast<OutVector *>(vectors[0]), rowIndex);
+    ExtractValuesInternal(state + aggStateOffset, static_cast<OutVector *>(vectors[0]), rowIndex);
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates, const size_t aggIdx,
+void SumAggregator<IN_ID, OUT_ID>::ExtractValuesBatch(std::vector<AggregateState *> &groupStates,
     std::vector<BaseVector *> &vectors, int32_t rowOffset, int32_t rowCount)
 {
     auto v = static_cast<OutVector *>(vectors[0]);
     for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-        auto &state = groupStates[rowIndex][aggIdx];
-        ExtractValuesInternal(state, v, rowIndex);
+        ExtractValuesInternal(groupStates[rowIndex] + aggStateOffset, v, rowIndex);
     }
 }
 
@@ -88,14 +88,14 @@ template <DataTypeId IN_ID, DataTypeId OUT_ID> std::vector<DataTypePtr> SumAggre
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateState *> &groupStates,
-    const size_t aggIdx, std::vector<BaseVector *> &vectors)
+    std::vector<BaseVector *> &vectors)
 {
     auto spillValueVec = static_cast<Vector<ResultType> *>(vectors[0]);
 
     auto rowCount = static_cast<int32_t>(groupStates.size());
     for (int32_t rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-        auto &state = groupStates[rowIndex][aggIdx];
-        auto count = state.count;
+        auto *state = SumState::CastState(groupStates[rowIndex] + aggStateOffset);
+        auto count = state->count;
         bool isOverflow = count < 0;
         bool isEmpty = count == 0;
 
@@ -109,145 +109,111 @@ void SumAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<AggregateSt
             spillValueVec->SetNull(rowIndex);
             spillValueVec->SetValue(rowIndex, SPILL_EMPTY_VALUE);
         } else {
-            ResultType result;
-            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                result = *reinterpret_cast<ResultType *>(state.val);
-            } else {
-                result = static_cast<ResultType>(state.val);
-            }
+            ResultType result = static_cast<ResultType>(state->value);
             spillValueVec->SetValue(rowIndex, result);
         }
     }
 }
 
-template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState &state)
+template <DataTypeId IN_ID, DataTypeId OUT_ID> void SumAggregator<IN_ID, OUT_ID>::InitState(AggregateState *state)
 {
-    if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType> ||
-        std::is_same_v<ResultType, std::string_view>) {
-        state.val = reinterpret_cast<int64_t>(arenaAllocator->Allocate(sizeof(ResultType)));
-        *reinterpret_cast<ResultType *>(state.val) = ResultType {};
-    } else {
-        state.val = 0;
-    }
-    state.count = 0;
+    auto *sumState = SumState::CastState(state + aggStateOffset);
+    sumState->value = ResultType{};
+    sumState->count = 0;
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::InitStates(std::vector<AggregateState *> groupStates, const size_t aggIdx)
+void SumAggregator<IN_ID, OUT_ID>::InitStates(std::vector<AggregateState *> &groupStates)
 {
     for (auto groupState : groupStates) {
-        auto &state = groupState[aggIdx];
-        InitState(state);
+        InitState(groupState);
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState &state, BaseVector *vector,
+void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
     const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
 {
+    auto *sumState = SumState::CastState(state);
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                Add<InType, ResultType, SumOp<InType, ResultType>>(reinterpret_cast<ResultType *>(state.val),
-                    state.count, ptr, rowCount);
-            } else {
-                Add<InType, ResultType, SumOp<InType, ResultType>>(reinterpret_cast<ResultType *>(&state.val),
-                    state.count, ptr, rowCount);
-            }
+            Add<InType, ResultType, int64_t, SumOp<InType, ResultType, int64_t, StateCountHandler>>(
+                reinterpret_cast<ResultType *>(&sumState->value), sumState->count, ptr, rowCount);
         } else {
             if constexpr (std::is_floating_point_v<InType>) {
-                if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                    SumConditionalFloat<InType, ResultType, false>(reinterpret_cast<ResultType *>(state.val),
-                        state.count, ptr, rowCount, nullMap);
-                } else {
-                    SumConditionalFloat<InType, ResultType, false>(reinterpret_cast<ResultType *>(&state.val),
-                        state.count, ptr, rowCount, nullMap);
-                }
+                SumConditionalFloat<InType, ResultType, false>(reinterpret_cast<ResultType *>(&sumState->value),
+                    sumState->count, ptr, rowCount, nullMap);
             } else {
-                if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                    AddConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
-                        reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap);
-                } else {
-                    AddConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
-                        reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap);
-                }
+                AddConditional<InType, ResultType, int64_t,
+                    SumConditionalOp<InType, ResultType, int64_t, StateCountHandler, false>>(
+                    reinterpret_cast<ResultType *>(&sumState->value), sumState->count, ptr, rowCount, nullMap);
             }
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
-            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                AddDict<InType, ResultType, SumOp<InType, ResultType>>(reinterpret_cast<ResultType *>(state.val),
-                    state.count, ptr, rowCount, indexMap);
-            } else {
-                AddDict<InType, ResultType, SumOp<InType, ResultType>>(reinterpret_cast<ResultType *>(&state.val),
-                    state.count, ptr, rowCount, indexMap);
-            }
+            AddDict<InType, ResultType, int64_t, SumOp<InType, ResultType, int64_t, StateCountHandler>>(
+                reinterpret_cast<ResultType *>(&sumState->value), sumState->count, ptr, rowCount, indexMap);
         } else {
-            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
-                    reinterpret_cast<ResultType *>(state.val), state.count, ptr, rowCount, nullMap, indexMap);
-            } else {
-                AddDictConditional<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(
-                    reinterpret_cast<ResultType *>(&state.val), state.count, ptr, rowCount, nullMap, indexMap);
-            }
+            AddDictConditional<InType, ResultType, int64_t,
+                SumConditionalOp<InType, ResultType, int64_t, StateCountHandler, false>>(
+                reinterpret_cast<ResultType *>(&sumState->value), sumState->count, ptr, rowCount, nullMap, indexMap);
         }
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
-void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, const size_t aggIdx,
-    BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
+void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
+    const int32_t rowOffset, const uint8_t *nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            AddUseRowIndex<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr);
+            AddUseRowIndex<InType, SumState::template UpdateState<InType, ResultType>>(rowStates, aggStateOffset, ptr);
         } else {
             // Reza: can we use customize float operation similar to sumConditionalFloat
-            AddConditionalUseRowIndex<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(rowStates,
-                aggIdx, ptr, nullMap);
+            AddConditionalUseRowIndex<InType, SumState::template UpdateStateWithCondition<InType, ResultType, false>>(
+                rowStates, aggStateOffset, ptr, nullMap);
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
-            AddDictUseRowIndex<InType, ResultType, SumOp<InType, ResultType>>(rowStates, aggIdx, ptr, indexMap);
+            AddDictUseRowIndex<InType, SumState::template UpdateState<InType, ResultType>>(rowStates, aggStateOffset,
+                ptr, indexMap);
         } else {
-            AddDictConditionalUseRowIndex<InType, ResultType, SumConditionalOp<InType, ResultType, false>>(rowStates,
-                aggIdx, ptr, nullMap, indexMap);
+            AddDictConditionalUseRowIndex<InType, ResultType,
+                SumState::template UpdateStateWithCondition<InType, ResultType, false>>(rowStates, aggStateOffset, ptr,
+                nullMap, indexMap);
         }
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount,
-    const size_t aggIdx, int32_t &vectorIndex)
+    int32_t &vectorIndex)
 {
     auto firstVecIdx = vectorIndex++;
     for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
         auto &row = unspillRows[rowIdx];
         auto batch = row.batch;
         auto index = row.rowIdx;
-        auto &state = row.state[aggIdx];
+        auto *state = SumState::CastState(row.state + aggStateOffset);
         auto sumVector = static_cast<Vector<ResultType> *>(batch->Get(firstVecIdx));
         auto value = sumVector->GetValue(index);
         if (!sumVector->IsNull(index)) {
-            if constexpr (std::is_same_v<ResultType, Decimal128> || std::is_floating_point_v<ResultType>) {
-                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(state.val), state.count, value, 1LL);
-            } else {
-                SumOp<ResultType, ResultType>(reinterpret_cast<ResultType *>(&state.val), state.count, value, 1LL);
-            }
+            SumOp<ResultType, ResultType, int64_t, StateCountHandler>(reinterpret_cast<ResultType *>(&state->value),
+                state->count, value, 1LL);
         } else {
             // empty group or overflow case
             // if it is overflow we set -1
             // if it is empty group we skipped
             if (value == SPILL_OVERFLOW_VALUE) {
-                state.count = -1;
+                state->count = -1;
             }
         }
     }

@@ -6,7 +6,6 @@
 #include "vector/vector_common.h"
 #include "operator/status.h"
 #include "util/type_util.h"
-#include "agg_util.h"
 #include "vector_getter.h"
 
 namespace omniruntime {
@@ -88,15 +87,15 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
         int32_t filterOffset = vecBatch->GetVectorCount() - aggFiltersCount;
         for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
             if (hasAggFilters[aggIdx] == 1) {
-                aggregators[aggIdx]->ProcessGroupFilter(aggsStates[aggIdx], vecBatch, 0, filterOffset);
+                aggregators[aggIdx]->ProcessGroupFilter(aggsStates.get(), vecBatch, 0, filterOffset);
                 filterOffset++;
             } else {
-                aggregators[aggIdx]->ProcessGroup(aggsStates[aggIdx], vecBatch, 0, rowCount);
+                aggregators[aggIdx]->ProcessGroup(aggsStates.get(), vecBatch, 0, rowCount);
             }
         }
     } else {
         for (size_t aggIdx = 0; aggIdx < aggCount; aggIdx++) {
-            aggregators[aggIdx]->ProcessGroup(aggsStates[aggIdx], vecBatch, 0, rowCount);
+            aggregators[aggIdx]->ProcessGroup(aggsStates.get(), vecBatch, 0, rowCount);
         }
     }
 
@@ -105,11 +104,10 @@ int32_t AggregationOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
-static ALWAYS_INLINE void GenerateAggVector(VectorBatch *vectorBatch, std::vector<DataTypePtr> &dataTypes, int size)
+static ALWAYS_INLINE void GenerateAggVector(VectorBatch *vectorBatch, std::vector<DataTypeId> &dataTypes, int size)
 {
-    for (auto &type : dataTypes) {
-        auto omniId = type->GetId();
-        auto &newFunc = newUniqueVectorFunctions[omniId];
+    for (auto &typeId : dataTypes) {
+        auto &newFunc = newUniqueVectorFunctions[typeId];
         newFunc(vectorBatch, size);
     }
 }
@@ -118,23 +116,23 @@ int AggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     // always output one row
     int32_t aggsCount = 0;
-    std::vector<DataTypePtr> aggsOutputDataTypePtrs;
-    for (auto aggOutputTypes : aggsOutputTypes) {
+    std::vector<DataTypeId> aggsOutputDataTypeIds;
+    for (auto &aggOutputTypes : aggsOutputTypes) {
         auto aggSize = aggOutputTypes.GetSize();
         aggsCount += aggSize;
         for (int i = 0; i < aggSize; ++i) {
-            aggsOutputDataTypePtrs.push_back(aggOutputTypes.GetType(i));
+            aggsOutputDataTypeIds.push_back(aggOutputTypes.GetType(i)->GetId());
         }
     }
     auto output = std::make_unique<VectorBatch>(1);
     auto outputPtr = output.get();
-    GenerateAggVector(outputPtr, aggsOutputDataTypePtrs, 1);
+    GenerateAggVector(outputPtr, aggsOutputDataTypeIds, 1);
 
     // set result value
     int32_t aggOutputColsStart = 0;
     for (size_t aggIdx = 0; aggIdx < aggregators.size(); ++aggIdx) {
         auto aggregator = aggregators[aggIdx].get();
-        auto &state = aggsStates[aggIdx];
+        auto *state = aggsStates.get();
         std::vector<BaseVector *> extractVectors;
         for (int32_t i = 0; i < aggsOutputTypes[aggIdx].GetSize(); ++i) {
             extractVectors.push_back(outputPtr->Get(aggOutputColsStart + i));
