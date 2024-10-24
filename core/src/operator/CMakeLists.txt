@@ -1,4 +1,4 @@
-file(GLOB_RECURSE OPERATOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
+file(GLOB_RECURSE OPERATOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp ../simd/*.cpp)
 
 set(OP_TARGET ${OMNI_OPERATOR_SO})
 find_package(nlohmann_json 3.7.3 REQUIRED)

@@ -63,7 +63,7 @@ template <typename T> struct OrderAscending : public KeyLane<T, T> {
 
     using Order = SortAscending;
     using OrderForSortingNetwork = OrderAscending<T>;
-
+    detail::SortOrder currentOrder = detail::SortOrder::ASCENDING;
     OMNI_API bool Compare1(const T *a, const T *b)
     {
         return *a < *b;
@@ -109,6 +109,27 @@ template <typename T> struct OrderAscending : public KeyLane<T, T> {
     {
         return SmallerSortValue(d, v);
     }
+    template <class D> inline Vec<D> GetLargestVec(D d)
+    {
+        return detail::QuickSortAscending::GetLargestVec(d);
+    }
+    template <class D> inline Vec<D> GetSmallestVec(D d)
+    {
+        return detail::QuickSortAscending::GetSmallestVec(d);
+    }
+    template <class D, class V> static void UpdateMinMax(D d, V value, V &smallest, V &largest)
+    {
+        detail::QuickSortAscending::UpdateMinMax(d, value, smallest, largest);
+    }
+    template <class D, class V> inline TFromD<D> GetSmallest(D d, V v)
+    {
+        return detail::QuickSortAscending::GetSmallest(d, v);
+    }
+
+    template <class D, class V> inline TFromD<D> GetLargest(D d, V v)
+    {
+        return detail::QuickSortAscending::GetLargest(d, v);
+    }
 };
 
 template <typename T> struct OrderDescending : public KeyLane<T, T> {
@@ -121,7 +142,7 @@ template <typename T> struct OrderDescending : public KeyLane<T, T> {
 
     using Order = SortDescending;
     using OrderForSortingNetwork = OrderDescending<T>;
-
+    detail::SortOrder currentOrder = detail::SortOrder::DESCENDING;
     OMNI_INLINE bool Compare1(const T *a, const T *b) const
     {
         return *b < *a;
@@ -165,6 +186,27 @@ template <typename T> struct OrderDescending : public KeyLane<T, T> {
     template <class D> OMNI_INLINE Vec<D> PrevValue(D d, Vec<D> v) const
     {
         return LargerSortValue(d, v);
+    }
+    template <class D> inline Vec<D> GetLargestVec(D d)
+    {
+        return detail::QuickSortDescending::GetLargestVec(d);
+    }
+    template <class D> inline Vec<D> GetSmallestVec(D d)
+    {
+        return detail::QuickSortDescending::GetSmallestVec(d);
+    }
+    template <class D, class V> static void UpdateMinMax(D d, V value, V &smallest, V &largest)
+    {
+        detail::QuickSortDescending::UpdateMinMax(d, value, smallest, largest);
+    }
+    template <class D, class V> inline TFromD<D> GetSmallest(D d, V v)
+    {
+        return detail::QuickSortDescending::GetSmallest(d, v);
+    }
+
+    template <class D, class V> inline TFromD<D> GetLargest(D d, V v)
+    {
+        return detail::QuickSortDescending::GetLargest(d, v);
     }
 };
 
