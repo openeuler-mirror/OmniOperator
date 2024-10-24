@@ -100,6 +100,19 @@ std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
 
 std::shared_ptr<omniruntime::type::ContainerDataType> ContainerType(
     std::vector<omniruntime::type::DataTypePtr> &&fieldTypes);
+
+template <typename...> struct CheckTypesContainsDecimal128 {
+    static constexpr bool value = false;
+};
+
+template <typename RawType> struct CheckTypesContainsDecimal128<RawType> {
+    static constexpr bool value = std::is_same_v<RawType, omniruntime::type::Decimal128>;
+};
+
+template <typename oneType, typename... RemainTypes> struct CheckTypesContainsDecimal128<oneType, RemainTypes...> {
+    static constexpr bool value =
+        CheckTypesContainsDecimal128<oneType>::value || CheckTypesContainsDecimal128<RemainTypes...>::value;
+};
 }
 }
 

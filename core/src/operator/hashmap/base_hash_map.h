@@ -14,6 +14,7 @@
 #include <jemalloc/jemalloc.h>
 #include <arm_neon.h>
 
+#include "simd/func/match.h"
 #include "operator/hash_util.h"
 #include "group_hasher.h"
 #include "memory/memory_pool.h"
@@ -353,105 +354,10 @@ enum Ctrl : ctrl_t {
     kSentinel = -1
 };
 
-static uint32_t mm_movemask_epi8(uint8x16_t input)
-{
-    // Shift out everything but the sign bits with an unsigned shift right.
-    //
-    // Bytes of the vector::
-    // 89 ff 1d c0 00 10 99 33
-    // \  \  \  \  \  \  \  \    high_bits = (uint16x4_t)(input >> 7)
-    //  |  |  |  |  |  |  |  |
-    // 01 01 00 01 00 00 01 00
-    //
-    // Bits of first important lane(s):
-    // 10001001 (89)
-    // \______
-    //        |
-    // 00000001 (01)
-    uint16x8_t high_bits = vreinterpretq_u16_u8(vshrq_n_u8(input, 7));
-
-    // Merge the even lanes together with a 16-bit unsigned shift right + add.
-    // 'xx' represents garbage data which will be ignored in the final result.
-    // In the important bytes, the add functions like a binary OR.
-    //
-    // 01 01 00 01 00 00 01 00
-    //  \_ |  \_ |  \_ |  \_ |   paired16 = (uint32x4_t)(input + (input >> 7))
-    //    \|    \|    \|    \|
-    // xx 03 xx 01 xx 00 xx 02
-    //
-    // 00000001 00000001 (01 01)
-    //        \_______ |
-    //                \|
-    // xxxxxxxx xxxxxx11 (xx 03)
-    uint32x4_t paired16 = vreinterpretq_u32_u16(vsraq_n_u16(high_bits, high_bits, 7));
-
-    // Repeat with a wider 32-bit shift + add.
-    // xx 03 xx 01 xx 00 xx 02
-    //     \____ |     \____ |  paired32 = (uint64x1_t)(paired16 + (paired16 >>
-    //     14))
-    //          \|          \|
-    // xx xx xx 0d xx xx xx 02
-    //
-    // 00000011 00000001 (03 01)
-    //        \\_____ ||
-    //         '----.\||
-    // xxxxxxxx xxxx1101 (xx 0d)
-    uint64x2_t paired32 = vreinterpretq_u64_u32(vsraq_n_u32(paired16, paired16, 14));
-
-    // Last, an even wider 64-bit shift + add to get our result in the low 8 bit
-    // lanes. xx xx xx 0d xx xx xx 02
-    //            \_________ |   paired64 = (uint8x8_t)(paired32 + (paired32 >>
-    //            28))
-    //                      \|
-    // xx xx xx xx xx xx xx d2
-    //
-    // 00001101 00000010 (0d 02)
-    //     \   \___ |  |
-    //      '---.  \|  |
-    // xxxxxxxx 11010010 (xx d2)
-    uint8x16_t paired64 = vreinterpretq_u8_u64(vsraq_n_u64(paired32, paired32, 28));
-
-    // Extract the low 8 bits from each 64-bit lane with 2 8-bit extracts.
-    // xx xx xx xx xx xx xx d2
-    //                      ||  return paired64[0]
-    //                      d2
-    // Note: Little endian would return the correct value 4b (01001011) instead.
-    return vgetq_lane_u8(paired64, 0) | ((int)vgetq_lane_u8(paired64, EIGHT) << EIGHT);
-}
-
 struct GroupNeonImpl {
     enum {
         kWidth = 16
     }; // the number of slots per group
-
-    explicit GroupNeonImpl(const ctrl_t *pos)
-    {
-        ctrl = vld1q_s8(reinterpret_cast<const int8_t *>(pos));
-    }
-
-    // Returns a bitmask representing the positions of slots that match hash.
-    BitMask<uint32_t, kWidth> Match(h2_t hash) const
-    {
-        int8x16_t match = vdupq_n_s8((uint8_t)hash);
-        uint8x16_t cmp_result = vceqq_s8(match, ctrl);
-
-        // Convert NEON register to bitmask
-        auto bitmask = mm_movemask_epi8(cmp_result);
-        return BitMask<uint32_t, kWidth>(bitmask);
-    }
-
-    // Returns a bitmask representing the positions of empty slots.
-    BitMask<uint32_t, kWidth> MatchEmpty()
-    {
-        return Match(static_cast<h2_t>(kEmpty));
-    }
-
-    // Returns the number of trailing empty elements in the group.
-    uint32_t CountLeadingEmpty() const
-    {
-        auto special = vdupq_n_s8(static_cast<uint8_t>(kSentinel));
-        return TrailingZeros(static_cast<uint32_t>(mm_movemask_epi8(vcgtq_s8(special, ctrl)) + 1));
-    }
 
     int8x16_t ctrl;
 };
@@ -653,7 +559,7 @@ public:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                uint32_t shift = Group { identifiers + index }.CountLeadingEmpty();
+                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
                 index += shift;
             }
             auto &slot = slots[index];
@@ -678,7 +584,7 @@ public:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                uint32_t shift = Group { identifiers + index }.CountLeadingEmpty();
+                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
                 index += shift;
             }
             auto &slot = slots[index];
@@ -771,7 +677,7 @@ public:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                uint32_t shift = Group { identifiers_ + pos }.CountLeadingEmpty();
+                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers_ + pos);
                 pos += shift;
             }
         }
@@ -814,7 +720,7 @@ private:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                uint32_t shift = Group { oldIdentifiers + index }.CountLeadingEmpty();
+                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, oldIdentifiers + index);
                 index += shift;
             }
             Reinsert(std::move(oldSlots[index]));
@@ -845,18 +751,19 @@ private:
     {
         auto seq = Probe(hashValue);
         while (identifiers[seq.GetOffset()] != kEmpty) {
-            Group g { identifiers + seq.GetOffset() };
+            auto maskIter = FindMatch<ctrl_t, 16>(static_cast<ctrl_t>(H2(hashValue)), identifiers + seq.GetOffset());
             // Traverse all the keys which match the low 7 bit hash
-            for (uint32_t i : g.Match((h2_t)H2(hashValue))) {
-                // Compare the values of key. KeyType must be primitive or overload operator==()
-                if (slots[seq.GetOffset((size_t)i)].IsSameKey(hashValue, key)) {
-                    return seq.GetOffset((size_t)i);
+            while (maskIter.HasNext()) {
+                auto v = maskIter.Next();
+                if (slots[seq.GetOffset((size_t)v)].IsSameKey(hashValue, key)) {
+                    return seq.GetOffset((size_t)v);
                 }
             }
-            auto mask = g.MatchEmpty();
-            if (mask) {
+
+            auto firstIndex = FindFirst<ctrl_t, 16>(kEmpty, identifiers + seq.GetOffset());
+            if (firstIndex != -1) {
                 inserted = true;
-                return seq.GetOffset((size_t)mask.LowestBitSet());
+                return seq.GetOffset(firstIndex);
             }
             seq.GetNext();
             if (seq.GetIndex() > capacity) {
@@ -885,7 +792,7 @@ private:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                uint32_t shift = Group { identifiers + index }.CountLeadingEmpty();
+                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
                 index += shift;
             }
             slots[index].~Slot();

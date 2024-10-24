@@ -7,4 +7,5 @@ add_library(${OP_TARGET} SHARED ${OPERATOR_LIST})
 
 #dependent library
 target_link_libraries(${OP_TARGET} PUBLIC expression ${OMNI_CODEGEN_SO} ${OMNI_VECTOR_SO})
+target_include_directories(${OP_TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/simd)
 install(TARGETS ${OP_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})

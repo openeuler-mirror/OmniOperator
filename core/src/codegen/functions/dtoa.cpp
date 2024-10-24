@@ -76,7 +76,6 @@ static std::vector<FDBigInteger> GetPow5Cache() noexcept
 
 FDBigInteger::FDBigInteger(long lValue, const char *digits, int kDigits, int nDigits)
 {
-    int n = std::max((nDigits + 8) / 9, 2); // estimate size needed.8 mean long bits size
     data[0] = static_cast<int>(lValue); // starting value
     data[1] = static_cast<int>(Unsigned64RightShift(lValue, 32));
     offset = 0;
