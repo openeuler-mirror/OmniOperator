@@ -10,17 +10,19 @@
 
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, bool isNullTimeStr,
-    const char *fmtStr, int32_t fmtLen, bool isNullFmtStr, const char *tzStr, int32_t tzLen,
-    bool isNullTzStr, bool *retIsNull)
+    const char *fmtStr, int32_t fmtLen, bool isNullFmtStr, const char *tzStr, int32_t tzLen, bool isNullTzStr,
+    const char *policyStr, int32_t policyLen, bool isNullPolStr, bool *retIsNull)
 {
-    if (isNullTimeStr || isNullFmtStr || isNullTzStr || fmtLen == 0 || timeLen == 0) {
+    if (isNullTimeStr || isNullFmtStr || fmtLen == 0 || timeLen == 0) {
         *retIsNull = true;
         return 0;
     }
-    if (!TimeUtil::IsTimeValid(timeStr, timeLen, fmtStr, fmtLen)) {
+    if (!TimeUtil::IsTimeValid(timeStr, timeLen, fmtStr, fmtLen, policyStr)) {
         *retIsNull = true;
         return 0;
     }
+    setenv("TZ", TimeZoneUtil::GetTZ(tzStr), 1);
+    tzset();
     struct tm timeInfo = { 0 };
     std::string timeStr1(timeStr, timeLen);
     std::string fmtStr1(fmtStr, fmtLen);
@@ -38,6 +40,8 @@ extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmt
     if (isNull) {
         return 0;
     }
+    setenv("TZ", TimeZoneUtil::GetTZ(tzStr), 1);
+    tzset();
     time_t desiredTime = type::SECOND_OF_DAY * date;
     struct tm ltm;
     localtime_r(&desiredTime, &ltm);
@@ -50,6 +54,8 @@ extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_
     int32_t fmtLen, const char *tzStr, int32_t tzLen, int32_t *outLen)
 {
     time_t timeStampVal = timestamp;
+    setenv("TZ", TimeZoneUtil::GetTZ(tzStr), 1);
+    tzset();
     struct tm ltm;
     localtime_r(&timeStampVal, &ltm);
     if (!TimeZoneUtil::JudgeDSTByFromUnixTime(tzStr, tzLen, &ltm)) {

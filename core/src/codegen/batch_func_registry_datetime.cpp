@@ -13,7 +13,7 @@ std::vector<Function> BatchDateTimeFunctionRegistry::GetFunctions()
 {
     static std::vector<Function> batchDateTimeFunctions = {
         Function(reinterpret_cast<void *>(BatchUnixTimestampFromStr), "batch_unix_timestamp", {},
-            { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+            { OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(BatchUnixTimestampFromDate), "batch_unix_timestamp", {},
             { OMNI_DATE32, OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchFromUnixTime), "batch_from_unixtime", {},

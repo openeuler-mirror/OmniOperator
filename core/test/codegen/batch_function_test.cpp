@@ -2437,12 +2437,15 @@ TEST(BatchFunctionTest, BatchUnixTimestampFromStr)
     std::string fmtStrs[] = {"%Y-%m-%d", "%Y-%m-%d", "%Y-%m-%d", "", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"};
     std::string tzStrs[] = {"Asia/Shanghai", "Asia/Shanghai", "Asia/Shanghai", "Asia/Shanghai",
                           "Asia/Shanghai", "Asia/Shanghai"};
+    std::string policyStrs[] = {"CORRECTED", "CORRECTED", "CORRECTED", "CORRECTED", "CORRECTED", "CORRECTED"};
     const char *timeStrPtrs[rowCnt];
     int32_t timeLens[rowCnt];
     const char *fmtStrPtrs[rowCnt];
     int32_t fmtLens[rowCnt];
     const char *tzStrPtrs[rowCnt];
     int32_t tzLens[rowCnt];
+    const char *policyStrPtrs[rowCnt];
+    int32_t policyLens[rowCnt];
     for (int32_t i = 0; i < rowCnt; i++) {
         timeStrPtrs[i] = const_cast<char *>(timeStrs[i].c_str());
         timeLens[i] = timeStrs[i].length();
@@ -2450,14 +2453,17 @@ TEST(BatchFunctionTest, BatchUnixTimestampFromStr)
         fmtLens[i] = fmtStrs[i].length();
         tzStrPtrs[i] = tzStrs[i].c_str();
         tzLens[i] = tzStrs[i].length();
+        policyStrPtrs[i] = policyStrs[i].c_str();
+        policyLens[i] = policyStrs[i].length();
     }
     bool isNullTimeStr[] = {false, false, false, true, false, false};
     bool isNullFmtStr[] = {false, false, false, true, false, false};
     bool isNullTzStr[] = {false, false, false, false, false, false};
+    bool isNullPolStr[] = {false, false, false, false, false, false};
     bool retIsNull[rowCnt] = {false};
     int64_t output[rowCnt];
-    BatchUnixTimestampFromStr(timeStrPtrs, timeLens, isNullTimeStr, fmtStrPtrs, fmtLens, isNullFmtStr,
-                              tzStrPtrs, tzLens, isNullTzStr, retIsNull, output, rowCnt);
+    BatchUnixTimestampFromStr(timeStrPtrs, timeLens, isNullTimeStr, fmtStrPtrs, fmtLens, isNullFmtStr, tzStrPtrs,
+                              tzLens, isNullTzStr, policyStrPtrs, policyLens, isNullPolStr, retIsNull, output, rowCnt);
     std::vector<bool> expectIsNull = {false, false, false, true, false, false};
     AssertBoolEquals(expectIsNull, retIsNull);
     std::vector<int64_t> result(output, output + rowCnt);

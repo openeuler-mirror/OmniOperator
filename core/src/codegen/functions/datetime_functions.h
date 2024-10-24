@@ -18,7 +18,7 @@
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, bool isNullTimeStr,
     const char *fmtStr, int32_t fmtLen, bool isNullFmtStr, const char *tzStr, int32_t tzLen,
-    bool isNullTzStr, bool *retIsNull);
+    bool isNullTzStr, const char *policyStr, int32_t policyLen, bool isNullPolStr, bool *retIsNull);
 
 extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmtStr, int32_t fmtLen,
     const char *tzStr, int32_t tzLen, bool isNull);
