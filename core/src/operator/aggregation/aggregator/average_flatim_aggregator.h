@@ -83,18 +83,18 @@ public:
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    simd::SIMDAdd<RawInputType, ResultType, int64_t, StateCountHandler, simd::BasicOp::Sum>(
+                    simd::ReduceExternal<RawInputType, ResultType, int64_t, StateCountHandler, simd::ReduceFunc::Sum>(
                         &avgFlatState->value, avgFlatState->count, ptr, rowCount);
                 } else {
-                    simd::SIMDAddConditional<RawInputType, ResultType, int64_t, StateCountHandler, simd::BasicOp::Sum>(
-                        &avgFlatState->value, avgFlatState->count, ptr, rowCount, nullMap);
+                    simd::ReduceWithNullsExternal<RawInputType, ResultType, int64_t, StateCountHandler,
+                        simd::ReduceFunc::Sum>(&avgFlatState->value, avgFlatState->count, ptr, rowCount, nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    simd::SIMDAddDict<RawInputType, ResultType, int64_t, StateCountHandler, simd::BasicOp::Sum>(
-                        &avgFlatState->value, avgFlatState->count, ptr, rowCount, indexMap);
+                    simd::ReduceWithDicExternal<RawInputType, ResultType, int64_t, StateCountHandler,
+                        simd::ReduceFunc::Sum>(&avgFlatState->value, avgFlatState->count, ptr, rowCount, indexMap);
                 } else {
                     AddDictConditional<RawInputType, ResultType, int64_t,
                         SumConditionalOp<RawInputType, ResultType, int64_t, StateCountHandler, false, false>>(

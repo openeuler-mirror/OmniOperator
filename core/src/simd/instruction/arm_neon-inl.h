@@ -4393,18 +4393,6 @@ OMNI_NEON_DEF_FUNCTION_UIF_8_16_32(InterleaveLower, vzip1, _, 2)
 // N=1 makes no sense (in that case, there would be no upper/lower).
 OMNI_NEON_DEF_FUNCTION_FULL_UIF_64(InterleaveLower, vzip1, _, 2)
 
-#if !OMNI_HAVE_FLOAT16
-
-template <size_t N, OMNI_IF_V_SIZE_GT(float16_t, N, 4)>
-OMNI_API Vec128<float16_t, N> InterleaveLower(Vec128<float16_t, N> a, Vec128<float16_t, N> b)
-{
-    const DFromV<decltype(a)> d;
-    const RebindToUnsigned<decltype(d)> du;
-    return BitCast(d, InterleaveLower(BitCast(du, a), BitCast(du, b)));
-}
-
-#endif // !OMNI_HAVE_FLOAT16
-
 // < 64 bit parts
 template <typename T, size_t N, OMNI_IF_V_SIZE_LE(T, N, 4)>
 OMNI_API Vec128<T, N> InterleaveLower(Vec128<T, N> a, Vec128<T, N> b)

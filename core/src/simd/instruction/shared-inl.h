@@ -37,9 +37,7 @@ namespace detail {
 template <typename T> struct NativeLaneTypeT {
     using type = T;
 };
-template <> struct NativeLaneTypeT<simd::float16_t> {
-    using type = simd::float16_t::Native;
-};
+
 template <> struct NativeLaneTypeT<simd::bfloat16_t> {
     using type = uint16_t;
 };

@@ -5,6 +5,7 @@ if (DEFINED ENABLE_DT)
     endif ()
 endif ()
 
+add_subdirectory(simd)
 add_subdirectory(memory)
 add_subdirectory(operator)
 add_subdirectory(util)

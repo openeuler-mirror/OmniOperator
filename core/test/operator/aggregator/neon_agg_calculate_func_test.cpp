@@ -10,7 +10,7 @@
 #include <limits>
 #include <gtest/gtest.h>
 #include <ctime>
-#include "src/operator/aggregation/neon_aggregation/simd_aggregation_external.h"
+#include "simd/func/reduce.h"
 #include "src/operator/aggregation/aggregator/state_flag_operation.h"
 
 namespace omniruntime {
@@ -20,7 +20,7 @@ int32_t SimdNoNull(int32_t *values, int32_t size)
 {
     int64_t result = 0;
     int64_t flag = 0;
-    SIMDAdd<int32_t, int64_t, int64_t, op::StateCountHandler, BasicOp::Sum>(&result, flag, values, size);
+    ReduceExternal<int32_t, int64_t, int64_t, op::StateCountHandler, ReduceFunc::Sum>(&result, flag, values, size);
     return result;
 }
 
@@ -28,7 +28,8 @@ template <typename T> T SimdWithNull(T *values, uint8_t *nulls, int32_t size)
 {
     int64_t result = 0;
     int64_t flag = 0;
-    SIMDAddConditional<T, int64_t, int64_t, op::StateCountHandler, BasicOp::Sum>(&result, flag, values, size, nulls);
+    ReduceWithNullsExternal<T, int64_t, int64_t, op::StateCountHandler, ReduceFunc::Sum>(&result, flag, values, size,
+        nulls);
     return result;
 }
 
@@ -48,7 +49,8 @@ template <typename T> T SimdSumWithDict(int32_t size, T *values, int32_t *indexs
 {
     int64_t result = 0;
     int64_t flag = 0;
-    SIMDAddDict<T, int64_t, int64_t, op::StateCountHandler, BasicOp::Sum>(&result, flag, values, size, indexs);
+    ReduceWithDicExternal<T, int64_t, int64_t, op::StateCountHandler, ReduceFunc::Sum>(&result, flag, values, size,
+        indexs);
     return result;
 }
 
@@ -56,8 +58,8 @@ template <typename T> T SimdWithDictWithNull(const T *values, const uint8_t *nul
 {
     double result = 0;
     int64_t flag = 0;
-    SIMDAddDictConditional<T, double, int64_t, op::StateCountHandler, BasicOp::Sum>(&result, flag, values, size, nulls,
-        indexs);
+    ReduceWithDicAndNullsExternal<T, double, int64_t, op::StateCountHandler, ReduceFunc::Sum>(&result, flag, values,
+        size, nulls, indexs);
     return result;
 }
 
@@ -65,7 +67,8 @@ template <typename T> T SimdMinWithDictWithNull(const T *values, const uint8_t *
 {
     T result = std::numeric_limits<T>::max();
     int64_t flag = 0;
-    SIMDAddDictConditional<T, T, int64_t, op::StateCountHandler, BasicOp::Min>(&result, flag, values, size, nulls,
+    ReduceWithDicAndNullsExternal<T, T, int64_t, op::StateCountHandler, ReduceFunc::Min>(&result, flag, values, size,
+        nulls,
         indexs);
     return result;
 }
@@ -87,7 +90,8 @@ template <typename T> T SimdMaxWithDictWithNull(const T *values, const uint8_t *
 {
     T result = 0;
     int64_t flag = 0;
-    SIMDAddDictConditional<T, T, int64_t, op::StateCountHandler, BasicOp::Max>(&result, flag, values, size, nulls,
+    ReduceWithDicAndNullsExternal<T, T, int64_t, op::StateCountHandler, ReduceFunc::Max>(&result, flag, values, size,
+        nulls,
         indexs);
     return result;
 }
@@ -285,7 +289,8 @@ void Verify()
         }
         int64_t flag = 0;
         int32_t actual = 0;
-        SIMDAddConditional<int32_t, int32_t, int64_t, op::StateCountHandler, BasicOp::Sum>(&actual, flag, data.data(),
+        ReduceWithNullsExternal<int32_t, int32_t, int64_t, op::StateCountHandler, ReduceFunc::Sum>(&actual, flag,
+            data.data(),
             value, nulls);
         if (expect != actual) {
             for (int i = 0; i < value; ++i) {

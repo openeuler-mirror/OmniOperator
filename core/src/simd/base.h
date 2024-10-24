@@ -714,195 +714,6 @@ template <class T, class TVal = RemoveCvRef<T>> struct NativeSpecialFloatToWrapp
 template <class T> using NativeSpecialFloatToWrapper = typename NativeSpecialFloatToWrapperT<T>::type;
 } // namespace detail
 
-// Match [u]int##_t naming scheme so rvv-inl.h macros can obtain the type name
-// by concatenating base type and bits. We use a wrapper class instead of a
-// typedef to the native type to ensure that the same symbols, e.g. for VQSort,
-// are generated regardless of F16 support; see #1684.
-struct alignas(2) float16_t {
-    using Native = __fp16;
-    union {
-        // Accessed via NativeLaneType, and used directly if
-        // OMNI_HAVE_SCALAR_F16_OPERATORS.
-        Native native;
-        // Only accessed via NativeLaneType or U16LaneType.
-        uint16_t bits;
-    };
-
-    // Default init and copying.
-    float16_t() noexcept = default;
-
-    constexpr float16_t(const float16_t &) noexcept = default;
-
-    constexpr float16_t(float16_t &&) noexcept = default;
-
-    float16_t &operator = (const float16_t &) noexcept = default;
-
-    float16_t &operator = (float16_t &&) noexcept = default;
-
-    // NEON vget/set_lane intrinsics and SVE `svaddv` could use explicit
-    // float16_t(intrinsic()), but user code expects implicit conversions.
-    constexpr float16_t(Native arg) noexcept : native(arg) {}
-
-    constexpr operator Native() const noexcept
-    {
-        return native;
-    }
-
-    static constexpr float16_t FromBits(uint16_t bits)
-    {
-        return float16_t(BitCastScalar<Native>(bits));
-    }
-
-    template <typename T,
-        simd::EnableIf<!IsSame<RemoveCvRef<T>, float16_t>() && IsConvertible<T, Native>()>* = nullptr>
-    constexpr float16_t(T &&arg) noexcept : native(static_cast<Native>(static_cast<T &&>(arg)))
-    {}
-
-    template <typename T, simd::EnableIf<!IsSame<RemoveCvRef<T>, float16_t>() && !IsConvertible<T, Native>() &&
-        IsStaticCastable<T, Native>()>* = nullptr>
-    explicit constexpr float16_t(T &&arg) noexcept : native(static_cast<Native>(static_cast<T &&>(arg)))
-    {}
-
-    // pre-decrement operator (--x)
-    constexpr float16_t &operator -- () noexcept
-    {
-        native = static_cast<Native>(native - Native{ 1 });
-        return *this;
-    }
-
-    // post-decrement operator (x--)
-    constexpr float16_t operator -- (int) noexcept
-    {
-        float16_t result = *this;
-        native = static_cast<Native>(native - Native{ 1 });
-        return result;
-    }
-
-    // pre-increment operator (++x)
-    constexpr float16_t &operator ++ () noexcept
-    {
-        native = static_cast<Native>(native + Native{ 1 });
-        return *this;
-    }
-
-    // post-increment operator (x++)
-    constexpr float16_t operator ++ (int) noexcept
-    {
-        float16_t result = *this;
-        native = static_cast<Native>(native + Native{ 1 });
-        return result;
-    }
-
-    constexpr float16_t operator - () const noexcept
-    {
-        return float16_t(static_cast<Native>(-native));
-    }
-
-    constexpr float16_t operator + () const noexcept
-    {
-        return *this;
-    }
-
-    // Reduce clutter by generating `operator+` and `operator+=` etc. Note that
-    // we cannot token-paste `operator` and `+`, so pass it in as `op_func`.
-#define OMNI_FLOAT16_BINARY_OP(op, op_func, assign_func)                                                           \
-    constexpr float16_t op_func(const float16_t &rhs) const noexcept                                               \
-    {                                                                                                              \
-        return float16_t(static_cast<Native>(native op rhs.native));                                               \
-    }                                                                                                              \
-    template <typename T, OMNI_IF_NOT_F16(T),                                                                      \
-        typename UnwrappedT = detail::SpecialFloatUnwrapArithOpOperand<const T &>,                                 \
-        typename RawResultT = decltype(DeclVal<Native>() op DeclVal<UnwrappedT>()),                                \
-        typename ResultT = detail::NativeSpecialFloatToWrapper<RawResultT>, OMNI_IF_CASTABLE(RawResultT, ResultT)> \
-    constexpr ResultT op_func(const T &rhs)                                                                        \
-        const noexcept(noexcept(static_cast<ResultT>(DeclVal<Native>() op DeclVal<UnwrappedT>())))                 \
-    {                                                                                                              \
-        return static_cast<ResultT>(native op static_cast<UnwrappedT>(rhs));                                       \
-    }                                                                                                              \
-    constexpr simd::float16_t &assign_func(const simd::float16_t &rhs) noexcept                                    \
-    {                                                                                                              \
-        native = static_cast<Native>(native op rhs.native);                                                        \
-        return *this;                                                                                              \
-    }                                                                                                              \
-    template <typename T, OMNI_IF_NOT_F16(T), OMNI_IF_OP_CASTABLE(op, const T &, Native),                          \
-        OMNI_IF_ASSIGNABLE(Native, decltype(DeclVal<Native>() op DeclVal<const T &>()))>                           \
-    constexpr simd::float16_t &assign_func(const T &rhs) noexcept(                                                 \
-        noexcept(static_cast<Native>(DeclVal<Native>() op DeclVal<const T &>())))                                  \
-    {                                                                                                              \
-        native = static_cast<Native>(native op rhs);                                                               \
-        return *this;                                                                                              \
-    }
-
-    OMNI_FLOAT16_BINARY_OP(+, operator +, operator +=)
-
-    OMNI_FLOAT16_BINARY_OP(-, operator -, operator -=)
-
-    OMNI_FLOAT16_BINARY_OP(*, operator*, operator *=)
-
-    OMNI_FLOAT16_BINARY_OP(/, operator /, operator /=)
-
-#undef OMNI_FLOAT16_BINARY_OP
-};
-
-static_assert(sizeof(simd::float16_t) == 2, "Wrong size of float16_t");
-
-namespace detail {
-template <class T> struct SpecialFloatUnwrapArithOpOperandT<T, simd::float16_t, true> {
-    using type = simd::float16_t::Native;
-};
-
-template <class T> struct NativeSpecialFloatToWrapperT<T, simd::float16_t::Native> {
-    using type = simd::float16_t;
-};
-} // namespace detail
-
-OMNI_API constexpr float F32FromF16(float16_t f16)
-{
-    return static_cast<float>(f16);
-}
-
-OMNI_API constexpr float16_t F16FromF32(float f32)
-{
-    return float16_t(static_cast<float16_t::Native>(f32));
-}
-
-OMNI_API constexpr float16_t F16FromF64(double f64)
-{
-    return float16_t(static_cast<float16_t::Native>(f64));
-}
-
-// More convenient to define outside float16_t because these may use
-// F32FromF16, which is defined after the struct.
-constexpr inline bool operator == (float16_t lhs, float16_t rhs) noexcept
-{
-    return lhs.native == rhs.native;
-}
-
-constexpr inline bool operator != (float16_t lhs, float16_t rhs) noexcept
-{
-    return lhs.native != rhs.native;
-}
-
-constexpr inline bool operator < (float16_t lhs, float16_t rhs) noexcept
-{
-    return lhs.native < rhs.native;
-}
-
-constexpr inline bool operator <= (float16_t lhs, float16_t rhs) noexcept
-{
-    return lhs.native <= rhs.native;
-}
-
-constexpr inline bool operator > (float16_t lhs, float16_t rhs) noexcept
-{
-    return lhs.native > rhs.native;
-}
-
-constexpr inline bool operator >= (float16_t lhs, float16_t rhs) noexcept
-{
-    return lhs.native >= rhs.native;
-}
-
 // ------------------------------------------------------------------------------
 // BF16 lane type
 struct alignas(2) bfloat16_t {
@@ -1335,11 +1146,6 @@ template <> OMNI_INLINE constexpr bfloat16_t LowestValue<bfloat16_t>()
     return bfloat16_t::FromBits(uint16_t{ 0xFF7Fu }); // -1.1111111 x 2^127
 }
 
-template <> OMNI_INLINE constexpr float16_t LowestValue<float16_t>()
-{
-    return float16_t::FromBits(uint16_t{ 0xFBFFu }); // -1.1111111111 x 2^15
-}
-
 template <> OMNI_INLINE constexpr float LowestValue<float>()
 {
     return -3.402823466e+38F;
@@ -1358,11 +1164,6 @@ template <typename T> OMNI_API constexpr T HighestValue()
 template <> OMNI_INLINE constexpr bfloat16_t HighestValue<bfloat16_t>()
 {
     return bfloat16_t::FromBits(uint16_t{ 0x7F7Fu }); // 1.1111111 x 2^127
-}
-
-template <> OMNI_INLINE constexpr float16_t HighestValue<float16_t>()
-{
-    return float16_t::FromBits(uint16_t{ 0x7BFFu }); // 1.1111111111 x 2^15
 }
 
 template <> OMNI_INLINE constexpr float HighestValue<float>()
@@ -1385,11 +1186,6 @@ template <typename T> OMNI_API constexpr T Epsilon()
 template <> OMNI_INLINE constexpr bfloat16_t Epsilon<bfloat16_t>()
 {
     return bfloat16_t::FromBits(uint16_t{ 0x3C00u }); // 0.0078125
-}
-
-template <> OMNI_INLINE constexpr float16_t Epsilon<float16_t>()
-{
-    return float16_t::FromBits(uint16_t{ 0x1400u }); // 0.0009765625
 }
 
 template <> OMNI_INLINE constexpr float Epsilon<float>()
@@ -1467,11 +1263,6 @@ template <> OMNI_INLINE constexpr bfloat16_t MantissaEnd<bfloat16_t>()
     return bfloat16_t::FromBits(uint16_t{ 0x4300u }); // 1.0 x 2^7
 }
 
-template <> OMNI_INLINE constexpr float16_t MantissaEnd<float16_t>()
-{
-    return float16_t::FromBits(uint16_t{ 0x6400u }); // 1.0 x 2^10
-}
-
 template <> OMNI_INLINE constexpr float MantissaEnd<float>()
 {
     return 8388608.0f; // 1 << 23
@@ -1521,38 +1312,11 @@ template <typename T> constexpr MakeSigned<T> MaxExponentField()
         return static_cast<ResultT>(a.native op b);                                                                \
     }
 
-OMNI_RHS_SPECIAL_FLOAT_ARITH_OP(+, operator +, float16_t)
-
-OMNI_RHS_SPECIAL_FLOAT_ARITH_OP(-, operator -, float16_t)
-
-OMNI_RHS_SPECIAL_FLOAT_ARITH_OP(*, operator*, float16_t)
-
-OMNI_RHS_SPECIAL_FLOAT_ARITH_OP(/, operator /, float16_t)
-
-OMNI_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(==, operator ==, float16_t)
-
-OMNI_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(!=, operator !=, float16_t)
-
-OMNI_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(<, operator <, float16_t)
-
-OMNI_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(<=, operator <=, float16_t)
-
-OMNI_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(>, operator >, float16_t)
-
-OMNI_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP(>=, operator >=, float16_t)
-
 #undef OMNI_RHS_SPECIAL_FLOAT_ARITH_OP
 #undef OMNI_SPECIAL_FLOAT_CMP_AGAINST_NON_SPECIAL_OP
 
 // ------------------------------------------------------------------------------
 // Type conversions (after IsSpecialFloat)
-
-OMNI_API float F32FromF16Mem(const void *ptr)
-{
-    float16_t f16;
-    CopyBytes<2>(OMNI_ASSUME_ALIGNED(ptr, 2), &f16);
-    return F32FromF16(f16);
-}
 
 OMNI_API float F32FromBF16Mem(const void *ptr)
 {
@@ -1569,33 +1333,11 @@ OMNI_API constexpr TTo ConvertScalarTo(const TFrom in)
     return static_cast<TTo>(in);
 }
 
-template <typename TTo, typename TFrom, OMNI_IF_F16(TTo), OMNI_IF_NOT_SPECIAL_FLOAT(TFrom),
-    OMNI_IF_NOT_SAME(TFrom, double)>
-OMNI_API constexpr TTo ConvertScalarTo(const TFrom in)
-{
-    return F16FromF32(static_cast<float>(in));
-}
-
-template <typename TTo, OMNI_IF_F16(TTo)> OMNI_API constexpr TTo ConvertScalarTo(const simd::bfloat16_t in)
-{
-    return F16FromF32(F32FromBF16(in));
-}
-
-template <typename TTo, OMNI_IF_F16(TTo)> OMNI_API constexpr TTo ConvertScalarTo(const double in)
-{
-    return F16FromF64(in);
-}
-
 template <typename TTo, typename TFrom, OMNI_IF_BF16(TTo), OMNI_IF_NOT_SPECIAL_FLOAT(TFrom),
     OMNI_IF_NOT_SAME(TFrom, double)>
 OMNI_API constexpr TTo ConvertScalarTo(const TFrom in)
 {
     return BF16FromF32(static_cast<float>(in));
-}
-
-template <typename TTo, OMNI_IF_BF16(TTo)> OMNI_API constexpr TTo ConvertScalarTo(const simd::float16_t in)
-{
-    return BF16FromF32(F32FromF16(in));
 }
 
 template <typename TTo, OMNI_IF_BF16(TTo)> OMNI_API constexpr TTo ConvertScalarTo(const double in)

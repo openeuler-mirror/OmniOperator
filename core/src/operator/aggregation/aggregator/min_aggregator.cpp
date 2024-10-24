@@ -4,7 +4,7 @@
  */
 
 #include "min_aggregator.h"
-#include "operator/aggregation/neon_aggregation/simd_aggregation_external.h"
+#include "simd/func/reduce.h"
 
 namespace omniruntime {
 namespace op {
@@ -105,40 +105,40 @@ void MinAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, 
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
         ptr += rowOffset;
         if (nullMap == nullptr) {
-            if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
+            if constexpr (CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 Add<InType, ResultType, AggValueState, MinOp<InType, ResultType>>(&minState->value,
                     minState->valueState, ptr, rowCount);
             } else {
-                simd::SIMDAdd<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Min>(
+                simd::ReduceExternal<InType, ResultType, AggValueState, StateValueHandler, simd::ReduceFunc::Min>(
                     &minState->value, minState->valueState, ptr, rowCount);
             }
         } else {
-            if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
+            if constexpr (CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 AddConditional<InType, ResultType, AggValueState, MinConditionalOp<InType, ResultType, false>>(
                     &minState->value, minState->valueState, ptr, rowCount, nullMap);
             } else {
-                simd::SIMDAddConditional<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Min>(
-                    &minState->value, minState->valueState, ptr, rowCount, nullMap);
+                simd::ReduceWithNullsExternal<InType, ResultType, AggValueState, StateValueHandler,
+                    simd::ReduceFunc::Min>(&minState->value, minState->valueState, ptr, rowCount, nullMap);
             }
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
         auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
         if (nullMap == nullptr) {
-            if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
+            if constexpr (CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 AddDict<InType, ResultType, AggValueState, MinOp<InType, ResultType>>(&minState->value,
                     minState->valueState, ptr, rowCount, indexMap);
             } else {
-                simd::SIMDAddDict<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Min>(
-                    &minState->value, minState->valueState, ptr, rowCount, indexMap);
+                simd::ReduceWithDicExternal<InType, ResultType, AggValueState, StateValueHandler,
+                    simd::ReduceFunc::Min>(&minState->value, minState->valueState, ptr, rowCount, indexMap);
             }
         } else {
-            if constexpr (simd::CheckTypesContainsDecimal128<InType, ResultType>::value) {
+            if constexpr (CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 AddDictConditional<InType, ResultType, AggValueState, MinConditionalOp<InType, ResultType, false>>(
                     &minState->value, minState->valueState, ptr, rowCount, nullMap, indexMap);
             } else {
-                simd::SIMDAddDictConditional<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Min>(
-                    &minState->value, minState->valueState, ptr, rowCount, nullMap, indexMap);
+                simd::ReduceWithDicAndNullsExternal<InType, ResultType, AggValueState, StateValueHandler,
+                    simd::ReduceFunc::Min>(&minState->value, minState->valueState, ptr, rowCount, nullMap, indexMap);
             }
         }
     }

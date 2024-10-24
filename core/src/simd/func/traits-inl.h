@@ -222,7 +222,6 @@ template <class Base> struct TraitsLane : public Base {
         const Vec<D> aCopy = a;
         Sort2(d, a, b);
 
-        DFromV<A_VEC> addrD;
         auto mask = Eq(a, aCopy);
         auto firstTrue = FindFirstTrue(d, mask);
         auto lastTrue = FindLastTrue(d, mask);

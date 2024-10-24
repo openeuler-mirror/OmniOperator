@@ -82,6 +82,9 @@ else
       elif [ "$i" == '--exclude-test' ]; then
           echo "-- Exclude Test Source"
           OPTIONS+=" -DEXCLUDE_TEST=ON"
+      elif [ "$i" == '--enable-sve' ]; then
+          echo "-- ENABLE SVE"
+          OPTIONS+=" -DENABLE_SVE=ON"
       else
           exit_with_message_and_print_help "ERROR: Invalid option: $i"
       fi

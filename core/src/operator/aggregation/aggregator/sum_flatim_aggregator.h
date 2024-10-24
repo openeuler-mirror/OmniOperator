@@ -6,7 +6,7 @@
 #define OMNI_RUNTIME_SUM_FLAT_IM_AGGREGATOR_H
 
 #include "aggregator.h"
-#include "operator/aggregation/neon_aggregation/simd_aggregation_external.h"
+#include "simd/func/reduce.h"
 
 namespace omniruntime {
 namespace op {
@@ -129,19 +129,19 @@ public:
         ptr += rowOffset;
         if (nullMap == nullptr) {
             if constexpr (std::is_floating_point_v<ResultType>) {
-                simd::SIMDAdd<ResultType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
-                    &sumFlatState->value, sumFlatState->valueState, ptr, rowCount);
+                simd::ReduceExternal<ResultType, ResultType, AggValueState, StateValueHandler,
+                    simd::ReduceFunc::Sum>(&sumFlatState->value, sumFlatState->valueState, ptr, rowCount);
             } else {
-                simd::SIMDAdd<ResultType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
-                    &sumFlatState->value, sumFlatState->valueState, ptr, rowCount);
+                simd::ReduceExternal<ResultType, ResultType, AggValueState, StateValueHandler,
+                    simd::ReduceFunc::Sum>(&sumFlatState->value, sumFlatState->valueState, ptr, rowCount);
             }
         } else {
             if constexpr (std::is_floating_point_v<ResultType>) {
-                simd::SIMDAddConditional<ResultType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
-                    &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
+                simd::ReduceWithNullsExternal<ResultType, ResultType, AggValueState, StateValueHandler,
+                    simd::ReduceFunc::Sum>(&sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
             } else {
-                simd::SIMDAddConditional<ResultType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
-                    &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
+                simd::ReduceWithNullsExternal<ResultType, ResultType, AggValueState, StateValueHandler,
+                    simd::ReduceFunc::Sum>(&sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
             }
         }
     }
@@ -155,18 +155,18 @@ public:
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
                 ptr += rowOffset;
                 if (nullMap == nullptr) {
-                    simd::SIMDAdd<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
+                    simd::ReduceExternal<InType, ResultType, AggValueState, StateValueHandler, simd::ReduceFunc::Sum>(
                         &sumFlatState->value, sumFlatState->valueState, ptr, rowCount);
                 } else {
-                    simd::SIMDAddConditional<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
-                        &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
+                    simd::ReduceWithNullsExternal<InType, ResultType, AggValueState, StateValueHandler,
+                        simd::ReduceFunc::Sum>(&sumFlatState->value, sumFlatState->valueState, ptr, rowCount, nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
                 auto *indexMap = GetIdsFromDict<IN_ID>(vector) + rowOffset;
                 if (nullMap == nullptr) {
-                    simd::SIMDAddDict<InType, ResultType, AggValueState, StateValueHandler, simd::BasicOp::Sum>(
-                        &sumFlatState->value, sumFlatState->valueState, ptr, rowCount, indexMap);
+                    simd::ReduceWithDicExternal<InType, ResultType, AggValueState, StateValueHandler,
+                        simd::ReduceFunc::Sum>(&sumFlatState->value, sumFlatState->valueState, ptr, rowCount, indexMap);
                 } else {
                     AddDictConditional<InType, ResultType, AggValueState,
                         SumConditionalOp<InType, ResultType, AggValueState, StateValueHandler, false, false>>(

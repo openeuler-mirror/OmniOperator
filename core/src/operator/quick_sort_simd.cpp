@@ -7,10 +7,10 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <arm_neon.h>
 #include "util/compiler_util.h"
 #include "huawei_secure_c/include/securec.h"
-#include "small_case_sort_simd.h"
-#include "arm_neon.h"
+#include "simd/func/small_case_sort.h"
 
 constexpr int32_t SMALL_CASE_LENGTH = 16;
 constexpr int32_t CHUNK_SIZE = 8;
@@ -657,9 +657,9 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
     int32_t num = to - from;
     if (num <= SMALL_CASE_LENGTH) {
         if constexpr (sortAscending == 0) {
-            SmallCaseSortDesc<RawType>(values, addresses, from, to);
+            simd::SmallCaseSortDesc<RawType>(values, addresses, from, to);
         } else {
-            SmallCaseSortAsec<RawType>(values, addresses, from, to);
+            simd::SmallCaseSortAsec<RawType>(values, addresses, from, to);
         }
         return;
     }
@@ -670,9 +670,11 @@ void QuickSortInternalSIMD(int64_t *values, uint64_t *addresses, int32_t from, i
     } else {
         auto count = DrawSamples<RawType, sortAscending>(values, from, to, valueBuf);
         if constexpr (sortAscending == 0) {
-            SmallCaseSortWithoutAddressDesc<RawType>(valueBuf, 0, count);
+            const simd::MakeTraits<RawType, simd::SortDescending> st;
+            simd::Sort3Rows(st, valueBuf, count);
         } else {
-            SmallCaseSortWithoutAddressAsec<RawType>(valueBuf, 0, count);
+            const simd::MakeTraits<RawType, simd::SortAscending> st;
+            simd::Sort3Rows(st, valueBuf, count);
         }
         pivotVal = ChoosePivot<RawType>(valueBuf, 0, count);
     }
