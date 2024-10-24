@@ -6,7 +6,7 @@
 #include <cstring>
 #include "vector/vector.h"
 #include "type/data_type.h"
-#include "quick_sort_simd.h"
+#include "simd/func/quick_sort_simd.h"
 #include "radix_sort.h"
 #include "pages_index.h"
 
@@ -910,17 +910,19 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
             } else {
                 QuickSortDecimal128<1>(values, valueAddresses, nonNullFrom, nonNullTo);
             }
-        } else if constexpr (std::is_same_v<RawType, double>) {
-            if (sortAscending == 0) {
-                QuickSortDoubleDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
-            } else {
-                QuickSortDoubleAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
-            }
         } else {
-            if (sortAscending == 0) {
-                QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+            if constexpr (std::is_same_v<RawType, double>) {
+                if (sortAscending == 0) {
+                    QuickSortDescSIMD(reinterpret_cast<double *>(values), valueAddresses, nonNullFrom, nonNullTo);
+                } else {
+                    QuickSortAscSIMD(reinterpret_cast<double *>(values), valueAddresses, nonNullFrom, nonNullTo);
+                }
             } else {
-                QuickSortAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                if (sortAscending == 0) {
+                    QuickSortDescSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                } else {
+                    QuickSortAscSIMD(values, valueAddresses, nonNullFrom, nonNullTo);
+                }
             }
         }
     }

@@ -6490,16 +6490,6 @@ template <class Traits, class V> inline V MedianOf3(Traits st, V v0, V v1, V v2)
     return v1;
 }
 
-inline double GetLane(Vec128<double> v, int32_t lan)
-{
-    return vgetq_lane_f64(v.raw, 0);
-}
-
-inline int64_t GetLane(Vec128<int64_t> v, int32_t lan)
-{
-    return vgetq_lane_s64(v.raw, 0);
-}
-
 inline bool NotEqual(const double &pivot, const double &smallest)
 {
     if (std::fabs(pivot - smallest) >= DBL_EPSILON) {

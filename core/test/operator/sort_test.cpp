@@ -16,7 +16,8 @@
 #include "vector/vector_helper.h"
 #include "util/test_util.h"
 #include "operator/omni_id_type_vector_traits.h"
-#include "operator/quick_sort_simd.h"
+#include "simd/func/quick_sort_simd.h"
+#include "simd/func/small_case_sort.h"
 #include "operator/pages_index.h"
 #include "random"
 
@@ -204,8 +205,10 @@ TEST(NativeOmniSortTest, TestQuickSortInternalSIMD)
 
     int64_t valueBuf[50];
     uint64_t addrBuf[50];
-    QuickSortInternalSIMD<int64_t, 1>(data1, data0, 0, dataSize, valueBuf, addrBuf, true, 12562);
-
+    const SortTag<int64_t> d;
+    const simd::MakeTraits<int64_t, simd::SortAscending> st;
+    int64_t avg = 12562;
+    QuickSortInternalSIMD(d, st, data1, data0, 0, dataSize, valueBuf, addrBuf, true, avg);
     int64_t expectData[dataSize] = {12546, 12546, 12549, 12549, 12549, 12550, 12550, 12556, 12556, 12556, 12556, 12557,
         12557, 12557, 12558, 12558, 12565, 12565};
     for (int32_t i = 0; i < dataSize; i++) {
