@@ -156,7 +156,7 @@ extern "C" DLLEXPORT int64_t ModulusInt64(int64_t contextPtr, int64_t divident, 
         SetError(contextPtr, DIVIDE_ZERO_EROR);
         return 0;
     }
-    return std::fmod(divident, divisor);
+    return divident % divisor;
 }
 
 extern "C" DLLEXPORT bool LessThanInt64(int64_t left, int64_t right)
@@ -221,7 +221,7 @@ extern "C" DLLEXPORT int32_t ModulusInt32(int64_t contextPtr, int32_t divident, 
         SetError(contextPtr, DIVIDE_ZERO_EROR);
         return 0;
     }
-    return std::fmod(divident, divisor);
+    return divident % divisor;
 }
 
 extern "C" DLLEXPORT bool LessThanInt32(int32_t left, int32_t right)
