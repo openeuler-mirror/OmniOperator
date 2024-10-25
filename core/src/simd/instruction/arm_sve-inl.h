@@ -4,6 +4,8 @@
 #ifndef ARM_SVE_INL_H
 #define ARM_SVE_INL_H
 #include <arm_sve.h>
+#include <float.h>
+#include <math.h>
 #include "simd/instruction/shared-inl.h"
 
 namespace simd {
@@ -65,7 +67,6 @@ namespace detail { // for code folding
 // bf16 overloads for some intrinsics (especially less-common arithmetic).
 // However, this does include f16 because SVE supports it unconditionally.
 #define OMNI_SVE_FOREACH_F(X_MACRO, NAME, OP) \
-    OMNI_SVE_FOREACH_F16(X_MACRO, NAME, OP)   \
     OMNI_SVE_FOREACH_F3264(X_MACRO, NAME, OP)
 
 // Commonly used type categories for a given element size:
@@ -1873,33 +1874,11 @@ namespace detail {
 OMNI_SVE_FOREACH(OMNI_SVE_RETV_ARGVV, ZipLowerSame, zip1)
 } // namespace detail
 
-template <size_t N, int kPow2> OMNI_API svfloat32_t PromoteTo(Simd<float32_t, N, kPow2> /* d */, const svfloat16_t v)
-{
-    // svcvt* expects inputs in even lanes, whereas Simd wants lower lanes, so
-    // first replicate each lane once.
-    const svfloat16_t vv = detail::ZipLowerSame(v, v);
-    return svcvt_f32_f16_x(detail::PTrue(Simd<float16_t, N, kPow2>()), vv);
-}
-
 #ifdef OMNI_NATIVE_PROMOTE_F16_TO_F64
 #undef OMNI_NATIVE_PROMOTE_F16_TO_F64
 #else
 #define OMNI_NATIVE_PROMOTE_F16_TO_F64
 #endif
-
-template <size_t N, int kPow2> OMNI_API svfloat64_t PromoteTo(Simd<float64_t, N, kPow2> /* d */, const svfloat16_t v)
-{
-    // svcvt* expects inputs in even lanes, whereas Simd wants lower lanes, so
-    // first replicate each lane once.
-    const svfloat16_t vv = detail::ZipLowerSame(v, v);
-    return svcvt_f64_f16_x(detail::PTrue(Simd<float16_t, N, kPow2>()), detail::ZipLowerSame(vv, vv));
-}
-
-template <size_t N, int kPow2> OMNI_API svfloat64_t PromoteTo(Simd<float64_t, N, kPow2> /* d */, const svfloat32_t v)
-{
-    const svfloat32_t vv = detail::ZipLowerSame(v, v);
-    return svcvt_f64_f32_x(detail::PTrue(Simd<float32_t, N, kPow2>()), vv);
-}
 
 template <size_t N, int kPow2> OMNI_API svfloat64_t PromoteTo(Simd<float64_t, N, kPow2> /* d */, const svint32_t v)
 {
@@ -2322,28 +2301,11 @@ OMNI_SVE_FOREACH_UI64(OMNI_SVE_RETV_ARGPV, NativePromoteEvenTo, extw)
 
 #include "simd/instruction/inside-inl.h"
 
-// ------------------------------ DemoteTo F
-
-// We already toggled OMNI_NATIVE_F16C above.
-
-template <size_t N, int kPow2> OMNI_API svfloat16_t DemoteTo(Simd<float16_t, N, kPow2> d, const svfloat32_t v)
-{
-    const svfloat16_t in_even = svcvt_f16_f32_x(detail::PTrue(d), v);
-    return detail::ConcatEvenFull(in_even, in_even); // lower half
-}
-
 #ifdef OMNI_NATIVE_DEMOTE_F64_TO_F16
 #undef OMNI_NATIVE_DEMOTE_F64_TO_F16
 #else
 #define OMNI_NATIVE_DEMOTE_F64_TO_F16
 #endif
-
-template <size_t N, int kPow2> OMNI_API svfloat16_t DemoteTo(Simd<float16_t, N, kPow2> d, const svfloat64_t v)
-{
-    const svfloat16_t in_lo16 = svcvt_f16_f64_x(detail::PTrue(d), v);
-    const svfloat16_t in_even = detail::ConcatEvenFull(in_lo16, in_lo16);
-    return detail::ConcatEvenFull(in_even, in_even); // lower half
-}
 
 #ifdef OMNI_NATIVE_DEMOTE_F32_TO_BF16
 #undef OMNI_NATIVE_DEMOTE_F32_TO_BF16
@@ -3248,14 +3210,6 @@ template <class V, OMNI_IF_T_SIZE_V(V, 2)> OMNI_API V Compress(V v, svbool_t mas
     const size_t countL = detail::CountTrueFull(dw, mask32L);
     const auto compressed_maskL = FirstN(d16, countL);
     return detail::Splice(v16H, v16L, compressed_maskL);
-}
-
-// Must treat float16_t as integers so we can ConcatEven.
-OMNI_API svfloat16_t Compress(svfloat16_t v, svbool_t mask16)
-{
-    const DFromV<decltype(v)> df;
-    const RebindToSigned<decltype(df)> di;
-    return BitCast(df, Compress(BitCast(di, v), mask16));
 }
 
 // ------------------------------ CompressNot
@@ -4874,7 +4828,253 @@ template <typename T, size_t N> OMNI_API uint64_t FindMatchMask(T value, const T
     }
     return nib;
 }
+namespace detail {
+enum class SortOrder {
+    ASCENDING,
+    DESCENDING
+};
 
+using AddrVec = svuint64_t;
+using AddrType = uint64_t;
+template <typename T> using SortTag = ScalableTag<T>;
+
+static const SortTag<AddrType> ADDR_TAG;
+
+template <class Base> struct SharedTraits : public Base {
+    using SharedTraitsForSortingNetwork = SharedTraits<typename Base::TraitsForSortingNetwork>;
+    SortOrder CurrentOrder = Base::Order;
+};
+
+static svint64_t GetSmallestIntegerVec()
+{
+    return svdup_s64(INT64_MIN);
+}
+static svint64_t GetLargestIntegerVec()
+{
+    return svdup_s64(INT64_MAX);
+}
+static svfloat64_t GetSmallestDoubleVec()
+{
+    return svdup_f64(-DBL_MAX);
+}
+static svfloat64_t GetLargestDoubleVec()
+{
+    return svdup_f64(DBL_MAX);
+}
+template <class D> VFromD<D> GetVec(D d, double buf)
+{
+    return svdup_f64(buf);
+}
+template <class D> VFromD<D> GetVec(D d, int64_t buf)
+{
+    return svdup_s64(buf);
+}
+
+namespace QuickSortAscending {
+template <class D, OMNI_IF_F64_D(D)> inline VFromD<D> GetSmallestVec(D d)
+{
+    return static_cast<VFromD<D>>(GetLargestDoubleVec());
+}
+template <class D, OMNI_IF_I64_D(D)> inline VFromD<D> GetSmallestVec(D d)
+{
+    return static_cast<VFromD<D>>(GetLargestIntegerVec());
+}
+
+template <class D, class V, OMNI_IF_F64_D(D)> inline TFromD<D> GetSmallest(D d, V v)
+{
+    return svminv_f64(svptrue_b64(), v);
+}
+
+template <class D, class V, OMNI_IF_F64_D(D)> inline TFromD<D> GetLargest(D d, V v)
+{
+    return svmaxv_f64(svptrue_b64(), v);
+}
+
+template <class D, class V, OMNI_IF_I64_D(D)> inline TFromD<D> GetSmallest(D d, V v)
+{
+    return svminv_s64(svptrue_b64(), v);
+}
+
+template <class D, class V, OMNI_IF_I64_D(D)> inline TFromD<D> GetLargest(D d, V v)
+{
+    return svmaxv_s64(svptrue_b64(), v);
+}
+
+template <class D, OMNI_IF_F64_D(D)> inline VFromD<D> GetLargestVec(D)
+{
+    return static_cast<VFromD<D>>(GetSmallestDoubleVec());
+}
+
+template <class D, OMNI_IF_I64_D(D)> inline VFromD<D> GetLargestVec(D)
+{
+    return static_cast<VFromD<D>>(GetSmallestIntegerVec());
+}
+template <class D, class V> static void UpdateMinMax(D, V value, V &smallest, V &largest)
+{
+    if constexpr (std::is_same_v<TFromD<D>, double>) {
+        svbool_t cmp_less = svcmplt_f64(svptrue_b64(), value, smallest);
+        svbool_t cmp_greater = svcmpgt_f64(svptrue_b64(), value, largest);
+
+        smallest = svsel(cmp_less, value, smallest);
+        largest = svsel(cmp_greater, value, largest);
+    } else {
+        svbool_t cmp_less = svcmplt_s64(svptrue_b64(), value, smallest);
+        svbool_t cmp_greater = svcmpgt_s64(svptrue_b64(), value, largest);
+
+        smallest = svsel(cmp_less, value, smallest);
+        largest = svsel(cmp_greater, value, largest);
+    }
+}
+template <class D, OMNI_IF_I64_D(D), class V> svbool_t Compare(D d, V v1, V v2)
+{
+    svbool_t less_than_mask = svcmplt_s64(svptrue_b64(), v1, v2);
+    return less_than_mask;
+}
+template <class D, OMNI_IF_F64_D(D), class V> svbool_t Compare(D d, V v1, V v2)
+{
+    svbool_t less_than_mask = svcmplt_f64(svptrue_b64(), v1, v2);
+    return less_than_mask;
+}
+};
+
+
+namespace QuickSortDescending {
+template <class D, OMNI_IF_F64_D(D)> inline VFromD<D> GetSmallestVec(D d)
+{
+    return GetSmallestDoubleVec();
+}
+template <class D, OMNI_IF_I64_D(D)> inline VFromD<D> GetSmallestVec(D d)
+{
+    return static_cast<VFromD<D>>(GetSmallestIntegerVec());
+}
+template <class D, OMNI_IF_F64_D(D)> inline VFromD<D> GetLargestVec(D d)
+{
+    return GetLargestDoubleVec();
+}
+
+template <class D, OMNI_IF_I64_D(D)> inline VFromD<D> GetLargestVec(D d)
+{
+    return static_cast<VFromD<D>>(GetLargestIntegerVec());
+}
+template <class D, class V> static void UpdateMinMax(D, V value, V &smallest, V &largest)
+{
+    svbool_t mask = svptrue_b64();
+    if constexpr (std::is_same_v<TFromD<D>, double>) {
+        svbool_t cmp_greater = svcmpgt_f64(mask, value, smallest);
+        svbool_t cmp_less = svcmplt_f64(mask, value, largest);
+
+        smallest = svsel(cmp_greater, value, smallest);
+        largest = svsel(cmp_less, value, largest);
+    } else {
+        svbool_t cmp_greater = svcmpgt_s64(mask, value, smallest);
+        svbool_t cmp_less = svcmplt_s64(mask, value, largest);
+
+        smallest = svsel(cmp_greater, value, smallest);
+        largest = svsel(cmp_less, value, largest);
+    }
+}
+template <class D, OMNI_IF_I64_D(D), class V> svbool_t Compare(D d, V v1, V v2)
+{
+    svbool_t pg = svwhilelt_b64(0, 4);
+    svbool_t less_than_mask = svcmplt_s64(pg, v2, v1);
+    return less_than_mask;
+}
+template <class D, OMNI_IF_F64_D(D), class V> svbool_t Compare(D d, V v1, V v2)
+{
+    svbool_t pg = svwhilelt_b64(0, 4);
+    svbool_t less_than_mask = svcmplt_f64(pg, v2, v1);
+    return less_than_mask;
+}
+template <class D, class V, OMNI_IF_F64_D(D)> inline TFromD<D> GetSmallest(D d, V v)
+{
+    return svmaxv_f64(svptrue_b64(), v);
+}
+template <class D, class V, OMNI_IF_I64_D(D)> inline TFromD<D> GetSmallest(D d, V v)
+{
+    return svmaxv_s64(svptrue_b64(), v);
+}
+
+template <class D, class V, OMNI_IF_F64_D(D)> inline TFromD<D> GetLargest(D d, V v)
+{
+    return svminv_f64(svptrue_b64(), v);
+}
+
+template <class D, class V, OMNI_IF_I64_D(D)> inline TFromD<D> GetLargest(D d, V v)
+{
+    return svminv_s64(svptrue_b64(), v);
+}
+};
+template <class V> OMNI_API V GetBlendedVec(const svbool_t &mask, const V &compressAddrVec, const V &tmpAddrVec)
+{
+    return svsel(mask, compressAddrVec, tmpAddrVec);
+}
+template <class Base> struct TraitsLane : public Base {
+    using TraitsForSortingNetwork = TraitsLane<typename Base::OrderForSortingNetwork>;
+    template <class D> inline void Sort2(D d, VFromD<D> &a, VFromD<D> &b) const
+    {
+        const Base *base = static_cast<const Base *>(this);
+
+        const VFromD<D> a_copy = a;
+        a = base->First(d, a, b);
+        b = base->Last(d, a_copy, b);
+    }
+};
+template <class V, class D, class RawType>
+OMNI_API size_t CompressStore(const D d, const V v, const AddrVec a, const svbool_t mask, RawType *valuePtr,
+    AddrType *address)
+{
+    StoreU(Compress(v, mask), d, valuePtr);
+    StoreU(Compress(a, mask), ADDR_TAG, address);
+    return CountTrue(d, mask);
+}
+template <class V, class D, class RawType>
+OMNI_API size_t CompressBlendedStore(D d, V v, AddrVec addrVec, MFromD<D> mask, RawType *values, AddrType *addrPtr)
+{
+    const size_t count = CountTrue(d, mask);
+    const svbool_t store_mask = FirstN(d, count);
+    BlendedStore(Compress(v, mask), store_mask, d, values);
+    BlendedStore(Compress(addrVec, mask), store_mask, ADDR_TAG, addrPtr);
+    return count;
+}
+inline bool NotEqual(double pivot, double smallest)
+{
+    if (std::fabs(pivot - smallest) >= DBL_EPSILON) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+inline bool NotEqual(int64_t a, int64_t b)
+{
+    return a != b;
+}
+inline double GetAvg(double a, double b)
+{
+    return (a + b) / 2;
+}
+inline int64_t GetAvg(int64_t a, int64_t b)
+{
+    return (a & b) + ((a ^ b) >> 1);
+}
+template <class Traits, class V> inline V MedianOf3(Traits st, V v0, V v1, V v2)
+{
+    const DFromV<V> d;
+    st.Sort2(d, v0, v2);
+    v1 = st.Last(d, v0, v1);
+    v1 = st.First(d, v1, v2);
+    return v1;
+}
+template <class D, class M> OMNI_API MFromD<D> GetBlendedMask(D d, M a, M b)
+{
+    return svbic_b_z(svptrue_b64(), a, b);
+}
+
+template <class D, class M> inline MFromD<D> GetAndMask(D d, M a, M b)
+{
+    return svand_b_z(svptrue_b64(), a, b);
+}
+}
 // ================================================== END MACROS
 #undef OMNI_SVE_ALL_PTRUE
 #undef OMNI_SVE_D
