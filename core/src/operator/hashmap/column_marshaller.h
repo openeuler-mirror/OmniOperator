@@ -16,6 +16,8 @@ namespace op {
 using namespace vec;
 enum class HandleType {
     serialize,
+    fixedInt32,
+    fixedInt64,
     fixed256Bytes,
     onlyOneKey
 };
@@ -23,6 +25,7 @@ enum class HandleType {
 template <typename Hashmap> class ColumnSerializeHandler {
 public:
     Hashmap hashmap;
+    static constexpr bool HasSpecialNullFunc = false;
     using KeyType = typename Hashmap::Keys;
     using ValueType = typename Hashmap::Values;
     using Result = typename Hashmap::ResultType;
@@ -171,6 +174,60 @@ private:
 
     std::vector<VectorSerializerIgnoreNull> ignoreNullSerializers;
     std::vector<FixedKeyVectorSerializerIgnoreNull> fixedKeysIgnoreNullSerializers;
+};
+
+template <typename Hashmap, typename T>
+class GroupbySingleFixHandler {
+public:
+    static constexpr bool HasSpecialNullFunc = true;
+    Hashmap hashmap;
+    using Result = typename Hashmap::ResultType;
+
+    Result InsertValueToHashmap(BaseVector **groupVectors, int32_t groupColNum, int32_t rowIdx,
+        mem::SimpleArenaAllocator &arenaAllocator)
+    {
+        auto *curVector = groupVectors[0];
+        if (curVector->IsNull(rowIdx)) {
+            T value = 0;
+            return hashmap.EmplaceNullValue(value);
+        }
+        if (curVector->GetEncoding() == Encoding::OMNI_DICTIONARY) {
+            auto dictionaryVector = static_cast<Vector<DictionaryContainer<T>> *>(curVector);
+            auto value = dictionaryVector->GetValue(rowIdx);
+            return hashmap.Emplace(value);
+        } else {
+            return hashmap.Emplace(reinterpret_cast<Vector<T>*>(curVector)->GetValue(rowIdx));
+        }
+    }
+
+    void ParseKeyToCols(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int rowIdx)
+    {
+        auto curVectorPtr = groupOutputVectors[0];
+        if (curVectorPtr->GetEncoding() == Encoding::OMNI_DICTIONARY) {
+            auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<T>> *>(curVectorPtr);
+            dictionaryVector->SetValue(rowIdx, key);
+        } else {
+            reinterpret_cast<Vector<T>*>(curVectorPtr)->SetValue(rowIdx, key);
+        }
+    }
+
+    void ParseNull(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,
+        const int rowIdx)
+    {
+        auto curVectorPtr = groupOutputVectors[0];
+        curVectorPtr->SetNull(rowIdx);
+    }
+
+    size_t GetElementsSize() const
+    {
+        return hashmap.GetElementsSize();
+    }
+
+    void ResetHashmap()
+    {
+        hashmap.Reset();
+    }
 };
 }
 }

@@ -98,6 +98,8 @@ private:
     VectorBatch *GetOutputFromDiskWithAgg(VectorBatch *output);
     void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
     void CalcAndSetStatesSize();
+    ALWAYS_INLINE size_t GetElementsSize();
+    ALWAYS_INLINE void ResetHashmap();
 
     std::vector<ColumnIndex> groupByCols;
     std::vector<std::vector<int32_t>> aggInputCols;
@@ -107,6 +109,8 @@ private:
     std::vector<type::DataTypePtr> outputTypes;
     HandleType groupByColumnsHandleType = HandleType::serialize;
     std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
+    std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int32_t, AggregateState *>, int32_t>> fixedInt32 = nullptr;
+    std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int64_t, AggregateState *>, int64_t>> fixedInt64 = nullptr;
     bool isInited = false;
 
     OutputState outputState;

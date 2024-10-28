@@ -23,6 +23,22 @@ template <> struct GroupbyHashCalculator<omniruntime::type::StringRef> {
         return omniruntime::op::HashUtil::HashValue((int8_t *)str.data, str.size);
     }
 };
+
+template <> struct GroupbyHashCalculator<int32_t>
+{
+    size_t operator () (const int32_t data) const
+    {
+        return data;
+    }
+};
+
+template <> struct GroupbyHashCalculator<int64_t>
+{
+    size_t operator() (const int64_t data) const
+    {
+        return data;
+    }
+};
 }
 }
 

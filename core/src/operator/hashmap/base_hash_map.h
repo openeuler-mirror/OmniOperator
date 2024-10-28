@@ -531,16 +531,16 @@ public:
         return InsertResult<ValueType>(slots[pos].GetValue(), inserted);
     }
 
-    // no need to check T
+    // key can be any data
     template <typename T> InsertResult<ValueType> EmplaceNullValue(T &&key)
     {
         if (nullSlot == nullptr) {
             ++elementsSize;
             allocator.Allocate(sizeof(Slot), reinterpret_cast<uint8_t **>(&nullSlot));
             new (nullSlot)Slot(std::forward<T>(key));
-            return InsertResult<ValueType> { nullSlot->GetValue(), true };
+            return InsertResult<ValueType>{ nullSlot->GetValue(), true };
         } else {
-            return InsertResult<ValueType> { nullSlot->GetValue(), false };
+            return InsertResult<ValueType>{ nullSlot->GetValue(), false };
         }
     }
 
@@ -643,7 +643,8 @@ public:
             this->pos = pos;
         }
 
-        template <class Func> OutputState HandleElements(uint32_t expectSize, Func func)
+        template <class Func, class NullFunc> OutputState HandleElements(uint32_t expectSize, Func func,
+            NullFunc nullFunc)
         {
             uint32_t remainHandleSize = expectSize;
             while (remainSlot && remainHandleSize) {
@@ -659,7 +660,7 @@ public:
             }
             if (hashMapPtr->HasNullCell()) {
                 --remainHandleSize;
-                func(hashMapPtr->nullSlot->GetKey(), hashMapPtr->nullSlot->GetValue());
+                nullFunc(hashMapPtr->nullSlot->GetKey(), hashMapPtr->nullSlot->GetValue());
             }
             return OutputState(pos, expectSize - remainHandleSize);
         }
