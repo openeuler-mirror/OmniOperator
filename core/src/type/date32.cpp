@@ -286,6 +286,7 @@ int Date32::StringToTm(const char *s, int32_t len, tm &r)
 
 Status Date32::StringToDate32(const char *buf, int32_t len, int64_t &result)
 {
+    constexpr std::size_t YEAR_LENGTH = 4;
     int32_t pos = 0;
     if (len == 0) {
         return Status::IS_NOT_A_NUMBER;
@@ -295,6 +296,8 @@ Status Date32::StringToDate32(const char *buf, int32_t len, int64_t &result)
     int32_t month = -1;
     int32_t year = 0;
     bool yearNeg = false;
+    // Whether a sign is included in the date string.
+    bool sign = false;
     int sep;
 
     while (pos < len && buf[len - 1] == ' ') {
@@ -304,17 +307,19 @@ Status Date32::StringToDate32(const char *buf, int32_t len, int64_t &result)
     while (pos < len && buf[pos] == ' ') {
         pos++;
     }
-
+    auto startPos = pos;
     if (pos >= len) {
         return Status::IS_NOT_A_NUMBER;
     }
     if (buf[pos] == '-') {
+        sign = true;
         yearNeg = true;
         pos++;
         if (pos >= len) {
             return Status::IS_NOT_A_NUMBER;
         }
     } else if (buf[pos] == '+') {
+        sign = true;
         pos++;
         if (pos >= len) {
             return Status::IS_NOT_A_NUMBER;
@@ -338,6 +343,10 @@ Status Date32::StringToDate32(const char *buf, int32_t len, int64_t &result)
         if (year > MAX_YEAR) {
             break;
         }
+    }
+
+    if (pos - startPos - sign < YEAR_LENGTH) {
+        return Status::IS_NOT_A_NUMBER;
     }
     if (yearNeg) {
         if (NegateCheckedOverflow(year, year)) {
