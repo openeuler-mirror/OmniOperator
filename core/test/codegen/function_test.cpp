@@ -2039,7 +2039,7 @@ TEST(FunctionTest, UnixTimestampFromDate)
     int64_t output[rowCnt];
     for (int32_t i = 0; i < rowCnt; i++) {
         output[i] = UnixTimestampFromDate(dates[i], fmtStrs[i].c_str(), fmtStrs[i].length(),
-                                          "Asia/Shanghai", 13, isNull[i]);
+                                          "Asia/Shanghai", 13, "CORRECTED", 9, isNull[i]);
     }
     std::vector<int64_t> result(output, output + rowCnt);
     std::vector<int64_t> expect = { 615999600, 488822400, -28800 };

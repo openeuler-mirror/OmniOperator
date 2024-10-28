@@ -2477,20 +2477,26 @@ TEST(BatchFunctionTest, BatchUnixTimestampFromDate)
     int32_t dates[] = {7130, 5658, 0};
     std::string fmtStrs[] = {"%Y-%m-%d", "%Y-%m-%d", "%Y-%m-%d"};
     std::string tzStrs[] = {"Asia/Shanghai", "Asia/Shanghai", "Asia/Shanghai"};
+    std::string policyStrs[] = {"CORRECTED", "CORRECTED", "CORRECTED"};
     const char *fmtStrPtrs[rowCnt];
     int32_t fmtLens[rowCnt];
     const char *tzStrPtrs[rowCnt];
     int32_t tzLens[rowCnt];
+    const char *policyStrPtrs[rowCnt];
+    int32_t policyLens[rowCnt];
     for (int32_t i = 0; i < rowCnt; i++) {
         fmtStrPtrs[i] = fmtStrs[i].c_str();
         fmtLens[i] = fmtStrs[i].length();
         tzStrPtrs[i] = tzStrs[i].c_str();
         tzLens[i] = tzStrs[i].length();
+        policyStrPtrs[i] = policyStrs[i].c_str();
+        policyLens[i] = policyStrs[i].length();
     }
 
     bool isAnyNull[] = {false, false, false};
     int64_t output[rowCnt];
-    BatchUnixTimestampFromDate(dates, fmtStrPtrs, fmtLens, tzStrPtrs, tzLens, isAnyNull, output, rowCnt);
+    BatchUnixTimestampFromDate(dates, fmtStrPtrs, fmtLens, tzStrPtrs, tzLens, policyStrPtrs, policyLens,
+                               isAnyNull, output, rowCnt);
     std::vector<int64_t> result(output, output + rowCnt);
     std::vector<int64_t> expect = { 615999600, 488822400, -28800 };
     AssertLongEquals(expect, result);
