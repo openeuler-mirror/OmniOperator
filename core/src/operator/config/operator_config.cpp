@@ -155,26 +155,24 @@ static void CreateSpillDirectory(const char *spillPathChars)
     }
 }
 
-static void CreateSpillDirectories(char *spillPathChars)
+static void CreateSpillDirectories(std::string &spillPath)
 {
-    int32_t curPos = 0;
-    char c = spillPathChars[curPos];
-    while (c != '\0') {
+    size_t curPos = 0;
+    size_t len = spillPath.size();
+    while (curPos < len) {
         // create parent directory if it does not exist
-        if (c == '/') {
-            int32_t nextPos = curPos + 1;
-            auto tmpChar = spillPathChars[nextPos];
-            spillPathChars[nextPos] = '\0';
-            CreateSpillDirectory(spillPathChars);
-            spillPathChars[nextPos] = tmpChar;
+        if (spillPath[curPos] == '/') {
+            size_t nextPos = curPos + 1;
+            auto tmpChar = spillPath[nextPos];
+            spillPath[nextPos] = '\0';
+            CreateSpillDirectory(spillPath.c_str());
+            spillPath[nextPos] = tmpChar;
             curPos = nextPos;
         } else {
             curPos++;
         }
-        c = spillPathChars[curPos];
     }
-
-    CreateSpillDirectory(spillPathChars);
+    CreateSpillDirectory(spillPath.c_str());
 }
 
 void OperatorConfig::CheckSpillConfig(SpillConfig *spillConfig)
@@ -184,11 +182,8 @@ void OperatorConfig::CheckSpillConfig(SpillConfig *spillConfig)
         // enable spill but the spill path is invalid
         throw exception::OmniException(GetErrorCode(ErrorCode::EMPTY_PATH), GetErrorMessage(ErrorCode::EMPTY_PATH));
     }
-
-    auto spillPathChars = spillPath.c_str();
-    CreateSpillDirectories(const_cast<char *>(spillPathChars));
-
-    CheckHasEnoughDiskSpace(spillPathChars, *spillConfig);
+    CreateSpillDirectories(spillPath);
+    CheckHasEnoughDiskSpace(spillPath.c_str(), *spillConfig);
 }
 }
 }
