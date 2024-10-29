@@ -1274,6 +1274,10 @@ TEST(FunctionTest, CastStringToDate)
     EXPECT_EQ(result, -188682);
     result = CastStringToDateAllowReducePrecison(contextPtr, "   1 453-05-29   ", 16, false);
     EXPECT_EQ(result, -1);
+    result = CastStringToDateAllowReducePrecison(contextPtr, " 145", 4, false);
+    EXPECT_EQ(result, -1);
+    result = CastStringToDateAllowReducePrecison(contextPtr, "-145", 4, false);
+    EXPECT_EQ(result, -1);
 
     result = CastStringToDateAllowReducePrecison(contextPtr, "1996-09  ", 9, false);
     EXPECT_EQ(result, 9740);
