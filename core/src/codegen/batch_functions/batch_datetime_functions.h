@@ -20,7 +20,8 @@ extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32
     const char **policyStrs, int32_t *policyLens, bool *isNullPolStr, bool *retIsNull, int64_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchUnixTimestampFromDate(int32_t *dates, const char **fmtStrs, int32_t *fmtLens,
-    const char **tzStrs, int32_t *tzLens, bool *isAnyNull, int64_t *output, int32_t rowCnt);
+    const char **tzStrs, int32_t *tzLens, const char **policyStrs, int32_t *policyLens,
+    bool *isAnyNull, int64_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void BatchFromUnixTime(bool *outputNull, int64_t contextPtr, int64_t *timestamps,
     const char **fmtStrs, int32_t *fmtLens, const char **tzStrs, int32_t *tzLens,

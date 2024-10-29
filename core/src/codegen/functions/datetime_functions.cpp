@@ -35,7 +35,7 @@ extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t t
 }
 
 extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmtStr, int32_t fmtLen,
-                                                   const char *tzStr, int32_t tzLen, bool isNull)
+   const char *tzStr, int32_t tzLen, const char *policyStr, int32_t policyLen, bool isNull)
 {
     if (isNull) {
         return 0;

@@ -21,7 +21,7 @@ extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t t
     bool isNullTzStr, const char *policyStr, int32_t policyLen, bool isNullPolStr, bool *retIsNull);
 
 extern "C" DLLEXPORT int64_t UnixTimestampFromDate(int32_t date, const char *fmtStr, int32_t fmtLen,
-    const char *tzStr, int32_t tzLen, bool isNull);
+    const char *tzStr, int32_t tzLen, const char *policyStr, int32_t policyLen, bool isNull);
 
 extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_t timestamp, const char *fmtStr,
     int32_t fmtLen, const char *tzStr, int32_t tzLen, int32_t *outLen);

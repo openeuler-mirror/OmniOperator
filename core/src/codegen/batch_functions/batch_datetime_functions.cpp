@@ -42,7 +42,8 @@ extern "C" DLLEXPORT void BatchUnixTimestampFromStr(const char **timeStrs, int32
 }
 
 extern "C" DLLEXPORT void BatchUnixTimestampFromDate(int32_t *dates, const char **fmtStrs, int32_t *fmtLens,
-    const char **tzStrs, int32_t *tzLens, bool *isAnyNull, int64_t *output, int32_t rowCnt)
+    const char **tzStrs, int32_t *tzLens, const char **policyStrs, int32_t *policyLens,
+    bool *isAnyNull, int64_t *output, int32_t rowCnt)
 {
     std::string tzStr(tzStrs[0], tzLens[0]);
     setenv("TZ", TimeZoneUtil::GetTZ(tzStr.c_str()), 1);
