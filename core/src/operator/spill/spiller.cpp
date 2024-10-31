@@ -166,6 +166,7 @@ ErrorCode SpillWriter::CreateTempFile()
     char filePathChars[fileNameLen];
     auto pid = static_cast<int>(getpid());
     auto tid = static_cast<uint32_t>(pthread_self());
+    LogDebug("Spill writer create temp file at dir: %s.", dirPathChars);
     if (snprintf_s(filePathChars, fileNameLen, fileNameLen, "%s/%d-%u-%s", dirPathChars, pid, tid,
         SPILL_TEMPLATE_CHARS) < 0) {
         auto errorNum = errno;
