@@ -11,14 +11,28 @@ package nova.hetu.omniruntime.operator;
  */
 public abstract class OmniOperatorFactoryContext {
     /**
+     * Switch for configuring factory cache defaults
+     */
+    private static boolean defaultNeedCacheValue = true;
+
+    /**
      * Whether the omni operator factory needs to be cached.
      */
-    private boolean isNeedCache = true;
+    private boolean isNeedCache = defaultNeedCacheValue;
 
     /**
      * Instantiates a new Omni operator factory context.
      */
     public OmniOperatorFactoryContext() {
+    }
+
+    /**
+     * Interface for setting default values for engine initialization
+     *
+     * @param value enable op factory cache
+     */
+    public static void setDefaultNeedCacheValue(boolean value) {
+        defaultNeedCacheValue = value;
     }
 
     /**

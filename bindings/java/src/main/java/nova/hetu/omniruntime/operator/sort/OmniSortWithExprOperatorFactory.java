@@ -97,7 +97,6 @@ public class OmniSortWithExprOperatorFactory
             this.sortAscendings = sortAscendings;
             this.sortNullFirsts = sortNullFirsts;
             this.operatorConfig = operatorConfig;
-            setNeedCache(true);
         }
 
         @Override
