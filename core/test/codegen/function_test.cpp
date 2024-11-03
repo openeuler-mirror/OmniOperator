@@ -445,10 +445,10 @@ TEST(FunctionTest, Round)
     EXPECT_EQ(-10, Round<int32_t>(-10, 0));
     EXPECT_EQ(-10, Round<int32_t>(-10, 5));
 
-    EXPECT_EQ(10, Round<int64_t>(10, 0));
-    EXPECT_EQ(10, Round<int64_t>(10, 5));
-    EXPECT_EQ(-10, Round<int64_t>(-10, 0));
-    EXPECT_EQ(-10, Round<int64_t>(-10, 5));
+    EXPECT_EQ(10, RoundLong(10, 0));
+    EXPECT_EQ(10, RoundLong(10, 5));
+    EXPECT_EQ(-10, RoundLong(-10, 0));
+    EXPECT_EQ(-10, RoundLong(-10, 5));
 
     EXPECT_EQ(10.00, Round<double>(10.12345, 0));
     EXPECT_EQ(10.12, Round<double>(10.12345, 2));

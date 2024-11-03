@@ -191,7 +191,7 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(Pmod), PmodFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
         // insert native functions for each round math function
         Function(reinterpret_cast<void *>(Round<int32_t>), RoundFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(Round<int64_t>), RoundFnStr(), {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,
+        Function(reinterpret_cast<void *>(RoundLong), RoundFnStr(), {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,
             INPUT_DATA),
         Function(reinterpret_cast<void *>(Round<double>), RoundFnStr(), {}, { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE,
             INPUT_DATA),
