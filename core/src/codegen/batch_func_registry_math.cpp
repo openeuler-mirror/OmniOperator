@@ -113,7 +113,7 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(BatchPmod), PMOD_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchRound<int32_t>), ROUND_FN_STR, {}, intParams, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(BatchRound<int64_t>), ROUND_FN_STR, {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,
+        Function(reinterpret_cast<void *>(BatchRoundLong), ROUND_FN_STR, {}, { OMNI_LONG, OMNI_INT }, OMNI_LONG,
             INPUT_DATA),
         Function(reinterpret_cast<void *>(BatchRound<double>), ROUND_FN_STR, {}, { OMNI_DOUBLE, OMNI_INT }, OMNI_DOUBLE,
             INPUT_DATA),

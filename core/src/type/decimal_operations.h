@@ -893,6 +893,11 @@ public:
         return false;
     }
 
+    void Unset()
+    {
+        val = 0;
+    }
+
     Decimal128Wrapper &Abs()
     {
         if (signum == -1) {
@@ -1402,6 +1407,16 @@ public:
         return scale;
     }
 
+    bool IsNegative()
+    {
+        return val < 0;
+    }
+
+    void Unset()
+    {
+        val = 0;
+    }
+
     Decimal64 &SetScale(int32_t inputScale)
     {
         scale = inputScale;
@@ -1539,14 +1554,14 @@ public:
             return;
         } else {
             if (realRound > 37) {
-                input.IsOverflow();
+                input.Unset();
                 return;
             }
             uint128_t tenOfScale = TenOfScaleMultipliers[realRound];
-            input = input.Add(tenOfScale / 2);
+            input = input.IsNegative() ? input.Subtract(tenOfScale / 2) : input.Add(tenOfScale / 2);
             input /= tenOfScale;
             if (round < 0) {
-                input *= TenOfScaleMultipliers[-round - 1];
+                input *= TenOfScaleMultipliers[-round];
             }
         }
     }

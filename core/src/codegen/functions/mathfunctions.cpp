@@ -6,7 +6,7 @@
 #include <iostream>
 #include <cfloat>
 #include "codegen/context_helper.h"
-
+#include "codegen/common_util.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -265,5 +265,10 @@ extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y)
     } else {
         return r;
     }
+}
+
+extern "C" DLLEXPORT int64_t RoundLong(int64_t num, int32_t decimals)
+{
+    return RoundOperator(num, decimals);
 }
 }

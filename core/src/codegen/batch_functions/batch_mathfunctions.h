@@ -119,6 +119,9 @@ extern "C" DLLEXPORT void BatchEqualBool(bool *left, bool toCmp, int32_t rowCnt)
 
 extern "C" DLLEXPORT void BatchPmod(int32_t *x, int32_t *y, bool *isAnyNull, int32_t *output, int32_t rowCnt);
 
+extern "C" DLLEXPORT void BatchRoundLong(int64_t *num, int32_t *decimals, bool *isAnyNull, int64_t *output,
+    int32_t rowCnt);
+
 template <typename T>
 extern DLLEXPORT void BatchRound(T *num, int32_t *decimals, bool *isAnyNull, T *output, int32_t rowCnt)
 {

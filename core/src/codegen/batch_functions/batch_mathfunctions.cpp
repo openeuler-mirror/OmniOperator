@@ -8,6 +8,7 @@
 #include "codegen/context_helper.h"
 #include "codegen/functions/mathfunctions.h"
 #include "util/config_util.h"
+#include "codegen/common_util.h"
 
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -374,6 +375,14 @@ extern "C" DLLEXPORT void BatchPmod(int32_t *x, int32_t *y, bool *isAnyNull, int
         } else {
             output[i] = r;
         }
+    }
+}
+
+extern "C" DLLEXPORT void BatchRoundLong(int64_t *num, int32_t *decimals, bool *isAnyNull, int64_t *output,
+    int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        output[i] = RoundOperator(num[i], decimals[i]);
     }
 }
 }
