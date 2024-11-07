@@ -157,12 +157,12 @@ enum class TimeParserRule {
 
 class Policy {
 public:
-    // Default policy is OLK policy
+    // Default policy is spark policy
     Policy()
-        : Policy(RoundingRule::HALF_UP, CheckReScaleRule::NOT_CHECK_RESCALE, EmptySearchStrReplaceRule::REPLACE,
-        CastDecimalToDoubleRule::CAST, NegativeStartIndexOutOfBoundsRule::EMPTY_STRING,
-        ZeroStartIndexSupportRule::IS_NOT_SUPPORT, SupportContainerVecRule::SUPPORT,
-        StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION, SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT,
+        : Policy(RoundingRule::DOWN, CheckReScaleRule::CHECK_RESCALE, EmptySearchStrReplaceRule::NOT_REPLACE,
+        CastDecimalToDoubleRule::CONVERT_WITH_STRING, NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND,
+        ZeroStartIndexSupportRule::IS_SUPPORT, SupportContainerVecRule::NOT_SUPPORT,
+        StringToDateFormatRule::ALLOW_REDUCED_PRECISION, SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT,
         StringToDecimalRule::OVERFLOW_AS_NULL, TimeParserRule::CORRECTED) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,

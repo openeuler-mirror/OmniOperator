@@ -26,7 +26,6 @@ import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory;
 import nova.hetu.omniruntime.operator.aggregator.OmniAggregationOperatorFactory.FactoryContext;
 import nova.hetu.omniruntime.operator.config.OperatorConfig;
 import nova.hetu.omniruntime.type.CharDataType;
-import nova.hetu.omniruntime.type.ContainerDataType;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.Decimal128DataType;
 import nova.hetu.omniruntime.type.DoubleDataType;
@@ -262,14 +261,9 @@ public class OmniAggregationOperatorTest {
         DataType[] sourceTypes = {LongDataType.LONG, new Decimal128DataType(20, 5)};
         FunctionType sumFn = OMNI_AGGREGATION_TYPE_SUM;
         FunctionType avgFn = OMNI_AGGREGATION_TYPE_AVG;
-        FunctionType[] aggFunctionTypes = {sumFn, sumFn, avgFn, avgFn};
-        int[] aggInputChannels = {0, 1, 0, 1};
-        int[] maskChannels = {-1, -1, -1, -1};
-        DataType[] partialAggOutputTypes = {LongDataType.LONG, new VarcharDataType(24),
-                new ContainerDataType(new DataType[]{DoubleDataType.DOUBLE, LongDataType.LONG}),
-                new VarcharDataType(32)};
-        OmniAggregationOperatorFactory factory1 = new OmniAggregationOperatorFactory(sourceTypes, aggFunctionTypes,
-                aggInputChannels, maskChannels, partialAggOutputTypes, true, true);
+        FunctionType[] aggFunctionTypes = {sumFn, avgFn};
+        int[] aggInputChannels = {0, 1};
+        int[] maskChannels = {-1, -1};
 
         Object[][] sampleDatas = {{3L, 10L, 2L, 7L, 3L}};
         Object[][] decimalDatas = {{4000L, 0L}, {2000L, 0L}, {1000L, 0L}, {3000L, 0L}, {5000L, 0L}};
@@ -281,23 +275,14 @@ public class OmniAggregationOperatorTest {
         buildVecs[1] = createVec(sourceTypes[1], decimalDatas);
         VecBatch inputData = new VecBatch(buildVecs);
 
-        OmniOperator omniOperator1 = factory1.createOperator();
-        omniOperator1.addInput(inputData);
-        Iterator<VecBatch> partialOutput = omniOperator1.getOutput();
+        DataType[] finalAggOutputTypes = {LongDataType.LONG, new Decimal128DataType(20, 5)};
+        OmniAggregationOperatorFactory factory = new OmniAggregationOperatorFactory(sourceTypes,
+                aggFunctionTypes, aggInputChannels, maskChannels, finalAggOutputTypes, true, false);
 
-        int[] finalAggInputChannels = {0, 1, 2, 3};
-        DataType[] finalAggOutputTypes = {LongDataType.LONG, new Decimal128DataType(20, 5), DoubleDataType.DOUBLE,
-                new Decimal128DataType(20, 5)};
-        OmniAggregationOperatorFactory factory2 = new OmniAggregationOperatorFactory(partialAggOutputTypes,
-                aggFunctionTypes, finalAggInputChannels, maskChannels, finalAggOutputTypes, false, false);
+        OmniOperator omniOperator = factory.createOperator();
+        omniOperator.addInput(inputData);
 
-        OmniOperator omniOperator2 = factory2.createOperator();
-        while (partialOutput.hasNext()) {
-            VecBatch partialVecBatch = partialOutput.next();
-            omniOperator2.addInput(partialVecBatch);
-        }
-
-        Iterator<VecBatch> finalOutput = omniOperator2.getOutput();
+        Iterator<VecBatch> finalOutput = omniOperator.getOutput();
         while (finalOutput.hasNext()) {
             VecBatch finalVecBatch = finalOutput.next();
             if (finalVecBatch.getVectors().length != finalAggOutputTypes.length) {
@@ -307,19 +292,14 @@ public class OmniAggregationOperatorTest {
             }
 
             assertNotNull(finalVecBatch);
-            assertEquals(finalVecBatch.getVectors().length, 4);
+            assertEquals(finalVecBatch.getVectors().length, 2);
             Vec[] vectors = finalVecBatch.getVectors();
             assertEquals(((LongVec) vectors[0]).get(0), 25L);
-            assertEquals(((Decimal128Vec) vectors[1]).get(0), new Object[]{15000L, 0L});
-            assertEquals(((DoubleVec) vectors[2]).get(0), 5.0);
-            assertEquals(((Decimal128Vec) vectors[3]).get(0), new Object[]{3000L, 0L});
-
+            assertEquals(((Decimal128Vec) vectors[1]).get(0), new Object[]{3000L, 0L});
             freeVecBatch(finalVecBatch);
         }
-        omniOperator2.close();
-        omniOperator1.close();
-        factory2.close();
-        factory1.close();
+        omniOperator.close();
+        factory.close();
     }
 
     @Test
