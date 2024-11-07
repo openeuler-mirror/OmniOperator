@@ -10,6 +10,7 @@
 #include "operator/filter/filter_and_project.h"
 #include "operator/projection/projection.h"
 #include "util/test_util.h"
+#include "type/base_operations.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -431,9 +432,9 @@ TEST(ExpressionTest, q1Decimal64Type)
         new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, Decimal64Type(12, 2));
     FieldExpr *mulLeft = new FieldExpr(0, Decimal64Type(12, 2));
     BinaryExpr *mulExpr1 =
-        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, Decimal64Type(12, 2));
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, Decimal64Type(12, 4));
     BinaryExpr *mulExpr2 =
-        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, Decimal64Type(12, 2));
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, Decimal64Type(12, 6));
     std::vector<Expr *> exprs = { mulExpr2 };
 
     Timer timer;
@@ -473,12 +474,13 @@ TEST(ExpressionTest, q1Decimal64Type)
         std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
 
         // verify result
-        for (int i = 0; i < numRows; i++) {
-            double result = (reinterpret_cast<Vector<int64_t> *>(vectorBatch->Get(0)))->GetValue(i) / 1000000.0;
-            double actualDecimal64 = ((reinterpret_cast<Vector<int64_t> *>(t->Get(0)))->GetValue(i)) / 100.0 *
-                (1.0 - (reinterpret_cast<Vector<int64_t> *>(t->Get(1)))->GetValue(i) / 100.0) *
-                (1 + (reinterpret_cast<Vector<int64_t> *>(t->Get(2)))->GetValue(i) / 100.0);
-            EXPECT_TRUE(abs(result - actualDecimal64) < 0.1);
+        for (int j = 0; j < numRows; j++) {
+            int64_t result = (reinterpret_cast<Vector<int64_t> *>(vectorBatch->Get(0)))->GetValue(j);
+            auto val1 = reinterpret_cast<Vector<int64_t> *>(t->Get(0))->GetValue(j);
+            auto val2 = reinterpret_cast<Vector<int64_t> *>(t->Get(1))->GetValue(j);
+            auto val3 = reinterpret_cast<Vector<int64_t> *>(t->Get(2))->GetValue(j);
+            int64_t actualDecimal64 = val1 * (100 - val2) * (100 + val3);
+            EXPECT_EQ(result, actualDecimal64);
         }
         VectorHelper::FreeVecBatch(vectorBatch);
     }
@@ -530,9 +532,9 @@ TEST(ExpressionTest, q1Decimal128Type)
         new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, Decimal128Type(32, 2));
     FieldExpr *mulLeft = new FieldExpr(0, Decimal128Type(32, 2));
     BinaryExpr *mulExpr1 =
-        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, Decimal128Type(32, 2));
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, Decimal128Type(32, 4));
     BinaryExpr *mulExpr2 =
-        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, Decimal128Type(32, 2));
+        new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, Decimal128Type(32, 6));
     std::vector<Expr *> exprs = { mulExpr2 };
 
     Timer timer;
@@ -581,9 +583,8 @@ TEST(ExpressionTest, q1Decimal128Type)
             Decimal128 val2 = reinterpret_cast<Vector<Decimal128> *>(t->Get(1))->GetValue(i);
             Decimal128 val3 = reinterpret_cast<Vector<Decimal128> *>(t->Get(2))->GetValue(i);
 
-            double actualDecimal128 =
-                val1.LowBits() / 100.0 * (1.0 - val2.LowBits() / 100.0) * (1.0 + val3.LowBits() / 100.0);
-            EXPECT_TRUE(abs(result.LowBits() / 1000000.0 - actualDecimal128) < 0.1);
+            int64_t actualDecimal128 = val1.LowBits() * (100 - val2.LowBits()) * (100 + val3.LowBits());
+            EXPECT_EQ(result.LowBits(), actualDecimal128);
         }
         VectorHelper::FreeVecBatch(vectorBatch);
     }
@@ -1323,7 +1324,7 @@ TEST(ExpressionTest, q1CastDoubleLong)
         std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
         for (int i = 0; i < numRows; i++) {
             int64_t result = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0)))->GetValue(i);
-            int64_t actual = (int64_t)(col0[i] + 0.5);
+            int64_t actual = static_cast<int64_t>(col0[i]);
             EXPECT_EQ(result, actual);
         }
         VectorHelper::FreeVecBatch(outputVecBatch);
@@ -1453,7 +1454,7 @@ TEST(ExpressionTest, q1CastDecimal64Int64)
         std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
         for (int i = 0; i < numRows; i++) {
             int64_t result = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0)))->GetValue(i);
-            EXPECT_EQ(result, (col0[i] + 50) / 100);
+            EXPECT_EQ(result, col0[i] / 100);
         }
         VectorHelper::FreeVecBatch(outputVecBatch);
     }
