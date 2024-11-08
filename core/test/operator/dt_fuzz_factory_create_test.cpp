@@ -78,6 +78,20 @@ TEST(DtFuzzFactoryCreateTest, testHashJoinFactoryCreate)
     delete overflowConfig;
 }
 
+TEST(DtFuzzFactoryCreateTest, testLookupOuterJoinFactoryCreate)
+{
+    DataTypes sourceTypes(supportedTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto operatorFactories = CreateLookupOuterFactory(sourceTypes, overflowConfig, "", 1);
+
+    ASSERT_FALSE(operatorFactories[0] == nullptr);
+    ASSERT_FALSE(operatorFactories[1] == nullptr);
+    for (auto operatorFactory : operatorFactories) {
+        delete operatorFactory;
+    }
+    delete overflowConfig;
+}
+
 TEST(DtFuzzFactoryCreateTest, testDistinctLimitFactoryCreate)
 {
     DataTypes sourceTypes(supportedTypes);

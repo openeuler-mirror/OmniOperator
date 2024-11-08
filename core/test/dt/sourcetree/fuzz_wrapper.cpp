@@ -18,6 +18,7 @@
 #include "operator/filter/filter_and_project.h"
 #include "operator/window/window.h"
 #include "operator/join/lookup_join.h"
+#include "operator/join/lookup_outer_join.h"
 #include "operator/join/sortmergejoin/sort_merge_join.h"
 #include "operator/topnsort/topn_sort_expr.h"
 #include "operator/join/sortmergejoin/sort_merge_join_expr_v3.h"
@@ -225,6 +226,40 @@ void TestHashJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     delete overflowConfig;
 }
 
+void TestLookupOuterJoin(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize,
+    uint16_t loopCount, std::string filterExpr, int32_t optCount)
+{
+    std::cout << "LookupOuterJoin Fuzz" << std::endl;
+    loopCount = loopCount <= 100 ? loopCount : 100;
+    auto vecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, (loopCount / 10) + 1, true, true);
+
+    auto overflowConfig = new OverflowConfig();
+    auto operatorFactories = CreateLookupOuterFactory(sourceTypes, overflowConfig, filterExpr, optCount);
+    auto hashBuilderFactory = dynamic_cast<HashBuilderOperatorFactory *>(operatorFactories[0]);
+    auto hashBuilderOperator = hashBuilderFactory->CreateOperator();
+    hashBuilderOperator->AddInput(vecBatch);
+    VectorBatch *hashBuildOutput = nullptr;
+    hashBuilderOperator->GetOutput(&hashBuildOutput);
+
+    VectorBatch *probeVecBatch = CreateInputForAllTypes(sourceTypes, testData, dataSize, loopCount, true, true);
+
+    auto lookupJoinFactory = dynamic_cast<LookupOuterJoinOperatorFactory *>(operatorFactories[1]);
+    auto lookupJoinOperator = lookupJoinFactory->CreateOperator();
+    lookupJoinOperator->AddInput(probeVecBatch);
+    while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        VectorBatch *outputVecBatch = nullptr;
+        lookupJoinOperator->GetOutput(&outputVecBatch);
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
+    VectorHelper::FreeVecBatch(probeVecBatch);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
+    for (auto operatorFactory : operatorFactories) {
+        DeleteOperatorFactory(operatorFactory);
+    }
+    delete overflowConfig;
+}
+
 void TestDistinctLimit(void **testData, omniruntime::type::DataTypes &sourceTypes, int32_t dataSize, uint16_t loopCount)
 {
     std::cout << "DistinctLimit Fuzz" << std::endl;
@@ -311,44 +346,30 @@ void TestSortMergeJoin(void **testData, omniruntime::type::DataTypes &sourceType
     // need add buffered table data
     smjOp->AddBufferedTableInput(bufferedTblVecBatch1);
 
-    std::vector<DataTypePtr> bufferTypesVector = { ShortType(),
-        IntType(),
-        LongType(),
-        BooleanType(),
-        DoubleType(),
-        Date32Type(DAY),
-        Decimal64Type(SHORT_DECIMAL_SIZE, 0),
-        Decimal128Type(LONG_DECIMAL_SIZE, LONG_DECIMAL_SIZE),
-        VarcharType(CHAR_SIZE),
-        CharType(CHAR_SIZE) };
     // add eof flag to buffered table , need add streamed table data
-    VectorBatch *bufferedTblVecBatchEof = omniruntime::TestUtil::CreateEmptyVectorBatch(DataTypes(bufferTypesVector));
+    VectorBatch *bufferedTblVecBatchEof = omniruntime::TestUtil::CreateEmptyVectorBatch(sourceTypes);
     smjOp->AddBufferedTableInput(bufferedTblVecBatchEof);
 
     // add eof flag to streamed table
-    std::vector<DataTypePtr> streamTypesVector = { ShortType(),
-        IntType(),
-        LongType(),
-        BooleanType(),
-        DoubleType(),
-        Date32Type(DAY),
-        Decimal64Type(SHORT_DECIMAL_SIZE, 0),
-        Decimal128Type(LONG_DECIMAL_SIZE, LONG_DECIMAL_SIZE),
-        VarcharType(CHAR_SIZE),
-        CharType(CHAR_SIZE) };
-    VectorBatch *streamedTblVecBatchEof = omniruntime::TestUtil::CreateEmptyVectorBatch(DataTypes(streamTypesVector));
+    VectorBatch *streamedTblVecBatchEof = omniruntime::TestUtil::CreateEmptyVectorBatch(sourceTypes);
     smjOp->AddStreamedTableInput(streamedTblVecBatchEof);
 
     VectorBatch *result = nullptr;
     smjOp->GetOutput(&result);
+    // getOutput should be called cyclically due to vecBatch iterator output function.
+    if (smjOp->GetStatus() != OMNI_STATUS_FINISHED) {
+        while (smjOp->GetStatus() != OMNI_STATUS_FINISHED) {
+            VectorHelper::FreeVecBatch(result);
+            smjOp->GetOutput(&result);
+        }
+    }
 
-    auto streamedTblVecBatchEof1 = omniruntime::TestUtil::CreateEmptyVectorBatch(DataTypes(streamTypesVector));
+    // construct exception input
+    auto streamedTblVecBatchEof1 = omniruntime::TestUtil::CreateEmptyVectorBatch(sourceTypes);
     smjOp->AddStreamedTableInput(streamedTblVecBatchEof1);
 
     // check the join result
-    if (result) {
-        VectorHelper::FreeVecBatch(result);
-    }
+    VectorHelper::FreeVecBatch(result);
 
     omniruntime::op::Operator::DeleteOperator(smjOp);
     delete overflowConfig;
@@ -388,6 +409,8 @@ void TestTopNSort(void **testData, omniruntime::type::DataTypes &sourceTypes, in
     if (outputVectorBatch) {
         VectorHelper::FreeVecBatch(outputVectorBatch);
     }
+    Expr::DeleteExprs(partitionKeys);
+    Expr::DeleteExprs(sortKeys);
     omniruntime::op::Operator::DeleteOperator(topNSortOperator);
     DeleteOperatorFactory(topNSortOperatorFactory);
 }
@@ -431,6 +454,12 @@ void TestWindow(void **testData, omniruntime::type::DataTypes &sourceTypes, int3
     windowOperator->AddInput(sourceVecBatch);
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
+    if (windowOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        while (windowOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+            VectorHelper::FreeVecBatch(outputVecBatch);
+            windowOperator->GetOutput(&outputVecBatch);
+        }
+    }
 
     omniruntime::op::Operator::DeleteOperator(windowOperator);
     if (outputVecBatch) {
@@ -499,6 +528,7 @@ int GlobalFuzz(struct FuzzData fzd, uint16_t loopCount, std::string filterExpr, 
             TestHashAggregation(inputDatas, sourceTypes, dataSize, loopCount);
             std::cout << "filterExpr = " << filterExpr << ", operatorCount = " << opCnt << std::endl;
             TestHashJoin(inputDatas, sourceTypes, dataSize, loopCount, filterExpr, opCnt);
+            TestLookupOuterJoin(inputDatas, sourceTypes, dataSize, loopCount, filterExpr, opCnt);
             TestDistinctLimit(inputDatas, sourceTypes, dataSize, loopCount);
             TestProject(inputDatas, sourceTypes, dataSize, loopCount);
             TestSort(inputDatas, sourceTypes, dataSize, loopCount);

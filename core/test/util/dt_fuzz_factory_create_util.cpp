@@ -9,6 +9,7 @@
 #include "operator/aggregation/group_aggregation.h"
 #include "operator/aggregation/aggregator/aggregator_util.h"
 #include "operator/join/lookup_join.h"
+#include "operator/join/lookup_outer_join.h"
 #include "operator/limit/distinct_limit.h"
 #include "operator/union/union.h"
 #include "operator/topn/topn.h"
@@ -85,18 +86,29 @@ OperatorFactory *CreateAggregationFactory(omniruntime::type::DataTypes &sourceTy
 
 OperatorFactory *CreateHashAggregationFactory(omniruntime::type::DataTypes &sourceTypes)
 {
-    omniruntime::op::FunctionType aggFunType[] = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_SUM};
-    DataTypes groupTypes(std::vector<DataTypePtr>({ IntType(), LongType() }));
-    DataTypes aggInputTypes(std::vector<DataTypePtr>({ LongType(), DoubleType() }));
-    DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), DoubleType() }));
-    uint32_t groupCols[2] = {1, 2};
-    uint32_t aggCols[2] = {2, 4};
-    std::vector<uint32_t> groupByColContext = std::vector<uint32_t>((uint32_t *)groupCols, (uint32_t *)groupCols + 2);
-    std::vector<uint32_t> aggColContext = std::vector<uint32_t>((uint32_t *)aggCols, (uint32_t *)aggCols + 2);
-    std::vector<uint32_t> aggFuncTypeContext =
-        std::vector<uint32_t>((uint32_t *)aggFunType, (uint32_t *)aggFunType + 2);
-    int32_t maskCols[] = {-1, -1};
-    std::vector<uint32_t> maskColsContext = std::vector<uint32_t>((uint32_t *)maskCols, (uint32_t *)maskCols + 2);
+    int32_t SHORT_DECIMAL_SIZE = 18;
+    int32_t LONG_DECIMAL_SIZE = 38;
+    uint16_t CHAR_SIZE = 10;
+    omniruntime::op::FunctionType aggFunType[] = {OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MAX,
+        OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN, OMNI_AGGREGATION_TYPE_MIN,
+        OMNI_AGGREGATION_TYPE_MAX, OMNI_AGGREGATION_TYPE_MIN};
+    DataTypes groupTypes(std::vector<DataTypePtr>({ ShortType(), IntType() }));
+    DataTypes aggInputTypes(std::vector<DataTypePtr>({
+        LongType(), BooleanType(), DoubleType(), Date32Type(DAY), Decimal64Type(SHORT_DECIMAL_SIZE, 0),
+        Decimal128Type(LONG_DECIMAL_SIZE, 0), VarcharType(CHAR_SIZE), CharType(CHAR_SIZE)
+    }));
+    DataTypes aggOutputTypes(std::vector<DataTypePtr>({
+        LongType(), BooleanType(), DoubleType(), Date32Type(DAY), Decimal64Type(SHORT_DECIMAL_SIZE, 0),
+        Decimal128Type(LONG_DECIMAL_SIZE, 0), VarcharType(CHAR_SIZE), CharType(CHAR_SIZE)
+    }));
+    uint32_t groupCols[2] = {0, 1};
+    uint32_t aggCols[8] = {2, 3, 4, 5, 6, 7, 8, 9};
+    std::vector<uint32_t> groupByColContext = { groupCols[0], groupCols[1] };
+    std::vector<uint32_t> aggColContext = { aggCols[0], aggCols[1], aggCols[2], aggCols[3],
+        aggCols[4], aggCols[5], aggCols[6], aggCols[7] };
+    std::vector<uint32_t> aggFuncTypeContext = { aggFunType[0], aggFunType[1], aggFunType[2], aggFunType[3],
+        aggFunType[4], aggFunType[5], aggFunType[6], aggFunType[7] };
+    std::vector<uint32_t> maskColsContext = { 1, 1, 1, 1, 1, 1, 1, 1 };
 
     auto aggColContextWrap = AggregatorUtil::WrapWithVector(aggColContext);
     auto aggInputTypesWrap = AggregatorUtil::WrapWithVector(aggInputTypes);
@@ -165,6 +177,29 @@ std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataType
     return operatorFactories;
 }
 
+std::vector<OperatorFactory *> CreateLookupOuterFactory(omniruntime::type::DataTypes &sourceTypes,
+    OverflowConfig *overflowConfig, std::string filterExpr, int32_t operatorCount)
+{
+    int32_t buildJoinCols[1] = {1};
+    int32_t joinColsCount = 1;
+    operatorCount = 1;
+    auto hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(OMNI_JOIN_TYPE_FULL,
+        sourceTypes, buildJoinCols, joinColsCount, operatorCount);
+
+    int32_t probeOutputCols[1] = {2};
+    int32_t probeOutputColsCount = 1;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({ LongType() }));
+    int32_t buildOutputCols[1] = {2};
+
+    auto hashBuilderFactoryAddr = reinterpret_cast<int64_t>(hashBuilderFactory);
+
+    auto lookupOuterJoinOperatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
+        sourceTypes, probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes, hashBuilderFactoryAddr);
+
+    std::vector<OperatorFactory *> operatorFactories = { hashBuilderFactory, lookupOuterJoinOperatorFactory };
+    return operatorFactories;
+}
+
 OperatorFactory *CreateTopNSortFactory(omniruntime::type::DataTypes &sourceTypes,
     std::vector<omniruntime::expressions::Expr *> partitionKeys, std::vector<omniruntime::expressions::Expr *> sortKeys,
     int32_t dataSize)
@@ -211,15 +246,13 @@ omniruntime::op::Operator *CreateSortMergeJoinOperator(omniruntime::type::DataTy
     DataTypes streamedTblTypes(sourceTypes);
     std::vector<int32_t> streamedKeysCols;
     streamedKeysCols.push_back(1);
-    std::vector<int32_t> streamedOutputCols;
-    streamedOutputCols.push_back(2);
+    std::vector<int32_t> streamedOutputCols = { 0, 2, 3, 4, 5, 6, 7, 8, 9 };
     smjOp->ConfigStreamedTblInfo(streamedTblTypes, streamedKeysCols, streamedOutputCols, sourceTypes.GetSize());
 
     DataTypes bufferedTblTypes(sourceTypes);
     std::vector<int32_t> bufferedKeysCols;
-    bufferedKeysCols.push_back(2);
-    std::vector<int32_t> bufferedOutputCols;
-    bufferedOutputCols.push_back(1);
+    bufferedKeysCols.push_back(1);
+    std::vector<int32_t> bufferedOutputCols = { 0, 2, 3, 4, 5, 6, 7, 8, 9 };
     smjOp->ConfigBufferedTblInfo(bufferedTblTypes, bufferedKeysCols, bufferedOutputCols, sourceTypes.GetSize());
     smjOp->InitScannerAndResultBuilder(overflowConfig);
     return smjOp;
