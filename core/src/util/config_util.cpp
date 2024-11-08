@@ -278,6 +278,8 @@ void ConfigUtil::InitRoundingRule(Policy *policy, const std::string &ruleValueSt
 {
     if (ruleValueStr == "DOWN") {
         policy->SetRoundingRule(RoundingRule::DOWN);
+    } else if (ruleValueStr == "HALF_UP") {
+        policy->SetRoundingRule(RoundingRule::HALF_UP);
     }
 }
 
@@ -285,6 +287,8 @@ void ConfigUtil::InitCheckReScaleRule(Policy *policy, const std::string &ruleVal
 {
     if (ruleValueStr == "CHECK_RESCALE") {
         policy->SetCheckReScaleRule(CheckReScaleRule::CHECK_RESCALE);
+    } else if (ruleValueStr == "NOT_CHECK_RESCALE") {
+        policy->SetCheckReScaleRule(CheckReScaleRule::NOT_CHECK_RESCALE);
     }
 }
 
@@ -292,6 +296,8 @@ void ConfigUtil::InitEmptySearchStrReplaceRule(Policy *policy, const std::string
 {
     if (ruleValueStr == "NOT_REPLACE") {
         policy->SetEmptySearchStrReplaceRule(EmptySearchStrReplaceRule::NOT_REPLACE);
+    } else if (ruleValueStr == "REPLACE") {
+        policy->SetEmptySearchStrReplaceRule(EmptySearchStrReplaceRule::REPLACE);
     }
 }
 
@@ -299,6 +305,8 @@ void ConfigUtil::InitCastDecimalToDoubleRule(Policy *policy, const std::string &
 {
     if (ruleValueStr == "CONVERT_WITH_STRING") {
         policy->SetCastDecimalToDoubleRule(CastDecimalToDoubleRule::CONVERT_WITH_STRING);
+    } else if (ruleValueStr == "CAST") {
+        policy->SetCastDecimalToDoubleRule(CastDecimalToDoubleRule::CAST);
     }
 }
 
@@ -306,6 +314,8 @@ void ConfigUtil::InitNegativeStartIndexOutOfBoundsRule(Policy *policy, const std
 {
     if (ruleValueStr == "INTERCEPT_FROM_BEYOND") {
         policy->SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND);
+    } else if (ruleValueStr == "EMPTY_STRING") {
+        policy->SetNegativeStartIndexOutOfBoundsRule(NegativeStartIndexOutOfBoundsRule::EMPTY_STRING);
     }
 }
 
@@ -313,6 +323,8 @@ void ConfigUtil::InitZeroStartIndexSupportRule(Policy *policy, const std::string
 {
     if (ruleValueStr == "IS_SUPPORT") {
         policy->SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_SUPPORT);
+    } else if (ruleValueStr == "IS_NOT_SUPPORT") {
+        policy->SetZeroStartIndexSupportRule(ZeroStartIndexSupportRule::IS_NOT_SUPPORT);
     }
 }
 
@@ -320,6 +332,8 @@ void ConfigUtil::InitSupportContainerVecRule(Policy *policy, const std::string &
 {
     if (ruleValueStr == "NOT_SUPPORT") {
         policy->SetSupportContainerVecRule(SupportContainerVecRule::NOT_SUPPORT);
+    } else if (ruleValueStr == "SUPPORT") {
+        policy->SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);
     }
 }
 
@@ -327,6 +341,8 @@ void ConfigUtil::InitStringToDateFormatRule(Policy *policy, const std::string &r
 {
     if (ruleValueStr == "ALLOW_REDUCED_PRECISION") {
         policy->SetStringToDateFormatRule(StringToDateFormatRule::ALLOW_REDUCED_PRECISION);
+    } else if (ruleValueStr == "NOT_ALLOW_REDUCED_PRECISION") {
+        policy->SetStringToDateFormatRule(StringToDateFormatRule::NOT_ALLOW_REDUCED_PRECISION);
     }
 }
 
@@ -334,6 +350,8 @@ void ConfigUtil::InitSupportDecimalPrecisionImprovementRule(Policy *policy, cons
 {
     if (ruleValueStr == "IS_SUPPORT") {
         policy->SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_SUPPORT);
+    } else if (ruleValueStr == "IS_NOT_SUPPORT") {
+        policy->SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT);
     }
 }
 
@@ -341,5 +359,7 @@ void ConfigUtil::InitStringToDecimalRule(Policy *policy, const std::string &rule
 {
     if (ruleValueStr == "OVERFLOW_AS_ROUND_UP") {
         policy->SetStringToDecimalRule(StringToDecimalRule::OVERFLOW_AS_ROUND_UP);
+    } else if (ruleValueStr == "OVERFLOW_AS_NULL") {
+        policy->SetStringToDecimalRule(StringToDecimalRule::OVERFLOW_AS_NULL);
     }
 }
