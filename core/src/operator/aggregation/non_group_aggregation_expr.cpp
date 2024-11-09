@@ -109,19 +109,24 @@ AggregationWithExprOperator::AggregationWithExprOperator(const DataTypes &origin
     : originTypes(originSourceTypes),
       sourceTypes(sourceTypes),
       projections(projections),
-      aggSimpleFilters(aggSimpleFilters),
       aggOperator(aggOperator)
 {
-    for (auto simpleFilter : aggSimpleFilters) {
-        if (simpleFilter != nullptr) {
+    auto aggFilterNum = aggSimpleFilters.size();
+    this->aggSimpleFilters.resize(aggFilterNum, nullptr);
+    for (size_t i = 0; i < aggFilterNum; ++i) {
+        if (aggSimpleFilters[i] != nullptr) {
             hasAggFilter = true;
-            break;
+            this->aggSimpleFilters[i] = new SimpleFilter(*aggSimpleFilters[i]);
         }
     }
 }
 
 AggregationWithExprOperator::~AggregationWithExprOperator()
 {
+    for (auto it: aggSimpleFilters) {
+        delete it;
+    }
+    aggSimpleFilters.clear();
     delete aggOperator;
 }
 

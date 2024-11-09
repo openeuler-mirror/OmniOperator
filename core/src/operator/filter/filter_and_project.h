@@ -38,6 +38,10 @@ public:
 
     ~SimpleFilter();
 
+    SimpleFilter(const SimpleFilter &simpleFilter);
+
+    SimpleFilter& operator=(const SimpleFilter &simpleFilter) = delete;
+
     /* *
      * Initialize the filter, this method must be called after the construct
      * @return if the expression and types can be supported or not
@@ -73,7 +77,7 @@ public:
     }
 
 private:
-    std::unique_ptr<codegen::SimpleFilterCodeGen> codegen;
+    std::shared_ptr<codegen::SimpleFilterCodeGen> codegen;
     const expressions::Expr *expression;
     SimpleRowExprEvalFunc func;
     bool *isResultNull;
