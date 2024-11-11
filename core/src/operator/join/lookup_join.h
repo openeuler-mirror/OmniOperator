@@ -181,17 +181,39 @@ private:
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftSemiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftAntiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForExistenceJoin();
-    bool IsJoinPositionEligible(uint32_t partition, uint64_t buildAddress, uint32_t probeRow,
-        ExecutionContext *executionContextPtr);
+    template <bool hasJoinFilter> void ProbeJoinPosition(int32_t probePosition);
+    bool BuildJoinPosition(uint32_t partition, uint32_t buildRowIdx,
+                           uint32_t buildBatchIdx, ExecutionContext *contextPtr);
     void PrepareCurrentProbe();
     void PrepareSerializers();
     void PopulateProbeHashes();
     void PopulateProbeNulls();
     void ProcessProbe();
 
-    ALWAYS_INLINE std::vector<BaseVector **> &GetBuildFilterColPtrs(uint32_t partition)
+    template <bool hasJoinFilter>
+    ALWAYS_INLINE void InitForProbe(uint32_t partition, bool initSize=true)
     {
-        return tableBuildFilterColPtrs[partition];
+        if constexpr (hasJoinFilter) {
+            if (initSize) {
+                probeFilterColsSize = probeFilterCols.size();
+                buildFilterColsSize = buildFilterCols.size();
+            }
+            buildFilterColPtrs = GetBuildFilterColPtrs(partition);
+        }
+    }
+
+    ALWAYS_INLINE void AppendRow(int32_t probePosition, BaseVector ***array,
+                                 uint64_t address, bool appendRow, bool& hasProduceRow)
+    {
+        if (appendRow) {
+            outputBuilder->AppendRow(probePosition, array, address);
+            hasProduceRow = true;
+        }
+    }
+
+    ALWAYS_INLINE std::vector<BaseVector **> *GetBuildFilterColPtrs(uint32_t partition)
+    {
+        return &tableBuildFilterColPtrs[partition];
     }
 
     void PushBackProbeSerializer(VectorSerializerIgnoreNull &serializer)
@@ -235,6 +257,9 @@ private:
     std::vector<std::vector<BaseVector **>> tableBuildFilterColPtrs;
     bool firstVecBatch = true;
     std::vector<VectorSerializerIgnoreNull> probeSerializers;
+    std::vector<BaseVector **> *buildFilterColPtrs = nullptr;
+    size_t probeFilterColsSize = 0;
+    size_t buildFilterColsSize = 0;
 };
 } // end of op
 } // end of omniruntime
