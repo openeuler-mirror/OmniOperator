@@ -28,6 +28,16 @@ SimpleFilter::~SimpleFilter()
     this->codegen.reset();
 }
 
+SimpleFilter::SimpleFilter(const SimpleFilter &simpleFilter)
+{
+    this->codegen = simpleFilter.codegen;
+    this->expression = simpleFilter.expression;
+    this->func = simpleFilter.func;
+    this->initialized = simpleFilter.initialized;
+    this->resultLength = new int(0);
+    this->isResultNull = new bool(false);
+}
+
 bool SimpleFilter::Initialize(OverflowConfig *overflowConfig)
 {
     if (this->expression == nullptr) {
