@@ -97,11 +97,17 @@ void AddValueToVector(BaseVector *inputVector, int32_t inputRowId, BaseVector *o
     using Type = typename NativeAndVectorType<typeId>::type;
     using Vector = typename NativeAndVectorType<typeId>::vector;
 
-    if (inputVector->IsNull(inputRowId)) {
+    if (UNLIKELY(inputVector->IsNull(inputRowId))) {
         reinterpret_cast<Vector *>(outputVector)->SetNull(outputRowId);
     } else {
-        // no dictionary input for smj
-        Type value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
+        // The input may be dictionary.
+        Type value;
+        if (UNLIKELY(inputVector->GetEncoding() == OMNI_DICTIONARY)) {
+            value = reinterpret_cast<omniruntime::vec::Vector<vec::DictionaryContainer<Type >> *>(inputVector)
+                    ->GetValue(inputRowId);
+        } else {
+            value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
+        }
         reinterpret_cast<Vector *>(outputVector)->SetValue(outputRowId, value);
     }
 }
@@ -117,8 +123,14 @@ void AddValuesToVector(BaseVector *inputVector, const int32_t* inputRowIds, int3
         if (UNLIKELY(inputVector->IsNull(inputRowId))) {
             reinterpret_cast<Vector *>(outputVector)->SetNull(outputRowId);
         } else {
-            // no dictionary input for smj
-            Type value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
+            // The input may be dictionary.
+            Type value;
+            if (UNLIKELY(inputVector->GetEncoding() == OMNI_DICTIONARY)) {
+                value = reinterpret_cast<omniruntime::vec::Vector<vec::DictionaryContainer<Type >> *>(inputVector)
+                        ->GetValue(inputRowId);
+            } else {
+                value = reinterpret_cast<Vector *>(inputVector)->GetValue(inputRowId);
+            }
             reinterpret_cast<Vector *>(outputVector)->SetValue(outputRowId, value);
         }
         ++outputRowId;
