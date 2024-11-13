@@ -203,6 +203,58 @@ public:
     }
 
     template <typename T, bool IsAscending, bool NeedCompareNull, bool IsNullsFirst>
+    static ALWAYS_INLINE int32_t CompareValue(vec::BaseVector *leftVector, int32_t leftPosition,
+            vec::BaseVector *rightVector, int32_t rightPosition)
+    {
+        if constexpr (NeedCompareNull) {
+            bool isNullLeft = leftVector->IsNull(leftPosition);
+            bool isNullRight = rightVector->IsNull(rightPosition);
+            auto nullResult = CompareNull<IsAscending, IsNullsFirst>(isNullLeft, isNullRight);
+            if (nullResult != COMPARE_STATUS_OTHER) {
+                return nullResult;
+            }
+        }
+
+        int32_t result = 0;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            std::string_view leftValue = reinterpret_cast<VarcharVector *>(leftVector)->GetValue(leftPosition);
+            std::string_view rightValue = reinterpret_cast<VarcharVector *>(rightVector)->GetValue(rightPosition);
+            auto leftLength = leftValue.length();
+            auto rightLength = rightValue.length();
+            result = memcmp(leftValue.data(), rightValue.data(), std::min(leftLength, rightLength));
+            if (result == 0) {
+                if (leftLength > rightLength) {
+                    result = COMPARE_STATUS_GREATER_THAN;
+                } else if (leftLength < rightLength) {
+                    result = COMPARE_STATUS_LESS_THAN;
+                }
+            }
+        } else {
+            T left;
+            T right;
+            if (leftVector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                left = static_cast<omniruntime::vec::Vector<vec::DictionaryContainer<T>> *>(leftVector)
+                        ->GetValue(leftPosition);
+            } else {
+                left = static_cast<omniruntime::vec::Vector<T> *>(leftVector)->GetValue(leftPosition);
+            }
+            if (rightVector->GetEncoding() == vec::OMNI_DICTIONARY) {
+                right = static_cast<omniruntime::vec::Vector<vec::DictionaryContainer<T>> *>(rightVector)
+                        ->GetValue(rightPosition);
+            } else {
+                right = static_cast<omniruntime::vec::Vector<T> *>(rightVector)->GetValue(rightPosition);
+            }
+            result = left > right ? COMPARE_STATUS_GREATER_THAN :
+                     (left < right ? COMPARE_STATUS_LESS_THAN : COMPARE_STATUS_EQUAL);
+        }
+        if constexpr (IsAscending) {
+            return result;
+        } else {
+            return -result;
+        }
+    }
+
+    template <typename T, bool IsAscending, bool NeedCompareNull, bool IsNullsFirst>
     static ALWAYS_INLINE int32_t CompareFlatTemplate(vec::BaseVector *leftVector, int32_t leftPosition,
         vec::BaseVector *rightVector, int32_t rightPosition)
     {

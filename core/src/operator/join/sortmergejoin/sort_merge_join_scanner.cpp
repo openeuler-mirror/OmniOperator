@@ -54,29 +54,29 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
         auto colTypeId = streamedTableKeysTypes.GetIds()[i];
         switch (colTypeId) {
             case OMNI_BOOLEAN:
-                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<bool, true, false, true>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareValue<bool, true, false, true>);
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<int32_t, true, false, true>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareValue<int32_t, true, false, true>);
                 break;
             case OMNI_SHORT:
-                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<int16_t, true, false, true>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareValue<int16_t, true, false, true>);
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<int64_t, true, false, true>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareValue<int64_t, true, false, true>);
                 break;
             case OMNI_DOUBLE:
-                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<double, true, false, true>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareValue<double, true, false, true>);
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<std::string_view, true, false, true>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareValue<std::string_view, true, false, true>);
                 break;
             case OMNI_DECIMAL128:
-                keyCompareFuncs[i] = (OperatorUtil::CompareFlatTemplate<Decimal128, true, false, true>);
+                keyCompareFuncs[i] = (OperatorUtil::CompareValue<Decimal128, true, false, true>);
                 break;
             default:
                 throw omniruntime::exception::OmniException("sort merge join scanner",
