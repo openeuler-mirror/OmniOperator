@@ -224,7 +224,6 @@ template <class Base> struct TraitsLane : public Base {
 
         auto mask = Eq(a, aCopy);
         auto firstTrue = FindFirstTrue(d, mask);
-        auto lastTrue = FindLastTrue(d, mask);
         if constexpr (D::kPrivateLanes == 1) {
             if (firstTrue != 0) {
                 A_VEC copyE = e;
@@ -232,6 +231,7 @@ template <class Base> struct TraitsLane : public Base {
                 c = copyE;
             }
         } else {
+            auto lastTrue = FindLastTrue(d, mask);
             auto diffMask = firstTrue + lastTrue;
             if (diffMask == 0) {
                 A_VEC copyC = c;

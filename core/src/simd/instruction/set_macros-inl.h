@@ -55,7 +55,7 @@
 #if OMNI_TARGET_IS_NEON
 #define OMNI_ALIGN alignas(16)
 #define OMNI_MAX_BYTES 16
-#define OMNI_LANES(T) (16 / sizeof(T))
+#define OMNI_LANES(T) static_cast<int32_t>(16 / sizeof(T))
 
 #define OMNI_HAVE_SCALABLE 0
 #define OMNI_HAVE_INTEGER64 1
