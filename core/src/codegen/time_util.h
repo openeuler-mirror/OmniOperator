@@ -132,7 +132,7 @@ public:
     static inline const char* GetTZ(const char *tzStr)
     {
         if (strcmp(tzStr, "GMT+08:00") == 0) {
-            return "Asia/Beijing";
+            return "Etc/GMT-8";
         } else {
             return tzStr;
         }
