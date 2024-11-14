@@ -315,7 +315,7 @@ void QuickSortInternalSIMD(D d, Traits st, RawType *values, AddrType *addresses,
     V pivotVal;
     if (chooseAvg) {
         RawType avgVec[OMNI_LANES(RawType)] = {0};
-        for (auto i = 0; i < OMNI_LANES(RawType); i++) {
+        for (int64_t i = 0; i < OMNI_LANES(RawType); i++) {
             avgVec[i] = avg;
         }
         pivotVal = LoadU(d, avgVec);
