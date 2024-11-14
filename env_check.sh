@@ -68,22 +68,18 @@ setup_dependencies() {
   mkdir -p ${workspace}/${open_source_dir}
 
   cp -r ${workspace}/../huawei_secure_c ${open_source_dir}
-  cp -r ${workspace}/../jemalloc ${open_source_dir}
   cp -r ${workspace}/../json ${open_source_dir}
   if [ "$1" != "package" ] && [ "$1" != "release" ]; then
     cp -r ${workspace}/../benchmark ${open_source_dir}
     cp -r ${workspace}/../googletest ${open_source_dir}/benchmark
   fi
 
-  echo "Start build open source code for huawei_secure_c, jemalloc, json and gtest"
+  echo "Start build open source code for huawei_secure_c, json and gtest"
   cd ${workspace}/${open_source_dir}/huawei_secure_c/src
   sudo make
   cd ${workspace}/${open_source_dir}
   sudo cp huawei_secure_c/lib/libsecurec.so $OMNI_HOME/lib
   sudo cp -r huawei_secure_c/include/ $OMNI_HOME/lib
-
-  cd ${workspace}/${open_source_dir}/jemalloc
-  sudo ./autogen.sh --disable-initial-exec-tls && sudo make -j16 && sudo make install
 
   mkdir ${workspace}/${open_source_dir}/json/build
   cd ${workspace}/${open_source_dir}/json/build && sudo cmake ../ && sudo make -j16 && sudo make install
