@@ -210,12 +210,11 @@ public:
         significand_ = ac + (ad >> 32) + (bc >> 32) + (tmp >> 32);
     }
 
-    // returns a * b;
     static DiyFp Times(const DiyFp &a, const DiyFp &b)
     {
-        DiyFp result = a;
-        result.Multiply(b);
-        return result;
+        DiyFp product = a;
+        product.Multiply(b);
+        return product;
     }
 
     void Normalize()
@@ -446,16 +445,16 @@ public:
 
     bool LowerBoundaryIsCloser() const
     {
-        // The boundary is closer if the significand is of the form f == 2^p-1 then
-        // the lower boundary is closer.
-        // Think of v = 1000e10 and v- = 9999e9.
-        // Then the boundary (== (v - v-)/2) is not just at a distance of 1e9 but
-        // at a distance of 1e8.
-        // The only exception is for the smallest normal: the largest denormal is
-        // at the same distance as its successor.
-        // Note: denormals have the same exponent as the smallest normals.
-        bool physicalSignificandIsZero = ((AsUint64() & SIGNIFICAND_MASK) == 0);
-        return physicalSignificandIsZero && (Exponent() != NORMAL_EXPONENT);
+        // The boundary is closer when the significand is in the form f == 2^p - 1,
+        // which makes the lower boundary closer to the value.
+        // For example, consider v = 1000e10 and v- = 9999e9.
+        // In this case, the boundary (calculated as (v - v-) / 2) is not just at a distance of 1e9,
+        // but rather at a distance of 1e8.
+        // The only exception to this rule is for the smallest normal number:
+        // the largest denormal number is at the same distance from its successor.
+        // Note that denormal numbers share the same exponent as the smallest normal numbers.
+        bool isSignificandZero = ((AsUint64() & SIGNIFICAND_MASK) == 0);
+        return isSignificandZero && (Exponent() != NORMAL_EXPONENT);
     }
 
     double value() const

@@ -106,16 +106,6 @@ template <typename From, typename To> OMNI_API void CopySameSize(const From *OMN
     CopyBytes<sizeof(From)>(from, to);
 }
 
-template <size_t kBytes, typename To> OMNI_API void ZeroBytes(To *to)
-{
-    __builtin_memset(to, 0, kBytes);
-}
-
-OMNI_API void ZeroBytes(void *to, size_t num_bytes)
-{
-    __builtin_memset(to, 0, num_bytes);
-}
-
 // ------------------------------------------------------------------------------
 // kMaxVectorSize (undocumented, pending removal)
 static constexpr OMNI_MAYBE_UNUSED size_t kMaxVectorSize = 16;
