@@ -146,15 +146,6 @@ enum class StringToDecimalRule {
     OVERFLOW_AS_ROUND_UP
 };
 
-/**
- *  Defines a time parsing rule for unix_timestamp and from_unixtime.
- *  Corresponds to the three values of spark.sql.legacy.timeParserPolicy in Spark.
- */
-enum class TimeParserRule {
-    LEGACY = 0,
-    CORRECTED
- };
-
 class Policy {
 public:
     // Default policy is spark policy
@@ -163,7 +154,7 @@ public:
         CastDecimalToDoubleRule::CONVERT_WITH_STRING, NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND,
         ZeroStartIndexSupportRule::IS_SUPPORT, SupportContainerVecRule::NOT_SUPPORT,
         StringToDateFormatRule::ALLOW_REDUCED_PRECISION, SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT,
-        StringToDecimalRule::OVERFLOW_AS_NULL, TimeParserRule::CORRECTED) {};
+        StringToDecimalRule::OVERFLOW_AS_NULL) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
@@ -171,7 +162,7 @@ public:
         ZeroStartIndexSupportRule zeroStartIndexSupportRule, SupportContainerVecRule supportContainerVecRule,
         StringToDateFormatRule stringToDateFormatRule,
         SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule,
-        StringToDecimalRule stringToDecimalRule, TimeParserRule timeParserRule)
+        StringToDecimalRule stringToDecimalRule)
         : roundingRule(roundingRule),
           checkReScaleRule(checkReScaleRule),
           emptySearchStrReplaceRule(emptySearchStrReplaceRule),
@@ -181,8 +172,7 @@ public:
           supportContainerVecRule(supportContainerVecRule),
           stringToDateFormatRule(stringToDateFormatRule),
           supportDecimalPrecisionImprovementRule(supportDecimalPrecisionImprovementRule),
-          stringToDecimalRule(stringToDecimalRule),
-          timeParserRule(timeParserRule){};
+          stringToDecimalRule(stringToDecimalRule) {};
 
     RoundingRule GetRoundingRule()
     {
@@ -284,16 +274,6 @@ public:
         stringToDecimalRule = rule;
     }
 
-    TimeParserRule GetTimeParserRule() const
-    {
-        return timeParserRule;
-    }
-
-    void SetTimeParserRule(TimeParserRule rule)
-    {
-        timeParserRule = rule;
-    }
-
 protected:
     RoundingRule roundingRule;
     CheckReScaleRule checkReScaleRule;
@@ -305,7 +285,6 @@ protected:
     StringToDateFormatRule stringToDateFormatRule;
     SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule;
     StringToDecimalRule stringToDecimalRule;
-    TimeParserRule timeParserRule;
 };
 
 #endif // OMNI_RUNTIME_POLICY_H
