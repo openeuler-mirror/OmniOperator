@@ -2212,9 +2212,6 @@ template <uint8_t kRcon, class V, OMNI_IF_U8_D(DFromV<V>)> OMNI_API V AESKeyGenA
     return Xor(rot_word_result, rconXorMask);
 }
 
-// Constant-time implementation inspired by
-// https://www.bearssl.org/constanttime.html, but about half the cost because we
-// use 64x64 multiplies and 128-bit XORs.
 template <class V> OMNI_API V CLMulLower(V a, V b)
 {
     const DFromV<V> d;

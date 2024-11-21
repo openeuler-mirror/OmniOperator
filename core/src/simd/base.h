@@ -118,12 +118,6 @@ static constexpr OMNI_MAYBE_UNUSED size_t kMaxVectorSize = 16;
 // exceed the stack size.
 #define OMNI_ALIGN_MAX alignas(16)
 
-// ------------------------------------------------------------------------------
-// Lane types
-
-// simd::float16_t and simd::bfloat16_t are forward declared here to allow
-// BitCastScalar to be implemented before the implementations of the
-// simd::float16_t and simd::bfloat16_t types
 struct float16_t;
 struct bfloat16_t;
 
@@ -132,22 +126,16 @@ using float64_t = double;
 
 #pragma pack(push, 1)
 
-// Aligned 128-bit type. Cannot use __int128 because clang doesn't yet align it:
-// https://reviews.llvm.org/D86310
 struct alignas(16) uint128_t {
     uint64_t lo; // little-endian layout
     uint64_t hi;
 };
 
-// 64 bit key plus 64 bit value. Faster than using uint128_t when only the key
-// field is to be compared (Lt128Upper instead of Lt128).
 struct alignas(16) K64V64 {
     uint64_t value; // little-endian layout
     uint64_t key;
 };
 
-// 32 bit key plus 32 bit value. Allows vqsort recursions to terminate earlier
-// than when considering both to be a 64-bit key.
 struct alignas(8) K32V32 {
     uint32_t value; // little-endian layout
     uint32_t key;
@@ -704,15 +692,11 @@ template <class T, class TVal = RemoveCvRef<T>> struct NativeSpecialFloatToWrapp
 template <class T> using NativeSpecialFloatToWrapper = typename NativeSpecialFloatToWrapperT<T>::type;
 } // namespace detail
 
-// ------------------------------------------------------------------------------
-// BF16 lane type
 struct alignas(2) bfloat16_t {
     union {
-        // Only accessed via NativeLaneType or U16LaneType.
         uint16_t bits;
     };
 
-    // Default init and copying
     bfloat16_t() noexcept = default;
 
     constexpr bfloat16_t(bfloat16_t &&) noexcept = default;
@@ -756,14 +740,6 @@ static OMNI_INLINE OMNI_MAYBE_UNUSED constexpr uint32_t F32BitsToBF16RoundIncr(c
 // rounded to the nearest F16 value
 static OMNI_INLINE OMNI_MAYBE_UNUSED constexpr uint16_t F32BitsToBF16Bits(const uint32_t f32_bits)
 {
-    // Round f32_bits to the nearest BF16 by first adding
-    // F32BitsToBF16RoundIncr(f32_bits) to f32_bits and then right shifting
-    // f32_bits + F32BitsToBF16RoundIncr(f32_bits) by 16
-
-    // If f32_bits is the bit representation of a NaN F32 value, make sure that
-    // bit 6 of the BF16 result is set to convert SNaN F32 values to QNaN BF16
-    // values and to prevent NaN F32 values from being converted to an infinite
-    // BF16 value
     return static_cast<uint16_t>(((f32_bits + F32BitsToBF16RoundIncr(f32_bits)) >> 16) |
         (static_cast<uint32_t>((f32_bits & 0x7FFFFFFFu) > 0x7F800000u) << 6));
 }
@@ -776,36 +752,6 @@ OMNI_API constexpr bfloat16_t BF16FromF32(float f)
 
 OMNI_API constexpr bfloat16_t BF16FromF64(double f64)
 {
-    // The mantissa bits of f64 are first rounded using round-to-odd rounding
-    // to the nearest f64 value that has the lower 38 bits zeroed out to
-    // ensure that the result is correctly rounded to a BF16.
-
-    // The F64 round-to-odd operation below will round a normal F64 value
-    // (using round-to-odd rounding) to a F64 value that has 15 bits of precision.
-
-    // It is okay if the magnitude of a denormal F64 value is rounded up in the
-    // F64 round-to-odd step below as the magnitude of a denormal F64 value is
-    // much smaller than 2^(-133) (the smallest positive denormal BF16 value).
-
-    // It is also okay if bit 38 of a NaN F64 value is changed by the F64
-    // round-to-odd step below as the lower 16 bits of a F32 NaN value are usually
-    // discarded or ignored by the conversion of a F32 NaN value to a BF16.
-
-    // If f64 is a NaN value, the result of the F64 round-to-odd step will be a
-    // NaN value as the result of the F64 round-to-odd step will have at least one
-    // mantissa bit if f64 is a NaN value.
-
-    // The F64 round-to-odd step below will ensure that the F64 to F32 conversion
-    // is exact if the magnitude of the rounded F64 value (using round-to-odd
-    // rounding) is between 2^(-135) (one-fourth of the smallest positive denormal
-    // BF16 value) and HighestValue<float>() (the largest finite F32 value).
-
-    // If |f64| is less than 2^(-135), the magnitude of the result of the F64 to
-    // F32 conversion is guaranteed to be less than or equal to 2^(-135), which
-    // ensures that the F32 to BF16 conversion is correctly rounded, even if the
-    // conversion of a rounded F64 value whose magnitude is less than 2^(-135)
-    // to a F32 is inexact.
-
     return BF16FromF32(static_cast<float>(
         BitCastScalar<double>(static_cast<uint64_t>((BitCastScalar<uint64_t>(f64) & 0xFFFFFFC000000000ULL) |
         ((BitCastScalar<uint64_t>(f64) + 0x0000003FFFFFFFFFULL) & 0x0000004000000000ULL)))));
@@ -1033,7 +979,6 @@ template <size_t N> using UnsignedFromSize = typename detail::TypeFromSize<N>::U
 template <size_t N> using SignedFromSize = typename detail::TypeFromSize<N>::Signed;
 template <size_t N> using FloatFromSize = typename detail::TypeFromSize<N>::Float;
 
-// Avoid confusion with SizeTag where the parameter is a lane size.
 using UnsignedTag = SizeTag<0>;
 using SignedTag = SizeTag<0x100>; // integer
 using FloatTag = SizeTag<0x200>;
@@ -1361,21 +1306,17 @@ template <typename T1, typename T2> constexpr inline T1 DivCeil(T1 a, T2 b)
     return (a + b - 1) / b;
 }
 
-// Works for any `align`; if a power of two, compiler emits ADD+AND.
 constexpr inline size_t RoundUpTo(size_t what, size_t align)
 {
     return DivCeil(what, align) * align;
 }
 
-// Works for any `align`; if a power of two, compiler emits AND.
 constexpr inline size_t RoundDownTo(size_t what, size_t align)
 {
     return what - (what % align);
 }
 
 namespace detail {
-// T is unsigned or T is signed and (val >> shift_amt) is an arithmetic right
-// shift
 template <class T> static OMNI_INLINE constexpr T ScalarShr(simd::UnsignedTag /* type_tag */, T val, int shift_amt)
 {
     return static_cast<T>(val >> shift_amt);
@@ -1469,10 +1410,6 @@ OMNI_INLINE constexpr T AddWithWraparound(T t, T2 increment)
 template <typename T, typename T2, OMNI_IF_NOT_FLOAT(T)> OMNI_INLINE constexpr T AddWithWraparound(T t, T2 n)
 {
     using TU = MakeUnsigned<T>;
-    // Sub-int types would promote to int, not unsigned, which would trigger
-    // warnings, so first promote to the largest unsigned type. Due to
-    // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87519, which affected GCC 8
-    // until fixed in 9.3, we use built-in types rather than uint64_t.
     return static_cast<T>(static_cast<TU>(
         static_cast<unsigned long long>(static_cast<unsigned long long>(t) + static_cast<unsigned long long>(n)) &
         uint64_t{ simd::LimitsMax<TU>() }));

@@ -13,20 +13,6 @@
 #include "simd/instruction/set_macros-inl.h"
 
 namespace simd {
-// NOTE: GCC generates incorrect code for vector arguments to non-inlined
-// functions in two situations:
-// - on Windows and GCC 10.3, passing by value crashes due to unaligned loads:
-//   https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54412.
-// - on aarch64 and GCC 9.3.0 or 11.2.1, passing by value causes many (but not
-//   all) tests to fail.
-//
-// We therefore pass by const& only on GCC and (Windows or aarch64). This alias
-// must be used for all vector/mask parameters of functions marked OMNI_NOINLINE,
-// and possibly also other functions that are not inlined.
-//
-// Even better is to avoid passing vector arguments to non-inlined functions,
-// because the SVE and RISC-V ABIs are still works in progress and may lead to
-// incorrect codegen.
 #if OMNI_COMPILER_GCC_ACTUAL && (OMNI_OS_WIN || OMNI_ARCH_ARM_A64)
 template <class V> using VecArg = const V &;
 #else
