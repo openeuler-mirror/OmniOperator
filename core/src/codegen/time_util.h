@@ -11,7 +11,6 @@
 #include <functional>
 #include <map>
 #include <stdlib.h>
-#include "util/config_util.h"
 #include "type/date_time_utils.h"
 
 namespace omniruntime::codegen::function {
@@ -66,7 +65,6 @@ static const std::set<std::string> UNIX_TIMESTAMP_FROM_STR_SHANGHAI_NON_DST_SET 
 using JudgeDSTActionByUnixTimestampFromDate = std::function<short(const struct tm *, time_t)>;
 static std::map<std::string, JudgeDSTActionByUnixTimestampFromDate> AdjustDSTByUnixTimestampFromDateMap = {
     {"GMT+08:00", [](const struct tm *timeInfo, time_t desiredTime) {return timeInfo->tm_isdst;}},
-    {"Asia/Beijing", [](const struct tm *timeInfo, time_t desiredTime) {return timeInfo->tm_isdst;}},
     {"Asia/Shanghai", [](const struct tm *timeInfo, time_t desiredTime) {
             short flag = 0;
             flag = UNIX_TIMESTAMP_FROM_DATE_SHANGHAI_NON_DST_SET.find(desiredTime) !=
@@ -83,8 +81,6 @@ using JudgeDSTActionByUnixTimestampFromStr =
 static std::map<std::string, JudgeDSTActionByUnixTimestampFromStr> JudgeDSTByUnixTimestampFromStrMap = {
     {"GMT+08:00", [](const struct tm *timeInfo, const char *timeStr, int32_t timeLen,
             const char *fmtStr, int32_t fmtLen) {return false;}},
-    {"Asia/Beijing", [](const struct tm *timeInfo, const char *timeStr, int32_t timeLen,
-            const char *fmtStr, int32_t fmtLen) {return false;}},
     {"Asia/Shanghai", [](const struct tm *timeInfo, const char *timeStr, int32_t timeLen,
             const char *fmtStr, int32_t fmtLen) {
             bool flag = false;
@@ -100,7 +96,6 @@ static std::map<std::string, JudgeDSTActionByUnixTimestampFromStr> JudgeDSTByUni
 using JudgeDSTActionByFromUnixTime = std::function<bool(const struct tm *)>;
 static std::map<std::string, JudgeDSTActionByFromUnixTime> JudgeDSTByFromUnixTimeMap = {
     {"GMT+08:00", [](const struct tm *timeInfo) {return timeInfo->tm_isdst > 0 ? false : true;}},
-    {"Asia/Beijing", [](const struct tm *timeInfo) {return timeInfo->tm_isdst > 0 ? false : true;}},
     {"Asia/Shanghai", [](const struct tm *timeInfo) {return true;}}
 };
 
