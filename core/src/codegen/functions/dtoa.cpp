@@ -1023,7 +1023,11 @@ void DoubleToString::Dtoa(int binExp, long fractBits, int nSignificantBits, bool
         if (low) {
             if (lowDigitDifference == 0L) {
                 // it's a tie! choose based on which digits we like.
-                if ((digits[firstDigitIndex + nDigits - 1] & 1) != 0) {
+                auto index = firstDigitIndex + nDigits - 1;
+                if (index >= MAX_DIGIT_INDEX) {
+                    throw std::runtime_error("digits index overflow! index value:" + std::to_string(index));
+                }
+                if ((digits[index] & 1) != 0) {
                     Roundup();
                 }
             } else if (lowDigitDifference > 0) {

@@ -385,6 +385,7 @@ public:
     }
 
     static constexpr int SIGNIFICAND_WIDTH = 53;
+    static constexpr int MAX_DIGIT_INDEX = 20;
     static constexpr int EXP_SHIFT = SIGNIFICAND_WIDTH - 1;
     static constexpr long FRACT_HOB = (1L << EXP_SHIFT);
     static constexpr int MAX_SMALL_BIN_EXP = 62;
@@ -402,7 +403,7 @@ private:
     int decExponent;
     int firstDigitIndex;
     int nDigits;
-    char digits[20];
+    char digits[MAX_DIGIT_INDEX];
     char buffer[26];
 };
 }
