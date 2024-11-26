@@ -30,6 +30,9 @@ using VectorSerializer = void (*)(BaseVector *baseVector, int32_t rowIdx, mem::S
 using FixedKeyVectorSerializerIgnoreNull = bool (*)(BaseVector *baseVector, int32_t rowIdx, StringRef &result,
     size_t &pos);
 
+using FixedKeyVectorSerializerIgnoreNullSimd = bool (*)(BaseVector *baseVector, int32_t rowIdx,
+    std::vector<StringRef> &result, size_t &pos, int32_t joinRownum);
+
 template <type::DataTypeId id> char *DeserializeFromPointer(BaseVector *baseVector, int32_t rowIdx, const char *&begin);
 
 extern std::vector<VectorSerializer> vectorSerializerCenter;
@@ -41,6 +44,9 @@ extern std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCent
 
 extern std::vector<FixedKeyVectorSerializerIgnoreNull> vectorSerializerFixedKeysIgnoreNullCenter;
 extern std::vector<FixedKeyVectorSerializerIgnoreNull> dicVectorSerializerFixedKeysIgnoreNullCenter;
+
+extern std::vector<FixedKeyVectorSerializerIgnoreNullSimd> vectorSerializerFixedKeysIgnoreNullCenterSimd;
+extern std::vector<FixedKeyVectorSerializerIgnoreNullSimd> dicVectorSerializerFixedKeysIgnoreNullCenterSimd;
 }
 }
 #endif // OMNI_RUNTIME_VECTOR_MARSHALLER_H

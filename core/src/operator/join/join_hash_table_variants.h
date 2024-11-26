@@ -176,6 +176,10 @@ private:
         VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum);
 
     template <typename HashTableType>
+    void EmplaceFixedNotNullKeyToNormalHashTableSimd(HashTableType &hashTable, int32_t partitionIndex,
+        VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum);
+
+    template <typename HashTableType>
     void EmplaceFixedKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch,
         int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum);
 

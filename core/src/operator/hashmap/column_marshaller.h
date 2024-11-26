@@ -75,6 +75,19 @@ public:
         isNotNullKey = true;
     }
 
+    ALWAYS_INLINE void TryToInsertFixedJoinKeysToHashmapSimd(BaseVector **joinVectors, int32_t joinRowNum,
+        int32_t colIdx, std::vector<type::StringRef> &keys, std::vector<bool> &isNotNullKey, size_t &pos)
+    {
+        auto &curFunc = fixedKeysIgnoreNullSerializersSimd[colIdx];
+        auto curVector = joinVectors[colIdx];
+        for (int32_t rowid = 0; rowid < joinRowNum; rowid++) {
+            if (UNLIKELY(!curFunc(curVector, rowid, keys, pos, joinRowNum))) {
+                isNotNullKey[rowid] = false;
+            }
+            isNotNullKey[rowid] = isNotNullKey[rowid] & true;
+        }
+    }
+
     ALWAYS_INLINE void BatchCalculateHash(std::vector<KeyType> &keys, std::vector<int8_t> &isNotNullKeys,
         std::vector<size_t> &hashes, int32_t maxStep)
     {
@@ -138,6 +151,11 @@ public:
         fixedKeysIgnoreNullSerializers.clear();
     }
 
+    void ResetFixedKeysIgnoreNullSerializerSimd()
+    {
+        fixedKeysIgnoreNullSerializersSimd.clear();
+    }
+
     void PushBackSerializer(VectorSerializer &serializer)
     {
         serializers.push_back(serializer);
@@ -151,6 +169,11 @@ public:
     void PushBackFixedKeysIgnoreNullSerializer(FixedKeyVectorSerializerIgnoreNull &serializer)
     {
         fixedKeysIgnoreNullSerializers.push_back(serializer);
+    }
+
+    void PushBackFixedKeysIgnoreNullSerializerSimd(FixedKeyVectorSerializerIgnoreNullSimd &serializer)
+    {
+        fixedKeysIgnoreNullSerializersSimd.push_back(serializer);
     }
 
     void PushBackDeSerializer(VectorDeSerializer &deserializer)
@@ -174,6 +197,8 @@ private:
 
     std::vector<VectorSerializerIgnoreNull> ignoreNullSerializers;
     std::vector<FixedKeyVectorSerializerIgnoreNull> fixedKeysIgnoreNullSerializers;
+
+    std::vector<FixedKeyVectorSerializerIgnoreNullSimd> fixedKeysIgnoreNullSerializersSimd;
 };
 
 template <typename Hashmap, typename T>

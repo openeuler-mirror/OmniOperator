@@ -64,6 +64,23 @@ public:
         return buildTypes;
     }
 
+    HashTableImplementationType GetHashTableType()
+    {
+        return std::visit(
+            [&](auto &&arg) -> HashTableImplementationType { return arg.GetHashTableTypes(partitionIndex); },
+            *hashTablesVariants);
+    }
+
+    uint32_t GetHashTableSize()
+    {
+        return std::visit([&](auto &&arg) -> uint32_t { return arg.GetHashTableSize(); }, *hashTablesVariants);
+    }
+
+    uint32_t GetHashTableCount()
+    {
+        return std::visit([&](auto &&arg) -> uint32_t { return arg.GetHashTableCount(); }, *hashTablesVariants);
+    }
+
 private:
     DataTypes buildTypes;
     int32_t partitionIndex;

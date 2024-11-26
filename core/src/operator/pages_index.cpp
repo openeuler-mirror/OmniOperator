@@ -6,9 +6,9 @@
 #include <cstring>
 #include "vector/vector.h"
 #include "type/data_type.h"
-#include "simd/func/quick_sort_simd.h"
 #include "radix_sort.h"
 #include "pages_index.h"
+#include "simd/func/quick_sort_simd.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::type;
