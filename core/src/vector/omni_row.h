@@ -579,6 +579,8 @@ public:
     {
         // we cant free rowBatch now
         // for adaptor, memory in rowArray will be reuse
+        rowArray.clear();
+        types.clear();
     }
 
     void PrintRowBatch(std::vector<DataTypeId> types)

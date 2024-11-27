@@ -261,9 +261,9 @@ int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 
     if (LIKELY(groupByColumnsHandleType == HandleType::serialize)) {
         Emplace(serialize, vecBatch, groupVectors, groupColNum);
-    } else if (LIKELY(groupByColumnsHandleType == HandleType::fixedInt32)) {
+    } else if (groupByColumnsHandleType == HandleType::fixedInt32) {
         Emplace(fixedInt32, vecBatch, groupVectors, groupColNum);
-    } else if (LIKELY(groupByColumnsHandleType == HandleType::fixedInt64)) {
+    } else if (groupByColumnsHandleType == HandleType::fixedInt64) {
         Emplace(fixedInt64, vecBatch, groupVectors, groupColNum);
     } else {
         // only serialize method are used now

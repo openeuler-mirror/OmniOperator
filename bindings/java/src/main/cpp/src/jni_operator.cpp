@@ -360,7 +360,9 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeseri
 {
     auto *parser = reinterpret_cast<RowParser *>(parserAddr);
     auto *row = reinterpret_cast<uint8_t *>(rowAddr);
-    parser->ParseOnRow(row, rowIndex);
+    if (row != nullptr) {
+        parser->ParseOnRow(row, rowIndex);
+    }
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_parseAllRow(JNIEnv *env,

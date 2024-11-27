@@ -35,16 +35,8 @@ public:
         kv.value = value;
     }
 
-    void ParseHashMapToVector(const int32_t &key, AggregateState *value, size_t groupIndex)
-    {
-        auto &kv = kvVec[groupIndex];
-        std::string s = std::to_string(key);
-        kv.keyAddr = const_cast<char *>(s.c_str());
-        kv.keyLen = sizeof(key);
-        kv.value = value;
-    }
-
-    void ParseHashMapToVector(const int64_t &key, AggregateState *value, size_t groupIndex)
+    template<typename T>
+    void ParseHashMapToVector(const T &key, AggregateState *value, size_t groupIndex)
     {
         auto &kv = kvVec[groupIndex];
         std::string s = std::to_string(key);
