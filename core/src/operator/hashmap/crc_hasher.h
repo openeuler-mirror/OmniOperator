@@ -25,6 +25,11 @@ inline uint64_t HashUint64(uint64_t x)
 
 template <typename T> inline size_t CRC32Hasher(T key)
 {
+    // For integers less than or equal to 64 bits, calculating their hash value as a uint64 is unnecessary, as these
+    // integers can be directly converted into a uint64 type instead of performing a CRC32-based hash calculation.
+    if constexpr (std::is_integral_v<T>) {
+        return static_cast<uint64_t>(key);
+    }
     union {
         T in;
         uint64_t out;
