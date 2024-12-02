@@ -73,7 +73,10 @@ template <typename T> struct OrderAscending : public KeyLane<T, T> {
     {
         return Lt(a, b);
     }
-
+    template <class D> OMNI_INLINE Mask<D> QuickSortCompare(D d /* tag */, Vec<D> a, Vec<D> b) const
+    {
+        return detail::QuickSortAscending::Compare(d, a, b);
+    }
     // Two halves of Sort2, used in ScanMinMax.
     template <class D> OMNI_API Vec<D> First(D /* tag */, const Vec<D> a, const Vec<D> b)
     {
@@ -152,7 +155,10 @@ template <typename T> struct OrderDescending : public KeyLane<T, T> {
     {
         return Lt(b, a);
     }
-
+    template <class D> OMNI_INLINE Mask<D> QuickSortCompare(D d /* tag */, Vec<D> a, Vec<D> b) const
+    {
+        return detail::QuickSortDescending::Compare(d, a, b);
+    }
     template <class D> OMNI_INLINE Vec<D> First(D /* tag */, const Vec<D> a, const Vec<D> b) const
     {
         return Max(a, b);

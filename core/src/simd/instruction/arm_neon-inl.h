@@ -6401,12 +6401,12 @@ template <class D, class V> static void UpdateMinMax(D, V value, V &smallest, V 
 
 template <class D, OMNI_IF_I64_D(D), class V> MFromD<D> Compare(D d, V v1, V v2)
 {
-    return static_cast<MFromD<D>>(vcltq_s64(v2.raw, v1.raw));
+    return Not(static_cast<MFromD<D>>(vcltq_s64(v1.raw, v2.raw)));
 }
 
 template <class D, OMNI_IF_F64_D(D), class V> MFromD<D> Compare(D d, V v1, V v2)
 {
-    return static_cast<MFromD<D>>(vcltq_f64(v2.raw, v1.raw));
+    return Not(static_cast<MFromD<D>>(vcltq_f64(v1.raw, v2.raw)));
 }
 
 template <class D, class V, OMNI_IF_F64_D(D)> inline TFromD<D> GetSmallest(D d, V v)

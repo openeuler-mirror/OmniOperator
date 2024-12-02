@@ -4976,14 +4976,14 @@ template <class D, class V> static void UpdateMinMax(D, V value, V &smallest, V 
 template <class D, OMNI_IF_I64_D(D), class V> svbool_t Compare(D d, V v1, V v2)
 {
     svbool_t pg = svwhilelt_b64(0, 4);
-    svbool_t less_than_mask = svcmplt_s64(pg, v2, v1);
-    return less_than_mask;
+    svbool_t maskV2LeV1 = svnot_b_z(pg, svcmplt_s64(pg, v1, v2));
+    return maskV2LeV1;
 }
 template <class D, OMNI_IF_F64_D(D), class V> svbool_t Compare(D d, V v1, V v2)
 {
     svbool_t pg = svwhilelt_b64(0, 4);
-    svbool_t less_than_mask = svcmplt_f64(pg, v2, v1);
-    return less_than_mask;
+    svbool_t maskV2LeV1 = svnot_b_z(pg, svcmplt_f64(pg, v1, v2));
+    return maskV2LeV1;
 }
 template <class D, class V, OMNI_IF_F64_D(D)> inline TFromD<D> GetSmallest(D d, V v)
 {

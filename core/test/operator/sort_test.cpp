@@ -196,7 +196,7 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
     DeleteSortOperatorFactory(operatorFactory);
 }
 
-TEST(NativeOmniSortTest, TestQuickSortInternalSIMD)
+TEST(NativeOmniSortTest, TestQuickSortInternalSIMDAsc)
 {
     constexpr int32_t dataSize = 18;
     uint64_t data0[dataSize] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
@@ -211,6 +211,25 @@ TEST(NativeOmniSortTest, TestQuickSortInternalSIMD)
     QuickSortInternalSIMD(d, st, data1, data0, 0, dataSize, valueBuf, addrBuf, true, avg);
     int64_t expectData[dataSize] = {12546, 12546, 12549, 12549, 12549, 12550, 12550, 12556, 12556, 12556, 12556, 12557,
         12557, 12557, 12558, 12558, 12565, 12565};
+    for (int32_t i = 0; i < dataSize; i++) {
+        EXPECT_EQ(data1[i], expectData[i]);
+    }
+}
+
+TEST(NativeOmniSortTest, TestQuickSortInternalSIMDDes)
+{
+    constexpr int32_t dataSize = 18;
+    uint64_t data0[dataSize] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+    int64_t data1[dataSize] = {18555, 18555, 18555, 18555, 18556, 18555, 18555, 18556, 18555, 18555, 18555, 18555,
+        18555, 18556, 18555, 18555, 18555, 18555};
+
+    int64_t valueBuf[50];
+    uint64_t addrBuf[50];
+    const SortTag<int64_t> d;
+    const simd::MakeTraits<int64_t, simd::SortDescending> st;
+    QuickSortInternalSIMD(d, st, data1, data0, 0, dataSize, valueBuf, addrBuf);
+    int64_t expectData[dataSize] = {18556, 18556, 18556, 18555, 18555, 18555, 18555, 18555, 18555, 18555, 18555, 18555,
+        18555, 18555, 18555, 18555, 18555, 18555};
     for (int32_t i = 0; i < dataSize; i++) {
         EXPECT_EQ(data1[i], expectData[i]);
     }
