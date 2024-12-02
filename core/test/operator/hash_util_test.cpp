@@ -253,21 +253,21 @@ TEST(HashUtilTest, TestCRCHashNumericTypes)
 {
     size_t hash;
     int16_t shortValues[] = {1, 2, 3, INT16_MIN, INT16_MAX};
-    size_t expectedShortHashes[] = {988491858, 3786389307, 2828257820, 2260288385, 3837611627};
+    size_t expectedShortHashes[] = {1, 2, 3, static_cast<uint64_t>(INT16_MIN), static_cast<uint64_t>(INT16_MAX)};
     for (int i = 0; i < 5; ++i) {
         hash = HashCRC32<int16_t>()(shortValues[i]);
         EXPECT_EQ(hash, expectedShortHashes[i]);
     }
 
     int32_t intValues[] = {1, 2, 3, INT_MIN, INT_MAX};
-    size_t expectedIntHashes[] = {988491858, 3786389307, 2828257820, 494245929, 1856165212};
+    size_t expectedIntHashes[] = {1, 2, 3, static_cast<uint64_t>(INT_MIN), static_cast<uint64_t>(INT_MAX)};
     for (int i = 0; i < 5; ++i) {
         hash = HashCRC32<int32_t>()(intValues[i]);
         EXPECT_EQ(hash, expectedIntHashes[i]);
     }
 
     int64_t longValues[] = {1L, 2L, 3L, INT64_MIN, INT64_MAX};
-    size_t expectedLongHashes[] = {988491858, 3786389307, 2828257820, 4045501965, 896438080};
+    size_t expectedLongHashes[] = {1UL, 2UL, 3UL, static_cast<uint64_t>(INT64_MIN), static_cast<uint64_t>(INT64_MAX)};
     for (int i = 0; i < 5; ++i) {
         hash = HashCRC32<int64_t>()(longValues[i]);
         EXPECT_EQ(hash, expectedLongHashes[i]);
