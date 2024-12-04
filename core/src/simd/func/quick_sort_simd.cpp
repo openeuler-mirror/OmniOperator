@@ -96,7 +96,7 @@ int32_t PartitionToMultipleOfUnroll(D d, Traits st, RawType *values, AddrType *a
         auto addrVec = LoadU(ADDR_TAG, addresses + readL);
         readL += OMNI_LANES(TFromD<D>);
 
-        compareResult = st.Compare(d, pivotVec, valueVec);
+        compareResult = st.QuickSortCompare(d, pivotVec, valueVec);
         blendedMask = Not(compareResult);
         auto sizeL = CompressBlendedStore(d, valueVec, addrVec, blendedMask, valuePosL, addrPosL);
         valuePosL += sizeL;
@@ -110,7 +110,7 @@ int32_t PartitionToMultipleOfUnroll(D d, Traits st, RawType *values, AddrType *a
         auto lastValueVec = LoadU(d, values + readL);
         st.UpdateMinMax(d, lastValueVec, smallestVec, largestVec);
         auto lastAddrVec = LoadU(ADDR_TAG, addresses + readL);
-        compareResult = st.Compare(d, pivotVec, lastValueVec);
+        compareResult = st.QuickSortCompare(d, pivotVec, lastValueVec);
         blendedMask = GetBlendedMask(d, firstMask, compareResult);
         auto sizeL = CompressBlendedStore(d, lastValueVec, lastAddrVec, blendedMask, valuePosL, addrPosL);
         valuePosL += sizeL;
@@ -131,7 +131,7 @@ inline void StoreLeftRight(D d, Traits st, const Vec<D> v, AddrVec a, const Vec<
     AddrType *addresses, int32_t &writeL, int32_t &remaining)
 {
     const size_t N = Lanes(d);
-    const Mask<D> comp = st.Compare(d, pivot, v);
+    const Mask<D> comp = st.QuickSortCompare(d, pivot, v);
     remaining -= N;
     if (CompressIsPartition<T>::value) {
         const Vec<D> lr = st.CompressKeys(v, comp);
@@ -276,7 +276,7 @@ int32_t PartitionWithSIMD(D d, Traits st, RawType *values, AddrType *addresses, 
     }
 
     int32_t totalR = last - writeL;
-    MFromD<D> compareResult = st.Compare(d, pivotVec, valueLast);
+    MFromD<D> compareResult = st.QuickSortCompare(d, pivotVec, valueLast);
     MFromD<D> blendedMask = Not(compareResult);
     if (totalR == 0) {
         writeL += CompressStore(d, valueLast, addrLast, blendedMask, valueStart + writeL, addressStart + writeL);
@@ -351,10 +351,18 @@ template void QuickSortInternalSIMD<simd::Simd<long, 4ul, 0>,
     simd::SharedTraits<simd::TraitsLane<simd::OrderAscending<long> > >, long>(simd::Simd<long, 4ul, 0>,
     simd::SharedTraits<simd::TraitsLane<simd::OrderAscending<long> > >, long *, unsigned long *, int, int, long *,
     unsigned long *, bool, long);
+template void QuickSortInternalSIMD<simd::Simd<long, 4ul, 0>,
+    simd::SharedTraits<simd::TraitsLane<simd::OrderDescending<long> > >, long>(simd::Simd<long, 4ul, 0>,
+    simd::SharedTraits<simd::TraitsLane<simd::OrderDescending<long> > >, long *, unsigned long *, int, int, long *,
+    unsigned long *, bool, long);
 #else
 template void QuickSortInternalSIMD<simd::Simd<long, 2ul, 0>,
     simd::SharedTraits<simd::TraitsLane<simd::OrderAscending<long> > >, long>(simd::Simd<long, 2ul, 0>,
     simd::SharedTraits<simd::TraitsLane<simd::OrderAscending<long> > >, long *, unsigned long *, int, int, long *,
+    unsigned long *, bool, long);
+template void QuickSortInternalSIMD<simd::Simd<long, 2ul, 0>,
+    simd::SharedTraits<simd::TraitsLane<simd::OrderDescending<long> > >, long>(simd::Simd<long, 2ul, 0>,
+    simd::SharedTraits<simd::TraitsLane<simd::OrderDescending<long> > >, long *, unsigned long *, int, int, long *,
     unsigned long *, bool, long);
 #endif
 template <class ValType> void QuickSortAscSIMD(ValType *values, AddrType *addresses, int32_t from, int32_t to)
