@@ -22,9 +22,11 @@ public:
         std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address);
-    void BuildOutput(BaseVector **probeOutputColumns, VectorBatch **outputVecBatch);
+    void BuildOutput(BaseVector **probeOutputColumns, JoinType joinType, VectorBatch **outputVecBatch);
     void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns, int32_t rowCount);
     void ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount);
+    template<bool isMatched> void AppendExistenceRow(int32_t probePosition);
+    void ConstructExistenceColumn(VectorBatch *vectorBatch);
 
     ALWAYS_INLINE bool IsFull()
     {
@@ -42,6 +44,7 @@ public:
         probeRowCount = 0;
         probeIndex.clear();
         buildIndex.clear();
+        existJoinBuildIndex.clear();
     }
 
     static const uint32_t SHIFT_SIZE_32 = 32;
@@ -113,6 +116,7 @@ private:
     int32_t probeRowOffset = 0;
     std::vector<int32_t> probeIndex;
     std::vector<std::pair<BaseVector ***, uint64_t>> buildIndex;
+    std::vector<bool> existJoinBuildIndex;
 };
 
 class LookupJoinOperatorFactory : public OperatorFactory {
@@ -176,6 +180,7 @@ private:
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForFullJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftSemiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftAntiJoin();
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForExistenceJoin();
     bool IsJoinPositionEligible(uint32_t partition, uint64_t buildAddress, uint32_t probeRow,
         ExecutionContext *executionContextPtr);
     void PrepareCurrentProbe();

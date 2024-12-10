@@ -3504,4 +3504,57 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinOfArrayTable)
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory, lookupOuterJoinFactory);
 }
+
+TEST(NativeOmniJoinTest, TestExistenceEqualityJoin)
+{
+    // construct input data
+    const int32_t dataSize = 4;
+    DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    int64_t buildData0[] = {1, 2, 3, 4};
+    int64_t buildData1[] = {111, 11, 333, 33};
+    VectorBatch *buildVecBatch = CreateVectorBatch(buildTypes, dataSize, buildData0, buildData1);
+
+    int32_t buildJoinCols[1] = {1};
+    int32_t joinColsCount = 1;
+    int32_t operatorCount = 1;
+    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
+            OMNI_JOIN_TYPE_EXISTENCE, buildTypes, buildJoinCols, joinColsCount, operatorCount);
+    HashBuilderOperator *hashBuilderOperator =
+            dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
+    hashBuilderOperator->AddInput(buildVecBatch);
+    VectorBatch *hashBuildOutput = nullptr;
+    hashBuilderOperator->GetOutput(&hashBuildOutput);
+
+    int32_t probeDataSize = 6;
+    DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    int64_t probeData0[] = {1, 2, 3, 4, 3, 6};
+    int64_t probeData1[] = {11, 22, 33, 44, 22, 44};
+    VectorBatch *probeVecBatch = CreateVectorBatch(probeTypes, probeDataSize, probeData0, probeData1);
+
+    int32_t probeOutputCols[0] = {};
+    int32_t probeOutputColsCount = 0;
+    int32_t probeHashCols[1] = {1};
+    int32_t probeHashColsCount = 1;
+    int32_t buildOutputCols[0] = {};
+    int32_t buildOutputColsCount = 0;
+    DataTypes buildOutputTypes(std::vector<DataTypePtr>({}));
+    auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
+    auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
+            probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
+            buildOutputCols, buildOutputColsCount, buildOutputTypes, hashBuilderFactoryAddr,
+            nullptr, nullptr);
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(CreateTestOperator(lookupJoinFactory));
+    lookupJoinOperator->AddInput(probeVecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    lookupJoinOperator->GetOutput(&outputVecBatch);
+
+    const int32_t expectedDataSize = 6;
+    bool expectedDatas[1][expectedDataSize] = {{true, false, true, false, false, false}};
+    AssertVecBatchEquals(outputVecBatch, 1, expectedDataSize, expectedDatas[0]);
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
+    DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+}
 }

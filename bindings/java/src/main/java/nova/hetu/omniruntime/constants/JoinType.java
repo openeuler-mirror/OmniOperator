@@ -40,6 +40,11 @@ public class JoinType extends Constant {
      */
     public static final JoinType OMNI_JOIN_TYPE_LEFT_ANTI = new JoinType(5);
 
+    /**
+     * The constant OMNI_JOIN_TYPE_EXISTENCE.
+     */
+    public static final JoinType OMNI_JOIN_TYPE_EXISTENCE = new JoinType(6);
+
     private static final long serialVersionUID = -4086671645951741450L;
 
     /**
