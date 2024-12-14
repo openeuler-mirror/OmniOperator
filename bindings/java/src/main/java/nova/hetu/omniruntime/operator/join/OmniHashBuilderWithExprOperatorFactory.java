@@ -39,20 +39,20 @@ public class OmniHashBuilderWithExprOperatorFactory
      * The hashmap cached the shared hash builder operator, the key is the build
      * plan node id.
      */
-    private static Map<String, OmniOperator> operatorCache = new HashMap<>();
+    private static Map<Integer, OmniOperator> operatorCache = new HashMap<>();
 
     /**
      * The hashmap cached the shared hash builder operator factory, the key is the
      * build plan node id.
      */
-    private static Map<String, OmniHashBuilderWithExprOperatorFactory> factoryCache = new HashMap<>();
+    private static Map<Integer, OmniHashBuilderWithExprOperatorFactory> factoryCache = new HashMap<>();
 
     /**
      * The hashmap stores the num of lookup which is in-use shared hash builder
      * operator
      * the key is the build plan node id.
      */
-    private static Map<String, AtomicInteger> ref = new HashMap<>();
+    private static Map<Integer, AtomicInteger> ref = new HashMap<>();
 
     /**
      * Instantiates a new Omni hash builder with expression operator factory.
@@ -99,7 +99,7 @@ public class OmniHashBuilderWithExprOperatorFactory
      * @param factory the shared hash builder operator factory
      * @param operator the shared hash builder operator
      */
-    public static void saveHashBuilderOperatorAndFactory(String builderNodeId,
+    public static void saveHashBuilderOperatorAndFactory(Integer builderNodeId,
             OmniHashBuilderWithExprOperatorFactory factory, OmniOperator operator) {
         operatorCache.put(builderNodeId, operator);
         factoryCache.put(builderNodeId, factory);
@@ -111,7 +111,7 @@ public class OmniHashBuilderWithExprOperatorFactory
      * @param builderNodeId the build plan node id
      * @return the shared hash builder operator factory
      */
-    public static OmniHashBuilderWithExprOperatorFactory getHashBuilderOperatorFactory(String builderNodeId) {
+    public static OmniHashBuilderWithExprOperatorFactory getHashBuilderOperatorFactory(Integer builderNodeId) {
         ref.computeIfAbsent(builderNodeId, key -> new AtomicInteger(0));
         ref.get(builderNodeId).incrementAndGet();
         return factoryCache.get(builderNodeId);
@@ -122,7 +122,7 @@ public class OmniHashBuilderWithExprOperatorFactory
      *
      * @param builderNodeId the build plan node id
      */
-    public static void dereferenceHashBuilderOperatorAndFactory(String builderNodeId) {
+    public static void dereferenceHashBuilderOperatorAndFactory(Integer builderNodeId) {
         if (ref.get(builderNodeId).decrementAndGet() == 0) {
             ref.remove(builderNodeId);
             operatorCache.get(builderNodeId).close();
