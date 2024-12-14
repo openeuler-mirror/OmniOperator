@@ -411,10 +411,28 @@ TEST(FunctionTest, CastDoubleToInt64)
     EXPECT_EQ(-2001, result);
 }
 
+bool CompareDoubleBits(double d1, double d2)
+{
+    uint64_t bits1;
+    uint64_t bits2;
+    memcpy_s(&bits1, sizeof bits1, &d1, sizeof(double));
+    memcpy_s(&bits2, sizeof bits2, &d2, sizeof(double));
+    return bits1 == bits2;
+}
+
 TEST(FunctionTest, NormalizeNaNAndZero)
 {
-    EXPECT_EQ(0.0, NormalizeNaNAndZero(-0.0));
-    EXPECT_EQ(3.5, NormalizeNaNAndZero(3.5));
+    EXPECT_FALSE(CompareDoubleBits(-0.0, NormalizeNaNAndZero(-0.0)));
+    EXPECT_TRUE(CompareDoubleBits(0.0, NormalizeNaNAndZero(-0.0)));
+    EXPECT_TRUE(CompareDoubleBits(0.0, NormalizeNaNAndZero(0.0)));
+    uint64_t nanBits = 0xFFF8000000000001L;
+    double nanDouble = 0;
+    memcpy_s(&nanDouble, sizeof nanDouble, &nanBits, sizeof(nanBits));
+    EXPECT_FALSE(CompareDoubleBits(nanDouble, NormalizeNaNAndZero(nanDouble)));
+    EXPECT_TRUE(CompareDoubleBits(0.0 / 0.0, NormalizeNaNAndZero(nanDouble)));
+    EXPECT_TRUE(CompareDoubleBits(0.0 / 0.0, NormalizeNaNAndZero(0.0 / 0.0)));
+    double value = 3.5;
+    EXPECT_TRUE(CompareDoubleBits(value, NormalizeNaNAndZero(value)));
 }
 
 TEST(FunctionTest, PowerDouble)

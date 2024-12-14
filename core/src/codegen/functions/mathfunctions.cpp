@@ -14,6 +14,9 @@
 #define DLLEXPORT
 #endif
 
+const double DOUBLE_NAN = (0.0 / 0.0);
+const uint64_t DOUBLE_BIT_MASK = ((static_cast<uint64_t>(1) << (sizeof(double) * 8 - 1)) - 1);
+
 namespace omniruntime::codegen::function {
 static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
 
@@ -116,7 +119,18 @@ extern "C" DLLEXPORT bool NotEqualDouble(double left, double right)
 
 extern "C" DLLEXPORT double NormalizeNaNAndZero(double value)
 {
-    return (std::fabs(-0.0 - value) < DBL_EPSILON) ? 0.0 : value;
+    if (std::isnan(value)) {
+        return DOUBLE_NAN;
+    }
+    union {
+        uint64_t l;
+        double d;
+    } u;
+    u.d = value;
+    if (u.l & DOUBLE_BIT_MASK) {
+        return value;
+    }
+    return 0.0;
 }
 
 extern "C" DLLEXPORT double PowerDouble(double base, double exponent)

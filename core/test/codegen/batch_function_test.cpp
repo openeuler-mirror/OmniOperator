@@ -313,17 +313,32 @@ TEST(BatchFunctionTest, DoubleArith)
     EXPECT_TRUE(CmpArray<double>(left, expect, rowCnt));
 }
 
+bool CompareDoubleBits(double d1, double d2)
+{
+    uint64_t bits1;
+    uint64_t bits2;
+    memcpy_s(&bits1, sizeof bits1, &d1, sizeof(double));
+    memcpy_s(&bits2, sizeof bits2, &d2, sizeof(double));
+    return bits1 == bits2;
+}
+
 TEST(BatchFunctionTest, BatchNormalizeNaNAndZero)
 {
-    const int32_t rowCnt = 2;
-    double input[rowCnt] = { -0.0, 3.5 };
-    bool isAnyNull[rowCnt] = { false, false };
+    const int32_t rowCnt = 3;
+    uint64_t nanBits = 0xFFF8000000000001L;
+    double nanDouble = 0;
+    memcpy_s(&nanDouble, sizeof nanDouble, &nanBits, sizeof(nanBits));
+    double value = 3.5;
+    double input[rowCnt] = {-0.0, nanDouble, value};
+    bool isAnyNull[rowCnt] = {false, false, false};
     double output[rowCnt];
-    std::vector<double> expect = { 0.0, 3.5 };
+    std::vector<double> expect = {0.0, 0.0 / 0.0, value};
     BatchNormalizeNaNAndZero(input, isAnyNull, output, rowCnt);
     for (int32_t i = 0; i < rowCnt; i++) {
-        EXPECT_EQ(expect[i], output[i]);
+        EXPECT_TRUE(CompareDoubleBits(expect[i], output[i]));
     }
+    EXPECT_FALSE(CompareDoubleBits(input[0], output[0]));
+    EXPECT_FALSE(CompareDoubleBits(input[1], output[1]));
 }
 
 TEST(BatchFunctionTest, BatchPowerDouble)
