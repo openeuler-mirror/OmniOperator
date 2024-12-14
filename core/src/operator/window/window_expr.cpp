@@ -47,6 +47,9 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
             fullArgumentChannels.push_back(this->argumentChannels[position++]);
         } else {
             fullArgumentChannels.push_back(-1);
+            if (windowFunctionTypes[i] == OMNI_AGGREGATION_TYPE_COUNT_ALL) {
+                position++;
+            }
         }
     }
 
