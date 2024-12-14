@@ -16,6 +16,9 @@
 #define DLLEXPORT
 #endif
 
+const double DOUBLE_NAN = (0.0 / 0.0);
+const uint64_t DOUBLE_BIT_MASK = ((static_cast<uint64_t>(1) << (sizeof(double) * 8 - 1)) - 1);
+
 namespace omniruntime::codegen::function {
 static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
 
@@ -157,7 +160,20 @@ extern "C" DLLEXPORT void BatchNormalizeNaNAndZero(double *input, bool *isAnyNul
 {
     for (int32_t i = 0; i < rowCnt; i++) {
         auto value = input[i];
-        output[i] = (std::fabs(-0.0 - value) < DBL_EPSILON) ? 0.0 : value;
+        if (std::isnan(value)) {
+            output[i] = DOUBLE_NAN;
+            continue;
+        }
+        union {
+            uint64_t l;
+            double d;
+        } u;
+        u.d = value;
+        if (u.l & DOUBLE_BIT_MASK) {
+            output[i] = value;
+        } else {
+            output[i] = 0.0;
+        }
     }
 }
 
