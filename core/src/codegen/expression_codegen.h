@@ -129,16 +129,20 @@ protected:
     std::shared_ptr<ExprFunction> exprFunc;
 
 private:
+    template <bool isNeedVerifyResult, bool isNeedVerifyVal>
     std::vector<Value *> GetDefaultFunctionArgValues(const FuncExpr &fExpr, Value **isAnyNull, bool &isInvalidExpr);
 
     std::vector<llvm::Value *> GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr, llvm::Value **isAnyNull,
         bool &isInvalidExpr);
 
-    std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
-        llvm::Value **isAnyNull, bool &isInvalidExpr, llvm::Value *overflowNull);
-
     std::vector<llvm::Value *> GetDataAndNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
         llvm::Value **isAnyNull, bool &isInvalidExpr);
+
+    std::vector<llvm::Value *> GetDataAndNullArgsAndReturnNull(const omniruntime::expressions::FuncExpr &fExpr,
+        llvm::Value **isAnyNull, bool &isInvalidExpr);
+
+    std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const omniruntime::expressions::FuncExpr &fExpr,
+        llvm::Value **isAnyNull, bool &isInvalidExpr, llvm::Value *overflowNull);
 
     llvm::Value *CreateHiveUdfArgTypes(const omniruntime::expressions::FuncExpr &fExpr);
 

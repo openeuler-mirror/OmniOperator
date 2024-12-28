@@ -466,7 +466,6 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     continue;
                 }
 
-                bool hasProduceRow = false;
                 if constexpr (!singleHT) {
                     partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
                     buildColumns = arg.GetColumns(partition);
