@@ -11,6 +11,7 @@
 #include "operator/aggregation/aggregator/average_aggregator.h"
 #include "operator/aggregation/aggregator/average_flatim_aggregator.h"
 #include "operator/aggregation/aggregator/average_spark_decimal_aggregator.h"
+#include "operator/aggregation/aggregator/stddev_samp_aggregator.h"
 #include "operator/aggregation/aggregator/min_aggregator.h"
 #include "operator/aggregation/aggregator/min_varchar_aggregator.h"
 #include "operator/aggregation/aggregator/max_aggregator.h"

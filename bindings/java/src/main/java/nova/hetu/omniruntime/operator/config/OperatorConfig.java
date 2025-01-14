@@ -30,6 +30,13 @@ public class OperatorConfig {
 
     private OverflowConfig overflowConfig;
 
+    /**
+     * When set to true, statistical aggregate function returns Double.NaN
+     * if divide by zero occurred during expression evaluation, otherwise, it returns null.
+     * Before Spark version 3.1.0, it returns NaN in divideByZero case by default.
+     */
+    private boolean isStatisticalAggregate;
+
     private boolean isSkipExpressionVerify;
 
     private int adaptivityThreshold = -1;
@@ -82,6 +89,15 @@ public class OperatorConfig {
         this.spillConfig = spillConfig;
         this.overflowConfig = overflowConfig;
         this.isSkipExpressionVerify = isSkipExpressionVerify;
+        this.isStatisticalAggregate = false;
+    }
+
+    public OperatorConfig(SpillConfig spillConfig, boolean isStatisticalAggregate, OverflowConfig overflowConfig,
+            boolean isSkipExpressionVerify) {
+        this.spillConfig = spillConfig;
+        this.overflowConfig = overflowConfig;
+        this.isSkipExpressionVerify = isSkipExpressionVerify;
+        this.isStatisticalAggregate = isStatisticalAggregate;
     }
 
     /**
@@ -168,6 +184,24 @@ public class OperatorConfig {
     }
 
     /**
+     * Get statisticalAggregate
+     *
+     * @return statisticalAggregate
+     */
+    public boolean isStatisticalAggregate() {
+        return isStatisticalAggregate;
+    }
+
+    /**
+     * Set statisticalAggregate.
+     *
+     * @param isStatisticalAggregate boolean
+     */
+    public void setStatisticalAggregate(boolean isStatisticalAggregate) {
+        this.isStatisticalAggregate = isStatisticalAggregate;
+    }
+
+    /**
      * Set adaptivityThreshold
      *
      * @param adaptivityThreshold a threshold for some kind of adaptivity in operator
@@ -232,11 +266,13 @@ public class OperatorConfig {
         OperatorConfig that = (OperatorConfig) obj;
         return Objects.equals(spillConfig, that.spillConfig) && Objects.equals(overflowConfig, that.overflowConfig)
                 && isSkipExpressionVerify == that.isSkipExpressionVerify
+                && isStatisticalAggregate == that.isStatisticalAggregate
                 && adaptivityThreshold == that.adaptivityThreshold && isRowOutput == that.isRowOutput;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(spillConfig, overflowConfig, isSkipExpressionVerify, adaptivityThreshold, isRowOutput);
+        return Objects.hash(spillConfig, overflowConfig, isSkipExpressionVerify, isStatisticalAggregate,
+                adaptivityThreshold, isRowOutput);
     }
 }

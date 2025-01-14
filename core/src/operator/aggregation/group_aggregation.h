@@ -151,7 +151,7 @@ public:
         std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
         const OperatorConfig &operatorConfig)
         : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector,
-        operatorConfig.GetOverflowConfig()->IsOverflowAsNull()),
+        operatorConfig.GetOverflowConfig()->IsOverflowAsNull(), operatorConfig.IsStatisticalAggregate()),
           groupByColsVector(groupByCol),
           groupByTypes(groupInputTypes),
           aggsInputColsVector(aggsCols),
@@ -165,7 +165,7 @@ public:
         std::vector<std::vector<uint32_t>> &aggsCols, std::vector<DataTypes> &aggInputTypes,
         std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
         std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
-        bool overflowAsNull = false)
+        bool overflowAsNull = false, bool isStatisticalAggregate = false)
         : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull),
           groupByColsVector(groupByCol),
           groupByTypes(groupInputTypes),
@@ -195,7 +195,7 @@ public:
         std::vector<uint32_t> &maskColsVector, std::vector<bool> inputRaws, std::vector<bool> outputPartials,
         const std::vector<int8_t> &hasAggFilters, const OperatorConfig &operatorConfig)
         : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector,
-        operatorConfig.GetOverflowConfig()->IsOverflowAsNull()),
+        operatorConfig.GetOverflowConfig()->IsOverflowAsNull(), operatorConfig.IsStatisticalAggregate()),
           groupByColsVector(groupByCol),
           groupByTypes(groupInputTypes),
           aggsInputColsVector(aggsCols),

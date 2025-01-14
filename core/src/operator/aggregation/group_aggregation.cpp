@@ -131,6 +131,7 @@ Operator *HashAggregationOperatorFactory::CreateOperator()
             throw OmniException("OPERATOR_RUNTIME_ERROR", "Unable to create aggregator " + std::to_string(i) + " / " +
                 std::to_string(this->aggregatorFactories.size()));
         }
+        aggregator->SetStatisticalAggregate(isStatisticalAggregate);
         aggs.push_back(std::move(aggregator));
     }
 

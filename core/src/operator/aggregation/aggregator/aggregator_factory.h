@@ -149,6 +149,15 @@ public:
         bool isOverflowAsNull = true) override;
 };
 
+class StddevSampSparkAggregatorFactory : public AggregatorFactory {
+public:
+    StddevSampSparkAggregatorFactory() = default;
+    ~StddevSampSparkAggregatorFactory() override = default;
+    std::unique_ptr<Aggregator> CreateAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes,
+        std::vector<int32_t> &channels, bool inputRaw = true, bool outputPartial = false,
+        bool isOverflowAsNull = true) override;
+};
+
 class FirstAggregatorFactory : public AggregatorFactory {
 public:
     explicit FirstAggregatorFactory(FunctionType aggregateType) : aggregateType(aggregateType) {}

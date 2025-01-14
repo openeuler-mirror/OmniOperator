@@ -58,6 +58,10 @@ OmniStatus AggregationCommonOperatorFactory::CreateAggregatorFactories(
                 }
                 break;
             }
+            case OMNI_AGGREGATION_TYPE_SAMP: {
+                CreateAggregatorFactory<StddevSampSparkAggregatorFactory>(aggregatorFactories, maskCols[i]);
+                break;
+            }
             case OMNI_AGGREGATION_TYPE_FIRST_IGNORENULL: {
                 CreateAggregatorFactory<FirstIgnoreNullAggregatorFactory>(aggregatorFactories, maskCols[i]);
                 break;

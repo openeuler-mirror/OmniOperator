@@ -24,6 +24,8 @@ const std::string metricsNameFilter = "filter";
 const std::string metricsNameLookUpJoin = "lookUpJoin";
 const std::string metricsNameSort = "sort";
 const std::string metricsNameWindow = "window";
+const std::string metricsNameNestedLoopJoinBuilder = "nestedLoopJoinBuilder";
+const std::string metricsNameNestedLoopJoinLookup = "nestedLoopJoinLookup";
 
 class Metrics {
 public:

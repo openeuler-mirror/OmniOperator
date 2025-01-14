@@ -304,6 +304,50 @@ TEST(FunctionTest, AbsDecimal128)
     EXPECT_EQ(outLow, expected.LowBits());
 }
 
+TEST(FunctionTest, RoundDecimal)
+{
+    int64_t outHigh = 0;
+    uint64_t outLow = 0;
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    Decimal128 test;
+    Decimal128 expected;
+    test = Decimal128("22167875302138684366688952930001319804");
+    expected = Decimal128("22167875302138684367");
+    RoundDecimal128(contextPtr, test.HighBits(), test.LowBits(), 38, 18, 0, false, 21, 0, &outHigh, &outLow);
+    EXPECT_EQ(outHigh, expected.HighBits());
+    EXPECT_EQ(outLow, expected.LowBits());
+
+    test = Decimal128("151949737170315874258868924986217725952");
+    expected = Decimal128(0);
+    RoundDecimal128(contextPtr, test.HighBits(), test.LowBits(), 38, 18, 0, true, 21, 0, &outHigh, &outLow);
+    EXPECT_EQ(outHigh, expected.HighBits());
+    EXPECT_EQ(outLow, expected.LowBits());
+
+    test = Decimal128("76051882560490807662482874031011839644");
+    expected = Decimal128("76051882560490807662");
+    RoundDecimal128WithoutRound(contextPtr, test.HighBits(), test.LowBits(), 38, 18, false, 21, 0, &outHigh, &outLow);
+    EXPECT_EQ(outHigh, expected.HighBits());
+    EXPECT_EQ(outLow, expected.LowBits());
+
+    test = Decimal128("151949737170315874258868924986217725952");
+    expected = Decimal128(0);
+    RoundDecimal128WithoutRound(contextPtr, test.HighBits(), test.LowBits(), 38, 18, true, 21, 0, &outHigh, &outLow);
+    EXPECT_EQ(outHigh, expected.HighBits());
+    EXPECT_EQ(outLow, expected.LowBits());
+
+    int64_t result = RoundDecimal64(contextPtr, 463127424592162661L, 18, 8, 0, false, 11, 0);
+    EXPECT_EQ(result, 4631274246L);
+    result = RoundDecimal64(contextPtr, 63636006298474304L, 18, 8, 0, true, 11, 0);
+    EXPECT_EQ(result, 0);
+    result = RoundDecimal64WithoutRound(contextPtr, 920526845191220634L, 18, 8, false, 11, 0);
+    EXPECT_EQ(result, 9205268452L);
+    result = RoundDecimal64WithoutRound(contextPtr, 63636006298474304L, 18, 8, true, 11, 0);
+    EXPECT_EQ(result, 0);
+    delete context;
+}
+
 TEST(FunctionTest, CastDecimal64To64)
 {
     auto context = new ExecutionContext();

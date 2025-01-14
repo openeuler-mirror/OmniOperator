@@ -23,6 +23,9 @@ std::unique_ptr<AggregatorFactory> CreateAggregatorFactory(FunctionType aggType)
                 return std::make_unique<AverageAggregatorFactory>();
             }
         }
+        case OMNI_AGGREGATION_TYPE_SAMP: {
+            return std::make_unique<StddevSampSparkAggregatorFactory>();
+        }
         case OMNI_AGGREGATION_TYPE_MIN: {
             return std::make_unique<MinAggregatorFactory>();
         }
@@ -169,6 +172,22 @@ std::unique_ptr<Aggregator> AverageSparkAggregatorFactory::CreateAggregator(cons
     }
 }
 
+std::unique_ptr<Aggregator> StddevSampSparkAggregatorFactory::CreateAggregator(const DataTypes &inputTypes,
+    const DataTypes &outputTypes, std::vector<int32_t> &channels, bool inputRaw, bool outputPartial,
+    bool isOverflowAsNull)
+{
+    auto inputTypeId = inputTypes.GetIds()[0];
+    switch (inputTypeId) {
+        case OMNI_DOUBLE: {
+            return std::make_unique<StddevSampAggregator<OMNI_DOUBLE>>(inputTypes, outputTypes, channels, inputRaw,
+                outputPartial, isOverflowAsNull);
+        }
+        default: {
+            LogError("Unsupported input type %d for spark stddev_samp aggregate", inputTypeId);
+            return nullptr;
+        }
+    }
+}
 
 template <typename InputType>
 std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateFirstAggregatorHelper(FunctionType aggregateType,

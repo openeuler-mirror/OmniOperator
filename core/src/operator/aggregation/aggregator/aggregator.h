@@ -276,6 +276,16 @@ public:
         return this->isOverflowAsNull;
     }
 
+    virtual void SetStatisticalAggregate(bool statisticalAggregate)
+    {
+        this->isStatisticalAggregate = statisticalAggregate;
+    }
+
+    virtual bool IsStatisticalAggregate() const
+    {
+        return this->isStatisticalAggregate;
+    }
+
     virtual FunctionType GetType() const
     {
         return type;
@@ -311,6 +321,7 @@ protected:
     const bool inputRaw;
     const bool outputPartial;
     const bool isOverflowAsNull;
+    bool isStatisticalAggregate = false;
     const std::vector<int32_t> channels;
     ExecutionContext *executionContext = nullptr;
     SimpleArenaAllocator *arenaAllocator = nullptr;

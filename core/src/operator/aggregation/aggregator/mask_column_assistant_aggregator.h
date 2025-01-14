@@ -26,6 +26,16 @@ public:
         realAggregator->SetExecutionContext(executionContext);
     }
 
+    void SetStatisticalAggregate(bool statisticalAggregate) override
+    {
+        realAggregator->SetStatisticalAggregate(statisticalAggregate);
+    }
+
+    bool IsStatisticalAggregate() const override
+    {
+        return realAggregator->IsStatisticalAggregate();
+    }
+
     size_t GetStateSize() override
     {
         return realAggregator->GetStateSize();

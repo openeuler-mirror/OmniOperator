@@ -247,5 +247,101 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddDictConditionalAvg(OUT *res_, int64_t
         flag_ = flag;
     }
 }
+
+template<void (*OP)(double &, double &, double &, const double &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSamp(double &__restrict mean_, double &__restrict m2, double &cnt_,
+    const double *__restrict ptr, const size_t rowCount)
+{
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[add]: Data pointer NOT aligned");
+        }
+#endif
+        ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        for (size_t i = 0; i < rowCount; ++i) {
+            OP(mean_, m2, cnt_, ptr[i]);
+        }
+    }
+}
+
+template<void (*OP)(double &, double &, double &, const double &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampConditional(double &__restrict mean_, double &__restrict m2,
+    double &cnt_, const double *__restrict ptr, const size_t rowCount, const uint8_t *__restrict condition)
+{
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[add]: Data pointer NOT aligned");
+        }
+#endif
+        ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *) __builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            if (condition[i] == false) {
+                OP(mean_, m2, cnt_, ptr[i]);
+            }
+        }
+    }
+}
+
+template<void (*OP)(double &, double &, double &, const double &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampDict(double &__restrict mean_, double &__restrict m2, double &cnt_,
+    const double *__restrict ptr, const size_t rowCount, const int32_t *__restrict indexMap)
+{
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDict]: Data pointer NOT aligned");
+        }
+        if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDict]: Dictionary Index Map pointer NOT aligned");
+        }
+#endif
+        ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+
+        alignas(ARRAY_ALIGNMENT) auto inputArr = new double[rowCount];
+        for (size_t i = 0; i < rowCount; ++i) {
+            inputArr[i] = ptr[indexMap[i]];
+        }
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            OP(mean_, m2, cnt_, inputArr[i]);
+        }
+        delete[] inputArr;
+    }
+}
+
+template<void (*OP)(double &, double &, double &, const double &)>
+VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampDictConditional(double &__restrict mean_, double &__restrict m2,
+    double &cnt_, const double *__restrict ptr, const size_t rowCount, const uint8_t *__restrict condition,
+    const int32_t *__restrict indexMap)
+{
+    if (rowCount > 0) {
+#ifdef DEBUG
+        if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictConditional]: Data pointer NOT aligned");
+        }
+        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictConditional]: ConditionMap pointer NOT aligned");
+        }
+        if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
+            LogWarn("[addDictConditional]: Dictionary Index Map pointer NOT aligned");
+        }
+#endif
+        ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
+        condition = (const uint8_t *) __builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
+        indexMap = (const int32_t *) __builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
+
+        for (size_t i = 0; i < rowCount; ++i) {
+            if (condition[i] == false) {
+                OP(mean_, m2, cnt_, ptr[indexMap[i]]);
+            }
+        }
+    }
+}
+
 } // end of namespace op
 } // end of namespace omniruntime
