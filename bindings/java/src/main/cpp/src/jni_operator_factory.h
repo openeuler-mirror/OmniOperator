@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
  * Description: Type Operator Factory Header
  */
 #ifndef JNI_OPERATOR_FACTORY_H
@@ -331,6 +331,25 @@ Java_nova_hetu_omniruntime_operator_filter_OmniBloomFilterOperatorFactory_create
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory_createTopNSortWithExprOperatorFactory(
     JNIEnv *, jclass, jstring, jint, jboolean, jobjectArray, jobjectArray, jintArray, jintArray, jstring);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniNestedLoopJoinBuildOperatorFactory
+ * Method:    createNestedLoopJoinBuildOperatorFactory
+ * Signature: (Ljava/lang/String;IZ[Ljava/lang/String;[Ljava/lang/String;[I[ILjava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniNestedLoopJoinBuildOperatorFactory_createNestedLoopJoinBuildOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jBuildTypes, jintArray jBuildOutputCols);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_join_OmniNestedLoopJoinLookupOperatorFactory
+ * Method:    createNestedLoopJoinLookupOperatorFactory
+ * Signature: (Ljava/lang/String;IZ[Ljava/lang/String;[Ljava/lang/String;[I[ILjava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniNestedLoopJoinLookupOperatorFactory_createNestedLoopJoinLookupOperatorFactory(
+    JNIEnv *env, jclass jObj, jint jJoinType, jstring jProbeTypes, jintArray jProbeOutputCols, jstring jFilter,
+    jlong jNestedLoopJoinBuildOperatorFactory, jstring jOperatorConfig);
 
 #ifdef __cplusplus
 }

@@ -643,6 +643,47 @@ TEST(BatchFunctionTest, MakeDecimal)
     delete context;
 }
 
+TEST(BatchFunctionTest, RoundDecimal)
+{
+    int32_t rowCnt = 2;
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    bool isNull[2] = {false, true};
+    int32_t round[2] = {0, 0};
+    Decimal128 output128[2];
+    int64_t output64[2];
+
+    Decimal128 decimal128Val1[2];
+    decimal128Val1[0] = Decimal128("22167875302138684366688952930001319804");
+    decimal128Val1[1] = Decimal128("151949737170315874258868924986217725952");
+    BatchRoundDecimal128(contextPtr, decimal128Val1, 38, 18, round, isNull, output128, 21, 0, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 1);
+    EXPECT_EQ(output128[0].LowBits(), 3721131228429132751L);
+    EXPECT_EQ(output128[1].HighBits(), 0);
+    EXPECT_EQ(output128[1].LowBits(), 0);
+
+    Decimal128 decimal128Val2[2];
+    decimal128Val2[0] = Decimal128("22167875302138684366688952930001319804");
+    decimal128Val2[1] = Decimal128("151949737170315874258868924986217725952");
+    BatchRoundDecimal128WithoutRound(contextPtr, decimal128Val2, 38, 18, isNull, output128, 21, 0, rowCnt);
+    EXPECT_EQ(output128[0].HighBits(), 1);
+    EXPECT_EQ(output128[0].LowBits(), 3721131228429132751L);
+    EXPECT_EQ(output128[1].HighBits(), 0);
+    EXPECT_EQ(output128[1].LowBits(), 0);
+
+    int64_t decimal64Val1[2] = { 463127424592162661L, 63636006298474304L};
+    output64[1] = 0;
+    BatchRoundDecimal64(contextPtr, decimal64Val1, 18, 8, round, isNull, output64, 11, 0, rowCnt);
+    EXPECT_EQ(output64[0], 4631274246L);
+    EXPECT_EQ(output64[1], 0);
+
+    int64_t decimal64Val2[2] = { 463127424592162661L, 63636006298474304L};
+    BatchRoundDecimal64WithoutRound(contextPtr, decimal64Val2, 18, 8, isNull, output64, 11, 0, rowCnt);
+    EXPECT_EQ(output64[0], 4631274246L);
+    EXPECT_EQ(output64[1], 0);
+    delete context;
+}
+
 TEST(BatchFunctionTest, DecimalAdd)
 {
     int32_t rowCnt = 2;

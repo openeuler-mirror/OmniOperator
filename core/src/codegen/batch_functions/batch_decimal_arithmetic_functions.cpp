@@ -100,6 +100,9 @@ extern "C" DLLEXPORT void BatchRoundDecimal128(int64_t contextPtr, Decimal128 *x
     int32_t *round, bool *isNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
         Decimal128Wrapper input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, round[i]);
@@ -112,6 +115,9 @@ extern "C" DLLEXPORT void BatchRoundDecimal64(int64_t contextPtr, int64_t *x, in
     int32_t *round, bool *isNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
         Decimal64 input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, round[i]);
@@ -124,6 +130,9 @@ extern "C" DLLEXPORT void BatchRoundDecimal128WithoutRound(int64_t contextPtr, D
     int32_t xScale, bool *isNull, Decimal128 *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
         Decimal128Wrapper input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, 0);
@@ -136,6 +145,9 @@ extern "C" DLLEXPORT void BatchRoundDecimal64WithoutRound(int64_t contextPtr, in
     int32_t xScale, bool *isNull, int64_t *output, int32_t outPrecision, int32_t outScale, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {
+        if (isNull[i]) {
+            continue;
+        }
         Decimal64 input(x[i]);
         input.SetScale(xScale);
         DecimalOperations::Round(input, outScale, 0);

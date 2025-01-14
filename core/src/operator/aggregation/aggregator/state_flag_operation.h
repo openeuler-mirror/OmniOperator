@@ -67,6 +67,17 @@ template <typename ResultType> struct BaseCountState {
     }
 };
 
+struct BaseStdDevState {
+    double mean;
+    double m2;
+    double count;
+
+    bool IsEmpty() const
+    {
+        return count == 0;
+    }
+};
+
 #pragma pack(pop)
 
 /*

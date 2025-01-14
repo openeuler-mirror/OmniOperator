@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
  * Description: JNI Operator Factory Source File
  */
 
@@ -36,6 +36,9 @@
 #include "config.h"
 #include "jni_common_def.h"
 #include "expression/expr_verifier.h"
+#include "operator/join/nest_loop_join_builder.h"
+#include "operator/join/nest_loop_join_lookup.h"
+
 
 using namespace omniruntime::op;
 using namespace omniruntime::expressions;
@@ -1077,6 +1080,7 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
     auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
     auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
     auto overflowConfig = operatorConfig.GetOverflowConfig();
+    auto isStatisticalAggregate = operatorConfig.IsStatisticalAggregate();
     env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
 
     std::vector<omniruntime::expressions::Expr *> groupByKeysExprs;
@@ -1103,9 +1107,9 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
     JNI_METHOD_END_WITH_THREE_EXPRS(0L, groupByKeysExprs, aggKeysExprsVector, aggFilterExprs)
     AggregationWithExprOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
-    nativeOperatorFactory =
-        new AggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprsVector, sourceDataTypes,
-        outDataTypes, aggFuncTypes, aggFilterExprs, maskColumns, inputRaws, outputPartials, overflowConfig);
+    nativeOperatorFactory = new AggregationWithExprOperatorFactory(groupByKeysExprs, groupByNum, aggKeysExprsVector,
+        sourceDataTypes, outDataTypes, aggFuncTypes, aggFilterExprs, maskColumns, inputRaws, outputPartials,
+        overflowConfig, isStatisticalAggregate);
     JNI_METHOD_END_WITH_THREE_EXPRS(0L, groupByKeysExprs, aggKeysExprsVector, aggFilterExprs)
 
     Expr::DeleteExprs(groupByKeysExprs);
@@ -1549,4 +1553,60 @@ Java_nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory
     Expr::DeleteExprs(partitionKeys);
     Expr::DeleteExprs(sortKeys);
     return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniNestedLoopJoinBuildOperatorFactory_createNestedLoopJoinBuildOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jBuildTypes, jintArray jBuildOutputCols)
+{
+    auto buildTypesCharPtr = env->GetStringUTFChars(jBuildTypes, JNI_FALSE);
+    auto buildOutputColsCount = env->GetArrayLength(jBuildOutputCols);
+    auto buildOutputColsArr = env->GetIntArrayElements(jBuildOutputCols, JNI_FALSE);
+
+    auto buildDataTypes = Deserialize(buildTypesCharPtr);
+    env->ReleaseStringUTFChars(jBuildTypes, buildTypesCharPtr);
+
+    NestedLoopJoinBuildOperatorFactory *nestedLoopJoinBuildOperatorFactory = nullptr;
+    JNI_METHOD_START
+    nestedLoopJoinBuildOperatorFactory =
+        new NestedLoopJoinBuildOperatorFactory(buildDataTypes, buildOutputColsArr, buildOutputColsCount);
+    JNI_METHOD_END(0L)
+
+    env->ReleaseIntArrayElements(jBuildOutputCols, buildOutputColsArr, 0);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(nestedLoopJoinBuildOperatorFactory));
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_join_OmniNestedLoopJoinLookupOperatorFactory_createNestedLoopJoinLookupOperatorFactory(
+    JNIEnv *env, jclass jObj, jint jJoinType, jstring jProbeTypes, jintArray jProbeOutputCols, jstring jFilter,
+    jlong jNestedLoopJoinBuildOperatorFactory, jstring jOperatorConfig)
+{
+    auto probeTypesCharPtr = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
+    auto probeOutputColsCount = env->GetArrayLength(jProbeOutputCols);
+    auto probeOutputColsArr = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
+    auto filterChars = env->GetStringUTFChars(jFilter, JNI_FALSE);
+    auto probeDataTypes = Deserialize(probeTypesCharPtr);
+    std::string filterExpression = std::string(filterChars);
+
+    env->ReleaseStringUTFChars(jProbeTypes, probeTypesCharPtr);
+    env->ReleaseStringUTFChars(jFilter, filterChars);
+    Expr *filterExpr = nullptr;
+    JNI_METHOD_START
+    // extract the expression and the BuildDataTypes to parse the expression
+    filterExpr = CreateJoinFilterExpr(filterExpression);
+    JNI_METHOD_END(0L)
+    NestLoopJoinLookupOperatorFactory *nestLoopJoinLookupOperatorFactory = nullptr;
+    JNI_METHOD_START
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
+    auto *overflowConfig = operatorConfig.GetOverflowConfig();
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+    auto joinType = (JoinType)jJoinType;
+    nestLoopJoinLookupOperatorFactory =
+        NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(joinType, probeDataTypes,
+        probeOutputColsArr, probeOutputColsCount, filterExpr, jNestedLoopJoinBuildOperatorFactory, overflowConfig);
+    JNI_METHOD_END(0L)
+    Expr::DeleteExprs({ filterExpr });
+    env->ReleaseIntArrayElements(jProbeOutputCols, probeOutputColsArr, 0);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(nestLoopJoinLookupOperatorFactory));
 }

@@ -71,6 +71,7 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     bool needSkipVerify = false;
     int adaptThreshold = -1;
     bool curIsRowOutput = false;
+    bool isStatisticalAggregate = false;
 
     auto result = nlohmann::json::parse(configString);
     if (result.contains("overflowConfig")) {
@@ -119,8 +120,11 @@ OperatorConfig OperatorConfig::DeserializeOperatorConfig(const std::string &conf
     if (result.contains("isRowOutput")) {
         curIsRowOutput = result.at("isRowOutput").get<bool>();
     }
-
-    return OperatorConfig{ resultSpillConfig, resultOverflowConfig, needSkipVerify, adaptThreshold, curIsRowOutput };
+    if (result.contains("statisticalAggregate")) {
+        isStatisticalAggregate = result.at("statisticalAggregate").get<bool>();
+    }
+    return OperatorConfig{resultSpillConfig, resultOverflowConfig, needSkipVerify, adaptThreshold, curIsRowOutput,
+                          isStatisticalAggregate};
 }
 
 void CheckHasEnoughDiskSpace(const char *spillPathChars, SpillConfig &spillConfig)

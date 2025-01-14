@@ -38,8 +38,11 @@ protected:
 class AggregationCommonOperatorFactory : public OperatorFactory {
 public:
     AggregationCommonOperatorFactory(std::vector<bool> &inputRaws, std::vector<bool> &outputPartials,
-        std::vector<uint32_t> &maskColsContext, bool isOverflowAsNull = false)
-        : inputRaws(inputRaws), outputPartials(outputPartials), isOverflowAsNull(isOverflowAsNull)
+        std::vector<uint32_t> &maskColsContext, bool isOverflowAsNull = false, bool isStatisticalAggregate = false)
+        : inputRaws(inputRaws),
+          outputPartials(outputPartials),
+          isOverflowAsNull(isOverflowAsNull),
+          isStatisticalAggregate(isStatisticalAggregate)
     {
         for (size_t i = 0; i < maskColsContext.size(); ++i) {
             maskCols.push_back(maskColsContext[i]);
@@ -67,6 +70,7 @@ protected:
     std::vector<bool> outputPartials;
     std::vector<int32_t> maskCols;
     bool isOverflowAsNull;
+    bool isStatisticalAggregate;
 };
 }
 }

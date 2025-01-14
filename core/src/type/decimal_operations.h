@@ -545,7 +545,7 @@ public:
             uint128_t y = right.val;
             uint128_t r;
             bool isOverflow = __builtin_add_overflow(x, y, &r);
-            if (isOverflow || r > DECIMAL128_MAX_VALUE) {
+            if (isOverflow) {
                 result.overflow = OpStatus::OP_OVERFLOW;
                 return result;
             }

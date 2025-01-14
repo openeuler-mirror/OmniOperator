@@ -61,8 +61,9 @@ public:
     AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypesVector,
         std::vector<std::vector<uint32_t>> &aggsInputColsVector, std::vector<uint32_t> &maskColsVector,
         std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> inputRaws,
-        std::vector<bool> outputPartials, bool overflowAsNull = false)
-        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull),
+        std::vector<bool> outputPartials, bool overflowAsNull = false, bool isStatisticalAggregate = false)
+        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull,
+        isStatisticalAggregate),
           sourceTypes(sourceTypes),
           aggFuncTypesVector(aggFuncTypesVector),
           aggsInputColsVector(aggsInputColsVector),
@@ -73,8 +74,10 @@ public:
     AggregationOperatorFactory(omniruntime::type::DataTypes &sourceTypes, std::vector<uint32_t> &aggFuncTypesVector,
         std::vector<std::vector<uint32_t>> &aggsInputColsVector, std::vector<uint32_t> &maskColsVector,
         std::vector<omniruntime::type::DataTypes> &aggsOutputTypes, std::vector<bool> inputRaws,
-        std::vector<bool> outputPartials, const std::vector<int8_t> &hasAggFilters, bool overflowAsNull = false)
-        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull),
+        std::vector<bool> outputPartials, const std::vector<int8_t> &hasAggFilters, bool overflowAsNull = false,
+        bool isStatisticalAggregate = false)
+        : AggregationCommonOperatorFactory(inputRaws, outputPartials, maskColsVector, overflowAsNull,
+        isStatisticalAggregate),
           sourceTypes(sourceTypes),
           aggFuncTypesVector(aggFuncTypesVector),
           aggsInputColsVector(aggsInputColsVector),

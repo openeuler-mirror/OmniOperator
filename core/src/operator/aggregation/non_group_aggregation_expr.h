@@ -20,7 +20,8 @@ public:
         std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
         std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
         std::vector<omniruntime::expressions::Expr *> &aggFilterExprs, std::vector<uint32_t> &maskColumns,
-        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig);
+        std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig,
+        bool isStatisticalAggregate = false);
 
     ~AggregationWithExprOperatorFactory() override;
 

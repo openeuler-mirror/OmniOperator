@@ -203,12 +203,13 @@ public:
     OperatorConfig(const OperatorConfig &operatorConfig);
 
     OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig, bool isSkipVerify,
-        int adaptivityThreshold = -1, bool isRowOutput = false)
+        int adaptivityThreshold = -1, bool isRowOutput = false, bool isStatisticalAggregate = false)
         : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig()),
           overflowConfig((overflowConfig != nullptr) ? overflowConfig : new OverflowConfig()),
           isSkipVerify(isSkipVerify),
           adaptivityThreshold(adaptivityThreshold),
-          isRowOutput(isRowOutput)
+        isRowOutput(isRowOutput),
+        isStatisticalAggregate(isStatisticalAggregate)
     {}
 
     OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig)
@@ -275,6 +276,11 @@ public:
         return isRowOutput;
     }
 
+    bool IsStatisticalAggregate() const
+    {
+        return isStatisticalAggregate;
+    }
+
     static OperatorConfig DeserializeOperatorConfig(const std::string &configString);
 
     static void CheckSpillConfig(SpillConfig *spillConfig);
@@ -285,6 +291,7 @@ private:
     bool isSkipVerify = false;
     int adaptivityThreshold = -1;
     bool isRowOutput = false;
+    bool isStatisticalAggregate = false;
 };
 }
 }

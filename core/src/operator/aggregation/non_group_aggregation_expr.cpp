@@ -17,7 +17,8 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
     std::vector<std::vector<omniruntime::expressions::Expr *>> &aggsKeys, DataTypes &sourceDataTypes,
     std::vector<DataTypes> &aggOutputTypes, std::vector<uint32_t> &aggFuncTypes,
     std::vector<omniruntime::expressions::Expr *> &aggFilters, std::vector<uint32_t> &maskColumns,
-    std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig)
+    std::vector<bool> &inputRaws, std::vector<bool> &outputPartial, OverflowConfig *overflowConfig,
+    bool isStatisticalAggregate)
 {
     uint32_t aggColNum = 0;
     for (auto &aggKeys : aggsKeys) {
@@ -83,7 +84,8 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
     originSourceTypes = std::make_unique<DataTypes>(sourceDataTypes);
     sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
     aggOperatorFactory = new AggregationOperatorFactory(*sourceTypes, aggFuncTypes, aggColIdx, maskColumns,
-        aggOutputTypes, inputRaws, outputPartial, hasAggFilters, overflowConfig->IsOverflowAsNull());
+        aggOutputTypes, inputRaws, outputPartial, hasAggFilters, overflowConfig->IsOverflowAsNull(),
+        isStatisticalAggregate);
     aggOperatorFactory->Init();
 }
 
