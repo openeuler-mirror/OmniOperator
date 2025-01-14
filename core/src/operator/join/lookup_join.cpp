@@ -6,6 +6,7 @@
 #include <memory>
 #include "operator/util/operator_util.h"
 #include "vector/vector_helper.h"
+#include "simd/simd.h"
 #include "hash_builder.h"
 #include "simd/xsimd.h"
 #include "lookup_join.h"
@@ -1268,39 +1269,127 @@ LookupJoinOutputBuilder::LookupJoinOutputBuilder(std::vector<int32_t> &probeOutp
 {
     // if the probe and build do not have output columns, the row size is setted to DEFAULT_ROW_SIZE
     this->maxRowCount = OperatorUtil::GetMaxRowCount((outputRowSize != 0) ? outputRowSize : DEFAULT_ROW_SIZE);
-    if (!probeOutputCols.empty()) {
-        probeIndex.reserve(maxRowCount);
-    }
-    if (!buildOutputCols.empty()) {
-        buildIndex.reserve(maxRowCount);
+    if (!probeOutputCols.empty() || !buildOutputCols.empty()) {
+        probeBuildIndex.reserve(maxRowCount);
     }
 }
 
 void NO_INLINE LookupJoinOutputBuilder::AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address)
 {
     probeRowCount++;
-    if (!probeOutputCols.empty()) {
-        probeIndex.emplace_back(probePosition);
-    }
-    if (!buildOutputCols.empty()) {
-        buildIndex.emplace_back(array, address);
+    auto rowIdx = LookupJoinOutputBuilder::DecodeRowId(address);
+    auto vecBatchIdx = LookupJoinOutputBuilder::DecodeVectorBatchId(address);
+    if (!probeOutputCols.empty() || !buildOutputCols.empty()) {
+        probeBuildIndex.emplace_back(probePosition, array, vecBatchIdx, rowIdx);
     }
 }
 
 template <typename T>
-static NO_INLINE BaseVector *ConstructBuildColumn(const std::pair<BaseVector ***, uint64_t> *buildTemp,
-    uint32_t outputCol, int32_t numRows)
+static NO_INLINE BaseVector *ConstructBuildColumn(
+    const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows,
+    int8_t parallelism)
+{
+    auto ret = std::make_unique<Vector<T>>(numRows);
+    T value;
+    uint32_t preVecBatchIdx = 0;
+    T rowIdxes[parallelism];
+    T getResult[parallelism];
+    int8_t parallelNum = 0;
+    const ScalableTag<T> d;
+    BaseVector *preVector = nullptr;
+    for (int32_t i = 0; i < numRows; ++i) {
+        BaseVector ***array = std::get<1>(buildTemp[i]);
+        auto vecBatchIdx = std::get<2>(buildTemp[i]);
+        auto rowIdx = std::get<3>(buildTemp[i]);
+        if (array == nullptr || array[outputCol][vecBatchIdx]->IsNull(rowIdx)) {
+            ret->SetNull(i);
+            for (int32_t j = 0; j < parallelNum; ++j) {
+                auto currRow = i + j - parallelNum;
+                if (!(ret->IsNull(currRow))) {
+                    if (preVector->GetEncoding() == OMNI_DICTIONARY) {
+                        value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
+                    } else {
+                        value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                    }
+                    ret->SetValue(currRow, value);
+                }
+            }
+            parallelNum = 0;
+            preVector = array == nullptr ? nullptr : array[outputCol][vecBatchIdx];
+            continue;
+        }
+
+        BaseVector *buildVector = array[outputCol][vecBatchIdx];
+        if (vecBatchIdx == preVecBatchIdx) {
+            rowIdxes[parallelNum] = rowIdx;
+            parallelNum++;
+            if (parallelNum == parallelism) {
+                T *buildVecSrc;
+                if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
+                    buildVecSrc = unsafe::UnsafeDictionaryVector::GetDictionary(
+                        static_cast<Vector<DictionaryContainer<T>> *>(buildVector));
+                } else {
+                    buildVecSrc = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(buildVector));
+                }
+                auto result = GatherIndex(d, buildVecSrc, LoadU(d, rowIdxes));
+                Store(result, d, getResult);
+                ret->SetValues(i - parallelNum + 1, static_cast<void *>(getResult), parallelNum);
+                parallelNum = 0;
+                continue;
+            }
+        } else {
+            // Processing the data of the remaining rowIdxes of the previous vecBatch during cross-vecBatch.
+            for (int32_t j = 0; j < parallelNum; ++j) {
+                auto currRow = i + j - parallelNum;
+                if (!(ret->IsNull(currRow))) {
+                    if (preVector->GetEncoding() == OMNI_DICTIONARY) {
+                        value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
+                    } else {
+                        value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                    }
+                    ret->SetValue(currRow, value);
+                }
+            }
+            parallelNum = 0;
+            rowIdxes[parallelNum] = rowIdx;
+            parallelNum++;
+        }
+        preVecBatchIdx = vecBatchIdx;
+        preVector = buildVector;
+    }
+
+    // When the last row is traversed and the number of data is less than one instruction, the value is
+    // assigned cyclically.
+    if (parallelNum != 0) {
+        for (int32_t j = 0; j < parallelNum; ++j) {
+            auto currRow = numRows - parallelNum + j;
+            if (!(ret->IsNull(currRow))) {
+                if (preVector->GetEncoding() == OMNI_DICTIONARY) {
+                    value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
+                } else {
+                    value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                }
+                ret->SetValue(currRow, value);
+            }
+        }
+        parallelNum = 0;
+    }
+    return ret.release();
+}
+
+template <typename T>
+static NO_INLINE BaseVector *ConstructBuildColumn(
+    const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows)
 {
     auto ret = new Vector<T>(numRows);
     T value;
     for (int32_t i = 0; i < numRows; ++i) {
-        BaseVector ***array = buildTemp[i].first;
+        BaseVector ***array = std::get<1>(buildTemp[i]);
         if (array == nullptr) {
-            static_cast<Vector<T> *>(ret)->SetNull(i);
+            ret->SetNull(i);
         } else {
-            uint64_t address = buildTemp[i].second;
-            auto buildRowIdx = LookupJoinOutputBuilder::DecodeRowId(address);
-            auto vecBatchIndex = LookupJoinOutputBuilder::DecodeVectorBatchId(address);
+            auto vecBatchIndex = std::get<2>(buildTemp[i]);
+            auto buildRowIdx = std::get<3>(buildTemp[i]);
             BaseVector *buildVector = array[outputCol][vecBatchIndex];
             if (buildVector->IsNull(buildRowIdx)) {
                 ret->SetNull(i);
@@ -1312,30 +1401,29 @@ static NO_INLINE BaseVector *ConstructBuildColumn(const std::pair<BaseVector ***
             } else {
                 value = static_cast<Vector<T> *>(buildVector)->GetValue(buildRowIdx);
             }
-            static_cast<Vector<T> *>(ret)->SetValue(i, value);
+            ret->SetValue(i, value);
         }
     }
     return ret;
 }
 
-static NO_INLINE BaseVector *ConstructBuildVarcharColumn(const std::pair<BaseVector ***, uint64_t> *buildTemp,
-    uint32_t outputCol, int32_t numRows)
+static NO_INLINE BaseVector *ConstructBuildVarcharColumn(
+    const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows)
 {
     using VarcharVector = Vector<LargeStringContainer<std::string_view>>;
     using DictionaryVector = Vector<DictionaryContainer<std::string_view>>;
     auto *ret = new VarcharVector(numRows);
     std::string_view value;
     for (int32_t i = 0; i < numRows; ++i) {
-        BaseVector ***array = buildTemp[i].first;
+        BaseVector ***array = std::get<1>(buildTemp[i]);
         if (array == nullptr) {
             static_cast<VarcharVector *>(ret)->SetNull(i);
         } else {
-            uint64_t address = buildTemp[i].second;
-            auto buildRowIdx = LookupJoinOutputBuilder::DecodeRowId(address);
-            auto vecBatchIndex = LookupJoinOutputBuilder::DecodeVectorBatchId(address);
+            auto vecBatchIndex = std::get<2>(buildTemp[i]);
+            auto buildRowIdx = std::get<3>(buildTemp[i]);
             auto buildVector = array[outputCol][vecBatchIndex];
             if (buildVector->IsNull(buildRowIdx)) {
-                static_cast<VarcharVector *>(ret)->SetNull(i);
+                ret->SetNull(i);
                 continue;
             }
 
@@ -1344,7 +1432,7 @@ static NO_INLINE BaseVector *ConstructBuildVarcharColumn(const std::pair<BaseVec
             } else {
                 value = static_cast<VarcharVector *>(buildVector)->GetValue(buildRowIdx);
             }
-            static_cast<VarcharVector *>(ret)->SetValue(i, value);
+            ret->SetValue(i, value);
         }
     }
     return ret;
@@ -1355,9 +1443,9 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructProbeColumns(VectorBatch *vecto
 {
     bool isSequentialProbeIndices = true;
     if (rowCount > 1) { // <= 1 must be sequential
-        auto tmpProbeIndex = probeIndex.data() + probeRowOffset;
+        auto tmpProbeIndex = probeBuildIndex.data() + probeRowOffset;
         for (int32_t i = 1; i < rowCount; ++i) {
-            if (tmpProbeIndex[i] != tmpProbeIndex[i - 1] + 1) {
+            if (std::get<0>(tmpProbeIndex[i]) != std::get<0>(tmpProbeIndex[i - 1]) + 1) {
                 isSequentialProbeIndices = false;
                 break;
             }
@@ -1380,7 +1468,7 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
 {
     // preprocess the pointer to build table vectors -- doing a few levels of
     // pointer chasing first
-    const std::pair<BaseVector ***, uint64_t> *buildTemp = buildIndex.data() + probeRowOffset;
+    const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp = probeBuildIndex.data() + probeRowOffset;
     for (size_t j = 0; j < buildOutputCols.size(); j++) {
         uint32_t outputCol = buildOutputCols[j];
         BaseVector *buildColumn = nullptr;
@@ -1388,11 +1476,11 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                buildColumn = ConstructBuildColumn<int64_t>(buildTemp, outputCol, rowCount);
+                buildColumn = ConstructBuildColumn<int64_t>(buildTemp, outputCol, rowCount, OMNI_LANES(int64_t));
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                buildColumn = ConstructBuildColumn<int32_t>(buildTemp, outputCol, rowCount);
+                buildColumn = ConstructBuildColumn<int32_t>(buildTemp, outputCol, rowCount, OMNI_LANES(int32_t));
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
@@ -1402,7 +1490,11 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
                 buildColumn = ConstructBuildColumn<Decimal128>(buildTemp, outputCol, rowCount);
                 break;
             case OMNI_SHORT:
+#ifdef ENABLE_SVE
                 buildColumn = ConstructBuildColumn<int16_t>(buildTemp, outputCol, rowCount);
+#else
+                buildColumn = ConstructBuildColumn<int16_t>(buildTemp, outputCol, rowCount, OMNI_LANES(int16_t));
+#endif
                 break;
             case OMNI_DOUBLE:
                 buildColumn = ConstructBuildColumn<double>(buildTemp, outputCol, rowCount);
@@ -1425,19 +1517,32 @@ void LookupJoinOutputBuilder::BuildOutput(
     auto rowCount = std::min(probeRowCount, maxRowCount);
     auto output = std::make_unique<VectorBatch>(rowCount);
     auto outputPtr = output.get();
-    if (!probeOutputCols.empty()) {
-        // only probe side will produce dic vector
-        ConstructProbeColumns(outputPtr, probeOutputColumns, rowCount);
-    }
 
     if (joinType == OMNI_JOIN_TYPE_EXISTENCE) {
+        if (!probeOutputCols.empty()) {
+            // only probe side will produce dic vector
+            ConstructProbeColumns(outputPtr, probeOutputColumns, rowCount);
+        }
         ConstructExistenceColumn(outputPtr);
     } else {
+        const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *tempIndex =
+                probeBuildIndex.data() + probeRowOffset;
+        std::stable_sort(probeBuildIndex.begin() + probeRowOffset, probeBuildIndex.begin() + probeRowOffset + rowCount,
+            [](const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> &a,
+               const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> &b) {
+                if (std::get<2>(a) == std::get<2>(b)) {
+                    return std::get<3>(a) < std::get<3>(b);
+                }
+                return std::get<2>(a) < std::get<2>(b);
+            });
+        if (!probeOutputCols.empty()) {
+            // only probe side will produce dic vector
+            ConstructProbeColumns(outputPtr, probeOutputColumns, rowCount);
+        }
         if (!buildOutputCols.empty()) {
             ConstructBuildColumns(outputPtr, rowCount);
         }
     }
-
     probeRowOffset += rowCount;
     probeRowCount -= rowCount;
     *outputVecBatch = output.release();
@@ -1448,7 +1553,7 @@ void ALWAYS_INLINE LookupJoinOutputBuilder::AppendExistenceRow(int32_t probePosi
 {
     probeRowCount++;
     if (probeOutputCols.size() > 0) {
-        probeIndex.emplace_back(probePosition);
+        probeBuildIndex.emplace_back(probePosition, nullptr, 0, 0);
     }
     existJoinBuildIndex.emplace_back(isMatched);
 }
