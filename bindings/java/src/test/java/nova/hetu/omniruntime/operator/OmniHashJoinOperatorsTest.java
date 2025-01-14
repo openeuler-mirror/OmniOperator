@@ -7,8 +7,11 @@ package nova.hetu.omniruntime.operator;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_FULL;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_INNER;
 import static nova.hetu.omniruntime.constants.JoinType.OMNI_JOIN_TYPE_LEFT;
-import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEquals;
-import static nova.hetu.omniruntime.util.TestUtils.assertVecEquals;
+import static nova.hetu.omniruntime.util.TestUtils.assertDecimal128DictionaryVecEqualsIgnoreOrder;
+import static nova.hetu.omniruntime.util.TestUtils.assertDecimal128VecEqualsIgnoreOrder;
+import static nova.hetu.omniruntime.util.TestUtils.assertDictionaryVecEqualsIgnoreOrder;
+import static nova.hetu.omniruntime.util.TestUtils.assertVecBatchEqualsIgnoreOrder;
+import static nova.hetu.omniruntime.util.TestUtils.assertVecEqualsIgnoreOrder;
 import static nova.hetu.omniruntime.util.TestUtils.createDictionaryVec;
 import static nova.hetu.omniruntime.util.TestUtils.createLongVec;
 import static nova.hetu.omniruntime.util.TestUtils.createVec;
@@ -38,6 +41,7 @@ import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
+import nova.hetu.omniruntime.vector.DictionaryVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -135,7 +139,7 @@ public class OmniHashJoinOperatorsTest {
         while (hashBuilderOutputWithoutJit.hasNext()) {
             VecBatch resultWithoutJit = hashBuilderOutputWithoutJit.next();
             VecBatch resultWithJit = hashBuilderOutputWithJit.next();
-            assertVecBatchEquals(resultWithoutJit, resultWithJit);
+            assertVecBatchEqualsIgnoreOrder(resultWithoutJit, resultWithJit);
             freeVecBatch(resultWithoutJit);
             freeVecBatch(resultWithJit);
         }
@@ -143,7 +147,7 @@ public class OmniHashJoinOperatorsTest {
         while (lookupJoinOutputWithoutJit.hasNext() && lookupJoinOutputWithJit.hasNext()) {
             VecBatch resultWithoutJit = lookupJoinOutputWithoutJit.next();
             VecBatch resultWithJit = lookupJoinOutputWithJit.next();
-            assertVecBatchEquals(resultWithoutJit, resultWithJit);
+            assertVecBatchEqualsIgnoreOrder(resultWithoutJit, resultWithJit);
             freeVecBatch(resultWithoutJit);
             freeVecBatch(resultWithJit);
         }
@@ -198,7 +202,7 @@ public class OmniHashJoinOperatorsTest {
         Object[][] expectedDatas = {
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 82L, 82L, 82L, 65L},
                 {79L, 70L, 70L, 79L, 70L, 70L, 70L, 70L, 70L, 79L, 70L, 70L, 79L, 70L, 70L, 79L, 70L, 70L}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -250,7 +254,7 @@ public class OmniHashJoinOperatorsTest {
         Object[][] expectedDatas = {
                 {78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 78L, 82L, 82L, 82L, 82L, 82L, 65L},
                 {79L, 70L, 70L, 79L, 70L, 70L, 70L, 70L, 70L, 79L, 70L, 70L, 79L, 70L, 70L, 79L, 70L, 70L}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator1.close();
@@ -297,7 +301,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}, {2L, null, 4L, null},
                 {11L, null, 33L, null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -343,7 +347,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}, {2L, null, 4L, null},
                 {"11", null, "33", null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -389,7 +393,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}, {2L, null, 4L, null},
                 {"11", null, "33", null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -434,7 +438,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(len, 4);
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11, 22, 33, 44}, {2L, null, 4L, null}, {11, null, 33, null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -480,7 +484,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}, {2L, null, 4L, null},
                 {11L, null, 33L, null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -528,10 +532,13 @@ public class OmniHashJoinOperatorsTest {
         int len = resultVecBatch.getRowCount();
         assertEquals(len, 4);
         assertEquals(resultVecBatch.getVectorCount(), 4);
-        assertVecEquals(resultVecBatch.getVectors()[0], new Object[]{1L, 2L, 3L, 4L});
-        assertVecEquals(resultVecBatch.getVectors()[1], new Object[][]{{11L, 0L}, {22L, 0L}, {33L, 0L}, {44L, 0L}});
-        assertVecEquals(resultVecBatch.getVectors()[2], new Object[]{2L, null, 4L, null});
-        assertVecEquals(resultVecBatch.getVectors()[3], new Object[][]{{11L, 0L}, null, {33L, 0L}, null});
+        assertDictionaryVecEqualsIgnoreOrder((DictionaryVec) resultVecBatch.getVectors()[0],
+                new Object[]{1L, 2L, 3L, 4L});
+        assertDecimal128DictionaryVecEqualsIgnoreOrder((DictionaryVec) resultVecBatch.getVectors()[1],
+                new Long[][]{{11L, 0L}, {22L, 0L}, {33L, 0L}, {44L, 0L}});
+        assertVecEqualsIgnoreOrder(resultVecBatch.getVectors()[2], new Object[]{2L, null, 4L, null});
+        assertDecimal128VecEqualsIgnoreOrder(resultVecBatch.getVectors()[3], new Long[][]{{11L, 0L}, null, {33L, 0L},
+                null});
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -583,7 +590,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(len, 2);
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{null, null}, {11L, 33L}, {null, null}, {11L, 33L}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -632,7 +639,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(len, 2);
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{16, 19}, {35709, 35709}, {16, 19}, {31904, 31904}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -686,7 +693,7 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{20, 16, 19}, {"35709", "35709", "35709"}, {20, 16, 19},
                 {"31904", "31904", "31904"}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         freeVecBatch(resultVecBatch);
         lookupJoinOperator.close();
         hashBuilderOperator.close();
@@ -864,14 +871,14 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}, {2L, null, 4L, null},
                 {11L, null, 33L, null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
 
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 2);
         Object[][] expectedData = {{null, null}, {null, null}, {1L, 3L}, {111L, 333L}};
-        assertVecBatchEquals(appendBatch, expectedData);
+        assertVecBatchEqualsIgnoreOrder(appendBatch, expectedData);
 
         freeVecBatch(resultVecBatch);
         freeVecBatch(appendBatch);
@@ -924,13 +931,13 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}, {2L, null, 4L, null},
                 {"11", null, "33", null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 2);
         Object[][] expectedData = {{null, null}, {null, null}, {1L, 3L}, {"aaa", "ccc"}};
-        assertVecBatchEquals(appendBatch, expectedData);
+        assertVecBatchEqualsIgnoreOrder(appendBatch, expectedData);
 
         freeVecBatch(resultVecBatch);
         freeVecBatch(appendBatch);
@@ -983,14 +990,14 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {"11", "22", "33", "44"}, {2L, null, 4L, null},
                 {"11", null, "33", null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
 
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 2);
         Object[][] expectedData = {{null, null}, {null, null}, {1L, 3L}, {"aaa", "ccc"}};
-        assertVecBatchEquals(appendBatch, expectedData);
+        assertVecBatchEqualsIgnoreOrder(appendBatch, expectedData);
 
         freeVecBatch(appendBatch);
         freeVecBatch(resultVecBatch);
@@ -1042,14 +1049,14 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(len, 4);
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11, 22, 33, 44}, {2L, null, 4L, null}, {11, null, 33, null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
 
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 2);
         Object[][] expectedData = {{null, null}, {null, null}, {1L, 3L}, {123, 321}};
-        assertVecBatchEquals(appendBatch, expectedData);
+        assertVecBatchEqualsIgnoreOrder(appendBatch, expectedData);
 
         freeVecBatch(resultVecBatch);
         freeVecBatch(appendBatch);
@@ -1102,14 +1109,14 @@ public class OmniHashJoinOperatorsTest {
         assertEquals(resultVecBatch.getVectorCount(), 4);
         Object[][] expectedDatas = {{1L, 2L, 3L, 4L}, {11L, 22L, 33L, 44L}, {2L, null, 4L, null},
                 {11L, null, 33L, null}};
-        assertVecBatchEquals(resultVecBatch, expectedDatas);
+        assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
 
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 2);
         Object[][] expectedData = {{null, null}, {null, null}, {1L, 3L}, {123L, 321L}};
-        assertVecBatchEquals(appendBatch, expectedData);
+        assertVecBatchEqualsIgnoreOrder(appendBatch, expectedData);
 
         freeVecBatch(resultVecBatch);
         freeVecBatch(appendBatch);
@@ -1165,19 +1172,22 @@ public class OmniHashJoinOperatorsTest {
         int len = resultVecBatch.getRowCount();
         assertEquals(len, 4);
         assertEquals(resultVecBatch.getVectorCount(), 4);
-        assertVecEquals(resultVecBatch.getVectors()[0], new Object[]{1L, 2L, 3L, 4L});
-        assertVecEquals(resultVecBatch.getVectors()[1], new Object[][]{{11L, 0L}, {22L, 0L}, {33L, 0L}, {44L, 0L}});
-        assertVecEquals(resultVecBatch.getVectors()[2], new Object[]{2L, null, 4L, null});
-        assertVecEquals(resultVecBatch.getVectors()[3], new Object[][]{{11L, 0L}, null, {33L, 0L}, null});
+        assertDictionaryVecEqualsIgnoreOrder((DictionaryVec) resultVecBatch.getVectors()[0],
+                new Object[]{1L, 2L, 3L, 4L});
+        assertDecimal128DictionaryVecEqualsIgnoreOrder((DictionaryVec) resultVecBatch.getVectors()[1],
+                new Long[][]{{11L, 0L}, {22L, 0L}, {33L, 0L}, {44L, 0L}});
+        assertVecEqualsIgnoreOrder(resultVecBatch.getVectors()[2], new Object[]{2L, null, 4L, null});
+        assertDecimal128VecEqualsIgnoreOrder(resultVecBatch.getVectors()[3], new Long[][]{{11L, 0L}, null, {33L, 0L},
+                null});
 
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();
         len = appendBatch.getRowCount();
         assertEquals(len, 2);
-        assertVecEquals(appendBatch.getVector(0), new Object[]{null, null});
-        assertVecEquals(appendBatch.getVector(1), new Object[]{null, null});
-        assertVecEquals(appendBatch.getVector(2), new Object[]{1L, 3L});
-        assertVecEquals(appendBatch.getVector(3), new Object[][]{{123L, 0L}, {321L, 0L}});
+        assertVecEqualsIgnoreOrder(appendBatch.getVector(0), new Object[]{null, null});
+        assertDecimal128VecEqualsIgnoreOrder(appendBatch.getVector(1), new Long[][]{null, null});
+        assertVecEqualsIgnoreOrder(appendBatch.getVector(2), new Object[]{1L, 3L});
+        assertDecimal128VecEqualsIgnoreOrder(appendBatch.getVector(3), new Long[][]{{123L, 0L}, {321L, 0L}});
 
         freeVecBatch(resultVecBatch);
         freeVecBatch(appendBatch);
