@@ -721,8 +721,8 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_createHashBuilderWithExprOperatorFactory(
-    JNIEnv *env, jclass jObj, jint jJoinType, jstring jBuildTypes, jobjectArray jBuildHashKeys, jint jHashTableCount,
-    jstring jOperatorConfig)
+    JNIEnv *env, jclass jObj, jint jJoinType, jint jBuildSide, jstring jBuildTypes, jobjectArray jBuildHashKeys,
+    jint jHashTableCount, jstring jOperatorConfig)
 {
     auto buildTypesChars = env->GetStringUTFChars(jBuildTypes, JNI_FALSE);
     auto buildHashKeysCount = env->GetArrayLength(jBuildHashKeys);
@@ -745,7 +745,7 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
     HashBuilderWithExprOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory((JoinType)jJoinType,
-        buildDataTypes, buildHashKeysArrExprs, jHashTableCount, overflowConfig);
+        (BuildSide)jBuildSide, buildDataTypes, buildHashKeysArrExprs, jHashTableCount, overflowConfig);
     JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, buildHashKeysArrExprs)
     Expr::DeleteExprs(buildHashKeysArrExprs);
 

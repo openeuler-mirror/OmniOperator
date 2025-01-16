@@ -159,8 +159,8 @@ Java_nova_hetu_omniruntime_operator_sort_OmniSortWithExprOperatorFactory_createS
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_createHashBuilderWithExprOperatorFactory(
-    JNIEnv *env, jclass jObj, jint jJoinType, jstring jBuildTypes, jobjectArray jBuildHashKeys, jint jHashTableCount,
-    jstring jOperatorConfig);
+    JNIEnv *env, jclass jObj, jint jJoinType, jint jBuildSide, jstring jBuildTypes, jobjectArray jBuildHashKeys,
+    jint jHashTableCount, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory

@@ -18,12 +18,16 @@ class HashBuilderOperatorFactory : public OperatorFactory {
 public:
     HashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes, const int32_t *buildHashCols,
         int32_t buildHashColsCount, int32_t operatorCount);
+    HashBuilderOperatorFactory(JoinType joinType, BuildSide buildSide, const DataTypes &buildTypes,
+        const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
     ~HashBuilderOperatorFactory()
     {
         delete hashTablesVariants;
     }
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
         const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(JoinType joinType, BuildSide buildSide,
+        const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
     omniruntime::op::Operator *CreateOperator() override;
 
     HashTableVariants *GetHashTablesVariants()
@@ -38,7 +42,8 @@ private:
     std::atomic<int32_t> operatorIndex;
 
     template <class RowRefListType>
-    HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType);
+    HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType,
+        BuildSide buildSide = OMNI_BUILD_UNKNOWN);
 };
 
 class HashBuilderOperator : public Operator {
