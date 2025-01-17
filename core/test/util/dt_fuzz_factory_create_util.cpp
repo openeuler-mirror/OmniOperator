@@ -264,7 +264,7 @@ OperatorFactory *CreateTopNFactory(omniruntime::type::DataTypes &sourceTypes)
     int32_t ascendings[1] = {true};
     int32_t nullFirsts[1] = {false};
 
-    auto operatorFactory = new TopNOperatorFactory(sourceTypes, 5, sortCols, ascendings, nullFirsts, 1);
+    auto operatorFactory = new TopNOperatorFactory(sourceTypes, 5, 0, sortCols, ascendings, nullFirsts, 1);
     return operatorFactory;
 }
 

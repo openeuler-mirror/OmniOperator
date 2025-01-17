@@ -6,17 +6,17 @@
 #include "operator/util/operator_util.h"
 
 namespace omniruntime::op {
-TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
-    const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc, int32_t *sortNullFirsts,
-    int32_t sortKeyCount, OverflowConfig *overflowConfig)
+TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t limit,
+    int32_t offset, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAsc,
+    int32_t *sortNullFirsts, int32_t sortKeyCount, OverflowConfig *overflowConfig)
 {
     std::vector<DataTypePtr> newSourceTypes;
     OperatorUtil::CreateProjections(sourceDataTypes, sortKeys, newSourceTypes, this->projections, this->sortCols,
         overflowConfig);
 
     this->sourceTypes = std::make_unique<DataTypes>(newSourceTypes);
-    this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(*sourceTypes, n, this->sortCols.data(), sortAsc,
-        sortNullFirsts, sortKeyCount);
+    this->topNOperatorFactory = std::make_unique<TopNOperatorFactory>(*sourceTypes,
+    limit, offset, this->sortCols.data(), sortAsc, sortNullFirsts, sortKeyCount);
 }
 
 TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;

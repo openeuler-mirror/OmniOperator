@@ -20,16 +20,26 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
      *
      * @param limit the limit count
      */
-    public OmniLimitOperatorFactory(long limit) {
-        super(new FactoryContext(limit));
+    public OmniLimitOperatorFactory(int limit) {
+        super(new FactoryContext(limit, 0));
+    }
+
+    /**
+     * Instantiates a new Omni limit operator factory.
+     *
+     * @param limit the limit count
+     * @param offset the offset count
+     */
+    public OmniLimitOperatorFactory(int limit, int offset) {
+        super(new FactoryContext(limit, offset));
     }
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
-        return createLimitOperatorFactory(context.limit);
+        return createLimitOperatorFactory(context.limit, context.offset);
     }
 
-    private static native long createLimitOperatorFactory(long limit);
+    private static native long createLimitOperatorFactory(int limit, int offset);
 
     /**
      * The type Factory context.
@@ -37,15 +47,18 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
      * @since 2021-06-30
      */
     public static class FactoryContext extends OmniOperatorFactoryContext {
-        private final long limit;
+        private final int limit;
+        private final int offset;
 
         /**
          * Instantiates a new Context.
          *
          * @param limit the limit count
+         * @param offset the offset count
          */
-        public FactoryContext(long limit) {
+        public FactoryContext(int limit, int offset) {
             this.limit = limit;
+            this.offset = offset;
         }
 
         @Override
@@ -57,12 +70,12 @@ public class OmniLimitOperatorFactory extends OmniOperatorFactory<OmniLimitOpera
                 return false;
             }
             FactoryContext context = (FactoryContext) obj;
-            return limit == context.limit;
+            return limit == context.limit && offset == context.offset;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(this.limit);
+            return Objects.hash(this.limit, this.offset);
         }
     }
 }
