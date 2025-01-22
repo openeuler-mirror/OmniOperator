@@ -29,6 +29,7 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Arrays;
 
 /**
  * The type Omni TopN with expression operator test.
@@ -163,9 +164,9 @@ public class OmniTopNWithExprOperatorTest {
         int[] sortAsc = {0, 1};
         int[] nullFirst = {0, 0};
         int expectedRowSize = 5;
-        FactoryContext factory1 = new FactoryContext(sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst,
+        FactoryContext factory1 = new FactoryContext(sourceTypes, expectedRowSize, 0, sortKeys, sortAsc, nullFirst,
                 new OperatorConfig());
-        FactoryContext factory2 = new FactoryContext(sourceTypes, expectedRowSize, sortKeys, sortAsc, nullFirst,
+        FactoryContext factory2 = new FactoryContext(sourceTypes, expectedRowSize, 0, sortKeys, sortAsc, nullFirst,
                 new OperatorConfig());
         FactoryContext factory3 = null;
         assertEquals(factory2, factory1);
@@ -198,6 +199,48 @@ public class OmniTopNWithExprOperatorTest {
             expectedData2[2][i] = (long) expectedData2[0][i] + 5L;
             expectedData2[3][i] = (long) expectedData2[1][i] + 2L;
         }
+    }
+
+    @Test
+    public void testTopNWithExprAndOffset() {
+        DataType[] sourceTypes = {IntDataType.INTEGER, LongDataType.LONG, LongDataType.LONG};
+        String[] sortKeys = {getOmniJsonFieldReference(1, 0), getOmniJsonFieldReference(2, 2)};
+        int[] sortAsc = {0, 1};
+        int[] nullFirst = {0, 0};
+
+        int limitSize = 5;
+        int offsetSize = 2;
+        int expectedRowSize = limitSize - offsetSize;
+
+        OmniTopNWithExprOperatorFactory omniTopNOperatorFactory = new OmniTopNWithExprOperatorFactory(sourceTypes,
+            limitSize, offsetSize, sortKeys, sortAsc, nullFirst);
+        OmniOperator operator = omniTopNOperatorFactory.createOperator();
+
+        List<List<Object>> sourceDatas = Arrays.asList(Arrays.asList(5, 8, 8, 6, 8, 4, 13, 15),
+            Arrays.asList(2L, 5L, 3L, 11L, 4L, 3L, 0L, 23L),
+            Arrays.asList(5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L));
+        VecBatch vecBatch = createVecBatch(sourceTypes, sourceDatas);
+
+        operator.addInput(vecBatch);
+        Iterator<VecBatch> output = operator.getOutput();
+
+        assertEquals(output.hasNext(), true);
+        VecBatch resultVecBatch = output.next();
+        assertEquals(output.hasNext(), false);
+        assertEquals(resultVecBatch.getRowCount(), expectedRowSize);
+        assertEquals(resultVecBatch.getVectorCount(), 3);
+
+        List<List<Object>> expectedDatas = new ArrayList<>();
+        expectedDatas.add(Arrays.asList(8, 8, 8));
+        expectedDatas.add(Arrays.asList(4L, 3L, 5L));
+        expectedDatas.add(Arrays.asList(1L, 2L, 3L));
+
+        VecBatch expectedVecBatch = createVecBatch(sourceTypes, expectedDatas);
+        assertVecBatchEquals(resultVecBatch, expectedVecBatch);
+
+        freeVecBatch(resultVecBatch);
+        operator.close();
+        omniTopNOperatorFactory.close();
     }
 
     @Test

@@ -13,9 +13,9 @@ namespace op {
 using namespace omniruntime::vec;
 using namespace std;
 
-TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t n, int32_t *sortCols,
-    int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
-    : sourceTypes(sourceTypes), n(n), sortColCount(sortColCount)
+TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t limit, int32_t offset,
+    int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount)
+    : sourceTypes(sourceTypes), limit(limit), offset(offset), sortColCount(sortColCount)
 {
     this->sortCols.insert(this->sortCols.end(), sortCols, sortCols + sortColCount);
     this->sortAscendings.insert(this->sortAscendings.end(), sortAscendings, sortAscendings + sortColCount);
@@ -26,15 +26,17 @@ TopNOperatorFactory::~TopNOperatorFactory() = default;
 
 Operator *TopNOperatorFactory::CreateOperator()
 {
-    return new TopNOperator(sourceTypes, n, sortCols, sortAscendings, sortNullFirsts, sortColCount);
+    return new TopNOperator(sourceTypes, limit, offset, sortCols, sortAscendings, sortNullFirsts, sortColCount);
 }
 
-TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t n, std::vector<int32_t> &sortCols,
-    std::vector<int32_t> &sortAscendings, std::vector<int32_t> &sortNullFirsts, int32_t sortColCount)
+TopNOperator::TopNOperator(const type::DataTypes &sourceTypes, int32_t limit, int32_t offset,
+    std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscendings,
+    std::vector<int32_t> &sortNullFirsts, int32_t sortColCount)
     : sourceTypes(sourceTypes),
       sourceTypesCount(this->sourceTypes.GetSize()),
       sortCols(sortCols),
-      n(n),
+      limit(limit),
+      offset(offset),
       sortAscendings(sortAscendings),
       sortNullFirsts(sortNullFirsts),
       sortColCount(sortColCount)
@@ -94,7 +96,7 @@ int32_t TopNOperator::AddInput(VectorBatch *vectorBatch)
 
     auto typeIds = sourceTypes.GetIds();
     int32_t position = 0;
-    for (; (static_cast<int32_t>(pq.size()) < n) && (position < vectorBatch->GetRowCount()); ++position) {
+    for (; (static_cast<int32_t>(pq.size()) < limit) && (position < vectorBatch->GetRowCount()); ++position) {
         VectorBatch *singleRowVecBatch = CreateSingleRowVecBatch(vectorBatch, position);
         pq.emplace(typeIds, sortCols.data(), sortAscendings.data(), sortNullFirsts.data(), sortColCount,
             singleRowVecBatch);
@@ -248,7 +250,10 @@ static void ALWAYS_INLINE SetValueForVector(BaseVector *pqVector, BaseVector *tm
 
 void TopNOperator::FillResultVectorBatchList()
 {
-    totalRowCount = static_cast<int64_t>(pq.size());
+    totalRowCount = static_cast<int64_t>(pq.size()) - offset;
+    if (totalRowCount < 0) {
+        return;
+    }
     resultVectorBatchList.resize(totalRowCount);
     for (int64_t i = totalRowCount; i > 0; i--) {
         resultVectorBatchList[i - 1] = pq.top().GetVecBatch();
@@ -264,6 +269,10 @@ int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
             return 0;
         }
         FillResultVectorBatchList();
+        if (resultVectorBatchList.empty()) {
+            SetStatus(OMNI_STATUS_FINISHED);
+            return 0;
+        }
         hasFilledResult = true;
     }
     int64_t rowCount = std::min(maxRowCount, totalRowCount - outputtedRowCount);

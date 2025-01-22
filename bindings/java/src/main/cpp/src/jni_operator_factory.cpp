@@ -392,7 +392,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jclass jObj,
-    jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
+    jstring jSourceTypes, jint jN, jint jOffset, jobjectArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint sortColCount = env->GetArrayLength(jSortCols);
@@ -406,7 +406,8 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOpera
 
     TopNOperatorFactory *topNOperatorFactory = nullptr;
     JNI_METHOD_START
-    topNOperatorFactory = new TopNOperatorFactory(sourceTypes, jN, sortColsArr, sortAsc, sortNullFirsts, sortColCount);
+    topNOperatorFactory = new TopNOperatorFactory(sourceTypes, jN, jOffset,
+     sortColsArr, sortAsc, sortNullFirsts, sortColCount);
     JNI_METHOD_END(0L)
 
     env->ReleaseIntArrayElements(jSortAsc, sortAsc, 0);
@@ -1122,8 +1123,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
 
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createTopNWithExprOperatorFactory(JNIEnv *env,
-    jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortKeys, jintArray jSortAsc, jintArray jSortNullFirsts,
-    jstring jOperatorConfig)
+    jclass jObj, jstring jSourceTypes, jint jN, jint jOffset, jobjectArray jSortKeys, jintArray jSortAsc,
+    jintArray jSortNullFirsts, jstring jOperatorConfig)
 {
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceTypes, JNI_FALSE);
     jint sortKeyCount = env->GetArrayLength(jSortKeys);
@@ -1132,7 +1133,8 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
 
     jint *sortAsc = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
     jint *sortNullFirsts = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
-    auto n = (int32_t)jN;
+    auto limit = (int32_t)jN;
+    auto offset = static_cast<int32_t>(jOffset);
     auto sourceDataTypes = Deserialize(sourceTypesCharPtr);
     env->ReleaseStringUTFChars(jSourceTypes, sourceTypesCharPtr);
 
@@ -1149,8 +1151,8 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
 
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory = nullptr;
     JNI_METHOD_START
-    topNWithExprOperatorFactory = new TopNWithExprOperatorFactory(sourceDataTypes, n, sortKeyExprArr, sortAsc,
-        sortNullFirsts, sortKeyCount, overflowConfig);
+    topNWithExprOperatorFactory = new TopNWithExprOperatorFactory(sourceDataTypes, limit, offset, sortKeyExprArr,
+     sortAsc, sortNullFirsts, sortKeyCount, overflowConfig);
     JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, sortKeyExprArr)
     Expr::DeleteExprs(sortKeyExprArr);
 
@@ -1167,11 +1169,11 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperatorFactory_c
 }
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory_createLimitOperatorFactory(
-    JNIEnv *env, jclass jObj, jlong jLimit)
+    JNIEnv *env, jclass jObj, jint jLimit, jint jOffset)
 {
     LimitOperatorFactory *limitOperatorFactory = nullptr;
     JNI_METHOD_START
-    limitOperatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(jLimit);
+    limitOperatorFactory = LimitOperatorFactory::CreateLimitOperatorFactory(jLimit, jOffset);
     JNI_METHOD_END(0L)
     return reinterpret_cast<intptr_t>(static_cast<void *>(limitOperatorFactory));
 }

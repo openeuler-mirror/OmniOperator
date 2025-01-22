@@ -196,6 +196,57 @@ public class OmniTopNOperatorTest {
     }
 
     @Test
+    public void testTopNWithOffset() {
+        int rowSize = 6;
+        int[] rawData1 = {0, 1, 2, 0, 1, 2};
+        double[] rawData2 = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+        IntVec vec1 = new IntVec(6);
+        DoubleVec vec2 = new DoubleVec(6);
+        vec1.put(rawData1, 0, 0, rowSize);
+        vec2.put(rawData2, 0, 0, rowSize);
+        ArrayList<Vec> longVecs = new ArrayList<>();
+        longVecs.add(vec1);
+        longVecs.add(vec2);
+
+        DataType[] sourceTypes = {IntDataType.INTEGER, DoubleDataType.DOUBLE};
+        String[] sortCols = {"#0", "#1"};
+        int[] sortAsc = {1, 0};
+        int[] nullFirst = {0, 0};
+        int limitSize = 5;
+        int expectedRowSize = limitSize - 2;
+        OmniTopNOperatorFactory omniTopNOperatorFactory = new OmniTopNOperatorFactory(sourceTypes, limitSize, 2,
+                sortCols, sortAsc, nullFirst);
+        OmniOperator operator = omniTopNOperatorFactory.createOperator();
+        operator.addInput(new VecBatch(longVecs));
+        Iterator<VecBatch> output = operator.getOutput();
+        VecBatch result = output.next();
+        assertEquals(result.getRowCount(), expectedRowSize);
+        Vec[] vector = result.getVectors();
+        int[] resultArray1 = new int[expectedRowSize];
+        double[] resultArray2 = new double[expectedRowSize];
+        for (int i = 0; i < vector[0].getSize(); i++) {
+            if (vector[0] instanceof IntVec) {
+                resultArray1[i] = ((IntVec) vector[0]).get(i);
+            }
+        }
+        for (int i = 0; i < vector[1].getSize(); i++) {
+            if (vector[1] instanceof DoubleVec) {
+                resultArray2[i] = ((DoubleVec) vector[1]).get(i);
+            }
+        }
+
+        int[] expectedArray1 = {1, 1, 2};
+        double[] expectedArray2 = {5.5, 2.2, 4.4};
+        assertEquals(resultArray1, expectedArray1);
+        assertEquals(resultArray2, expectedArray2);
+
+        TestUtils.freeVecBatch(result);
+
+        operator.close();
+        omniTopNOperatorFactory.close();
+    }
+
+    @Test
     public void testTopNDescMultiColumnSortColumn1() {
         int rowSize = 6;
         int[] rawData1 = {0, 1, 2, 0, 1, 2};
@@ -259,9 +310,9 @@ public class OmniTopNOperatorTest {
         int[] sortAsc = {0};
         int[] nullFirst = {0};
         int expectedRowSize = 5;
-        FactoryContext factory1 = new FactoryContext(sourceTypes, expectedRowSize, sortCols, sortAsc, nullFirst,
+        FactoryContext factory1 = new FactoryContext(sourceTypes, expectedRowSize, 0, sortCols, sortAsc, nullFirst,
                 new OperatorConfig());
-        FactoryContext factory2 = new FactoryContext(sourceTypes, expectedRowSize, sortCols, sortAsc, nullFirst,
+        FactoryContext factory2 = new FactoryContext(sourceTypes, expectedRowSize, 0, sortCols, sortAsc, nullFirst,
                 new OperatorConfig());
         FactoryContext factory3 = null;
         assertEquals(factory2, factory1);

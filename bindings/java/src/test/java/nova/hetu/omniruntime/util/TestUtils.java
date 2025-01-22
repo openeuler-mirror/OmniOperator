@@ -73,6 +73,21 @@ public class TestUtils {
     }
 
     /**
+     * Create vec batch data
+     *
+     * @param types dataType
+     * @param list dataList
+     * @return VecBatch
+     */
+    public static VecBatch createVecBatch(DataType[] types, List<List<Object>> list) {
+        Vec[] vecs = new Vec[types.length];
+        for (int i = 0; i < types.length; i++) {
+            vecs[i] = createVec(types[i], list.get(i).toArray());
+        }
+        return new VecBatch(vecs);
+    }
+
+    /**
      * Create vec
      *
      * @param type dataType

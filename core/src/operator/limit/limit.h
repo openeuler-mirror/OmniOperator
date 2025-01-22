@@ -14,21 +14,22 @@ namespace omniruntime {
 namespace op {
 class LimitOperatorFactory : public OperatorFactory {
 public:
-    explicit LimitOperatorFactory(int64_t limit);
+    explicit LimitOperatorFactory(int32_t limit, int32_t offset);
 
     ~LimitOperatorFactory() override;
 
-    static LimitOperatorFactory *CreateLimitOperatorFactory(int64_t limitNum);
+    static LimitOperatorFactory *CreateLimitOperatorFactory(int32_t limitNum, int32_t offsetNum);
 
     Operator *CreateOperator() override;
 
 private:
-    int64_t limit;
+    int32_t limit;
+    int32_t offset;
 };
 
 class LimitOperator : public Operator {
 public:
-    explicit LimitOperator(int64_t limit);
+    explicit LimitOperator(int32_t limit, int32_t offset);
 
     ~LimitOperator() override;
 
@@ -39,7 +40,8 @@ public:
     OmniStatus Close() override;
 
 private:
-    int64_t remainingLimit;
+    int32_t remainingLimit;
+    int32_t remainingOffset;
     vec::VectorBatch *outputVecBatch;
 };
 }

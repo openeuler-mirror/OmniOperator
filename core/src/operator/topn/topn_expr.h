@@ -11,7 +11,7 @@
 namespace omniruntime::op {
 class TopNWithExprOperatorFactory : public OperatorFactory {
 public:
-    TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t n,
+    TopNWithExprOperatorFactory(const type::DataTypes &sourceDataTypes, int32_t limit, int32_t offset,
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortKeyCount, OverflowConfig *overflowConfig);
 

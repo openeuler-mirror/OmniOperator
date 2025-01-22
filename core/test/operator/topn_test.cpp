@@ -63,7 +63,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -98,7 +98,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformance)
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
 
     TopNOperatorFactory *topNOperatorFactory2 =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator2 = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory2));
 
@@ -166,7 +166,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
     auto s = clock();
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
@@ -187,7 +187,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNInstruct)
     cout << "topn with OmniJit performance takes: " << (double)(e - s) / CLOCKS_PER_SEC << endl;
 
     TopNOperatorFactory *topNOperatorFactoryWithoutJit =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
     auto s2 = clock();
     auto topNOp = topNOperatorFactoryWithoutJit->CreateOperator();
     perfUtil->Init();
@@ -246,7 +246,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnPerformanceVarChar)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     auto s = clock();
 
@@ -299,7 +299,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -313,6 +313,54 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumn)
         expectCol1->SetValue(i, expectData1[i]);
     }
     VectorBatch *expectVectorBatch = new VectorBatch(5);
+    expectVectorBatch->Append(expectCol1);
+
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
+
+    omniruntime::op::Operator::DeleteOperator(topNOperator);
+    DeleteTopNOperatorFactory(topNOperatorFactory);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);
+}
+
+TEST(NativeOmniTopNOperatorTest, TestTopNOneColumnWithOffset)
+{
+    // construct input data
+    const int32_t dataSize = 7;
+    const int32_t expectedDataSize = 5;
+    const int32_t offsetSize = 2;
+
+    // prepare data
+    int32_t data0[dataSize] = {0, 1, 2, 4, 5, 2, 3};
+
+    omniruntime::vec::VectorBatch *inputVecBatch = new VectorBatch(7);
+    auto column0 = new Vector<int32_t>(dataSize);
+    for (int i = 0; i < dataSize; i++) {
+        column0->SetValue(i, data0[i]);
+    }
+
+    inputVecBatch->Append(column0);
+    std::vector<DataTypePtr> types = { IntType() };
+    omniruntime::type::DataTypes sourceTypes(types);
+    int32_t sortCols[1] = {0};
+    int32_t ascendings[1] = {true};
+    int32_t nullFirsts[1] = {false};
+
+    TopNOperatorFactory *topNOperatorFactory =
+            new TopNOperatorFactory(sourceTypes, expectedDataSize, offsetSize, sortCols, ascendings, nullFirsts, 1);
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
+    int32_t expectData1[expectedDataSize] = {2, 2, 3};
+    auto expectCol1 = new Vector<int32_t>(expectedDataSize - offsetSize);
+
+    for (int i = 0; i < expectedDataSize - offsetSize; i++) {
+        expectCol1->SetValue(i, expectData1[i]);
+    }
+    VectorBatch *expectVectorBatch = new VectorBatch(3);
     expectVectorBatch->Append(expectCol1);
 
     EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
@@ -348,7 +396,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnVarChar)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -400,7 +448,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscOneColumnChar)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -450,7 +498,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumn)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -499,7 +547,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnVarChar)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -549,7 +597,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescOneColumnChar)
     int32_t nullFirsts[1] = {false};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -610,7 +658,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -633,6 +681,81 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumn)
     }
 
     VectorBatch *expectVectorBatch = new VectorBatch(expectedDataSize);
+    expectVectorBatch->Append(expectCol1);
+    expectVectorBatch->Append(expectCol2);
+    expectVectorBatch->Append(expectCol3);
+    expectVectorBatch->Append(expectCol4);
+
+    EXPECT_TRUE(VecBatchMatch(outputVectorBatch, expectVectorBatch));
+
+    omniruntime::op::Operator::DeleteOperator(topNOperator);
+    DeleteTopNOperatorFactory(topNOperatorFactory);
+    VectorHelper::FreeVecBatch(expectVectorBatch);
+    VectorHelper::FreeVecBatch(outputVectorBatch);;
+}
+
+TEST(NativeOmniTopNOperatorTest, TestTopNMultiColumnWithOffset)
+{
+    using namespace omniruntime::op;
+    // construct input data
+    const int32_t dataSize = 6;
+
+    // prepare data
+    int32_t data0[dataSize] = {0, 1, 2, 0, 1, 2};
+    int64_t data1[dataSize] = {0, 1, 2, 3, 4, 5};
+    double data2[dataSize] = {6.6, 5.5, 4.4, 3.3, 2.2, 1.1};
+    int16_t data3[dataSize] = {5, 4, 3, 2, 1, 0};
+
+    VectorBatch *inputVecBatch = new VectorBatch(dataSize);
+    IntVector *column0 = new IntVector(dataSize);
+    LongVector *column1 = new LongVector(dataSize);
+    DoubleVector *column2 = new DoubleVector(dataSize);
+    ShortVector *column3 = new ShortVector(dataSize);
+
+    for (int i = 0; i < dataSize; i++) {
+        column0->SetValue(i, data0[i]);
+        column1->SetValue(i, data1[i]);
+        column2->SetValue(i, data2[i]);
+        column3->SetValue(i, data3[i]);
+    }
+    inputVecBatch->Append(column0);
+    inputVecBatch->Append(column1);
+    inputVecBatch->Append(column2);
+    inputVecBatch->Append(column3);
+
+    std::vector<DataTypePtr> types = { IntType(), LongType(), DoubleType(), ShortType() };
+    DataTypes sourceTypes(types);
+    int32_t sortCols[2] = {0, 1};
+    int32_t ascendings[2] = {true, true};
+    int32_t nullFirsts[2] = {false, false};
+    const int32_t expectedDataSize = 5;
+    const int32_t offsetSize = 2;
+    const int32_t realDataSize = expectedDataSize - offsetSize;
+
+    TopNOperatorFactory *topNOperatorFactory =
+            new TopNOperatorFactory(sourceTypes, expectedDataSize, offsetSize, sortCols, ascendings, nullFirsts, 2);
+
+    TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
+
+    topNOperator->AddInput(inputVecBatch);
+    VectorBatch *outputVectorBatch;
+    topNOperator->GetOutput(&outputVectorBatch);
+    int32_t expectData1[realDataSize] = {1, 1, 2};
+    IntVector *expectCol1 = new IntVector(realDataSize);
+    int64_t expectData2[realDataSize] = { 1, 4, 2};
+    LongVector *expectCol2 = new LongVector(realDataSize);
+    double expectData3[realDataSize] = {5.5, 2.2, 4.4};
+    DoubleVector *expectCol3 = new DoubleVector(realDataSize);
+    int16_t expectData4[realDataSize] = {4, 1, 3};
+    ShortVector *expectCol4 = new ShortVector(realDataSize);
+    for (int i = 0; i < realDataSize; i++) {
+        expectCol1->SetValue(i, expectData1[i]);
+        expectCol2->SetValue(i, expectData2[i]);
+        expectCol3->SetValue(i, expectData3[i]);
+        expectCol4->SetValue(i, expectData4[i]);
+    }
+
+    VectorBatch *expectVectorBatch = new VectorBatch(realDataSize);
     expectVectorBatch->Append(expectCol1);
     expectVectorBatch->Append(expectCol2);
     expectVectorBatch->Append(expectCol3);
@@ -681,7 +804,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnVarChar)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -754,7 +877,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnChar)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -827,7 +950,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumn)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -899,7 +1022,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnVarChar)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
     topNOperator->AddInput(inputVecBatch);
@@ -969,7 +1092,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnChar)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1046,7 +1169,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     inputVecBatch->Append(column2);
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1127,7 +1250,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryCha
     inputVecBatch->Append(column2);
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1201,7 +1324,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDescMultiColumnSortOnlyOneColumn)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 1);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 1);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1276,7 +1399,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirstAndDictionaryVec
     inputVecBatch->Append(column3);
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1355,7 +1478,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullFirst)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1437,7 +1560,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNAscMultiColumnNullLast)
     const int32_t expectedDataSize = 5;
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1500,7 +1623,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDate32AndDecimal64Column)
     int32_t nullFirsts[2] = {true, true};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1543,7 +1666,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNDecimal128Column)
     int32_t nullFirsts[2] = {true, true};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1588,7 +1711,7 @@ TEST(NativeOmniTopNOperatorTest, TestTopNShortColumn)
     int32_t nullFirsts[2] = {true, true};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1632,7 +1755,7 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharColumn)
     int32_t nullFirsts[2] = {true, true};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, 2);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, 2);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 
@@ -1676,7 +1799,7 @@ TEST(NativeOmniTopNTest, TestTopNDoubleCharAndBooleanColumn)
     int32_t nullFirsts[sortColCount] = {true, true};
 
     TopNOperatorFactory *topNOperatorFactory =
-        new TopNOperatorFactory(sourceTypes, expectedDataSize, sortCols, ascendings, nullFirsts, sortColCount);
+        new TopNOperatorFactory(sourceTypes, expectedDataSize, 0, sortCols, ascendings, nullFirsts, sortColCount);
 
     TopNOperator *topNOperator = static_cast<TopNOperator *>(CreateTestOperator(topNOperatorFactory));
 

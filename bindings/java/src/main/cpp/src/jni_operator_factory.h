@@ -100,7 +100,8 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jclass jObj,
-    jstring jSourceTypes, jint jN, jobjectArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts);
+    jstring jSourceTypes, jint jN, jint jOffset, jobjectArray jSortCols, jintArray jSortAsc,
+    jintArray jSortNullFirsts);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory
@@ -230,8 +231,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createTopNWithExprOperatorFactory(JNIEnv *env,
-    jclass jObj, jstring jSourceTypes, jint jN, jobjectArray jSortKeys, jintArray jSortAsc, jintArray jSortNullFirsts,
-    jstring jOperatorConfig);
+    jclass jObj, jstring jSourceTypes, jint jN, jint jOffset, jobjectArray jSortKeys, jintArray jSortAsc,
+    jintArray jSortNullFirsts, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory
@@ -239,7 +240,7 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
  * Signature: (J)J
  */
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_limit_OmniLimitOperatorFactory_createLimitOperatorFactory(
-    JNIEnv *env, jclass jObj, jlong jLimit);
+    JNIEnv *env, jclass jObj, jint jLimit, jint jOffset);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_limit_OmniDistinctLimitOperatorFactory
