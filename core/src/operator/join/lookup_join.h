@@ -171,8 +171,8 @@ public:
 private:
     void InitFirst();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForInnerJoin();
-    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftJoin();
-    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForRightJoin();
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForOppositeSideOuterJoin();
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForSameSideOuterJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForFullJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftSemiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftAntiJoin();
@@ -212,6 +212,7 @@ private:
     omniruntime::vec::VectorBatch *curInputBatch = nullptr;
     int32_t curProbePosition = 0;
     JoinType joinType;
+    BuildSide buildSide;
     uint32_t partitionMask = 0;
     bool isSingleHT;
 

@@ -37,7 +37,7 @@ public:
     using Mapped = RowRefListType;
 
     explicit JoinHashTableVariants(uint32_t hashTableCount, DataTypes *buildDataTypes,
-        std::vector<int32_t> &buildHashCols, JoinType joinType);
+        std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide);
 
     ~JoinHashTableVariants();
 
@@ -121,6 +121,11 @@ public:
         return joinType;
     }
 
+    ALWAYS_INLINE BuildSide GetBuildSide() const
+    {
+        return buildSide;
+    }
+
     void BuildHashTable(int32_t partitionIndex);
 
     void Prepare(int32_t partitionIndex);
@@ -196,6 +201,7 @@ private:
     uint32_t totalVisitedCounts = 0;
     std::vector<omniruntime::vec::BaseVector ***> columns; // Vector* [partitionIdx][columnIdx][vecBatchIdx]
     JoinType joinType;
+    BuildSide buildSide;
     bool isFixedKeys = true;
     size_t fixedKeysSize = 0;
     size_t sizeOfRowRefList = 0;

@@ -7,6 +7,7 @@ package nova.hetu.omniruntime.operator.join;
 import static java.util.Objects.requireNonNull;
 
 import nova.hetu.omniruntime.constants.JoinType;
+import nova.hetu.omniruntime.constants.BuildSide;
 import nova.hetu.omniruntime.operator.OmniOperator;
 import nova.hetu.omniruntime.operator.OmniOperatorFactory;
 import nova.hetu.omniruntime.operator.OmniOperatorFactoryContext;
@@ -69,6 +70,21 @@ public class OmniHashBuilderWithExprOperatorFactory
     }
 
     /**
+     * Instantiates a new Omni hash builder with expression operator factory.
+     *
+     * @param joinType the join type
+     * @param buildSide the build side
+     * @param buildTypes the build input types
+     * @param buildHashKeys the build hash keys
+     * @param operatorCount the operator count
+     * @param operatorConfig the operator config
+     */
+    public OmniHashBuilderWithExprOperatorFactory(JoinType joinType, BuildSide buildSide, DataType[] buildTypes,
+            String[] buildHashKeys, int operatorCount, OperatorConfig operatorConfig) {
+        super(new FactoryContext(joinType, buildSide, buildTypes, buildHashKeys, operatorCount, operatorConfig));
+    }
+
+    /**
      * Instantiates a new Omni hash builder with expression operator factory with
      * default operator config.
      *
@@ -82,12 +98,12 @@ public class OmniHashBuilderWithExprOperatorFactory
         this(joinType, buildTypes, buildHashKeys, operatorCount, new OperatorConfig());
     }
 
-    private static native long createHashBuilderWithExprOperatorFactory(int joinType, String buildTypes,
+    private static native long createHashBuilderWithExprOperatorFactory(int joinType, int buildSide, String buildTypes,
             String[] buildHashKeys, int operatorCount, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
-        return createHashBuilderWithExprOperatorFactory(context.joinType.getValue(),
+        return createHashBuilderWithExprOperatorFactory(context.joinType.getValue(), context.buildSide.getValue(),
                 DataTypeSerializer.serialize(context.buildTypes), context.buildHashKeys, context.operatorCount,
                 OperatorConfig.serialize(context.operatorConfig));
     }
@@ -148,6 +164,8 @@ public class OmniHashBuilderWithExprOperatorFactory
 
         private final OperatorConfig operatorConfig;
 
+        private BuildSide buildSide = BuildSide.BUILD_UNKNOWN;
+
         /**
          * Instantiates a new Context.
          *
@@ -165,6 +183,22 @@ public class OmniHashBuilderWithExprOperatorFactory
             this.operatorCount = operatorCount;
             this.operatorConfig = operatorConfig;
             setNeedCache(false);
+        }
+
+        /**
+         *  Instantiates a new Context.
+         *
+         * @param joinType the join type
+         * @param buildSide the build side
+         * @param buildTypes the build types
+         * @param buildHashKeys the build hash keys
+         * @param operatorCount the operator count
+         * @param operatorConfig the operator config
+         */
+        public FactoryContext(JoinType joinType, BuildSide buildSide, DataType[] buildTypes, String[] buildHashKeys,
+                int operatorCount, OperatorConfig operatorConfig) {
+            this(joinType, buildTypes, buildHashKeys, operatorCount, operatorConfig);
+            this.buildSide = buildSide;
         }
 
         @Override

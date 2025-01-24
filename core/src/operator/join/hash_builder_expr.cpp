@@ -21,6 +21,15 @@ HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHa
     return new HashBuilderWithExprOperatorFactory(joinType, buildTypes, buildHashKeys, hashTableCount, overflowConfig);
 }
 
+HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
+    JoinType joinType, BuildSide buildSide, const type::DataTypes &buildTypes,
+    const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t hashTableCount,
+    OverflowConfig *overflowConfig)
+{
+    return new HashBuilderWithExprOperatorFactory(joinType, buildSide, buildTypes,
+                                                  buildHashKeys, hashTableCount, overflowConfig);
+}
+
 HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType,
     const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
     int32_t hashTableCount, OverflowConfig *overflowConfig)
@@ -31,6 +40,18 @@ HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType 
     this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinType, *(this->buildTypes),
         this->buildHashCols.data(), buildHashKeys.size(), hashTableCount);
+}
+
+HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType, BuildSide buildSide,
+    const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
+    int32_t hashTableCount, OverflowConfig *overflowConfig)
+{
+    std::vector<DataTypePtr> newBuildTypes;
+    OperatorUtil::CreateProjections(buildTypes, buildHashKeys, newBuildTypes, this->projections, this->buildHashCols,
+        overflowConfig);
+    this->buildTypes = std::make_unique<DataTypes>(newBuildTypes);
+    this->operatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinType, buildSide,
+        *(this->buildTypes), this->buildHashCols.data(), buildHashKeys.size(), hashTableCount);
 }
 
 HashBuilderWithExprOperatorFactory::~HashBuilderWithExprOperatorFactory()
