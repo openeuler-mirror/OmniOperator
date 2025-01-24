@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
  * Description: JNI Operator Factory Source File
  */
 
@@ -28,6 +28,7 @@
 #include "operator/topnsort/topn_sort_expr.h"
 #include "operator/union/union.h"
 #include "operator/window/window_expr.h"
+#include "operator/window/window_group_limit_expr.h"
 #include "operator/limit/limit.h"
 #include "operator/limit/distinct_limit.h"
 #include "operator/fusion/fusion_operator.h"
@@ -222,9 +223,9 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniHashAggregationOperatorFactor
 
     HashAggregationOperatorFactory *nativeOperatorFactory = nullptr;
     JNI_METHOD_START
-    nativeOperatorFactory = new HashAggregationOperatorFactory(groupByColVector, groupByDataTypes, aggColVectorWrap,
-        aggInputTypesWrap, aggOutputTypesWrap, aggFuncTypeVector, maskColumnVector, inputRawsWrap, outputPartialsWrap,
-        operatorConfig);
+    nativeOperatorFactory =
+        new HashAggregationOperatorFactory(groupByColVector, groupByDataTypes, aggColVectorWrap, aggInputTypesWrap,
+        aggOutputTypesWrap, aggFuncTypeVector, maskColumnVector, inputRawsWrap, outputPartialsWrap, operatorConfig);
     JNI_METHOD_END(0L)
     nativeOperatorFactory->Init();
 
@@ -406,8 +407,8 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOpera
 
     TopNOperatorFactory *topNOperatorFactory = nullptr;
     JNI_METHOD_START
-    topNOperatorFactory = new TopNOperatorFactory(sourceTypes, jN, jOffset,
-     sortColsArr, sortAsc, sortNullFirsts, sortColCount);
+    topNOperatorFactory =
+        new TopNOperatorFactory(sourceTypes, jN, jOffset, sortColsArr, sortAsc, sortNullFirsts, sortColCount);
     JNI_METHOD_END(0L)
 
     env->ReleaseIntArrayElements(jSortAsc, sortAsc, 0);
@@ -1152,7 +1153,7 @@ Java_nova_hetu_omniruntime_operator_topn_OmniTopNWithExprOperatorFactory_createT
     TopNWithExprOperatorFactory *topNWithExprOperatorFactory = nullptr;
     JNI_METHOD_START
     topNWithExprOperatorFactory = new TopNWithExprOperatorFactory(sourceDataTypes, limit, offset, sortKeyExprArr,
-     sortAsc, sortNullFirsts, sortKeyCount, overflowConfig);
+        sortAsc, sortNullFirsts, sortKeyCount, overflowConfig);
     JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, sortKeyExprArr)
     Expr::DeleteExprs(sortKeyExprArr);
 
@@ -1549,6 +1550,60 @@ Java_nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory
     TopNSortWithExprOperatorFactory *operatorFactory = nullptr;
     JNI_METHOD_START
     operatorFactory = new TopNSortWithExprOperatorFactory(inputTypes, jLimitN, jIsStrict, partitionKeys, sortKeys,
+        sortAscendings, sortNullFirsts, overflowConfig);
+    JNI_METHOD_END_WITH_MULTI_EXPRS(0L, partitionKeys, sortKeys)
+
+    Expr::DeleteExprs(partitionKeys);
+    Expr::DeleteExprs(sortKeys);
+    return reinterpret_cast<intptr_t>(static_cast<void *>(operatorFactory));
+}
+
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_window_OmniWindowGroupLimitWithExprOperatorFactory_createWindowGroupLimitWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jInputTypes, jint jN, jstring jFuncName, jobjectArray jPartitionKeys,
+    jobjectArray jSortKeys, jintArray jSortAsc, jintArray jSortNullFirsts, jstring jOperatorConfig)
+{
+    auto inputTypesCharPtr = env->GetStringUTFChars(jInputTypes, JNI_FALSE);
+    auto inputTypes = Deserialize(inputTypesCharPtr);
+    env->ReleaseStringUTFChars(jInputTypes, inputTypesCharPtr);
+
+    auto funcNameCharPtr = env->GetStringUTFChars(jFuncName, JNI_FALSE);
+    std::string funcName = std::string(funcNameCharPtr);
+    env->ReleaseStringUTFChars(jFuncName, funcNameCharPtr);
+
+    jint partitionKeyCount = env->GetArrayLength(jPartitionKeys);
+    std::string partitionKeysArr[partitionKeyCount];
+    GetExpressions(env, jPartitionKeys, partitionKeysArr, partitionKeyCount);
+
+    jint sortKeyCount = env->GetArrayLength(jSortKeys);
+    std::string sortKeysArr[sortKeyCount];
+    GetExpressions(env, jSortKeys, sortKeysArr, sortKeyCount);
+
+    std::vector<omniruntime::expressions::Expr *> partitionKeys;
+    // parse the expressions
+    JNI_METHOD_START
+    GetExprsFromJson(partitionKeysArr, partitionKeyCount, partitionKeys);
+    JNI_METHOD_END(0L)
+    std::vector<omniruntime::expressions::Expr *> sortKeys;
+    JNI_METHOD_START
+    GetExprsFromJson(sortKeysArr, sortKeyCount, sortKeys);
+    JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, partitionKeys)
+
+    jint *sortAscPtr = env->GetIntArrayElements(jSortAsc, JNI_FALSE);
+    jint *sortNullFirstsPtr = env->GetIntArrayElements(jSortNullFirsts, JNI_FALSE);
+    std::vector<int32_t> sortAscendings(sortAscPtr, sortAscPtr + sortKeyCount);
+    std::vector<int32_t> sortNullFirsts(sortNullFirstsPtr, sortNullFirstsPtr + sortKeyCount);
+    env->ReleaseIntArrayElements(jSortAsc, sortAscPtr, 0);
+    env->ReleaseIntArrayElements(jSortNullFirsts, sortNullFirstsPtr, 0);
+
+    auto operatorConfigChars = env->GetStringUTFChars(jOperatorConfig, JNI_FALSE);
+    auto operatorConfig = OperatorConfig::DeserializeOperatorConfig(operatorConfigChars);
+    auto overflowConfig = operatorConfig.GetOverflowConfig();
+    env->ReleaseStringUTFChars(jOperatorConfig, operatorConfigChars);
+
+    WindowGroupLimitWithExprOperatorFactory *operatorFactory = nullptr;
+    JNI_METHOD_START
+    operatorFactory = new WindowGroupLimitWithExprOperatorFactory(inputTypes, jN, funcName, partitionKeys, sortKeys,
         sortAscendings, sortNullFirsts, overflowConfig);
     JNI_METHOD_END_WITH_MULTI_EXPRS(0L, partitionKeys, sortKeys)
 

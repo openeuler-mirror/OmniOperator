@@ -59,8 +59,8 @@ JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_ge
  * Method:    alignSchemaNative
  * Signature: (JJ)[Lnova/hetu/omniruntime/vector/VecBatch
  */
-JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_alignSchemaNative(JNIEnv *, jobject,
-    jlong, jlong);
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_alignSchemaNative(JNIEnv *, jobject, jlong,
+    jlong);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperator

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023-2025. All rights reserved.
  * Description: Type Operator Factory Header
  */
 #ifndef JNI_OPERATOR_FACTORY_H
@@ -100,8 +100,7 @@ Java_nova_hetu_omniruntime_operator_window_OmniWindowOperatorFactory_createWindo
  */
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topn_OmniTopNOperatorFactory_createTopNOperatorFactory(JNIEnv *env, jclass jObj,
-    jstring jSourceTypes, jint jN, jint jOffset, jobjectArray jSortCols, jintArray jSortAsc,
-    jintArray jSortNullFirsts);
+    jstring jSourceTypes, jint jN, jint jOffset, jobjectArray jSortCols, jintArray jSortAsc, jintArray jSortNullFirsts);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory
@@ -332,6 +331,17 @@ Java_nova_hetu_omniruntime_operator_filter_OmniBloomFilterOperatorFactory_create
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_topnsort_OmniTopNSortWithExprOperatorFactory_createTopNSortWithExprOperatorFactory(
     JNIEnv *, jclass, jstring, jint, jboolean, jobjectArray, jobjectArray, jintArray, jintArray, jstring);
+
+/*
+ * Class:     nova_hetu_omniruntime_operator_window_OmniWindowGroupLimitWithExprOperatorFactory
+ * Method:    createWindowGroupLimitWithExprOperatorFactory
+ * Signature: (Ljava/lang/String;IZ[Ljava/lang/String;[Ljava/lang/String;[I[ILjava/lang/String;)J
+ */
+JNIEXPORT jlong JNICALL
+Java_nova_hetu_omniruntime_operator_window_OmniWindowGroupLimitWithExprOperatorFactory_createWindowGroupLimitWithExprOperatorFactory(
+    JNIEnv *env, jclass jObj, jstring jInputTypes, jint jN, jstring jFuncName, jobjectArray jPartitionKeys,
+    jobjectArray jSortKeys, jintArray jSortAsc, jintArray jSortNullFirsts, jstring jOperatorConfig);
+
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniNestedLoopJoinBuildOperatorFactory
