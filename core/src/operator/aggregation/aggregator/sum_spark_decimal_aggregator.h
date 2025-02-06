@@ -15,7 +15,7 @@ namespace op {
 template <typename InDecimalType, typename OutDecimalType, bool HasNullFlag, typename StateType>
 VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *> &rowStates, const size_t aggOffset,
     const InDecimalType *__restrict dataPtr, const bool *__restrict emptyPtr,
-    const uint8_t *__restrict nullMap = nullptr)
+    const std::shared_ptr<NullsHelper> nullMap = nullptr)
 {
     bool isOverflow = false;
     auto rowCount = rowStates.size();
@@ -30,7 +30,7 @@ VECTORIZE_LOOP NO_INLINE void AddDecimalUseRowIndex(std::vector<AggregateState *
 
         ResultIntType tmpResult = 0;
         if constexpr (HasNullFlag) {
-            if (nullMap[i]) {
+            if ((*nullMap)[i]) {
                 // partial stage overflow , so no need to do aggregation in final
                 state->valueState = AggValueState::OVERFLOWED;
                 continue;
@@ -327,7 +327,7 @@ public:
     }
 
     void ProcessGroupInternalFinal(std::vector<AggregateState *> &rowStates, BaseVector *dataVector,
-        const int32_t rowOffset, const uint8_t *nullMap)
+        const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
     {
         // final stage : input vector will be Vector<Decimal128> or Vector<Decimal64>
         auto *dataPtr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(dataVector));
@@ -381,7 +381,7 @@ public:
     }
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const uint8_t *nullMap)
+        const std::shared_ptr<NullsHelper> nullMap)
     {
         if (inputRaw) {
             if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
@@ -394,7 +394,7 @@ public:
                     // Reza: can we use customize float operation similar to sumConditionalFloat
                     AddConditionalUseRowIndex<InRawType,
                         SumSparkDecimalState::template UpdateStateWithCondition<InRawType, ResultType, false>>(
-                        rowStates, aggStateOffset, ptr, nullMap);
+                        rowStates, aggStateOffset, ptr, *nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
@@ -405,7 +405,7 @@ public:
                 } else {
                     AddDictConditionalUseRowIndex<InRawType, ResultType,
                         SumSparkDecimalState::template UpdateStateWithCondition<InRawType, ResultType, false>>(
-                        rowStates, aggStateOffset, ptr, nullMap, indexMap);
+                        rowStates, aggStateOffset, ptr, *nullMap, indexMap);
                 }
             }
         } else {
@@ -414,7 +414,7 @@ public:
     }
 
     void ProcessSingleInternalFinal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *conditionMap)
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> conditionMap)
     {
         auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromVector<InDecimalId>(vector));
 
@@ -441,7 +441,7 @@ public:
                     // means overflow in final stage, no need to calculate remaining data
                     break;
                 }
-                if (not conditionMap[i]) {
+                if (not (*conditionMap)[i]) {
                     if (not emptyPtr[i]) {
                         // the emptyPtr here means partial result is null
                         SumOp<InRawType, ResultType, AggValueState, StateValueHandler>(&sumSparkDecimalState->value,
@@ -457,7 +457,7 @@ public:
     }
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap)
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {
         SumSparkDecimalState *sumSparkDecimalState = SumSparkDecimalState::CastState(state);
         if (inputRaw) {
@@ -472,7 +472,7 @@ public:
                 } else {
                     AddConditional<InRawType, ResultType, AggValueState,
                         SumConditionalOp<InRawType, ResultType, AggValueState, StateValueHandler, false>>(
-                        &sumSparkDecimalState->value, sumSparkDecimalState->valueState, ptr, rowCount, nullMap);
+                        &sumSparkDecimalState->value, sumSparkDecimalState->valueState, ptr, rowCount, *nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InRawType *>(GetValuesFromDict<InDecimalId>(vector));
@@ -484,7 +484,7 @@ public:
                 } else {
                     AddDictConditional<InRawType, ResultType, AggValueState,
                         SumConditionalOp<InRawType, ResultType, AggValueState, StateValueHandler, false>>(
-                        &sumSparkDecimalState->value, sumSparkDecimalState->valueState, ptr, rowCount, nullMap,
+                        &sumSparkDecimalState->value, sumSparkDecimalState->valueState, ptr, rowCount, *nullMap,
                         indexMap);
                 }
             }
@@ -493,8 +493,8 @@ public:
         }
     }
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
     {
         int rowCount = originVector->GetSize();
         // opt: if InRawType and ResultType are same type, directly setValue
@@ -506,7 +506,7 @@ public:
                 std::fill_n(valueAddr, rowCount, false);
             } else {
                 for (int index = 0; index < rowCount; ++index) {
-                    if (nullMap[index]) {
+                    if ((*nullMap)[index]) {
                         emptyVector->SetValue(index, true);
                     } else {
                         emptyVector->SetValue(index, false);
@@ -527,7 +527,8 @@ public:
 
     // logic: Template-based vector encoding type, to avoid long functions and high depth.
     template<typename T>
-    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap)
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap)
     {
         int rowCount = originVector->GetSize();
         auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OutDecimalId, rowCount));
@@ -535,7 +536,7 @@ public:
         auto vector = reinterpret_cast<T *>(originVector);
         if (nullMap != nullptr) {
             for (int index = 0; index < rowCount; ++index) {
-                if (nullMap[index]) {
+                if ((*nullMap)[index]) {
                     sumVector->SetValue(index, (ResultType)(0));
                     emptyVector->SetValue(index, true);
                 } else {

@@ -20,4 +20,14 @@ extern DLLEXPORT int32_t WrapVarcharVector(int64_t vectorAddr, int32_t index, ui
     }
     return 0;
 }
+
+extern DLLEXPORT void WrapSetBitNull(int32_t *bits, int32_t index, bool isNull)
+{
+    BitUtil::SetBit(bits, index, isNull);
+}
+
+extern DLLEXPORT bool WrapIsBitNull(int32_t *bits, int32_t index)
+{
+    return BitUtil::IsBitSet(bits, index);
+}
 }

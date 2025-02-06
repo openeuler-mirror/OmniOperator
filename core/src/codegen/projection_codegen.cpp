@@ -45,7 +45,7 @@ intptr_t ProjectionCodeGen::CreateWrapper()
         llvmTypes->I32Type(),    // the num of selected rows
         llvmTypes->I64PtrType(), // bitmap address array
         llvmTypes->I64PtrType(), // offset address array
-        llvmTypes->I1PtrType(),  // output null values array
+        llvmTypes->I32PtrType(),  // output null values array
         llvmTypes->I32PtrType(), // output offset array
         llvmTypes->I64Type(),    // execution content address
         llvmTypes->I64PtrType()  // dictionary address array
@@ -118,6 +118,11 @@ intptr_t ProjectionCodeGen::CreateWrapper()
 
     // i64 selectedAddress,Only use if filter enabled
     Value *selectedAddress;
+
+    // set bits null func
+    FunctionSignature setBitNullFuncSignature = FunctionSignature("WrapSetBitNull", { OMNI_INT }, OMNI_BOOLEAN);
+    llvm::Function *setBitNullFunc =
+        modulePtr->getFunction(FunctionRegistry::LookupFunction(&setBitNullFuncSignature)->GetId());
 
     // Type of output column
     llvm::Function *varcharVectorFunc = nullptr;
@@ -199,8 +204,10 @@ intptr_t ProjectionCodeGen::CreateWrapper()
         builder->CreateStore(ret, gep);
     }
 
-    gep = builder->CreateGEP(llvmTypes->I1Type(), nullValuesAddress, curIndexVal, "NULL_VALUE_POINTER_ADDRESS");
-    builder->CreateStore(builder->CreateLoad(llvmTypes->I1Type(), isNullPtr), gep);
+    auto setNullRet = builder->CreateCall(setBitNullFunc,
+        { nullValuesAddress, curIndexVal, builder->CreateLoad(llvmTypes->I1Type(), isNullPtr) }, "wrap_set_bit_null");
+    InlineFunctionInfo inlineSetNullFuncInfo;
+    InlineFunction(*setNullRet, inlineSetNullFuncInfo);
 
     builder->CreateBr(incrementCounter);
     // Increment loop counter

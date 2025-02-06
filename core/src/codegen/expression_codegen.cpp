@@ -208,19 +208,23 @@ void ExpressionCodeGen::Visit(const FieldExpr &fExpr)
         phiLength->addIncoming(length, falseBlock);
     }
 
+    FunctionSignature isBitNullFuncSignature = FunctionSignature("WrapIsBitNull", { OMNI_INT }, OMNI_BOOLEAN);
+    llvm::Function *isBitNullFunc =
+        modulePtr->getFunction(FunctionRegistry::LookupFunction(&isBitNullFuncSignature)->GetId());
     // Get bitmap address of this column
     Value *bitmapPtr = exprFunc->GetNullArgument(fExpr.colVal);
-    auto bitmapGEP = builder->CreateGEP(llvmTypes->I1Type(), bitmapPtr, rowIdx);
-    Value *bitmapValue = builder->CreateLoad(llvmTypes->I1Type(), bitmapGEP);
+    auto isNullRet = builder->CreateCall(isBitNullFunc, { bitmapPtr, rowIdx }, "wrap_is_bit_null");
+    InlineFunctionInfo inlineIsNullFuncInfo;
+    InlineFunction(*isNullRet, inlineIsNullFuncInfo);
 
     if (TypeUtil::IsDecimalType(fExpr.GetReturnTypeId())) {
         Value *precision =
             llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetPrecision());
         Value *scale =
             llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(fExpr.GetReturnType().get())->GetScale());
-        this->value = make_shared<DecimalValue>(phiValue, bitmapValue, precision, scale);
+        this->value = make_shared<DecimalValue>(phiValue, isNullRet, precision, scale);
     } else {
-        this->value = make_shared<CodeGenValue>(phiValue, bitmapValue, phiLength);
+        this->value = make_shared<CodeGenValue>(phiValue, isNullRet, phiLength);
     }
 }
 

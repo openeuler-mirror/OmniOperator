@@ -137,7 +137,7 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
     auto nullsAddrs = new int64_t[vecCount];
     for (int i = 0; i < vecCount; ++i) {
         dictsAddrs[i] = 0; // Spark's TableScan will not produce dictionary.
-        auto null = new bool[1];
+        auto null = new uint8_t[NullsBuffer::CalculateNbytes(1)];
         nullsAddrs[i] = reinterpret_cast<int64_t>(null);
         auto offset = new int32_t[2]; // offset[1] - offset[0] = length
         offsetsAddrs[i] = reinterpret_cast<int64_t>(offset);
@@ -146,11 +146,11 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
     // Construct nullsAddrs and offsetsAddrs from inputLens
     for (int i = 0; i < vecCount; ++i) {
         if (inputLens[i] == -1) {
-            reinterpret_cast<bool *>(nullsAddrs[i])[0] = true;
+            BitUtil::SetBit(reinterpret_cast<uint8_t *>(nullsAddrs[i]), 0, true);
             reinterpret_cast<int32_t *>(offsetsAddrs[i])[0] = 0;
             reinterpret_cast<int32_t *>(offsetsAddrs[i])[1] = 0;
         } else {
-            reinterpret_cast<bool *>(nullsAddrs[i])[0] = false;
+            BitUtil::SetBit(reinterpret_cast<uint8_t *>(nullsAddrs[i]), 0, false);
             reinterpret_cast<int32_t *>(offsetsAddrs[i])[0] = 0;
             reinterpret_cast<int32_t *>(offsetsAddrs[i])[1] = inputLens[i];
         }
@@ -164,7 +164,7 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
     if (executionContext->HasError()) {
         executionContext->GetArena()->Reset();
         for (int i = 0; i < vecCount; ++i) {
-            delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
+            delete[] reinterpret_cast<uint8_t *>(nullsAddrs[i]);
             delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);
         }
         delete[] dictsAddrs;
@@ -177,7 +177,7 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
     if (numSelectedRows <= 0) {
         executionContext->GetArena()->Reset();
         for (int i = 0; i < vecCount; ++i) {
-            delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
+            delete[] reinterpret_cast<uint8_t *>(nullsAddrs[i]);
             delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);
         }
         delete[] dictsAddrs;
@@ -194,7 +194,7 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
         } else {
             executionContext->GetArena()->Reset();
             for (int j = 0; j < vecCount; ++j) {
-                delete[] reinterpret_cast<bool *>(nullsAddrs[j]);
+                delete[] reinterpret_cast<uint8_t *>(nullsAddrs[j]);
                 delete[] reinterpret_cast<int32_t *>(offsetsAddrs[j]);
             }
             delete[] dictsAddrs;
@@ -207,7 +207,7 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
 
     executionContext->GetArena()->Reset();
     for (int i = 0; i < vecCount; ++i) {
-        delete[] reinterpret_cast<bool *>(nullsAddrs[i]);
+        delete[] reinterpret_cast<uint8_t *>(nullsAddrs[i]);
         delete[] reinterpret_cast<int32_t *>(offsetsAddrs[i]);
     }
     delete[] dictsAddrs;

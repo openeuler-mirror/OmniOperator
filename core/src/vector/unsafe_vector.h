@@ -16,9 +16,14 @@ namespace omniruntime::vec::unsafe {
  */
 class UnsafeBaseVector {
 public:
-    static ALWAYS_INLINE bool *GetNulls(BaseVector *vector)
+    static ALWAYS_INLINE uint8_t *GetNulls(BaseVector *vector)
     {
-        return vector->nulls + vector->offset;
+        return reinterpret_cast<uint8_t *>(vector->nullsBuffer->GetNulls());
+    }
+
+    static ALWAYS_INLINE std::shared_ptr<NullsHelper> GetNullsHelper(BaseVector *vector)
+    {
+        return std::make_shared<NullsHelper>(vector->nullsBuffer);
     }
 
     static ALWAYS_INLINE void SetSize(BaseVector *vector, int size)

@@ -50,11 +50,11 @@ public:
     }
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap) override
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) override
     {}
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const uint8_t *nullMap) override
+        const std::shared_ptr<NullsHelper> nullMap) override
     {}
 
     void ExtractValues(const AggregateState *state, std::vector<BaseVector *> &vectors, const int32_t rowIndex) override
@@ -67,8 +67,8 @@ public:
     void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) override
     {}
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
     {}
 
     template <typename InType, typename OutType> OutType TestCastWithOverflow(const InType val, bool &overflow)

@@ -6,6 +6,7 @@ package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.OmniLibs;
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.utils.NullsBufHelper;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
@@ -161,7 +162,7 @@ public abstract class Vec implements Closeable {
         this.dataType = dataType;
         this.nativeVector = nativeVector;
         this.valuesBuf = OmniBufferFactory.create(nativeVectorValueBufAddress, capacityInBytes);
-        this.nullsBuf = OmniBufferFactory.create(nativeVectorNullBufAddress, size);
+        this.nullsBuf = OmniBufferFactory.create(nativeVectorNullBufAddress, NullsBufHelper.nBytes(size));
         this.isWritable = isWritable;
     }
 
@@ -336,7 +337,7 @@ public abstract class Vec implements Closeable {
      * @return if it is null, return true, otherwise return false
      */
     public boolean isNull(int index) {
-        return nullsBuf.getByte(index) == 1;
+        return NullsBufHelper.isSet(nullsBuf, index) == 1;
     }
 
     /**
@@ -345,7 +346,7 @@ public abstract class Vec implements Closeable {
      * @param index the element offset in vec
      */
     public void setNull(int index) {
-        nullsBuf.setByte(index, (byte) 1);
+        NullsBufHelper.setBit(nullsBuf, index);
         setNullFlagNative(nativeVector, true);
     }
 
@@ -359,7 +360,7 @@ public abstract class Vec implements Closeable {
      */
     public void setNulls(int index, boolean[] isNulls, int start, int length) {
         byte[] values = transformBooleanToByte(isNulls, start, length);
-        nullsBuf.setBytes(index, values, 0, length);
+        NullsBufHelper.setBit(nullsBuf, index, values, 0, length);
         setNullFlagNative(nativeVector, true);
     }
 
@@ -372,7 +373,7 @@ public abstract class Vec implements Closeable {
      * @param length number of elements
      */
     public void setNulls(int index, byte[] isNulls, int start, int length) {
-        nullsBuf.setBytes(index, isNulls, start, length);
+        NullsBufHelper.setBit(nullsBuf, index, isNulls, start, length);
         setNullFlagNative(nativeVector, true);
     }
 
@@ -452,7 +453,7 @@ public abstract class Vec implements Closeable {
     public byte[] getRawValueNulls() {
         // the length of the array is size + offset, so that the caller
         // and vec can have the same offset.
-        byte[] rawValueNulls = new byte[size];
+        byte[] rawValueNulls = new byte[NullsBufHelper.nBytes(size)];
         nullsBuf.getBytes(0, rawValueNulls, 0, rawValueNulls.length);
         return rawValueNulls;
     }
@@ -466,7 +467,7 @@ public abstract class Vec implements Closeable {
      */
     public boolean[] getValuesNulls(int index, int length) {
         byte[] nullsArray = new byte[length];
-        nullsBuf.getBytes(index, nullsArray, 0, length);
+        NullsBufHelper.getBytes(nullsBuf, index, nullsArray, 0, length);
         return transformByteToBoolean(nullsArray, 0, length);
     }
 
@@ -554,7 +555,7 @@ public abstract class Vec implements Closeable {
      * @return length in bytes
      */
     public int getRealNullBufCapacityInBytes() {
-        return size * Byte.BYTES;
+        return NullsBufHelper.nBytes(size);
     }
 
     /**

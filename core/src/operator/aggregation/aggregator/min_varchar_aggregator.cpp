@@ -60,19 +60,19 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<Aggr
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
+    const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddChar<MinCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            AddConditionalChar<MinCharOp>(state, vector, rowOffset, rowCount, nullMap);
+            AddConditionalChar<MinCharOp>(state, vector, rowOffset, rowCount, *nullMap);
         }
     } else {
         if (nullMap == nullptr) {
             AddDictChar<MinDictCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            AddDictConditionalChar<MinDictCharOp>(state, vector, rowOffset, rowCount, nullMap);
+            AddDictConditionalChar<MinDictCharOp>(state, vector, rowOffset, rowCount, *nullMap);
         }
     }
 
@@ -81,19 +81,19 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
-    BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
+    BaseVector *vector, const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddUseRowIndexChar<MinCharOp>(rowStates, aggStateOffset, vector, rowOffset);
         } else {
-            AddConditionalUseRowIndexChar<MinCharOp>(rowStates, aggStateOffset, vector, rowOffset, nullMap);
+            AddConditionalUseRowIndexChar<MinCharOp>(rowStates, aggStateOffset, vector, rowOffset, *nullMap);
         }
     } else {
         if (nullMap == nullptr) {
             AddDictUseRowIndexChar<MinDictCharOp>(rowStates, aggStateOffset, rowOffset, vector);
         } else {
-            AddDictConditionalUseRowIndexChar<MinDictCharOp>(rowStates, aggStateOffset, rowOffset, vector, nullMap);
+            AddDictConditionalUseRowIndexChar<MinDictCharOp>(rowStates, aggStateOffset, rowOffset, vector, *nullMap);
         }
     }
 
@@ -130,7 +130,7 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<Unspil
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
-                                                                const uint8_t *nullMap, const bool aggFilter)
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
 {
     // note: type relationship matches only (IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR) and
     // (OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)
@@ -152,14 +152,14 @@ void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *res
 template<DataTypeId IN_ID, DataTypeId OUT_ID>
 template<typename T>
 void MinVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
-                                                                        const uint8_t *nullMap)
+    const std::shared_ptr<NullsHelper> nullMap)
 {
     int rowCount = originVector->GetSize();
     auto minVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
             VectorHelper::CreateFlatVector(OUT_ID, rowCount));
     auto vector = reinterpret_cast<T *>(originVector);
     for (int index = 0; index < rowCount; ++index) {
-        if (nullMap[index]) {
+        if ((*nullMap)[index]) {
             minVector->SetNull(index);
         } else {
             std::string_view val = vector->GetValue(index);

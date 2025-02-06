@@ -44,10 +44,9 @@ public:
     static BaseVector *CreateStringDictionary(const int32_t *values, int32_t valueSize,
         Vector<LargeStringContainer<std::string_view>> *vector)
     {
-        std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);
-        bool *nulls = nullsBuffer->GetBuffer();
+        auto nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
         for (int i = 0; i < valueSize; i++) {
-            nulls[i] = vector->IsNull(values[i]);
+            nullsBuffer->SetNull(i, vector->IsNull(values[i]));
         }
 
         // todo:: handing other types of container
@@ -55,20 +54,19 @@ public:
             unsafe::UnsafeStringVector::GetContainer(
             reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)),
             vector->GetSize(), vector->GetOffset());
-        return new Vector<DictionaryContainer<std::string_view>>(valueSize, dictionary, nullsBuffer, OMNI_CHAR);
+        return new Vector<DictionaryContainer<std::string_view>>(valueSize, dictionary, nullsBuffer.get(), OMNI_CHAR);
     }
 
     template <typename T> static BaseVector *CreateDictionary(int32_t *values, int32_t valueSize, Vector<T> *vector)
     {
-        std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);
-        bool *nulls = nullsBuffer->GetBuffer();
+        auto nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
         for (int i = 0; i < valueSize; i++) {
-            nulls[i] = vector->IsNull(values[i]);
+            nullsBuffer->SetNull(i, vector->IsNull(values[i]));
         }
 
         auto dictionary = std::make_shared<DictionaryContainer<T>>(values, valueSize,
             unsafe::UnsafeVector::GetValues<T>(vector), vector->GetSize(), vector->GetOffset());
-        return new Vector<DictionaryContainer<T>>(valueSize, dictionary, nullsBuffer, TYPE_ID<T>);
+        return new Vector<DictionaryContainer<T>>(valueSize, dictionary, nullsBuffer.get(), TYPE_ID<T>);
     }
 
     /* *
@@ -766,13 +764,11 @@ public:
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
+
         auto destNulls = unsafe::UnsafeBaseVector::GetNulls(destVector);
-        auto srcNulls = unsafe::UnsafeBaseVector::GetNulls(srcVector) + offset;
-        auto ret = memcpy_s(destNulls, length, srcNulls, length);
-        if (ret != EOK) {
-            std::string message("Nulls memory copy failed " + std::to_string(ret) + ", size " + std::to_string(length));
-            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
-        }
+        auto srcNulls = unsafe::UnsafeBaseVector::GetNulls(srcVector);
+        BitUtil::CopyBits(reinterpret_cast<uint64_t *>(srcNulls), offset, reinterpret_cast<uint64_t *>(destNulls), 0,
+            length);
         switch (destDataTypeId) {
             case type::OMNI_INT:
             case type::OMNI_DATE32: {

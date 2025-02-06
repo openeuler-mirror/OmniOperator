@@ -8,24 +8,24 @@
 namespace omniruntime {
 namespace op {
 // mask not null, agg vec not null
-inline uint8_t AddMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr)
+inline uint8_t AddMask(NullsHelper &nullMap, const size_t length, const uint8_t *__restrict maskPtr)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
         const auto v = maskPtr[i];
-        nullMap[i] = !v;
+        nullMap.SetNull(i, !v);
         nonZero |= v;
     }
     return nonZero;
 }
 
-inline uint8_t AddDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+inline uint8_t AddDictMask(NullsHelper &nullMap, const size_t length, const uint8_t *__restrict maskPtr,
     const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
         const auto v = maskPtr[indexMap[i]];
-        nullMap[i] = !v;
+        nullMap.SetNull(i, !v);
         nonZero |= v;
     }
     return nonZero;
@@ -33,50 +33,50 @@ inline uint8_t AddDictMask(uint8_t *__restrict nullMap, const size_t length, con
 
 // mask nullable, agg vec not null OR
 // mask not null, agg vec nullable: in this case maskNullMap is actually agg vec nullMap
-inline uint8_t AddMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
-    const uint8_t *__restrict maskNullMap)
+inline uint8_t AddMask(NullsHelper &nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const NullsHelper &maskNullMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
         const auto v = !maskNullMap[i] && maskPtr[i];
-        nullMap[i] = !v;
+        nullMap.SetNull(i, !v);
         nonZero |= v;
     }
     return nonZero;
 }
 
-inline uint8_t AddDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
-    const uint8_t *__restrict maskNullMap, const int32_t *__restrict indexMap)
+inline uint8_t AddDictMask(NullsHelper &nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const NullsHelper &maskNullMap, const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
         const auto v = !maskNullMap[i] && maskPtr[indexMap[i]];
-        nullMap[i] = !v;
+        nullMap.SetNull(i, !v);
         nonZero |= v;
     }
     return nonZero;
 }
 
 // mask nullable, agg vec nullable
-inline uint8_t AddMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
-    const uint8_t *__restrict maskNullMap, const uint8_t *__restrict vecNullMap)
+inline uint8_t AddMask(NullsHelper &nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const NullsHelper &maskNullMap, const NullsHelper &vecNullMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
         const auto v = !maskNullMap[i] && !vecNullMap[i] && maskPtr[i];
-        nullMap[i] = !v;
+        nullMap.SetNull(i, !v);
         nonZero |= v;
     }
     return nonZero;
 }
 
-inline uint8_t AddDictMask(uint8_t *__restrict nullMap, const size_t length, const uint8_t *__restrict maskPtr,
-    const uint8_t *__restrict maskNullMap, const uint8_t *__restrict vecNullMap, const int32_t *__restrict indexMap)
+inline uint8_t AddDictMask(NullsHelper &nullMap, const size_t length, const uint8_t *__restrict maskPtr,
+    const NullsHelper &maskNullMap, const NullsHelper &vecNullMap, const int32_t *__restrict indexMap)
 {
     uint8_t nonZero = 0;
     for (size_t i = 0; i < length; ++i) {
         const auto v = !maskNullMap[i] && !vecNullMap[i] && maskPtr[indexMap[i]];
-        nullMap[i] = !v;
+        nullMap.SetNull(i, !v);
         nonZero |= v;
     }
     return nonZero;
@@ -94,7 +94,7 @@ public:
     void ProcessGroup(AggregateState *state, VectorBatch *vectorBatch, const int32_t rowOffset,
         const int32_t rowCount) override
     {
-        const uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
+        const std::shared_ptr<NullsHelper> nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
         if (nullMap == nullptr) {
             return;
         }
@@ -112,7 +112,7 @@ public:
         const int32_t filterIndex) override
     {
         int32_t rowCount = vectorBatch->GetRowCount();
-        uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
+        std::shared_ptr<NullsHelper> nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
         if (nullMap == nullptr) {
             return;
         }
@@ -139,10 +139,10 @@ public:
             // nullmapPtr can filter row which no need to aggregate
             // the nullMap: true means null
             // booleanVector: false means one row has been filtered
-            auto *nullmapPtr = nullMap;
+            auto nullmapPtr = *nullMap;
 
             for (int i = 0; i < rowCount; ++i) {
-                nullmapPtr[i] |= not filterPtr[i];
+                nullmapPtr.SetNull(i, nullmapPtr[i] | not filterPtr[i]);
             }
         }
 
@@ -153,7 +153,7 @@ public:
         const int32_t rowOffset) override
     {
         const size_t rowCount = rowStates.size();
-        const uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
+        const std::shared_ptr<NullsHelper> nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
         if (nullMap == nullptr) {
             return;
         }
@@ -171,7 +171,7 @@ public:
         const int32_t filterStart, const int32_t rowOffset) override
     {
         const size_t rowCount = rowStates.size();
-        uint8_t *nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
+        std::shared_ptr<NullsHelper> nullMap = GenerateNullMap(vectorBatch, rowOffset, rowCount);
         if (nullMap == nullptr) {
             return;
         }
@@ -197,10 +197,10 @@ public:
             // nullMap can filter row which no need to aggregate
             // the nullMap: true means need filter
             // booleanVector: false means one row has been filtered
-            auto *nullmapPtr = nullMap;
+            auto nullmapPtr = *nullMap;
 
             for (int i = 0; i < rowCount; ++i) {
-                nullmapPtr[i] |= not filterPtr[i];
+                nullmapPtr.SetNull(i, nullmapPtr[i] | not filterPtr[i]);
             }
         }
 
@@ -244,8 +244,8 @@ public:
         realAggregator->ExtractValuesBatch(groupStates, vectors, rowOffset, rowCount);
     }
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
     {
         realAggregator->ProcessAlignAggSchema(result, originVector, nullMap, aggFilter);
     }
@@ -303,29 +303,28 @@ protected:
     }
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap)
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {}
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const uint8_t *nullMap)
+        const std::shared_ptr<NullsHelper> nullMap)
     {}
 
 private:
-    uint8_t *GenerateNullMap(VectorBatch *vectorBatch, const int32_t rowOffset, const size_t rowCount)
+    std::shared_ptr<NullsHelper> GenerateNullMap(VectorBatch *vectorBatch, const int32_t rowOffset,
+        const size_t rowCount)
     {
         if (maskColumnId < 0 || maskColumnId >= vectorBatch->GetVectorCount()) {
             throw OmniException("Illegal Arguement", "Aggregator maskColumnId " + std::to_string(maskColumnId) +
                 " out of range [0, " + std::to_string(vectorBatch->GetVectorCount()) + ") for masked aggregator");
         }
         auto maskVector = vectorBatch->Get(maskColumnId);
-        uint8_t *maskNullMap = maskVector->HasNull() ?
-            reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(maskVector)) :
-            nullptr;
+        auto maskNullMap = maskVector->HasNull() ? unsafe::UnsafeBaseVector::GetNullsHelper(maskVector) : nullptr;
         if (maskNullMap != nullptr) {
-            maskNullMap += rowOffset;
+            *maskNullMap += rowOffset;
         }
 
-        uint8_t *aggNullMap = nullptr;
+        std::shared_ptr<NullsHelper> aggNullMap = nullptr;
         auto aggChannels = realAggregator->GetInputChannels();
         if (aggChannels.size() > 0) {
             auto aggColumnId = aggChannels[0];
@@ -334,16 +333,15 @@ private:
                     " out of range [0, " + std::to_string(vectorBatch->GetVectorCount()) + ") for masked aggregator");
             } else if (aggColumnId >= 0) {
                 auto aggVector = vectorBatch->Get(aggColumnId);
-                aggNullMap = aggVector->HasNull() ?
-                    reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(aggVector)) :
-                    nullptr;
+                aggNullMap = aggVector->HasNull() ? unsafe::UnsafeBaseVector::GetNullsHelper(aggVector) : nullptr;
                 if (aggNullMap != nullptr) {
-                    aggNullMap += rowOffset;
+                    *aggNullMap += rowOffset;
                 }
             }
         }
 
-        uint8_t *nullMap = nullMapBuffer.AllocateReuse(rowCount, false);
+        nullMapBuffer->AllocateReuse(NullsBuffer::CalculateNbytes(rowCount), false);
+        auto nullMap = std::make_shared<NullsHelper>(std::make_shared<NullsBuffer>(rowCount, nullMapBuffer));
         bool hasValidRows;
         if (maskVector->GetEncoding() == OMNI_DICTIONARY) {
             hasValidRows = GenerateNullMapDict(nullMap, rowOffset, rowCount, maskVector, maskNullMap, aggNullMap);
@@ -354,8 +352,9 @@ private:
         return hasValidRows ? nullMap : nullptr;
     }
 
-    bool GenerateNullMapDict(uint8_t *nullMap, const int32_t rowOffset, const size_t rowCount, BaseVector *maskVector,
-        const uint8_t *maskNullMap, const uint8_t *aggNullMap)
+    bool GenerateNullMapDict(std::shared_ptr<NullsHelper> nullMap, const int32_t rowOffset, const size_t rowCount,
+        BaseVector *maskVector, const std::shared_ptr<NullsHelper> maskNullMap,
+        const std::shared_ptr<NullsHelper> aggNullMap)
     {
         uint8_t hasValidRows;
         const int32_t *indexMap = GetIdsFromDict<OMNI_BOOLEAN>(maskVector) + rowOffset;
@@ -363,23 +362,24 @@ private:
 
         if (maskNullMap == nullptr) {
             if (aggNullMap == nullptr) {
-                hasValidRows = AddDictMask(nullMap, rowCount, maskPtr, indexMap);
+                hasValidRows = AddDictMask(*nullMap, rowCount, maskPtr, indexMap);
             } else {
-                hasValidRows = AddDictMask(nullMap, rowCount, maskPtr, aggNullMap, indexMap);
+                hasValidRows = AddDictMask(*nullMap, rowCount, maskPtr, *aggNullMap, indexMap);
             }
         } else {
             if (aggNullMap == nullptr) {
-                hasValidRows = AddDictMask(nullMap, rowCount, maskPtr, maskNullMap, indexMap);
+                hasValidRows = AddDictMask(*nullMap, rowCount, maskPtr, *maskNullMap, indexMap);
             } else {
-                hasValidRows = AddDictMask(nullMap, rowCount, maskPtr, maskNullMap, aggNullMap, indexMap);
+                hasValidRows = AddDictMask(*nullMap, rowCount, maskPtr, *maskNullMap, *aggNullMap, indexMap);
             }
         }
 
         return hasValidRows != 0;
     }
 
-    bool GenerateNullMapFlat(uint8_t *nullMap, const int32_t rowOffset, const size_t rowCount, BaseVector *maskVector,
-        const uint8_t *maskNullMap, const uint8_t *aggNullMap)
+    bool GenerateNullMapFlat(std::shared_ptr<NullsHelper> nullMap, const int32_t rowOffset, const size_t rowCount,
+        BaseVector *maskVector, const std::shared_ptr<NullsHelper> maskNullMap,
+        const std::shared_ptr<NullsHelper> aggNullMap)
     {
         uint8_t hasValidRows;
         uint8_t *maskPtr = reinterpret_cast<uint8_t *>(GetValuesFromVector<OMNI_BOOLEAN>(maskVector));
@@ -387,15 +387,15 @@ private:
 
         if (maskNullMap == nullptr) {
             if (aggNullMap == nullptr) {
-                hasValidRows = AddMask(nullMap, rowCount, maskPtr);
+                hasValidRows = AddMask(*nullMap, rowCount, maskPtr);
             } else {
-                hasValidRows = AddMask(nullMap, rowCount, maskPtr, aggNullMap);
+                hasValidRows = AddMask(*nullMap, rowCount, maskPtr, *aggNullMap);
             }
         } else {
             if (aggNullMap == nullptr) {
-                hasValidRows = AddMask(nullMap, rowCount, maskPtr, maskNullMap);
+                hasValidRows = AddMask(*nullMap, rowCount, maskPtr, *maskNullMap);
             } else {
-                hasValidRows = AddMask(nullMap, rowCount, maskPtr, maskNullMap, aggNullMap);
+                hasValidRows = AddMask(*nullMap, rowCount, maskPtr, *maskNullMap, *aggNullMap);
             }
         }
 
@@ -405,7 +405,7 @@ private:
     int32_t maskColumnId;
     std::unique_ptr<TypedAggregator> realAggregator;
     // define nullmap buffer as member variable tor reduce number of memory allocaitons
-    AlignedBuffer<uint8_t> nullMapBuffer;
+    std::shared_ptr<AlignedBuffer<uint8_t>> nullMapBuffer = std::make_shared<AlignedBuffer<uint8_t>>();
 };
 }
 }

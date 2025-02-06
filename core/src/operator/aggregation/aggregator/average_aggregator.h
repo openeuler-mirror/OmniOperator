@@ -11,7 +11,7 @@ namespace omniruntime {
 namespace op {
 template <typename IN, typename MID, bool addIf>
 VECTORIZE_LOOP FAST_MATH NO_INLINE void AvgConditionalFloat(MID *res, int64_t &flag, const IN *__restrict ptr,
-    const int64_t *__restrict cntPtr, const size_t rowCount, const uint8_t *__restrict condition)
+    const int64_t *__restrict cntPtr, const size_t rowCount, const NullsHelper &condition)
 {
     static_assert(std::is_floating_point_v<IN>, "Not floating point input passed to AvgConditionalFloat");
 #ifdef DEBUG
@@ -21,13 +21,9 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AvgConditionalFloat(MID *res, int64_t &f
     if (reinterpret_cast<unsigned long>(cntPtr) % ARRAY_ALIGNMENT != 0) {
         LogWarn("[avgConditionalFloat]: Counter pointer NOT aligned");
     }
-    if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-        LogWarn("[avgConditionalFloat] ConditionMap pointer NOT aligned");
-    }
 #endif
     ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
     cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-    condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
     const auto len = sizeof(IN);
 
@@ -124,21 +120,22 @@ public:
 
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override;
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
 
 protected:
     AverageAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap) override;
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const uint8_t *nullMap) override;
+        const std::shared_ptr<NullsHelper> nullMap) override;
 
-    template<typename T>
-    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
+    template <typename T>
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap);
 
 private:
     void (AverageAggregator<IN_ID, OUT_ID>::*extractValuesFuncPointer)(const AggregateState *state,

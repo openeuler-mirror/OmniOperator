@@ -28,12 +28,11 @@ TEST(vector2, vec_batch)
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<int32_t>::DICTIONARY_TYPE;
     auto dictionary = CreateDictionary<DICTIONARY_DATA_TYPE>(dictSize);
     auto container = std::make_shared<DictionaryContainer<int32_t>>(values, rowCnt, dictionary, dictSize, 0);
-    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(rowCnt);
-    bool *nulls = nullsBuffer->GetBuffer();
+    std::unique_ptr<NullsBuffer> nullsBuffer = std::make_unique<NullsBuffer>(rowCnt);
     for (int i = 0; i < rowCnt; i++) {
-        nulls[i] = false;
+        nullsBuffer->SetNull(i, false);
     }
-    auto intDictVec = std::make_unique<Vector<DictionaryContainer<int32_t>>>(rowCnt, container, nullsBuffer);
+    auto intDictVec = std::make_unique<Vector<DictionaryContainer<int32_t>>>(rowCnt, container, nullsBuffer.get());
 
     VectorBatch vectorBatch(rowCnt);
     vectorBatch.Append(intVec.release());

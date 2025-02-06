@@ -57,7 +57,7 @@ VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndex(std::vector<AggregateState *> &
 
 template <typename IN, void (*Updater)(AggregateState *, const IN &, const uint8_t &)>
 VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndex(std::vector<AggregateState *> &rowStates,
-    const size_t aggStateOffset, const IN *__restrict ptr, const uint8_t *__restrict condition)
+    const size_t aggStateOffset, const IN *__restrict ptr, const NullsHelper &condition)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -65,12 +65,8 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndex(std::vector<AggregateSta
         if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addConditionalUseRowIndex]: Data pointer NOT aligned");
         }
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addConditionalUseRowIndex]: ConditionMap Index Map pointer NOT aligned");
-        }
 #endif
         ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             AggregateState *state = rowStates[i] + aggStateOffset;
@@ -81,7 +77,7 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndex(std::vector<AggregateSta
 
 template <typename IN, typename OUT, void (*Updater)(AggregateState *, const IN &, const uint8_t &)>
 VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndex(std::vector<AggregateState *> &rowStates,
-    const size_t aggStateOffset, const IN *__restrict ptr, const uint8_t *__restrict condition,
+    const size_t aggStateOffset, const IN *__restrict ptr, const NullsHelper &condition,
     const int32_t *__restrict indexMap)
 {
     const size_t rowCount = rowStates.size();
@@ -90,15 +86,11 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndex(std::vector<Aggregat
         if (reinterpret_cast<unsigned long>(ptr) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addDictConditionalUseRowIndex]: Data pointer NOT aligned");
         }
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addDictConditionalUseRowIndex]: ConditionMap Index Map pointer NOT aligned");
-        }
         if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addDictConditionalUseRowIndex]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
         ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
@@ -170,7 +162,7 @@ template <typename IN, typename OUT, typename STATE,
     void (*OP)(OUT *, int64_t &, const IN &, const int64_t, const uint8_t &)>
 VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexAvg(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, const IN *__restrict ptr, const int64_t *__restrict cntPtr,
-    const uint8_t *__restrict condition)
+    const NullsHelper &condition)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -181,13 +173,9 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexAvg(std::vector<Aggregate
         if (reinterpret_cast<unsigned long>(cntPtr) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addConditionalUseRowIndexAvg]: Counter pointer NOT aligned");
         }
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addConditionalUseRowIndexAvg]: ConditionMap Index Map pointer NOT aligned");
-        }
 #endif
         ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             STATE *state = STATE::CastState(rowStates[i] + aggStateOffset);
@@ -204,7 +192,7 @@ template <typename IN, typename OUT, typename STATE,
     void (*OP)(OUT *, int64_t &, const IN &, const int64_t, const uint8_t &)>
 VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexAvg(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, const IN *__restrict ptr, const int64_t *__restrict cntPtr,
-    const uint8_t *__restrict condition, const int32_t *__restrict indexMap)
+    const NullsHelper &condition, const int32_t *__restrict indexMap)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -215,16 +203,12 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexAvg(std::vector<Aggre
         if (reinterpret_cast<unsigned long>(cntPtr) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addDictConditionalUseRowIndexAvg]: Counter pointer NOT aligned");
         }
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addDictConditionalUseRowIndexAvg]: ConditionMap Index Map pointer NOT aligned");
-        }
         if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addDictConditionalUseRowIndexAvg]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
         ptr = (const IN *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
@@ -297,7 +281,7 @@ VECTORIZE_LOOP NO_INLINE void AddDictUseRowIndexStdDev(std::vector<AggregateStat
 template<typename STATE, void (*OP)(double &, double &, int64_t &, const double &, const int64_t, const uint8_t &)>
 VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexStdDev(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, const double *__restrict ptr, const int64_t *__restrict cntPtr,
-    const uint8_t *__restrict condition)
+    const NullsHelper &condition)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -308,13 +292,9 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexStdDev(std::vector<Aggreg
         if (reinterpret_cast<unsigned long>(cntPtr) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addConditionalUseRowIndexAvg]: Counter pointer NOT aligned");
         }
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addConditionalUseRowIndexAvg]: ConditionMap Index Map pointer NOT aligned");
-        }
 #endif
         ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             STATE *state = STATE::CastState(rowStates[i] + aggStateOffset);
@@ -330,7 +310,7 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexStdDev(std::vector<Aggreg
 template<typename STATE, void (*OP)(double &, double &, int64_t &, const double &, const int64_t, const uint8_t &)>
 VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexStdDev(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, const double *__restrict ptr, const int64_t *__restrict cntPtr,
-    const uint8_t *__restrict condition, const int32_t *__restrict indexMap)
+    const NullsHelper &condition, const int32_t *__restrict indexMap)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -341,16 +321,12 @@ VECTORIZE_LOOP NO_INLINE void AddDictConditionalUseRowIndexStdDev(std::vector<Ag
         if (reinterpret_cast<unsigned long>(cntPtr) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addDictConditionalUseRowIndexAvg]: Counter pointer NOT aligned");
         }
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addDictConditionalUseRowIndexAvg]: ConditionMap Index Map pointer NOT aligned");
-        }
         if (reinterpret_cast<unsigned long>(indexMap) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addDictConditionalUseRowIndexAvg]: Dictionary Index Map pointer NOT aligned");
         }
 #endif
         ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         cntPtr = (const int64_t *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
@@ -394,7 +370,7 @@ VECTORIZE_LOOP NO_INLINE void AddUseRowIndexStdDevFinal(std::vector<AggregateSta
 template<typename STATE, void (*OP)(double &, double &, double &, double, double, double)>
 VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexStdDevFinal(std::vector<AggregateState *> &rowStates,
     const size_t aggStateOffset, double *__restrict cntPtr, double *__restrict meanPt,
-    double *__restrict m2Ptr, const uint8_t *__restrict condition)
+    double *__restrict m2Ptr, const NullsHelper &condition)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
@@ -405,14 +381,10 @@ VECTORIZE_LOOP NO_INLINE void AddConditionalUseRowIndexStdDevFinal(std::vector<A
         if (reinterpret_cast<unsigned long>(meanPt) % ARRAY_ALIGNMENT != 0) {
             LogWarn("[addConditionalUseRowIndexAvg]: Counter pointer NOT aligned");
         }
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addConditionalUseRowIndexAvg]: ConditionMap Index Map pointer NOT aligned");
-        }
 #endif
         meanPt = (double *)__builtin_assume_aligned(meanPt, ARRAY_ALIGNMENT);
         m2Ptr = (double *)__builtin_assume_aligned(m2Ptr, ARRAY_ALIGNMENT);
         cntPtr = (double *)__builtin_assume_aligned(cntPtr, ARRAY_ALIGNMENT);
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
 
         for (size_t i = 0; i < rowCount; ++i) {
             STATE *state = STATE::CastState(rowStates[i] + aggStateOffset);

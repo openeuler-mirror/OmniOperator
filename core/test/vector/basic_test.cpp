@@ -400,7 +400,7 @@ template <typename T> void vec_set_nulls(int32_t nullSize = 100)
 {
     int vecSize = 100;
     auto vector = std::make_unique<Vector<T>>(vecSize);
-    auto *nulls = new bool[nullSize];
+    auto nulls = std::make_shared<NullsBuffer>(nullSize);
 
     for (int i = 0; i < vecSize; i++) {
         if (i % 2 != 0) {
@@ -412,20 +412,20 @@ template <typename T> void vec_set_nulls(int32_t nullSize = 100)
 
     for (int i = 0; i < nullSize; i++) {
         if (i % 2 == 0) {
-            nulls[i] = true;
+            nulls->SetNull(i, true);
         } else {
-            nulls[i] = false;
+            nulls->SetNull(i, false);
         }
     }
     if (nullSize > 100) {
-        EXPECT_ANY_THROW(vector->SetNulls(0, nulls, nullSize));
+        EXPECT_ANY_THROW(vector->SetNulls(0, nulls.get(), nullSize));
     } else {
-        vector->SetNulls(0, nulls, nullSize);
+        vector->SetNulls(0, nulls.get(), nullSize);
     }
 
     if (vecSize >= nullSize) {
         for (int i = 0; i < nullSize; i++) {
-            EXPECT_EQ(nulls[i], vector->IsNull(i));
+            EXPECT_EQ(nulls->IsNull(i), vector->IsNull(i));
         }
     } else {
         for (int i = 0; i < vecSize; i++) {
@@ -433,7 +433,6 @@ template <typename T> void vec_set_nulls(int32_t nullSize = 100)
             EXPECT_EQ(value, vector->IsNull(i));
         }
     }
-    delete[] nulls;
 }
 
 TEST(vector, vector_get_set_value_int32)

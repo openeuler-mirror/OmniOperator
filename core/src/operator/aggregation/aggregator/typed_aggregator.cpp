@@ -12,7 +12,7 @@ TypedAggregator::TypedAggregator(const FunctionType aggregateType, const DataTyp
 {}
 
 BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-    uint8_t **nullMap, const size_t channelIdx)
+     std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx)
 {
 #ifdef DEBUG
     if (channelIdx < 0 || channelIdx >= channels.size()) {
@@ -32,11 +32,11 @@ BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t r
 
     auto vector = vectorBatch->Get(channel);
 
-    *nullMap = vector->HasNull() ? reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector)) : nullptr;
-    if (*nullMap != nullptr) {
-        *nullMap += rowOffset;
+    auto nullsHelper = vector->HasNull() ? unsafe::UnsafeBaseVector::GetNullsHelper(vector) : nullptr;
+    if (nullsHelper != nullptr) {
+        *nullsHelper += rowOffset;
     }
-
+    *nullMap = nullsHelper;
     return vector;
 }
 

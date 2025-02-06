@@ -31,14 +31,14 @@ public class TestMemoryManager {
         MemoryManager memoryManager = new MemoryManager();
         int size = 1024 * 1024;
         IntVec intVec = new IntVec(size);
-        // 5242944 = values(size * 4) + nulls(size) + other(CreateFlatVector_ptr(64))
-        assertTrue(memoryManager.getAllocatedMemory() >= 5242944);
+        // 4325384 = values(size * 4) + nulls(size) + other(CreateFlatVector_ptr(64))
+        assertTrue(memoryManager.getAllocatedMemory() >= 4325384);
         LongVec longVec = new LongVec(size);
-        // 14680192 = 5242944 + values(size * 8) + nulls(size) + other(CreateFlatVector_ptr(64))
-        assertTrue(memoryManager.getAllocatedMemory() >= 14680192);
+        // 12845072 = 5242944 + values(size * 8) + nulls(size) + other(CreateFlatVector_ptr(64))
+        assertTrue(memoryManager.getAllocatedMemory() >= 12845072);
         intVec.close();
-        // 9437248 = 14680192 - 5242944
-        assertTrue(memoryManager.getAllocatedMemory() >= 9437248);
+        // 8519688 = 12845072 - 4325384
+        assertTrue(memoryManager.getAllocatedMemory() >= 8519688);
         longVec.close();
         assertEquals(memoryManager.getAllocatedMemory(), 0);
     }

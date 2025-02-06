@@ -4456,7 +4456,7 @@ TEST(AggregatorTest, typed_aggregator_test)
         };
 
         BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-            uint8_t **nullMap, const size_t channelIdx)
+            std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx)
         {
             return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, channelIdx);
         }
@@ -4469,11 +4469,11 @@ TEST(AggregatorTest, typed_aggregator_test)
         void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) {}
 
         void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
-                                   const uint8_t *nullMap, const bool aggFilter) override
+            const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
         {}
 
         virtual void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-            const int32_t rowCount, const uint8_t *nullMap)
+            const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
         {}
 
         virtual void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
@@ -4483,7 +4483,7 @@ TEST(AggregatorTest, typed_aggregator_test)
         }
 
         virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
-            const int32_t rowOffset, const uint8_t *nullMap)
+            const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
         {
             return;
         }
@@ -4525,7 +4525,7 @@ TEST(AggregatorTest, typed_aggregator_test)
             DataTypes({ typesPtr.at(OMNI_SHORT) }), DataTypes({ typesPtr.at(OMNI_SHORT) }), channels, rawIn, partialOut,
             isOverflowAsNull);
 
-        uint8_t *nullMap = nullptr;
+        std::shared_ptr<NullsHelper> nullMap = nullptr;
         agg.GetVector(vectorBatch, 0, dataSize, &nullMap, 0);
         agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap, 0);
         rawVectorBatch->Get(0)->SetNull(1);

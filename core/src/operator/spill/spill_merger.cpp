@@ -119,8 +119,9 @@ template <typename T> ErrorCode SpillReader::ReadVector(BaseVector *vector, int3
         auto resultVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
 
         // read nulls
-        bool *nulls = unsafe::UnsafeBaseVector::GetNulls(resultVector);
-        if (Read(nulls, rowCount) != ErrorCode::SUCCESS) {
+        uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(resultVector);
+        int32_t nullsSize = BitUtil::Nbytes(rowCount);
+        if (Read(nulls, nullsSize) != ErrorCode::SUCCESS) {
             LogError("Read value nulls from %s failed.", filePath.c_str());
             return ErrorCode::READ_FAILED;
         }
@@ -151,8 +152,9 @@ template <typename T> ErrorCode SpillReader::ReadVector(BaseVector *vector, int3
         auto resultVector = static_cast<Vector<T> *>(vector);
 
         // read valueNulls
-        bool *nulls = unsafe::UnsafeBaseVector::GetNulls(resultVector);
-        if (Read(nulls, rowCount) != ErrorCode::SUCCESS) {
+        uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(resultVector);
+        int32_t nullsSize = BitUtil::Nbytes(rowCount);
+        if (Read(nulls, nullsSize) != ErrorCode::SUCCESS) {
             LogError("Read value nulls from %s failed.", filePath.c_str());
             return ErrorCode::READ_FAILED;
         }

@@ -273,11 +273,11 @@ void BatchExpressionCodeGen::Visit(const FieldExpr &fExpr)
 
     // Get isNull value
     auto bitmapGEP = builder->CreateGEP(llvmTypes->I64Type(), bitmap, colIdx);
-    Value *nullArrayPtr = builder->CreateLoad(llvmTypes->I64Type(), bitmapGEP);
-    nullArrayPtr = builder->CreateIntToPtr(nullArrayPtr, llvmTypes->I1PtrType());
+    Value *nullBitsPtr = builder->CreateLoad(llvmTypes->I64Type(), bitmapGEP);
+    nullBitsPtr = builder->CreateIntToPtr(nullBitsPtr, llvmTypes->I32PtrType());
     auto dstNullArray = GetResultArray(OMNI_BOOLEAN, rowCnt);
-    CallExternFunction("batch_copy_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
-        { dstNullArray, nullArrayPtr, rowIdxArray, rowCnt }, nullptr, "copy_null");
+    CallExternFunction("batch_BitsToNullArray", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
+        { dstNullArray, nullBitsPtr, rowIdxArray, rowCnt }, nullptr, "copy_null");
 
     if (TypeUtil::IsDecimalType(fExpr.GetReturnTypeId())) {
         Value *precision =

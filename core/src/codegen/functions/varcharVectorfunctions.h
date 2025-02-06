@@ -16,5 +16,9 @@
 
 namespace omniruntime::codegen::function {
 extern DLLEXPORT int32_t WrapVarcharVector(int64_t vectorAddr, int32_t index, uint8_t *data, int32_t dataLen);
+
+extern DLLEXPORT void WrapSetBitNull(int32_t *bits, int32_t index, bool isNull);
+
+extern DLLEXPORT bool WrapIsBitNull(int32_t *bits, int32_t index);
 }
 #endif // OMNI_RUNTIME_VARCHARVECTORFUNCTIONS_H

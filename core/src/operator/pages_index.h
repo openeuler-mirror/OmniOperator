@@ -148,13 +148,13 @@ private:
         using T = typename NativeType<typeId>::type;
         auto vecBatchCount = static_cast<int32_t>(inputVecBatches.size());
         auto values = reinterpret_cast<T *>(VectorHelper::UnsafeGetValues(inplaceSortColumn));
-        auto nulls = unsafe::UnsafeBaseVector::GetNulls(inplaceSortColumn);
+        auto nulls = unsafe::UnsafeBaseVector::GetNullsHelper(inplaceSortColumn);
 
         // init values, nulls position
         if (nullFirst) {
             values += totalNullCount;
         } else {
-            nulls += rowCount - totalNullCount;
+            *nulls += rowCount - totalNullCount;
         }
 
         int32_t valueIndex = 0;
@@ -170,7 +170,7 @@ private:
             } else {
                 for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
                     if (col->IsNull(rowIdx)) {
-                        nulls[nullIndex++] = true;
+                        nulls->SetNull(nullIndex++, true);
                     } else {
                         values[valueIndex++] = col->GetValue(rowIdx);
                     }

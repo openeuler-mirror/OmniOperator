@@ -100,8 +100,8 @@ public:
 
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override;
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
 
 protected:
     CountColumnAggregator(const DataTypes &outputTypes, std::vector<int32_t> &channels, const bool inputRaw,
@@ -133,27 +133,28 @@ protected:
     }
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap) override;
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const uint8_t *nullMap) override;
+        const std::shared_ptr<NullsHelper> nullMap) override;
 
     template <bool RAW_IN>
     void ProcessSingleInternalFunction(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap);
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap);
 
     template <bool RAW_IN>
     void ProcessGroupInternalFunction(std::vector<AggregateState *> &rowStates, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap);
+        const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap);
 
 private:
     void (CountColumnAggregator<IN_ID, OUT_ID>::*processGroupInternalPtr)(std::vector<AggregateState *> &rowStates,
-        BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap) = nullptr;
+        BaseVector *vector, const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap) = nullptr;
 
     void (CountColumnAggregator<IN_ID, OUT_ID>::*processSingleInternalPtr)(AggregateState *state, BaseVector *vector,
-        const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap) = nullptr;
+        const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) = nullptr;
 
-    void ProcessGroupInternalFunctionForRawInput(std::vector<AggregateState *> &rowStates, const uint8_t *nullMap);
+    void ProcessGroupInternalFunctionForRawInput(std::vector<AggregateState *> &rowStates,
+        const std::shared_ptr<NullsHelper> nullMap);
 };
 }
 }
