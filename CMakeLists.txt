@@ -93,6 +93,7 @@ aux_source_directory(${CMAKE_CURRENT_LIST_DIR} ROOT_SRCS)
 # for header searching
 include_directories(SYSTEM core/src)
 include_directories(SYSTEM core)
+include_directories(${CMAKE_INSTALL_PREFIX}/lib/APL/include)
 
 # compile library
 add_subdirectory(core)
