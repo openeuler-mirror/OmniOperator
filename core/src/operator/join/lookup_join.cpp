@@ -479,12 +479,17 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     auto it = result.GetValue()->Begin();
                     ProbeJoinPosition<hasJoinFilter>(probePosition);
                     while (it.IsOk()) {
-                        bool appendRow = true;
-                        if constexpr (hasJoinFilter) {
-                            appendRow = BuildJoinPosition(partition, it->rowIdx, it->vecBatchIdx, contextPtr);
-                        }
                         auto address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
-                        AppendRow(probePosition, buildColumns, address, appendRow, hasProduceRow);
+                        if constexpr (hasJoinFilter) {
+                            auto filterResult = BuildJoinPosition(partition, it->rowIdx, it->vecBatchIdx, contextPtr);
+                            if (filterResult) {
+                                outputBuilder->AppendRow(probePosition, buildColumns, address);
+                                hasProduceRow = true;
+                            }
+                        } else {
+                            outputBuilder->AppendRow(probePosition, buildColumns, address);
+                            hasProduceRow = true;
+                        }
                         ++it;
                     }
                 }
@@ -525,7 +530,6 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                         InitForProbe<hasJoinFilter>(partition, false);
                     }
 
-                    bool hasProduceRow = false;
                     auto result = arg.Find(probeSerializers, contextPtr, probeHashColumns, probeHashColsCount,
                         probePosition, partition);
                     if (result.IsInsert()) {
@@ -546,9 +550,6 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                             }
                             ++it;
                         }
-                    }
-                    if (!hasProduceRow) {
-                        outputBuilder->AppendRow(probePosition, nullptr, 0);
                     }
                     if (outputBuilder->IsFull()) {
                         curProbePosition = probePosition + 1;
@@ -923,8 +924,8 @@ void CalculateColVarcharHashes(BaseVector *vec, int32_t rowCount, int64_t *hashe
 void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
 {
     int32_t rowCount = curInputBatch->GetRowCount();
-    auto probeHashColsCount = probeHashCols.size();
     int64_t *hashes = curProbeHashes.data();
+    auto probeHashColsCount = probeHashCols.size();
 
     for (size_t j = 0; j < probeHashColsCount; ++j) {
         BaseVector *hashCol = probeHashColumns[j];

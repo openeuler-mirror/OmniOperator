@@ -191,7 +191,7 @@ private:
     void ProcessProbe();
 
     template <bool hasJoinFilter>
-    ALWAYS_INLINE void InitForProbe(uint32_t partition, bool initSize=true)
+    ALWAYS_INLINE void InitForProbe(uint32_t partition, bool initSize = true)
     {
         if constexpr (hasJoinFilter) {
             if (initSize) {
@@ -199,15 +199,6 @@ private:
                 buildFilterColsSize = buildFilterCols.size();
             }
             buildFilterColPtrs = GetBuildFilterColPtrs(partition);
-        }
-    }
-
-    ALWAYS_INLINE void AppendRow(int32_t probePosition, BaseVector ***array,
-                                 uint64_t address, bool appendRow, bool& hasProduceRow)
-    {
-        if (appendRow) {
-            outputBuilder->AppendRow(probePosition, array, address);
-            hasProduceRow = true;
         }
     }
 
