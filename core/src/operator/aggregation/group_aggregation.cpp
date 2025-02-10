@@ -504,6 +504,26 @@ uint64_t HashAggregationOperator::GetSpilledBytes()
     return spilledBytes;
 }
 
+uint64_t HashAggregationOperator::GetUsedMemBytes()
+{
+    return usedMemBytes;
+}
+
+uint64_t HashAggregationOperator::GetTotalMemBytes()
+{
+    return totalMemBytes;
+}
+
+std::vector<uint64_t> HashAggregationOperator::GetSpecialMetricsInfo()
+{
+    int arrayLength = 2;  // 根据返回元素个数修改长度
+    std::vector<uint64_t> specialMetricsInfoArray(arrayLength);
+    specialMetricsInfoArray[0] = GetUsedMemBytes();
+    specialMetricsInfoArray[1] = GetTotalMemBytes();
+
+    return specialMetricsInfoArray;
+}
+
 uint64_t HashAggregationOperator::GetHashMapUniqueKeys()
 {
     return serialize->hashmap.GetElementsSize();
@@ -782,6 +802,9 @@ void HashAggregationOperator::CalcAndSetStatesSize()
 template <typename Deserialize>
 int32_t HashAggregationOperator::Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch)
 {
+    usedMemBytes = executionContext->GetArena()->UsedBytes();
+    totalMemBytes = executionContext->GetArena()->TotalBytes();
+
     if (hasSpill) {
         GetOutputFromDisk(outputVecBatch);
         executionContext->GetArena()->Reset();
