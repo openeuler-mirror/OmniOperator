@@ -14,6 +14,7 @@
 
 namespace omniruntime {
 namespace simdutil {
+constexpr int32_t BYTES_OF_LONGLONG = 16;
 using namespace omniruntime::type;
 
 inline uint64_t HashUint64(uint64_t x)
@@ -43,6 +44,13 @@ template <typename T> struct HashCRC32 {
     size_t operator () (T key) const
     {
         return CRC32Hasher<T>(key);
+    }
+};
+
+template <> struct HashCRC32<int128_t> {
+    size_t operator () (int128_t key) const
+    {
+        return Extend(0, reinterpret_cast<const char *>(&key), BYTES_OF_LONGLONG);
     }
 };
 

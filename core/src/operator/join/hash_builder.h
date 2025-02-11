@@ -43,7 +43,7 @@ private:
 
     template <class RowRefListType>
     HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType,
-        BuildSide buildSide = OMNI_BUILD_UNKNOWN);
+        BuildSide buildSide = OMNI_BUILD_UNKNOWN, bool isMultiCols = false);
 };
 
 class HashBuilderOperator : public Operator {
@@ -86,6 +86,8 @@ private:
     int32_t partitionIndex;
     HashTableVariants *hashTablesVariants;
 };
+
+int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector<int32_t>& buildHashCols);
 } // end of op
 } // end of omniruntime
 #endif

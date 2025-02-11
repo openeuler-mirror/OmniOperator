@@ -43,7 +43,7 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, BuildS
 
 template <class RowRefListType>
 HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashColsCount, int32_t operatorCount,
-    JoinType joinType, BuildSide buildSide)
+    JoinType joinType, BuildSide buildSide, bool isMultiCols)
 {
     if (buildHashColsCount == 1) {
         auto type = buildTypes.GetIds()[buildHashCols[0]];
@@ -73,9 +73,44 @@ HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashCols
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
         }
     } else {
+        int32_t lengthCount = GetTypeLength(buildHashColsCount, buildTypes, buildHashCols);
+        if (0 < lengthCount && lengthCount <= BITS_OF_INT) {
+            return new HashTableVariants{std::in_place_type<JoinHashTableVariants<int32_t, RowRefListType>>,
+                operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide, true };
+        } else if (BITS_OF_INT < lengthCount && lengthCount <= BITS_OF_LONG) {
+            return new HashTableVariants{std::in_place_type<JoinHashTableVariants<int64_t, RowRefListType>>,
+                operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide, true };
+        } else if (BITS_OF_LONG < lengthCount && lengthCount <= BITS_OF_LONGLONG) {
+            return new HashTableVariants{std::in_place_type<JoinHashTableVariants<int128_t, RowRefListType>>,
+                operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide, true };
+        }
         return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<StringRef, RowRefListType>>,
             operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
     }
+}
+
+int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector<int32_t>& buildHashCols)
+{
+    int32_t lengthCount = 0;
+    for (int i = 0; i < buildHashColsCount; i++) {
+        switch (buildTypes.GetIds()[buildHashCols[i]]) {
+            case OMNI_SHORT:
+                lengthCount += BITS_OF_SHORT;
+                break;
+            case OMNI_INT:
+                lengthCount += BITS_OF_INT;
+                break;
+            case OMNI_LONG:
+                lengthCount += BITS_OF_LONG;
+                break;
+            case OMNI_DECIMAL64:
+                lengthCount += BITS_OF_DECIMAL;
+                break;
+            default:
+                return NOT_EXPECTED_TYPE;
+        }
+    }
+    return lengthCount;
 }
 
 HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(JoinType joinType,

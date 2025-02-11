@@ -14,7 +14,8 @@ static constexpr uint8_t MIN_DEGREE = 5;
 
 template <typename KeyType, typename RowRefListType>
 JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t hashTableCount,
-    DataTypes *buildDataTypes, std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide)
+    DataTypes *buildDataTypes, std::vector<int32_t> &buildHashCols,
+    JoinType joinType, BuildSide buildSide, bool isMultiCols)
     : hashTableCount(hashTableCount),
       hashTableSize(0),
       probeTypes(nullptr),
@@ -24,7 +25,8 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
       inputVecBatches(std::vector<std::vector<omniruntime::vec::VectorBatch *>>(hashTableCount)),
       columns(std::vector<omniruntime::vec::BaseVector ***>(hashTableCount)),
       joinType(joinType),
-      buildSide(buildSide)
+      buildSide(buildSide),
+      isMultiCols(isMultiCols)
 {
     hashTables = std::vector<std::unique_ptr<JoinHashTableVariant<KeyType, RowRefListType>>>(hashTableCount);
     arrayTables = std::vector<std::unique_ptr<DefaultArrayMap<RowRefListType>>>(hashTableCount);
@@ -98,11 +100,57 @@ JoinHashTableVariants<KeyType, RowRefListType>::~JoinHashTableVariants()
 }
 
 template <typename KeyType, typename RowRefListType>
+void JoinHashTableVariants<KeyType, RowRefListType>::ComputeMultiColKey(
+    BaseVector **hashColumns, int32_t hashColCount, int32_t index, KeyType& key)
+{
+    if constexpr (std::is_same_v<KeyType, int32_t> ||
+                  std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
+        for (int i = 0; i < hashColCount; ++i) {
+            switch (hashColumns[i]->GetTypeId()) {
+                case OMNI_SHORT:
+                    key = static_cast<KeyType>(key) << BITS_OF_SHORT | static_cast<KeyType>(
+                        hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
+                        reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(hashColumns[i])->GetValue(index)
+                        : reinterpret_cast<Vector<int16_t> *>(hashColumns[i])->GetValue(index));
+                    break;
+                case OMNI_INT:
+                    key = static_cast<KeyType>(key) << BITS_OF_INT | static_cast<KeyType>(
+                        hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
+                        reinterpret_cast<Vector<DictionaryContainer<int32_t>> *>(hashColumns[i])->GetValue(index)
+                        : reinterpret_cast<Vector<int32_t> *>(hashColumns[i])->GetValue(index));
+                    break;
+                case OMNI_LONG:
+                case OMNI_DECIMAL64:
+                    key = static_cast<KeyType>(key) << BITS_OF_LONG | static_cast<KeyType>(
+                        hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
+                        reinterpret_cast<Vector<DictionaryContainer<int64_t>> *>(hashColumns[i])->GetValue(index)
+                        : reinterpret_cast<Vector<int64_t> *>(hashColumns[i])->GetValue(index));
+                    break;
+                default:
+                    std::string omniExceptionInfo =
+                        "Error in computing multiCol key, not support type: " +
+                        std::to_string(hashColumns[i]->GetTypeId());
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            }
+        }
+    }
+}
+
+template <typename KeyType, typename RowRefListType>
 InsertResult<RowRefListType *> JoinHashTableVariants<KeyType, RowRefListType>::Find(
     std::vector<VectorSerializerIgnoreNull> &probeSerializers, ExecutionContext *probeArena,
     BaseVector **probeHashColumns, int32_t probeHashColCount, int32_t probePosition, uint32_t partition)
 {
     KeyType key;
+    if (isMultiCols) {
+        if constexpr (std::is_same_v<KeyType, int32_t> ||
+                      std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
+            key = 0;
+        }
+        ComputeMultiColKey(probeHashColumns, probeHashColCount, probePosition, key);
+        return hashTables[partition]->FindValueFromHashmap(key);
+    }
+
     if constexpr (std::is_same_v<KeyType, int16_t> || std::is_same_v<KeyType, int32_t> ||
         std::is_same_v<KeyType, int64_t>) {
         if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
@@ -251,6 +299,98 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceSingleKeyToNormalHas
 
 template <typename KeyType, typename RowRefListType>
 template <typename HashTableType>
+void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceMultiKey(HashTableType &hashTable, int32_t partitionIndex,
+    VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors)
+{
+    if (joinType == OMNI_JOIN_TYPE_FULL) {
+        EmplaceMultiKeyToNormalHashTable(hashTable, partitionIndex,
+            vecBatch, vecBatchIdx, buildVectors);
+    } else {
+        EmplaceMultiNotNullKeyToNormalHashTable(hashTable, partitionIndex,
+            vecBatch, vecBatchIdx, buildVectors);
+    }
+}
+
+template <typename KeyType, typename RowRefListType>
+template <typename HashTableType>
+void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceMultiNotNullKeyToNormalHashTable(HashTableType &hashTable,
+    int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors)
+{
+    auto rowCount = vecBatch->GetRowCount();
+    auto &arenaAllocator = *(executionContexts[partitionIndex]->GetArena());
+    RowRefListType *rowRef = nullptr;
+    KeyType key;
+
+    for (auto offset = 0; offset < rowCount; offset++) {
+        bool unNullKey = true;
+        for (int i = 0; i < this->buildHashCols.size(); ++i) {
+            unNullKey = unNullKey && (!buildVectors[i]->IsNull(offset));
+        }
+        if (LIKELY(unNullKey)) {
+            if constexpr (std::is_same_v<KeyType, int32_t> ||
+                          std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
+                key = 0;
+            }
+            ComputeMultiColKey(buildVectors, buildHashCols.size(), offset, key);
+            auto ret = hashTable->InsertJoinKeysToHashmap(key);
+            if (ret.IsInsert()) {
+                rowRef = reinterpret_cast<RowRefListType *>(arenaAllocator.Allocate(sizeOfRowRefList));
+                *rowRef = RowRefListType(static_cast<uint32_t>(offset), static_cast<uint32_t>(vecBatchIdx));
+                ret.SetValue(rowRef);
+            } else {
+                rowRef = ret.GetValue();
+                rowRef->Insert({ static_cast<uint32_t>(offset), static_cast<uint32_t>(vecBatchIdx) }, arenaAllocator);
+            }
+        }
+    }
+}
+
+template <typename KeyType, typename RowRefListType>
+template <typename HashTableType>
+void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceMultiKeyToNormalHashTable(HashTableType &hashTable,
+    int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors)
+{
+    auto rowCount = vecBatch->GetRowCount();
+    auto &arenaAllocator = *(executionContexts[partitionIndex]->GetArena());
+    RowRefListType *rowRef = nullptr;
+    KeyType key;
+
+    for (auto offset = 0; offset < rowCount; offset++) {
+        bool unNullKey = true;
+        for (int i = 0; i < this->buildHashCols.size(); ++i) {
+            unNullKey = unNullKey && (!buildVectors[i]->IsNull(offset));
+        }
+        if (LIKELY(unNullKey)) {
+            if constexpr (std::is_same_v<KeyType, int32_t> ||
+                          std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
+                key = 0;
+            }
+            ComputeMultiColKey(buildVectors, buildHashCols.size(), offset, key);
+            auto ret = hashTable->InsertJoinKeysToHashmap(key);
+            if (ret.IsInsert()) {
+                rowRef = reinterpret_cast<RowRefListType *>(arenaAllocator.Allocate(sizeOfRowRefList));
+                *rowRef = RowRefListType(static_cast<uint32_t>(offset), static_cast<uint32_t>(vecBatchIdx));
+                ret.SetValue(rowRef);
+            } else {
+                rowRef = ret.GetValue();
+                rowRef->Insert({ static_cast<uint32_t>(offset), static_cast<uint32_t>(vecBatchIdx) }, arenaAllocator);
+            }
+        } else {
+            auto ret = hashTable->InsertNullKeysToHashmap(key);
+            if (ret.IsInsert()) {
+                rowRef = reinterpret_cast<RowRefListType *>(arenaAllocator.Allocate(sizeOfRowRefList));
+                *rowRef = RowRefListType(static_cast<uint32_t>(offset), static_cast<uint32_t>(vecBatchIdx));
+                ret.SetValue(rowRef);
+            } else {
+                rowRef = ret.GetValue();
+                rowRef->Insert({ static_cast<uint32_t>(offset), static_cast<uint32_t>(vecBatchIdx) }, arenaAllocator);
+            }
+        }
+    }
+}
+
+template <typename KeyType, typename RowRefListType>
+template <typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceVariableKey(HashTableType &hashTable,
     int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum,
     std::vector<int8_t> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes)
@@ -363,8 +503,13 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildNormalHashTableWithFix
             for (int32_t i = 0; i < buildColNum; ++i) {
                 buildVectors[i] = vecBatch->Get(this->buildHashCols[i]);
             }
-            EmplaceSingleKey<std::unique_ptr<JoinHashTableVariant<KeyType, RowRefListType>>>(hashTable, partitionIndex,
-                vecBatch, j, buildVectors);
+            if (isMultiCols) {
+                EmplaceMultiKey<std::unique_ptr<JoinHashTableVariant<KeyType, RowRefListType>>>(hashTable,
+                    partitionIndex, vecBatch, j, buildVectors);
+            } else {
+                EmplaceSingleKey<std::unique_ptr<JoinHashTableVariant<KeyType, RowRefListType>>>(hashTable,
+                    partitionIndex, vecBatch, j, buildVectors);
+            }
         }
     } else if constexpr (std::is_same_v<KeyType, StringRef>) {
         BaseVector *buildVectors[buildColNum];
@@ -787,5 +932,7 @@ template class JoinHashTableVariants<int32_t, RowRefListWithFlags>;
 template class JoinHashTableVariants<int64_t, RowRefListWithFlags>;
 template class JoinHashTableVariants<Decimal128, RowRefListWithFlags>;
 template class JoinHashTableVariants<StringRef, RowRefListWithFlags>;
+template class JoinHashTableVariants<int128_t, RowRefList>;
+template class JoinHashTableVariants<int128_t, RowRefListWithFlags>;
 }
 }
