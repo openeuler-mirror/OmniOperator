@@ -45,7 +45,8 @@ public:
     {
         probeRowOffset = 0;
         probeRowCount = 0;
-        probeBuildIndex.clear();
+        probeIndex.clear();
+        buildIndex.clear();
     }
 
     static const uint32_t SHIFT_SIZE_32 = 32;
@@ -69,11 +70,7 @@ private:
         int32_t rowCount)
     {
         auto probeOutputColsCount = probeOutputCols.size();
-        auto tempIndex = probeBuildIndex.data() + probeRowOffset;
-        int32_t probePositions[rowCount];
-        for (int32_t i = 0; i < rowCount; ++i) {
-            probePositions[i] = std::get<0>(tempIndex[i]);
-        }
+        auto probePositions = probeIndex.data() + probeRowOffset;
         for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
             auto type = probeOutputTypes[j];
@@ -104,7 +101,7 @@ private:
         int32_t rowCount)
     {
         auto probeOutputColsCount = probeOutputCols.size();
-        auto offset = std::get<0>(probeBuildIndex[probeRowOffset]);
+        auto offset = probeIndex[probeRowOffset];
         for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
             auto resultColumn = VectorHelper::SliceVector(column, offset, rowCount);
@@ -119,7 +116,8 @@ private:
     const int32_t *buildOutputTypes;
     int32_t probeRowCount = 0;
     int32_t probeRowOffset = 0;
-    std::vector<std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t>> probeBuildIndex;
+    std::vector<int32_t> probeIndex;
+    std::vector<std::pair<BaseVector ***, uint64_t>> buildIndex;
 };
 
 class LookupJoinOperatorFactory : public OperatorFactory {

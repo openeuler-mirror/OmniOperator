@@ -126,7 +126,7 @@ void BuildTestData(VectorBatch **vecBatches, int32_t vecBatchCount, int32_t colu
     for (int32_t i = 0; i < vecBatchCount; i++) {
         auto *vecBatch = new VectorBatch(positionCount);
         for (int32_t colIdx = 0; colIdx < columnCount; colIdx++) {
-            auto vector = std::make_unique<Vector<int64_t>>(positionCount);
+            auto vector = std::make_unique<Vector<int64_t >> (positionCount);
             BuildVectorValues(vector.get());
             vecBatch->Append(vector.release());
         }
@@ -260,7 +260,7 @@ TEST(NativeOmniJoinTest, TestComparePerf)
 
     EXPECT_EQ(lookupJoinOutputWithoutJit.size(), lookupJoinOutputWithJit.size());
     for (uint32_t i = 0; i < lookupJoinOutputWithoutJit.size(); ++i) {
-        EXPECT_TRUE(VecBatchMatchIgnoreOrder(lookupJoinOutputWithoutJit[i], lookupJoinOutputWithJit[i]));
+        EXPECT_TRUE(VecBatchMatch(lookupJoinOutputWithoutJit[i], lookupJoinOutputWithJit[i]));
     }
 
     VectorHelper::FreeVecBatches(lookupJoinOutputWithoutJit);
@@ -298,7 +298,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithOneBuildOp)
 
     VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
     EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -329,7 +329,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithTwoBuildOp)
 
     VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
     EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     delete[] vectorBatches;
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -363,7 +363,7 @@ VectorBatch **ConstructHashBuilderTestData(int32_t tableCount, int32_t columnCou
     for (int32_t vecBatchIdx = 0; vecBatchIdx < tableCount; vecBatchIdx++) {
         auto *vecBatch = new VectorBatch(columnCount);
         for (int32_t vecIdx = 0; vecIdx < columnCount; vecIdx++) {
-            std::unique_ptr<Vector<int64_t>> vector = std::make_unique<Vector<int64_t>>(positionCount);
+            std::unique_ptr<Vector<int64_t >> vector = std::make_unique<Vector<int64_t >> (positionCount);
             for (int32_t position = 0; position < positionCount; position++) {
                 int64_t value = numbers[position % numberCount];
                 vector->SetValue(position, value);
@@ -452,7 +452,7 @@ void TestHashBuilderMultiThread(VectorBatch **buildVecBatches)
     HashBuilderOperatorFactory *hashBuilderOperatorFactory = PrepareHashBuilder(1, true);
     struct HashJoinThreadArgs hashBuilderThreadArgs;
     SetHashJoinThreadArgs(&hashBuilderThreadArgs, true, reinterpret_cast<int64_t>(hashBuilderOperatorFactory),
-        buildVecBatches, 1, 0, nullptr, 0);
+                          buildVecBatches, 1, 0, nullptr, 0);
     TestHashBuilder(&hashBuilderThreadArgs);
     DeleteJoinOperatorFactory(hashBuilderOperatorFactory, nullptr);
 }
@@ -486,12 +486,12 @@ void TestHashJoin(VectorBatch **buildVecBatches, int index, VectorBatch **probeV
     HashBuilderOperatorFactory *hashBuilderOperatorFactory = PrepareHashBuilder(1, true);
     struct HashJoinThreadArgs hashBuilderThreadArgs;
     SetHashJoinThreadArgs(&hashBuilderThreadArgs, true, reinterpret_cast<int64_t>(hashBuilderOperatorFactory),
-        buildVecBatches, 1, 0, nullptr, 0);
+                          buildVecBatches, 1, 0, nullptr, 0);
 
     LookupJoinOperatorFactory *lookupJoinOperatorFactory = PrepareLookupJoin(hashBuilderOperatorFactory, true);
     struct HashJoinThreadArgs lookupJoinThreadArgs;
     SetHashJoinThreadArgs(&lookupJoinThreadArgs, true, 0, nullptr, 0,
-        reinterpret_cast<int64_t>(lookupJoinOperatorFactory), probeVecBatches, VEC_BATCH_COUNT_1);
+                          reinterpret_cast<int64_t>(lookupJoinOperatorFactory), probeVecBatches, VEC_BATCH_COUNT_1);
 
     hashBuilderThreadArgs.partitionIndex = index;
     TestHashBuilder(&hashBuilderThreadArgs);
@@ -503,7 +503,7 @@ void TestHashJoin(VectorBatch **buildVecBatches, int index, VectorBatch **probeV
 }
 
 void TestHashJoinMultiThreads(VectorBatch **buildVecBatches, int threadNum, VectorBatch **probeVecBatches,
-    double &wallElapsed, double &cpuElapsed)
+                              double &wallElapsed, double &cpuElapsed)
 {
     std::vector<std::thread> vecOfThreads;
     Timer timer;
@@ -608,7 +608,7 @@ VectorBatch **ConstructBuilderTestData(int32_t *numbers, int32_t numberCount)
     for (int32_t vecBatchIdx = 0; vecBatchIdx < numberCount; vecBatchIdx++) {
         auto *vectorBatch = new VectorBatch(1);
         for (int32_t colIdx = 0; colIdx < COLUMN_COUNT_4; colIdx++) {
-            std::unique_ptr<Vector<int64_t>> column = std::make_unique<Vector<int64_t>>(1);
+            std::unique_ptr<Vector<int64_t >> column = std::make_unique<Vector<int64_t >> (1);
             column->SetValue(0, numbers[vecBatchIdx]);
             vectorBatch->Append(column.release());
         }
@@ -629,7 +629,7 @@ VectorBatch **ConstructProbeTestData(const int32_t *numbers, int32_t numberCount
     for (int32_t vecBatchIdx = 0; vecBatchIdx < VEC_BATCH_COUNT_1; vecBatchIdx++) {
         auto *vecBatch = new VectorBatch(COLUMN_COUNT_4);
         for (int32_t colIdx = 0; colIdx < COLUMN_COUNT_4; colIdx++) {
-            std::unique_ptr<Vector<int64_t>> vector = std::make_unique<Vector<int64_t>>(positionCount);
+            std::unique_ptr<Vector<int64_t >> vector = std::make_unique<Vector<int64_t >> (positionCount);
             for (int32_t posIdx = 0; posIdx < positionCount; posIdx++) {
                 int64_t value = numbers[(posIdx % numberCount)];
                 vector->SetValue(posIdx, value);
@@ -816,17 +816,10 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoin)
             {11, 22, 33, 44},
             {2, 0, 4, 0},
             {11, 0, 33, 0}};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-        expectedDatas[2], expectedDatas[3]);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -978,9 +971,8 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinAndBuildLeftWithArray)
             {11, 12, 10},
             {2,  5,  1},
             {11, 12, 10}};
-    auto *expectedVecbatch = CreateVectorBatch(expectedTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-                                               expectedDatas[2], expectedDatas[3]);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+                         expectedDatas[0], expectedDatas[1]);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -1007,7 +999,6 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinAndBuildLeftWithArray)
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(appendOutput);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
@@ -1060,17 +1051,10 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinChar)
     std::string expectedData1[expectedDataSize] = {"11", "22", "33", "44"};
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     std::string expectedData3[expectedDataSize] = {"11", "", "33", ""};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(3), LongType(), VarcharType(2) }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -1122,17 +1106,10 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDate32)
     int32_t expectedData1[expectedDataSize] = {11, 22, 33, 44};
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     int32_t expectedData3[expectedDataSize] = {11, -1, 33, -1};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), IntType(), LongType(), IntType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -1184,17 +1161,10 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinShort)
     int16_t expectedData1[expectedDataSize] = {11, 22, 33, 44};
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     int16_t expectedData3[expectedDataSize] = {11, -1, 33, -1};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), ShortType(), LongType(), ShortType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -1246,17 +1216,10 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal64)
     int64_t expectedData1[expectedDataSize] = {11, 22, 33, 44};
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     int64_t expectedData3[expectedDataSize] = {11, -1, 33, -1};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -1310,18 +1273,10 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinDecimal128)
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     Decimal128 expectedData3[expectedDataSize] = {Decimal128(11, 0), Decimal128(0, 0), Decimal128(33, 0),
                                                   Decimal128(0, 0)};
-    DataTypes expectedDataTypes(
-        std::vector<DataTypePtr>({ LongType(), Decimal128Type(), LongType(), Decimal128Type() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -1381,13 +1336,10 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinDictionary)
             {11, 33},
             {2, 4},
             {11, 33}};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-        expectedDatas[2], expectedDatas[3]);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -1455,7 +1407,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNulls)
     expectedVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1, ids, expectedDataSize));
     expectedVecBatch->Append(expectedVector2);
     expectedVecBatch->Append(expectedVector3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch));
 
     delete expectedProbeVec0;
     delete expectedProbeVec1;
@@ -1527,7 +1479,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinHasOutputNullsChar)
     expectedVecBatch->Append(CreateDictionary<OMNI_CHAR>(expectedProbeVec1, ids, expectedDataSize));
     expectedVecBatch->Append(expectedVector2);
     expectedVecBatch->Append(expectedVector3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch));
 
     delete expectedProbeVec0;
     delete expectedProbeVec1;
@@ -1603,7 +1555,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilter)
     expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec1, ids, expectDataSize));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData3));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({ notEqualExpr });
 
@@ -1690,7 +1642,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilterWithOddDataSize)
     expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec1, ids, expectDataSize));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData3));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({notEqualExpr});
 
@@ -1777,7 +1729,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithIntFilterWithoutArray)
     expectVecBatch->Append(CreateDictionary<OMNI_INT>(expectedProbeVec1, ids, expectDataSize));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData3));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({notEqualExpr});
 
@@ -1884,7 +1836,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter)
     expectVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1, ids, expectDataSize));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
     expectVecBatch->Append(CreateVarcharVector(expectData3, expectDataSize));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({ joinFilter });
     delete expectedProbeVec0;
@@ -1971,7 +1923,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilterWithOddDataSize)
     expectVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1, ids, expectDataSize));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
     expectVecBatch->Append(CreateVarcharVector(expectData3, expectDataSize));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({joinFilter});
     delete expectedProbeVec0;
@@ -2047,8 +1999,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2)
     expectVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1, ids, expectDataSize));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
     expectVecBatch->Append(CreateVarcharVector(expectData3, expectDataSize));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({ joinFilter });
     delete expectedProbeVec0;
@@ -2130,7 +2081,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithCharFilter2WithOddDataSize)
     expectVecBatch->Append(CreateDictionary<OMNI_VARCHAR>(expectedProbeVec1, ids, expectDataSize));
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData2));
     expectVecBatch->Append(CreateVarcharVector(expectData3, expectDataSize));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({joinFilter});
     delete expectedProbeVec0;
@@ -2244,7 +2195,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilter)
     expectVecBatch->Append(expectedProbeVec1);
     expectVecBatch->Append(expectVec2);
     expectVecBatch->Append(expectVec3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({joinFilter});
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -2356,7 +2307,7 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinWithCharFilterWithOddDataSize)
     expectVecBatch->Append(expectedProbeVec1);
     expectVecBatch->Append(expectVec2);
     expectVecBatch->Append(expectVec3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({ joinFilter });
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -2508,7 +2459,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnAllTypesWithNulls)
     lookupJoinOperator->AddInput(probeVecBatch);
     VectorBatch *outputVecBatch = nullptr;
     lookupJoinOperator->GetOutput(&outputVecBatch);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -2559,7 +2510,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOnDictionaryWithNulls)
     lookupJoinOperator->AddInput(probeVecBatch);
     VectorBatch *outputVecBatch = nullptr;
     lookupJoinOperator->GetOutput(&outputVecBatch);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
@@ -2604,7 +2555,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithOneBuildOp)
     VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -2616,7 +2567,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithOneBuildOp)
     vectorBatch->Append(expectedVec0);
     vectorBatch->Append(expectedVec1);
     vectorBatch->Get(0)->SetNull(0);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -2653,7 +2604,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithTwoBuildOp)
     VectorBatch *expectVecBatch = ConstructSimpleExpectedData();
     DataTypes expectTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -2665,7 +2616,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithTwoBuildOp)
     vectorBatch->Append(expectedVec0);
     vectorBatch->Append(expectedVec1);
     vectorBatch->Get(0)->SetNull(0);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     delete[] vectorBatches;
     VectorHelper::FreeVecBatch(vectorBatch);
@@ -2741,15 +2692,8 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithArray)
             {1, 5, 7,  9,  11},
             {1, 5, -1, -1, -1},
             {1, 5, -1, -1, -1}};
-    auto *expectedVecbatch = CreateVectorBatch(expectedTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-                                               expectedDatas[2], expectedDatas[3]);
-    expectedVecbatch->Get(2)->SetNull(2);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(2)->SetNull(4);
-    expectedVecbatch->Get(3)->SetNull(2);
-    expectedVecbatch->Get(3)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(4);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+                         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -2778,7 +2722,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithArray)
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(appendOutput);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
@@ -2829,19 +2772,14 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoin)
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
     const int32_t expectedDataSize = 4;
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     int64_t expectedDatas[4][expectedDataSize] = {
         {1, 2, 3, 4},
         {11, 22, 33, 44},
         {2, 0, 4, 0},
         {11, 0, 33, 0}};
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-        expectedDatas[2], expectedDatas[3]);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -2868,7 +2806,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoin)
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(appendOutput);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
@@ -2921,19 +2858,14 @@ TEST(NativeOmniJoinTest, TestOneKeyFullEqualityJoinWithBuildNull)
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
     const int32_t expectedDataSize = 6;
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     int64_t expectedDatas[4][expectedDataSize] = {
                 {1, 1, 1, 2, 3, 4},
                 {11, 11, 11, 22, 33, 44},
                 {2, 5, 6, 0, 4, 0},
                 {11, 11, 11, 0, 33, 0}};
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-        expectedDatas[2], expectedDatas[3]);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(2)->SetNull(5);
-    expectedVecbatch->Get(3)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(5);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -2957,12 +2889,11 @@ TEST(NativeOmniJoinTest, TestOneKeyFullEqualityJoinWithBuildNull)
     vectorBatch->Get(1)->SetNull(1);
     vectorBatch->Get(3)->SetNull(0);
     vectorBatch->Get(3)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(appendOutput);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
@@ -3015,19 +2946,14 @@ TEST(NativeOmniJoinTest, TestFixedKeysFullEqualityJoinWithBuildNull)
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
     const int32_t expectedDataSize = 4;
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     int64_t expectedDatas[4][expectedDataSize] = {
                 {1, 2, 3, 4},
                 {11, 22, 33, 44},
                 {1, 0, 3, 0},
                 {11, 0, 33, 0}};
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-        expectedDatas[2], expectedDatas[3]);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -3055,10 +2981,9 @@ TEST(NativeOmniJoinTest, TestFixedKeysFullEqualityJoinWithBuildNull)
     vectorBatch->Get(1)->SetNull(3);
     vectorBatch->Get(3)->SetNull(0);
     vectorBatch->Get(3)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     VectorHelper::FreeVecBatch(vectorBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(appendOutput);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
@@ -3128,7 +3053,7 @@ TEST(NativeOmniJoinTest, TestVariableKeysFullEqualityJoinWithBuildNull)
     expectVecBatch->Get(3)->SetNull(5);
     expectVecBatch->Get(3)->SetNull(6);
     expectVecBatch->Get(3)->SetNull(7);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     auto lookupOuterJoinFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes,
         probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes, hashBuilderFactoryAddr);
@@ -3220,14 +3145,9 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinChar)
     std::string expectedData1[expectedDataSize] = {"11", "22", "33", "44"};
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     std::string expectedData3[expectedDataSize] = {"11", "", "33", ""};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(2), LongType(), VarcharType(3) }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(2), LongType(), VarcharType(3) }));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -3254,7 +3174,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinChar)
     VectorHelper::FreeVecBatch(appendOutput);
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
@@ -3310,14 +3229,9 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDate32)
     int32_t expectedData1[expectedDataSize] = {11, 22, 33, 44};
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     int32_t expectedData3[expectedDataSize] = {11, -1, 33, -1};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), Date32Type(DAY), LongType(), Date32Type(DAY) }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), Date32Type(DAY), LongType(), Date32Type(DAY) }));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -3343,7 +3257,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDate32)
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     VectorHelper::FreeVecBatch(appendOutput);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
@@ -3395,20 +3308,16 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal64)
     VectorBatch *outputVecBatch = nullptr;
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
+
     const int32_t expectedDataSize = 4;
     int64_t expectedData0[expectedDataSize] = {1, 2, 3, 4};
     int64_t expectedData1[expectedDataSize] = {11, 22, 33, 44};
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     int64_t expectedData3[expectedDataSize] = {11, -1, 33, -1};
-    DataTypes expectedDataTypes(
+    DataTypes expectedTypes(
         std::vector<DataTypePtr>({ LongType(), Decimal64Type(2, 0), LongType(), Decimal64Type(3, 0) }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -3435,7 +3344,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal64)
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(appendOutput);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
@@ -3493,15 +3401,10 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal128)
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     Decimal128 expectedData3[expectedDataSize] = {Decimal128(11, 0), Decimal128(0, 0), Decimal128(33, 0),
                                                   Decimal128(0, 0)};
-    DataTypes expectedDataTypes(
+    DataTypes expectedTypes(
         std::vector<DataTypePtr>({ LongType(), Decimal128Type(2, 0), LongType(), Decimal128Type(3, 0) }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -3528,7 +3431,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDecimal128)
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(appendOutput);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
@@ -3583,14 +3485,9 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinShort)
     int16_t expectedData1[expectedDataSize] = {11, 22, 33, 44};
     int64_t expectedData2[expectedDataSize] = {2, 0, 4, 0};
     int16_t expectedData3[expectedDataSize] = {11, -1, 33, -1};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), ShortType(), LongType(), ShortType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedData0, expectedData1,
-        expectedData2, expectedData3);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), ShortType(), LongType(), ShortType() }));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize, expectedData0,
+        expectedData1, expectedData2, expectedData3);
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -3615,7 +3512,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinShort)
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(appendOutput);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
@@ -3680,15 +3576,9 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDictionary)
         {11, 22, 33, 44},
         {2, 0, 4, 0},
         {11, 0, 33, 0}};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-        expectedDatas[2], expectedDatas[3]);
-    expectedVecbatch->Get(2)->SetNull(1);
-    expectedVecbatch->Get(2)->SetNull(3);
-    expectedVecbatch->Get(3)->SetNull(1);
-    expectedVecbatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
-
+    DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
     const int32_t expectedDatasSize = 2;
@@ -3713,7 +3603,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinDictionary)
 
     VectorHelper::FreeVecBatch(vectorBatch);
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     VectorHelper::FreeVecBatch(appendOutput);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
@@ -3791,7 +3680,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinHasOutputNulls)
     expectedVecBatch->Get(0)->SetNull(2);
     expectedVecBatch->Get(3)->SetNull(1);
     expectedVecBatch->Get(3)->SetNull(3);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch));
 
     VectorBatch *appendOutput;
     lookupOuterJoinOperator->GetOutput(&appendOutput);
@@ -3876,7 +3765,7 @@ TEST(NativeOmniJoinTest, TestLeftSemiEqualityJoin)
     expectedVecBatch->Append(expectedVector0);
     expectedVecBatch->Append(expectedVector1);
     DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(2) }));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectedVecBatch);
@@ -3936,7 +3825,7 @@ TEST(NativeOmniJoinTest, TestLeftSemiEqualityJoinWithOddDataSize)
     expectedVecBatch->Append(expectedVector0);
     expectedVecBatch->Append(expectedVector1);
     DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(2) }));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectedVecBatch);
@@ -3997,7 +3886,7 @@ TEST(NativeOmniJoinTest, TestLeftSemiEqualityJoinWithCharFilter)
     auto expectVecBatch = new VectorBatch(expectDataSize);
     expectVecBatch->Append(CreateVector<int32_t>(expectDataSize, expectData0));
     expectVecBatch->Append(CreateVarcharVector(expectData1, expectDataSize));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({ joinFilter });
 
@@ -4067,7 +3956,7 @@ TEST(NativeOmniJoinTest, TestRightEqualityJoin)
     expectedVecBatch->Append(expectedVector2);
     expectedVecBatch->Append(expectedVector3);
     DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), VarcharType(2), LongType(), VarcharType(3) }));
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectedVecBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectedVecBatch);
@@ -4141,7 +4030,7 @@ TEST(NativeOmniJoinTest, TestRightEqualityJoinWithCharFilter)
         expectVecBatch->Get(2)->SetNull(idx);
         static_cast<Vector<std::string_view> *>(expectVecBatch->Get(3))->SetNull(idx);
     }
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
 
     Expr::DeleteExprs({ joinFilter });
     VectorHelper::FreeVecBatch(outputVecBatch);
@@ -4305,13 +4194,10 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinOfArrayTable)
                 {11, 11, 22, 22, 33, 44},
                 {1, 1, 2, 2, 3, 4},
                 {111, 20, 11, 16, 333, 33}};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ ShortType(), ShortType(), ShortType(), ShortType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-        expectedDatas[2], expectedDatas[3]);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize() + buildOutputColsCount, expectedDataSize,
+        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -4364,13 +4250,10 @@ TEST(NativeOmniJoinTest, TestLeftAntiEqualityJoinWithArrayProbe)
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
     const int32_t expectedDataSize = 5;
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     int64_t expectedDatas[2][expectedDataSize] = {{1, 4, 3, 6, 7}, {28, 10, 0, 15, 8}};
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1]);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeTypes.GetSize(), expectedDataSize, expectedDatas[0], expectedDatas[1]);
 
     VectorHelper::FreeVecBatch(outputVecBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
@@ -4424,10 +4307,8 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinOfArrayTable)
                 {11, 22, 33, 44},
                 {1, 2, 3, 4},
                 {111, 11, 333, 33}};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ ShortType(), ShortType(), ShortType(), ShortType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-                                               expectedDatas[2], expectedDatas[3]);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeOutputColsCount + buildOutputColsCount, expectedDataSize,
+        expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     auto lookupOuterJoinFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes,
         probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes, hashBuilderFactoryAddr);
@@ -4455,12 +4336,11 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinOfArrayTable)
     vectorBatch->Get(1)->SetNull(1);
     vectorBatch->Get(2)->SetNull(0);
     vectorBatch->Get(2)->SetNull(1);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
+    EXPECT_TRUE(VecBatchMatch(appendOutput, vectorBatch));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(appendOutput);
     VectorHelper::FreeVecBatch(vectorBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
@@ -4522,16 +4402,8 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinOfArrayTableWithOddDataSize)
             {11,  22, 33,  44, 55, 66, 77},
             {1,   2,  3,   4,  -1, -1, -1},
             {111, 11, 333, 33, -1, -1, -1}};
-    DataTypes expectedDataTypes(std::vector<DataTypePtr>({ ShortType(), ShortType(), ShortType(), ShortType() }));
-    auto *expectedVecbatch = CreateVectorBatch(expectedDataTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
-                                               expectedDatas[2], expectedDatas[3]);
-    expectedVecbatch->Get(2)->SetNull(4);
-    expectedVecbatch->Get(2)->SetNull(5);
-    expectedVecbatch->Get(2)->SetNull(6);
-    expectedVecbatch->Get(3)->SetNull(4);
-    expectedVecbatch->Get(3)->SetNull(5);
-    expectedVecbatch->Get(3)->SetNull(6);
-    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
+    AssertVecBatchEquals(outputVecBatch, probeOutputColsCount + buildOutputColsCount, expectedDataSize,
+                         expectedDatas[0], expectedDatas[1], expectedDatas[2], expectedDatas[3]);
 
     auto lookupOuterJoinFactory =
             LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(probeTypes,
@@ -4571,7 +4443,6 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinOfArrayTableWithOddDataSize)
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(appendOutput);
     VectorHelper::FreeVecBatch(vectorBatch);
-    VectorHelper::FreeVecBatch(expectedVecbatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     omniruntime::op::Operator::DeleteOperator(lookupOuterJoinOperator);
