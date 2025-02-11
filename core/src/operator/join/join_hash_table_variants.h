@@ -35,6 +35,8 @@ template <typename KeyType, typename RowRefListType> class JoinHashTableVariants
 public:
     using Key = KeyType;
     using Mapped = RowRefListType;
+    static constexpr bool IS_SIMPLE_KEY = (std::is_same_v<KeyType, int16_t> || std::is_same_v<KeyType, int32_t> ||
+                                           std::is_same_v<KeyType, int64_t>);
 
     explicit JoinHashTableVariants(uint32_t hashTableCount, DataTypes *buildDataTypes,
         std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide);
@@ -80,6 +82,25 @@ public:
     {
         inputVecBatches[partitionIndex].emplace_back(vecBatch);
         totalRowCount[partitionIndex] += vecBatch->GetRowCount();
+    }
+
+    ALWAYS_INLINE bool CanProbeSIMD(BaseVector **probeHashColumns, int32_t probeHashColCount, uint32_t partition)
+    {
+        if constexpr (IS_SIMPLE_KEY) {
+            return hashTableTypes[partition] == HashTableImplementationType::ARRAY_HASH_TABLE &&
+                   probeHashColCount == 1 && probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY;
+        }
+        return false;
+    }
+
+    ALWAYS_INLINE KeyType* GetSingleProbeHashKeyBase(BaseVector **probeHashColumns)
+    {
+        return reinterpret_cast<KeyType*>(VectorHelper::UnsafeGetValues(probeHashColumns[0]));
+    }
+
+    ALWAYS_INLINE int64_t GetMinValue(uint32_t partition)
+    {
+        return maxMins[partition].second;
     }
 
     InsertResult<RowRefListType *> Find(std::vector<VectorSerializerIgnoreNull> &probeSerializers,

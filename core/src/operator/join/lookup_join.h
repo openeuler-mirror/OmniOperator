@@ -33,6 +33,11 @@ public:
         return probeRowCount >= maxRowCount;
     }
 
+    ALWAYS_INLINE bool WillFull(int32_t rowCount)
+    {
+        return probeRowCount + rowCount >= maxRowCount;
+    }
+
     ALWAYS_INLINE bool IsEmpty()
     {
         return probeRowCount <= 0;
@@ -174,6 +179,17 @@ public:
 
 private:
     void InitFirst();
+    template<typename T, bool hasJoinFilter, JoinType joinType>
+    void ArrayJoinProbeSIMD(BaseVector ***buildColumns, size_t probeHashColsCount, T &&arg,
+                            ExecutionContext *contextPtr);
+
+    template<typename T, bool hasJoinFilter, JoinType joinType>
+    void DealWithProbeMatchResult(int32_t matchRowCnt, int32_t noMatchRowCnt, T &&arg,
+                                  ExecutionContext *contextPtr, BaseVector ***buildColumns);
+
+    template<typename T, bool hasJoinFilter, JoinType joinType>
+    void ArrayJoinProbe(BaseVector ***buildColumns, size_t probeHashColsCount,
+                        T &&arg, ExecutionContext *contextPtr);
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForInnerJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForOppositeSideOuterJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForSameSideOuterJoin();
@@ -224,6 +240,9 @@ private:
     omniruntime::vec::BaseVector **probeHashColumns = nullptr; // Vector *[join column count]
     omniruntime::vec::BaseVector **probeOutputColumns = nullptr;
     std::vector<int64_t> curProbeHashes;
+    std::vector<int64_t> matchRows;
+    std::vector<int64_t> matchSlots;
+    std::vector<int64_t> noMatchRows;
     std::vector<int8_t> curProbeNulls;
 
     std::unique_ptr<LookupJoinOutputBuilder> outputBuilder;
@@ -233,6 +252,7 @@ private:
     BuildSide buildSide;
     uint32_t partitionMask = 0;
     bool isSingleHT;
+    bool probeSimd;
 
     // this is for join filter
     SimpleFilter *simpleFilter = nullptr;
