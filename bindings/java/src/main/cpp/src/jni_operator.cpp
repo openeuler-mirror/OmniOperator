@@ -230,26 +230,20 @@ JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_ge
 {
     auto *nativeOperator = reinterpret_cast<op::Operator *>(jOperatorAddr);
     // get simpleMetrics info, used by all operators.
-    uint64_t simpleMetricsLength = 100;
-    jlongArray simpleMetricsInfoArray = env->NewLongArray(simpleMetricsLength);
-    jlong* elementsSimple = env->GetLongArrayElements(simpleMetricsInfoArray, nullptr);
+    uint64_t MetricsLength = 200;
+    uint64_t boundaryIndex = 100;
+    jlongArray MetricsInfoArray = env->NewLongArray(MetricsLength);
+    jlong* elementsSimple = env->GetLongArrayElements(MetricsInfoArray, nullptr);
     elementsSimple[0] = static_cast<jlong>(nativeOperator->GetSpilledBytes());
-
     // get specialMetrics info, every operator is different.
     std::vector<uint64_t> specialMetricsInfoArray = nativeOperator->GetSpecialMetricsInfo();
     long specialMetricsLength = specialMetricsInfoArray.size();
+    for(uint64_t i = boundaryIndex; i< specialMetricsLength; i++) {
+        elementsSimple[i] = specialMetricsInfoArray[i - boundaryIndex];
+    }
 
-    // merge simpleMetrics info and specialMetrics info
-    jlongArray result = env->NewLongArray(simpleMetricsLength + specialMetricsLength);
-    jlong* elementsResult = env->GetLongArrayElements(result, nullptr);
-    memcpy_s(elementsResult, simpleMetricsLength * sizeof(jlong), elementsSimple,
-        simpleMetricsLength * sizeof(jlong));
-    memcpy_s(elementsResult + simpleMetricsLength, specialMetricsLength * sizeof(jlong),
-        specialMetricsInfoArray.data(), specialMetricsLength * sizeof(jlong));
-
-    env->ReleaseLongArrayElements(simpleMetricsInfoArray, elementsSimple, 0);
-    env->ReleaseLongArrayElements(result, elementsResult, 0);
-    return result;
+    env->ReleaseLongArrayElements(MetricsInfoArray, elementsSimple, 0);
+    return MetricsInfoArray;
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_alignSchemaNative(JNIEnv *env, jobject jObj,
