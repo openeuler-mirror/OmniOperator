@@ -59,6 +59,12 @@ public:
 
     uint64_t GetSpilledBytes() override;
 
+    uint64_t GetUsedMemBytes() override;
+
+    uint64_t GetTotalMemBytes() override;
+
+    std::vector<uint64_t> GetSpecialMetricsInfo() override;
+
     uint64_t GetHashMapUniqueKeys() override;
 
     VectorBatch *AlignSchema(VectorBatch *inputVecBatch) override;

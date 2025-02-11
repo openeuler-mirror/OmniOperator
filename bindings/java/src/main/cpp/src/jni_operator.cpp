@@ -4,6 +4,7 @@
  */
 
 #include <vector>
+#include "securec.h"
 #include "vector/vector_batch.h"
 #include "vector/vector_helper.h"
 #include "jni_common_def.h"
@@ -220,8 +221,35 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpilledBytesNative(JNIEnv *env,
     jobject jObj, jlong jOperatorAddr)
 {
-    auto *nativeOperator = (op::Operator *)jOperatorAddr;
+    auto *nativeOperator = reinterpret_cast<op::Operator *>(jOperatorAddr);
     return static_cast<jlong>(nativeOperator->GetSpilledBytes());
+}
+
+JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getMetricsInfoNative(JNIEnv *env,
+    jobject jObj, jlong jOperatorAddr)
+{
+    auto *nativeOperator = reinterpret_cast<op::Operator *>(jOperatorAddr);
+    // get simpleMetrics info, used by all operators.
+    uint64_t simpleMetricsLength = 100;
+    jlongArray simpleMetricsInfoArray = env->NewLongArray(simpleMetricsLength);
+    jlong* elementsSimple = env->GetLongArrayElements(simpleMetricsInfoArray, nullptr);
+    elementsSimple[0] = static_cast<jlong>(nativeOperator->GetSpilledBytes());
+
+    // get specialMetrics info, every operator is different.
+    std::vector<uint64_t> specialMetricsInfoArray = nativeOperator->GetSpecialMetricsInfo();
+    long specialMetricsLength = specialMetricsInfoArray.size();
+
+    // merge simpleMetrics info and specialMetrics info
+    jlongArray result = env->NewLongArray(simpleMetricsLength + specialMetricsLength);
+    jlong* elementsResult = env->GetLongArrayElements(result, nullptr);
+    memcpy_s(elementsResult, simpleMetricsLength * sizeof(jlong), elementsSimple,
+        simpleMetricsLength * sizeof(jlong));
+    memcpy_s(elementsResult + simpleMetricsLength, specialMetricsLength * sizeof(jlong),
+        specialMetricsInfoArray.data(), specialMetricsLength * sizeof(jlong));
+
+    env->ReleaseLongArrayElements(simpleMetricsInfoArray, elementsSimple, 0);
+    env->ReleaseLongArrayElements(result, elementsResult, 0);
+    return result;
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_alignSchemaNative(JNIEnv *env, jobject jObj,

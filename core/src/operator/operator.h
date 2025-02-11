@@ -62,6 +62,21 @@ public:
         return 0;
     }
 
+    virtual uint64_t GetUsedMemBytes()
+    {
+        return 0;
+    }
+
+    virtual uint64_t GetTotalMemBytes()
+    {
+        return 0;
+    }
+
+    virtual std::vector<uint64_t> GetSpecialMetricsInfo()
+    {
+        return {};
+    }
+
     // Obtains the number of keys in the hashmap object.
     virtual uint64_t GetHashMapUniqueKeys()
     {
