@@ -310,7 +310,13 @@ bool VecBatchMatchIgnoreOrder(vec::VectorBatch *resultBatch, vec::VectorBatch *e
         PrintNotMatchBatches(resultBatch, expectedBatch);
         return false;
     }
-
+    for (int32_t i = 0; i < columnNumber; ++i) {
+        if (resultBatch->Get(i)->GetEncoding() != expectedBatch->Get(i)->GetEncoding()) {
+            printf("Encoding of column %d not match\n", i);
+            PrintNotMatchBatches(resultBatch, expectedBatch);
+            return false;
+        }
+    }
     for (int32_t i = 0; i < columnNumber; ++i) {
         if (!ColumnMatchIgnoreOrder(resultBatch->Get(i), expectedBatch->Get(i), error)) {
             printf("Vector %d not matched\n", i);
@@ -651,65 +657,6 @@ int32_t DecodeFetchFlag(int32_t resultCode)
     return resultCode & SHRT_MAX;
 }
 
-bool CompareVarcharUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, const double error)
-{
-    std::multiset<std::string_view> resRows;
-    std::multiset<std::string_view> expectedRows;
-    size_t resNullCount = 0;
-    size_t expNullCount = 0;
-    for (int32_t i = 0; i < resultVector->GetSize(); ++i) {
-        if (resultVector->GetEncoding() == OMNI_DICTIONARY) {
-            auto leftVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(resultVector);
-            if (leftVector->IsNull(i)) {
-                resNullCount++;
-            } else {
-                resRows.emplace(leftVector->GetValue(i));
-            }
-        } else {
-            auto leftVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(resultVector);
-            if (leftVector->IsNull(i)) {
-                resNullCount++;
-            } else {
-                resRows.emplace(leftVector->GetValue(i));
-            }
-        }
-
-        if (expectedVector->GetEncoding() == OMNI_DICTIONARY) {
-            auto rightVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(expectedVector);
-            if (rightVector->IsNull(i)) {
-                expNullCount++;
-            } else {
-                expectedRows.emplace(rightVector->GetValue(i));
-            }
-        } else {
-            auto rightVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(expectedVector);
-            if (rightVector->IsNull(i)) {
-                expNullCount++;
-            } else {
-                expectedRows.emplace(rightVector->GetValue(i));
-            }
-        }
-    }
-
-    if (resNullCount != expNullCount) {
-        return false;
-    }
-
-    if (resRows.size() != expectedRows.size()) {
-        return false;
-    }
-
-    auto it1 = resRows.begin();
-    auto it2 = expectedRows.begin();
-    for (; it1 != resRows.end(); ++it1, ++it2) {
-        if (*it1 != *it2) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 template <typename D, typename V>
 bool CompareUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, const double error)
 {
@@ -718,36 +665,17 @@ bool CompareUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, 
     size_t resNullCount = 0;
     size_t expNullCount = 0;
     for (int32_t i = 0; i < resultVector->GetSize(); ++i) {
-        if (resultVector->GetEncoding() == OMNI_DICTIONARY) {
-            auto leftVector = reinterpret_cast<Vector<DictionaryContainer<V>> *>(resultVector);
-            if (leftVector->IsNull(i)) {
-                resNullCount++;
-            } else {
-                resRows.emplace(leftVector->GetValue(i));
-            }
+        auto leftVector = static_cast<V *>(resultVector);
+        auto rightVector = static_cast<V *>(expectedVector);
+        if (leftVector->IsNull(i)) {
+            resNullCount++;
         } else {
-            auto leftVector = static_cast<Vector<V> *>(resultVector);
-            if (leftVector->IsNull(i)) {
-                resNullCount++;
-            } else {
-                resRows.emplace(leftVector->GetValue(i));
-            }
+            resRows.emplace(leftVector->GetValue(i));
         }
-
-        if (expectedVector->GetEncoding() == OMNI_DICTIONARY) {
-            auto rightVector = reinterpret_cast<Vector<DictionaryContainer<V>> *>(expectedVector);
-            if (rightVector->IsNull(i)) {
-                expNullCount++;
-            } else {
-                expectedRows.emplace(rightVector->GetValue(i));
-            }
+        if (rightVector->IsNull(i)) {
+            expNullCount++;
         } else {
-            auto rightVector = static_cast<Vector<V> *>(expectedVector);
-            if (rightVector->IsNull(i)) {
-                expNullCount++;
-            } else {
-                expectedRows.emplace(rightVector->GetValue(i));
-            }
+            expectedRows.emplace(rightVector->GetValue(i));
         }
     }
 
@@ -792,34 +720,35 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
     switch (expectedVector->GetTypeId()) {
         case OMNI_INT:
         case OMNI_DATE32: {
-            isMatched = CompareUnorderedRows<int32_t, int32_t>(resultVector, expectedVector, error);
+            isMatched = CompareUnorderedRows<int32_t, Vector<int32_t>>(resultVector, expectedVector, error);
             break;
         }
         case OMNI_SHORT: {
-            isMatched = CompareUnorderedRows<int16_t, int16_t>(resultVector, expectedVector, error);
+            isMatched = CompareUnorderedRows<int16_t, Vector<int16_t>>(resultVector, expectedVector, error);
             break;
         }
         case OMNI_DOUBLE: {
-            isMatched = CompareUnorderedRows<double, double>(resultVector, expectedVector, error);
+            isMatched = CompareUnorderedRows<double, Vector<double>>(resultVector, expectedVector, error);
             break;
         }
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64: {
-            isMatched = CompareUnorderedRows<int64_t, int64_t>(resultVector, expectedVector, error);
+            isMatched = CompareUnorderedRows<int64_t, Vector<int64_t>>(resultVector, expectedVector, error);
             break;
         }
         case OMNI_BOOLEAN: {
-            isMatched = CompareUnorderedRows<bool, bool>(resultVector, expectedVector, error);
+            isMatched = CompareUnorderedRows<bool, Vector<bool>>(resultVector, expectedVector, error);
             break;
         }
         case OMNI_DECIMAL128: {
-            isMatched = CompareUnorderedRows<Decimal128, Decimal128>(resultVector, expectedVector, error);
+            isMatched = CompareUnorderedRows<Decimal128, Vector<Decimal128>>(resultVector, expectedVector, error);
             break;
         }
         case OMNI_CHAR:
         case OMNI_VARCHAR: {
-            isMatched = CompareVarcharUnorderedRows(resultVector, expectedVector, error);
+            isMatched = CompareUnorderedRows<std::string_view, Vector<LargeStringContainer<std::string_view>>>(
+                resultVector, expectedVector, error);
             break;
         }
         case OMNI_CONTAINER: {
