@@ -11,7 +11,6 @@ else ()
     add_subdirectory(vector)
     add_subdirectory(function)
     add_subdirectory(memory)
-    add_subdirectory(simd)
 if (DEFINED ENABLE_BENCHMARK AND ENABLE_BENCHMARK STREQUAL "ON")
     add_subdirectory(benchmark)
 endif ()
@@ -29,7 +28,6 @@ endif ()
             parsertest
             typetest
             codegentest
-            simdtest
             )
 
     # find gtest package

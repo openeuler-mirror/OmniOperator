@@ -35,7 +35,6 @@ public:
         nullSlot = reinterpret_cast<Slot>(nullAddress);
         elementsSize = 0;
         capacity = defaultSize * sizeof(Slot);
-        size = defaultSize;
     }
 
     ArrayMap(const ArrayMap &) = delete;
@@ -82,26 +81,6 @@ public:
     ALWAYS_INLINE InsertResult<ValueType> EmptyResult()
     {
         return InsertResult<ValueType>(slots[0], false);
-    }
-
-    ALWAYS_INLINE bool* GetAssigned()
-    {
-        return isAssigned;
-    }
-
-    ALWAYS_INLINE ValueType* GetSlots()
-    {
-        return slots;
-    }
-
-    ALWAYS_INLINE size_t Size() const
-    {
-        return size;
-    }
-
-    ALWAYS_INLINE ValueType TransformPtr(int64_t ptr)
-    {
-        return reinterpret_cast<ValueType>(ptr);
     }
 
     template <class Func> void ForEachValue(Func &&func)
@@ -158,7 +137,6 @@ private:
     bool isNullAssigned = false;
     size_t elementsSize;
     uint64_t capacity;
-    int64_t size;
 };
 
 template <typename ValueType> using DefaultArrayMap = ArrayMap<ValueType *, OmniHashmapAllocator>;
