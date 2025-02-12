@@ -516,8 +516,7 @@ TEST(ProjectionTest, Doubles_DivideByZero)
     op->AddInput(t);
     VectorBatch *outputVecBatch = nullptr;
     op->GetOutput(&outputVecBatch);
-    double res = (reinterpret_cast<Vector<double> *>(outputVecBatch->Get(0)))->GetValue(3);
-    EXPECT_TRUE(isinf(res));
+    EXPECT_TRUE(outputVecBatch->Get(0)->IsNull(3));
 
     VectorHelper::FreeVecBatch(outputVecBatch);
     delete[] col1;
@@ -631,7 +630,7 @@ TEST(ProjectionTest, DoublesModulusByZero)
     op->GetOutput(&outputVecBatch);
     auto *res = (reinterpret_cast<Vector<double> *>(outputVecBatch->Get(0)));
     for (int32_t i = 0; i < numRows; i++) {
-        EXPECT_TRUE(-isnan(res->GetValue(i)));
+        EXPECT_TRUE(res->IsNull(i));
     }
 
     VectorHelper::FreeVecBatch(outputVecBatch);

@@ -45,9 +45,9 @@ extern "C" DLLEXPORT double SubtractDouble(double left, double right);
 
 extern "C" DLLEXPORT double MultiplyDouble(double left, double right);
 
-extern "C" DLLEXPORT double DivideDouble(double divident, double divisor);
+extern "C" DLLEXPORT double DivideDouble(bool *isNull, double divident, double divisor);
 
-extern "C" DLLEXPORT double ModulusDouble(double divident, double divisor);
+extern "C" DLLEXPORT double ModulusDouble(bool *isNull, double divident, double divisor);
 
 extern "C" DLLEXPORT bool LessThanDouble(double left, double right);
 
@@ -73,9 +73,15 @@ extern "C" DLLEXPORT int64_t SubtractInt64(int64_t left, int64_t right);
 
 extern "C" DLLEXPORT int64_t MultiplyInt64(int64_t left, int64_t right);
 
-extern "C" DLLEXPORT int64_t DivideInt64(int64_t contextPtr, int64_t divident, int64_t divisor);
+extern "C" DLLEXPORT int64_t DivideInt64(bool *isNull, int64_t divident, int64_t divisor);
 
-extern "C" DLLEXPORT int64_t ModulusInt64(int64_t contextPtr, int64_t divident, int64_t divisor);
+extern "C" DLLEXPORT int64_t ModulusInt64(bool *isNull, int64_t divident, int64_t divisor);
+
+extern "C" DLLEXPORT int64_t AddInt64RetNull(bool *isNull, int64_t left, int64_t right);
+
+extern "C" DLLEXPORT int64_t SubtractInt64RetNull(bool *isNull, int64_t left, int64_t right);
+
+extern "C" DLLEXPORT int64_t MultiplyInt64RetNull(bool *isNull, int64_t left, int64_t right);
 
 extern "C" DLLEXPORT bool LessThanInt64(int64_t left, int64_t right);
 
@@ -95,9 +101,15 @@ extern "C" DLLEXPORT int32_t SubtractInt32(int32_t left, int32_t right);
 
 extern "C" DLLEXPORT int32_t MultiplyInt32(int32_t left, int32_t right);
 
-extern "C" DLLEXPORT int32_t DivideInt32(int64_t contextPtr, int32_t divident, int32_t divisor);
+extern "C" DLLEXPORT int32_t DivideInt32(bool *isNull, int32_t divident, int32_t divisor);
 
-extern "C" DLLEXPORT int32_t ModulusInt32(int64_t contextPtr, int32_t divident, int32_t divisor);
+extern "C" DLLEXPORT int32_t ModulusInt32(bool *isNull, int32_t divident, int32_t divisor);
+
+extern "C" DLLEXPORT int32_t AddInt32RetNull(bool *isNull, int32_t left, int32_t right);
+
+extern "C" DLLEXPORT int32_t SubtractInt32RetNull(bool *isNull, int32_t left, int32_t right);
+
+extern "C" DLLEXPORT int32_t MultiplyInt32RetNull(bool *isNull, int32_t left, int32_t right);
 
 extern "C" DLLEXPORT bool LessThanInt32(int32_t left, int32_t right);
 

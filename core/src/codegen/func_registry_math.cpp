@@ -116,6 +116,30 @@ const std::string PowerFnStr()
     return powerFnStr;
 }
 
+const std::string TryAddFnStr()
+{
+    const std::string addFnStr = "try_add";
+    return addFnStr;
+}
+
+const std::string TrySubtractFnStr()
+{
+    const std::string subtractFnStr = "try_subtract";
+    return subtractFnStr;
+}
+
+const std::string TryMultiplyFnStr()
+{
+    const std::string multiplyFnStr = "try_multiply";
+    return multiplyFnStr;
+}
+
+const std::string TryDivideFnStr()
+{
+    const std::string tryDivideFnStr = "try_divide";
+    return tryDivideFnStr;
+}
+
 std::vector<Function> MathFunctionRegistry::GetFunctions()
 {
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
@@ -159,8 +183,12 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(AddInt64), AddFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(SubtractInt64), SubtractFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(MultiplyInt64), MultiplyFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
-        Function(reinterpret_cast<void *>(DivideInt64), DivideFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ModulusInt64), ModulusFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(DivideInt64), DivideFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(ModulusInt64), ModulusFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(AddInt64RetNull), TryAddFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(SubtractInt64RetNull), TrySubtractFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(MultiplyInt64RetNull), TryMultiplyFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(DivideInt64), TryDivideFnStr(), {}, longParams, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(LessThanInt64), LessThanFnStr(), {}, longParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(LessThanEqualInt64), LessThanEqualFnStr(), {}, longParams, OMNI_BOOLEAN,
             INPUT_DATA),
@@ -175,8 +203,12 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(AddInt32), AddFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(SubtractInt32), SubtractFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(MultiplyInt32), MultiplyFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
-        Function(reinterpret_cast<void *>(DivideInt32), DivideFnStr(), {}, intParams, OMNI_INT, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(ModulusInt32), ModulusFnStr(), {}, intParams, OMNI_INT, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(DivideInt32), DivideFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(ModulusInt32), ModulusFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(AddInt32RetNull), TryAddFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(SubtractInt32RetNull), TrySubtractFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(MultiplyInt32RetNull), TryMultiplyFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(DivideInt32), TryDivideFnStr(), {}, intParams, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(LessThanInt32), LessThanFnStr(), {}, intParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(LessThanEqualInt32), LessThanEqualFnStr(), {}, intParams, OMNI_BOOLEAN,
             INPUT_DATA),
