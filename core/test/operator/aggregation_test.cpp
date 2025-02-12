@@ -2542,6 +2542,65 @@ std::unique_ptr<AggregateState[]> NewAndInitState(Aggregator *agg, int32_t off =
     return state;
 }
 
+TEST(AggregatorTest, try_sum_test)
+{
+    int32_t rowCnt=200;
+    auto sumFactory=new TrySumSparkAggregatorFactory();
+    std::vector<int32_t>channel0={0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto sumAgg = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+        *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    sumAgg->SetExecutionContext(executionContext.get());
+    Vector<int64_t> *col = new Vector<int64_t>(rowCnt);
+    int64_t expectVal=0;
+    for (int32_t j = 0; j < rowCnt-1; ++j) {
+        col->SetValue(j, j);
+        expectVal+=j;
+    }
+    col->SetNull(rowCnt-1);
+    VectorBatch *vecBatch = new VectorBatch(rowCnt);
+    vecBatch->Append(col);
+    EXPECT_EQ(rowCnt, vecBatch->GetRowCount());
+
+    auto state = NewAndInitState(sumAgg.get());
+    sumAgg->ProcessGroup(state.get(), vecBatch, 0, rowCnt);
+    auto outputVector=VectorHelper::CreateVector(OMNI_FLAT, DataTypeId::OMNI_LONG, 1);
+    std::vector<BaseVector *> extractVectors{outputVector};
+    sumAgg->ExtractValues(state.get(), extractVectors, 0);
+    EXPECT_EQ(expectVal, dynamic_cast<Vector<NativeType<DataTypeId::OMNI_LONG>::type> *>(extractVectors[0])->GetValue(0));
+    delete outputVector;
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete sumFactory;
+}
+
+TEST(AggregatorTest, try_sum_overflow_test)
+{
+    int32_t rowCnt=2;
+    auto sumFactory=new TrySumSparkAggregatorFactory();
+    std::vector<int32_t>channel0={0};
+    auto executionContext = std::make_unique<ExecutionContext>();
+    auto sumAgg = sumFactory->CreateAggregator(*(AggregatorUtil::WrapWithDataTypes(LongType()).get()),
+                                               *(AggregatorUtil::WrapWithDataTypes(LongType()).get()), channel0, true, false, false);
+    sumAgg->SetExecutionContext(executionContext.get());
+    Vector<int64_t> *col = new Vector<int64_t>(rowCnt);
+    for (int32_t j = 0; j < rowCnt; ++j) {
+        col->SetValue(j, 9223372036854775807L);
+    }
+    VectorBatch *vecBatch = new VectorBatch(rowCnt);
+    vecBatch->Append(col);
+    EXPECT_EQ(rowCnt, vecBatch->GetRowCount());
+
+    auto state = NewAndInitState(sumAgg.get());
+    sumAgg->ProcessGroup(state.get(), vecBatch, 0, rowCnt);
+    auto outputVector=VectorHelper::CreateVector(OMNI_FLAT, DataTypeId::OMNI_LONG, 1);
+    std::vector<BaseVector *> extractVectors{outputVector};
+    sumAgg->ExtractValues(state.get(), extractVectors, 0);
+    EXPECT_TRUE(extractVectors[0]->IsNull(0));
+    delete outputVector;
+    VectorHelper::FreeVecBatch(vecBatch);
+    delete sumFactory;
+}
+
 TEST(AggregatorTest, sum_test)
 {
     ConfigUtil::SetSupportContainerVecRule(SupportContainerVecRule::SUPPORT);

@@ -456,6 +456,93 @@ TEST(FunctionTest, Pmod)
     }
 }
 
+TEST(FunctionTest, TryAdd)
+{
+    bool overflowFlag = false;
+    EXPECT_EQ(AddInt32RetNull(&overflowFlag, 2147483647, 1), -2147483648);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(AddInt32RetNull(&overflowFlag, -2147483648, -1), 2147483647);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(AddInt64RetNull(&overflowFlag, 9223372036854775807L, 1L), -9223372036854775808L);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(AddInt64RetNull(&overflowFlag, -9223372036854775808L, -1L), 9223372036854775807L);
+    EXPECT_TRUE(overflowFlag);
+}
+
+TEST(FunctionTest, TrySubtract)
+{
+    bool overflowFlag = false;
+    EXPECT_EQ(SubtractInt32RetNull(&overflowFlag, 2147483647, -1), -2147483648);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(SubtractInt32RetNull(&overflowFlag, -2147483648, 1), 2147483647);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(SubtractInt64RetNull(&overflowFlag, 9223372036854775807L, -1L), -9223372036854775808L);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(SubtractInt64RetNull(&overflowFlag, -9223372036854775808L, 1L), 9223372036854775807L);
+    EXPECT_TRUE(overflowFlag);
+}
+
+TEST(FunctionTest, TryMultiply)
+{
+    bool overflowFlag = false;
+    EXPECT_EQ(MultiplyInt32RetNull(&overflowFlag, 1073741824, 2), -2147483648);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(MultiplyInt32RetNull(&overflowFlag, -1073741825, 2), 2147483646);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(MultiplyInt64RetNull(&overflowFlag, 4611686018427387904L, 2L), -9223372036854775808L);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(MultiplyInt64RetNull(&overflowFlag, -4611686018427387905L, 2L), 9223372036854775806L);
+    EXPECT_TRUE(overflowFlag);
+}
+
+TEST(FunctionTest, Divide)
+{
+    bool nullFlag = false;
+    DivideInt32(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    DivideInt64(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    DivideDouble(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+}
+
+TEST(FunctionTest, Mod)
+{
+    bool nullFlag = false;
+    ModulusInt32(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    ModulusInt64(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    ModulusInt64(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+}
+
 TEST(FunctionTest, Round)
 {
     EXPECT_EQ(10, Round<int32_t>(10, 0));

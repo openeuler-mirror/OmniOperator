@@ -21,4 +21,5 @@
 #include "operator/aggregation/aggregator/mask_column_assistant_aggregator.h"
 #include "operator/aggregation/aggregator/typed_mask_column_assistant_aggregator.h"
 #include "operator/aggregation/aggregator/first_aggregator.h"
+#include "operator/aggregation/aggregator/try_sum_flatim_aggregator.h"
 #endif // OMNI_RUNTIME_ALL_AGGREGATORS_H

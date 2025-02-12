@@ -156,16 +156,16 @@ private:
         Value *rightIsNull, PHINode **leftPhi, PHINode **rightPhi);
 
     llvm::Value *BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
-        Value *rightIsNull);
+        Value *rightIsNull, Value *nullFlag = nullptr);
 
     Value *BinaryExprLongHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
-        Value *rightIsNull);
+        Value *rightIsNull, Value *nullFlag = nullptr);
 
     void BinaryExprDecimal64Helper(const BinaryExpr *binaryExpr, DecimalValue &left, DecimalValue &right,
         Value *leftIsNull, Value *rightIsNull);
 
     Value *BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
-        Value *rightIsNull);
+        Value *rightIsNull, Value *nullFlag = nullptr);
 
     Value *BinaryExprStringHelper(const BinaryExpr *binaryExpr, Value *leftVal, Value *leftLen, Value *rightVal,
         Value *rightLen, Value *leftIsNull, Value *rightIsNull);

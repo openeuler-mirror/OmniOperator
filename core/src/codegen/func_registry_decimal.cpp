@@ -202,6 +202,46 @@ const std::string ModDecimal64NullFnStr()
     return modDecimal64NullFnStr;
 }
 
+const std::string TryAddDecimal64FnStr()
+{
+    return "Try_add_decimal64";
+}
+
+const std::string TryAddDecimal128FnStr()
+{
+    return "Try_add_decimal128";
+}
+
+const std::string TrySubDecimal64FnStr()
+{
+    return "Try_sub_decimal64";
+}
+
+const std::string TrySubDecimal128FnStr()
+{
+    return "Try_sub_decimal128";
+}
+
+const std::string TryMulDecimal64FnStr()
+{
+    return "Try_mul_decimal64";
+}
+
+const std::string TryMulDecimal128FnStr()
+{
+    return "Try_mul_decimal128";
+}
+
+const std::string TryDivDecimal64FnStr()
+{
+    return "Try_div_decimal64";
+}
+
+const std::string TryDivDecimal128FnStr()
+{
+    return "Try_div_decimal128";
+}
+
 std::vector<Function> DecimalFunctionRegistry::GetFunctions()
 {
     std::vector<DataTypeId> paramTypes128 = { OMNI_DECIMAL128, OMNI_DECIMAL128 };
@@ -268,6 +308,16 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(AddDec128Dec64Dec128RetNull), AddDecimal128NullFnStr(), {}, paramTypes128Op64,
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(AddDec64Dec64Dec64RetNull), TryAddDecimal64FnStr(), {}, paramTypes64,
+                 retType64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(AddDec64Dec64Dec128RetNull), TryAddDecimal64FnStr(), {}, paramTypes64,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(AddDec64Dec128Dec128RetNull), TryAddDecimal64FnStr(), {}, paramTypes64Op128,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(AddDec128Dec128Dec128RetNull), TryAddDecimal128FnStr(), {}, paramTypes128,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(AddDec128Dec64Dec128RetNull), TryAddDecimal128FnStr(), {}, paramTypes128Op64,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
 
         Function(reinterpret_cast<void *>(SubDec64Dec64Dec64RetNull), SubDecimal64NullFnStr(), {}, paramTypes64,
             retType64, INPUT_DATA_AND_OVERFLOW_NULL),
@@ -279,6 +329,16 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(SubDec128Dec64Dec128RetNull), SubDecimal128NullFnStr(), {}, paramTypes128Op64,
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(SubDec64Dec64Dec64RetNull), TrySubDecimal64FnStr(), {}, paramTypes64,
+                 retType64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(SubDec64Dec64Dec128RetNull), TrySubDecimal64FnStr(), {}, paramTypes64,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(SubDec64Dec128Dec128RetNull), TrySubDecimal64FnStr(), {}, paramTypes64Op128,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(SubDec128Dec128Dec128RetNull), TrySubDecimal128FnStr(), {}, paramTypes128,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(SubDec128Dec64Dec128RetNull), TrySubDecimal128FnStr(), {}, paramTypes128Op64,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
 
         Function(reinterpret_cast<void *>(MulDec64Dec64Dec64RetNull), MulDecimal64NullFnStr(), {}, paramTypes64,
             retType64, INPUT_DATA_AND_OVERFLOW_NULL),
@@ -290,6 +350,16 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(MulDec128Dec64Dec128RetNull), MulDecimal128NullFnStr(), {}, paramTypes128Op64,
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(MulDec64Dec64Dec64RetNull), TryMulDecimal64FnStr(), {}, paramTypes64,
+                 retType64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(MulDec64Dec64Dec128RetNull), TryMulDecimal64FnStr(), {}, paramTypes64,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(MulDec64Dec128Dec128RetNull), TryMulDecimal64FnStr(), {}, paramTypes64Op128,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(MulDec128Dec128Dec128RetNull), TryMulDecimal128FnStr(), {}, paramTypes128,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(MulDec128Dec64Dec128RetNull), TryMulDecimal128FnStr(), {}, paramTypes128Op64,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
 
         Function(reinterpret_cast<void *>(DivDec64Dec64Dec64RetNull), DivDecimal64NullFnStr(), {}, paramTypes64,
             retType64, INPUT_DATA_AND_OVERFLOW_NULL),
@@ -305,6 +375,20 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(DivDec128Dec64Dec128RetNull), DivDecimal128NullFnStr(), {}, paramTypes128Op64,
             retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(DivDec64Dec64Dec64RetNull), TryDivDecimal64FnStr(), {}, paramTypes64,
+                 retType64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(DivDec64Dec128Dec64RetNull), TryDivDecimal64FnStr(), {}, paramTypes64Op128,
+                 retType64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(DivDec64Dec64Dec128RetNull), TryDivDecimal64FnStr(), {}, paramTypes64,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(DivDec64Dec128Dec128RetNull), TryDivDecimal64FnStr(), {}, paramTypes64Op128,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(DivDec128Dec128Dec128RetNull), TryDivDecimal128FnStr(), {}, paramTypes128,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(DivDec128Dec64Dec64RetNull), TryDivDecimal128FnStr(), {}, paramTypes128Op64,
+                 retType64, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(DivDec128Dec64Dec128RetNull), TryDivDecimal128FnStr(), {}, paramTypes128Op64,
+                 retType128, INPUT_DATA_AND_OVERFLOW_NULL),
 
         Function(reinterpret_cast<void *>(ModDec64Dec64Dec64RetNull), ModDecimal64NullFnStr(), {}, paramTypes64,
             retType64, INPUT_DATA_AND_OVERFLOW_NULL),

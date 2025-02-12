@@ -75,6 +75,16 @@ public class FunctionType extends Constant {
      */
     public static final FunctionType OMNI_WINDOW_TYPE_RANK = new FunctionType(12);
 
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_TRY_SUM.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_TRY_SUM = new FunctionType(13);
+
+    /**
+     * The constant OMNI_AGGREGATION_TYPE_TRY_AVG.
+     */
+    public static final FunctionType OMNI_AGGREGATION_TYPE_TRY_AVG = new FunctionType(14);
+
     private static final long serialVersionUID = 5337378607473315604L;
 
     /**

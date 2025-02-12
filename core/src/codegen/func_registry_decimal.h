@@ -23,6 +23,15 @@ const std::string mulDec64Str = "Mul_decimal64";
 const std::string divDec64Str = "Div_decimal64";
 const std::string modDec64Str = "Mod_decimal64";
 
+constexpr const char* tryAddDecimal64FnStr = "Try_add_decimal64";
+constexpr const char* tryAddDecimal128FnStr = "Try_add_decimal128";
+constexpr const char* trySubDecimal64FnStr = "Try_sub_decimal64";
+constexpr const char* trySubDecimal128FnStr = "Try_sub_decimal128";
+constexpr const char* tryMulDecimal64FnStr = "Try_mul_decimal64";
+constexpr const char* tryMulDecimal128FnStr = "Try_mul_decimal128";
+constexpr const char* tryDivDecimal64FnStr = "Try_div_decimal64";
+constexpr const char* tryDivDecimal128FnStr = "Try_div_decimal128";
+
 namespace omniruntime::codegen {
 class DecimalFunctionRegistry : public BaseFunctionRegistry {
 public:

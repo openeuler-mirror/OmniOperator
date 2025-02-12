@@ -253,14 +253,20 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         return;
     }
     if (bExpr->left->GetReturnTypeId() == OMNI_INT || bExpr->left->GetReturnTypeId() == OMNI_DATE32) {
+        Value *nullFlag = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "null_flag");
+        builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), nullFlag);
         this->value = make_shared<CodeGenValue>(
-            this->BinaryExprIntHelper(bExpr, left->data, right->data, left->isNull, right->isNull),
-            builder->CreateOr(left->isNull, right->isNull));
+            this->BinaryExprIntHelper(bExpr, left->data, right->data, left->isNull, right->isNull, nullFlag),
+            builder->CreateOr(builder->CreateOr(left->isNull, right->isNull),
+                              builder->CreateLoad(llvmTypes->I1Type(), nullFlag)));
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_LONG || bExpr->left->GetReturnTypeId() == OMNI_TIMESTAMP) {
+        Value *nullFlag = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "null_flag");
+        builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), nullFlag);
         this->value = make_shared<CodeGenValue>(
-            this->BinaryExprLongHelper(bExpr, left->data, right->data, left->isNull, right->isNull),
-            builder->CreateOr(left->isNull, right->isNull));
+            this->BinaryExprLongHelper(bExpr, left->data, right->data, left->isNull, right->isNull, nullFlag),
+            builder->CreateOr(builder->CreateOr(left->isNull, right->isNull),
+                              builder->CreateLoad(llvmTypes->I1Type(), nullFlag)));
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DECIMAL64) {
         auto decimalLeft = dynamic_cast<DecimalValue &>(*left.get());
@@ -280,9 +286,12 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
         this->BinaryExprDecimal64Helper(bExpr, decimalLeft, decimalRight, left->isNull, right->isNull);
         return;
     } else if (bExpr->left->GetReturnTypeId() == OMNI_DOUBLE) {
+        Value *nullFlag = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "null_flag");
+        builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), nullFlag);
         this->value = make_shared<CodeGenValue>(
-            this->BinaryExprDoubleHelper(bExpr, left->data, right->data, left->isNull, right->isNull),
-            builder->CreateOr(left->isNull, right->isNull));
+                this->BinaryExprDoubleHelper(bExpr, left->data, right->data, left->isNull, right->isNull, nullFlag),
+                builder->CreateOr(builder->CreateOr(left->isNull, right->isNull),
+                                  builder->CreateLoad(llvmTypes->I1Type(), nullFlag)));
         return;
     } else if (TypeUtil::IsStringType(bExpr->left->GetReturnTypeId())) {
         this->value = make_shared<CodeGenValue>(this->BinaryExprStringHelper(bExpr, left->data, left->length,
@@ -1285,7 +1294,9 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
 
     if (op == omniruntime::expressions::Operator::ADD || op == omniruntime::expressions::Operator::SUB ||
         op == omniruntime::expressions::Operator::MUL || op == omniruntime::expressions::Operator::DIV ||
-        op == omniruntime::expressions::Operator::MOD) {
+        op == omniruntime::expressions::Operator::MOD || op == omniruntime::expressions::Operator::TRY_ADD ||
+        op == omniruntime::expressions::Operator::TRY_SUB || op == omniruntime::expressions::Operator::TRY_MUL ||
+        op == omniruntime::expressions::Operator::TRY_DIV) {
         incomingBlock = builder->GetInsertBlock();
         nullBlock = BasicBlock::Create(*context, "nullBlock", builder->GetInsertBlock()->getParent());
         nextInst = BasicBlock::Create(*context, "nextInst", builder->GetInsertBlock()->getParent());
@@ -1346,7 +1357,7 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
 
 // Helper methods to parse binary expressions
 llvm::Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
-    Value *leftIsNull, Value *rightIsNull)
+    Value *leftIsNull, Value *rightIsNull, Value *nullFlag)
 {
     PHINode *leftPhi;
     PHINode *rightPhi;
@@ -1381,11 +1392,23 @@ llvm::Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr
             return CallExternFunction("multiply", intParams, OMNI_INT, { leftPhi, rightPhi }, nullptr,
                 "arithmetic_mul");
         case omniruntime::expressions::Operator::DIV:
-            return CallExternFunction("divide", intParams, OMNI_INT, { leftPhi, rightPhi },
-                codegenContext->executionContext, "arithmetic_div");
+            return CallExternFunction("divide", intParams, OMNI_INT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_div");
         case omniruntime::expressions::Operator::MOD:
-            return CallExternFunction("modulus", intParams, OMNI_INT, { leftPhi, rightPhi },
-                codegenContext->executionContext, "arithmetic_mod");
+            return CallExternFunction("modulus", intParams, OMNI_INT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_mod");
+        case omniruntime::expressions::Operator::TRY_ADD:
+            return CallExternFunction("try_add", intParams, OMNI_INT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_add");
+        case omniruntime::expressions::Operator::TRY_SUB:
+            return CallExternFunction("try_subtract", intParams, OMNI_INT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_sub");
+        case omniruntime::expressions::Operator::TRY_MUL:
+            return CallExternFunction("try_multiply", intParams, OMNI_INT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_mul");
+        case omniruntime::expressions::Operator::TRY_DIV:
+            return CallExternFunction("divide", intParams, OMNI_INT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_div");
         default: {
             LogError("Unsupported int binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
@@ -1394,7 +1417,7 @@ llvm::Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr
 }
 
 Value *ExpressionCodeGen::BinaryExprLongHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
-    Value *leftIsNull, Value *rightIsNull)
+    Value *leftIsNull, Value *rightIsNull, Value *nullFlag)
 {
     PHINode *leftPhi;
     PHINode *rightPhi;
@@ -1429,11 +1452,23 @@ Value *ExpressionCodeGen::BinaryExprLongHelper(const BinaryExpr *binaryExpr, Val
             return CallExternFunction("multiply", longParams, OMNI_LONG, { leftPhi, rightPhi }, nullptr,
                 "larithmetic_mul");
         case omniruntime::expressions::Operator::DIV:
-            return CallExternFunction("divide", longParams, OMNI_LONG, { leftPhi, rightPhi },
-                codegenContext->executionContext, "larithmetic_divide");
+            return CallExternFunction("divide", longParams, OMNI_LONG, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "larithmetic_divide");
         case omniruntime::expressions::Operator::MOD:
-            return CallExternFunction("modulus", longParams, OMNI_LONG, { leftPhi, rightPhi },
-                codegenContext->executionContext, "larithmetic_mod");
+            return CallExternFunction("modulus", longParams, OMNI_LONG, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "larithmetic_mod");
+        case omniruntime::expressions::Operator::TRY_ADD:
+            return CallExternFunction("try_add", longParams, OMNI_LONG, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "larithmetic_try_add");
+        case omniruntime::expressions::Operator::TRY_SUB:
+            return CallExternFunction("try_subtract", longParams, OMNI_LONG, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "larithmetic_try_sub");
+        case omniruntime::expressions::Operator::TRY_MUL:
+            return CallExternFunction("try_multiply", longParams, OMNI_LONG, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "larithmetic_try_mul");
+        case omniruntime::expressions::Operator::TRY_DIV:
+            return CallExternFunction("divide", longParams, OMNI_LONG, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "larithmetic_try_divide");
         default: {
             LogWarn("Unsupported long binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
@@ -1472,6 +1507,8 @@ void ExpressionCodeGen::BinaryExprDecimal64Helper(const BinaryExpr *binaryExpr, 
     std::string decimal64CmpFuncId = FunctionSignature(decimal64CompareStr, params, OMNI_INT).ToString();
     AllocaInst *overflowNull = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "overflow_null");
     builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), overflowNull);
+
+    bool isTryExpr = false;
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(
@@ -1528,6 +1565,35 @@ void ExpressionCodeGen::BinaryExprDecimal64Helper(const BinaryExpr *binaryExpr, 
                 this->overflowConfig, overflowNull);
             break;
         }
+        case omniruntime::expressions::Operator::TRY_ADD:{
+            isTryExpr = true;
+            auto ptr = std::make_unique<omniruntime::op::OverflowConfig>(omniruntime::op::OverflowConfigId::OVERFLOW_CONFIG_NULL);
+            std::string funcId = FunctionSignature(tryAddDecimal64FnStr, params, returnTypeId).ToString();
+            output= CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext, ptr.get(), overflowNull);
+            break;
+        }
+        case omniruntime::expressions::Operator::TRY_SUB: {
+            isTryExpr = true;
+            auto ptr = std::make_unique<omniruntime::op::OverflowConfig>(omniruntime::op::OverflowConfigId::OVERFLOW_CONFIG_NULL);
+            std::string funcId = FunctionSignature(trySubDecimal64FnStr, params, returnTypeId).ToString();
+
+            output = CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext, ptr.get(), overflowNull);
+            break;
+        }
+        case omniruntime::expressions::Operator::TRY_MUL: {
+            isTryExpr = true;
+            auto ptr = std::make_unique<omniruntime::op::OverflowConfig>(omniruntime::op::OverflowConfigId::OVERFLOW_CONFIG_NULL);
+            std::string funcId = FunctionSignature(tryMulDecimal64FnStr, params, returnTypeId).ToString();
+            output = CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext, ptr.get(), overflowNull);
+            break;
+        }
+        case omniruntime::expressions::Operator::TRY_DIV: {
+            isTryExpr = true;
+            auto ptr = std::make_unique<omniruntime::op::OverflowConfig>(omniruntime::op::OverflowConfigId::OVERFLOW_CONFIG_NULL);
+            std::string funcId = FunctionSignature(tryDivDecimal64FnStr, params, returnTypeId).ToString();
+            output = CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext, ptr.get(), overflowNull);
+            break;
+        }
         default: {
             LogWarn("Unsupported decimal64 binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             output = nullptr;
@@ -1542,14 +1608,15 @@ void ExpressionCodeGen::BinaryExprDecimal64Helper(const BinaryExpr *binaryExpr, 
         valuePtr = std::make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     }
 
-    if (overflowConfig != nullptr && overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+    if (isTryExpr || (overflowConfig != nullptr &&
+    overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL)) {
         valuePtr->isNull = builder->CreateOr(valuePtr->isNull, builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
     }
     this->value = valuePtr;
 }
 
 Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
-    Value *leftIsNull, Value *rightIsNull)
+    Value *leftIsNull, Value *rightIsNull, Value *nullFlag)
 {
     PHINode *leftPhi;
     PHINode *rightPhi;
@@ -1585,11 +1652,23 @@ Value *ExpressionCodeGen::BinaryExprDoubleHelper(const BinaryExpr *binaryExpr, V
             return CallExternFunction("multiply", doubleParams, OMNI_DOUBLE, { leftPhi, rightPhi }, nullptr,
                 "farithmetic_mul");
         case omniruntime::expressions::Operator::DIV:
-            return CallExternFunction("divide", doubleParams, OMNI_DOUBLE, { leftPhi, rightPhi }, nullptr,
+            return CallExternFunction("divide", doubleParams, OMNI_DOUBLE, { nullFlag, leftPhi, rightPhi }, nullptr,
                 "farithmetic_divide");
         case omniruntime::expressions::Operator::MOD:
-            return CallExternFunction("modulus", doubleParams, OMNI_DOUBLE, { leftPhi, rightPhi }, nullptr,
+            return CallExternFunction("modulus", doubleParams, OMNI_DOUBLE, { nullFlag, leftPhi, rightPhi }, nullptr,
                 "farithmetic_mod");
+        case omniruntime::expressions::Operator::TRY_ADD:
+            return CallExternFunction("add", doubleParams, OMNI_DOUBLE, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_add");
+        case omniruntime::expressions::Operator::TRY_SUB:
+            return CallExternFunction("subtract", doubleParams, OMNI_DOUBLE, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_sub");
+        case omniruntime::expressions::Operator::TRY_MUL:
+            return CallExternFunction("multiply", doubleParams, OMNI_DOUBLE, { leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_mul");
+        case omniruntime::expressions::Operator::TRY_DIV:
+            return CallExternFunction("divide", doubleParams, OMNI_DOUBLE, { nullFlag, leftPhi, rightPhi }, nullptr,
+                                      "farithmetic_divide");
         default: {
             LogWarn("Unsupported double binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             return nullptr;
@@ -1661,6 +1740,8 @@ void ExpressionCodeGen::BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr,
     std::string decimal128CmpFuncId = FunctionSignature(decimal128CompareStr, params, OMNI_INT).ToString();
     AllocaInst *overflowNull = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "overflow_null");
     builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), overflowNull);
+
+    bool isTryExpr = false;
     switch (binaryExpr->op) {
         case omniruntime::expressions::Operator::LT:
             output = builder->CreateAnd(isNeitherNull, builder->CreateICmpSLT(
@@ -1717,6 +1798,34 @@ void ExpressionCodeGen::BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr,
                 this->overflowConfig, overflowNull);
             break;
         }
+        case omniruntime::expressions::Operator::TRY_ADD:{
+            isTryExpr = true;
+            auto ptr = std::make_unique<omniruntime::op::OverflowConfig>(omniruntime::op::OverflowConfigId::OVERFLOW_CONFIG_NULL);
+            std::string funcId = FunctionSignature(tryAddDecimal128FnStr, params, returnTypeId).ToString();
+            output= CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext, ptr.get(), overflowNull);
+            break;
+        }
+        case omniruntime::expressions::Operator::TRY_SUB: {
+            isTryExpr = true;
+            auto ptr = std::make_unique<omniruntime::op::OverflowConfig>(omniruntime::op::OverflowConfigId::OVERFLOW_CONFIG_NULL);
+            std::string funcId = FunctionSignature(trySubDecimal128FnStr, params, returnTypeId).ToString();
+            output = CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext,ptr.get(), overflowNull);
+            break;
+        }
+        case omniruntime::expressions::Operator::TRY_MUL: {
+            isTryExpr = true;
+            auto ptr = std::make_unique<omniruntime::op::OverflowConfig>(omniruntime::op::OverflowConfigId::OVERFLOW_CONFIG_NULL);
+            std::string funcId = FunctionSignature(tryMulDecimal128FnStr, params, returnTypeId).ToString();
+            output = CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext, ptr.get(), overflowNull);
+            break;
+        }
+        case omniruntime::expressions::Operator::TRY_DIV: {
+            isTryExpr = true;
+            auto ptr = std::make_unique<omniruntime::op::OverflowConfig>(omniruntime::op::OverflowConfigId::OVERFLOW_CONFIG_NULL);
+            std::string funcId = FunctionSignature(tryDivDecimal128FnStr, params, returnTypeId).ToString();
+            output = CallDecimalFunction(funcId, returnType, argVals, codegenContext->executionContext, ptr.get(), overflowNull);
+            break;
+        }
         default: {
             LogWarn("Unsupported decimal128 binary operator %u", static_cast<uint32_t>(binaryExpr->op));
             output = nullptr;
@@ -1731,7 +1840,8 @@ void ExpressionCodeGen::BinaryExprDecimal128Helper(const BinaryExpr *binaryExpr,
         valuePtr = std::make_shared<CodeGenValue>(output, builder->CreateOr(leftIsNull, rightIsNull));
     }
 
-    if (overflowConfig != nullptr && overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL) {
+    if (isTryExpr || (overflowConfig != nullptr &&
+    overflowConfig->GetOverflowConfigId() == omniruntime::op::OVERFLOW_CONFIG_NULL)) {
         valuePtr->isNull = builder->CreateOr(valuePtr->isNull, builder->CreateLoad(llvmTypes->I1Type(), overflowNull));
     }
     this->value = valuePtr;

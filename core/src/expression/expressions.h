@@ -37,6 +37,10 @@ enum class Operator {
     MUL,
     DIV,
     MOD,
+    TRY_ADD,
+    TRY_SUB,
+    TRY_MUL,
+    TRY_DIV,
     INVALIDOP
 };
 
@@ -78,6 +82,10 @@ const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
     { "MULTIPLY", Operator::MUL },
     { "DIVIDE", Operator::DIV },
     { "MODULUS", Operator::MOD },
+    {"TRY_ADD", Operator::TRY_ADD},
+    {"TRY_SUBTRACT", Operator::TRY_SUB},
+    {"TRY_MULTIPLY", Operator::TRY_MUL},
+    {"TRY_DIVIDE", Operator::TRY_DIV}
 };
 
 bool IsNullLiteral(const std::string &value);
