@@ -418,6 +418,13 @@ void LookupJoinOperator::ArrayJoinProbe(BaseVector ***buildColumns, size_t probe
     int32_t numProbeRows = curInputBatch->GetRowCount();
     bool hasProduceRow = false;
     for (; probePosition < numProbeRows; probePosition++) {
+        if (curProbeNulls[probePosition]) {
+            if constexpr (joinType == OMNI_JOIN_TYPE_LEFT ||
+                          joinType == OMNI_JOIN_TYPE_FULL || joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
+                outputBuilder->AppendRow(probePosition, nullptr, 0);
+            }
+            continue;
+        }
         auto result = arg.Find(probeSerializers, contextPtr, probeHashColumns, probeHashColsCount,
                                probePosition, partitionMask);
         if constexpr (joinType == OMNI_JOIN_TYPE_LEFT ||
