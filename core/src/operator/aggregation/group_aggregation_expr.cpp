@@ -216,21 +216,6 @@ uint64_t HashAggregationWithExprOperator::GetSpilledBytes()
     return hashAggOperator->GetSpilledBytes();
 }
 
-uint64_t HashAggregationWithExprOperator::GetUsedMemBytes()
-{
-    return hashAggOperator->GetUsedMemBytes();
-}
-
-uint64_t HashAggregationWithExprOperator::GetTotalMemBytes()
-{
-    return hashAggOperator->GetTotalMemBytes();
-}
-
-std::vector<uint64_t> HashAggregationWithExprOperator::GetSpecialMetricsInfo()
-{
-    return hashAggOperator->GetSpecialMetricsInfo();
-}
-
 uint64_t HashAggregationWithExprOperator::GetHashMapUniqueKeys()
 {
     return hashAggOperator->GetHashMapUniqueKeys();

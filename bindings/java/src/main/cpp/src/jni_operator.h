@@ -48,14 +48,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpil
 
 /*
  * Class:     nova_hetu_omniruntime_operator_OmniOperator
- * Method:    getMetricsInfoNative
- * Signature: (J)J
- */
-JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getMetricsInfoNative(JNIEnv *, jobject,
-    jlong);
-
-/*
- * Class:     nova_hetu_omniruntime_operator_OmniOperator
  * Method:    alignSchemaNative
  * Signature: (JJ)[Lnova/hetu/omniruntime/vector/VecBatch
  */
