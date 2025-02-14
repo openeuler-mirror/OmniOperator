@@ -44,9 +44,6 @@ public final class OmniOperator implements AutoCloseable {
     // getSpilledBytes
     private static native long getSpilledBytesNative(long nativeOperator);
 
-    // getMetricsInfo
-    private static native long[] getMetricsInfoNative(long nativeOperator);
-
     // getHashMapUniqueKeys called by the adaptive partial hashagg optimization
     private static native long getHashMapUniqueKeysNative(long nativeOperator);
 
@@ -91,15 +88,6 @@ public final class OmniOperator implements AutoCloseable {
      */
     public long getSpilledBytes() {
         return getSpilledBytesNative(nativeOperator);
-    }
-
-    /**
-     * Get all Metrics info.
-     *
-     * @return the metrics info array
-     */
-    public long[] getMetricsInfo() {
-        return getMetricsInfoNative(nativeOperator);
     }
 
     /**
