@@ -12,7 +12,7 @@ TypedAggregator::TypedAggregator(const FunctionType aggregateType, const DataTyp
 {}
 
 BaseVector *TypedAggregator::GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-     std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx)
+    std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx)
 {
 #ifdef DEBUG
     if (channelIdx < 0 || channelIdx >= channels.size()) {

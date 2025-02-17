@@ -16,9 +16,9 @@ std::vector<Function> BatchVarcharVectorFunctionRegistry::GetFunctions()
     std::vector<Function> batchVarcharVectorFnRegistry = { Function(reinterpret_cast<void *>(BatchWrapVarcharVector),
         "batch_WrapVarcharVector", {}, paramTypes, OMNI_INT),
         Function(reinterpret_cast<void *>(BatchNullArrayToBits), "batch_NullArrayToBits", {}, { OMNI_BOOLEAN },
-        OMNI_BOOLEAN),
+            OMNI_BOOLEAN),
         Function(reinterpret_cast<void *>(BatchBitsToNullArray), "batch_BitsToNullArray", {}, { OMNI_BOOLEAN },
-        OMNI_BOOLEAN) };
+            OMNI_BOOLEAN) };
     return batchVarcharVectorFnRegistry;
 }
 }

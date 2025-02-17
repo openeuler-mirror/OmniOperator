@@ -326,8 +326,9 @@ void Projection::ProjectHelperVarWidth(VectorBatch &vecBatch, int64_t *valueAddr
     ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &outTypeId) const
 {
     this->projector(valueAddrs, vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec), selectedRows,
-        numSelectedRows, nullAddrs, offsetAddrs,reinterpret_cast<int32_t *>(unsafe::UnsafeBaseVector::GetNulls(outVec)),
-        nullptr, reinterpret_cast<int64_t>(context), dictionaryVectors);
+        numSelectedRows, nullAddrs, offsetAddrs,
+        reinterpret_cast<int32_t *>(unsafe::UnsafeBaseVector::GetNulls(outVec)), nullptr,
+        reinterpret_cast<int64_t>(context), dictionaryVectors);
 }
 
 void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAddrs, int64_t *nullAddrs,

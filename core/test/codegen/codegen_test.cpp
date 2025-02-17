@@ -1641,7 +1641,7 @@ TEST(CodeGenTest, IsNull)
     auto *selected = new int32_t[1];
 
     auto **bitmap = new uint8_t *[1];
-    bitmap[0] = new uint8_t[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
     BitUtil::SetBit(bitmap[0], 0, false);
 
     auto **offsets = new int32_t *[1];
@@ -1695,7 +1695,7 @@ TEST(CodeGenTest, IsNotNull)
     auto *selected = new int32_t[1];
 
     auto **bitmap = new uint8_t *[1];
-    bitmap[0] = new uint8_t[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
     BitUtil::SetBit(bitmap[0], 0, false);
 
     auto **offsets = new int32_t *[1];
@@ -2253,7 +2253,7 @@ TEST(CodeGenTest, Pmod)
     auto *selected = new int32_t[1];
 
     auto **bitmap = new uint8_t *[1];
-    bitmap[0] = new uint8_t[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
     BitUtil::SetBit(bitmap[0], 0, false);
     auto **offsets = new int32_t *[1];
     offsets[0] = new int32_t[1];

@@ -25,7 +25,7 @@ template <typename... Ts> struct Arguments {
     int rowCount;
     int colCount = 3;
     int32_t *selected;
-    bool **bitmap;
+    uint8_t **bitmap;
     int32_t **offsets;
     int64_t context;
     int64_t dictionaries[5] = {};
@@ -43,9 +43,9 @@ template <typename... Ts> struct Arguments {
 
         selected = new int32_t[rowCount];
 
-        bitmap = new bool *[colCount];
+        bitmap = new uint8_t *[colCount];
         for (int i = 0; i < colCount; i++) {
-            bitmap[i] = new bool[rowCount] { false };
+            bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(rowCount)] { 0 };
         }
 
         offsets = new int32_t *[colCount];

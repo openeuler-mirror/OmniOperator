@@ -764,7 +764,6 @@ public:
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
         }
 
-
         auto destNulls = unsafe::UnsafeBaseVector::GetNulls(destVector);
         auto srcNulls = unsafe::UnsafeBaseVector::GetNulls(srcVector);
         BitUtil::CopyBits(reinterpret_cast<uint64_t *>(srcNulls), offset, reinterpret_cast<uint64_t *>(destNulls), 0,
