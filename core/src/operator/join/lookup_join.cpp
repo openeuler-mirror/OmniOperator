@@ -654,7 +654,33 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     return;
                 }
             }
-            for (int32_t probePosition = curProbePosition; probePosition < inputRowCount; probePosition++) {
+
+            int64_t cacheKeyValue = 0;
+            bool isInsert = true;
+            typename std::decay_t<decltype(arg)>::Mapped *rowRefList = nullptr;
+            int32_t probePosition = curProbePosition;
+            if constexpr (std::remove_reference_t<decltype(arg)>::IS_SIMPLE_KEY) {
+                for (; probePosition < inputRowCount; probePosition++) {
+                    if (curProbeNulls[probePosition]) {
+                        continue;
+                    }
+                    if constexpr (!singleHT) {
+                        partition = HashUtil::GetRawHashPartition(curProbeHashes[probePosition], partitionMask);
+                    }
+
+                    auto result = arg.Find(probeSerializers, contextPtr, probeHashColumns, probeHashColsCount,
+                                           probePosition, partition);
+                    isInsert = result.IsInsert();
+                    if (!isInsert) {
+                        continue;
+                    }
+                    rowRefList = result.GetValue();
+                    cacheKeyValue = arg.GetKeyValue(probeHashColumns, probePosition);
+                    break;
+                }
+            }
+
+            for (; probePosition < inputRowCount; probePosition++) {
                 if (curProbeNulls[probePosition]) {
                     continue;
                 }
@@ -664,14 +690,34 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     buildColumns = arg.GetColumns(partition);
                     InitForProbe<hasJoinFilter>(partition, false);
                 }
-
-                auto result = arg.Find(probeSerializers, contextPtr, probeHashColumns, probeHashColsCount,
-                                       probePosition, partition);
-                if (!result.IsInsert()) {
-                    continue;
+                if constexpr (std::remove_reference_t<decltype(arg)>::IS_SIMPLE_KEY) {
+                    auto keyValue = arg.GetKeyValue(probeHashColumns, probePosition);
+                    if (keyValue != cacheKeyValue) {
+                        cacheKeyValue = keyValue;
+                        auto result = arg.Find(probeSerializers, contextPtr, probeHashColumns, probeHashColsCount,
+                            probePosition, partition);
+                        isInsert = result.IsInsert();
+                        if (!isInsert) {
+                            continue;
+                        }
+                        rowRefList = result.GetValue();
+                    } else {
+                        if (!isInsert) {
+                            continue;
+                        }
+                    }
+                } else {
+                    auto result = arg.Find(probeSerializers, contextPtr, probeHashColumns, probeHashColsCount,
+                        probePosition, partition);
+                    isInsert = result.IsInsert();
+                    if (!isInsert) {
+                        continue;
+                    }
+                    rowRefList = result.GetValue();
                 }
+
                 // probe matched in hash table
-                auto it = result.GetValue()->Begin();
+                auto it = rowRefList->Begin();
                 ProbeJoinPosition<hasJoinFilter>(probePosition);
 
                 while (it.IsOk()) {

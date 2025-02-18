@@ -117,6 +117,8 @@ public:
         ExecutionContext *probeArena, BaseVector **probeHashColumns, int32_t probeHashColCount, int32_t probePosition,
         uint32_t partition);
 
+    KeyType GetKeyValue(BaseVector **probeHashColumns, int32_t probePosition);
+
     void PositionVisited(ForwardIterator<RowRefListType> it)
     {
         if constexpr (std::is_same_v<RowRefListType, RowRefListWithFlags>) {

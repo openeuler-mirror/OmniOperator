@@ -191,6 +191,21 @@ InsertResult<RowRefListType *> JoinHashTableVariants<KeyType, RowRefListType>::F
     }
 }
 
+template<typename KeyType, typename RowRefListType>
+KeyType JoinHashTableVariants<KeyType, RowRefListType>::GetKeyValue(BaseVector **probeHashColumns,
+    int32_t probePosition)
+{
+    KeyType key;
+    if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
+        auto curVector = reinterpret_cast<Vector<KeyType> *>(probeHashColumns[0]);
+        key = curVector->GetValue(probePosition);
+    } else {
+        auto curVector = reinterpret_cast<Vector<DictionaryContainer<KeyType>> *>(probeHashColumns[0]);
+        key = curVector->GetValue(probePosition);
+    }
+    return key;
+}
+
 template <typename KeyType, typename RowRefListType>
 template <typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceFixedKey(HashTableType &hashTable, int32_t partitionIndex,
