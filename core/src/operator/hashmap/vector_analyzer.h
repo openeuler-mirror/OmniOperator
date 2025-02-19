@@ -30,10 +30,10 @@ public:
 
     bool IsArrayHashTableType();
 
-    bool DecideHashMode(omniruntime::vec::VectorBatch * vectorBatch);
+    bool DecideHashMode(omniruntime::vec::VectorBatch*& vectorBatch);
 
     template <typename T>
-    inline int64_t ToInt64(T value) const 
+    inline int64_t ToInt64(T value) const
     {
         return value;
     }
@@ -46,7 +46,7 @@ private:
     T ComputerKey(const T value);
 
     template <type::DataTypeId typeId>
-    bool HandleInputValues(omniruntime::vec::VectorBatch * vectorBatch, int32_t idx);
+    bool HandleInputValues(omniruntime::vec::VectorBatch*& vectorBatch, int32_t idx);
 
     std::vector<ColumnIndex> groupByCols;
 

@@ -54,7 +54,7 @@ T VectorAnalyzer::ComputerKey(const T value)
     return value - static_cast<T>(groupbyColsRange.min);
 }
 
-bool VectorAnalyzer::DecideHashMode(omniruntime::vec::VectorBatch * vectorBatch)
+bool VectorAnalyzer::DecideHashMode(omniruntime::vec::VectorBatch*& vectorBatch)
 {
     // skip analyze value
     if (hashMode == HashTableType::NORMAL_HASH_TABLE) {
@@ -93,7 +93,7 @@ bool VectorAnalyzer::DecideHashMode(omniruntime::vec::VectorBatch * vectorBatch)
 }
 
 template <type::DataTypeId typeId>
-bool VectorAnalyzer::HandleInputValues(omniruntime::vec::VectorBatch * vectorBatch, int32_t idx)
+bool VectorAnalyzer::HandleInputValues(omniruntime::vec::VectorBatch*& vectorBatch, int32_t idx)
 {
     using RawDataType = typename NativeAndVectorType<typeId>::type;
     using RawVectorType = typename NativeAndVectorType<typeId>::vector;
