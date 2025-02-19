@@ -13,21 +13,19 @@
 namespace omniruntime {
 namespace op {
 
-static constexpr uint32_t ARRAY_THRESHOLD = 8;
-
 enum class HashTableType {
     NORMAL_HASH_TABLE,
     ARRAY_HASH_TABLE
 };
 
 struct ArrayRange {
-  int64_t min = 1;
-  int64_t max = 0;
+    int64_t min = 1;
+    int64_t max = 0;
 };
 
 class VectorAnalyzer {
 public:
-    VectorAnalyzer(std::vector<ColumnIndex> &groupByCols) : groupByCols(groupByCols) {
+    explicit VectorAnalyzer(std::vector<ColumnIndex> &groupByCols) : groupByCols(groupByCols) {
     }
 
     bool IsArrayHashTableType();
@@ -35,7 +33,8 @@ public:
     bool DecideHashMode(omniruntime::vec::VectorBatch * vectorBatch);
 
     template <typename T>
-    inline int64_t toInt64(T value) const {
+    inline int64_t ToInt64(T value) const 
+    {
         return value;
     }
 

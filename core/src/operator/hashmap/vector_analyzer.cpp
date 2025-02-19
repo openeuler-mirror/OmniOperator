@@ -7,23 +7,24 @@
 namespace omniruntime {
 namespace op {
 
+static constexpr uint32_t ARRAY_THRESHOLD = 8;
+
 template <typename T>
 bool VectorAnalyzer::CheckArrayMap(const T* values, const size_t length)
 {
-    int64_t min = groupbyColsRange.min; 
+    int64_t min = groupbyColsRange.min;
     int64_t max = groupbyColsRange.max;
     auto rangeUpperBound = max - min;
     int64_t uint32Max = UINT32_MAX;
     const auto [minPtr, maxPtr] = std::minmax_element(values, values + length);
-    max = std::max(max, toInt64(*maxPtr));
-    min = std::min(min, toInt64(*minPtr));
-
+    max = std::max(max, ToInt64(*maxPtr));
+    min = std::min(min, ToInt64(*minPtr));
     if (max > 0 && min < 0 && min + ARRAY_THRESHOLD * rangeUpperBound < max) {
         return false;
     }
     if (max - min > uint32Max) {
         return false;
-    } 
+    }
 
     if (max < min) {
         return false;
@@ -36,7 +37,7 @@ bool VectorAnalyzer::CheckArrayMap(const T* values, const size_t length)
         return false;
     }
 
-    //upate range and exppand size
+    // upate range and exppand size
     if (groupbyColsRange.max < max) {
         groupbyColsRange.max = max;
     }
@@ -55,7 +56,7 @@ T VectorAnalyzer::ComputerKey(const T value)
 
 bool VectorAnalyzer::DecideHashMode(omniruntime::vec::VectorBatch * vectorBatch)
 {
-    // skip analyze value 
+    // skip analyze value
     if (hashMode == HashTableType::NORMAL_HASH_TABLE) {
         return false;
     }
@@ -64,7 +65,7 @@ bool VectorAnalyzer::DecideHashMode(omniruntime::vec::VectorBatch * vectorBatch)
     // current only support one columnar for array mode
     if (groupColNum != 1) {
         hashMode = HashTableType::NORMAL_HASH_TABLE;
-        return false; 
+        return false;
     }
     
     bool blChangeMap = false;
@@ -101,7 +102,7 @@ bool VectorAnalyzer::HandleInputValues(omniruntime::vec::VectorBatch * vectorBat
     auto rowCount = vectorBatch->GetRowCount();
     if (vector->GetEncoding() != OMNI_DICTIONARY) {
         auto valuePtr = unsafe::UnsafeVector::GetRawValues(static_cast<RawVectorType *>(vector));
-        if(!CheckArrayMap<RawDataType>(valuePtr, rowCount)) {
+        if (!CheckArrayMap<RawDataType>(valuePtr, rowCount)) {
             hashMode = HashTableType::NORMAL_HASH_TABLE;
             return true;
         }
