@@ -1579,16 +1579,6 @@ void LookupJoinOutputBuilder::BuildOutput(
         }
         ConstructExistenceColumn(outputPtr);
     } else {
-        const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *tempIndex =
-                probeBuildIndex.data() + probeRowOffset;
-        std::stable_sort(probeBuildIndex.begin() + probeRowOffset, probeBuildIndex.begin() + probeRowOffset + rowCount,
-            [](const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> &a,
-               const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> &b) {
-                if (std::get<2>(a) == std::get<2>(b)) {
-                    return std::get<3>(a) < std::get<3>(b);
-                }
-                return std::get<2>(a) < std::get<2>(b);
-            });
         if (!probeOutputCols.empty()) {
             // only probe side will produce dic vector
             ConstructProbeColumns(outputPtr, probeOutputColumns, rowCount);

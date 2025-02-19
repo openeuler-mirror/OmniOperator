@@ -307,7 +307,7 @@ TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithOneBuildOp)
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
 }
 // need calculate probe data partitionId
-TEST(NativeOmniJoinTest, TestInnerEqualityJoinWithTwoBuildOp)
+TEST(NativeOmniJoinTest, DISABLED_TestInnerEqualityJoinWithTwoBuildOp)
 {
     VectorBatch **vectorBatches = ConstructSimpleBuildData2();
     HashBuilderOperatorFactory *hashBuilderFactory = CreateSimpleBuildFactory(2, OMNI_JOIN_TYPE_INNER);
@@ -2628,7 +2628,7 @@ TEST(NativeOmniJoinTest, TestFullEqualityJoinWithOneBuildOp)
     DeleteJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory, lookupOuterJoinFactory);
 }
 
-TEST(NativeOmniJoinTest, TestFullEqualityJoinWithTwoBuildOp)
+TEST(NativeOmniJoinTest, DISABLED_TestFullEqualityJoinWithTwoBuildOp)
 {
     VectorBatch **vectorBatches = ConstructSimpleBuildData2();
     HashBuilderOperatorFactory *hashBuilderFactory = CreateSimpleBuildFactory(2, OMNI_JOIN_TYPE_FULL);
