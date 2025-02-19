@@ -134,6 +134,11 @@ public:
         return visitedCounts;
     }
 
+    ALWAYS_INLINE bool GetIsMultiCols() const
+    {
+        return isMultiCols;
+    }
+
     ALWAYS_INLINE uint32_t GetTotalVisitedCounts() const
     {
         return totalVisitedCounts;
@@ -165,7 +170,8 @@ public:
 
     void InitBuildFilterCols(std::vector<int32_t> &buildFilterCols, int32_t originalProbeColsCount,
         std::vector<std::vector<BaseVector **>> &tableBuildFilterColPtrs);
-
+    KeyType keyType;
+    RowRefListType valueType;
 private:
     template <typename T>
     bool TryToBuildArrayTable(uint32_t colIndex, T &min, T &max, int64_t rangeUpperBound, int32_t partitionIndex);

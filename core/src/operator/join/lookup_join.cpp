@@ -654,12 +654,12 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     return;
                 }
             }
-
-            int64_t cacheKeyValue = 0;
+            using KeyType = decltype(arg.keyType);
+            KeyType cacheKeyValue;
             bool isInsert = true;
             typename std::decay_t<decltype(arg)>::Mapped *rowRefList = nullptr;
             int32_t probePosition = curProbePosition;
-            if constexpr (std::remove_reference_t<decltype(arg)>::IS_SIMPLE_KEY) {
+            if (std::remove_reference_t<decltype(arg)>::IS_SIMPLE_KEY && !arg.GetIsMultiCols()) {
                 for (; probePosition < inputRowCount; probePosition++) {
                     if (curProbeNulls[probePosition]) {
                         continue;
@@ -690,7 +690,8 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     buildColumns = arg.GetColumns(partition);
                     InitForProbe<hasJoinFilter>(partition, false);
                 }
-                if constexpr (std::remove_reference_t<decltype(arg)>::IS_SIMPLE_KEY) {
+                // only support single probe column
+                if (std::remove_reference_t<decltype(arg)>::IS_SIMPLE_KEY && !arg.GetIsMultiCols()) {
                     auto keyValue = arg.GetKeyValue(probeHashColumns, probePosition);
                     if (keyValue != cacheKeyValue) {
                         cacheKeyValue = keyValue;
