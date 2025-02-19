@@ -143,7 +143,7 @@ uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
 template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vector)
 {
     int32_t rowCount = vector->GetSize();
-    uint64_t result = rowCount; // nulls byte size
+    uint64_t result = BitUtil::Nbytes(rowCount); // nulls byte size
     if constexpr (std::is_same_v<T, std::string_view>) {
         // offsets
         result += (rowCount + 1) * sizeof(int32_t);
