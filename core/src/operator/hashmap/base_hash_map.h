@@ -13,8 +13,8 @@
 #include <functional>
 #include <jemalloc/jemalloc.h>
 #include <arm_neon.h>
+#include "simd/simd.h"
 
-#include "simd/func/match.h"
 #include "operator/hash_util.h"
 #include "group_hasher.h"
 #include "memory/memory_pool.h"
@@ -41,6 +41,8 @@
  * hashmap.GetElementsSize();
  * hashmap.ForEachKV(CustomFunction);
  */
+
+using namespace simd;
 
 namespace omniruntime {
 namespace op {
@@ -354,15 +356,15 @@ enum Ctrl : ctrl_t {
     kSentinel = -1
 };
 
-struct GroupNeonImpl {
+struct Group {
     enum {
+#ifdef __ARM_FEATURE_SVE
+        kWidth = 32
+#else
         kWidth = 16
+#endif
     }; // the number of slots per group
-
-    int8x16_t ctrl;
 };
-
-using Group = GroupNeonImpl;
 
 template <size_t Width> class ProbeSeq {
 public:
@@ -559,7 +561,7 @@ public:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers + index);
                 index += shift;
             }
             auto &slot = slots[index];
@@ -584,7 +586,7 @@ public:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers + index);
                 index += shift;
             }
             auto &slot = slots[index];
@@ -678,7 +680,7 @@ public:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers_ + pos);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers_ + pos);
                 pos += shift;
             }
         }
@@ -721,7 +723,7 @@ private:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, oldIdentifiers + index);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, oldIdentifiers + index);
                 index += shift;
             }
             Reinsert(std::move(oldSlots[index]));
@@ -743,25 +745,27 @@ private:
         return c < kSentinel;
     }
 
-    ProbeSeq<Group::kWidth> Probe(size_t hashVal) const
+    template <size_t kWidth>
+    ProbeSeq<kWidth> Probe(size_t hashVal) const
     {
-        return ProbeSeq<Group::kWidth>(H1(hashVal), capacity - 1);
+        return ProbeSeq<kWidth>(H1(hashVal), capacity - 1);
     }
 
-    size_t FindPosition(const KeyType &key, size_t hashValue, bool &inserted)
+    size_t FindPosition(const KeyType& key, size_t hashValue, bool& inserted)
     {
-        auto seq = Probe(hashValue);
+        auto seq = Probe<Group::kWidth>(hashValue);
         while (identifiers[seq.GetOffset()] != kEmpty) {
-            auto maskIter = FindMatch<ctrl_t, 16>(static_cast<ctrl_t>(H2(hashValue)), identifiers + seq.GetOffset());
-            // Traverse all the keys which match the low 7 bit hash
-            while (maskIter.HasNext()) {
-                auto v = maskIter.Next();
-                if (slots[seq.GetOffset((size_t)v)].IsSameKey(hashValue, key)) {
-                    return seq.GetOffset((size_t)v);
+            auto pos =
+                FindMatch<ctrl_t, Group::kWidth>(static_cast<ctrl_t>(H2(hashValue)), identifiers + seq.GetOffset());
+            if (pos != 0) {
+                for (int i = 0; i < Group::kWidth; i++) {
+                    bool is_one = (pos & (1 << i)) != 0;
+                    if (is_one && slots[seq.GetOffset(i)].IsSameKey(hashValue, key))
+                        return seq.GetOffset(i);
                 }
             }
 
-            auto firstIndex = FindFirst<ctrl_t, 16>(kEmpty, identifiers + seq.GetOffset());
+            auto firstIndex = FindFirstMatch<ctrl_t, Group::kWidth>(kEmpty, identifiers + seq.GetOffset());
             if (firstIndex != -1) {
                 inserted = true;
                 return seq.GetOffset(firstIndex);
@@ -793,7 +797,7 @@ private:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers + index);
                 index += shift;
             }
             slots[index].~Slot();

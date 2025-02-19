@@ -6242,6 +6242,47 @@ template <typename T, size_t N> OMNI_API uint64_t FindMatchMask(T value, const T
     return nib;
 }
 
+template <typename T, size_t N>
+OMNI_INLINE int32_t FindMatch(T value, const T* OMNI_RESTRICT in)
+{
+    int32_t res = 0;
+    for (int i = N - 1; i >= 0; i--) {
+        if (*(in + i) == value) {
+            res = res | (1 << i);
+        }
+    }
+    return res;
+}
+
+template <typename T, size_t N>
+OMNI_INLINE int32_t FindFirstMatch(T value, const T* OMNI_RESTRICT in)
+{
+    int32_t res = 0;
+    for (int i = 0; i < N; i++) {
+        if (*(in + i) == value) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+template <typename T>
+OMNI_INLINE static unsigned FindFirstSetNonZero(T mask)
+{
+    if (sizeof(mask) == sizeof(unsigned)) {
+        return __builtin_ctz(static_cast<unsigned>(mask));
+    } else {
+        return __builtin_ctzll(mask);
+    }
+}
+
+template <typename T, size_t N>
+OMNI_INLINE size_t CountLeadingValue(T value, const T* OMNI_RESTRICT in)
+{
+    uint64_t nib = LeadingValueCountMask<T, N>(value, in);
+    return static_cast<size_t>(FindFirstSetNonZero(nib) >> 2);
+}
+
 namespace detail {
 using AddrVec = Vec128<uint64_t>;
 using AddrType = uint64_t;
