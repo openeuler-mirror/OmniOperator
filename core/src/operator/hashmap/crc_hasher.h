@@ -7,6 +7,7 @@
 #define __HASHER_H__
 
 #include <arm_neon.h>
+#include <cstdint>
 
 #include "type/decimal128.h"
 #include "type/string_ref.h"
@@ -14,7 +15,7 @@
 
 namespace omniruntime {
 namespace simdutil {
-constexpr int32_t BYTES_OF_LONGLONG = 16;
+constexpr uint32_t BITS_OF_LONG = 64;
 using namespace omniruntime::type;
 
 inline uint64_t HashUint64(uint64_t x)
@@ -62,7 +63,12 @@ template <typename T> struct HashCRC32 {
 template <> struct HashCRC32<int128_t> {
     size_t operator () (int128_t key) const
     {
-        return Extend(0, reinterpret_cast<const char *>(&key), BYTES_OF_LONGLONG);
+        uint32_t crc = -1UL;
+        uint64_t low = static_cast<uint64_t>(key);
+        uint64_t high = static_cast<uint64_t>((key >> BITS_OF_LONG));
+        __asm__ __volatile__("crc32cx %w[c], %w[c], %x[x]\n\t" : [ c ] "+r"(crc) : [ x ] "r"(low));
+        __asm__ __volatile__("crc32cx %w[c], %w[c], %x[x]\n\t" : [ c ] "+r"(crc) : [ x ] "r"(high));
+        return crc;
     }
 };
 
