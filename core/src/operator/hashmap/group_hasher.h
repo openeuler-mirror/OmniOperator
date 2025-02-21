@@ -7,6 +7,7 @@
 #include <operator/hash_util.h>
 #include <type/string_ref.h>
 #include <functional>
+#include "crc_hasher.h"
 
 namespace omniruntime {
 namespace op {
@@ -27,14 +28,14 @@ template <> struct GroupbyHashCalculator<omniruntime::type::StringRef> {
 template <> struct GroupbyHashCalculator<int32_t> {
     size_t operator () (const int32_t data) const
     {
-        return data;
+        return omniruntime::simdutil::CRC32HasherForInt(data);
     }
 };
 
 template <> struct GroupbyHashCalculator<int64_t> {
     size_t operator() (const int64_t data) const
     {
-        return data;
+        return omniruntime::simdutil::CRC32HasherForInt(data);
     }
 };
 }

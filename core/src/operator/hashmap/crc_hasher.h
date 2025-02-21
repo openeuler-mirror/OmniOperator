@@ -40,6 +40,18 @@ template <typename T> inline size_t CRC32Hasher(T key)
     return HashUint64(u.out);
 }
 
+template <typename T> inline size_t CRC32HasherForInt(T key)
+{
+    // Calculating integers's hash value
+    union {
+        T in;
+        uint64_t out;
+    } u;
+    u.out = 0;
+    u.in = key;
+    return HashUint64(u.out);
+}
+
 template <typename T> struct HashCRC32 {
     size_t operator () (T key) const
     {
