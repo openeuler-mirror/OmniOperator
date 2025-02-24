@@ -1220,4 +1220,40 @@ extern "C" DLLEXPORT void BatchGreatestStr(uint8_t **xStr, int32_t *xStrLen, boo
         outStrLen[i] = xStrLen[i];
     }
 }
+
+extern "C" DLLEXPORT void BatchStaticInvokeCharReadPadding(int64_t contextPtr, char **str,
+    int32_t *strLen, int32_t limit, bool *isAnyNull, char **outputStr, int32_t *outputLen, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        char *ss = str[i];
+        int len = strLen[i];
+        if (strLen[i] >= limit) {
+            outputStr[i] = ss;
+            outputLen[i] = len;
+            continue;
+        }
+
+        auto padded = ArenaAllocatorMalloc(contextPtr, limit + 1);
+        int diff = limit - len;
+        errno_t res = memcpy_s(padded, len + 1, ss, len);
+        if (res != EOK) {
+            SetError(contextPtr, "BatchStaticInvokeCharReadPadding failed");
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            isAnyNull[i] = true;
+            continue;
+        }
+        res = memset_s(padded + len, diff, ' ', diff);
+        if (res != EOK) {
+            SetError(contextPtr, "BatchStaticInvokeCharReadPadding failed");
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            isAnyNull[i] = true;
+            continue;
+        }
+        padded[limit] = '\0';
+        outputLen[i] = limit;
+        outputStr[i] = padded;
+    }
+}
 }

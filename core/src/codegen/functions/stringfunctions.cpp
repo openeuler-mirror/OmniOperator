@@ -535,6 +535,34 @@ extern "C" DLLEXPORT int64_t CastStringToDecimal64RoundUp(int64_t contextPtr, co
     return result.GetValue();
 }
 
+extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr, const char *str,
+    int32_t len, int32_t limit, bool *isNull, int32_t *outLen)
+{
+    if (len >= limit) {
+        *outLen = len;
+        return str;
+    }
+    auto padded = ArenaAllocatorMalloc(contextPtr, limit + 1);
+    int diff = limit - len;
+    errno_t res = memcpy_s(padded, len + 1, str, len);
+    if (res != EOK) {
+        SetError(contextPtr, "charReadPadding failed");
+        *outLen = 0;
+        *isNull = true;
+        return nullptr;
+    }
+    res = memset_s(padded + len, diff, ' ', diff);
+    if (res != EOK) {
+        SetError(contextPtr, "charReadPadding failed");
+        *outLen = 0;
+        *isNull = true;
+        return nullptr;
+    }
+    padded[limit] = '\0';
+    *outLen = limit;
+    return padded;
+}
+
 extern "C" DLLEXPORT void CastStringToDecimal128(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
     int32_t outPrecision, int32_t outScale, int64_t *outHighPtr, uint64_t *outLowPtr)
 {
