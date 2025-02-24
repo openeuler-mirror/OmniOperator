@@ -32,6 +32,22 @@ SelectivityVector SelectivityVector::GetSelectivityVectorFromBaseVector(omnirunt
     return result;
 }
 
+template <typename FlatVector>
+void SetFlatVectorValue(size_t rowCount, BaseVector *baseVector, BaseVector *selectedBaseVector,
+    SelectivityVector &selectivityVector)
+{
+    size_t index = 0;
+    for (auto j = 0; j < rowCount; j++) {
+        if (selectivityVector.IsValid(j)) {
+            if (baseVector->IsNull(j)) {
+                static_cast<FlatVector *>(selectedBaseVector)->SetNull(index++);
+            } else {
+                auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
+                static_cast<FlatVector *>(selectedBaseVector)->SetValue(index++, value);
+            }
+        }
+    }
+}
 
 bool SelectivityVector::GetFlatBaseVectorsFromSelectivityVector(std::vector<BaseVector *> &baseVectors,
     SelectivityVector &selectivityVector, std::vector<BaseVector *> &result)
@@ -49,68 +65,49 @@ bool SelectivityVector::GetFlatBaseVectorsFromSelectivityVector(std::vector<Base
     if (UNLIKELY(encodingType == OMNI_DICTIONARY)) {
         throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "OMNI_DICTIONARY is unsupported.");
     }
-    result.resize(resultSize, nullptr);
+    result.resize(baseVectors.size(), nullptr);
     for (size_t i = 0; i < baseVectors.size(); i++) {
         auto baseVector = baseVectors[i];
         auto dataType = baseVector->GetTypeId();
         auto selectedBaseVector = VectorHelper::CreateVector(OMNI_FLAT, dataType, static_cast<int32_t>(resultSize));
-        size_t index = 0;
-        for (auto j = 0; j < rowCount; j++) {
-            if (selectivityVector.IsValid(j)) {
-                switch (dataType) {
-                    case OMNI_INT:
-                    case OMNI_DATE32: {
-                        using FlatVector = Vector<int32_t>;
-                        auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
-                        static_cast<FlatVector *>(selectedBaseVector)->SetValue(index, value);
-                        break;
-                    }
-                    case OMNI_SHORT: {
-                        using FlatVector = Vector<int16_t>;
-                        auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
-                        static_cast<FlatVector *>(selectedBaseVector)->SetValue(index, value);
-                        break;
-                    }
-                    case OMNI_LONG:
-                    case OMNI_TIMESTAMP:
-                    case OMNI_DECIMAL64: {
-                        using FlatVector = Vector<int64_t>;
-                        auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
-                        static_cast<FlatVector *>(selectedBaseVector)->SetValue(index, value);
-                        break;
-                    }
-                    case OMNI_DOUBLE: {
-                        using FlatVector = Vector<double>;
-                        auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
-                        static_cast<FlatVector *>(selectedBaseVector)->SetValue(index, value);
-                        break;
-                    }
-                    case OMNI_BOOLEAN: {
-                        using FlatVector = Vector<bool>;
-                        auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
-                        static_cast<FlatVector *>(selectedBaseVector)->SetValue(index, value);
-                        break;
-                    }
-                    case OMNI_DECIMAL128: {
-                        using FlatVector = Vector<Decimal128>;
-                        auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
-                        static_cast<FlatVector *>(selectedBaseVector)->SetValue(index, value);
-                        break;
-                    }
-                    case OMNI_VARCHAR:
-                    case OMNI_CHAR: {
-                        using FlatVector = Vector<LargeStringContainer<std::string_view>>;
-                        auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
-                        static_cast<FlatVector *>(selectedBaseVector)->SetValue(index, value);
-                        break;
-                    }
-                    default: {
-                        LogError("No such %d type support", dataType);
-                        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
-                            "unsupported selectivity type: " + std::to_string(static_cast<int>(dataType)));
-                    }
-                }
-                index++;
+        switch (dataType) {
+            case OMNI_INT:
+            case OMNI_DATE32: {
+                SetFlatVectorValue<Vector<int32_t>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
+                break;
+            }
+            case OMNI_SHORT: {
+                SetFlatVectorValue<Vector<int16_t>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
+                break;
+            }
+            case OMNI_LONG:
+            case OMNI_TIMESTAMP:
+            case OMNI_DECIMAL64: {
+                SetFlatVectorValue<Vector<int64_t>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
+                break;
+            }
+            case OMNI_DOUBLE: {
+                SetFlatVectorValue<Vector<double>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
+                break;
+            }
+            case OMNI_BOOLEAN: {
+                SetFlatVectorValue<Vector<bool>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
+                break;
+            }
+            case OMNI_DECIMAL128: {
+                SetFlatVectorValue<Vector<Decimal128>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
+                break;
+            }
+            case OMNI_VARCHAR:
+            case OMNI_CHAR: {
+                SetFlatVectorValue<Vector<LargeStringContainer<std::string_view>>>(rowCount, baseVector,
+                    selectedBaseVector, selectivityVector);
+                break;
+            }
+            default: {
+                LogError("No such %d type support", dataType);
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                    "unsupported selectivity type: " + std::to_string(static_cast<int>(dataType)));
             }
         }
         result[i] = selectedBaseVector;

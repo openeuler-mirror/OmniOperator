@@ -284,7 +284,9 @@ public:
         auto startPositions = positions + positionOffset;
         for (int32_t i = 0; i < length; i++) {
             int position = startPositions[i];
-            vector->nullsBuffer->SetNull(i, IsNull(position));
+            if (UNLIKELY(IsNull(position))) {
+                vector->nullsBuffer->SetNull(i);
+            }
             vector->SetValue(i, GetValue(position));
         }
         return vector;
@@ -403,7 +405,9 @@ public:
         auto startPositions = positions + positionOffset;
         for (int32_t i = 0; i < length; i++) {
             auto position = startPositions[i];
-            newNullsBuffer->SetNull(i, this->IsNull(position));
+            if (UNLIKELY(this->IsNull(position))) {
+                newNullsBuffer->SetNull(i);
+            }
             newPositions[i] = position + this->offset;
         }
         // new container

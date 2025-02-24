@@ -55,6 +55,11 @@ public:
         }
     }
 
+    void ALWAYS_INLINE SetNull(int32_t index) {
+        BitUtil::SetBit(nulls, index);
+        hasNull = true;
+    }
+
     void ALWAYS_INLINE SetNotNull(int32_t index)
     {
         BitUtil::ClearBit(nulls, index);
