@@ -615,7 +615,7 @@ std::vector<FixedKeyVectorSerializerIgnoreNullSimd> vectorSerializerFixedKeysIgn
     SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DATE64
     SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32
     SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                                      // OMNI_TIMESTAMP
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                                      // OMNI_INTERVAL_MONTHS
     nullptr,                                                      // OMNI_INTERVAL_DAY_TIME
     nullptr,                                                      // OMNI_VARCHAR
@@ -636,7 +636,7 @@ std::vector<FixedKeyVectorSerializerIgnoreNullSimd> dicVectorSerializerFixedKeys
     SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DATE64
     SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32
     SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64
-    nullptr,                                                                // OMNI_TIMESTAMP
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                                                // OMNI_INTERVAL_MONTHS
     nullptr,                                                                // OMNI_INTERVAL_DAY_TIME
     nullptr,                                                                // OMNI_VARCHAR
