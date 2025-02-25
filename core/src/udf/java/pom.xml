@@ -8,14 +8,14 @@
     <groupId>com.huawei.boostkit</groupId>
     <artifactId>boostkit-omniop-udf</artifactId>
     <packaging>jar</packaging>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
 
     <properties >
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>8</java.version>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <omniop.version>1.7.0</omniop.version>
+        <omniop.version>1.8.0</omniop.version>
         <hive.version>3.1.2-1</hive.version>
         <guava.version>30.0-jre</guava.version>
         <testng.version>6.10</testng.version>
