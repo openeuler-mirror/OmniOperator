@@ -916,37 +916,6 @@ TEST(FunctionTest, SubstrCharZh)
     delete context;
 }
 
-TEST(FunctionTest, StaticInvokeCharReadPadding)
-{
-    auto context = new ExecutionContext();
-    int64_t contextPtr = reinterpret_cast<int64_t>(context);
-    std::string  src = "abc";
-    int outLen;
-    bool nullFlag1 = false;
-    const char* cs1 = StaticInvokeCharReadPadding(contextPtr, src.c_str(), src.length(), 2, &nullFlag1, &outLen);
-    std::string ss1(cs1, outLen);
-    EXPECT_EQ(outLen, src.length());
-    EXPECT_EQ(ss1, "abc");
-    EXPECT_FALSE(nullFlag1);
-
-    bool nullFlag2 = false;
-    const char* cs2 = StaticInvokeCharReadPadding(contextPtr, src.c_str(),
-        src.length(), src.length(), &nullFlag2, &outLen);
-    std::string ss2(cs2, outLen);
-    EXPECT_EQ(outLen, src.length());
-    EXPECT_EQ(ss2, "abc");
-    EXPECT_FALSE(nullFlag2);
-
-    bool nullFlag3 = false;
-    const char* cs3 = StaticInvokeCharReadPadding(contextPtr, src.c_str(), src.length(), 6, &nullFlag3, &outLen);
-    std::string ss3(cs3, outLen);
-    EXPECT_EQ(outLen, 6);
-    EXPECT_EQ(ss3, "abc   ");
-    EXPECT_FALSE(nullFlag3);
-    delete context;
-}
-
-
 TEST(FunctionTest, SubstrWithStart)
 {
     auto context = new ExecutionContext();

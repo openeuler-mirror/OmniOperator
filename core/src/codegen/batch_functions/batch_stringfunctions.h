@@ -420,9 +420,6 @@ extern "C" DLLEXPORT void BatchContainsStr(char **srcStrs, int32_t *srcLens, cha
 
 extern "C" DLLEXPORT void BatchGreatestStr(uint8_t **xStr, int32_t *xStrLen, bool *xIsNull, uint8_t **yStr,
     int32_t *yStrLen, bool *yIsNull, bool *retIsNull, uint8_t **outStr, int32_t *outStrLen, int32_t rowCnt);
-
-extern "C" DLLEXPORT void BatchStaticInvokeCharReadPadding(int64_t contextPtr, char **str,
-    int32_t *strLen, int32_t limit, bool *isAnyNull, char **outputStr, int32_t *outputLen, int32_t rowCnt);
 }
 
 #endif // OMNI_RUNTIME_BATCH_STRINGFUNCTIONS_H

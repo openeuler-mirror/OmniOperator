@@ -2766,32 +2766,3 @@ TEST(BatchFunctionTest, BatchEmptyToNull)
     EXPECT_EQ(outResult[3], nullptr);
     EXPECT_EQ(outLen[3], 0);
 }
-
-TEST(BatchFunctionTest, BatchStaticInvokeCharReadPadding)
-{
-    auto context = new ExecutionContext();
-    auto contextPtr = reinterpret_cast<int64_t>(context);
-    int32_t  limit = 4;
-    std::vector<std::string> srcStrVec{ "1", "12", "123", "1234", "12345", "123456"};
-    std::vector<std::string> matchStrVec{ "1   ", "12  ", "123 ", "1234", "12345", "123456"};
-    int32_t rowCnt = static_cast<int32_t>(srcStrVec.size());
-    char *srcStrs[rowCnt];
-    int32_t srcLens[rowCnt];
-    char *matchStrs[rowCnt];
-    int32_t matchLens[rowCnt];
-    bool isAnyNull[] = {false, false, false, false, false, false, false, false, false};
-    char *output[rowCnt];
-    int32_t outputLen[rowCnt];
-    for (int32_t row = 0; row < rowCnt; ++row) {
-        srcStrs[row] = const_cast<char *>(srcStrVec[row].c_str());
-        srcLens[row] = srcStrVec[row].length();
-        matchStrs[row] = const_cast<char *>(matchStrVec[row].c_str());
-        matchLens[row] = matchStrVec[row].length();
-    }
-    BatchStaticInvokeCharReadPadding(contextPtr, srcStrs, srcLens, limit, isAnyNull, output, outputLen, rowCnt);
-    for (int32_t row = 0; row < rowCnt; ++row) {
-        std::string outStr (output[row], outputLen[row]);
-        EXPECT_EQ(outStr, matchStrVec[row]);
-    }
-    delete context;
-}
