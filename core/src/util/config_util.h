@@ -48,6 +48,10 @@ public:
 
     static SupportContainerVecRule GetSupportContainerVecRule();
 
+    static AggHashTableRule GetAggHashTableRule();
+
+    static void SetAggHashTableRule(AggHashTableRule rule);
+
     static void SetStringToDateFormatRule(StringToDateFormatRule rule);
 
     static StringToDateFormatRule GetStringToDateFormatRule();
@@ -87,6 +91,8 @@ private:
     static void InitSupportExprFilterRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitSupportDecimalPrecisionImprovementRule(Policy *policy, const std::string &ruleValueStr);
+
+    static void InitAggHashTableRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitStringToDecimalRule(Policy *policy, const std::string &ruleValueStr);
 

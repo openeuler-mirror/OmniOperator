@@ -20,6 +20,7 @@ const int32_t DATA_SIZE = 3;
 
 TEST(VectorAnalyzerTest, TestHashMode)
 {
+    ConfigUtil::SetAggHashTableRule(AggHashTableRule::ARRAY);
     int32_t data01[DATA_SIZE] = {0, 1, 2};  // int
     double data02[DATA_SIZE] = {6.6, 5.5, 4.4}; // double
     int64_t data03[DATA_SIZE] = {1, 2, 3}; // long
@@ -57,7 +58,7 @@ TEST(VectorAnalyzerTest, TestHashMode)
     groupByIndex3[0] = {0, LongType(), LongType()};
     auto vector_analyzer3 = VectorAnalyzer(groupByIndex3);
     EXPECT_TRUE(vector_analyzer3.DecideHashMode(vecBatch3));
-    EXPECT_FALSE(vector_analyzer3.IsArrayHashTableType());
+    EXPECT_TRUE(vector_analyzer3.IsArrayHashTableType());
     VectorHelper::FreeVecBatch(vecBatch3);
 
     // decimal64 data type support
@@ -68,7 +69,7 @@ TEST(VectorAnalyzerTest, TestHashMode)
     groupByIndex4[0] = {0, Decimal64Type(), Decimal64Type()};
     auto vector_analyzer4 = VectorAnalyzer(groupByIndex4);
     EXPECT_TRUE(vector_analyzer4.DecideHashMode(vecBatch4));
-    EXPECT_FALSE(vector_analyzer4.IsArrayHashTableType());
+    EXPECT_TRUE(vector_analyzer4.IsArrayHashTableType());
     VectorHelper::FreeVecBatch(vecBatch4);
 }
 

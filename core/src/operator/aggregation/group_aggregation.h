@@ -13,6 +13,8 @@
 #include "operator/aggregation/aggregator/only_aggregator_factory.h"
 #include "operator/util/operator_util.h"
 #include "operator/hashmap/column_marshaller.h"
+#include "operator/hashmap/array_map.h"
+#include "operator/hashmap/vector_analyzer.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "operator/config/operator_config.h"
 #include "operator/filter/filter_and_project.h"
@@ -22,7 +24,9 @@
 
 namespace omniruntime::op {
 using namespace vec;
+
 class HashAggregationOperatorFactory;
+
 class HashAggregationOperator;
 
 class HashAggregationOperator : public AggregationCommonOperator {
@@ -41,7 +45,7 @@ public:
           hasAggFilters(hasAggFilters),
           operatorConfig(operatorConfig)
     {
-        for (auto hasFilter : hasAggFilters) {
+        for (auto hasFilter: hasAggFilters) {
             if (hasFilter == 1) {
                 aggFiltersCount++;
             }
@@ -58,8 +62,14 @@ public:
 
     OmniStatus Close() override;
 
-    template <typename Serialize>
+    template<typename Serialize>
     void Emplace(Serialize &emplaceKey, VectorBatch *vecBatch, BaseVector **groupVectors, int32_t groupColNum);
+
+    void EmplaceToArrayMap(VectorBatch *vecBatch, BaseVector *groupVector);
+
+    template<typename T, typename GroupMap>
+    void InsertValueToArrayMap(GroupMap &arrayMap, BaseVector *groupVector,
+                               int32_t rowIdx);
 
     uint64_t GetSpilledBytes() override;
 
@@ -80,25 +90,61 @@ public:
 
 private:
     int32_t InitMaxRowCountAndOutputTypes();
+
     void InitSpillInfos();
+
     ErrorCode SpillHashMap();
+
     ErrorCode SpillToDisk();
+
     void SetVectors(VectorBatch *output, const std::vector<DataTypePtr> &types, int32_t rowCount);
 
-    template <typename Deserialize> int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
+    template<typename Deserialize>
+    int32_t Output(Deserialize &deserializeHashmap, VectorBatch **outputVecBatch);
+
     void SetGroupByColumnsHandleType(HandleType t);
 
     friend class HashAggregationOperatorFactory;
-    template <typename V, typename D>
+
+    template<typename V, typename D>
     friend void FillValueImpl(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
+
     friend void FillVarcharValue(BaseVector *vector, int32_t rowIndex, const AggregateState &state);
 
+    void InitState(int64_t aggStateAddress);
+
+    void ProcessStates(VectorBatch *vecBatch);
+
+    template<DataTypeId typeId, bool hasNull>
+    void ArrayGroupProbeSIMD(BaseVector *groupVector, VectorBatch *vecBatch);
+
+    void ResizeArrayMap(int64_t oldMin);
+
+    void MoveEntryArrayTableToHashMap(int64_t minValue);
+
+    template<bool hasAgg, typename T>
+    void TraverseArrayMapGetOutput(BaseVector *groupVector,
+                                   std::vector<AggregateState *> *states, int64_t minValue);
+
+    template<bool hasAgg>
+    void TraverseArrayMap(BaseVector *groupVector, std::vector<AggregateState *> *states);
+
+    std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int16_t, AggregateState *>, int16_t>> fixedInt16 = nullptr;
+
+    void TraverseArrayMapToGetOneResult(VectorBatch *output);
+
     void GetOutputFromDisk(VectorBatch **outputVecBatch);
+
     VectorBatch *GetOutputFromDiskWithoutAgg(VectorBatch *output);
+
     VectorBatch *GetOutputFromDiskWithAgg(VectorBatch *output);
+
     void SetStateOutputVecBatch(VectorBatch *outputVecBatch, int32_t rowCount, int32_t groupColNum, int32_t aggNum);
+
     void CalcAndSetStatesSize();
+
     ALWAYS_INLINE size_t GetElementsSize();
+
     ALWAYS_INLINE void ResetHashmap();
 
     std::vector<ColumnIndex> groupByCols;
@@ -109,12 +155,15 @@ private:
     std::vector<type::DataTypePtr> outputTypes;
     HandleType groupByColumnsHandleType = HandleType::serialize;
     std::unique_ptr<ColumnSerializeHandler<DefaultHashMap<StringRef, AggregateState *>>> serialize = nullptr;
+    std::unique_ptr<DefaultArrayMap<AggregateState>> arrayTable = nullptr;
+
     std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int32_t, AggregateState *>, int32_t>> fixedInt32 = nullptr;
     std::unique_ptr<GroupbySingleFixHandler<DefaultHashMap<int64_t, AggregateState *>, int64_t>> fixedInt64 = nullptr;
     bool isInited = false;
 
     OutputState outputState;
-    template <typename Deserialize>
+
+    template<typename Deserialize>
     void TraverseHashmapToGetOneResult(Deserialize &deserializeHashmap, VectorBatch *output);
 
     int32_t rowsPerBatch;
@@ -141,6 +190,9 @@ private:
     bool hasSpill = false;
     std::unique_ptr<AggregationSort> aggregationSort = nullptr;
     int32_t totalAggStatesSize = 0;
+    VectorAnalyzer *vectorAnalyzer = nullptr;
+    std::vector<AggregateState *> rowsAggStates;
+    int8_t resizeArrayMapCnt = 0;
 };
 
 class HashAggregationOperatorFactory : public AggregationCommonOperatorFactory {
@@ -219,8 +271,11 @@ public:
     {}
 
     ~HashAggregationOperatorFactory() override = default;
+
     Operator *CreateOperator() override;
+
     OmniStatus Init() override;
+
     OmniStatus Close() override;
 
 private:
@@ -237,7 +292,6 @@ private:
     HandleType handleType;
     std::vector<int8_t> hasAggFilters;
     OperatorConfig operatorConfig;
-
     void ChooseGroupByType();
 };
 } // end of namespace omniruntime::op

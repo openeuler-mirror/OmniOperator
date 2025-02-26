@@ -19,37 +19,56 @@ enum class HashTableType {
 };
 
 struct ArrayRange {
-    int64_t min = 1;
-    int64_t max = 0;
+    bool init = false;
+    int64_t min = std::numeric_limits<int64_t>::max();
+    int64_t max = std::numeric_limits<int64_t>::min();
 };
 
 class VectorAnalyzer {
 public:
-    explicit VectorAnalyzer(std::vector<ColumnIndex> &groupByCols) : groupByCols(groupByCols) {
+    explicit VectorAnalyzer(std::vector<ColumnIndex> &groupByCols) : groupByCols(groupByCols)
+    {
     }
 
     bool IsArrayHashTableType();
 
-    bool DecideHashMode(omniruntime::vec::VectorBatch*& vectorBatch);
+    bool DecideHashMode(omniruntime::vec::VectorBatch *&vectorBatch);
 
-    template <typename T>
-    inline int64_t ToInt64(T value) const
+    ALWAYS_INLINE int64_t MinValue() const
     {
-        return value;
+        return groupbyColsRange.min;
+    }
+
+    ALWAYS_INLINE bool MinMaxChanged() const
+    {
+        return minMaxChanged;
+    }
+
+    ALWAYS_INLINE void SetNormalHashTable()
+    {
+        hashMode = HashTableType::NORMAL_HASH_TABLE;
+    }
+
+    ALWAYS_INLINE uint64_t GetRange() const
+    {
+        // range length max - min + 1 and null slot
+        return groupbyColsRange.max - groupbyColsRange.min + 2;
+    }
+
+    ALWAYS_INLINE uint64_t ComputeKey(const int64_t value) const
+    {
+        return value - groupbyColsRange.min + 1;
     }
 
 private:
-    template <typename T>
-    bool CheckArrayMap(const T* values, const size_t length);
+    template<typename T>
+    bool CheckArrayMap(Vector<T> *vector, size_t length);
 
-    template <typename T>
-    T ComputerKey(const T value);
+    template<type::DataTypeId typeId>
+    bool HandleInputValues(omniruntime::vec::VectorBatch *&vectorBatch, int32_t idx);
 
-    template <type::DataTypeId typeId>
-    bool HandleInputValues(omniruntime::vec::VectorBatch*& vectorBatch, int32_t idx);
-
+    bool minMaxChanged = false;
     std::vector<ColumnIndex> groupByCols;
-
     ArrayRange groupbyColsRange;
     HashTableType hashMode = HashTableType::ARRAY_HASH_TABLE;
 };

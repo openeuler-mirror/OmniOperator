@@ -4,6 +4,7 @@
 
 #ifndef OMNI_RUNTIME_COLUMN_MARSHALLER_H
 #define OMNI_RUNTIME_COLUMN_MARSHALLER_H
+
 #include <cstdint>
 #include "vector/vector_helper.h"
 #include "type/string_ref.h"
@@ -16,6 +17,7 @@ namespace op {
 using namespace vec;
 enum class HandleType {
     serialize,
+    fixedInt16,
     fixedInt32,
     fixedInt64,
     fixed256Bytes,
@@ -223,6 +225,16 @@ public:
         } else {
             return hashmap.Emplace(reinterpret_cast<Vector<T>*>(curVector)->GetValue(rowIdx));
         }
+    }
+
+    template<bool isNull>
+    Result InsertOneValueToHashmap(T value)
+    {
+        if constexpr (isNull) {
+            value = 0;
+            return hashmap.EmplaceNullValue(value);
+        }
+        return hashmap.Emplace(value);
     }
 
     void ParseKeyToCols(const T &key, std::vector<vec::BaseVector *> &groupOutputVectors, int32_t groupColNum,

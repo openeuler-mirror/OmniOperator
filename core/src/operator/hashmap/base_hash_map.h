@@ -577,7 +577,7 @@ public:
         int remainNum = elementsSize;
         if (HasNullCell()) {
             --remainNum;
-            func(nullSlot->GetValue());
+            func(nullSlot->GetValue(), -1);
         }
         int index = 0;
         while (remainNum && index < capacity) {
@@ -590,7 +590,7 @@ public:
                 index += shift;
             }
             auto &slot = slots[index];
-            func(slot.GetValue());
+            func(slot.GetValue(), index);
             ++index;
             --remainNum;
         }

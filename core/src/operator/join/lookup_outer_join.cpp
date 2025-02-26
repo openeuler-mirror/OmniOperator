@@ -54,11 +54,11 @@ void LookupOuterJoinOperatorFactory::PrepareTotalVisitedCounts()
                 if (arg.GetHashTableTypes(partitionIndex) == HashTableImplementationType::ARRAY_HASH_TABLE) {
                     auto &hashTable = arg.GetArrayTable(partitionIndex);
                     hashTable->ForEachValue(
-                        [&](const auto &value) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
+                        [&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
                 } else {
                     auto &hashTable = arg.GetHashTable(partitionIndex);
                     hashTable->hashmap.ForEachValue(
-                        [&](const auto &value) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
+                        [&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
                 }
                 partitionIndex++;
             }
@@ -229,7 +229,7 @@ void LookupOuterPositionIterator::GetAllUnVisitedAddressFromSingleTable(std::vec
             if constexpr (std::is_same_v<Mapped, RowRefListWithFlags>) {
                 if (arg.GetHashTableTypes(currentHashTable) == HashTableImplementationType::ARRAY_HASH_TABLE) {
                     auto &hashTable = arg.GetArrayTable(currentHashTable);
-                    hashTable->ForEachValue([&](const auto &value) {
+                    hashTable->ForEachValue([&](const auto &value, const auto &index) {
                         auto it = value->Begin();
                         while (it.IsOk()) {
                             if (!it->visited) {
@@ -240,7 +240,7 @@ void LookupOuterPositionIterator::GetAllUnVisitedAddressFromSingleTable(std::vec
                     });
                 } else {
                     auto &hashTable = arg.GetHashTable(currentHashTable);
-                    hashTable->hashmap.ForEachValue([&](const auto &value) {
+                    hashTable->hashmap.ForEachValue([&](const auto &value, const auto &index) {
                         auto it = value->Begin();
                         while (it.IsOk()) {
                             if (!it->visited) {
@@ -267,7 +267,7 @@ void LookupOuterPositionIterator::GetAllUnVisitedAddressFromMultipleTables(std::
                 while (currentHashTable < arg.GetHashTableSize()) {
                     if (arg.GetHashTableTypes(currentHashTable) == HashTableImplementationType::ARRAY_HASH_TABLE) {
                         auto &hashTable = arg.GetArrayTable(currentHashTable);
-                        hashTable->ForEachValue([&](const auto &value) {
+                        hashTable->ForEachValue([&](const auto &value, const auto &index) {
                             auto it = value->Begin();
                             while (it.IsOk()) {
                                 if (!it->visited) {
@@ -279,7 +279,7 @@ void LookupOuterPositionIterator::GetAllUnVisitedAddressFromMultipleTables(std::
                         });
                     } else {
                         auto &hashTable = arg.GetHashTable(currentHashTable);
-                        hashTable->hashmap.ForEachValue([&](const auto &value) {
+                        hashTable->hashmap.ForEachValue([&](const auto &value, const auto &index) {
                             auto it = value->Begin();
                             while (it.IsOk()) {
                                 if (!it->visited) {

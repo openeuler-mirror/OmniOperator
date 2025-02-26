@@ -19,6 +19,7 @@ namespace op {
 template <typename ValueType, typename Allocator,
     std::enable_if_t<std::is_move_constructible_v<ValueType> &&
     (std::is_move_assignable_v<ValueType> || std::is_copy_assignable_v<ValueType>)>* = nullptr>
+// template <typename ValueType, typename Allocator>
 class ArrayMap {
 public:
     using Slot = ValueType;
@@ -49,6 +50,11 @@ public:
     size_t GetElementsSize() const
     {
         return elementsSize;
+    }
+
+    ALWAYS_INLINE void AddElementsSize(size_t size)
+    {
+        elementsSize += size;
     }
 
     InsertResult<ValueType> InsertJoinKeysToHashmap(size_t pos)
@@ -112,14 +118,28 @@ public:
             while (not isAssigned[index]) {
                 ++index;
             }
-            func(slots[index]);
+            func(slots[index], index);
             ++index;
             --remainNum;
         }
         if (isNullAssigned) {
-            func(nullSlot);
+            func(nullSlot, -1);
         }
         return;
+    }
+
+    template<class Func>
+    void OutputEachValue(Func &&func, uint32_t &index, int remainNum)
+    {
+        while (remainNum) {
+            while (not isAssigned[index]) {
+                ++index;
+            }
+            func(slots[index], index);
+            ++index;
+            --remainNum;
+        }
+        // dont deal with nullSlot, it is in slots[0]
     }
 
     ~ArrayMap()
