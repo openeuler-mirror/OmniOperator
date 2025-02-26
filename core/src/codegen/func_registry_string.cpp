@@ -129,12 +129,6 @@ const std::string GreatestStrFnStr()
     return greatestStrFnStr;
 }
 
-const std::string StaticInvokeCharReadPaddingStr()
-{
-    const std::string staticInvokeCharReadPaddingStr = "StaticInvokeCharReadPadding";
-    return staticInvokeCharReadPaddingStr;
-}
-
 std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = { // concat functions
@@ -247,8 +241,6 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(EmptyToNull), EmptyToNullStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA, false),
-        Function(reinterpret_cast<void *>(StaticInvokeCharReadPadding), StaticInvokeCharReadPaddingStr(), {}, { OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR,
-            INPUT_DATA, true)
     };
 
     return stringFnRegistry;
