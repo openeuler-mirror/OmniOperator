@@ -754,15 +754,19 @@ private:
     size_t FindPosition(const KeyType& key, size_t hashValue, bool& inserted)
     {
         auto seq = Probe<Group::kWidth>(hashValue);
+        auto hashValueH2 = static_cast<ctrl_t>(H2(hashValue));
+        __builtin_prefetch(identifiers + seq.GetOffset(), 0, 3);
         while (identifiers[seq.GetOffset()] != kEmpty) {
+            __builtin_prefetch(identifiers + seq.GetOffset() + Group::kWidth, 0, 3);
             auto pos =
-                FindMatch<ctrl_t, Group::kWidth>(static_cast<ctrl_t>(H2(hashValue)), identifiers + seq.GetOffset());
-            if (pos != 0) {
-                for (int i = 0; i < Group::kWidth; i++) {
-                    bool is_one = (pos & (1 << i)) != 0;
-                    if (is_one && slots[seq.GetOffset(i)].IsSameKey(hashValue, key))
-                        return seq.GetOffset(i);
+                FindMatch<ctrl_t, Group::kWidth>(hashValueH2, identifiers + seq.GetOffset());
+            while (pos) {
+                int i = __builtin_ctz(pos);
+                int offset = seq.GetOffset(i);
+                if (slots[offset].IsSameKey(hashValue, key)) {
+                    return offset;
                 }
+                pos &= (pos - 1);
             }
 
             auto firstIndex = FindFirstMatch<ctrl_t, Group::kWidth>(kEmpty, identifiers + seq.GetOffset());
