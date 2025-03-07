@@ -378,6 +378,19 @@ public abstract class Vec implements Closeable {
     }
 
     /**
+     * set nulls in batch.
+     *
+     * @param index the offset of the element
+     * @param isBitNulls array of null values, true is null otherwise non-null. (Bit)
+     * @param start array offset (Bit)
+     * @param length number of elements (Bit)
+     */
+    public void setNullsByBits(int index, byte[] isBitNulls, int start, int length) {
+        NullsBufHelper.setBitByBits(nullsBuf, index, isBitNulls, start, length);
+        setNullFlagNative(nativeVector, true);
+    }
+
+    /**
      * set nulls buffer.
      *
      * @param buf buf of null

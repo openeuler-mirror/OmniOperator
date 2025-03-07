@@ -57,6 +57,17 @@ public class NullsBufHelper {
     }
 
     /**
+     * Indicates whether the position specified by the bit field is marked.
+     *
+     * @param isNulls bit field memory
+     * @param index Indexes
+     * @return flag
+     */
+    public static int isSet(byte[] isNulls, int index) {
+        return isNulls[byteIndex(index)] >> bitIndex(index) & 1;
+    }
+
+    /**
      * Indicates the flag of the specified position of the clear bit field.
      *
      * @param nullsBuf bit field memory
@@ -99,6 +110,23 @@ public class NullsBufHelper {
         int i = 0;
         while (i < length) {
             setValidityBit(nullsBuf, index + i, isNulls[srcStart + i]);
+            i++;
+        }
+    }
+
+    /**
+     * Bulk Mark Bit Field Memory
+     *
+     * @param nullsBuf bit field memory
+     * @param index Mark Start Position
+     * @param isBitNulls Tag Value array (Bit)
+     * @param srcStart Start position of the tag value array (Bit)
+     * @param length Tag Value array length (Bit)
+     */
+    public static void setBitByBits(OmniBuffer nullsBuf, int index, byte[] isBitNulls, int srcStart, int length) {
+        int i = 0;
+        while (i < length) {
+            setValidityBit(nullsBuf, index + i, isSet(isBitNulls, srcStart + i));
             i++;
         }
     }
