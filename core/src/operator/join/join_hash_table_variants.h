@@ -205,6 +205,7 @@ private:
     bool isFixedKeys = true;
     size_t fixedKeysSize = 0;
     size_t sizeOfRowRefList = 0;
+    bool isNeedNullKeyTable = false;
 };
 
 using HashTableVariants =
