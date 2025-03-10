@@ -1420,8 +1420,12 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
             if (parallelNum == parallelism) {
                 T *buildVecSrc;
                 if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
-                    buildVecSrc = unsafe::UnsafeDictionaryVector::GetDictionary(
-                        static_cast<Vector<DictionaryContainer<T>> *>(buildVector));
+                    auto dictionaryVector = static_cast<Vector<DictionaryContainer<T>> *>(buildVector);
+                    buildVecSrc = unsafe::UnsafeDictionaryVector::GetDictionary(dictionaryVector);
+                    int *ids = unsafe::UnsafeDictionaryVector::GetIds(dictionaryVector);
+                    for (int j = 0; j < parallelNum; ++j) {
+                        rowIdxes[j] = ids[rowIdxes[j]];
+                    }
                 } else {
                     buildVecSrc = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(buildVector));
                 }
@@ -1429,7 +1433,6 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
                 Store(result, d, getResult);
                 ret->SetValues(i - parallelNum + 1, static_cast<void *>(getResult), parallelNum);
                 parallelNum = 0;
-                continue;
             }
         } else {
             // Processing the data of the remaining rowIdxes of the previous vecBatch during cross-vecBatch.
