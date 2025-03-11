@@ -72,6 +72,9 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
             }
         }
     }
+    isNeedNullKeyTable = joinType == OMNI_JOIN_TYPE_FULL
+            || (joinType == OMNI_JOIN_TYPE_LEFT && buildSide == OMNI_BUILD_LEFT)
+            || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT);
 }
 
 template <typename KeyType, typename RowRefListType>
@@ -145,8 +148,7 @@ template <typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceFixedKey(HashTableType &hashTable, int32_t partitionIndex,
     VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum)
 {
-    if (joinType == OMNI_JOIN_TYPE_FULL || (joinType == OMNI_JOIN_TYPE_LEFT && buildSide == OMNI_BUILD_LEFT)
-        || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT)) {
+    if (isNeedNullKeyTable) {
         EmplaceFixedKeyToNormalHashTable(hashTable, partitionIndex, vecBatch, vecBatchIdx, buildVectors, buildColNum);
     } else {
         EmplaceFixedNotNullKeyToNormalHashTable(hashTable, partitionIndex, vecBatch, vecBatchIdx, buildVectors,
@@ -159,8 +161,7 @@ template <typename HashTableType>
 void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceSingleKey(HashTableType &hashTable, int32_t partitionIndex,
     VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors)
 {
-    if (joinType == OMNI_JOIN_TYPE_FULL || (joinType == OMNI_JOIN_TYPE_LEFT && buildSide == OMNI_BUILD_LEFT)
-        || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT)) {
+    if (isNeedNullKeyTable) {
         if (buildVectors[0]->GetEncoding() != OMNI_DICTIONARY) {
             EmplaceSingleKeyToNormalHashTable<false>(hashTable, partitionIndex, vecBatch, vecBatchIdx, buildVectors);
         } else {
@@ -254,8 +255,7 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceVariableKey(HashTabl
     int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum,
     std::vector<int8_t> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes)
 {
-    if (joinType == OMNI_JOIN_TYPE_FULL || (joinType == OMNI_JOIN_TYPE_LEFT && buildSide == OMNI_BUILD_LEFT)
-        || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT)) {
+    if (isNeedNullKeyTable) {
         EmplaceVariableKeyToNormalHashTable(hashTable, partitionIndex, vecBatch, vecBatchIdx, buildVectors, buildColNum,
             isNotNullKeys, hashes, tryRes);
     } else {
@@ -589,8 +589,7 @@ bool JoinHashTableVariants<KeyType, RowRefListType>::TryToBuildArrayTable(uint32
     }
 
     rangeUpperBound = max - min + 1;
-    if (joinType == OMNI_JOIN_TYPE_FULL || (joinType == OMNI_JOIN_TYPE_LEFT && buildSide == OMNI_BUILD_LEFT)
-        || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT)) {
+    if (isNeedNullKeyTable) {
         EmplaceKeyToArrayTable(min, max, rangeUpperBound, partitionIndex);
     } else {
         EmplaceNotNullKeyToArrayTable(min, max, rangeUpperBound, partitionIndex);
