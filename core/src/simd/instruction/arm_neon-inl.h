@@ -6270,7 +6270,7 @@ OMNI_INLINE int32_t FindFirstMatch(T value, const T* OMNI_RESTRICT in)
 }
 
 template <typename T>
-OMNI_INLINE static unsigned FindFirstSetNonZero(T mask)
+OMNI_INLINE static unsigned FindFirstSetNonZeroNeon(T mask)
 {
     if (sizeof(mask) == sizeof(unsigned)) {
         return __builtin_ctz(static_cast<unsigned>(mask));
@@ -6283,7 +6283,7 @@ template <typename T, size_t N>
 OMNI_INLINE size_t CountLeadingValue(T value, const T* OMNI_RESTRICT in)
 {
     uint64_t nib = LeadingValueCountMask<T, N>(value, in);
-    return static_cast<size_t>(FindFirstSetNonZero(nib) >> 2);
+    return static_cast<size_t>(FindFirstSetNonZeroNeon(nib) >> 2);
 }
 
 namespace detail {

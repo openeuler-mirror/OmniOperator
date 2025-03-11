@@ -13,7 +13,7 @@
 #include <functional>
 #include <jemalloc/jemalloc.h>
 #include <arm_neon.h>
-#include "simd/simd.h"
+#include "simd/func/match.h"
 
 #include "operator/hash_util.h"
 #include "group_hasher.h"
@@ -82,11 +82,8 @@ public:
         return *this;
     }
 
-    bool IsSameKey(const size_t &otherHashVal, const KeyType &key1)
+    bool ALWAYS_INLINE  IsSameKey(const size_t &otherHashVal, const KeyType &key1)
     {
-        if (otherHashVal != hashVal) {
-            return false;
-        }
         return kv.first == key1;
     }
 
@@ -556,6 +553,8 @@ public:
 
         int index = 0;
         while (remainNum) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(slots + index + 1, 0, 3);
             while (IsEmptyOrDeleted(*(identifiers + index))) {
                 // ctrl is not necessarily aligned to Group::kWidth. It is also likely
                 // to read past the space for ctrl bytes and into slots. This is ok
@@ -581,6 +580,8 @@ public:
         }
         int index = 0;
         while (remainNum && index < capacity) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(slots + index + 1, 0, 3);
             while (IsEmptyOrDeleted(*(identifiers + index))) {
                 // ctrl is not necessarily aligned to Group::kWidth. It is also likely
                 // to read past the space for ctrl bytes and into slots. This is ok
@@ -718,6 +719,8 @@ private:
         int remainNum = oldElements - (HasNullCell() ? 1 : 0);
         int index = 0;
         while (remainNum != 0) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(oldSlots + index + 1, 0, 3);
             while (IsEmptyOrDeleted(*(oldIdentifiers + index))) {
                 // ctrl is not necessarily aligned to Group::kWidth. It is also likely
                 // to read past the space for ctrl bytes and into slots. This is ok
@@ -758,18 +761,16 @@ private:
         __builtin_prefetch(identifiers + seq.GetOffset(), 0, 3);
         while (identifiers[seq.GetOffset()] != kEmpty) {
             __builtin_prefetch(identifiers + seq.GetOffset() + Group::kWidth, 0, 3);
-            auto pos =
-                FindMatch<ctrl_t, Group::kWidth>(hashValueH2, identifiers + seq.GetOffset());
-            while (pos) {
-                int i = __builtin_ctz(pos);
-                int offset = seq.GetOffset(i);
-                if (slots[offset].IsSameKey(hashValue, key)) {
-                    return offset;
+            auto maskIter = FindMatchNibbles<ctrl_t, Group::kWidth>(static_cast<ctrl_t>(hashValueH2), identifiers + seq.GetOffset());
+            // Traverse all the keys which match the low 7 bit hash
+            while (maskIter.HasNext()) {
+                auto v = maskIter.Next();
+                if (slots[seq.GetOffset((size_t)v)].IsSameKey(hashValue, key)) {
+                    return seq.GetOffset((size_t)v);
                 }
-                pos &= (pos - 1);
             }
 
-            auto firstIndex = FindFirstMatch<ctrl_t, Group::kWidth>(kEmpty, identifiers + seq.GetOffset());
+            auto firstIndex = FindFirstNibbles<ctrl_t, Group::kWidth>(kEmpty, identifiers + seq.GetOffset());
             if (firstIndex != -1) {
                 inserted = true;
                 return seq.GetOffset(firstIndex);
@@ -796,6 +797,8 @@ private:
         int remainNum = HasNullCell() ? elementsSize - 1 : elementsSize;
         int index = 0;
         while (remainNum) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(slots + index + 1, 0, 3);
             while (IsEmptyOrDeleted(*(identifiers + index))) {
                 // ctrl is not necessarily aligned to Group::kWidth. It is also likely
                 // to read past the space for ctrl bytes and into slots. This is ok
