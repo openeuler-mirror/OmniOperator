@@ -10,6 +10,7 @@
 #include "vector.h"
 #include "vector_batch.h"
 #include "vector_helper.h"
+#include "omni_row.h"
 #include "memory/allocator.h"
 #include "memory/memory_manager.h"
 #include "memory/memory_trace.h"
