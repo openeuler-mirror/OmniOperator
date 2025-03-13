@@ -36,6 +36,7 @@ SimpleFilter::SimpleFilter(const SimpleFilter &simpleFilter)
     this->initialized = simpleFilter.initialized;
     this->resultLength = new int(0);
     this->isResultNull = new bool(false);
+    this->isColumnFilter = simpleFilter.isColumnFilter;
 }
 
 bool SimpleFilter::Initialize(OverflowConfig *overflowConfig)
@@ -64,6 +65,7 @@ bool SimpleFilter::Initialize(OverflowConfig *overflowConfig)
 
     void *refFunc = &fAddr;
     this->func = *static_cast<SimpleRowExprEvalFunc *>(refFunc);
+    isColumnFilter = this->expression->GetType() == ExprType::FIELD_E && GetVectorIndexes().size() == 1;
     this->initialized = true;
     return true;
 }
