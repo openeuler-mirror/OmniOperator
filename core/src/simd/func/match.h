@@ -44,7 +44,13 @@ public:
 
 template <typename T, size_t N> SparseMaskIter FindMatch(T value, const T *OMNI_RESTRICT in)
 {
-    return SparseMaskIter{ FindMatchMask<T, N>(value, in) };
+    int8x16_t data = vld1q_s8(in);
+    int8x16_t value_vec = vdupq_n_s8(value);
+    uint8x16_t mask = vceqq_s8(data, value_vec);
+    uint8x8_t nib = vshrn_n_u16(vreinterpretq_u16_u8(mask), 4);
+    uint64_t result;
+    vst1_u64(&result, vreinterpret_u64_u8(nib));
+    return SparseMaskIter{ static_cast<uint64_t>(result) };
 }
 
 template <typename T, size_t N> OMNI_INLINE intptr_t FindFirst(T value, const T *OMNI_RESTRICT in)
