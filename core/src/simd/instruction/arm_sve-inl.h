@@ -4382,7 +4382,7 @@ OMNI_INLINE svuint8_t IndicesForExpandFromBits(uint64_t mask_bits)
         128, 128, 0, 1, 2, 3, 4, 5,   //
         0, 128, 1, 2, 3, 4, 5, 6,   //
         128, 0, 1, 2, 3, 4, 5, 6,   //
-            0, 1, 2, 3, 4, 5, 6, 7 };
+        0, 1, 2, 3, 4, 5, 6, 7 };
     return Load(du8, table + mask_bits * 8);
 }
 
