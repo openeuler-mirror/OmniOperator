@@ -498,9 +498,9 @@ void LookupJoinOperator::ArrayJoinProbe(BaseVector*** buildColumns, size_t probe
 }
 
 template <typename T, bool hasJoinFilter, JoinType joinType>
-void LookupJoinOperator::DealWithProbeMatchResult(int64_t* matchRowsData, int64_t* matchSlotsData,
-                                                  int64_t* noMatchRowsData, int32_t matchRowCnt, int32_t noMatchRowCnt,
-                                                  T&& arg, ExecutionContext* contextPtr, BaseVector*** buildColumns)
+void LookupJoinOperator::DealWithProbeMatchResult(int64_t *matchRowsData, int64_t *matchSlotsData,
+                                                  int64_t *noMatchRowsData, int32_t matchRowCnt, int32_t noMatchRowCnt,
+                                                  T &&arg, ExecutionContext *contextPtr, BaseVector ***buildColumns)
 {
     bool hasProduceRow = false;
     auto &arrayTable = arg.GetArrayTable(partitionMask);
@@ -571,10 +571,269 @@ void LookupJoinOperator::DealWithProbeMatchResult(int64_t* matchRowsData, int64_
     }
 }
 
+template <typename T, typename KeyType, bool hasJoinFilter, JoinType joinType, bool hasNull>
+void LookupJoinOperator::DealWithProbeMatchResultNeon(KeyType *hashes, KeyType *matches, int32_t len, int32_t rowStart,
+                                                      const int64_t *slots, const bool *isAssigned, T &&arg,
+                                                      ExecutionContext *contextPtr, BaseVector ***buildColumns)
+{
+    bool hasProduceRow = false;
+    auto &arrayTable = arg.GetArrayTable(partitionMask);
+    auto probeVector = probeHashColumns[0];
+    for (int32_t j = 0; j < len; j++) {
+        bool notNull = true;
+        int32_t rowIndex = rowStart + j;
+        if constexpr (hasNull) {
+            notNull = !probeVector->IsNull(rowIndex);
+        }
+        if (matches[j] && notNull && isAssigned[hashes[j]]) {
+            auto it = arrayTable->TransformPtr(slots[hashes[j]])->Begin();
+            if constexpr (hasJoinFilter && (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
+                                            joinType == OMNI_JOIN_TYPE_LEFT_ANTI)) {
+                hasProduceRow = false;
+            }
+            ProbeJoinPosition<hasJoinFilter>(rowIndex);
+            while (it.IsOk()) {
+                uint64_t address;
+                if constexpr (joinType != OMNI_JOIN_TYPE_LEFT_ANTI && joinType != OMNI_JOIN_TYPE_FULL) {
+                    address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
+                }
+                bool filterResult = true;
+                if constexpr (hasJoinFilter) {
+                    filterResult = BuildJoinPosition(partitionMask, it->rowIdx, it->vecBatchIdx, contextPtr);
+                    if (filterResult) {
+                        if constexpr (joinType != OMNI_JOIN_TYPE_LEFT_ANTI && joinType != OMNI_JOIN_TYPE_FULL) {
+                            outputBuilder->AppendRow(rowIndex, buildColumns, address);
+                        }
+                        if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_RIGHT ||
+                                      joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
+                            hasProduceRow = true;
+                        }
+                        if constexpr (joinType == OMNI_JOIN_TYPE_RIGHT) {
+                            arg.PositionVisited(it);
+                        }
+                        if constexpr (joinType == OMNI_JOIN_TYPE_LEFT_SEMI || joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
+                            break;
+                        }
+                    }
+                } else {
+                    if constexpr (joinType != OMNI_JOIN_TYPE_LEFT_ANTI && joinType != OMNI_JOIN_TYPE_FULL) {
+                        outputBuilder->AppendRow(rowIndex, buildColumns, address);
+                    }
+                    if constexpr (joinType == OMNI_JOIN_TYPE_RIGHT) {
+                        arg.PositionVisited(it);
+                    }
+                    if constexpr (joinType == OMNI_JOIN_TYPE_LEFT_SEMI || joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
+                        break;
+                    }
+                }
+                if constexpr (joinType == OMNI_JOIN_TYPE_FULL) {
+                    if (filterResult) {
+                        address = LookupJoinOutputBuilder::EncodeAddress(it->rowIdx, it->vecBatchIdx);
+                        outputBuilder->AppendRow(rowIndex, buildColumns, address);
+                        arg.PositionVisited(it);
+                        hasProduceRow = true;
+                    }
+                }
+                ++it;
+            }
+            if constexpr (hasJoinFilter && (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
+                                            joinType == OMNI_JOIN_TYPE_LEFT_ANTI)) {
+                if (!hasProduceRow) {
+                    outputBuilder->AppendRow(rowIndex, nullptr, 0);
+                }
+            }
+        } else if constexpr (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL ||
+                             joinType == OMNI_JOIN_TYPE_LEFT_ANTI) {
+            outputBuilder->AppendRow(rowIndex, nullptr, 0);
+        }
+    }
+}
+
+void Int16ArrayCompareNeon(int16_t *originKey, int16_t *keyResult, int16_t *cmpResult,
+                           int16x8_t vMin, int16x8_t vMax, int16_t minValue, int16_t maxValue)
+{
+    int16x8x3_t vCmp;
+    int16x8x3_t vecKey;
+    int16x8x3_t vIndex;
+
+    vecKey = vld3q_s16(originKey + 8);
+
+    keyResult[0] = originKey[0] - minValue;
+    keyResult[1] = originKey[1] - minValue;
+    vIndex.val[0] = vsubq_s16(vecKey.val[0], vMin);
+    keyResult[2] = originKey[2] - minValue;
+    keyResult[3] = originKey[3] - minValue;
+    keyResult[4] = originKey[4] - minValue;
+    keyResult[5] = originKey[5] - minValue;
+    vIndex.val[1] = vsubq_s16(vecKey.val[1], vMin);
+    keyResult[6] = originKey[6] - minValue;
+    keyResult[7] = originKey[7] - minValue;
+    vIndex.val[2] = vsubq_s16(vecKey.val[2], vMin);
+    vst3q_s16(keyResult + 8, vIndex);
+
+    cmpResult[0] = maxValue >= originKey[0] && originKey[0] >= minValue;
+    cmpResult[1] = maxValue >= originKey[1] && originKey[1] >= minValue;
+    cmpResult[2] = maxValue >= originKey[2] && originKey[2] >= minValue;
+    vCmp.val[0] = (int16x8_t)vcgeq_s16(vecKey.val[0], vMin);
+    vCmp.val[0] = vandq_s16(vCmp.val[0], (int16x8_t)vcleq_s16(vecKey.val[0], vMax));
+    cmpResult[3] = maxValue >= originKey[3] && originKey[3] >= minValue;
+    cmpResult[4] = maxValue >= originKey[4] && originKey[4] >= minValue;
+    cmpResult[5] = maxValue >= originKey[5] && originKey[5] >= minValue;
+    vCmp.val[1] = (int16x8_t)vcgeq_s16(vecKey.val[1], vMin);
+    vCmp.val[1] = vandq_s16(vCmp.val[1], (int16x8_t)vcleq_s16(vecKey.val[1], vMax));
+    cmpResult[6] = maxValue >= originKey[6] && originKey[6] >= minValue;
+    cmpResult[7] = maxValue >= originKey[7] && originKey[7] >= minValue;
+    vCmp.val[2] = (int16x8_t)vcgeq_s16(vecKey.val[2], vMin);
+    vCmp.val[2] = vandq_s16(vCmp.val[2], (int16x8_t)vcleq_s16(vecKey.val[2], vMax));
+
+    vst3q_s16(cmpResult + 8, vCmp);
+}
+
+void Int32ArrayCompareNeon(int32_t *originKey, int32_t *keyResult, int32_t *cmpResult,
+                           int32x4_t vMin, int32x4_t vMax, int32_t minValue, int32_t maxValue)
+{
+    int32x4x3_t vCmp;
+    int32x4x3_t vecKey;
+    int32x4x3_t vIndex;
+
+    vecKey = vld3q_s32(originKey + 4);
+
+    keyResult[0] = originKey[0] - minValue;
+    vIndex.val[0] = vsubq_s32(vecKey.val[0], vMin);
+    keyResult[1] = originKey[1] - minValue;
+    vIndex.val[1] = vsubq_s32(vecKey.val[1], vMin);
+    keyResult[2] = originKey[2] - minValue;
+    vIndex.val[2] = vsubq_s32(vecKey.val[2], vMin);
+    keyResult[3] = originKey[3] - minValue;
+    vst3q_s32(keyResult + 4, vIndex);
+
+    cmpResult[0] = maxValue >= originKey[0] && originKey[0] >= minValue;
+    vCmp.val[0] = (int32x4_t)vcgeq_s32(vecKey.val[0], vMin);
+    vCmp.val[0] = vandq_s32(vCmp.val[0], (int32x4_t)vcleq_s32(vecKey.val[0], vMax));
+    cmpResult[1] = maxValue >= originKey[1] && originKey[1] >= minValue;
+    vCmp.val[1] = (int32x4_t)vcgeq_s32(vecKey.val[1], vMin);
+    vCmp.val[1] = vandq_s32(vCmp.val[1], (int32x4_t)vcleq_s32(vecKey.val[1], vMax));
+    cmpResult[2] = maxValue >= originKey[2] && originKey[2] >= minValue;
+    vCmp.val[2] = (int32x4_t)vcgeq_s32(vecKey.val[2], vMin);
+    vCmp.val[2] = vandq_s32(vCmp.val[2], (int32x4_t)vcleq_s32(vecKey.val[2], vMax));
+    cmpResult[3] = maxValue >= originKey[3] && originKey[3] >= minValue;
+
+    vst3q_s32(cmpResult + 4, vCmp);
+}
+
+void Int64ArrayCompareNeon(int64_t *originKey, int64_t *keyResult, int64_t *cmpResult,
+                           int64x2_t vMin, int64x2_t vMax, int32_t minValue, int32_t maxValue)
+{
+    int64x2x3_t vCmp;
+    int64x2x3_t vecKey;
+    int64x2x3_t vHashes;
+
+    vecKey = vld3q_s64(originKey + 2);
+
+    keyResult[0] = originKey[0] - minValue;
+    vHashes.val[0] = vsubq_s64(vecKey.val[0], vMin);
+    vHashes.val[1] = vsubq_s64(vecKey.val[1], vMin);
+    keyResult[1] = originKey[1] - minValue;
+    vHashes.val[2] = vsubq_s64(vecKey.val[2], vMin);
+    vst3q_s64(keyResult + 2, vHashes);
+
+    cmpResult[0] = maxValue >= originKey[0] && originKey[0] >= minValue;
+    vCmp.val[0] = (int64x2_t)vcgeq_s64(vecKey.val[0], vMin);
+    vCmp.val[0] = vandq_s64(vCmp.val[0], (int64x2_t)vcleq_s64(vecKey.val[0], vMax));
+    vCmp.val[1] = (int64x2_t)vcgeq_s64(vecKey.val[1], vMin);
+    vCmp.val[1] = vandq_s64(vCmp.val[1], (int64x2_t)vcleq_s64(vecKey.val[1], vMax));
+
+    cmpResult[1] = maxValue >= originKey[1] && originKey[1] >= minValue;
+    vCmp.val[2] = (int64x2_t)vcgeq_s64(vecKey.val[2], vMin);
+    vCmp.val[2] = vandq_s64(vCmp.val[2], (int64x2_t)vcleq_s64(vecKey.val[2], vMax));
+
+    vst3q_s64(cmpResult + 2, vCmp);
+}
+
+template <typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
+void LookupJoinOperator::ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size_t probeHashColsCount, T &&arg,
+                                                ExecutionContext *contextPtr)
+{
+    // 4*128/8
+    constexpr int32_t simdLen = 64;
+    auto inputRowCount = curInputBatch->GetRowCount();
+    auto probeVector = arg.GetSingleProbeHashKeyBase(probeHashColumns);
+    using KeyType = typename std::remove_pointer<decltype(probeVector)>::type;
+    // get KeyType from hashmap
+    constexpr int32_t vecLanes = simdLen / sizeof(KeyType);
+    int32_t probePosition = curProbePosition;
+    probeVector += probePosition;
+    __builtin_prefetch(probeVector, 0, 3);
+    int32_t end = inputRowCount / vecLanes * vecLanes;
+    auto maxMinPair = arg.GetmaxMinValue(partitionMask);
+    auto minValue = static_cast<KeyType>(maxMinPair.second);
+    auto maxValue = static_cast<KeyType>(maxMinPair.first);
+    auto &arrayTable = arg.GetArrayTable(partitionMask);
+    bool *isAssigned = arrayTable->GetAssigned();
+    auto slots = reinterpret_cast<int64_t *>(arrayTable->GetSlots());
+    alignas(xsimd::default_arch::alignment()) KeyType hashes[vecLanes];
+    alignas(xsimd::default_arch::alignment()) KeyType matches[vecLanes];
+    if constexpr (std::is_same_v<KeyType, int16_t>) {
+        int16x8_t vMin = vdupq_n_s16(minValue);
+        int16x8_t vMax = vdupq_n_s16(maxValue);
+        for (; probePosition < end; probePosition += vecLanes) {
+            Int16ArrayCompareNeon(probeVector, hashes, matches, vMin, vMax, minValue, maxValue);
+            probeVector += vecLanes;
+            __builtin_prefetch(probeVector, 0, 3);
+
+            DealWithProbeMatchResultNeon<decltype(arg), KeyType, hasJoinFilter, joinType, hasNull>(
+                hashes, matches, vecLanes, probePosition, slots, isAssigned, arg, contextPtr, buildColumns);
+
+            if (UNLIKELY(outputBuilder->IsFull())) {
+                curProbePosition = probePosition + vecLanes;
+                return;
+            }
+        }
+    } else if constexpr (std::is_same_v<KeyType, int32_t>) {
+        int32x4_t vMin = vdupq_n_s32(minValue);
+        int32x4_t vMax = vdupq_n_s32(maxValue);
+        for (; probePosition < end; probePosition += vecLanes) {
+            Int32ArrayCompareNeon(probeVector, hashes, matches, vMin, vMax, minValue, maxValue);
+            probeVector += vecLanes;
+            __builtin_prefetch(probeVector, 0, 3);
+
+            DealWithProbeMatchResultNeon<decltype(arg), KeyType, hasJoinFilter, joinType, hasNull>(
+                hashes, matches, vecLanes, probePosition, slots, isAssigned, arg, contextPtr, buildColumns);
+
+            if (UNLIKELY(outputBuilder->IsFull())) {
+                curProbePosition = probePosition + vecLanes;
+                return;
+            }
+        }
+    } else if constexpr (std::is_same_v<KeyType, int64_t>) {
+        int64x2_t vMin = vdupq_n_s64(minValue);
+        int64x2_t vMax = vdupq_n_s64(maxValue);
+        for (; probePosition < end; probePosition += vecLanes) {
+            Int64ArrayCompareNeon(probeVector, hashes, matches, vMin, vMax, minValue, maxValue);
+            probeVector += vecLanes;
+            __builtin_prefetch(probeVector, 0, 3);
+
+            DealWithProbeMatchResultNeon<decltype(arg), KeyType, hasJoinFilter, joinType, hasNull>(
+                hashes, matches, vecLanes, probePosition, slots, isAssigned, arg, contextPtr, buildColumns);
+
+            if (UNLIKELY(outputBuilder->IsFull())) {
+                curProbePosition = probePosition + vecLanes;
+                return;
+            }
+        }
+    }
+    curProbePosition = end;
+    // deal with rest of rows
+    ArrayJoinProbe<decltype(arg), hasJoinFilter, joinType, hasNull>(buildColumns, probeHashColsCount, arg, contextPtr);
+}
+
 template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
 void LookupJoinOperator::ArrayJoinProbeSIMD(BaseVector ***buildColumns, size_t probeHashColsCount,
                                             T &&arg, ExecutionContext *contextPtr)
 {
+#ifndef ENABLE_SVE
+    ArrayJoinProbeSIMDNeon<T, hasJoinFilter, joinType, hasNull>(buildColumns, probeHashColsCount, arg, contextPtr);
+#else
     auto inputRowCount = curInputBatch->GetRowCount();
     int32_t end = inputRowCount / INT64_K_WIDTH * INT64_K_WIDTH;
     auto &arrayTable = arg.GetArrayTable(partitionMask);
@@ -650,6 +909,7 @@ void LookupJoinOperator::ArrayJoinProbeSIMD(BaseVector ***buildColumns, size_t p
     curProbePosition = end;
     // deal with rest of rows
     ArrayJoinProbe<decltype(arg), hasJoinFilter, joinType, hasNull>(buildColumns, probeHashColsCount, arg, contextPtr);
+#endif
 }
 
 template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatchForInnerJoin()
@@ -661,7 +921,13 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
             uint32_t partition = partitionMask;
             auto buildColumns = arg.GetColumns(partition);
             auto probeHashColsCount = probeHashCols.size();
+            int32_t probePosition = curProbePosition;
             InitForProbe<hasJoinFilter>(partition);
+            bool isInsert = true;
+            typename std::decay_t<decltype(arg)>::Mapped *rowRefList = nullptr;
+            // get KeyType from hashmap
+            using KeyType = decltype(arg.keyType);
+            KeyType cacheKeyValue;
             if constexpr (singleHT && std::remove_reference<decltype(arg)>::type::IS_SIMPLE_KEY) {
                 if (probeSimd) {
                     if (probeHashColumns[0]->HasNull()) {
@@ -674,11 +940,6 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     return;
                 }
             }
-            using KeyType = decltype(arg.keyType);
-            KeyType cacheKeyValue;
-            bool isInsert = true;
-            typename std::decay_t<decltype(arg)>::Mapped *rowRefList = nullptr;
-            int32_t probePosition = curProbePosition;
             if (std::remove_reference_t<decltype(arg)>::IS_SIMPLE_KEY && !arg.GetIsMultiCols()) {
                 for (; probePosition < inputRowCount; probePosition++) {
                     if (curProbeNulls[probePosition]) {

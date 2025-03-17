@@ -186,10 +186,19 @@ private:
     void ArrayJoinProbeSIMD(BaseVector ***buildColumns, size_t probeHashColsCount, T &&arg,
                             ExecutionContext *contextPtr);
 
+    template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
+    void ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size_t probeHashColsCount,
+                                                    T &&arg, ExecutionContext *contextPtr);
+
     template <typename T, bool hasJoinFilter, JoinType joinType>
     void DealWithProbeMatchResult(int64_t *matchRowsData, int64_t *matchSlotsData, int64_t *noMatchRowsData,
                                   int32_t matchRowCnt, int32_t noMatchRowCnt, T&& arg, ExecutionContext* contextPtr,
                                   BaseVector*** buildColumns);
+
+    template<typename T, typename KeyType, bool hasJoinFilter, JoinType joinType, bool hasNull>
+    void DealWithProbeMatchResultNeon(KeyType *hashes, KeyType *matches, int32_t len, int32_t rowStart,
+                                      const int64_t *slots, const bool *isAssigned,
+                                      T &&arg, ExecutionContext *contextPtr, BaseVector ***buildColumns);
 
     template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
     void ArrayJoinProbe(BaseVector ***buildColumns, size_t probeHashColsCount,

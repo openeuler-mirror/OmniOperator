@@ -743,9 +743,20 @@ bool JoinHashTableVariants<KeyType, RowRefListType>::TryToBuildArrayTable(uint32
         if (vector->GetEncoding() != OMNI_DICTIONARY) {
             // Caveat: null data might be a random number
             auto valuePtr = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(vector));
-            const auto [minPtr, maxPtr] = std::minmax_element(valuePtr, valuePtr + rowCount);
-            max = std::max(max, *maxPtr);
-            min = std::min(min, *minPtr);
+            if (vector->HasNull()) {
+                for (int32_t i = 0; i < rowCount; i++) {
+                    if (vector->IsNull(i)) {
+                        continue;
+                    }
+                    auto value = *(valuePtr + i);
+                    max = std::max(max, value);
+                    min = std::min(min, value);
+                }
+            } else {
+                const auto [minPtr, maxPtr] = std::minmax_element(valuePtr, valuePtr + rowCount);
+                max = std::max(max, *maxPtr);
+                min = std::min(min, *minPtr);
+            }
             // to prevent max - min overflow
             if (max > 0 && min < 0 && min + ARRAY_THRESHOLD * rangeUpperBound < max) {
                 return false;

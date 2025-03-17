@@ -81,6 +81,11 @@ public:
         return arrayTables[partitionIndex];
     }
 
+    ALWAYS_INLINE std::pair<int64_t, int64_t> &GetmaxMinValue(int32_t partitionIndex)
+    {
+        return maxMins[partitionIndex];
+    }
+
     ALWAYS_INLINE HashTableImplementationType GetHashTableTypes(int32_t partitionIndex)
     {
         return hashTableTypes[partitionIndex];
@@ -92,7 +97,11 @@ public:
         totalRowCount[partitionIndex] += vecBatch->GetRowCount();
     }
 
-    ALWAYS_INLINE bool CanProbeSIMD(BaseVector **probeHashColumns, int32_t probeHashColCount, uint32_t partition)
+    InsertResult<RowRefListType *> Find(std::vector<VectorSerializerIgnoreNull> &probeSerializers,
+                                        ExecutionContext *probeArena, BaseVector **probeHashColumns,
+                                        int32_t probeHashColCount, int32_t probePosition, uint32_t partition);
+
+    ALWAYS_INLINE bool CanProbeSIMD(BaseVector** probeHashColumns, int32_t probeHashColCount, uint32_t partition)
     {
         if constexpr (IS_SIMPLE_KEY) {
             return hashTableTypes[partition] == HashTableImplementationType::ARRAY_HASH_TABLE &&
@@ -112,10 +121,6 @@ public:
     }
 
     void ComputeMultiColKey(BaseVector **hashColumns, int32_t hashColCount, int32_t index, KeyType& key);
-
-    InsertResult<RowRefListType *> Find(std::vector<VectorSerializerIgnoreNull> &probeSerializers,
-        ExecutionContext *probeArena, BaseVector **probeHashColumns, int32_t probeHashColCount, int32_t probePosition,
-        uint32_t partition);
 
     KeyType GetKeyValue(BaseVector **probeHashColumns, int32_t probePosition);
 
@@ -234,7 +239,6 @@ private:
     void EmplaceVariableNotNullKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex,
         VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum,
         std::vector<int8_t> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes);
-
     template <typename HashTableType>
     void EmplaceVariableKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch,
         int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum, std::vector<int8_t> &isNotNullKeys,
