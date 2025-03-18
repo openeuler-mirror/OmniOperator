@@ -126,7 +126,10 @@ public:
 
     void ALWAYS_INLINE SetNull(int32_t index, bool isNull)
     {
-        nullsBuffer->SetNull(offset + index, isNull);
+        // 不存在对相同的index先设置为true，然后再设置为false的情况
+        if (UNLIKELY(isNull)) {
+            nullsBuffer->SetNull(offset + index);
+        }
     }
 
     uint8_t ALWAYS_INLINE operator[](int32_t index) const

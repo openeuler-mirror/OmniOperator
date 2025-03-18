@@ -142,7 +142,7 @@ public:
             auto nullmapPtr = *nullMap;
 
             for (int i = 0; i < rowCount; ++i) {
-                nullmapPtr.SetNull(i, nullmapPtr[i] | not filterPtr[i]);
+                nullmapPtr.SetNull(i, not filterPtr[i]);
             }
         }
 
@@ -200,7 +200,7 @@ public:
             auto nullmapPtr = *nullMap;
 
             for (int i = 0; i < rowCount; ++i) {
-                nullmapPtr.SetNull(i, nullmapPtr[i] | not filterPtr[i]);
+                nullmapPtr.SetNull(i, not filterPtr[i]);
             }
         }
 
@@ -340,7 +340,7 @@ private:
             }
         }
 
-        nullMapBuffer->AllocateReuse(NullsBuffer::CalculateNbytes(rowCount), false);
+        nullMapBuffer->AllocateReuse(NullsBuffer::CalculateNbytes(rowCount), true);
         auto nullMap = std::make_shared<NullsHelper>(std::make_shared<NullsBuffer>(rowCount, nullMapBuffer));
         bool hasValidRows;
         if (maskVector->GetEncoding() == OMNI_DICTIONARY) {

@@ -46,7 +46,9 @@ public:
     {
         auto nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
         for (int i = 0; i < valueSize; i++) {
-            nullsBuffer->SetNull(i, vector->IsNull(values[i]));
+            if (UNLIKELY(vector->IsNull(values[i]))) {
+                nullsBuffer->SetNull(i);
+            }
         }
 
         // todo:: handing other types of container
@@ -61,7 +63,9 @@ public:
     {
         auto nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
         for (int i = 0; i < valueSize; i++) {
-            nullsBuffer->SetNull(i, vector->IsNull(values[i]));
+            if (UNLIKELY(vector->IsNull(values[i]))) {
+                nullsBuffer->SetNull(i);
+            }
         }
 
         auto dictionary = std::make_shared<DictionaryContainer<T>>(values, valueSize,

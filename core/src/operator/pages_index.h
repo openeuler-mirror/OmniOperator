@@ -169,7 +169,7 @@ private:
                 }
             } else {
                 for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
-                    if (col->IsNull(rowIdx)) {
+                    if (UNLIKELY(col->IsNull(rowIdx))) {
                         nulls->SetNull(nullIndex++, true);
                     } else {
                         values[valueIndex++] = col->GetValue(rowIdx);

@@ -1511,7 +1511,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
 
-    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)];
+    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)] = {0};
     int newLengths[3];
 
     auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
@@ -1535,6 +1535,10 @@ TEST(CodeGenTest, ProjectionCoalesce)
     for (int i = 0; i < 3; i++) {
         BitUtil::SetBit(bitmap[0], 0, true);
     }
+    for (int i = 0; i < NullsBuffer::CalculateNbytes(3); i++) {
+        newNullValues[i] = 0;
+    }
+
     r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_NE(r, 0);
@@ -1581,7 +1585,7 @@ TEST(CodeGenTest, ProjectionIsNull)
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
 
-    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)];
+    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)] = {0};
     int newLengths[3];
 
     auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
@@ -1605,6 +1609,10 @@ TEST(CodeGenTest, ProjectionIsNull)
     for (int i = 0; i < 3; i++) {
         BitUtil::SetBit(bitmap[0], i, true);
     }
+    for (int i = 0; i < NullsBuffer::CalculateNbytes(3); i++) {
+        newNullValues[i] = 0;
+    }
+
     r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_NE(r, 0);
@@ -2096,7 +2104,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
 
-    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)];
+    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)] = {0};
     int newLengths[3];
 
     auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
@@ -2123,6 +2131,10 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     for (int i = 0; i < 3; i++) {
         BitUtil::SetBit(bitmap[0], i, true);
     }
+    for (int i = 0; i < NullsBuffer::CalculateNbytes(3); i++) {
+        newNullValues[i] = 0;
+    }
+
     r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_TRUE(BitUtil::IsBitSet(newNullValues, 0));
@@ -2172,7 +2184,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
 
-    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)];
+    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)] = {0};
     int newLengths[3];
 
     auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
@@ -2203,6 +2215,10 @@ TEST(CodeGenTest, ProjectionCodeGen)
     for (int i = 0; i < 3; i++) {
         BitUtil::SetBit(bitmap[0], i, true);
     }
+    for (int i = 0; i < NullsBuffer::CalculateNbytes(3); i++) {
+        newNullValues[i] = 0;
+    }
+
     r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
         reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_TRUE(BitUtil::IsBitSet(newNullValues, 0));
