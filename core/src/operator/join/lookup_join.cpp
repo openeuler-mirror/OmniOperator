@@ -722,7 +722,7 @@ void Int32ArrayCompareNeon(int32_t *originKey, int32_t *keyResult, int32_t *cmpR
 }
 
 void Int64ArrayCompareNeon(int64_t *originKey, int64_t *keyResult, int64_t *cmpResult,
-                           int64x2_t vMin, int64x2_t vMax, int32_t minValue, int32_t maxValue)
+                           int64x2_t vMin, int64x2_t vMax, int64_t minValue, int64_t maxValue)
 {
     int64x2x3_t vCmp;
     int64x2x3_t vecKey;
@@ -822,7 +822,7 @@ void LookupJoinOperator::ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size
             }
         }
     }
-    curProbePosition = end;
+    curProbePosition = probePosition;
     // deal with rest of rows
     ArrayJoinProbe<decltype(arg), hasJoinFilter, joinType, hasNull>(buildColumns, probeHashColsCount, arg, contextPtr);
 }
@@ -906,7 +906,7 @@ void LookupJoinOperator::ArrayJoinProbeSIMD(BaseVector ***buildColumns, size_t p
     }
     DealWithProbeMatchResult<decltype(arg), hasJoinFilter, joinType>(
         matchRowsData, matchSlotsData, noMatchRowsData, matchRowCnt, noMatchRowCnt, arg, contextPtr, buildColumns);
-    curProbePosition = end;
+    curProbePosition = probePosition;
     // deal with rest of rows
     ArrayJoinProbe<decltype(arg), hasJoinFilter, joinType, hasNull>(buildColumns, probeHashColsCount, arg, contextPtr);
 #endif
