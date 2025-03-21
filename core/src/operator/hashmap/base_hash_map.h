@@ -338,11 +338,6 @@ static const uint32_t SHIFT_DISTANCE_7 = 7;
 using ctrl_t = signed char;
 using h2_t = uint8_t;
 
-enum Ctrl : ctrl_t {
-    kEmpty = -128,  // 0b10000000 or 0x80
-    kSentinel = -1
-};
-
 ALWAYS_INLINE static size_t H1(size_t hashVal)
 {
     return (hashVal >> SHIFT_DISTANCE_7);
@@ -350,13 +345,13 @@ ALWAYS_INLINE static size_t H1(size_t hashVal)
 
 ALWAYS_INLINE static h2_t H2(size_t hashVal)
 {
-    signed char temp = hashVal & 0xFF;
-    if (temp != kSentinel && temp != kEmpty) {
-        return (h2_t)(ctrl_t)(temp);
-    } else {
-        return (h2_t)(ctrl_t)(hashVal & 0x7F);
-    }
+    return (h2_t)(ctrl_t)(hashVal & 0x7F);
 }
+
+enum Ctrl : ctrl_t {
+    kEmpty = -128, // 0b10000000 or 0x80
+    kSentinel = -1
+};
 
 struct Group {
     enum {
@@ -750,7 +745,7 @@ private:
 
     static bool IsEmptyOrDeleted(ctrl_t c)
     {
-        return c == kSentinel || c == kEmpty;
+        return c < kSentinel;
     }
 
     template <size_t kWidth>
