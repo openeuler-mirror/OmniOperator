@@ -9,6 +9,10 @@
 #include <huawei_secure_c/include/securec.h>
 #include "util/compiler_util.h"
 #include "type/data_utils.h"
+#include "codegen/functions/murmur3_hash.h"
+#include "codegen/functions/mathfunctions.h"
+#include "vector/vector.h"
+#include "vector/vector_batch.h"
 
 namespace omniruntime {
 namespace op {
@@ -49,9 +53,20 @@ constexpr int32_t PTR_STEP_1 = 1;
 constexpr int32_t PTR_STEP_2 = 2;
 constexpr int32_t PTR_STEP_3 = 3;
 constexpr int32_t PTR_STEP_4 = 4;
+constexpr uint32_t MM3HASH_SEED = 42;
+
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    constexpr bool IS_BIG_ENDIAN = true;
+#else
+    constexpr bool IS_BIG_ENDIAN = false;
+#endif
+
 
 class HashUtil {
 public:
+    static std::unique_ptr<omniruntime::vec::Vector<int32_t>> ComputePartitionIds(
+        std::vector<omniruntime::vec::BaseVector *> &vecs, int32_t partitionNum, int32_t rowCount);
+
     static uint64_t NextPowerOfTwo(uint64_t x);
 
     static uint32_t HashArraySize(uint32_t expected, float f);
