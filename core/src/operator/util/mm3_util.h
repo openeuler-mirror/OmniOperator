@@ -409,5 +409,15 @@ static void Mm3Boolean(omniruntime::vec::BaseVector* vec, int32_t &rowCount, std
         }
     }
 }
+
+static int32_t Pmod(int32_t x, int32_t y)
+{
+    int32_t r = x % y;
+    if (r < 0) {
+        return r + y;
+    }
+    return r;
+}
+
 }
 #endif // OMNI_RUNTIME_MM3_UTIL_H

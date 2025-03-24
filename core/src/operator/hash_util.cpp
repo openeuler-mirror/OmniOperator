@@ -72,15 +72,9 @@ std::unique_ptr<omniruntime::vec::Vector<int32_t>> HashUtil::ComputePartitionIds
         }
     }
     auto ret = std::make_unique<omniruntime::vec::Vector<int>>(rowCount, type::OMNI_INT);
-    int32_t row = 0;
-    for (; row + PTR_STEP_4 <= rowCount; row += PTR_STEP_4) {
-        ret->SetValue(row, partitionIds[row] % partitionNum);
-        ret->SetValue(row + PTR_STEP_1, partitionIds[row + PTR_STEP_1] % partitionNum);
-        ret->SetValue(row + PTR_STEP_2, partitionIds[row + PTR_STEP_2] % partitionNum);
-        ret->SetValue(row + PTR_STEP_3, partitionIds[row + PTR_STEP_3] % partitionNum);
-    }
-    for (; row < rowCount; row++) {
-        ret->SetValue(row, partitionIds[row] % partitionNum);
+
+    for (int32_t row = 0; row < rowCount; row++) {
+        ret->SetValue(row, Pmod(partitionIds[row], partitionNum));
     }
     return ret;
 }
