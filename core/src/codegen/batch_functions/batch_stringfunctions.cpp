@@ -1220,4 +1220,94 @@ extern "C" DLLEXPORT void BatchGreatestStr(uint8_t **xStr, int32_t *xStrLen, boo
         outStrLen[i] = xStrLen[i];
     }
 }
+
+extern "C" DLLEXPORT void BatchStaticInvokeVarcharTypeWriteSideCheck(int64_t contextPtr, char **str, int32_t *strLen,
+    int32_t limit, bool *isAnyNull, char **outputStr, int32_t *outputLen, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        }
+        char *ss = str[i];
+        int32_t len = strLen[i];
+        int32_t ssLen = StringUtil::NumChars(ss, len);
+        if (ssLen <= limit) {
+            outputStr[i] = ss;
+            outputLen[i] = len;
+            continue;
+        }
+        int32_t numTailSpacesToTrim = ssLen - limit;
+        int32_t endIdx = len - 1;
+        int32_t trimTo = len - numTailSpacesToTrim;
+        while (endIdx >= trimTo && ss[endIdx] == 0x20) {
+            endIdx--;
+        }
+        int32_t outByteNum = endIdx + 1;
+        if (ssLen > limit) {
+            std::ostringstream errorMessage;
+            errorMessage << "Exceeds varchar type length limitation: " << limit;
+            SetError(contextPtr, errorMessage.str());
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        }
+        auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+        errno_t res = memcpy_s(padded, outByteNum, ss, outByteNum);
+        if (res != EOK) {
+            SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        }
+        padded[outByteNum] = '\0';
+        outputLen[i] = outByteNum;
+        outputStr[i] = padded;
+    }
+}
+
+extern "C" DLLEXPORT void BatchStaticInvokeCharReadPadding(int64_t contextPtr, char **str,
+    int32_t *strLen, int32_t limit, bool *isAnyNull, char **outputStr, int32_t *outputLen, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        } else if (strLen[i] == 0) {
+            outputLen[i] = 0;
+            outputStr[i] = "";
+            continue;
+        }
+        char *ss = str[i];
+        int32_t len = strLen[i];
+        int32_t ssLen = StringUtil::NumChars(ss, len);
+        if (ssLen >= limit) {
+            outputStr[i] = ss;
+            outputLen[i] = len;
+            continue;
+        }
+        int32_t diff = limit - ssLen;
+        int32_t outByteNum = len + diff + 1;
+        auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+        errno_t res = memcpy_s(padded, len, ss, len);
+        if (res != EOK) {
+            SetError(contextPtr, "BatchStaticInvokeCharReadPadding failed：memcpy_s error");
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        }
+        res = memset_s(padded + len, diff, ' ', diff);
+        if (res != EOK) {
+            SetError(contextPtr, "BatchStaticInvokeCharReadPadding failed：memcpy_s error");
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        }
+        padded[outByteNum] = '\0';
+        outputLen[i] = outByteNum - 1;
+        outputStr[i] = padded;
+    }
+}
 }

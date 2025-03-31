@@ -2449,4 +2449,74 @@ TEST(FunctionTest, Greatest)
     EXPECT_FALSE(retIsNull);
 }
 
+TEST(FunctionTest, StaticInvokeVarcharTypeWriteSideCheck)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    std::string src = "abc";
+    int outLen;
+    const char* cs1 = StaticInvokeVarcharTypeWriteSideCheck(contextPtr, src.c_str(), src.size(), 4, false, &outLen);
+    std::string ss1(cs1, outLen);
+    EXPECT_EQ(ss1, src);
+
+    const char* cs2 = StaticInvokeVarcharTypeWriteSideCheck(contextPtr, src.c_str(), src.size(), 2, false, &outLen);
+    EXPECT_TRUE(cs2 == nullptr);
+
+    src = "abc   ";
+    const char* cs3 = StaticInvokeVarcharTypeWriteSideCheck(contextPtr, src.c_str(), src.size(), 4, false, &outLen);
+    std::string ss3(cs3, outLen);
+    EXPECT_EQ(ss3, "abc ");
+
+    const char* cs4 = StaticInvokeVarcharTypeWriteSideCheck(contextPtr, src.c_str(), src.size(), 2, false, &outLen);
+    EXPECT_TRUE(cs4 == nullptr);
+
+    src = "你好";
+    const char* cs5 = StaticInvokeVarcharTypeWriteSideCheck(contextPtr, src.c_str(), src.size(), 2, false, &outLen);
+    std::string ss5(cs5, outLen);
+    EXPECT_EQ(ss5, src);
+
+    const char* cs6 = StaticInvokeVarcharTypeWriteSideCheck(contextPtr, src.c_str(), src.size(), 1, false, &outLen);
+    EXPECT_TRUE(cs6 == nullptr);
+
+    const char* cs7 = StaticInvokeVarcharTypeWriteSideCheck(contextPtr, nullptr, 0, 1, true, &outLen);
+    EXPECT_TRUE(cs7 == nullptr);
+    delete context;
+}
+
+TEST(FunctionTest, StaticInvokeCharReadPadding)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    std::string src = "abc";
+    int outLen;
+    const char* cs1 = StaticInvokeCharReadPadding(contextPtr, src.c_str(), src.size(), 2, false, &outLen);
+    std::string ss1(cs1, outLen);
+    EXPECT_EQ(ss1, src);
+
+    const char* cs2 = StaticInvokeCharReadPadding(contextPtr, src.c_str(), src.size(), src.size(), false, &outLen);
+    std::string ss2(cs2, outLen);
+    EXPECT_EQ(ss2, src);
+
+    const char* cs3 = StaticInvokeCharReadPadding(contextPtr, src.c_str(), src.size(), 6, false, &outLen);
+    std::string ss3(cs3, outLen);
+    EXPECT_EQ(ss3, "abc   ");
+
+    src = "你好";
+    const char* cs4 = StaticInvokeCharReadPadding(contextPtr, src.c_str(), src.size(), 1, false, &outLen);
+    std::string ss4(cs4, outLen);
+    EXPECT_EQ(ss4, src);
+
+    const char* cs5 = StaticInvokeCharReadPadding(contextPtr, src.c_str(), src.size(), 2, false, &outLen);
+    std::string ss5(cs5, outLen);
+    EXPECT_EQ(ss5, src);
+
+    const char* cs6 = StaticInvokeCharReadPadding(contextPtr, src.c_str(), src.size(), 4, false, &outLen);
+    std::string ss6(cs6, outLen);
+    EXPECT_EQ(ss6, "你好  ");
+
+    const char* cs7 = StaticInvokeCharReadPadding(contextPtr, nullptr, 0, 4, true, &outLen);
+    std::string ss7(cs7, outLen);
+    EXPECT_TRUE(cs7 == nullptr);
+    delete context;
+}
 }
