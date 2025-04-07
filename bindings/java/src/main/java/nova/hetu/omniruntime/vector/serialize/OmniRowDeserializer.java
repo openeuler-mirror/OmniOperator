@@ -33,11 +33,11 @@ public class OmniRowDeserializer {
     /**
      * used when shuffle read
      *
-     * @param bytes one row 's bytes
+     * @param address one row 's bytes
      * @param rowIdx vector 's index
      */
-    public void parse(byte[] bytes, int rowIdx) {
-        parseOneRow(getNativeParser(), bytes, rowIdx);
+    public void parse(long address, int rowIdx) {
+        parseOneRowByAddr(getNativeParser(), address, rowIdx);
     }
 
     /**

@@ -35,6 +35,18 @@ public:
         return aggSimpleFilter->Evaluate(values, nulls, lengths, reinterpret_cast<int64_t>(&executionContext));
     }
 
+    static inline bool IsColumnFilter(VectorBatch *inputVecBatch, SimpleFilter *aggSimpleFilter)
+    {
+        return aggSimpleFilter->IsColumnFilter() &&
+               inputVecBatch->Get(*(aggSimpleFilter->GetVectorIndexes().begin()))->GetEncoding() == OMNI_FLAT;
+    }
+
+    static BaseVector *ColumnFilterFlatVectorSliceHelper(VectorBatch *inputVecBatch, SimpleFilter *aggSimpleFilter)
+    {
+        auto *sourceVector = inputVecBatch->Get(*aggSimpleFilter->GetVectorIndexes().begin());
+        return reinterpret_cast<Vector<bool> *>(sourceVector)->Slice(0, sourceVector->GetSize());
+    }
+
     static VectorBatch *AggFilterRequiredVectors(VectorBatch *inputVecBatch, const DataTypes &originTypes,
         const DataTypes &inputTypes, const std::vector<std::unique_ptr<Projection>> &projections,
         ExecutionContext *executionContext)
@@ -75,16 +87,20 @@ public:
         for (size_t i = 0; i < aggFilterNum; ++i) {
             auto aggSimpleFilter = aggSimpleFilters[i];
             if (aggSimpleFilter != nullptr) {
-                // if the agg expression has filter, then append a boolean vector to vector batch
-                auto *booleanVector = new Vector<bool>(rowCount);
-                for (int32_t j = 0; j < rowCount; ++j) {
-                    if (AggUtil::IsAggPositionEligible(j, inputVecBatch, aggSimpleFilter, context, originTypes)) {
-                        booleanVector->SetValue(j, true);
-                    } else {
-                        booleanVector->SetValue(j, false);
+                if (IsColumnFilter(inputVecBatch, aggSimpleFilter)) {
+                    newInputVecBatch->Append(ColumnFilterFlatVectorSliceHelper(inputVecBatch, aggSimpleFilter));
+                } else {
+                    // if the agg expression has filter, then append a boolean vector to vector batch
+                    auto *booleanVector = new Vector<bool>(rowCount);
+                    for (int32_t j = 0; j < rowCount; ++j) {
+                        if (AggUtil::IsAggPositionEligible(j, inputVecBatch, aggSimpleFilter, context, originTypes)) {
+                            booleanVector->SetValue(j, true);
+                        } else {
+                            booleanVector->SetValue(j, false);
+                        }
                     }
+                    newInputVecBatch->Append(booleanVector);
                 }
-                newInputVecBatch->Append(booleanVector);
             }
         }
     }

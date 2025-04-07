@@ -74,7 +74,7 @@ public:
     }
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap)
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {
         StdDevState *sampState = StdDevState::CastState(state);
         if (inputRaw) {
@@ -85,7 +85,7 @@ public:
                     AddSamp<StdDevSampPartialOp>(sampState->mean, sampState->m2, sampState->count, ptr, rowCount);
                 } else {
                     AddSampConditional<StdDevSampPartialOp>(sampState->mean, sampState->m2, sampState->count, ptr,
-                        rowCount, nullMap);
+                        rowCount, *nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromDict<IN_ID>(vector));
@@ -95,7 +95,7 @@ public:
                         indexMap);
                 } else {
                     AddSampDictConditional<StdDevSampPartialOp>(sampState->mean, sampState->m2, sampState->count, ptr,
-                        rowCount, nullMap, indexMap);
+                        rowCount, *nullMap, indexMap);
                 }
             }
         } else {
@@ -104,7 +104,7 @@ public:
     }
 
     void ProcessSingleInternalFinal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap)
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {
         auto *cnt = curVectorBatch->Get(channels[0]);
         auto *meanOther = curVectorBatch->Get(channels[1]);
@@ -122,14 +122,14 @@ public:
         for (int i = 0; i < rowCount; i++) {
             if (nullMap == nullptr) {
                 StdDevFinalOp(sampState->mean, sampState->m2, sampState->count, cntPtr[i], meanPtr[i], m2Ptr[i]);
-            } else if (nullMap[i] == false) {
+            } else if ((*nullMap)[i] == false) {
                 StdDevFinalOp(sampState->mean, sampState->m2, sampState->count, cntPtr[i], meanPtr[i], m2Ptr[i]);
             }
         }
     }
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const uint8_t *nullMap)
+        const std::shared_ptr<NullsHelper> nullMap)
     {
         if (this->inputRaw) {
             if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
@@ -139,7 +139,7 @@ public:
                     AddUseRowIndex<RawInputType, StdDevState::UpdateState>(rowStates, aggStateOffset, ptr);
                 } else {
                     AddConditionalUseRowIndex<RawInputType, StdDevState::template UpdateStateWithCondition<false>>(
-                        rowStates, aggStateOffset, ptr, nullMap);
+                        rowStates, aggStateOffset, ptr, *nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<RawInputType *>(GetValuesFromDict<IN_ID>(vector));
@@ -149,7 +149,7 @@ public:
                         indexMap);
                 } else {
                     AddDictConditionalUseRowIndex<RawInputType, ResultType,
-                        StdDevState::template UpdateStateWithCondition<false>>(rowStates, aggStateOffset, ptr, nullMap,
+                        StdDevState::template UpdateStateWithCondition<false>>(rowStates, aggStateOffset, ptr, *nullMap,
                         indexMap);
                 }
             }
@@ -172,7 +172,7 @@ public:
             } else {
                 // Reza: can we use customize float operation similar to sumConditionalFloat
                 AddConditionalUseRowIndexStdDevFinal<StdDevState, StdDevFinalOp>(rowStates, aggStateOffset, cntPtr,
-                    meanPtr, m2Ptr, nullMap);
+                    meanPtr, m2Ptr, *nullMap);
             }
         }
     }
@@ -314,8 +314,8 @@ public:
         }
     }
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
     {
         auto rowCount = originVector->GetSize();
         // opt branch
@@ -346,7 +346,8 @@ public:
 protected:
     // logic: Template-based vector encoding type, to avoid long functions and high depth.
     template <typename T>
-    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap)
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap)
     {
         int rowCount = originVector->GetSize();
         auto countVector = reinterpret_cast<Vector<double> *>(VectorHelper::CreateFlatVector(OMNI_DOUBLE, rowCount));
@@ -356,7 +357,7 @@ protected:
         auto vector = reinterpret_cast<T *>(originVector);
         if (nullMap != nullptr) {
             for (int index = 0; index < rowCount; ++index) {
-                if (nullMap[index]) {
+                if ((*nullMap)[index]) {
                     countVector->SetValue(index, 0);
                     avgVector->SetValue(index, 0);
                     m2Vector->SetValue(index, 0);

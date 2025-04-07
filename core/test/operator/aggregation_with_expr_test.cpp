@@ -1056,11 +1056,11 @@ TEST(HashAggregationWithExprOperatorTest, test_hashagg_spill_with_invalid_config
     int64_t data2[] = {5L, 3L, 2L, 6L, 1L, 4L, 7L, 8L};
 
     const int32_t groupByNum = 1;
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    DataTypes sourceTypes(std::vector<DataTypePtr>({DoubleType(), LongType()}));
     DataTypes aggOutputTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
 
     // groupByKeys
-    std::vector<Expr *> groupByKeys = { new FieldExpr(0, LongType()) };
+    std::vector<Expr *> groupByKeys = {new FieldExpr(0, DoubleType())};
 
     // aggKeys
     std::vector<Expr *> aggKeys1 = { new FieldExpr(1, LongType()) };

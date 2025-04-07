@@ -23,4 +23,18 @@ extern "C" DLLEXPORT int32_t BatchWrapVarcharVector(int64_t vectorAddr, uint8_t 
     }
     return 0;
 }
+
+extern "C" DLLEXPORT void BatchNullArrayToBits(int32_t *dstBits, bool *srcArray, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        BitUtil::SetBit(dstBits, i, srcArray[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchBitsToNullArray(bool *dstArray, int32_t *srcBits, int32_t *rowIdxArray, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        dstArray[i] = BitUtil::IsBitSet(srcBits, rowIdxArray[i]);
+    }
+}
 }

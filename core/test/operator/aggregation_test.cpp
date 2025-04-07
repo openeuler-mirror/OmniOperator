@@ -629,6 +629,569 @@ TEST(HashAggregationOperatorTest, verify_correctness)
     VectorHelper::FreeVecBatch(outputVecBatch3);
 }
 
+template<typename T>
+void TestGroupArrayMapRegular(std::shared_ptr<DataType> groupType)
+{
+    ConfigUtil::SetAggHashTableRule(AggHashTableRule::ARRAY);
+    const int vecBatchNum = 1;
+    const int ROW_SIZE = 21;
+    const int cardinality = 3;
+    std::vector<uint32_t> aggFuncTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
+                                          OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN,
+                                          OMNI_AGGREGATION_TYPE_MAX};
+    std::vector<DataTypePtr> groupTypes = {groupType};
+    std::vector<DataTypePtr> aggTypes = {LongType(), LongType(), LongType(), LongType(), LongType()};
+    VectorBatch **input = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
+    // set group vector null
+    input[0]->Get(0)->SetNull(0);
+    input[0]->Get(0)->SetNull(11);
+
+    input[0]->Get(2)->SetNull(0);
+    input[0]->Get(2)->SetNull(1);
+    input[0]->Get(2)->SetNull(2);
+    input[0]->Get(2)->SetNull(3);
+    input[0]->Get(2)->SetNull(4);
+
+    input[0]->Get(3)->SetNull(0);
+    input[0]->Get(4)->SetNull(0);
+    input[0]->Get(5)->SetNull(0);
+
+    input[0]->Get(3)->SetNull(1);
+    input[0]->Get(4)->SetNull(1);
+    input[0]->Get(5)->SetNull(1);
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
+
+    // set group vector null
+    input2[0]->Get(0)->SetNull(0);
+    input2[0]->Get(0)->SetNull(11);
+    input2[0]->Get(0)->SetNull(20);
+
+    input2[0]->Get(2)->SetNull(0);
+    input2[0]->Get(2)->SetNull(1);
+    input2[0]->Get(2)->SetNull(2);
+    input2[0]->Get(2)->SetNull(3);
+    input2[0]->Get(2)->SetNull(4);
+
+    input2[0]->Get(3)->SetNull(0);
+    input2[0]->Get(4)->SetNull(0);
+    input2[0]->Get(5)->SetNull(0);
+
+    input2[0]->Get(3)->SetNull(1);
+    input2[0]->Get(4)->SetNull(1);
+    input2[0]->Get(5)->SetNull(1);
+
+    // single stage
+    auto aggFactory =
+            CreateHashAggregationOperatorFactory(std::vector<uint32_t>({0}),
+                                                 groupTypes, aggFuncTypes, std::vector<uint32_t>({1, 2, 3, 4, 5}),
+                                                 std::vector<DataTypePtr>(
+                                                         {LongType(), LongType(), LongType(), LongType(), LongType()}),
+                                                 std::vector<DataTypePtr>(
+                                                         {LongType(), DoubleType(), LongType(), LongType(),
+                                                          LongType()}),
+                                                 std::vector<uint32_t>(), true, false, false);
+    auto groupByNULL = aggFactory->CreateOperator();
+    groupByNULL->Init();
+
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input[i]);
+    }
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input2[i]);
+    }
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t vecBatchCount = groupByNULL->GetOutput(&outputVecBatch);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    omniruntime::op::Operator::DeleteOperator(groupByNULL);
+
+    static constexpr int64_t expectedSize = 4;
+    T expectData1[expectedSize] = {-1, 0, 1, 2};
+    int64_t expectData2[expectedSize] = {5, 12, 14, 11};
+    double expectData3[expectedSize] = {1, 1, 1, 1};
+    int64_t expectData4[expectedSize] = {3, 12, 12, 11};
+    int64_t expectData5[expectedSize] = {1, 1, 1, 1};
+    int64_t expectData6[expectedSize] = {1, 1, 1, 1};
+
+    std::vector<DataTypePtr> expectedFieldTypes{groupType, LongType(), DoubleType(),
+                                                LongType(), LongType(), LongType()};
+    DataTypes expectedTypes(expectedFieldTypes);
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, expectedSize, expectData1, expectData2, expectData3,
+                                                    expectData4, expectData5, expectData6);
+    auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
+    groupV->SetNull(0);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    delete[] input;
+    delete[] input2;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
+TEST(HashAggregationOperatorTest, verify_group_colum_array_map_regular)
+{
+    TestGroupArrayMapRegular<int16_t>(ShortType());
+    TestGroupArrayMapRegular<int32_t>(IntType());
+    TestGroupArrayMapRegular<int32_t>(Date32Type());
+    TestGroupArrayMapRegular<int64_t>(LongType());
+    TestGroupArrayMapRegular<int64_t>(TimestampType());
+    TestGroupArrayMapRegular<int64_t>(Decimal64Type());
+}
+
+template<typename T>
+void TestGroupArrayMapWithoutAgg(std::shared_ptr<DataType> groupType)
+{
+    ConfigUtil::SetAggHashTableRule(AggHashTableRule::ARRAY);
+    const int vecBatchNum = 1;
+    const int ROW_SIZE = 21;
+    const int cardinality = 3;
+    std::vector<uint32_t> aggFuncTypes = {};
+    std::vector<DataTypePtr> groupTypes = {groupType};
+    std::vector<DataTypePtr> aggTypes = {};
+    VectorBatch **input = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 0, groupTypes, aggTypes);
+    // set group vector null
+    input[0]->Get(0)->SetNull(0);
+    input[0]->Get(0)->SetNull(11);
+
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 0, groupTypes, aggTypes);
+
+    // set group vector null
+    input2[0]->Get(0)->SetNull(0);
+    input2[0]->Get(0)->SetNull(11);
+    input2[0]->Get(0)->SetNull(20);
+
+    // single stage
+    auto aggFactory =
+            CreateHashAggregationOperatorFactory(std::vector<uint32_t>({0}),
+                                                 groupTypes, aggFuncTypes, std::vector<uint32_t>({}),
+                                                 aggTypes, aggTypes,
+                                                 std::vector<uint32_t>(), true, false, false);
+    auto groupByNULL = aggFactory->CreateOperator();
+    groupByNULL->Init();
+
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input[i]);
+    }
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input2[i]);
+    }
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t vecBatchCount = groupByNULL->GetOutput(&outputVecBatch);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    omniruntime::op::Operator::DeleteOperator(groupByNULL);
+
+    static constexpr int64_t expectedSize = 4;
+    T expectData1[expectedSize] = {-1, 0, 1, 2};
+
+    std::vector<DataTypePtr> expectedFieldTypes{groupType};
+    DataTypes expectedTypes(expectedFieldTypes);
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, expectedSize, expectData1);
+    auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
+    groupV->SetNull(0);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    delete[] input;
+    delete[] input2;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
+TEST(HashAggregationOperatorTest, verify_group_colum_array_map_regular_without_agg)
+{
+    TestGroupArrayMapWithoutAgg<int16_t>(ShortType());
+    TestGroupArrayMapWithoutAgg<int32_t>(IntType());
+    TestGroupArrayMapWithoutAgg<int32_t>(Date32Type());
+    TestGroupArrayMapWithoutAgg<int64_t>(LongType());
+    TestGroupArrayMapWithoutAgg<int64_t>(TimestampType());
+    TestGroupArrayMapWithoutAgg<int64_t>(Decimal64Type());
+}
+
+template<typename T>
+void TestGroupArrayMapResize(std::shared_ptr<DataType> groupType)
+{
+    ConfigUtil::SetAggHashTableRule(AggHashTableRule::ARRAY);
+    const int vecBatchNum = 1;
+    const int ROW_SIZE = 21;
+    const int cardinality = 3;
+    std::vector<uint32_t> aggFuncTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
+                                          OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN,
+                                          OMNI_AGGREGATION_TYPE_MAX};
+    std::vector<DataTypePtr> groupTypes = {groupType};
+    std::vector<DataTypePtr> aggTypes = {LongType(), LongType(), LongType(), LongType(), LongType()};
+    VectorBatch **input = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
+    // set group vector null
+    input[0]->Get(0)->SetNull(0);
+    input[0]->Get(0)->SetNull(11);
+
+    input[0]->Get(2)->SetNull(0);
+    input[0]->Get(2)->SetNull(1);
+    input[0]->Get(2)->SetNull(2);
+    input[0]->Get(2)->SetNull(3);
+    input[0]->Get(2)->SetNull(4);
+
+    input[0]->Get(3)->SetNull(0);
+    input[0]->Get(4)->SetNull(0);
+    input[0]->Get(5)->SetNull(0);
+
+    input[0]->Get(3)->SetNull(1);
+    input[0]->Get(4)->SetNull(1);
+    input[0]->Get(5)->SetNull(1);
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
+
+    // set group vector null
+    input2[0]->Get(0)->SetNull(0);
+    input2[0]->Get(0)->SetNull(11);
+    input2[0]->Get(0)->SetNull(20);
+
+    // set group vector large number to resize map
+    static_cast<Vector<T> *>(input2[0]->Get(0))->SetValue(2, 1000);
+
+    input2[0]->Get(2)->SetNull(0);
+    input2[0]->Get(2)->SetNull(1);
+    input2[0]->Get(2)->SetNull(2);
+    input2[0]->Get(2)->SetNull(3);
+    input2[0]->Get(2)->SetNull(4);
+
+    input2[0]->Get(3)->SetNull(0);
+    input2[0]->Get(4)->SetNull(0);
+    input2[0]->Get(5)->SetNull(0);
+
+    input2[0]->Get(3)->SetNull(1);
+    input2[0]->Get(4)->SetNull(1);
+    input2[0]->Get(5)->SetNull(1);
+
+    // single stage
+    auto aggFactory =
+            CreateHashAggregationOperatorFactory(std::vector<uint32_t>({0}),
+                                                 groupTypes, aggFuncTypes, std::vector<uint32_t>({1, 2, 3, 4, 5}),
+                                                 std::vector<DataTypePtr>(
+                                                         {LongType(), LongType(), LongType(), LongType(), LongType()}),
+                                                 std::vector<DataTypePtr>(
+                                                         {LongType(), DoubleType(), LongType(), LongType(),
+                                                          LongType()}),
+                                                 std::vector<uint32_t>(), true, false, false);
+    auto groupByNULL = aggFactory->CreateOperator();
+    groupByNULL->Init();
+
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input[i]);
+    }
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input2[i]);
+    }
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t vecBatchCount = groupByNULL->GetOutput(&outputVecBatch);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    omniruntime::op::Operator::DeleteOperator(groupByNULL);
+
+    static constexpr int64_t expectedSize = 5;
+    T expectData1[expectedSize] = {-1, 0, 1, 2, 1000};
+    int64_t expectData2[expectedSize] = {5, 12, 14, 10, 1};
+    double expectData3[expectedSize] = {1, 1, 1, 1, -1};
+    int64_t expectData4[expectedSize] = {3, 12, 12, 10, 1};
+    int64_t expectData5[expectedSize] = {1, 1, 1, 1, 1};
+    int64_t expectData6[expectedSize] = {1, 1, 1, 1, 1};
+
+    std::vector<DataTypePtr> expectedFieldTypes{groupType, LongType(), DoubleType(),
+                                                LongType(), LongType(), LongType()};
+    DataTypes expectedTypes(expectedFieldTypes);
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, expectedSize, expectData1, expectData2, expectData3,
+                                                    expectData4, expectData5, expectData6);
+    auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
+    groupV->SetNull(0);
+    expectVecBatch->Get(2)->SetNull(4);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    delete[] input;
+    delete[] input2;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
+TEST(HashAggregationOperatorTest, verify_group_colum_array_map_resize)
+{
+    TestGroupArrayMapResize<int16_t>(ShortType());
+    TestGroupArrayMapResize<int32_t>(IntType());
+    TestGroupArrayMapResize<int32_t>(Date32Type());
+    TestGroupArrayMapResize<int64_t>(LongType());
+    TestGroupArrayMapResize<int64_t>(TimestampType());
+    TestGroupArrayMapResize<int64_t>(Decimal64Type());
+}
+
+template<typename T>
+void TestGroupArrayMapResizeWithoutAgg(std::shared_ptr<DataType> groupType)
+{
+    ConfigUtil::SetAggHashTableRule(AggHashTableRule::ARRAY);
+    const int vecBatchNum = 1;
+    const int ROW_SIZE = 21;
+    const int cardinality = 3;
+    std::vector<uint32_t> aggFuncTypes = {};
+    std::vector<DataTypePtr> groupTypes = {groupType};
+    std::vector<DataTypePtr> aggTypes = {};
+    VectorBatch **input = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 0, groupTypes, aggTypes);
+    // set group vector null
+    input[0]->Get(0)->SetNull(0);
+    input[0]->Get(0)->SetNull(11);
+
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 0, groupTypes, aggTypes);
+
+    // set group vector null
+    input2[0]->Get(0)->SetNull(0);
+    input2[0]->Get(0)->SetNull(11);
+    input2[0]->Get(0)->SetNull(20);
+
+    // set group vector large number to resize map
+    static_cast<Vector<T> *>(input2[0]->Get(0))->SetValue(2, 1000);
+
+    // single stage
+    auto aggFactory =
+            CreateHashAggregationOperatorFactory(std::vector<uint32_t>({0}),
+                                                 groupTypes, aggFuncTypes, std::vector<uint32_t>({}),
+                                                 aggTypes, aggTypes,
+                                                 std::vector<uint32_t>(), true, false, false);
+    auto groupByNULL = aggFactory->CreateOperator();
+    groupByNULL->Init();
+
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input[i]);
+    }
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input2[i]);
+    }
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t vecBatchCount = groupByNULL->GetOutput(&outputVecBatch);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    omniruntime::op::Operator::DeleteOperator(groupByNULL);
+
+    static constexpr int64_t expectedSize = 5;
+    T expectData1[expectedSize] = {-1, 0, 1, 2, 1000};
+
+    std::vector<DataTypePtr> expectedFieldTypes{groupType};
+    DataTypes expectedTypes(expectedFieldTypes);
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, expectedSize, expectData1);
+    auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
+    groupV->SetNull(0);
+
+    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+
+    delete[] input;
+    delete[] input2;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
+TEST(HashAggregationOperatorTest, verify_group_colum_array_map_resize_without_agg)
+{
+    TestGroupArrayMapResizeWithoutAgg<int16_t>(ShortType());
+    TestGroupArrayMapResizeWithoutAgg<int32_t>(IntType());
+    TestGroupArrayMapResizeWithoutAgg<int32_t>(Date32Type());
+    TestGroupArrayMapResizeWithoutAgg<int64_t>(LongType());
+    TestGroupArrayMapResizeWithoutAgg<int64_t>(TimestampType());
+    TestGroupArrayMapResizeWithoutAgg<int64_t>(Decimal64Type());
+}
+
+template<typename T>
+void TestGroupArrayMapSwitch(std::shared_ptr<DataType> groupType)
+{
+    const int vecBatchNum = 1;
+    const int ROW_SIZE = 21;
+    const int cardinality = 3;
+    std::vector<uint32_t> aggFuncTypes = {OMNI_AGGREGATION_TYPE_SUM, OMNI_AGGREGATION_TYPE_AVG,
+                                          OMNI_AGGREGATION_TYPE_COUNT_COLUMN, OMNI_AGGREGATION_TYPE_MIN,
+                                          OMNI_AGGREGATION_TYPE_MAX};
+    std::vector<DataTypePtr> groupTypes = {groupType};
+    std::vector<DataTypePtr> aggTypes = {LongType(), LongType(), LongType(), LongType(), LongType()};
+    VectorBatch **input = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
+    // set group vector null
+    input[0]->Get(0)->SetNull(0);
+    input[0]->Get(0)->SetNull(11);
+
+    input[0]->Get(2)->SetNull(0);
+    input[0]->Get(2)->SetNull(1);
+    input[0]->Get(2)->SetNull(2);
+    input[0]->Get(2)->SetNull(3);
+    input[0]->Get(2)->SetNull(4);
+
+    input[0]->Get(3)->SetNull(0);
+    input[0]->Get(4)->SetNull(0);
+    input[0]->Get(5)->SetNull(0);
+
+    input[0]->Get(3)->SetNull(1);
+    input[0]->Get(4)->SetNull(1);
+    input[0]->Get(5)->SetNull(1);
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 5, groupTypes, aggTypes);
+    auto groupVector = input2[0]->Get(0);
+    // set group vector large number to switch map
+    static_cast<Vector<T> *>(groupVector)->SetValue(2, std::numeric_limits<T>::max());
+    static_cast<Vector<T> *>(groupVector)->SetValue(5, std::numeric_limits<T>::min());
+    int idx[ROW_SIZE];
+    std::iota(idx, idx + ROW_SIZE, 0);
+    auto groupDictVector = VectorHelper::CreateDictionaryVector(idx, ROW_SIZE, groupVector, groupType->GetId());
+    input2[0]->SetVector(0, groupDictVector);
+    // set group vector null
+    groupDictVector->SetNull(0);
+    groupDictVector->SetNull(11);
+    groupDictVector->SetNull(20);
+
+    input2[0]->Get(2)->SetNull(0);
+    input2[0]->Get(2)->SetNull(1);
+    input2[0]->Get(2)->SetNull(2);
+    input2[0]->Get(2)->SetNull(3);
+    input2[0]->Get(2)->SetNull(4);
+
+    input2[0]->Get(3)->SetNull(0);
+    input2[0]->Get(4)->SetNull(0);
+    input2[0]->Get(5)->SetNull(0);
+
+    input2[0]->Get(3)->SetNull(1);
+    input2[0]->Get(4)->SetNull(1);
+    input2[0]->Get(5)->SetNull(1);
+
+    // single stage
+    auto aggFactory =
+            CreateHashAggregationOperatorFactory(std::vector<uint32_t>({0}),
+                                                 groupTypes, aggFuncTypes, std::vector<uint32_t>({1, 2, 3, 4, 5}),
+                                                 std::vector<DataTypePtr>(
+                                                         {LongType(), LongType(), LongType(), LongType(), LongType()}),
+                                                 std::vector<DataTypePtr>(
+                                                         {LongType(), DoubleType(), LongType(), LongType(),
+                                                          LongType()}),
+                                                 std::vector<uint32_t>(), true, false, false);
+    auto groupByNULL = aggFactory->CreateOperator();
+    groupByNULL->Init();
+
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input[i]);
+    }
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input2[i]);
+    }
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t vecBatchCount = groupByNULL->GetOutput(&outputVecBatch);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    omniruntime::op::Operator::DeleteOperator(groupByNULL);
+
+    static constexpr int64_t expectedSize = 6;
+    T expectData1[expectedSize] = {0, std::numeric_limits<T>::min(), 1, std::numeric_limits<T>::max(), 2, -1};
+    int64_t expectData2[expectedSize] = {12, 1, 14, 1, 9, 5};
+    double expectData3[expectedSize] = {1, 1, 1, -1, 1, 1};
+    int64_t expectData4[expectedSize] = {12, 1, 12, 1, 9, 3};
+    int64_t expectData5[expectedSize] = {1, 1, 1, 1, 1, 1};
+    int64_t expectData6[expectedSize] = {1, 1, 1, 1, 1, 1};
+
+    std::vector<DataTypePtr> expectedFieldTypes{*groupTypes.begin(), LongType(), DoubleType(),
+                                                LongType(), LongType(), LongType()};
+    DataTypes expectedTypes(expectedFieldTypes);
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, expectedSize, expectData1, expectData2, expectData3,
+                                                    expectData4, expectData5, expectData6);
+    auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
+    groupV->SetNull(expectedSize - 1);
+    expectVecBatch->Get(2)->SetNull(3);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    delete groupVector;
+    delete[] input;
+    delete[] input2;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
+TEST(HashAggregationOperatorTest, verify_group_colum_array_map_switch)
+{
+    TestGroupArrayMapSwitch<int64_t>(LongType());
+    TestGroupArrayMapSwitch<int64_t>(TimestampType());
+    TestGroupArrayMapSwitch<int64_t>(Decimal64Type());
+    TestGroupArrayMapSwitch<int32_t>(IntType());
+    TestGroupArrayMapSwitch<int32_t>(Date32Type());
+    TestGroupArrayMapSwitch<int16_t>(ShortType());
+}
+
+template<typename T>
+void TestGroupArrayMapSwitchWithoutAgg(std::shared_ptr<DataType> groupType)
+{
+    const int vecBatchNum = 1;
+    const int ROW_SIZE = 21;
+    const int cardinality = 3;
+    std::vector<uint32_t> aggFuncTypes = {};
+    std::vector<DataTypePtr> groupTypes = {groupType};
+    std::vector<DataTypePtr> aggTypes = {};
+    VectorBatch **input = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 0, groupTypes, aggTypes);
+    // set group vector null
+    input[0]->Get(0)->SetNull(0);
+    input[0]->Get(0)->SetNull(11);
+
+    VectorBatch **input2 = BuildAggInput(vecBatchNum, ROW_SIZE, cardinality, 1, 0, groupTypes, aggTypes);
+    auto groupVector = input2[0]->Get(0);
+    // set group vector large number to switch map
+    static_cast<Vector<T> *>(groupVector)->SetValue(2, std::numeric_limits<T>::max());
+    static_cast<Vector<T> *>(groupVector)->SetValue(5, std::numeric_limits<T>::min());
+    int idx[ROW_SIZE];
+    std::iota(idx, idx + ROW_SIZE, 0);
+    auto groupDictVector = VectorHelper::CreateDictionaryVector(idx, ROW_SIZE, groupVector, groupType->GetId());
+    input2[0]->SetVector(0, groupDictVector);
+    // set group vector null
+    groupDictVector->SetNull(0);
+    groupDictVector->SetNull(11);
+    groupDictVector->SetNull(20);
+
+    // single stage
+    auto aggFactory =
+            CreateHashAggregationOperatorFactory(std::vector<uint32_t>({0}),
+                                                 groupTypes, aggFuncTypes, std::vector<uint32_t>(),
+                                                 aggTypes,
+                                                 aggTypes,
+                                                 std::vector<uint32_t>(), true, false, false);
+    auto groupByNULL = aggFactory->CreateOperator();
+    groupByNULL->Init();
+
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input[i]);
+    }
+    for (int32_t i = 0; i < vecBatchNum; ++i) {
+        groupByNULL->AddInput(input2[i]);
+    }
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t vecBatchCount = groupByNULL->GetOutput(&outputVecBatch);
+    EXPECT_EQ(vecBatchCount, 1);
+
+    omniruntime::op::Operator::DeleteOperator(groupByNULL);
+
+    static constexpr int64_t expectedSize = 6;
+    T expectData1[expectedSize] = {0, std::numeric_limits<T>::min(), 1, std::numeric_limits<T>::max(), 2, -1};
+
+    std::vector<DataTypePtr> expectedFieldTypes{*groupTypes.begin()};
+    DataTypes expectedTypes(expectedFieldTypes);
+    VectorBatch *expectVecBatch = CreateVectorBatch(expectedTypes, expectedSize, expectData1);
+    auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
+    groupV->SetNull(expectedSize - 1);
+
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    delete groupVector;
+    delete[] input;
+    delete[] input2;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+}
+
+TEST(HashAggregationOperatorTest, verify_group_colum_array_map_switch_without_agg)
+{
+    TestGroupArrayMapSwitchWithoutAgg<int64_t>(LongType());
+    TestGroupArrayMapSwitchWithoutAgg<int64_t>(TimestampType());
+    TestGroupArrayMapSwitchWithoutAgg<int64_t>(Decimal64Type());
+    TestGroupArrayMapSwitchWithoutAgg<int32_t>(IntType());
+    TestGroupArrayMapSwitchWithoutAgg<int32_t>(Date32Type());
+    TestGroupArrayMapSwitch<int16_t>(ShortType());
+}
+
 TEST(HashAggregationOperatorTest, verify_varchar_vector_correctness)
 {
     // create 10 pages
@@ -4456,7 +5019,7 @@ TEST(AggregatorTest, typed_aggregator_test)
         };
 
         BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-            uint8_t **nullMap, const size_t channelIdx)
+            std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx)
         {
             return TypedAggregator::GetVector(vectorBatch, rowOffset, rowCount, nullMap, channelIdx);
         }
@@ -4469,11 +5032,11 @@ TEST(AggregatorTest, typed_aggregator_test)
         void ExtractValuesForSpill(std::vector<AggregateState *> &groupStates, std::vector<BaseVector *> &vectors) {}
 
         void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
-                                   const uint8_t *nullMap, const bool aggFilter) override
+            const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
         {}
 
         virtual void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-            const int32_t rowCount, const uint8_t *nullMap)
+            const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
         {}
 
         virtual void ProcessSingleInternalFilter(AggregateState &state, BaseVector *vector, Vector<bool> *booleanVector,
@@ -4483,7 +5046,7 @@ TEST(AggregatorTest, typed_aggregator_test)
         }
 
         virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
-            const int32_t rowOffset, const uint8_t *nullMap)
+            const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
         {
             return;
         }
@@ -4525,7 +5088,7 @@ TEST(AggregatorTest, typed_aggregator_test)
             DataTypes({ typesPtr.at(OMNI_SHORT) }), DataTypes({ typesPtr.at(OMNI_SHORT) }), channels, rawIn, partialOut,
             isOverflowAsNull);
 
-        uint8_t *nullMap = nullptr;
+        std::shared_ptr<NullsHelper> nullMap = nullptr;
         agg.GetVector(vectorBatch, 0, dataSize, &nullMap, 0);
         agg.GetVector(rawVectorBatch, 0, dataSize, &nullMap, 0);
         rawVectorBatch->Get(0)->SetNull(1);

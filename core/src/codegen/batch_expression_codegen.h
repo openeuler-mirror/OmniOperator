@@ -130,11 +130,15 @@ private:
         const std::shared_ptr<CodeGenValue> &lowerVal, const std::shared_ptr<CodeGenValue> &upperVal,
         std::pair<llvm::AllocaInst **, AllocaInst **> cmpPair);
 
+    template <bool isNeedVerifyResult, bool isNeedVerifyVal>
+    std::vector<llvm::Value *> GetDefaultFunctionArgValues(const FuncExpr &fExpr, AllocaInst *isAnyNull,
+        bool &isInvalidExpr);
+
     std::vector<llvm::Value *> GetDataArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull, bool &isInvalidExpr);
 
     std::vector<llvm::Value *> GetDataAndNullArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull, bool &isInvalidExpr);
 
-    std::vector<llvm::Value *> GetDefaultFunctionArgValues(const FuncExpr &fExpr, AllocaInst *isAnyNull,
+    std::vector<llvm::Value *> GetDataAndNullArgsAndReturnNull(const FuncExpr &fExpr, AllocaInst *isAnyNull,
         bool &isInvalidExpr);
 
     std::vector<llvm::Value *> GetDataAndOverflowNullArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull,

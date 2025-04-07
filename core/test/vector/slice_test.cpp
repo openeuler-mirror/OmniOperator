@@ -79,18 +79,17 @@ template <typename T> void v2_slice_container()
     int dictionary_size = 10;
     int value_size = 100;
     int *values = new int[value_size];
-    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(value_size);
-    bool *nulls = nullsBuffer->GetBuffer();
+    std::unique_ptr<NullsBuffer> nullsBuffer = std::make_unique<NullsBuffer>(value_size);
     for (int i = 0; i < value_size; i++) {
         values[i] = i % dictionary_size;
-        nulls[i] = false;
+        nullsBuffer->SetNull(i, false);
     }
 
     using DICTIONARY_DATA_TYPE = typename TYPE_UTIL<T>::DICTIONARY_TYPE;
 
     auto dictionary = CreateDictionary<DICTIONARY_DATA_TYPE>(dictionary_size);
     auto container = std::make_shared<DictionaryContainer<T>>(values, value_size, dictionary, dictionary_size, 0);
-    auto parent = new Vector<DictionaryContainer<T>>(value_size, container, nullsBuffer, TYPE_ID<T>);
+    auto parent = new Vector<DictionaryContainer<T>>(value_size, container, nullsBuffer.get(), TYPE_ID<T>);
 
     auto vector = parent->Slice(g_offset, g_len);
     delete parent; // purposely deleting parent;

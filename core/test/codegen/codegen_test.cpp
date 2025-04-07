@@ -21,7 +21,7 @@ using namespace TestUtil;
 const string defaultTestFunctionName = "test-function";
 
 using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
-using ProjectFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, bool *,
+using ProjectFunc = int32_t (*)(int64_t *, int32_t, int64_t, int32_t *, int32_t, int64_t *, int64_t *, int32_t *,
     int32_t *, int64_t, int64_t *);
 
 TEST(CodeGenTest, Operators1)
@@ -57,10 +57,10 @@ TEST(CodeGenTest, Operators1)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -147,10 +147,10 @@ TEST(CodeGenTest, MathFunctions1)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -221,10 +221,10 @@ TEST(CodeGenTest, MathFunctions2)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -312,10 +312,10 @@ TEST(CodeGenTest, MathFunctions3)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -409,10 +409,10 @@ TEST(CodeGenTest, MathFunctions4)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -531,10 +531,10 @@ TEST(CodeGenTest, CastNumbers1)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -617,10 +617,10 @@ TEST(CodeGenTest, CastNumbers2)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -706,10 +706,10 @@ TEST(CodeGenTest, Like)
     vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -790,10 +790,10 @@ TEST(CodeGenTest, DateCast)
     vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -902,10 +902,10 @@ TEST(CodeGenTest, SubstrIn)
     vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -1003,10 +1003,10 @@ TEST(CodeGenTest, ConcatStr)
     vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -1107,10 +1107,10 @@ TEST(CodeGenTest, ConcatChars)
     vals[1] = reinterpret_cast<int64_t>(s1[0].c_str());
     vals[2] = reinterpret_cast<int64_t>(s2[0].c_str());
     auto *selected = new int32_t[1];
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -1204,10 +1204,10 @@ TEST(CodeGenTest, ToUpper)
     vals[1] = reinterpret_cast<int64_t>(s1->c_str());
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[2];
+    auto **bitmap = new uint8_t *[2];
     for (int i = 0; i < 2; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[2];
@@ -1271,10 +1271,10 @@ TEST(CodeGenTest, ToUpperChar)
     vals[1] = reinterpret_cast<int64_t>(s1->c_str());
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[2];
+    auto **bitmap = new uint8_t *[2];
     for (int i = 0; i < 2; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[2];
@@ -1344,10 +1344,10 @@ TEST(CodeGenTest, StringWithOps)
     int32_t *selected = new int32_t[1];
 
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -1436,10 +1436,10 @@ TEST(CodeGenTest, Coalesce)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -1461,7 +1461,7 @@ TEST(CodeGenTest, Coalesce)
     EXPECT_EQ(result, 1);
     context->GetArena()->Reset();
 
-    bitmap[0][0] = true;
+    BitUtil::SetBit(bitmap[0], 0, true);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1498,10 +1498,10 @@ TEST(CodeGenTest, ProjectionCoalesce)
     int64_t c[3] = {100, 200, 300};
     int64_t *vals = new int64_t[1];
     vals[0] = reinterpret_cast<int64_t>(c);
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[3];
+    auto **bitmap = new uint8_t *[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(3)];
     for (int i = 0; i < 3; i++) {
-        bitmap[0][i] = false;
+        BitUtil::SetBit(bitmap[0], i, false);
     }
     auto **offsets = new int32_t *[1];
     for (int col = 0; col < 1; col++) {
@@ -1511,7 +1511,7 @@ TEST(CodeGenTest, ProjectionCoalesce)
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
 
-    bool newNullValues[3];
+    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)] = {0};
     int newLengths[3];
 
     auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
@@ -1521,26 +1521,30 @@ TEST(CodeGenTest, ProjectionCoalesce)
     auto context = new ExecutionContext();
     auto func = (ProjectFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
-    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
-        newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_NE(r, 0);
-    EXPECT_EQ(newNullValues[0], false);
-    EXPECT_EQ(newNullValues[1], false);
-    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 0));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 1));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 2));
     EXPECT_EQ(oVec[0], true);
     EXPECT_EQ(oVec[1], false);
     EXPECT_EQ(oVec[2], false);
     context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
-        bitmap[0][0] = true;
+        BitUtil::SetBit(bitmap[0], 0, true);
     }
-    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
-        reinterpret_cast<int64_t>(context), dictionaryVectors);
+    for (int i = 0; i < NullsBuffer::CalculateNbytes(3); i++) {
+        newNullValues[i] = 0;
+    }
+
+    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_NE(r, 0);
-    EXPECT_EQ(newNullValues[0], false);
-    EXPECT_EQ(newNullValues[1], false);
-    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 0));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 1));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 2));
     EXPECT_EQ(oVec[0], true);
     EXPECT_EQ(oVec[1], false);
     EXPECT_EQ(oVec[2], false);
@@ -1568,10 +1572,10 @@ TEST(CodeGenTest, ProjectionIsNull)
     int64_t c[3] = {100, 200, 300};
     int64_t *vals = new int64_t[1];
     vals[0] = reinterpret_cast<int64_t>(c);
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[3];
+    auto **bitmap = new uint8_t *[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(3)];
     for (int i = 0; i < 3; i++) {
-        bitmap[0][i] = false;
+        BitUtil::SetBit(bitmap[0], i, false);
     }
     auto **offsets = new int32_t *[1];
     for (int col = 0; col < 1; col++) {
@@ -1581,7 +1585,7 @@ TEST(CodeGenTest, ProjectionIsNull)
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
 
-    bool newNullValues[3];
+    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)] = {0};
     int newLengths[3];
 
     auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
@@ -1591,26 +1595,30 @@ TEST(CodeGenTest, ProjectionIsNull)
     auto context = new ExecutionContext();
     auto func = (ProjectFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
-    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
-        newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_NE(r, 0);
-    EXPECT_EQ(newNullValues[0], false);
-    EXPECT_EQ(newNullValues[1], false);
-    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 0));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 1));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 2));
     EXPECT_EQ(oVec[0], false);
     EXPECT_EQ(oVec[1], false);
     EXPECT_EQ(oVec[2], false);
     context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
-        bitmap[0][i] = true;
+        BitUtil::SetBit(bitmap[0], i, true);
     }
-    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
-        reinterpret_cast<int64_t>(context), dictionaryVectors);
+    for (int i = 0; i < NullsBuffer::CalculateNbytes(3); i++) {
+        newNullValues[i] = 0;
+    }
+
+    r = func(vals, 3, (int64_t)oVec, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_NE(r, 0);
-    EXPECT_EQ(newNullValues[0], false);
-    EXPECT_EQ(newNullValues[1], false);
-    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 0));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 1));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 2));
     EXPECT_EQ(oVec[0], true);
     EXPECT_EQ(oVec[1], true);
     EXPECT_EQ(oVec[2], true);
@@ -1640,9 +1648,9 @@ TEST(CodeGenTest, IsNull)
     vals[0] = reinterpret_cast<int64_t>(v1);
     auto *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[1];
-    bitmap[0][0] = false;
+    auto **bitmap = new uint8_t *[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+    BitUtil::SetBit(bitmap[0], 0, false);
 
     auto **offsets = new int32_t *[1];
     for (int col = 0; col < 1; col++) {
@@ -1663,7 +1671,7 @@ TEST(CodeGenTest, IsNull)
     EXPECT_EQ(result, false);
     context->GetArena()->Reset();
 
-    bitmap[0][0] = true;
+    BitUtil::SetBit(bitmap[0], 0, true);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1694,9 +1702,9 @@ TEST(CodeGenTest, IsNotNull)
     vals[0] = reinterpret_cast<int64_t>(v1);
     auto *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[1];
-    bitmap[0][0] = false;
+    auto **bitmap = new uint8_t *[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+    BitUtil::SetBit(bitmap[0], 0, false);
 
     auto **offsets = new int32_t *[1];
     for (int col = 0; col < 1; col++) {
@@ -1717,7 +1725,7 @@ TEST(CodeGenTest, IsNotNull)
     EXPECT_EQ(result, true);
     context->GetArena()->Reset();
 
-    bitmap[0][0] = true;
+    BitUtil::SetBit(bitmap[0], 0, true);
 
     result = func(vals, 1, selected, (int64_t *)(bitmap), (int64_t *)(offsets), reinterpret_cast<int64_t>(context),
         dictionaries);
@@ -1755,10 +1763,10 @@ TEST(CodeGenTest, DecimalOperators1)
 
     int32_t *selected = new int32_t[2];
 
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[2];
+    auto **bitmap = new uint8_t *[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(2)];
     for (int i = 0; i < 2; i++) {
-        bitmap[0][i] = false;
+        BitUtil::SetBit(bitmap[0], i, false);
     }
 
     auto **offsets = new int32_t *[1];
@@ -1818,10 +1826,10 @@ TEST(CodeGenTest, DecimalOperators2)
 
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -1887,10 +1895,10 @@ TEST(CodeGenTest, DecimalOperators3)
 
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];
@@ -1963,10 +1971,10 @@ TEST(CodeGenTest, DecimalNegate)
 
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[4];
+    auto **bitmap = new uint8_t *[4];
     for (int i = 0; i < 4; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[4];
@@ -2032,10 +2040,10 @@ TEST(CodeGenTest, Decimal128AbsAndCompare)
 
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[2];
+    auto **bitmap = new uint8_t *[2];
     for (int i = 0; i < 2; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[2];
@@ -2083,10 +2091,10 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     int64_t *vals = new int64_t[1];
     vals[0] = reinterpret_cast<int64_t>(c);
 
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[3];
+    auto **bitmap = new uint8_t *[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(3)];
     for (int i = 0; i < 3; i++) {
-        bitmap[0][i] = false;
+        BitUtil::SetBit(bitmap[0], i, false);
     }
     auto **offsets = new int32_t *[1];
     for (int col = 0; col < 1; col++) {
@@ -2096,7 +2104,7 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     std::vector<DataTypePtr> vecOfTypes = { LongType() };
     DataTypes inputTypes(vecOfTypes);
 
-    bool newNullValues[3];
+    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)] = {0};
     int newLengths[3];
 
     auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
@@ -2109,25 +2117,29 @@ TEST(CodeGenTest, ProjectionSubtractNulls)
     auto context = new ExecutionContext();
     auto func = (ProjectFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
-    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
-        newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_NE(r, 0);
-    EXPECT_EQ(newNullValues[0], false);
-    EXPECT_EQ(newNullValues[1], false);
-    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 0));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 1));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 2));
     EXPECT_EQ(oVec[0], -90);
     EXPECT_EQ(oVec[1], -80);
     EXPECT_EQ(oVec[2], -70);
     context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
-        bitmap[0][i] = true;
+        BitUtil::SetBit(bitmap[0], i, true);
     }
-    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
-        reinterpret_cast<int64_t>(context), dictionaryVectors);
-    EXPECT_EQ(newNullValues[0], true);
-    EXPECT_EQ(newNullValues[1], true);
-    EXPECT_EQ(newNullValues[2], true);
+    for (int i = 0; i < NullsBuffer::CalculateNbytes(3); i++) {
+        newNullValues[i] = 0;
+    }
+
+    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_TRUE(BitUtil::IsBitSet(newNullValues, 0));
+    EXPECT_TRUE(BitUtil::IsBitSet(newNullValues, 1));
+    EXPECT_TRUE(BitUtil::IsBitSet(newNullValues, 2));
 
     context->GetArena()->Reset();
     for (int i = 0; i < 1; i++) {
@@ -2159,10 +2171,10 @@ TEST(CodeGenTest, ProjectionCodeGen)
     int64_t *vals = new int64_t[1];
     vals[0] = reinterpret_cast<int64_t>(c1);
 
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[3];
+    auto **bitmap = new uint8_t *[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(3)];
     for (int i = 0; i < 3; i++) {
-        bitmap[0][i] = false;
+        BitUtil::SetBit(bitmap[0], i, false);
     }
     auto **offsets = new int32_t *[1];
     for (int col = 0; col < 1; col++) {
@@ -2172,7 +2184,7 @@ TEST(CodeGenTest, ProjectionCodeGen)
     std::vector<DataTypePtr> vecOfTypes = { Decimal128Type() };
     DataTypes inputTypes(vecOfTypes);
 
-    bool newNullValues[3];
+    uint8_t newNullValues[NullsBuffer::CalculateNbytes(3)] = {0};
     int newLengths[3];
 
     auto codegen = ProjectionCodeGen(defaultTestFunctionName, *expr, false, nullptr);
@@ -2185,12 +2197,12 @@ TEST(CodeGenTest, ProjectionCodeGen)
     auto context = new ExecutionContext();
     auto func = (ProjectFunc)(intptr_t)codegen.GetFunction(inputTypes);
 
-    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues,
-        newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    int32_t r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
     EXPECT_NE(r, 0);
-    EXPECT_EQ(newNullValues[0], false);
-    EXPECT_EQ(newNullValues[1], false);
-    EXPECT_EQ(newNullValues[2], false);
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 0));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 1));
+    EXPECT_FALSE(BitUtil::IsBitSet(newNullValues, 2));
 
     EXPECT_EQ(oVec.at(0), 110);
     EXPECT_EQ(oVec.at(1), 0);
@@ -2201,13 +2213,17 @@ TEST(CodeGenTest, ProjectionCodeGen)
     context->GetArena()->Reset();
 
     for (int i = 0; i < 3; i++) {
-        bitmap[0][i] = true;
+        BitUtil::SetBit(bitmap[0], i, true);
     }
-    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets), newNullValues, newLengths,
-        reinterpret_cast<int64_t>(context), dictionaryVectors);
-    EXPECT_EQ(newNullValues[0], true);
-    EXPECT_EQ(newNullValues[1], true);
-    EXPECT_EQ(newNullValues[2], true);
+    for (int i = 0; i < NullsBuffer::CalculateNbytes(3); i++) {
+        newNullValues[i] = 0;
+    }
+
+    r = func(vals, 3, *cvecVals, nullptr, 3, (int64_t *)(bitmap), (int64_t *)(offsets),
+        reinterpret_cast<int32_t *>(newNullValues), newLengths, reinterpret_cast<int64_t>(context), dictionaryVectors);
+    EXPECT_TRUE(BitUtil::IsBitSet(newNullValues, 0));
+    EXPECT_TRUE(BitUtil::IsBitSet(newNullValues, 1));
+    EXPECT_TRUE(BitUtil::IsBitSet(newNullValues, 2));
 
     context->GetArena()->Reset();
     for (int i = 0; i < 1; i++) {
@@ -2252,9 +2268,9 @@ TEST(CodeGenTest, Pmod)
     vals[0] = reinterpret_cast<int64_t>(v1);
     auto *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[1];
-    bitmap[0] = new bool[1];
-    bitmap[0][0] = false;
+    auto **bitmap = new uint8_t *[1];
+    bitmap[0] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+    BitUtil::SetBit(bitmap[0], 0, false);
     auto **offsets = new int32_t *[1];
     offsets[0] = new int32_t[1];
     offsets[0][0] = 0;
@@ -2312,10 +2328,10 @@ TEST(CodeGenTest, CombineHash)
     vals[2] = reinterpret_cast<int64_t>(v3);
 
     auto *selected = new int32_t[1];
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
     int32_t **offsets = new int32_t *[3];
     for (int i = 0; i < 3; i++) {
@@ -2407,10 +2423,10 @@ TEST(CodeGenTest, JSONFunc)
     vals[2] = reinterpret_cast<int64_t>(v3);
     int32_t *selected = new int32_t[1];
 
-    bool **bitmap = new bool *[3];
+    auto **bitmap = new uint8_t *[3];
     for (int i = 0; i < 3; i++) {
-        bitmap[i] = new bool[1];
-        bitmap[i][0] = false;
+        bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(1)];
+        BitUtil::SetBit(bitmap[i], 0, false);
     }
 
     auto **offsets = new int32_t *[3];

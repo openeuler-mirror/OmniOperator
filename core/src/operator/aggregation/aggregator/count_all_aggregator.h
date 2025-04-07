@@ -35,8 +35,8 @@ public:
         }
     }
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
     {
         int rowCount = result->GetRowCount();
         auto countVector = reinterpret_cast<Vector<int64_t> *>(VectorHelper::CreateFlatVector(OMNI_LONG, rowCount));
@@ -54,7 +54,7 @@ protected:
     {}
 
     virtual ALWAYS_INLINE BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset,
-        const int32_t rowCount, uint8_t **nullMap, const size_t channelIdx) override
+        const int32_t rowCount,  std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx) override
     {
         if (CountColumnAggregator<IN_ID, OUT_ID>::inputRaw) {
             *nullMap = nullptr;

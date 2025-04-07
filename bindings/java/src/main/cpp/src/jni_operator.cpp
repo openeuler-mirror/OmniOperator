@@ -4,6 +4,7 @@
  */
 
 #include <vector>
+#include "securec.h"
 #include "vector/vector_batch.h"
 #include "vector/vector_helper.h"
 #include "jni_common_def.h"
@@ -220,8 +221,29 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_closeNat
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getSpilledBytesNative(JNIEnv *env,
     jobject jObj, jlong jOperatorAddr)
 {
-    auto *nativeOperator = (op::Operator *)jOperatorAddr;
+    auto *nativeOperator = reinterpret_cast<op::Operator *>(jOperatorAddr);
     return static_cast<jlong>(nativeOperator->GetSpilledBytes());
+}
+
+JNIEXPORT jlongArray JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_getMetricsInfoNative(JNIEnv *env,
+    jobject jObj, jlong jOperatorAddr)
+{
+    auto *nativeOperator = reinterpret_cast<op::Operator *>(jOperatorAddr);
+    // get simpleMetrics info, used by all operators.
+    static const uint64_t metricsLength = 200;
+    static const uint64_t boundaryIndex = 100;
+    jlongArray metricsInfoArray = env->NewLongArray(metricsLength);
+    jlong* elementsSimple = env->GetLongArrayElements(metricsInfoArray, nullptr);
+    elementsSimple[0] = static_cast<jlong>(nativeOperator->GetSpilledBytes());
+    // get specialMetrics info, every operator is different.
+    std::vector<uint64_t> specialMetricsInfoArray = nativeOperator->GetSpecialMetricsInfo();
+    long specialMetricsLength = specialMetricsInfoArray.size();
+    for (uint64_t i = 0; i < specialMetricsLength; i++) {
+        elementsSimple[i + boundaryIndex] = specialMetricsInfoArray[i];
+    }
+
+    env->ReleaseLongArrayElements(metricsInfoArray, elementsSimple, 0);
+    return metricsInfoArray;
 }
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_operator_OmniOperator_alignSchemaNative(JNIEnv *env, jobject jObj,
@@ -338,7 +360,9 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeseri
 {
     auto *parser = reinterpret_cast<RowParser *>(parserAddr);
     auto *row = reinterpret_cast<uint8_t *>(rowAddr);
-    parser->ParseOnRow(row, rowIndex);
+    if (row != nullptr) {
+        parser->ParseOnRow(row, rowIndex);
+    }
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_serialize_OmniRowDeserializer_parseAllRow(JNIEnv *env,

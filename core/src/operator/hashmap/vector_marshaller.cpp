@@ -472,9 +472,9 @@ std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter = {
 template <typename RawDataType>
 void ALWAYS_INLINE FixedKeysSerializerForJoin(RawDataType value, StringRef &result, size_t &pos)
 {
-    static constexpr uint8_t RawDataSize = sizeof(RawDataType);
+    static constexpr uint8_t rawDataSize = sizeof(RawDataType);
     *reinterpret_cast<RawDataType *>(const_cast<char *>(result.data) + pos) = value;
-    pos += RawDataSize;
+    pos += rawDataSize;
 }
 
 template <type::DataTypeId id>
@@ -503,6 +503,60 @@ bool SerializeDictionaryFixedKeysIgnoreNullIntoArena(BaseVector *baseVector, int
         return true;
     }
 
+    return false;
+}
+
+
+template <typename RawDataType>
+void ALWAYS_INLINE FixedKeysSerializerForJoinSimd(RawDataType value, StringRef &result, size_t &pos)
+{
+    static constexpr uint8_t rawDataSize = sizeof(RawDataType);
+    *reinterpret_cast<RawDataType *>(const_cast<char *>(result.data) + pos) = value;
+}
+
+
+template <type::DataTypeId id>
+bool SerializeFixedKeysIgnoreNullIntoArenaSimd(BaseVector *baseVector, int32_t rowid,
+    std::vector<StringRef> &result, size_t &pos, int32_t joinRownum)
+{
+    using RawDataType = typename NativeAndVectorType<id>::type;
+    static constexpr uint8_t rawDataSize = sizeof(RawDataType);
+
+    if (!baseVector->IsNull(rowid)) {
+        auto rawVector = reinterpret_cast<Vector<RawDataType> *>(baseVector);
+        auto value = rawVector->GetValue(rowid);
+        FixedKeysSerializerForJoinSimd<RawDataType>(value, result[rowid], pos);
+        if (rowid == joinRownum - 1) {
+            pos += rawDataSize;
+        }
+        return true;
+    }
+    if (rowid == joinRownum - 1) {
+        pos += rawDataSize;
+    }
+    
+    return false;
+}
+
+template <type::DataTypeId id>
+bool SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd(BaseVector *baseVector, int32_t rowid,
+    std::vector<StringRef> &result, size_t &pos, int32_t joinRownum)
+{
+    using RawDataType = typename NativeAndVectorType<id>::type;
+    static constexpr uint8_t rawDataSize = sizeof(RawDataType);
+
+    if (!baseVector->IsNull(rowid)) {
+        auto dictionaryVector = reinterpret_cast<Vector<DictionaryContainer<RawDataType>> *>(baseVector);
+        auto value = dictionaryVector->GetValue(rowid);
+        FixedKeysSerializerForJoinSimd<RawDataType>(value, result[rowid], pos);
+        if (rowid == joinRownum - 1) {
+            pos += rawDataSize;
+        }
+        return true;
+    }
+    if (rowid == joinRownum - 1) {
+        pos += rawDataSize;
+    }
     return false;
 }
 
@@ -541,6 +595,48 @@ std::vector<FixedKeyVectorSerializerIgnoreNull> dicVectorSerializerFixedKeysIgno
     SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_INT>,        // OMNI_TIME32
     SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIME64
     SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_LONG>,       // OMNI_TIMESTAMP
+    nullptr,                                                                // OMNI_INTERVAL_MONTHS
+    nullptr,                                                                // OMNI_INTERVAL_DAY_TIME
+    nullptr,                                                                // OMNI_VARCHAR
+    nullptr,                                                                // OMNI_CHAR,
+    nullptr                                                                 // OMNI_CONTAINER,
+};
+
+std::vector<FixedKeyVectorSerializerIgnoreNullSimd> vectorSerializerFixedKeysIgnoreNullCenterSimd = {
+    nullptr,                                                      // OMNI_NONE,
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_INT
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_LONG
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_SHORT>,      // OMNI_SHORT
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DECIMAL64,
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_DATE32
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DATE64
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP
+    nullptr,                                                      // OMNI_INTERVAL_MONTHS
+    nullptr,                                                      // OMNI_INTERVAL_DAY_TIME
+    nullptr,                                                      // OMNI_VARCHAR
+    nullptr,                                                      // OMNI_CHAR,
+    nullptr                                                       // OMNI_CONTAINER,
+};
+
+std::vector<FixedKeyVectorSerializerIgnoreNullSimd> dicVectorSerializerFixedKeysIgnoreNullCenterSimd = {
+    nullptr,                                                                // OMNI_NONE,
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_INT
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_LONG
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DOUBLE>,     // OMNI_DOUBLE
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BOOLEAN>,    // OMNI_BOOLEAN
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_SHORT>,      // OMNI_SHORT
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DECIMAL64,
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_DECIMAL128>, // OMNI_DECIMAL128
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_DATE32
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_DATE64
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP
     nullptr,                                                                // OMNI_INTERVAL_MONTHS
     nullptr,                                                                // OMNI_INTERVAL_DAY_TIME
     nullptr,                                                                // OMNI_VARCHAR

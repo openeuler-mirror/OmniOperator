@@ -14,6 +14,7 @@
 #include "vector/vector_common.h"
 #include "operator/execution_context.h"
 #include "operator/util/function_type.h"
+#include "operator/join/row_ref.h"
 #include "util/type_util.h"
 #include "src/util/config_util.h"
 #include "state_flag_operation.h"

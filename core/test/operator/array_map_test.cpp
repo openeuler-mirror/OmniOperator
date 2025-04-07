@@ -43,7 +43,7 @@ TEST(ArrayMapTest, TestForAllFunctions)
     ret1.GetValue()->Insert({ static_cast<uint32_t>(2 * positions.size() + 1), 2 }, *arenaAllocator);
 
     EXPECT_EQ(hashMap.GetElementsSize(), 7);
-    hashMap.ForEachValue([&](const auto &value) {
+    hashMap.ForEachValue([&](const auto &value, int index) {
         auto it = value->Begin();
         while (it.IsOk()) {
             std::cout << "[" << it->rowIdx << ", " << it->vecBatchIdx << "] ";

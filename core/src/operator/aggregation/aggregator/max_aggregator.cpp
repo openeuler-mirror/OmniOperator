@@ -98,7 +98,7 @@ void MaxAggregator<IN_ID, OUT_ID>::InitStates(std::vector<AggregateState *> &gro
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
+    const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     auto maxState = MaxState::CastState(state);
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
@@ -115,10 +115,12 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, 
         } else {
             if constexpr (CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 AddConditional<InType, ResultType, AggValueState, MaxConditionalOp<InType, ResultType, false>>(
-                    &(maxState->value), maxState->valueState, ptr, rowCount, nullMap);
+                    &(maxState->value), maxState->valueState, ptr, rowCount, *nullMap);
             } else {
+                auto conditionArray = nullMap->convertToArray(rowCount);
                 simd::ReduceWithNullsExternal<InType, ResultType, AggValueState, StateValueHandler,
-                    simd::ReduceFunc::Max>(&maxState->value, maxState->valueState, ptr, rowCount, nullMap);
+                    simd::ReduceFunc::Max>(&maxState->value, maxState->valueState, ptr, rowCount,
+                    conditionArray.data());
             }
         }
     } else {
@@ -135,10 +137,12 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, 
         } else {
             if constexpr (CheckTypesContainsDecimal128<InType, ResultType>::value) {
                 AddDictConditional<InType, ResultType, AggValueState, MaxConditionalOp<InType, ResultType, false>>(
-                    &maxState->value, maxState->valueState, ptr, rowCount, nullMap, indexMap);
+                    &maxState->value, maxState->valueState, ptr, rowCount, *nullMap, indexMap);
             } else {
+                auto conditionArray = nullMap->convertToArray(rowCount);
                 simd::ReduceWithDicAndNullsExternal<InType, ResultType, AggValueState, StateValueHandler,
-                    simd::ReduceFunc::Max>(&maxState->value, maxState->valueState, ptr, rowCount, nullMap, indexMap);
+                    simd::ReduceFunc::Max>(&maxState->value, maxState->valueState, ptr, rowCount, conditionArray.data(),
+                    indexMap);
             }
         }
     }
@@ -146,7 +150,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, 
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
-    const int32_t rowOffset, const uint8_t *nullMap)
+    const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
@@ -155,7 +159,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
             AddUseRowIndex<InType, MaxState::template UpdateState<InType, ResultType>>(rowStates, aggStateOffset, ptr);
         } else {
             AddConditionalUseRowIndex<InType, MaxState::template UpdateStateWithCondition<InType, ResultType, false>>(
-                rowStates, aggStateOffset, ptr, nullMap);
+                rowStates, aggStateOffset, ptr, *nullMap);
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
@@ -166,7 +170,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
         } else {
             AddDictConditionalUseRowIndex<InType, ResultType,
                 MaxState::template UpdateStateWithCondition<InType, ResultType, false>>(rowStates, aggStateOffset, ptr,
-                nullMap, indexMap);
+                *nullMap, indexMap);
         }
     }
 }
@@ -191,7 +195,7 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInf
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
-    const uint8_t *nullMap, const bool aggFilter)
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
 {
     int rowCount = originVector->GetSize();
     if constexpr (std::is_same_v<InType, OutType>) {
@@ -212,14 +216,14 @@ void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, Ba
 template<DataTypeId IN_ID, DataTypeId OUT_ID>
 template<typename T>
 void MaxAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
-    const uint8_t *nullMap)
+    const std::shared_ptr<NullsHelper> nullMap)
 {
     int rowCount = originVector->GetSize();
     auto maxVector = reinterpret_cast<OutVector *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
     auto vector = reinterpret_cast<T *>(originVector);
     if (nullMap != nullptr) {
         for (int index = 0; index < rowCount; ++index) {
-            if (nullMap[index]) {
+            if ((*nullMap)[index]) {
                 maxVector->SetNull(index);
             } else {
                 InType val = vector->GetValue(index);

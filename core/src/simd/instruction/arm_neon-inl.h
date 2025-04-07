@@ -6242,6 +6242,50 @@ template <typename T, size_t N> OMNI_API uint64_t FindMatchMask(T value, const T
     return nib;
 }
 
+template <typename T, size_t N>
+OMNI_INLINE int32_t FindMatch(T value, const T* OMNI_RESTRICT in)
+{
+    int8x16_t data = vld1q_s8(in);
+    int8x16_t value_vec = vdupq_n_s8(value);
+    uint8x16_t mask = vceqq_s8(data, value_vec);
+    static const int8_t kShift[] = {
+        -7, -6, -5, -4, -3, -2, -1, 0, -7, -6, -5, -4, -3, -2, -1, 0};
+    int8x16_t vshift = vld1q_s8(kShift);
+    uint8x16_t vmask = vshlq_u8(vandq_u8(mask, vdupq_n_u8(0x80)), vshift);
+    return (vaddv_u8(vget_high_u8(vmask)) << 8) | vaddv_u8(vget_low_u8(vmask));
+}
+
+template <typename T, size_t N>
+OMNI_INLINE int32_t FindFirstMatch(T value, const T* OMNI_RESTRICT in)
+{
+    int8x16_t data = vld1q_s8(in);
+    int8x16_t value_vec = vdupq_n_s8(value);
+    uint8x16_t mask = vceqq_s8(data, value_vec);
+    static const int8_t kShift[] = {
+        -7, -6, -5, -4, -3, -2, -1, 0, -7, -6, -5, -4, -3, -2, -1, 0};
+    int8x16_t vshift = vld1q_s8(kShift);
+    uint8x16_t vmask = vshlq_u8(vandq_u8(mask, vdupq_n_u8(0x80)), vshift);
+    auto res = (vaddv_u8(vget_high_u8(vmask)) << 8) | vaddv_u8(vget_low_u8(vmask));
+    return res == 0 ? -1 : __builtin_ctz(res);
+}
+
+template <typename T>
+OMNI_INLINE static unsigned FindFirstSetNonZeroNeon(T mask)
+{
+    if (sizeof(mask) == sizeof(unsigned)) {
+        return __builtin_ctz(static_cast<unsigned>(mask));
+    } else {
+        return __builtin_ctzll(mask);
+    }
+}
+
+template <typename T, size_t N>
+OMNI_INLINE size_t CountLeadingValue(T value, const T* OMNI_RESTRICT in)
+{
+    uint64_t nib = LeadingValueCountMask<T, N>(value, in);
+    return static_cast<size_t>(FindFirstSetNonZeroNeon(nib) >> 2);
+}
+
 namespace detail {
 using AddrVec = Vec128<uint64_t>;
 using AddrType = uint64_t;

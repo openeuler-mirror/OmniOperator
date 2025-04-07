@@ -22,7 +22,7 @@ using namespace omniruntime::exception;
 
 using FilterFunc = int32_t (*)(int64_t *, int32_t, int32_t *, int64_t *, int64_t *, int64_t, int64_t *);
 using ProjFunc = int32_t (*)(int64_t const *, int32_t, int64_t, int32_t *, int32_t, int64_t const *, int64_t const *,
-    bool *, int32_t *, int64_t, int64_t *);
+    int32_t *, int32_t *, int64_t, int64_t *);
 
 typedef struct LiteralValue {
     bool isNull = false;

@@ -58,7 +58,7 @@ public:
     ~TrySumFlatIMAggregator() override = default;
 
     void ProcessGroupInternalFinal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap)
+        const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
     {
         // final stage : input vector will be Vector<ResultType>
         auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
@@ -69,12 +69,12 @@ public:
         } else {
             AddConditionalUseRowIndex<ResultType,
                 TrySumFlatState::template UpdateStateWithCondition<ResultType, ResultType, false>>(rowStates,
-                aggStateOffset, ptr, nullMap);
+                aggStateOffset, ptr, *nullMap);
         }
     }
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const uint8_t *nullMap)
+        const std::shared_ptr<NullsHelper> nullMap)
     {
         if (inputRaw) {
             if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
@@ -86,7 +86,7 @@ public:
                 } else {
                     AddConditionalUseRowIndex<InType,
                         TrySumFlatState::template UpdateStateWithCondition<InType, ResultType, false>>(rowStates,
-                        aggStateOffset, ptr, nullMap);
+                        aggStateOffset, ptr, *nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
@@ -97,7 +97,7 @@ public:
                 } else {
                     AddDictConditionalUseRowIndex<InType, ResultType,
                         TrySumFlatState::template UpdateStateWithCondition<InType, ResultType, false>>(rowStates,
-                        aggStateOffset, ptr, nullMap, indexMap);
+                        aggStateOffset, ptr, *nullMap, indexMap);
                 }
             }
         } else {
@@ -125,7 +125,7 @@ public:
     }
 
     void ProcessSingleInternalFinal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap)
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {
         TrySumFlatState *trySumFlatState = TrySumFlatState::CastState(state);
         auto *ptr = reinterpret_cast<ResultType *>(GetValuesFromVector<OUT_ID>(vector));
@@ -135,12 +135,12 @@ public:
                     reinterpret_cast<ResultType *>(&trySumFlatState->value), trySumFlatState->count, ptr, rowCount);
         } else {
                 AddConditional<ResultType , ResultType, int64_t, SumConditionalOp<ResultType, ResultType, int64_t, StateCountHandler, false>>(
-                    reinterpret_cast<ResultType *>(&trySumFlatState->value), trySumFlatState->count, ptr, rowCount, nullMap);
+                    reinterpret_cast<ResultType *>(&trySumFlatState->value), trySumFlatState->count, ptr, rowCount, *nullMap);
         }
     }
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap)
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
     {
         TrySumFlatState *trySumFlatState = TrySumFlatState::CastState(state);
         if (inputRaw) {
@@ -152,7 +152,7 @@ public:
                             reinterpret_cast<ResultType *>(&trySumFlatState->value), trySumFlatState->count, ptr, rowCount);
                 } else {
                         AddConditional<InType, ResultType, int64_t, SumConditionalOp<InType, ResultType, int64_t, StateCountHandler, false>>(
-                            reinterpret_cast<ResultType *>(&trySumFlatState->value), trySumFlatState->count, ptr, rowCount, nullMap);
+                            reinterpret_cast<ResultType *>(&trySumFlatState->value), trySumFlatState->count, ptr, rowCount, *nullMap);
                 }
             } else {
                 auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
@@ -163,7 +163,7 @@ public:
                 } else {
                         AddDictConditional<InType, ResultType, int64_t,
                             SumConditionalOp<InType, ResultType, int64_t, StateCountHandler, false>>(
-                            &trySumFlatState->value, trySumFlatState->count, ptr, rowCount, nullMap, indexMap);
+                            &trySumFlatState->value, trySumFlatState->count, ptr, rowCount, *nullMap, indexMap);
                 }
             }
         } else {
@@ -240,8 +240,8 @@ public:
         }
     }
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override
     {
         int rowCount = originVector->GetSize();
         // opt branch
@@ -261,7 +261,8 @@ public:
     }
 
     template<typename T>
-    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap)
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap)
     {
         int rowCount = originVector->GetSize();
         auto sumVector = reinterpret_cast<Vector<ResultType> *>(VectorHelper::CreateFlatVector(OUT_ID, rowCount));
@@ -269,7 +270,7 @@ public:
         auto vector = reinterpret_cast<T *>(originVector);
         if (nullMap != nullptr) {
             for (int index = 0; index < rowCount; ++index) {
-                if (nullMap[index]) {
+                if ((*nullMap)[index]) {
                     sumVector->SetNull(index);
                 } else {
                     sumVector->SetValue(index, (ResultType)vector->GetValue(index));

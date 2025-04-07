@@ -110,7 +110,7 @@ public:
         const int32_t rowCount) override
     {
         curVectorBatch = vectorBatch;
-        uint8_t *nullMap = nullptr;
+        std::shared_ptr<NullsHelper> nullMap = nullptr;
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
 
         ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, nullMap);
@@ -121,7 +121,7 @@ public:
         const int32_t filterIndex) override
     {
         curVectorBatch = vectorBatch;
-        uint8_t *nullMap = nullptr;
+        std::shared_ptr<NullsHelper> nullMap = nullptr;
 
         int32_t rowCount = vectorBatch->GetRowCount();
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
@@ -134,20 +134,19 @@ public:
             // notSatisfiedArray can filter row which no need to aggregate
             // the nullMap: true means null
             // booleanVector: false means one row has been filtered
-            std::vector<uint8_t> notSatisfiedArray;
-            notSatisfiedArray.resize(rowCount);
+            auto notSatisfied = std::make_shared<NullsHelper>(std::make_shared<NullsBuffer>(rowCount));
             if (nullMap == nullptr) {
                 for (int32_t i = 0; i < rowCount; ++i) {
-                    notSatisfiedArray[i] = not filterPtr[i];
+                    notSatisfied->SetNull(i, not filterPtr[i]);
                 }
             } else {
-                auto *nullmapPtr = nullMap;
+                auto nullmapPtr = *nullMap;
                 nullmapPtr += rowOffset;
                 for (int32_t i = 0; i < rowCount; ++i) {
-                    notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
+                    notSatisfied->SetNull(i, nullmapPtr[i] || not filterPtr[i]);
                 }
             }
-            ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, notSatisfiedArray.data());
+            ProcessSingleInternal(state + aggStateOffset, vector, rowOffset, rowCount, notSatisfied);
         } else {
             // true/false meaning in nullmap is same with notSatisfiedArray
             // true means one row no need to aggregate
@@ -160,7 +159,7 @@ public:
         const int32_t rowOffset) override
     {
         curVectorBatch = vectorBatch;
-        uint8_t *nullMap = nullptr;
+        std::shared_ptr<NullsHelper> nullMap = nullptr;
 
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowStates.size(), &nullMap, 0);
         ProcessGroupInternal(rowStates, vector, rowOffset, nullMap);
@@ -171,7 +170,7 @@ public:
         const int32_t filterOffset, const int32_t rowOffset) override
     {
         curVectorBatch = vectorBatch;
-        uint8_t *nullMap = nullptr;
+        std::shared_ptr<NullsHelper> nullMap = nullptr;
 
         auto rowCount = static_cast<int32_t>(rowStates.size());
         BaseVector *vector = GetVector(vectorBatch, rowOffset, rowCount, &nullMap, 0);
@@ -184,20 +183,19 @@ public:
             // notSatisfiedArray can filter row which no need to aggregate
             // the nullMap: true means null
             // booleanVector: false means one row has been filtered
-            std::vector<uint8_t> notSatisfiedArray;
-            notSatisfiedArray.resize(rowCount);
+            auto notSatisfied = std::make_shared<NullsHelper>(std::make_shared<NullsBuffer>(rowCount));
             if (nullMap == nullptr) {
                 for (int32_t i = 0; i < rowCount; ++i) {
-                    notSatisfiedArray[i] = not filterPtr[i];
+                    notSatisfied->SetNull(i, not filterPtr[i]);
                 }
             } else {
-                auto *nullmapPtr = nullMap;
+                auto nullmapPtr = *nullMap;
                 nullmapPtr += rowOffset;
                 for (int32_t i = 0; i < rowCount; ++i) {
-                    notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
+                    notSatisfied->SetNull(i, nullmapPtr[i] || not filterPtr[i]);
                 }
             }
-            ProcessGroupInternal(rowStates, vector, rowOffset, notSatisfiedArray.data());
+            ProcessGroupInternal(rowStates, vector, rowOffset, notSatisfied);
         } else {
             // true/false meaning in nullmap is same with notSatisfiedArray
             // true means one row no need to aggregate
@@ -209,7 +207,7 @@ public:
     void AlignAggSchemaWithFilter(VectorBatch *result, VectorBatch *inputVecBatch, const int32_t filterIndex) override
     {
         int32_t rowCount = inputVecBatch->GetRowCount();
-        uint8_t *nullMap = nullptr;
+        std::shared_ptr<NullsHelper> nullMap = nullptr;
         BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap, 0);
 
         Vector<bool> *booleanVector = static_cast<Vector<bool> *>(inputVecBatch->Get(filterIndex));
@@ -219,19 +217,18 @@ public:
             // notSatisfiedArray can filter row which no need to aggregate
             // the nullMap: true means null
             // booleanVector: false means one row has been filtered
-            std::vector<uint8_t> notSatisfiedArray;
-            notSatisfiedArray.resize(rowCount);
+            auto notSatisfied = std::make_shared<NullsHelper>(std::make_shared<NullsBuffer>(rowCount));
             if (nullMap == nullptr) {
                 for (int32_t i = 0; i < rowCount; ++i) {
-                    notSatisfiedArray[i] = not filterPtr[i];
+                    notSatisfied->SetNull(i, not filterPtr[i]);
                 }
             } else {
-                auto *nullmapPtr = nullMap;
+                auto nullmapPtr = *nullMap;
                 for (int32_t i = 0; i < rowCount; ++i) {
-                    notSatisfiedArray[i] = nullmapPtr[i] || not filterPtr[i];
+                    notSatisfied->SetNull(i, nullmapPtr[i] || not filterPtr[i]);
                 }
             }
-            ProcessAlignAggSchema(result, originVector, notSatisfiedArray.data(), true);
+            ProcessAlignAggSchema(result, originVector, notSatisfied, true);
         } else {
             ProcessAlignAggSchema(result, originVector, nullMap, false);
         }
@@ -241,7 +238,7 @@ public:
     void AlignAggSchema(VectorBatch *result, VectorBatch *inputVecBatch) override
     {
         int32_t rowCount = inputVecBatch->GetRowCount();
-        uint8_t *nullMap = nullptr;
+        std::shared_ptr<NullsHelper> nullMap = nullptr;
         BaseVector *originVector = GetVector(inputVecBatch, 0, rowCount, &nullMap, 0);
         ProcessAlignAggSchema(result, originVector, nullMap, false);
     }
@@ -260,13 +257,13 @@ protected:
      * The state pointer has offset aggStateOffset bytes.
      */
     virtual void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap) = 0;
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) = 0;
 
     virtual void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
-        const int32_t rowOffset, const uint8_t *nullMap) = 0;
+        const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap) = 0;
 
-    virtual void ProcessAlignAggSchema(VectorBatch *vecBatch, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) = 0;
+    virtual void ProcessAlignAggSchema(VectorBatch *vecBatch, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) = 0;
 
     // set vector value null or throw exception when overflow
     void SetNullOrThrowException(BaseVector *vector, const int index, const char *errorMsg)
@@ -278,7 +275,7 @@ protected:
     }
 
     virtual BaseVector *GetVector(VectorBatch *vectorBatch, const int32_t rowOffset, const int32_t rowCount,
-        uint8_t **nullMap, const size_t channelIdx);
+        std::shared_ptr<NullsHelper> *nullMap, const size_t channelIdx);
 
     // this is needed in case, we directly create aggregator (using Aggregator::Create) without using AggregatorFactory
     static bool CheckTypes(const std::string &aggName, const DataTypes &inputTypes, const DataTypes &outputTypes,

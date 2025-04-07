@@ -224,6 +224,16 @@ SupportContainerVecRule ConfigUtil::GetSupportContainerVecRule()
     return g_properties.GetPolicy()->GetSupportContainerVecRule();
 }
 
+AggHashTableRule ConfigUtil::GetAggHashTableRule()
+{
+    return g_properties.GetPolicy()->GetAggHashTableRule();
+}
+
+void ConfigUtil::SetAggHashTableRule(AggHashTableRule rule)
+{
+    g_properties.GetPolicy()->SetAggHashTableRule(rule);
+}
+
 void ConfigUtil::SetStringToDateFormatRule(StringToDateFormatRule rule)
 {
     g_properties.GetPolicy()->SetStringToDateFormatRule(rule);
@@ -262,7 +272,8 @@ Policy *ConfigUtil::InitializePolicy()
         { "SupportContainerVecRule", InitSupportContainerVecRule },
         { "StringToDateFormatRule", InitStringToDateFormatRule },
         { "StringToDecimalRule", InitStringToDecimalRule },
-        { "SupportDecimalPrecisionImprovementRule", InitSupportDecimalPrecisionImprovementRule } };
+        { "SupportDecimalPrecisionImprovementRule", InitSupportDecimalPrecisionImprovementRule },
+        { "AggHashTableRule", InitAggHashTableRule }};
     std::string ruleValueStr;
     for (const auto &item : initFunctionMap) {
         const char *ruleKeyStr = item.first;
@@ -352,6 +363,15 @@ void ConfigUtil::InitSupportDecimalPrecisionImprovementRule(Policy *policy, cons
         policy->SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_SUPPORT);
     } else if (ruleValueStr == "IS_NOT_SUPPORT") {
         policy->SetSupportDecimalPrecisionImprovementRule(SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT);
+    }
+}
+
+void ConfigUtil::InitAggHashTableRule(Policy *policy, const std::string &ruleValueStr)
+{
+    if (ruleValueStr == "ARRAY") {
+        policy->SetAggHashTableRule(AggHashTableRule::ARRAY);
+    } else if (ruleValueStr == "NORMAL") {
+        policy->SetAggHashTableRule(AggHashTableRule::NORMAL);
     }
 }
 

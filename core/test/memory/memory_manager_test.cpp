@@ -132,21 +132,21 @@ TEST(MemoryManager, testStatisticsFunction)
     auto threadMemoryManager = mem::ThreadMemoryManager::GetThreadMemoryManager();
     threadMemoryManager->Clear();
 
-    // mem 628 = vector, nullsBuffer, valuesBuffer size(128) + null size(100) + value size(400). Take null as
+    // mem 573 = vector, nullsBuffer, valuesBuffer size(152) + null size(21) + value size(400). Take null as
     // an example, 100 indicates the overhead of new bool[100].
     auto int32Vector = CreateVector<int32_t>(100);
     int64_t threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 628);
+    EXPECT_EQ(threadUntracked, 573);
 
-    // mem 1028 = vector, nullsBuffer, valuesBuffer size(128) + null size(100) + value size(800)
+    // mem 973 = vector, nullsBuffer, valuesBuffer size(152) + null size(21) + value size(800)
     auto int64Vector = CreateVector<int64_t>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 1656); // int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 1546); // int64Vector + int32Vector
 
-    // mem 1028 = vector, nullsBuffer, valuesBuffer size(128) + null size(100) + value size(800)
+    // mem 973 = vector, nullsBuffer, valuesBuffer size(152) + null size(21) + value size(800)
     auto doubleVector = CreateVector<double>(100);
     threadUntracked = threadMemoryManager->GetUntrackedMemory();
-    EXPECT_EQ(threadUntracked, 2684); // doubleVector + int64Vector + int32Vector
+    EXPECT_EQ(threadUntracked, 2519); // doubleVector + int64Vector + int32Vector
 
     int32Vector.reset();
     int64Vector.reset();
@@ -167,18 +167,18 @@ TEST(MemoryManager, testStatisticsFunctionMemoryLimit)
 
     auto globalMemoryManager = mem::MemoryManager::GetGlobalMemoryManager();
     int size = 1024 * 1024;
-    int limit = 10 * 1024 * 1024;
+    int limit = 8 * 1024 * 1024;
     globalMemoryManager->SetMemoryLimit(limit);
     auto vector1 = std::make_unique<Vector<int32_t>>(size);
     int64_t globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-    // 5242880 = null size(1048576) + value size(4194304), untracked memory(vector, nullsBuffer, valuesBuffer size(128))
-    EXPECT_EQ(globalMemoryAmount, 5242880);
+    // 4325384 = null size(131080) + value size(4194304), untracked memory(vector, nullsBuffer, valuesBuffer size(152))
+    EXPECT_EQ(globalMemoryAmount, 4325384);
     // it is equivalent to "auto vector = std::make_unique<Vector<int32_t>>(size)"
     auto currentMemoryManager = std::make_unique<mem::MemoryManager>(globalMemoryManager);
     EXPECT_ANY_THROW(currentMemoryManager->AddMemory(globalMemoryAmount));
 
     globalMemoryAmount = globalMemoryManager->GetMemoryAmount();
-    EXPECT_EQ(globalMemoryAmount, 10485760);
+    EXPECT_EQ(globalMemoryAmount, 8650768);
 }
 
 TEST(MemoryManager, testFixedVectorStatisticsFunction)

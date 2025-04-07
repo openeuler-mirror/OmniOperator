@@ -6,6 +6,7 @@
 #ifndef OMNI_RUNTIME_GROUP_AGGREATION_SORT_H
 #define OMNI_RUNTIME_GROUP_AGGREATION_SORT_H
 
+#include <string>
 #include "aggregator/aggregator.h"
 #include "type/data_types.h"
 #include "type/string_ref.h"
@@ -31,6 +32,16 @@ public:
         auto &kv = kvVec[groupIndex];
         kv.keyAddr = const_cast<char *>(key.data);
         kv.keyLen = key.size;
+        kv.value = value;
+    }
+
+    template<typename T>
+    void ParseHashMapToVector(const T &key, AggregateState *value, size_t groupIndex)
+    {
+        auto &kv = kvVec[groupIndex];
+        std::string s = std::to_string(key);
+        kv.keyAddr = const_cast<char *>(s.c_str());
+        kv.keyLen = sizeof(key);
         kv.value = value;
     }
 

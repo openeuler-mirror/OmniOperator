@@ -273,11 +273,11 @@ void BatchExpressionCodeGen::Visit(const FieldExpr &fExpr)
 
     // Get isNull value
     auto bitmapGEP = builder->CreateGEP(llvmTypes->I64Type(), bitmap, colIdx);
-    Value *nullArrayPtr = builder->CreateLoad(llvmTypes->I64Type(), bitmapGEP);
-    nullArrayPtr = builder->CreateIntToPtr(nullArrayPtr, llvmTypes->I1PtrType());
+    Value *nullBitsPtr = builder->CreateLoad(llvmTypes->I64Type(), bitmapGEP);
+    nullBitsPtr = builder->CreateIntToPtr(nullBitsPtr, llvmTypes->I32PtrType());
     auto dstNullArray = GetResultArray(OMNI_BOOLEAN, rowCnt);
-    CallExternFunction("batch_copy_null", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
-        { dstNullArray, nullArrayPtr, rowIdxArray, rowCnt }, nullptr, "copy_null");
+    CallExternFunction("batch_BitsToNullArray", { OMNI_BOOLEAN }, OMNI_BOOLEAN,
+        { dstNullArray, nullBitsPtr, rowIdxArray, rowCnt }, nullptr, "copy_null");
 
     if (TypeUtil::IsDecimalType(fExpr.GetReturnTypeId())) {
         Value *precision =
@@ -470,51 +470,6 @@ void BatchExpressionCodeGen::Visit(const IsNullExpr &isNullExpr)
     this->value = std::make_shared<CodeGenValue>(isNullValue->isNull, nullArrayPtr);
 }
 
-std::vector<llvm::Value *> BatchExpressionCodeGen::GetDefaultFunctionArgValues(const FuncExpr &fExpr,
-    AllocaInst *isAnyNull, bool &isInvalidExpr)
-{
-    std::vector<Value *> argVals;
-    CodeGenValuePtr resultPtr;
-    int numArgs = fExpr.arguments.size();
-    std::vector<Value *> nullFuncParams;
-
-    if (fExpr.function->IsExecutionContextSet()) {
-        argVals.push_back(this->batchCodegenContext->executionContext);
-    }
-    for (int i = 0; i < numArgs; i++) {
-        Expr *argN = fExpr.arguments[i];
-        resultPtr = VisitExpr(*argN);
-        if (!resultPtr->IsValidValue()) {
-            isInvalidExpr = true;
-            return argVals;
-        }
-        argVals.push_back(resultPtr->data);
-
-        nullFuncParams = { isAnyNull, resultPtr->isNull, this->batchCodegenContext->rowCnt };
-        CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, nullFuncParams, nullptr,
-            "either_null");
-
-        if ((TypeUtil::IsStringType(argN->GetReturnTypeId()))) {
-            if (argN->GetReturnTypeId() == OMNI_CHAR) {
-                argVals.push_back(
-                    llvmTypes->CreateConstantInt(static_cast<CharDataType *>(argN->GetReturnType().get())->GetWidth()));
-            }
-            if (FuncExpr::IsCastStrStr(fExpr)) {
-                argVals.push_back(llvmTypes->CreateConstantInt(
-                    static_cast<VarcharDataType *>(argN->GetReturnType().get())->GetWidth()));
-            }
-            argVals.push_back(this->value->length);
-        }
-        if (TypeUtil::IsDecimalType(argN->GetReturnTypeId())) {
-            argVals.push_back(llvmTypes->CreateConstantInt(
-                static_cast<DecimalDataType *>(argN->GetReturnType().get())->GetPrecision()));
-            argVals.push_back(
-                llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(argN->GetReturnType().get())->GetScale()));
-        }
-    }
-    return argVals;
-}
-
 llvm::AllocaInst *BatchExpressionCodeGen::GetResultArray(omniruntime::type::DataTypeId dataTypeId, Value *rowCnt)
 {
     AllocaInst *resultArray = nullptr;
@@ -646,13 +601,6 @@ void BatchExpressionCodeGen::FuncExprOverflowNullHelper(const FuncExpr &fExpr)
     }
 }
 
-
-std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataArgs(const omniruntime::expressions::FuncExpr &fExpr,
-    AllocaInst *isAnyNull, bool &isInvalidExpr)
-{
-    return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
-}
-
 std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndOverflowNullArgs(
     const omniruntime::expressions::FuncExpr &fExpr, AllocaInst *isAnyNull, bool &isInvalidExpr,
     AllocaInst *overflowNull)
@@ -704,7 +652,10 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndOverflowNullArgs(
     return argVals;
 }
 
-std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndNullArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull,
+template <bool isNeedVerifyResult, bool isNeedVerifyVal>
+std::vector<llvm::Value *> BatchExpressionCodeGen::GetDefaultFunctionArgValues(
+    const FuncExpr &fExpr,
+    AllocaInst *isAnyNull,
     bool &isInvalidExpr)
 {
     std::vector<Value *> argVals;
@@ -723,15 +674,20 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndNullArgs(const Func
             return argVals;
         }
         argVals.push_back(resultPtr->data);
-
-        nullFuncParams = { isAnyNull, resultPtr->isNull, this->batchCodegenContext->rowCnt };
-        CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, nullFuncParams, nullptr,
-            "either_null");
-
+        if constexpr (isNeedVerifyResult) {
+            nullFuncParams = { isAnyNull, resultPtr->isNull, this->batchCodegenContext->rowCnt };
+            CallExternFunction("batch_or", { OMNI_BOOLEAN, OMNI_BOOLEAN }, OMNI_BOOLEAN, nullFuncParams, nullptr,
+                               "either_null");
+        }
         if ((TypeUtil::IsStringType(argN->GetReturnTypeId()))) {
             if (argN->GetReturnTypeId() == OMNI_CHAR) {
                 argVals.push_back(
-                    llvmTypes->CreateConstantInt(static_cast<CharDataType *>(argN->GetReturnType().get())->GetWidth()));
+                    llvmTypes->CreateConstantInt(
+                        static_cast<CharDataType *>(argN->GetReturnType().get())->GetWidth()));
+            }
+            if (FuncExpr::IsCastStrStr(fExpr)) {
+                argVals.push_back(llvmTypes->CreateConstantInt(
+                    static_cast<VarcharDataType *>(argN->GetReturnType().get())->GetWidth()));
             }
             argVals.push_back(this->value->length);
         }
@@ -739,11 +695,32 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndNullArgs(const Func
             argVals.push_back(llvmTypes->CreateConstantInt(
                 static_cast<DecimalDataType *>(argN->GetReturnType().get())->GetPrecision()));
             argVals.push_back(
-                llvmTypes->CreateConstantInt(static_cast<DecimalDataType *>(argN->GetReturnType().get())->GetScale()));
+                llvmTypes->CreateConstantInt(
+                    static_cast<DecimalDataType *>(argN->GetReturnType().get())->GetScale()));
         }
-        argVals.push_back(this->value->isNull);
+        if constexpr (isNeedVerifyVal) {
+            argVals.push_back(this->value->isNull);
+        }
     }
     return argVals;
+}
+
+inline std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataArgs(const FuncExpr &fExpr, AllocaInst *isAnyNull,
+    bool &isInvalidExpr)
+{
+    return GetDefaultFunctionArgValues<true, false>(fExpr, isAnyNull, isInvalidExpr);
+}
+
+inline std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndNullArgs(const FuncExpr &fExpr,
+    AllocaInst *isAnyNull, bool &isInvalidExpr)
+{
+    return GetDefaultFunctionArgValues<false, true>(fExpr, isAnyNull, isInvalidExpr);
+}
+
+inline std::vector<llvm::Value *> BatchExpressionCodeGen::GetDataAndNullArgsAndReturnNull(const FuncExpr &fExpr,
+    AllocaInst *isAnyNull, bool &isInvalidExpr)
+{
+    return GetDefaultFunctionArgValues<true, true>(fExpr, isAnyNull, isInvalidExpr);
 }
 
 std::vector<llvm::Value *> BatchExpressionCodeGen::GetFunctionArgValues(const omniruntime::expressions::FuncExpr &fExpr,
@@ -753,10 +730,11 @@ std::vector<llvm::Value *> BatchExpressionCodeGen::GetFunctionArgValues(const om
         case INPUT_DATA:
             return GetDataArgs(fExpr, isAnyNull, isInvalidExpr);
         case INPUT_DATA_AND_NULL:
-        case INPUT_DATA_AND_NULL_AND_RETURN_NULL:
             return GetDataAndNullArgs(fExpr, isAnyNull, isInvalidExpr);
+        case INPUT_DATA_AND_NULL_AND_RETURN_NULL:
+            return GetDataAndNullArgsAndReturnNull(fExpr, isAnyNull, isInvalidExpr);
         default:
-            return GetDefaultFunctionArgValues(fExpr, isAnyNull, isInvalidExpr);
+            return GetDataArgs(fExpr, isAnyNull, isInvalidExpr);
     }
 }
 

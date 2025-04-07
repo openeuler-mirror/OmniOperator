@@ -135,21 +135,22 @@ public:
 
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override;
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
 
 protected:
     MaxAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
         const bool inputRaw, const bool outputPartial, const bool isOverflowAsNull);
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-        const int32_t rowCount, const uint8_t *nullMap) override;
+        const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector, const int32_t rowOffset,
-        const uint8_t *nullMap) override;
+        const std::shared_ptr<NullsHelper> nullMap) override;
 
     template<typename T>
-    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap);
 };
 }
 }

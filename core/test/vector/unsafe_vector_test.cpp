@@ -26,13 +26,13 @@ template <typename DATA_TYPE> void VectorGetValuesAndNulls()
     auto vector = CreateVectorAndSetValue<DATA_TYPE>(size);
     VectorSetNull(vector.get());
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector.get());
+    auto vectorNulls = UnsafeBaseVector::GetNullsHelper(vector.get());
 
     DATA_TYPE *vectorValues = UnsafeVector::GetRawValues(vector.get());
 
     for (int i = 0; i < size; i++) {
         if (i % 2) {
-            EXPECT_TRUE(vectorNulls[i]);
+            EXPECT_TRUE((*vectorNulls)[i]);
         } else {
             EXPECT_EQ(vectorValues[i], vector->GetValue(i));
         }
@@ -50,12 +50,12 @@ template <typename DATA_TYPE> void VectorSliceGetValuesAndNulls()
 
     auto vector2 = vector->Slice(offSet, sliceLength);
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2);
+    auto vectorNulls = UnsafeBaseVector::GetNullsHelper(vector2);
     DATA_TYPE *vectorValues = UnsafeVector::GetRawValues(vector2);
 
     for (int i = 0; i < sliceLength; i++) {
         if (i % 2) {
-            EXPECT_TRUE(vectorNulls[i]);
+            EXPECT_TRUE((*vectorNulls)[i]);
         } else {
             EXPECT_EQ(vectorValues[i], vector2->GetValue(i));
         }
@@ -70,13 +70,13 @@ template <typename DATA_TYPE> void DictionaryVectorGetValuesAndNulls()
     auto vector = CreateDictionaryVector<DATA_TYPE>(10, 100);
     VectorSetNull(vector.get());
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector.get());
+    auto vectorNulls = UnsafeBaseVector::GetNullsHelper(vector.get());
     DATA_TYPE *vectorValues = UnsafeDictionaryVector::GetDictionary(vector.get());
     int *valuesIds = UnsafeDictionaryVector::GetIds(vector.get());
 
     for (int i = 0; i < size; i++) {
         if (i % 2) {
-            EXPECT_TRUE(vectorNulls[i]);
+            EXPECT_TRUE((*vectorNulls)[i]);
         } else {
             EXPECT_EQ(vectorValues[valuesIds[i]], vector->GetValue(i));
         }
@@ -109,13 +109,13 @@ void DictionaryStringVectorGetValuesAndNulls()
     auto dictVector =
         reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(vectorPtr);
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(dictVector);
+    auto vectorNulls = UnsafeBaseVector::GetNullsHelper(dictVector);
     char *vectorValues = UnsafeDictionaryVector::GetVarCharDictionary(dictVector);
     int *valuesIds = UnsafeDictionaryVector::GetIds(dictVector);
     auto vectorOffsets = UnsafeDictionaryVector::GetDictionaryOffsets(dictVector);
     for (int i = 0; i < size; i++) {
         if (i % 2 == 0) {
-            EXPECT_TRUE(vectorNulls[i]);
+            EXPECT_TRUE((*vectorNulls)[i]);
         } else {
             EXPECT_EQ(vectorValues + vectorOffsets[valuesIds[i]], dictVector->GetValue(i).data());
         }
@@ -135,13 +135,13 @@ template <typename DATA_TYPE> void DictionaryVectorSliceGetValuesAndNulls()
 
     auto vector2 = vector->Slice(offSet, sliceLength);
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2);
+    auto vectorNulls = UnsafeBaseVector::GetNullsHelper(vector2);
     DATA_TYPE *vectorValues = UnsafeDictionaryVector::GetDictionary(vector2);
     int *valuesIds = UnsafeDictionaryVector::GetIds(vector2);
 
     for (int i = 0; i < sliceLength; i++) {
         if (i % 2) {
-            EXPECT_TRUE(vectorNulls[i]);
+            EXPECT_TRUE((*vectorNulls)[i]);
         } else {
             EXPECT_EQ(vectorValues[valuesIds[i]], vector2->GetValue(i));
         }
@@ -156,13 +156,13 @@ template <typename CONTAINER> void StringVectorGetValuesAndNulls()
     auto baseVector = CreateStringTestVector<CONTAINER>(1000);
     VectorSetNull(baseVector);
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(baseVector);
+    auto vectorNulls = UnsafeBaseVector::GetNullsHelper(baseVector);
     auto *vector = (Vector<CONTAINER> *)baseVector;
     char *vectorValues = UnsafeStringVector::GetValues(vector);
     auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
     for (int i = 0; i < size; i++) {
         if (i % 2) {
-            EXPECT_TRUE(vectorNulls[i]);
+            EXPECT_TRUE((*vectorNulls)[i]);
         } else {
             EXPECT_EQ(vectorValues + valueOffsets[i], vector->GetValue(i).data());
         }
@@ -181,12 +181,12 @@ template <typename CONTAINER> void StringVectorSliceGetValuesAndNulls()
     auto *vector = (Vector<CONTAINER> *)baseVector;
     auto vector2 = (Vector<CONTAINER> *)(vector->Slice(offSet, sliceLength));
 
-    bool *vectorNulls = UnsafeBaseVector::GetNulls(vector2);
+    auto vectorNulls = UnsafeBaseVector::GetNullsHelper(vector2);
     char *vectorValues = UnsafeStringVector::GetValues(vector2);
     auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector2));
     for (int i = 0; i < sliceLength; i++) {
         if (i % 2) {
-            EXPECT_TRUE(vectorNulls[i]);
+            EXPECT_TRUE((*vectorNulls)[i]);
         } else {
             EXPECT_EQ(vectorValues + valueOffsets[i], vector2->GetValue(i).data());
         }

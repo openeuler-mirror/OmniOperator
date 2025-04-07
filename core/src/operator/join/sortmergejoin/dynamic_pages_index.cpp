@@ -33,9 +33,9 @@ std::vector<bool> DynamicPagesIndex::CalculateNullsFromRawVectorBatch(VectorBatc
         if (nullSize == 0) {
             continue;
         }
-        auto nullValues = unsafe::UnsafeBaseVector::GetNulls(vec);
+        auto nullValues = unsafe::UnsafeBaseVector::GetNullsHelper(vec);
         for (int32_t rowId = 0; rowId < totalRowSize && nullSize > 0; ++rowId) {
-            if (nullValues[rowId]) {
+            if ((*nullValues)[rowId]) {
                 --nullSize;
                 result[rowId] = true;
             }

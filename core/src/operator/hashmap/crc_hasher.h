@@ -7,6 +7,7 @@
 #define __HASHER_H__
 
 #include <arm_neon.h>
+#include <cstdint>
 
 #include "type/decimal128.h"
 #include "type/string_ref.h"
@@ -14,6 +15,7 @@
 
 namespace omniruntime {
 namespace simdutil {
+constexpr uint32_t BITS_OF_LONG = 64;
 using namespace omniruntime::type;
 
 inline uint64_t HashUint64(uint64_t x)
@@ -39,10 +41,34 @@ template <typename T> inline size_t CRC32Hasher(T key)
     return HashUint64(u.out);
 }
 
+template <typename T> inline size_t CRC32HasherForInt(T key)
+{
+    // Calculating integers's hash value
+    union {
+        T in;
+        uint64_t out;
+    } u;
+    u.out = 0;
+    u.in = key;
+    return HashUint64(u.out);
+}
+
 template <typename T> struct HashCRC32 {
     size_t operator () (T key) const
     {
         return CRC32Hasher<T>(key);
+    }
+};
+
+template <> struct HashCRC32<int128_t> {
+    size_t operator () (int128_t key) const
+    {
+        uint32_t crc = -1UL;
+        uint64_t low = static_cast<uint64_t>(key);
+        uint64_t high = static_cast<uint64_t>((key >> BITS_OF_LONG));
+        __asm__ __volatile__("crc32cx %w[c], %w[c], %x[x]\n\t" : [ c ] "+r"(crc) : [ x ] "r"(low));
+        __asm__ __volatile__("crc32cx %w[c], %w[c], %x[x]\n\t" : [ c ] "+r"(crc) : [ x ] "r"(high));
+        return crc;
     }
 };
 

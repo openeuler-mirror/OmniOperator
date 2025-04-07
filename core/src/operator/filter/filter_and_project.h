@@ -76,6 +76,15 @@ public:
         return this->expression;
     }
 
+    /* *
+     * short-circuit logic for column filter, no need to go through codegen
+     * @return is short-circuit
+     */
+    bool IsColumnFilter()
+    {
+        return isColumnFilter;
+    }
+
 private:
     std::shared_ptr<codegen::SimpleFilterCodeGen> codegen;
     const expressions::Expr *expression;
@@ -83,6 +92,7 @@ private:
     bool *isResultNull;
     int32_t *resultLength;
     bool initialized;
+    bool isColumnFilter = false;
 };
 
 class FilterAndProjectOperator : public Operator {

@@ -122,7 +122,7 @@ std::vector<Value *> ExprFunction::ToNullArgs(Value *bitmap)
         std::string bitmapName = "bitmap_";
         auto bitmapValue =
             codegen.GetIRBuilder()->CreateLoad(codegen.GetTypes()->I64Type(), bitmapAddr, bitmapName.append(itostr(i)));
-        auto bitmapPtr = codegen.GetIRBuilder()->CreateIntToPtr(bitmapValue, codegen.GetTypes()->I1PtrType());
+        auto bitmapPtr = codegen.GetIRBuilder()->CreateIntToPtr(bitmapValue, codegen.GetTypes()->I32PtrType());
         result.push_back(bitmapPtr);
     }
     return result;

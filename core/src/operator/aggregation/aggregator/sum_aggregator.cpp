@@ -132,7 +132,7 @@ void SumAggregator<IN_ID, OUT_ID>::InitStates(std::vector<AggregateState *> &gro
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
+    const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     auto *sumState = SumState::CastState(state);
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
@@ -144,11 +144,11 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, 
         } else {
             if constexpr (std::is_floating_point_v<InType>) {
                 SumConditionalFloat<InType, ResultType, false>(reinterpret_cast<ResultType *>(&sumState->value),
-                    sumState->count, ptr, rowCount, nullMap);
+                    sumState->count, ptr, rowCount, *nullMap);
             } else {
                 AddConditional<InType, ResultType, int64_t,
                     SumConditionalOp<InType, ResultType, int64_t, StateCountHandler, false>>(
-                    reinterpret_cast<ResultType *>(&sumState->value), sumState->count, ptr, rowCount, nullMap);
+                    reinterpret_cast<ResultType *>(&sumState->value), sumState->count, ptr, rowCount, *nullMap);
             }
         }
     } else {
@@ -160,14 +160,14 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, 
         } else {
             AddDictConditional<InType, ResultType, int64_t,
                 SumConditionalOp<InType, ResultType, int64_t, StateCountHandler, false>>(
-                reinterpret_cast<ResultType *>(&sumState->value), sumState->count, ptr, rowCount, nullMap, indexMap);
+                reinterpret_cast<ResultType *>(&sumState->value), sumState->count, ptr, rowCount, *nullMap, indexMap);
         }
     }
 }
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *vector,
-    const int32_t rowOffset, const uint8_t *nullMap)
+    const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromVector<IN_ID>(vector));
@@ -177,7 +177,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
         } else {
             // Reza: can we use customize float operation similar to sumConditionalFloat
             AddConditionalUseRowIndex<InType, SumState::template UpdateStateWithCondition<InType, ResultType, false>>(
-                rowStates, aggStateOffset, ptr, nullMap);
+                rowStates, aggStateOffset, ptr, *nullMap);
         }
     } else {
         auto *ptr = reinterpret_cast<InType *>(GetValuesFromDict<IN_ID>(vector));
@@ -188,7 +188,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateSta
         } else {
             AddDictConditionalUseRowIndex<InType, ResultType,
                 SumState::template UpdateStateWithCondition<InType, ResultType, false>>(rowStates, aggStateOffset, ptr,
-                nullMap, indexMap);
+                *nullMap, indexMap);
         }
     }
 }
@@ -221,7 +221,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<UnspillRowInf
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
-    const uint8_t *nullMap, const bool aggFilter)
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
 {
     int rowCount = originVector->GetSize();
     // opt branch
@@ -269,14 +269,14 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, Ba
 template<DataTypeId IN_ID, DataTypeId OUT_ID>
 template<typename T>
 void SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternalForDecimal(VectorBatch *result,
-    BaseVector *originVector, const uint8_t *nullMap)
+    BaseVector *originVector, const std::shared_ptr<NullsHelper> nullMap)
 {
     int rowCount = originVector->GetSize();
     auto sumVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
             VectorHelper::CreateFlatVector(OMNI_VARCHAR, rowCount));
     if (nullMap != nullptr) {
         for (int index = 0; index < rowCount; ++index) {
-            if (nullMap[index]) {
+            if ((*nullMap)[index]) {
                 sumVector->SetNull(index);
             } else {
                 DecimalPartialResult out;
@@ -303,7 +303,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternalForDecimal(Vecto
 template<DataTypeId IN_ID, DataTypeId OUT_ID>
 template<typename T>
 void SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
-    const uint8_t *nullMap)
+    const std::shared_ptr<NullsHelper> nullMap)
 {
     if constexpr (IN_ID != OMNI_VARCHAR && OUT_ID != OMNI_VARCHAR) {
         int rowCount = originVector->GetSize();
@@ -311,7 +311,7 @@ void SumAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *re
         auto vector = reinterpret_cast<T *>(originVector);
         if (nullMap != nullptr) {
             for (int index = 0; index < rowCount; ++index) {
-                if (nullMap[index]) {
+                if ((*nullMap)[index]) {
                     sumVector->SetNull(index);
                 } else {
                     InType val = vector->GetValue(index);

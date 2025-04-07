@@ -25,7 +25,7 @@ template <typename... Ts> struct Arguments {
     int rowCount;
     int colCount = 3;
     int32_t *selected;
-    bool **bitmap;
+    uint8_t **bitmap;
     int32_t **offsets;
     int64_t context;
     int64_t dictionaries[5] = {};
@@ -43,9 +43,9 @@ template <typename... Ts> struct Arguments {
 
         selected = new int32_t[rowCount];
 
-        bitmap = new bool *[colCount];
+        bitmap = new uint8_t *[colCount];
         for (int i = 0; i < colCount; i++) {
-            bitmap[i] = new bool[rowCount] { false };
+            bitmap[i] = new uint8_t[NullsBuffer::CalculateNbytes(rowCount)] { 0 };
         }
 
         offsets = new int32_t *[colCount];
@@ -1511,15 +1511,15 @@ TEST(ExpressionTest, q1TestNull)
     // verify result
     auto vector = reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0));
     EXPECT_TRUE(vector->HasNull());
-    uint8_t *retnullptr = reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(vector));
+    auto retnullptr = unsafe::UnsafeBaseVector::GetNullsHelper(vector);
     for (int i = 0; i < numRows; i++) {
         if (i == 2 || i == 4 || i == 6) {
-            EXPECT_TRUE(*(retnullptr + i));
+            EXPECT_TRUE((*retnullptr)[i]);
         } else {
             int64_t result = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(0)))->GetValue(i);
             int64_t actualLong = col1[i] * (100L - col2[i]) * (100L + col3[i]);
             EXPECT_EQ(result, actualLong);
-            EXPECT_FALSE(*(retnullptr + i));
+            EXPECT_FALSE((*retnullptr)[i]);
         }
     }
     VectorHelper::FreeVecBatch(outputVecBatch);

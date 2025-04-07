@@ -19,6 +19,14 @@
 
 namespace omniruntime {
 namespace op {
+
+constexpr int32_t BITS_OF_SHORT = 16;
+constexpr int32_t BITS_OF_INT = 32;
+constexpr int32_t BITS_OF_LONG = 64;
+constexpr int32_t BITS_OF_DECIMAL = 64;
+constexpr int32_t BITS_OF_LONGLONG = 128;
+constexpr int32_t NOT_EXPECTED_TYPE = 0;
+
 template <typename KeyType, typename ValueType>
 using JoinHashMap =
     BaseHashMap<KeyType, ValueType, omniruntime::simdutil::HashCRC32<KeyType>, Grower, OmniHashmapAllocator>;
@@ -35,9 +43,11 @@ template <typename KeyType, typename RowRefListType> class JoinHashTableVariants
 public:
     using Key = KeyType;
     using Mapped = RowRefListType;
+    static constexpr bool IS_SIMPLE_KEY = (std::is_same_v<KeyType, int16_t> || std::is_same_v<KeyType, int32_t> ||
+                                           std::is_same_v<KeyType, int64_t>);
 
     explicit JoinHashTableVariants(uint32_t hashTableCount, DataTypes *buildDataTypes,
-        std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide);
+        std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide, bool isMultiCols = false);
 
     ~JoinHashTableVariants();
 
@@ -71,6 +81,11 @@ public:
         return arrayTables[partitionIndex];
     }
 
+    ALWAYS_INLINE std::pair<int64_t, int64_t> &GetmaxMinValue(int32_t partitionIndex)
+    {
+        return maxMins[partitionIndex];
+    }
+
     ALWAYS_INLINE HashTableImplementationType GetHashTableTypes(int32_t partitionIndex)
     {
         return hashTableTypes[partitionIndex];
@@ -83,8 +98,31 @@ public:
     }
 
     InsertResult<RowRefListType *> Find(std::vector<VectorSerializerIgnoreNull> &probeSerializers,
-        ExecutionContext *probeArena, BaseVector **probeHashColumns, int32_t probeHashColCount, int32_t probePosition,
-        uint32_t partition);
+                                        ExecutionContext *probeArena, BaseVector **probeHashColumns,
+                                        int32_t probeHashColCount, int32_t probePosition, uint32_t partition);
+
+    ALWAYS_INLINE bool CanProbeSIMD(BaseVector** probeHashColumns, int32_t probeHashColCount, uint32_t partition)
+    {
+        if constexpr (IS_SIMPLE_KEY) {
+            return hashTableTypes[partition] == HashTableImplementationType::ARRAY_HASH_TABLE &&
+                   probeHashColCount == 1 && probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY;
+        }
+        return false;
+    }
+
+    ALWAYS_INLINE KeyType* GetSingleProbeHashKeyBase(BaseVector **probeHashColumns)
+    {
+        return reinterpret_cast<KeyType*>(VectorHelper::UnsafeGetValues(probeHashColumns[0]));
+    }
+
+    ALWAYS_INLINE int64_t GetMinValue(uint32_t partition)
+    {
+        return maxMins[partition].second;
+    }
+
+    void ComputeMultiColKey(BaseVector **hashColumns, int32_t hashColCount, int32_t index, KeyType& key);
+
+    KeyType GetKeyValue(BaseVector **probeHashColumns, int32_t probePosition);
 
     void PositionVisited(ForwardIterator<RowRefListType> it)
     {
@@ -99,6 +137,11 @@ public:
     ALWAYS_INLINE uint32_t GetVisitedCounts() const
     {
         return visitedCounts;
+    }
+
+    ALWAYS_INLINE bool GetIsMultiCols() const
+    {
+        return isMultiCols;
     }
 
     ALWAYS_INLINE uint32_t GetTotalVisitedCounts() const
@@ -132,7 +175,8 @@ public:
 
     void InitBuildFilterCols(std::vector<int32_t> &buildFilterCols, int32_t originalProbeColsCount,
         std::vector<std::vector<BaseVector **>> &tableBuildFilterColPtrs);
-
+    KeyType keyType;
+    RowRefListType valueType;
 private:
     template <typename T>
     bool TryToBuildArrayTable(uint32_t colIndex, T &min, T &max, int64_t rangeUpperBound, int32_t partitionIndex);
@@ -155,6 +199,10 @@ private:
         VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum);
 
     template <typename HashTableType>
+    void EmplaceFixedNotNullKeyToNormalHashTableSimd(HashTableType &hashTable, int32_t partitionIndex,
+        VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum);
+
+    template <typename HashTableType>
     void EmplaceFixedKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch,
         int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum);
 
@@ -171,6 +219,18 @@ private:
         int32_t vecBatchIdx, BaseVector **buildVectors);
 
     template <typename HashTableType>
+    void EmplaceMultiKey(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch, int32_t vecBatchIdx,
+        BaseVector **buildVectors);
+
+    template <typename HashTableType>
+    void EmplaceMultiNotNullKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex,
+         VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors);
+
+    template <typename HashTableType>
+    void EmplaceMultiKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch,
+         int32_t vecBatchIdx, BaseVector **buildVectors);
+
+    template <typename HashTableType>
     void EmplaceVariableKey(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch,
         int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum, std::vector<int8_t> &isNotNullKeys,
         std::vector<size_t> &hashes, std::vector<KeyType> &tryRes);
@@ -179,7 +239,6 @@ private:
     void EmplaceVariableNotNullKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex,
         VectorBatch *vecBatch, int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum,
         std::vector<int8_t> &isNotNullKeys, std::vector<size_t> &hashes, std::vector<KeyType> &tryRes);
-
     template <typename HashTableType>
     void EmplaceVariableKeyToNormalHashTable(HashTableType &hashTable, int32_t partitionIndex, VectorBatch *vecBatch,
         int32_t vecBatchIdx, BaseVector **buildVectors, int32_t buildColNum, std::vector<int8_t> &isNotNullKeys,
@@ -202,6 +261,7 @@ private:
     std::vector<omniruntime::vec::BaseVector ***> columns; // Vector* [partitionIdx][columnIdx][vecBatchIdx]
     JoinType joinType;
     BuildSide buildSide;
+    bool isMultiCols;
     bool isFixedKeys = true;
     size_t fixedKeysSize = 0;
     size_t sizeOfRowRefList = 0;
@@ -212,6 +272,7 @@ using HashTableVariants =
     std::variant<JoinHashTableVariants<int8_t, RowRefList>, JoinHashTableVariants<int16_t, RowRefList>,
     JoinHashTableVariants<int32_t, RowRefList>, JoinHashTableVariants<int64_t, RowRefList>,
     JoinHashTableVariants<Decimal128, RowRefList>, JoinHashTableVariants<StringRef, RowRefList>,
+    JoinHashTableVariants<int128_t, RowRefList>, JoinHashTableVariants<int128_t, RowRefListWithFlags>,
     JoinHashTableVariants<int8_t, RowRefListWithFlags>, JoinHashTableVariants<int16_t, RowRefListWithFlags>,
     JoinHashTableVariants<int32_t, RowRefListWithFlags>, JoinHashTableVariants<int64_t, RowRefListWithFlags>,
     JoinHashTableVariants<Decimal128, RowRefListWithFlags>, JoinHashTableVariants<StringRef, RowRefListWithFlags>>;

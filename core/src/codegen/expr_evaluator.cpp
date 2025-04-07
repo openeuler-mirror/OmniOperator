@@ -197,11 +197,11 @@ Projection::Projection(const Expr &expr, bool filter, DataTypePtr outType, const
 bool Projection::NullColumnProjection(ExecutionContext *context, BaseVector *outVec)
 {
     auto outNulls = unsafe::UnsafeBaseVector::GetNulls(outVec);
-    auto rowCount = outVec->GetSize();
-    auto result = memset_s(outNulls, rowCount, true, rowCount);
+    auto outNullsSize = BitUtil::Nbytes(outVec->GetSize());
+    auto result = memset_s(outNulls, outNullsSize, -1, outNullsSize);
     if (result != EOK) {
         std::string errorMessage = "Memset failed, ret " + std::to_string(result) + " destMax " +
-            std::to_string(rowCount) + " count " + std::to_string(rowCount);
+            std::to_string(outNullsSize) + " count " + std::to_string(outNullsSize);
         context->SetError(errorMessage);
         return false;
     }
@@ -326,7 +326,8 @@ void Projection::ProjectHelperVarWidth(VectorBatch &vecBatch, int64_t *valueAddr
     ExecutionContext *context, int64_t *dictionaryVectors, DataTypeId &outTypeId) const
 {
     this->projector(valueAddrs, vecBatch.GetRowCount(), reinterpret_cast<int64_t>(outVec), selectedRows,
-        numSelectedRows, nullAddrs, offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(outVec), nullptr,
+        numSelectedRows, nullAddrs, offsetAddrs,
+        reinterpret_cast<int32_t *>(unsafe::UnsafeBaseVector::GetNulls(outVec)), nullptr,
         reinterpret_cast<int64_t>(context), dictionaryVectors);
 }
 
@@ -336,8 +337,8 @@ void Projection::ProjectHelperFixedWidth(VectorBatch &vecBatch, int64_t *valueAd
 {
     auto outValueAddr = reinterpret_cast<int64_t>(VectorHelper::UnsafeGetValues(outVec));
     this->projector(valueAddrs, vecBatch.GetRowCount(), outValueAddr, selectedRows, numSelectedRows, nullAddrs,
-        offsetAddrs, unsafe::UnsafeBaseVector::GetNulls(outVec), nullptr, reinterpret_cast<int64_t>(context),
-        dictionaryVectors);
+        offsetAddrs, reinterpret_cast<int32_t *>(unsafe::UnsafeBaseVector::GetNulls(outVec)), nullptr,
+        reinterpret_cast<int64_t>(context), dictionaryVectors);
 }
 
 BaseVector *Projection::Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,

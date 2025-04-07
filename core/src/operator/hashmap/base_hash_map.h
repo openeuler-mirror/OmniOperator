@@ -13,8 +13,8 @@
 #include <functional>
 #include <jemalloc/jemalloc.h>
 #include <arm_neon.h>
-
 #include "simd/func/match.h"
+
 #include "operator/hash_util.h"
 #include "group_hasher.h"
 #include "memory/memory_pool.h"
@@ -41,6 +41,8 @@
  * hashmap.GetElementsSize();
  * hashmap.ForEachKV(CustomFunction);
  */
+
+using namespace simd;
 
 namespace omniruntime {
 namespace op {
@@ -80,11 +82,8 @@ public:
         return *this;
     }
 
-    bool IsSameKey(const size_t &otherHashVal, const KeyType &key1)
+    bool ALWAYS_INLINE  IsSameKey(const size_t &otherHashVal, const KeyType &key1)
     {
-        if (otherHashVal != hashVal) {
-            return false;
-        }
         return kv.first == key1;
     }
 
@@ -354,15 +353,15 @@ enum Ctrl : ctrl_t {
     kSentinel = -1
 };
 
-struct GroupNeonImpl {
+struct Group {
     enum {
+#ifdef __ARM_FEATURE_SVE
+        kWidth = 32
+#else
         kWidth = 16
+#endif
     }; // the number of slots per group
-
-    int8x16_t ctrl;
 };
-
-using Group = GroupNeonImpl;
 
 template <size_t Width> class ProbeSeq {
 public:
@@ -531,16 +530,16 @@ public:
         return InsertResult<ValueType>(slots[pos].GetValue(), inserted);
     }
 
-    // no need to check T
+    // key can be any data
     template <typename T> InsertResult<ValueType> EmplaceNullValue(T &&key)
     {
         if (nullSlot == nullptr) {
             ++elementsSize;
             allocator.Allocate(sizeof(Slot), reinterpret_cast<uint8_t **>(&nullSlot));
             new (nullSlot)Slot(std::forward<T>(key));
-            return InsertResult<ValueType> { nullSlot->GetValue(), true };
+            return InsertResult<ValueType>{ nullSlot->GetValue(), true };
         } else {
-            return InsertResult<ValueType> { nullSlot->GetValue(), false };
+            return InsertResult<ValueType>{ nullSlot->GetValue(), false };
         }
     }
 
@@ -554,12 +553,14 @@ public:
 
         int index = 0;
         while (remainNum) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(slots + index + 1, 0, 3);
             while (IsEmptyOrDeleted(*(identifiers + index))) {
                 // ctrl is not necessarily aligned to Group::kWidth. It is also likely
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers + index);
                 index += shift;
             }
             auto &slot = slots[index];
@@ -575,20 +576,22 @@ public:
         int remainNum = elementsSize;
         if (HasNullCell()) {
             --remainNum;
-            func(nullSlot->GetValue());
+            func(nullSlot->GetValue(), -1);
         }
         int index = 0;
         while (remainNum && index < capacity) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(slots + index + 1, 0, 3);
             while (IsEmptyOrDeleted(*(identifiers + index))) {
                 // ctrl is not necessarily aligned to Group::kWidth. It is also likely
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers + index);
                 index += shift;
             }
             auto &slot = slots[index];
-            func(slot.GetValue());
+            func(slot.GetValue(), index);
             ++index;
             --remainNum;
         }
@@ -643,7 +646,8 @@ public:
             this->pos = pos;
         }
 
-        template <class Func> OutputState HandleElements(uint32_t expectSize, Func func)
+        template <class Func, class NullFunc> OutputState HandleElements(uint32_t expectSize, Func func,
+            NullFunc nullFunc)
         {
             uint32_t remainHandleSize = expectSize;
             while (remainSlot && remainHandleSize) {
@@ -659,7 +663,7 @@ public:
             }
             if (hashMapPtr->HasNullCell()) {
                 --remainHandleSize;
-                func(hashMapPtr->nullSlot->GetKey(), hashMapPtr->nullSlot->GetValue());
+                nullFunc(hashMapPtr->nullSlot->GetKey(), hashMapPtr->nullSlot->GetValue());
             }
             return OutputState(pos, expectSize - remainHandleSize);
         }
@@ -677,7 +681,7 @@ public:
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers_ + pos);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers_ + pos);
                 pos += shift;
             }
         }
@@ -715,12 +719,14 @@ private:
         int remainNum = oldElements - (HasNullCell() ? 1 : 0);
         int index = 0;
         while (remainNum != 0) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(oldSlots + index + 1, 0, 3);
             while (IsEmptyOrDeleted(*(oldIdentifiers + index))) {
                 // ctrl is not necessarily aligned to Group::kWidth. It is also likely
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, oldIdentifiers + index);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, oldIdentifiers + index);
                 index += shift;
             }
             Reinsert(std::move(oldSlots[index]));
@@ -742,16 +748,20 @@ private:
         return c < kSentinel;
     }
 
-    ProbeSeq<Group::kWidth> Probe(size_t hashVal) const
+    template <size_t kWidth>
+    ProbeSeq<kWidth> Probe(size_t hashVal) const
     {
-        return ProbeSeq<Group::kWidth>(H1(hashVal), capacity - 1);
+        return ProbeSeq<kWidth>(H1(hashVal), capacity - 1);
     }
 
-    size_t FindPosition(const KeyType &key, size_t hashValue, bool &inserted)
+    size_t FindPosition(const KeyType& key, size_t hashValue, bool& inserted)
     {
-        auto seq = Probe(hashValue);
+        auto seq = Probe<Group::kWidth>(hashValue);
+        auto hashValueH2 = static_cast<ctrl_t>(H2(hashValue));
+        __builtin_prefetch(identifiers + seq.GetOffset(), 0, 3);
         while (identifiers[seq.GetOffset()] != kEmpty) {
-            auto maskIter = FindMatch<ctrl_t, 16>(static_cast<ctrl_t>(H2(hashValue)), identifiers + seq.GetOffset());
+            __builtin_prefetch(identifiers + seq.GetOffset() + Group::kWidth, 0, 3);
+            auto maskIter = FindMatchNibbles<ctrl_t, Group::kWidth>(static_cast<ctrl_t>(hashValueH2), identifiers + seq.GetOffset());
             // Traverse all the keys which match the low 7 bit hash
             while (maskIter.HasNext()) {
                 auto v = maskIter.Next();
@@ -760,7 +770,7 @@ private:
                 }
             }
 
-            auto firstIndex = FindFirst<ctrl_t, 16>(kEmpty, identifiers + seq.GetOffset());
+            auto firstIndex = FindFirstNibbles<ctrl_t, Group::kWidth>(kEmpty, identifiers + seq.GetOffset());
             if (firstIndex != -1) {
                 inserted = true;
                 return seq.GetOffset(firstIndex);
@@ -787,12 +797,14 @@ private:
         int remainNum = HasNullCell() ? elementsSize - 1 : elementsSize;
         int index = 0;
         while (remainNum) {
+            __builtin_prefetch(identifiers + index + 1, 0, 3);
+            __builtin_prefetch(slots + index + 1, 0, 3);
             while (IsEmptyOrDeleted(*(identifiers + index))) {
                 // ctrl is not necessarily aligned to Group::kWidth. It is also likely
                 // to read past the space for ctrl bytes and into slots. This is ok
                 // because ctrl has sizeof() == 1 and slot has sizeof() >= 1 so there
                 // is no way to read outside the combined slot array.
-                size_t shift = CountLeadingValue<ctrl_t, 16>(kEmpty, identifiers + index);
+                size_t shift = CountLeadingValue<ctrl_t, Group::kWidth>(kEmpty, identifiers + index);
                 index += shift;
             }
             slots[index].~Slot();

@@ -22,13 +22,20 @@ public:
         std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address);
-    void BuildOutput(BaseVector **probeOutputColumns, VectorBatch **outputVecBatch);
+    void BuildOutput(BaseVector **probeOutputColumns, JoinType joinType, VectorBatch **outputVecBatch);
     void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns, int32_t rowCount);
     void ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount);
+    template<bool isMatched> void AppendExistenceRow(int32_t probePosition);
+    void ConstructExistenceColumn(VectorBatch *vectorBatch);
 
     ALWAYS_INLINE bool IsFull()
     {
         return probeRowCount >= maxRowCount;
+    }
+
+    ALWAYS_INLINE bool WillFull(int32_t rowCount)
+    {
+        return probeRowCount + rowCount >= maxRowCount;
     }
 
     ALWAYS_INLINE bool IsEmpty()
@@ -40,8 +47,8 @@ public:
     {
         probeRowOffset = 0;
         probeRowCount = 0;
-        probeIndex.clear();
-        buildIndex.clear();
+        probeBuildIndex.clear();
+        existJoinBuildIndex.clear();
     }
 
     static const uint32_t SHIFT_SIZE_32 = 32;
@@ -65,7 +72,11 @@ private:
         int32_t rowCount)
     {
         auto probeOutputColsCount = probeOutputCols.size();
-        auto probePositions = probeIndex.data() + probeRowOffset;
+        auto tempIndex = probeBuildIndex.data() + probeRowOffset;
+        int32_t probePositions[rowCount];
+        for (int32_t i = 0; i < rowCount; ++i) {
+            probePositions[i] = std::get<0>(tempIndex[i]);
+        }
         for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
             auto type = probeOutputTypes[j];
@@ -96,7 +107,7 @@ private:
         int32_t rowCount)
     {
         auto probeOutputColsCount = probeOutputCols.size();
-        auto offset = probeIndex[probeRowOffset];
+        auto offset = std::get<0>(probeBuildIndex[probeRowOffset]);
         for (size_t j = 0; j < probeOutputColsCount; ++j) {
             auto column = probeOutputColumns[j];
             auto resultColumn = VectorHelper::SliceVector(column, offset, rowCount);
@@ -111,8 +122,8 @@ private:
     const int32_t *buildOutputTypes;
     int32_t probeRowCount = 0;
     int32_t probeRowOffset = 0;
-    std::vector<int32_t> probeIndex;
-    std::vector<std::pair<BaseVector ***, uint64_t>> buildIndex;
+    std::vector<std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t>> probeBuildIndex;
+    std::vector<bool> existJoinBuildIndex;
 };
 
 class LookupJoinOperatorFactory : public OperatorFactory {
@@ -170,23 +181,59 @@ public:
 
 private:
     void InitFirst();
+
+    template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
+    void ArrayJoinProbeSIMD(BaseVector ***buildColumns, size_t probeHashColsCount, T &&arg,
+                            ExecutionContext *contextPtr);
+
+    template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
+    void ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size_t probeHashColsCount,
+                                                    T &&arg, ExecutionContext *contextPtr);
+
+    template <typename T, bool hasJoinFilter, JoinType joinType>
+    void DealWithProbeMatchResult(int64_t *matchRowsData, int64_t *matchSlotsData, int64_t *noMatchRowsData,
+                                  int32_t matchRowCnt, int32_t noMatchRowCnt, T&& arg, ExecutionContext* contextPtr,
+                                  BaseVector*** buildColumns);
+
+    template<typename T, typename KeyType, bool hasJoinFilter, JoinType joinType, bool hasNull>
+    void DealWithProbeMatchResultNeon(KeyType *hashes, KeyType *matches, int32_t len, int32_t rowStart,
+                                      const int64_t *slots, const bool *isAssigned,
+                                      T &&arg, ExecutionContext *contextPtr, BaseVector ***buildColumns);
+
+    template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
+    void ArrayJoinProbe(BaseVector ***buildColumns, size_t probeHashColsCount,
+                        T &&arg, ExecutionContext *contextPtr);
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForInnerJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForOppositeSideOuterJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForSameSideOuterJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForFullJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftSemiJoin();
     template <bool hasJoinFilter, bool singleHT> void ProbeBatchForLeftAntiJoin();
-    bool IsJoinPositionEligible(uint32_t partition, uint64_t buildAddress, uint32_t probeRow,
-        ExecutionContext *executionContextPtr);
+    template <bool hasJoinFilter, bool singleHT> void ProbeBatchForExistenceJoin();
+    template <bool hasJoinFilter> void ProbeJoinPosition(int32_t probePosition);
+    bool BuildJoinPosition(uint32_t partition, uint32_t buildRowIdx,
+                           uint32_t buildBatchIdx, ExecutionContext *contextPtr);
     void PrepareCurrentProbe();
     void PrepareSerializers();
     void PopulateProbeHashes();
     void PopulateProbeNulls();
     void ProcessProbe();
 
-    ALWAYS_INLINE std::vector<BaseVector **> &GetBuildFilterColPtrs(uint32_t partition)
+    template <bool hasJoinFilter>
+    ALWAYS_INLINE void InitForProbe(uint32_t partition, bool initSize = true)
     {
-        return tableBuildFilterColPtrs[partition];
+        if constexpr (hasJoinFilter) {
+            if (initSize) {
+                probeFilterColsSize = probeFilterCols.size();
+                buildFilterColsSize = buildFilterCols.size();
+            }
+            buildFilterColPtrs = GetBuildFilterColPtrs(partition);
+        }
+    }
+
+    ALWAYS_INLINE std::vector<BaseVector **> *GetBuildFilterColPtrs(uint32_t partition)
+    {
+        return &tableBuildFilterColPtrs[partition];
     }
 
     void PushBackProbeSerializer(VectorSerializerIgnoreNull &serializer)
@@ -215,6 +262,7 @@ private:
     BuildSide buildSide;
     uint32_t partitionMask = 0;
     bool isSingleHT;
+    bool probeSimd;
 
     // this is for join filter
     SimpleFilter *simpleFilter = nullptr;
@@ -230,6 +278,9 @@ private:
     std::vector<std::vector<BaseVector **>> tableBuildFilterColPtrs;
     bool firstVecBatch = true;
     std::vector<VectorSerializerIgnoreNull> probeSerializers;
+    std::vector<BaseVector **> *buildFilterColPtrs = nullptr;
+    size_t probeFilterColsSize = 0;
+    size_t buildFilterColsSize = 0;
 };
 } // end of op
 } // end of omniruntime

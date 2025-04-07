@@ -47,7 +47,7 @@ intptr_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
     args.push_back(llvmTypes->I32Type());    // the num of selected rows
     args.push_back(llvmTypes->I64PtrType()); // bitmap address array
     args.push_back(llvmTypes->I64PtrType()); // offset address array
-    args.push_back(llvmTypes->I1PtrType());  // output null values array
+    args.push_back(llvmTypes->I32PtrType());  // output null values array
     args.push_back(llvmTypes->I32PtrType()); // output offset array
     args.push_back(llvmTypes->I64Type());    // execution content address
     args.push_back(llvmTypes->I64PtrType()); // dictionary address array
@@ -122,9 +122,8 @@ intptr_t BatchProjectionCodeGen::CreateBatchWrapper(llvm::Function &projFunc)
             nullptr, "copy_result");
     }
 
-    auto dstNullPtr = builder->CreateIntToPtr(nullValuesAddress, llvmTypes->I1PtrType());
-    funcArgs = { dstNullPtr, isNullPtr, numRows };
-    CallExternFunction("batch_copy", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr, "copy_null");
+    funcArgs = { nullValuesAddress, isNullPtr, numRows };
+    CallExternFunction("batch_NullArrayToBits", { OMNI_BOOLEAN }, OMNI_BOOLEAN, funcArgs, nullptr, "copy_null");
     builder->CreateRet(numRows);
     OptimizeFunctionsAndModule();
     return Compile();

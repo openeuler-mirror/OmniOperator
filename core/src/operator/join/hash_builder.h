@@ -43,7 +43,7 @@ private:
 
     template <class RowRefListType>
     HashTableVariants *InitVariant(int32_t buildHashColsCount, int32_t operatorCount, JoinType joinType,
-        BuildSide buildSide = OMNI_BUILD_UNKNOWN);
+        BuildSide buildSide = OMNI_BUILD_UNKNOWN, bool isMultiCols = false);
 };
 
 class HashBuilderOperator : public Operator {
@@ -64,11 +64,30 @@ public:
         return buildTypes;
     }
 
+    HashTableImplementationType GetHashTableType()
+    {
+        return std::visit(
+            [&](auto &&arg) -> HashTableImplementationType { return arg.GetHashTableTypes(partitionIndex); },
+            *hashTablesVariants);
+    }
+
+    uint32_t GetHashTableSize()
+    {
+        return std::visit([&](auto &&arg) -> uint32_t { return arg.GetHashTableSize(); }, *hashTablesVariants);
+    }
+
+    uint32_t GetHashTableCount()
+    {
+        return std::visit([&](auto &&arg) -> uint32_t { return arg.GetHashTableCount(); }, *hashTablesVariants);
+    }
+
 private:
     DataTypes buildTypes;
     int32_t partitionIndex;
     HashTableVariants *hashTablesVariants;
 };
+
+int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector<int32_t>& buildHashCols);
 } // end of op
 } // end of omniruntime
 #endif

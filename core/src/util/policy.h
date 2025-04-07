@@ -46,6 +46,16 @@ enum class EmptySearchStrReplaceRule {
 };
 
 /**
+ * Defines switch for array join for hash agg.
+ */
+enum class AggHashTableRule {
+    // use array for hash table
+    ARRAY = 0,
+
+    NORMAL
+};
+
+/**
  * Defines the differences that engines cast Decimal to Double.
  */
 enum class CastDecimalToDoubleRule {
@@ -154,7 +164,7 @@ public:
         CastDecimalToDoubleRule::CONVERT_WITH_STRING, NegativeStartIndexOutOfBoundsRule::INTERCEPT_FROM_BEYOND,
         ZeroStartIndexSupportRule::IS_SUPPORT, SupportContainerVecRule::NOT_SUPPORT,
         StringToDateFormatRule::ALLOW_REDUCED_PRECISION, SupportDecimalPrecisionImprovementRule::IS_NOT_SUPPORT,
-        StringToDecimalRule::OVERFLOW_AS_NULL) {};
+        StringToDecimalRule::OVERFLOW_AS_NULL, AggHashTableRule::NORMAL) {};
 
     Policy(RoundingRule roundingRule, CheckReScaleRule checkReScaleRule,
         EmptySearchStrReplaceRule emptySearchStrReplaceRule, CastDecimalToDoubleRule castDecimalToDoubleRule,
@@ -162,7 +172,7 @@ public:
         ZeroStartIndexSupportRule zeroStartIndexSupportRule, SupportContainerVecRule supportContainerVecRule,
         StringToDateFormatRule stringToDateFormatRule,
         SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule,
-        StringToDecimalRule stringToDecimalRule)
+        StringToDecimalRule stringToDecimalRule, AggHashTableRule aggHashTableRule)
         : roundingRule(roundingRule),
           checkReScaleRule(checkReScaleRule),
           emptySearchStrReplaceRule(emptySearchStrReplaceRule),
@@ -172,7 +182,8 @@ public:
           supportContainerVecRule(supportContainerVecRule),
           stringToDateFormatRule(stringToDateFormatRule),
           supportDecimalPrecisionImprovementRule(supportDecimalPrecisionImprovementRule),
-          stringToDecimalRule(stringToDecimalRule) {};
+          stringToDecimalRule(stringToDecimalRule),
+          aggHashTableRule(aggHashTableRule){};
 
     RoundingRule GetRoundingRule()
     {
@@ -244,6 +255,16 @@ public:
         supportContainerVecRule = rule;
     }
 
+    AggHashTableRule GetAggHashTableRule() const
+    {
+        return aggHashTableRule;
+    }
+
+    void SetAggHashTableRule(AggHashTableRule rule)
+    {
+        aggHashTableRule = rule;
+    }
+
     StringToDateFormatRule GetStringToDateFormatRule() const
     {
         return stringToDateFormatRule;
@@ -285,6 +306,7 @@ protected:
     StringToDateFormatRule stringToDateFormatRule;
     SupportDecimalPrecisionImprovementRule supportDecimalPrecisionImprovementRule;
     StringToDecimalRule stringToDecimalRule;
+    AggHashTableRule aggHashTableRule;
 };
 
 #endif // OMNI_RUNTIME_POLICY_H

@@ -34,7 +34,7 @@ public:
                 BaseVector *col = reinterpret_cast<BaseVector *>(fieldVectors[j]);
                 isNull = isNull && col->IsNull(rowIndex); // each value is null in all column
             }
-            this->nulls[rowIndex] = isNull;
+            this->nullsBuffer->SetNull(rowIndex, isNull);
         }
 
         // init value
@@ -43,7 +43,8 @@ public:
         }
 
         // report memory usage
-        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
+        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(NullsBuffer) + sizeof(AlignedBuffer<uint8_t>)
+            + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
     }
@@ -62,7 +63,8 @@ public:
         }
 
         // report memory usage
-        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
+        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(NullsBuffer) + sizeof(AlignedBuffer<uint8_t>)
+            + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
         omniruntime::mem::MemoryTrace::AddVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
     }
@@ -139,8 +141,7 @@ public:
             AppendToVector(thisVector, positionOffset, otherVector, length, dataTypes[i]->GetId());
         }
         // set nulls
-        bool *otherValueNulls = unsafe::UnsafeBaseVector::GetNulls(other);
-        SetNulls(positionOffset, otherValueNulls, length);
+        SetNulls(positionOffset, otherContainer->nullsBuffer.get(), length);
     }
 
     /* *
@@ -179,7 +180,8 @@ public:
             }
         }
 
-        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(AlignedBuffer<bool>) + sizeof(AlignedBuffer<int64_t>);
+        int64_t vectorCapacity = sizeof(ContainerVector) + sizeof(NullsBuffer) + sizeof(AlignedBuffer<uint8_t>)
+            + sizeof(AlignedBuffer<int64_t>);
         omniruntime::mem::ThreadMemoryManager::ReclaimMemory(vectorCapacity);
         omniruntime::mem::MemoryTrace::SubVectorMemory(reinterpret_cast<uintptr_t>(this), vectorCapacity);
     }

@@ -5,6 +5,7 @@
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.utils.NullsBufHelper;
 
 /**
  * varchar vec.
@@ -174,7 +175,7 @@ public class VarcharVec extends VariableWidthVec {
         if (newCapacityInBytes != capacityInBytes) {
             capacityInBytes = newCapacityInBytes;
             size = getSizeNative(nativeVector);
-            nullsBuf = OmniBufferFactory.create(getValueNullsNative(nativeVector), size);
+            nullsBuf = OmniBufferFactory.create(getValueNullsNative(nativeVector), NullsBufHelper.nBytes(size));
             valuesBuf = OmniBufferFactory.create(getValuesNative(nativeVector), capacityInBytes);
             offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(nativeVector), (size + 1) * Integer.BYTES);
         }

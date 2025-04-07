@@ -59,10 +59,9 @@ template <typename T>
 std::unique_ptr<Vector<DictionaryContainer<T>>> CreateDictionaryVector(int dictionarySize, int valueSize)
 {
     int *values = new int[valueSize];
-    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);
-    bool *nulls = nullsBuffer->GetBuffer();
+    std::unique_ptr<NullsBuffer> nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
     for (int i = 0; i < valueSize; i++) {
-        nulls[i] = false;
+        nullsBuffer->SetNull(i, false);
         values[i] = i % dictionarySize;
     }
 
@@ -70,7 +69,7 @@ std::unique_ptr<Vector<DictionaryContainer<T>>> CreateDictionaryVector(int dicti
     auto dictionary = CreateDictionary<DICTIONARY_DATA_TYPE>(dictionarySize);
 
     auto container = std::make_shared<DictionaryContainer<T>>(values, valueSize, dictionary, dictionarySize, 0);
-    auto vector = std::make_unique<Vector<DictionaryContainer<T>>>(valueSize, container, nullsBuffer);
+    auto vector = std::make_unique<Vector<DictionaryContainer<T>>>(valueSize, container, nullsBuffer.get());
     delete[] values;
     return vector;
 }
@@ -79,10 +78,9 @@ template <typename T>
 std::unique_ptr<Vector<DictionaryContainer<T>>> CreateStringDictionaryVector(int dictionarySize, int valueSize)
 {
     int *values = new int[valueSize];
-    std::shared_ptr<AlignedBuffer<bool>> nullsBuffer = std::make_shared<AlignedBuffer<bool>>(valueSize);
-    bool *nulls = nullsBuffer->GetBuffer();
+    std::unique_ptr<NullsBuffer> nullsBuffer = std::make_unique<NullsBuffer>(valueSize);
     for (int i = 0; i < valueSize; i++) {
-        nulls[i] = false;
+        nullsBuffer->SetNull(i, false);
         values[i] = i % dictionarySize;
     }
 
@@ -90,7 +88,7 @@ std::unique_ptr<Vector<DictionaryContainer<T>>> CreateStringDictionaryVector(int
     auto container = std::make_shared<DictionaryContainer<std::string_view, LargeStringContainer>>(values, valueSize,
         dictionary, dictionarySize, 0);
     auto vector = std::make_unique<Vector<DictionaryContainer<std::string_view, LargeStringContainer>>>(valueSize,
-        container, nullsBuffer);
+        container, nullsBuffer.get());
     delete[] values;
     return vector;
 }

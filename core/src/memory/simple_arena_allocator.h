@@ -73,6 +73,7 @@ public:
         availBuf += sizeInBytes;
         availBytes -= sizeInBytes;
         usedBytes += sizeInBytes;
+        continuousUsed = false;
         return ret;
     }
 
@@ -98,6 +99,7 @@ public:
 
     uint8_t *AllocateContinue(int64_t sizeInBytes, const uint8_t *&start)
     {
+        continuousUsed = true;
         // null means a new begin of allocate
         if (start == nullptr) {
             uint8_t *ret = (Allocate(sizeInBytes));
@@ -132,9 +134,11 @@ public:
 
     ALWAYS_INLINE void RollBackContinualMem()
     {
-        availBuf -= continuousUsedMemoryBytes;
-        availBytes += continuousUsedMemoryBytes;
-        usedBytes -= continuousUsedMemoryBytes;
+        if (continuousUsed) {
+            availBuf -= continuousUsedMemoryBytes;
+            availBytes += continuousUsedMemoryBytes;
+            usedBytes -= continuousUsedMemoryBytes;
+        }
     }
 
     ALWAYS_INLINE uint64_t TotalBytes()
@@ -210,6 +214,7 @@ private:
     uint8_t *availBuf;
     // Record the size of the memory used continuously.
     uint64_t continuousUsedMemoryBytes;
+    uint32_t continuousUsed = false;
     std::vector<Chunk *> chunks;
     Allocator *allocator;
     uint32_t growthFactor;

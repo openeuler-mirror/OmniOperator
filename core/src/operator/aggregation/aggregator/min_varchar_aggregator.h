@@ -107,40 +107,37 @@ VECTORIZE_LOOP inline void AddDictChar(AggregateState *state, BaseVector *vector
 
 template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddConditionalChar(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const uint8_t *__restrict condition)
+    const int32_t rowCount, const NullsHelper &condition)
 {
     if (rowCount > 0) {
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[AddConditionalChar]: ConditionMap pointer NOT aligned");
-        }
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         auto rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
 
         auto *varcharState = VarcharState::CastState(state);
         int32_t idx = rowOffset;
         const auto end = rowOffset + rowCount;
 
+        int32_t index = 0;
         if (varcharState->realValue == 0) {
             while (idx < end) {
-                if (!(*condition)) {
+                if (!condition[index]) {
                     auto strView = rawVector->GetValue(idx);
                     varcharState->realValue = reinterpret_cast<int64_t>(strView.data());
                     varcharState->len = strView.size();
                     varcharState->needUpdate = true;
-                    ++condition;
+                    ++index;
                     ++idx;
                     break;
                 }
-                ++condition;
+                ++index;
                 ++idx;
             }
         }
 
         while (idx < end) {
-            if (!(*condition)) {
+            if (!condition[index]) {
                 OP(varcharState, vector, idx);
             }
-            ++condition;
+            ++index;
             ++idx;
         }
     }
@@ -148,15 +145,9 @@ VECTORIZE_LOOP inline void AddConditionalChar(AggregateState *state, BaseVector 
 
 template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddDictConditionalChar(AggregateState *state, BaseVector *vector, const int32_t rowOffset,
-    const int32_t rowCount, const uint8_t *__restrict condition)
+    const int32_t rowCount, const NullsHelper &condition)
 {
     if (rowCount > 0) {
-#ifdef DEBUG
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addDictConditionalChar]: ConditionMap pointer NOT aligned");
-        }
-#endif
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         auto *rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
         auto *varcharState = VarcharState::CastState(state);
         int32_t idx = rowOffset;
@@ -234,20 +225,14 @@ VECTORIZE_LOOP inline void AddDictUseRowIndexChar(std::vector<AggregateState *> 
 
 template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates,
-    const size_t aggStateOffset, BaseVector *vector, const int32_t rowOffset, const uint8_t *__restrict condition)
+    const size_t aggStateOffset, BaseVector *vector, const int32_t rowOffset, const NullsHelper &condition)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
-#ifdef DEBUG
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
-        }
-#endif
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         auto *rawVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector);
         int32_t rowIdx = rowOffset;
         for (size_t i = 0; i < rowCount; ++i) {
-            if (!(*condition)) {
+            if (!condition[i]) {
                 auto *state = VarcharState::CastState(rowStates[i] + aggStateOffset);
                 if (state->realValue == 0) {
                     auto strView = rawVector->GetValue(rowIdx);
@@ -260,23 +245,16 @@ VECTORIZE_LOOP inline void AddConditionalUseRowIndexChar(std::vector<AggregateSt
                 }
             }
             ++rowIdx;
-            ++condition;
         }
     }
 }
 
 template <void (*OP)(VarcharState *, BaseVector *, const int32_t)>
 VECTORIZE_LOOP inline void AddDictConditionalUseRowIndexChar(std::vector<AggregateState *> &rowStates,
-    const size_t aggStateOffset, const int32_t rowOffset, BaseVector *vector, const uint8_t *__restrict condition)
+    const size_t aggStateOffset, const int32_t rowOffset, BaseVector *vector, const NullsHelper &condition)
 {
     const size_t rowCount = rowStates.size();
     if (rowCount > 0) {
-#ifdef DEBUG
-        if (reinterpret_cast<unsigned long>(condition) % ARRAY_ALIGNMENT != 0) {
-            LogWarn("[addDictConditionalUseRowIndexChar]: ConditionMap pointer NOT aligned");
-        }
-#endif
-        condition = (const uint8_t *)__builtin_assume_aligned(condition, ARRAY_ALIGNMENT);
         auto rawVector = reinterpret_cast<Vector<DictionaryContainer<std::string_view>> *>(vector);
         int32_t rowIdx = rowOffset;
         for (size_t i = 0; i < rowCount; ++i) {
@@ -361,8 +339,8 @@ public:
 
     void ProcessGroupUnspill(std::vector<UnspillRowInfo> &unspillRows, int32_t rowCount, int32_t &vectorIndex) override;
 
-    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap,
-        const bool aggFilter) override;
+    void ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter) override;
 
 protected:
     MinVarcharAggregator(const DataTypes &inputTypes, const DataTypes &outputTypes, std::vector<int32_t> &channels,
@@ -372,13 +350,14 @@ protected:
     {}
 
     void ProcessSingleInternal(AggregateState *state, BaseVector *v, const int32_t rowOffset, const int32_t rowCount,
-        const uint8_t *nullMap) override;
+        const std::shared_ptr<NullsHelper> nullMap) override;
 
     void ProcessGroupInternal(std::vector<AggregateState *> &rowStates, BaseVector *v, const int32_t rowOffset,
-        const uint8_t *nullMap) override;
+        const std::shared_ptr<NullsHelper> nullMap) override;
 
     template<typename T>
-    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector, const uint8_t *nullMap);
+    void ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
+        const std::shared_ptr<NullsHelper> nullMap);
 
 private:
     ALWAYS_INLINE void SaveState(VarcharState *state);

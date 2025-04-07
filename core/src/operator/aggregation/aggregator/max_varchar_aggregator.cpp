@@ -62,20 +62,20 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ExtractValuesForSpill(std::vector<Aggr
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *state, BaseVector *vector,
-    const int32_t rowOffset, const int32_t rowCount, const uint8_t *nullMap)
+    const int32_t rowOffset, const int32_t rowCount, const std::shared_ptr<NullsHelper> nullMap)
 {
     VarcharState *varcharState = VarcharState::CastState(state);
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddChar<MaxCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            AddConditionalChar<MaxCharOp>(state, vector, rowOffset, rowCount, nullMap);
+            AddConditionalChar<MaxCharOp>(state, vector, rowOffset, rowCount, *nullMap);
         }
     } else {
         if (nullMap == nullptr) {
             AddDictChar<MaxDictCharOp>(state, vector, rowOffset, rowCount);
         } else {
-            AddDictConditionalChar<MaxDictCharOp>(state, vector, rowOffset, rowCount, nullMap);
+            AddDictConditionalChar<MaxDictCharOp>(state, vector, rowOffset, rowCount, *nullMap);
         }
     }
     SaveState(varcharState);
@@ -83,19 +83,19 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessSingleInternal(AggregateState *
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupInternal(std::vector<AggregateState *> &rowStates,
-    BaseVector *vector, const int32_t rowOffset, const uint8_t *nullMap)
+    BaseVector *vector, const int32_t rowOffset, const std::shared_ptr<NullsHelper> nullMap)
 {
     if (vector->GetEncoding() != vec::OMNI_DICTIONARY) {
         if (nullMap == nullptr) {
             AddUseRowIndexChar<MaxCharOp>(rowStates, aggStateOffset, vector, rowOffset);
         } else {
-            AddConditionalUseRowIndexChar<MaxCharOp>(rowStates, aggStateOffset, vector, rowOffset, nullMap);
+            AddConditionalUseRowIndexChar<MaxCharOp>(rowStates, aggStateOffset, vector, rowOffset, *nullMap);
         }
     } else {
         if (nullMap == nullptr) {
             AddDictUseRowIndexChar<MaxDictCharOp>(rowStates, aggStateOffset, rowOffset, vector);
         } else {
-            AddDictConditionalUseRowIndexChar<MaxDictCharOp>(rowStates, aggStateOffset, rowOffset, vector, nullMap);
+            AddDictConditionalUseRowIndexChar<MaxDictCharOp>(rowStates, aggStateOffset, rowOffset, vector, *nullMap);
         }
     }
 
@@ -132,7 +132,7 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessGroupUnspill(std::vector<Unspil
 
 template <DataTypeId IN_ID, DataTypeId OUT_ID>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *result, BaseVector *originVector,
-    const uint8_t *nullMap, const bool aggFilter)
+    const std::shared_ptr<NullsHelper> nullMap, const bool aggFilter)
 {
     // note: type relationship matches only (IN_ID == OMNI_CHAR || IN_ID == OMNI_VARCHAR) and
     // (OUT_ID == OMNI_CHAR || OUT_ID == OMNI_VARCHAR)
@@ -154,14 +154,14 @@ void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchema(VectorBatch *res
 template<DataTypeId IN_ID, DataTypeId OUT_ID>
 template<typename T>
 void MaxVarcharAggregator<IN_ID, OUT_ID>::ProcessAlignAggSchemaInternal(VectorBatch *result, BaseVector *originVector,
-    const uint8_t *nullMap)
+    const std::shared_ptr<NullsHelper> nullMap)
 {
     int rowCount = originVector->GetSize();
     auto maxVector = reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(
             VectorHelper::CreateFlatVector(OUT_ID, rowCount));
     auto vector = reinterpret_cast<T *>(originVector);
     for (int index = 0; index < rowCount; ++index) {
-        if (nullMap[index]) {
+        if ((*nullMap)[index]) {
             maxVector->SetNull(index);
         } else {
             std::string_view val = vector->GetValue(index);

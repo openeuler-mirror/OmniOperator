@@ -143,7 +143,7 @@ uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
 template <typename T> uint64_t Spiller::CollectVectorSize(vec::BaseVector *vector)
 {
     int32_t rowCount = vector->GetSize();
-    uint64_t result = rowCount; // nulls byte size
+    uint64_t result = BitUtil::Nbytes(rowCount); // nulls byte size
     if constexpr (std::is_same_v<T, std::string_view>) {
         // offsets
         result += (rowCount + 1) * sizeof(int32_t);
@@ -293,8 +293,9 @@ ErrorCode SpillWriter::WriteVecBatchToBuffer(vec::VectorBatch *vectorBatch)
 template <typename T>
 ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowCount, int32_t &writeOffset)
 {
-    bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
-    errno_t ret = memcpy_s(writeBuffer + writeOffset, rowCount, nulls, rowCount);
+    uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    errno_t ret = memcpy_s(writeBuffer + writeOffset, nullsSize, nulls, nullsSize);
     if (ret != EOK) {
         auto errorNum = errno;
         char errorBuf[ERROR_BUFFER_SIZE];
@@ -302,7 +303,7 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
         LogError("Write value nulls to buffer failed since %s.", errorBuf);
         return ErrorCode::WRITE_FAILED;
     }
-    writeOffset += rowCount;
+    writeOffset += nullsSize;
 
     if constexpr (std::is_same_v<T, std::string_view>) {
         // write offsets
@@ -410,8 +411,9 @@ ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
  */
 template <typename T> ErrorCode SpillWriter::WriteVector(omniruntime::vec::BaseVector *vector, int32_t rowCount)
 {
-    bool *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
-    if (Write(nulls, rowCount) != ErrorCode::SUCCESS) {
+    uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
+    int32_t nullsSize = BitUtil::Nbytes(rowCount);
+    if (Write(nulls, nullsSize) != ErrorCode::SUCCESS) {
         LogError("Write value nulls to %s failed.", filePath.c_str());
         return ErrorCode::WRITE_FAILED;
     }
