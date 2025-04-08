@@ -115,7 +115,12 @@ private:
 
     void ProcessStates(VectorBatch *vecBatch);
 
-    template<DataTypeId typeId, bool hasNull>
+    template<typename T>
+    inline void InsertAggStatesToArrayMap(T *hashes, int32_t vecLanes, bool *isAssigned,
+                                    int64_t *slots, mem::SimpleArenaAllocator &arenaAllocator,
+                                   int32_t probePosition);
+
+    template<typename T, bool hasNull>
     void ArrayGroupProbeSIMD(BaseVector *groupVector, VectorBatch *vecBatch);
 
     void ResizeArrayMap(int64_t oldMin);

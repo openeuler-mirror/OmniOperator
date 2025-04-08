@@ -10,7 +10,6 @@
 #include "util/type_util.h"
 #include "util/debug.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
-#include "simd/xsimd.h"
 
 #if defined(DEBUG_OPERATOR) && defined(TRACE)
 #include <sstream>
@@ -536,72 +535,185 @@ void HashAggregationOperator::ProcessStates(VectorBatch *vecBatch)
     }
 }
 
-template<DataTypeId typeId, bool hasNull>
+template <bool hasNull>
+void ComputeHashSIMD(int64_t *key, uint8_t nullMask, uint64_t *hashes, int64x2_t vMin, uint64x2_t vOne)
+{
+    constexpr int32_t vecLanes = 8;
+    int64x2x4_t vKey = vld4q_s64(key);
+    uint64x2x4_t vHashes;
+    vHashes.val[0] = vaddq_u64((uint64x2_t)vsubq_s64(vKey.val[0], vMin), vOne);
+    vHashes.val[1] = vaddq_u64((uint64x2_t)vsubq_s64(vKey.val[1], vMin), vOne);
+    vHashes.val[2] = vaddq_u64((uint64x2_t)vsubq_s64(vKey.val[2], vMin), vOne);
+    vHashes.val[3] = vaddq_u64((uint64x2_t)vsubq_s64(vKey.val[3], vMin), vOne);
+    if constexpr (hasNull) {
+        alignas(xsimd::default_arch::alignment()) int64_t nulls[8];
+        nullMask = ~nullMask;
+        for (int i = 0; i < vecLanes; i++) {
+            nulls[i] = -(((nullMask) >> i) & 1);
+        }
+        uint64x2x4_t vNull = vld4q_u64(reinterpret_cast<uint64_t*>(nulls));
+        vHashes.val[0] = vandq_u64(vHashes.val[0], vNull.val[0]);
+        vHashes.val[1] = vandq_u64(vHashes.val[1], vNull.val[1]);
+        vHashes.val[2] = vandq_u64(vHashes.val[2], vNull.val[2]);
+        vHashes.val[3] = vandq_u64(vHashes.val[3], vNull.val[3]);
+    }
+    vst4q_u64(hashes, vHashes);
+}
+
+template <bool hasNull>
+void ComputeHashSIMD(int32_t *key, uint16_t nullMask, uint32_t *hashes, int32x4_t vMin, uint32x4_t vOne)
+{
+    constexpr int32_t vecLanes = 16;
+    int32x4x4_t vKey = vld4q_s32(key);
+    uint32x4x4_t vHashes;
+    vHashes.val[0] = vaddq_u32((uint32x4_t)vsubq_s32(vKey.val[0], vMin), vOne);
+    vHashes.val[1] = vaddq_u32((uint32x4_t)vsubq_s32(vKey.val[1], vMin), vOne);
+    vHashes.val[2] = vaddq_u32((uint32x4_t)vsubq_s32(vKey.val[2], vMin), vOne);
+    vHashes.val[3] = vaddq_u32((uint32x4_t)vsubq_s32(vKey.val[3], vMin), vOne);
+    if constexpr (hasNull) {
+        alignas(xsimd::default_arch::alignment()) int32_t nulls[16];
+        nullMask = ~nullMask;
+        for (int i = 0; i < vecLanes; i++) {
+            nulls[i] = -(((nullMask) >> i) & 1);
+        }
+        uint32x4x4_t vNull = vld4q_u32(reinterpret_cast<uint32_t*>(nulls));
+        vHashes.val[0] = vandq_u32(vHashes.val[0], vNull.val[0]);
+        vHashes.val[1] = vandq_u32(vHashes.val[1], vNull.val[1]);
+        vHashes.val[2] = vandq_u32(vHashes.val[2], vNull.val[2]);
+        vHashes.val[3] = vandq_u32(vHashes.val[3], vNull.val[3]);
+    }
+    vst4q_u32(hashes, vHashes);
+}
+
+template <bool hasNull>
+void ComputeHashSIMD(int16_t *key, uint32_t nullMask, uint16_t *hashes, int16x8_t vMin, uint16x8_t vOne)
+{
+    constexpr int32_t vecLanes = 32;
+    int16x8x4_t vKey = vld4q_s16(key);
+    uint16x8x4_t vHashes;
+    vHashes.val[0] = vaddq_u16((uint16x8_t)vsubq_s16(vKey.val[0], vMin), vOne);
+    vHashes.val[1] = vaddq_u16((uint16x8_t)vsubq_s16(vKey.val[1], vMin), vOne);
+    vHashes.val[2] = vaddq_u16((uint16x8_t)vsubq_s16(vKey.val[2], vMin), vOne);
+    vHashes.val[3] = vaddq_u16((uint16x8_t)vsubq_s16(vKey.val[3], vMin), vOne);
+    if constexpr (hasNull) {
+        alignas(xsimd::default_arch::alignment()) int16_t nulls[32];
+        nullMask = ~nullMask;
+        for (int i = 0; i < vecLanes; i++) {
+            nulls[i] = static_cast<int16_t>(-(((nullMask) >> i) & 1));
+        }
+        uint16x8x4_t vNull = vld4q_u16(reinterpret_cast<uint16_t*>(nulls));
+        vHashes.val[0] = vandq_u16(vHashes.val[0], vNull.val[0]);
+        vHashes.val[1] = vandq_u16(vHashes.val[1], vNull.val[1]);
+        vHashes.val[2] = vandq_u16(vHashes.val[2], vNull.val[2]);
+        vHashes.val[3] = vandq_u16(vHashes.val[3], vNull.val[3]);
+    }
+    vst4q_u16(hashes, vHashes);
+}
+
+template <typename T>
+void HashAggregationOperator::InsertAggStatesToArrayMap(T *hashes, int32_t vecLanes, bool *isAssigned, int64_t *slots,
+                                                        mem::SimpleArenaAllocator &arenaAllocator,
+                                                        int32_t probePosition)
+{
+    int64_t *matchSlotsData = reinterpret_cast<int64_t*>(rowsAggStates.data());
+    auto arrayTablePtr = arrayTable.get();
+    int32_t missCnt = 0;
+    for (auto miss = 0; miss < vecLanes; ++miss) {
+        auto hash = hashes[miss];
+        if (!isAssigned[hash]) {
+            missCnt++;
+            auto aggSateAddress = reinterpret_cast<int64_t>(arenaAllocator.Allocate(totalAggStatesSize));
+            InitState(aggSateAddress);
+            slots[hash] = aggSateAddress;
+            isAssigned[hash] = true;
+        }
+    }
+    arrayTablePtr->AddElementsSize(missCnt);
+    // store matched rowIndex ,rowRefList* and no matched rowIndex
+    for (int j = 0; j < vecLanes; j++) {
+        matchSlotsData[probePosition + j] = slots[hashes[j]];
+    }
+}
+
+template<typename T, bool hasNull>
 void HashAggregationOperator::ArrayGroupProbeSIMD(BaseVector *groupVector, VectorBatch *vecBatch)
 {
     using namespace omniruntime::type;
-    using T = typename NativeType<typeId>::type;
+    using unsignedT = typename std::make_unsigned<T>::type;
     auto &arenaAllocator = *(executionContext->GetArena());
     T *groupValueBase = reinterpret_cast<T *>(VectorHelper::UnsafeGetValues(groupVector));
-    auto nulls = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(groupVector));
+    __builtin_prefetch(groupValueBase, 0, 3);
     auto rowCount = groupVector->GetSize();
-    auto probeSimdEnd = rowCount / INT64_K_WIDTH * INT64_K_WIDTH;
     auto arrayTablePtr = arrayTable.get();
-    int32_t probePosition = 0;
-    int64_t min = vectorAnalyzer->MinValue();
-    int64BatchType minValueBatch = xsimd::broadcast<int64_t>(min);
-    int64BatchType allOne = xsimd::broadcast<int64_t>(1);
     bool *isAssigned = arrayTablePtr->GetAssigned();
     auto slots = reinterpret_cast<int64_t *>(arrayTablePtr->GetSlots());
+    int32_t probePosition = 0;
+    T min = static_cast<T>(vectorAnalyzer->MinValue());
+    // 4*128/8
+    constexpr int32_t simdLen = 64;
+    constexpr int32_t vecLanes = simdLen / sizeof(T);
+    int32_t end = rowCount / vecLanes * vecLanes;
+    alignas(xsimd::default_arch::alignment()) unsignedT hashes[vecLanes];
     int64_t *matchSlotsData = reinterpret_cast<int64_t *>(rowsAggStates.data());
-    const int8_t nullMaskBit = 64;
-    alignas(xsimd::default_arch::alignment()) int64_t matchData[INT64_K_WIDTH];
-    for (int16_t shiftRightBit = 0;
-         probePosition < probeSimdEnd; probePosition += INT64_K_WIDTH, shiftRightBit += INT64_K_WIDTH) {
-        if constexpr (hasNull) {
-            if (UNLIKELY(shiftRightBit >= nullMaskBit)) {
-                shiftRightBit = 0;
-                nulls++;
+    if constexpr (std::is_same_v<T, int64_t>) {
+        auto nulls = reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(groupVector));
+        int64x2_t vMin = vdupq_n_s64(min);
+        uint64x2_t vOne = vdupq_n_u64(1);
+        for (; probePosition < end; probePosition += vecLanes) {
+            if constexpr (hasNull) {
+                ComputeHashSIMD<hasNull>(groupValueBase, *nulls, hashes, vMin, vOne);
+                nulls += 1;
+            } else {
+                ComputeHashSIMD<hasNull>(groupValueBase, 0, hashes, vMin, vOne);
             }
+            groupValueBase += vecLanes;
+            __builtin_prefetch(groupValueBase, 0, 3);
+            InsertAggStatesToArrayMap(hashes, vecLanes, isAssigned, slots, arenaAllocator, probePosition);
         }
-        // load group values
-        int64BatchType probeData =
-                int64BatchType::load_unaligned(groupValueBase + probePosition) - minValueBatch + allOne;
-        if constexpr (hasNull) {
-            // load nullmask
-            int64BatchBoolType nullMask = int64BatchBoolType::from_mask((*nulls) >> shiftRightBit);
-            // make null to zero
-            probeData = bitwise_and(probeData, bitwise_cast(!nullMask));
-        }
-        probeData.store_aligned(matchData);
-        int32_t missCnt = 0;
-        for (auto miss = 0; miss < INT64_K_WIDTH; ++miss) {
-            auto hash = matchData[miss];
-            if (!isAssigned[hash]) {
-                missCnt++;
-                auto aggSateAddress = reinterpret_cast<int64_t>(arenaAllocator.Allocate(totalAggStatesSize));
-                InitState(aggSateAddress);
-                slots[hash] = aggSateAddress;
-                isAssigned[hash] = true;
+    }
+    if constexpr (std::is_same_v<T, int32_t>) {
+        auto nulls = reinterpret_cast<uint16_t *>(unsafe::UnsafeBaseVector::GetNulls(groupVector));
+        int32x4_t vMin = vdupq_n_s32(min);
+        uint32x4_t vOne = vdupq_n_u32(1);
+        for (; probePosition < end; probePosition += vecLanes) {
+            if constexpr (hasNull) {
+                ComputeHashSIMD<hasNull>(groupValueBase, *nulls, hashes, vMin, vOne);
+                nulls += 1;
+            } else {
+                ComputeHashSIMD<hasNull>(groupValueBase, 0, hashes, vMin, vOne);
             }
+            groupValueBase += vecLanes;
+            __builtin_prefetch(groupValueBase, 0, 3);
+            InsertAggStatesToArrayMap(hashes, vecLanes, isAssigned, slots, arenaAllocator, probePosition);
         }
-        arrayTablePtr->AddElementsSize(missCnt);
-        // store matched rowIndex ,rowRefList* and no matched rowIndex
-        for (int j = 0; j < INT64_K_WIDTH; j++) {
-            matchSlotsData[probePosition + j] = slots[matchData[j]];
+    }
+    if constexpr (std::is_same_v<T, int16_t>) {
+        auto nulls = reinterpret_cast<uint32_t *>(unsafe::UnsafeBaseVector::GetNulls(groupVector));
+        int16x8_t vMin = vdupq_n_s16(min);
+        uint16x8_t vOne = vdupq_n_u16(1);
+        for (; probePosition < end; probePosition += vecLanes) {
+            if constexpr (hasNull) {
+                ComputeHashSIMD<hasNull>(groupValueBase, *nulls, hashes, vMin, vOne);
+                nulls += 1;
+            } else {
+                ComputeHashSIMD<hasNull>(groupValueBase, 0, hashes, vMin, vOne);
+            }
+            groupValueBase += vecLanes;
+            __builtin_prefetch(groupValueBase, 0, 3);
+            InsertAggStatesToArrayMap(hashes, vecLanes, isAssigned, slots, arenaAllocator, probePosition);
         }
     }
     // deal rest group values
-    for (; probePosition < rowCount; probePosition++) {
+    for (; probePosition < rowCount; probePosition++, groupValueBase += 1) {
         int64_t hashValue;
         if constexpr (hasNull) {
             if (UNLIKELY(groupVector->IsNull(probePosition))) {
                 hashValue = 0;
             } else {
-                hashValue = groupValueBase[probePosition] - min + 1;
+                hashValue = *groupValueBase - min + 1;
             }
         } else {
-            hashValue = groupValueBase[probePosition] - min + 1;
+            hashValue = *groupValueBase - min + 1;
         }
         if (!isAssigned[hashValue]) {
             arrayTablePtr->AddElementsSize(1);
@@ -653,25 +765,25 @@ void HashAggregationOperator::EmplaceToArrayMap(VectorBatch *vecBatch, BaseVecto
         case OMNI_INT:
         case OMNI_DATE32:
             if (groupVector->HasNull()) {
-                ArrayGroupProbeSIMD<OMNI_INT, true>(groupVector, vecBatch);
+                ArrayGroupProbeSIMD<int32_t, true>(groupVector, vecBatch);
             } else {
-                ArrayGroupProbeSIMD<OMNI_INT, false>(groupVector, vecBatch);
+                ArrayGroupProbeSIMD<int32_t, false>(groupVector, vecBatch);
             }
             break;
         case OMNI_SHORT:
             if (groupVector->HasNull()) {
-                ArrayGroupProbeSIMD<OMNI_SHORT, true>(groupVector, vecBatch);
+                ArrayGroupProbeSIMD<int16_t, true>(groupVector, vecBatch);
             } else {
-                ArrayGroupProbeSIMD<OMNI_SHORT, false>(groupVector, vecBatch);
+                ArrayGroupProbeSIMD<int16_t, false>(groupVector, vecBatch);
             }
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             if (groupVector->HasNull()) {
-                ArrayGroupProbeSIMD<OMNI_LONG, true>(groupVector, vecBatch);
+                ArrayGroupProbeSIMD<int64_t, true>(groupVector, vecBatch);
             } else {
-                ArrayGroupProbeSIMD<OMNI_LONG, false>(groupVector, vecBatch);
+                ArrayGroupProbeSIMD<int64_t, false>(groupVector, vecBatch);
             }
             break;
         default:

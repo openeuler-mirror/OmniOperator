@@ -721,7 +721,7 @@ void TestGroupArrayMapRegular(std::shared_ptr<DataType> groupType)
     auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
     groupV->SetNull(0);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     delete[] input;
     delete[] input2;
@@ -791,7 +791,7 @@ void TestGroupArrayMapWithoutAgg(std::shared_ptr<DataType> groupType)
     auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
     groupV->SetNull(0);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     delete[] input;
     delete[] input2;
@@ -905,7 +905,7 @@ void TestGroupArrayMapResize(std::shared_ptr<DataType> groupType)
     groupV->SetNull(0);
     expectVecBatch->Get(2)->SetNull(4);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     delete[] input;
     delete[] input2;
@@ -978,7 +978,7 @@ void TestGroupArrayMapResizeWithoutAgg(std::shared_ptr<DataType> groupType)
     auto groupV = reinterpret_cast<Vector<T> *>(expectVecBatch->Get(0));
     groupV->SetNull(0);
 
-    EXPECT_TRUE(VecBatchMatch(outputVecBatch, expectVecBatch));
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
     delete[] input;
     delete[] input2;

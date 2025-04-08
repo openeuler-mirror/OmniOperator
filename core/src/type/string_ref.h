@@ -5,7 +5,7 @@
 #define OMNI_RUNTIME_STRING_REF_H
 #include <string>
 #include <cstring>
-#include "simd/xsimd.h"
+#include "xsimd/xsimd.hpp"
 
 namespace omniruntime {
 namespace type {
