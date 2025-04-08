@@ -33,6 +33,27 @@ public class OmniLookupJoinWithExprOperatorFactory
      * @param buildOutputTypes the build output column types
      * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
      * @param filterExpression the join filter expression
+     * @param isShuffleExchangeBuildPlan build plan is shuffleExchange
+     * @param operatorConfig the operator config
+     */
+    public OmniLookupJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
+            int[] buildOutputCols, DataType[] buildOutputTypes,
+            OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
+            Optional<String> filterExpression, boolean isShuffleExchangeBuildPlan, OperatorConfig operatorConfig) {
+        super(new FactoryContext(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
+                hashBuilderWithExprOperatorFactory, filterExpression, isShuffleExchangeBuildPlan, operatorConfig));
+    }
+
+    /**
+     * Instantiates a new Omni lookup join with expression operator factory.
+     *
+     * @param probeTypes the probe input types
+     * @param probeOutputCols the probe output columns
+     * @param probeHashKeys the probe hash keys
+     * @param buildOutputCols the build output columns
+     * @param buildOutputTypes the build output column types
+     * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
+     * @param filterExpression the join filter expression
      * @param operatorConfig the operator config
      */
     public OmniLookupJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
@@ -40,7 +61,28 @@ public class OmniLookupJoinWithExprOperatorFactory
             OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
             Optional<String> filterExpression, OperatorConfig operatorConfig) {
         super(new FactoryContext(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
-                hashBuilderWithExprOperatorFactory, filterExpression, operatorConfig));
+                hashBuilderWithExprOperatorFactory, filterExpression, false, operatorConfig));
+    }
+
+    /**
+     * Instantiates a new Omni lookup join with expression operator factory with
+     * default operator config.
+     *
+     * @param probeTypes the probe input types
+     * @param probeOutputCols the probe output columns
+     * @param probeHashKeys the probe hash keys
+     * @param buildOutputCols the build output columns
+     * @param buildOutputTypes the build output column types
+     * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
+     * @param filterExpression the join filter expression
+     * @param isShuffleExchangeBuildPlan build plan is shuffleExchange
+     */
+    public OmniLookupJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
+            int[] buildOutputCols, DataType[] buildOutputTypes,
+            OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
+            Optional<String> filterExpression, boolean isShuffleExchangeBuildPlan) {
+        this(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
+                hashBuilderWithExprOperatorFactory, filterExpression, isShuffleExchangeBuildPlan, new OperatorConfig());
     }
 
     /**
@@ -60,7 +102,27 @@ public class OmniLookupJoinWithExprOperatorFactory
             OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
             Optional<String> filterExpression) {
         this(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
-                hashBuilderWithExprOperatorFactory, filterExpression, new OperatorConfig());
+                hashBuilderWithExprOperatorFactory, filterExpression, false, new OperatorConfig());
+    }
+
+    /**
+     * Instantiates a new Omni lookup join with expression operator factory with
+     * default operator config.
+     *
+     * @param probeTypes the probe input types
+     * @param probeOutputCols the probe output columns
+     * @param probeHashKeys the probe hash keys
+     * @param buildOutputCols the build output columns
+     * @param buildOutputTypes the build output column types
+     * @param hashBuilderWithExprOperatorFactory the hash builder operator factory
+     * @param isShuffleExchangeBuildPlan build plan is shuffleExchange
+     */
+    public OmniLookupJoinWithExprOperatorFactory(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
+            int[] buildOutputCols, DataType[] buildOutputTypes,
+            OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
+            boolean isShuffleExchangeBuildPlan) {
+        this(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
+                hashBuilderWithExprOperatorFactory, Optional.empty(), isShuffleExchangeBuildPlan, new OperatorConfig());
     }
 
     /**
@@ -78,19 +140,21 @@ public class OmniLookupJoinWithExprOperatorFactory
             int[] buildOutputCols, DataType[] buildOutputTypes,
             OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory) {
         this(probeTypes, probeOutputCols, probeHashKeys, buildOutputCols, buildOutputTypes,
-                hashBuilderWithExprOperatorFactory, Optional.empty(), new OperatorConfig());
+                hashBuilderWithExprOperatorFactory, Optional.empty(), false, new OperatorConfig());
     }
 
     private static native long createLookupJoinWithExprOperatorFactory(String probeTypes, int[] probeOutputCols,
             String[] probeHashKeys, int[] buildOutputCols, String buildOutputTypes,
-            long hashBuilderWithExprOperatorFactory, String filterExpression, String operatorConfig);
+            long hashBuilderWithExprOperatorFactory, String filterExpression,
+             boolean isShuffleExchangeBuildPlan, String operatorConfig);
 
     @Override
     protected long createNativeOperatorFactory(FactoryContext context) {
         return createLookupJoinWithExprOperatorFactory(DataTypeSerializer.serialize(context.probeTypes),
                 context.probeOutputCols, context.probeHashKeys, context.buildOutputCols,
-                DataTypeSerializer.serialize(context.buildOutputTypes), context.getHashBuilderWithExprOperatorFactory(),
-                context.filterExpression, OperatorConfig.serialize(context.operatorConfig));
+                DataTypeSerializer.serialize(context.buildOutputTypes),
+                context.getHashBuilderWithExprOperatorFactory(), context.filterExpression,
+                context.isShuffleExchangeBuildPlan, OperatorConfig.serialize(context.operatorConfig));
     }
 
     /**
@@ -113,6 +177,8 @@ public class OmniLookupJoinWithExprOperatorFactory
 
         private final String filterExpression;
 
+        private final boolean isShuffleExchangeBuildPlan;
+
         private final OperatorConfig operatorConfig;
 
         /**
@@ -125,12 +191,13 @@ public class OmniLookupJoinWithExprOperatorFactory
          * @param buildOutputTypes the build output types
          * @param hashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory
          * @param filterExpression the join filter expression
+         * @param isShuffleExchangeBuildPlan build plan is shuffleExchange
          * @param operatorConfig the operator config
          */
         public FactoryContext(DataType[] probeTypes, int[] probeOutputCols, String[] probeHashKeys,
                 int[] buildOutputCols, DataType[] buildOutputTypes,
                 OmniHashBuilderWithExprOperatorFactory hashBuilderWithExprOperatorFactory,
-                Optional<String> filterExpression, OperatorConfig operatorConfig) {
+                Optional<String> filterExpression, boolean isShuffleExchangeBuildPlan, OperatorConfig operatorConfig) {
             this.probeTypes = requireNonNull(probeTypes, "probeTypes");
             this.probeOutputCols = requireNonNull(probeOutputCols, "probeOutputCols");
             this.probeHashKeys = requireNonNull(probeHashKeys, "probeHashKeys");
@@ -138,6 +205,7 @@ public class OmniLookupJoinWithExprOperatorFactory
             this.buildOutputTypes = requireNonNull(buildOutputTypes, "buildOutputTypes");
             this.hashBuilderWithExprOperatorFactory = hashBuilderWithExprOperatorFactory.getNativeOperatorFactory();
             this.filterExpression = filterExpression.isPresent() ? filterExpression.get() : "";
+            this.isShuffleExchangeBuildPlan = isShuffleExchangeBuildPlan;
             this.operatorConfig = operatorConfig;
             setNeedCache(false);
         }
@@ -146,7 +214,7 @@ public class OmniLookupJoinWithExprOperatorFactory
         public int hashCode() {
             return Objects.hash(Arrays.hashCode(probeTypes), Arrays.hashCode(probeOutputCols),
                     Arrays.hashCode(probeHashKeys), Arrays.hashCode(buildOutputCols), Arrays.hashCode(buildOutputTypes),
-                    hashBuilderWithExprOperatorFactory, filterExpression, operatorConfig);
+                    hashBuilderWithExprOperatorFactory, filterExpression, isShuffleExchangeBuildPlan, operatorConfig);
         }
 
         @Override
@@ -163,7 +231,9 @@ public class OmniLookupJoinWithExprOperatorFactory
                     && Arrays.equals(buildOutputCols, that.buildOutputCols)
                     && Arrays.equals(buildOutputTypes, that.buildOutputTypes)
                     && (hashBuilderWithExprOperatorFactory == that.hashBuilderWithExprOperatorFactory)
-                    && filterExpression.equals(that.filterExpression) && operatorConfig.equals(that.operatorConfig);
+                    && filterExpression.equals(that.filterExpression)
+                    && isShuffleExchangeBuildPlan == that.isShuffleExchangeBuildPlan
+                    && operatorConfig.equals(that.operatorConfig);
         }
 
         public long getHashBuilderWithExprOperatorFactory() {

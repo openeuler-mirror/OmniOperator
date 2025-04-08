@@ -120,7 +120,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderOperatorFactory_createHa
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *env,
     jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols, jintArray jBuildOutputCols,
-    jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory, jstring jFilter, jstring jOperatorConfig);
+    jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory,
+    jstring jFilter, jboolean isShuffleExchangeBuildPlan, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_partitionedoutput_OmniPartitionedOutPutOperatorFactory
@@ -169,8 +170,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_createLookupJoinWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jobjectArray jProbeHashKeys,
-    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory, jstring jFilter,
-    jstring jOperatorConfig);
+    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory,
+    jstring jFilter, jboolean isShuffleExchangeBuildPlan, jstring jOperatorConfig);
 
 /*
  * Class:     nova_hetu_omniruntime_operator_join_OmniLookupOuterJoinWithExprOperatorFactory
