@@ -11,7 +11,6 @@
 #include "util/debug.h"
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 
-
 #if defined(DEBUG_OPERATOR) && defined(TRACE)
 #include <sstream>
 #endif
