@@ -11,6 +11,7 @@
 #include "simd/xsimd.h"
 #include "lookup_join.h"
 
+
 static constexpr int8_t BUFFER_SIZE = 8;
 
 using namespace omniruntime::vec;
@@ -38,11 +39,12 @@ void LookupJoinOperatorFactory::CommonInitActions(const type::DataTypes &probeTy
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
-    omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig)
+    omniruntime::expressions::Expr *filterExpr, bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig)
     : probeTypes(probeTypes),
       buildOutputTypes(buildOutputTypes),
       hashTables(hashTables),
-      originalProbeColsCount(probeTypes.GetSize())
+      originalProbeColsCount(probeTypes.GetSize()),
+      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan)
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
         buildOutputCols, buildOutputColsCount, buildOutputTypes);
@@ -53,11 +55,13 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
 LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
-    omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig)
+    omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount,
+    bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig)
     : probeTypes(probeTypes),
       buildOutputTypes(buildOutputTypes),
       hashTables(hashTables),
-      originalProbeColsCount(originalProbeColsCount)
+      originalProbeColsCount(originalProbeColsCount),
+      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan)
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
         buildOutputCols, buildOutputColsCount, buildOutputTypes);
@@ -74,32 +78,36 @@ LookupJoinOperatorFactory::~LookupJoinOperatorFactory()
 LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
     int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
-    int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig)
+    int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr,
+    bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount, buildOutputTypes,
-        hashBuilderFactory->GetHashTablesVariants(), filterExpr, overflowConfig);
+        hashBuilderFactory->GetHashTablesVariants(), filterExpr, isShuffleExchangeBuildPlan, overflowConfig);
     return pOperatorFactory;
 }
 
 LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
     int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
-    int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount,
+    int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr,
+    int32_t originalProbeColsCount, bool isShuffleExchangeBuildPlan,
     OverflowConfig *overflowConfig)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount, buildOutputTypes,
-        hashBuilderFactory->GetHashTablesVariants(), filterExpr, originalProbeColsCount, overflowConfig);
+        hashBuilderFactory->GetHashTablesVariants(), filterExpr,
+        originalProbeColsCount, isShuffleExchangeBuildPlan, overflowConfig);
     return pOperatorFactory;
 }
 
 Operator *LookupJoinOperatorFactory::CreateOperator()
 {
     auto pLookupJoinOperator = new LookupJoinOperator(probeTypes, probeOutputCols, probeHashCols, probeHashColTypes,
-        buildOutputCols, buildOutputTypes, hashTables, simpleFilter, originalProbeColsCount, rowSize);
+        buildOutputCols, buildOutputTypes, hashTables, simpleFilter,
+        originalProbeColsCount, rowSize, isShuffleExchangeBuildPlan);
     return pLookupJoinOperator;
 }
 
@@ -120,7 +128,7 @@ void LookupJoinOperatorFactory::JoinFilterCodeGen(Expr *filterExpr, OverflowConf
 LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
     std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes, std::vector<int32_t> &buildOutputCols,
     const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables, SimpleFilter *simpleFilter,
-    int32_t originalProbeColsCount, int32_t outputRowSize)
+    int32_t originalProbeColsCount, int32_t outputRowSize, bool isShuffleExchangeBuildPlan)
     : probeTypes(probeTypes),
       probeOutputCols(probeOutputCols),
       probeHashCols(probeHashCols),
@@ -129,7 +137,8 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
       buildOutputTypes(buildOutputTypes),
       hashTables(hashTables),
       simpleFilter(simpleFilter),
-      originalProbeColsCount(originalProbeColsCount)
+      originalProbeColsCount(originalProbeColsCount),
+      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan)
 {
     std::vector<DataTypePtr> tmpProbeOutputTypesVec;
     for (size_t i = 0; i < probeOutputCols.size(); i++) {
@@ -368,7 +377,7 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 
     // handle the output
     if (!outputBuilder->IsEmpty()) {
-        outputBuilder->BuildOutput(probeOutputColumns, joinType, outputVecBatch);
+        outputBuilder->BuildOutput(probeOutputColumns, joinType, isShuffleExchangeBuildPlan, outputVecBatch);
     }
     if (curProbePosition >= inputRowCount && outputBuilder->IsEmpty()) {
         VectorHelper::FreeVecBatch(curInputBatch);
@@ -1639,7 +1648,7 @@ void NO_INLINE LookupJoinOutputBuilder::AppendRow(int32_t probePosition, BaseVec
     }
 }
 
-template <typename T>
+template <typename T, bool isInnerJoin, bool isShuffleExchangeBuildPlan>
 static NO_INLINE BaseVector *ConstructBuildColumn(
     const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows,
     int8_t parallelism)
@@ -1656,15 +1665,25 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
         BaseVector ***array = std::get<1>(buildTemp[i]);
         auto vecBatchIdx = std::get<2>(buildTemp[i]);
         auto rowIdx = std::get<3>(buildTemp[i]);
-        if (array == nullptr || array[outputCol][vecBatchIdx]->IsNull(rowIdx)) {
+        bool nullFlag;
+        if constexpr (!isInnerJoin) {
+            nullFlag = array == nullptr || array[outputCol][vecBatchIdx]->IsNull(rowIdx);
+        } else {
+            nullFlag = array[outputCol][vecBatchIdx]->IsNull(rowIdx);
+        }
+        if (nullFlag) {
             ret->SetNull(i);
             for (int32_t j = 0; j < parallelNum; ++j) {
                 auto currRow = i + j - parallelNum;
                 if (!(ret->IsNull(currRow))) {
-                    if (preVector->GetEncoding() == OMNI_DICTIONARY) {
-                        value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
-                    } else {
+                    if constexpr (isShuffleExchangeBuildPlan) {
                         value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                    } else {
+                        if (preVector->GetEncoding() == OMNI_DICTIONARY) {
+                            value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
+                        } else {
+                            value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                        }
                     }
                     ret->SetValue(currRow, value);
                 }
@@ -1700,10 +1719,14 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
             for (int32_t j = 0; j < parallelNum; ++j) {
                 auto currRow = i + j - parallelNum;
                 if (!(ret->IsNull(currRow))) {
-                    if (preVector->GetEncoding() == OMNI_DICTIONARY) {
-                        value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
-                    } else {
+                    if constexpr (isShuffleExchangeBuildPlan) {
                         value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                    } else {
+                        if (preVector->GetEncoding() == OMNI_DICTIONARY) {
+                            value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
+                        } else {
+                            value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                        }
                     }
                     ret->SetValue(currRow, value);
                 }
@@ -1722,10 +1745,14 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
         for (int32_t j = 0; j < parallelNum; ++j) {
             auto currRow = numRows - parallelNum + j;
             if (!(ret->IsNull(currRow))) {
-                if (preVector->GetEncoding() == OMNI_DICTIONARY) {
-                    value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
-                } else {
+                if constexpr (isShuffleExchangeBuildPlan) {
                     value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                } else {
+                    if (preVector->GetEncoding() == OMNI_DICTIONARY) {
+                        value = static_cast<Vector<DictionaryContainer<T>> *>(preVector)->GetValue(rowIdxes[j]);
+                    } else {
+                        value = static_cast<Vector<T> *>(preVector)->GetValue(rowIdxes[j]);
+                    }
                 }
                 ret->SetValue(currRow, value);
             }
@@ -1735,7 +1762,7 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
     return ret.release();
 }
 
-template <typename T>
+template <typename T, bool isInnerJoin, bool isShuffleExchangeBuildPlan>
 static NO_INLINE BaseVector *ConstructBuildColumn(
     const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows)
 {
@@ -1743,28 +1770,34 @@ static NO_INLINE BaseVector *ConstructBuildColumn(
     T value;
     for (int32_t i = 0; i < numRows; ++i) {
         BaseVector ***array = std::get<1>(buildTemp[i]);
-        if (array == nullptr) {
-            ret->SetNull(i);
-        } else {
-            auto vecBatchIndex = std::get<2>(buildTemp[i]);
-            auto buildRowIdx = std::get<3>(buildTemp[i]);
-            BaseVector *buildVector = array[outputCol][vecBatchIndex];
-            if (buildVector->IsNull(buildRowIdx)) {
+        if constexpr (!isInnerJoin) {
+            if (array == nullptr) {
                 ret->SetNull(i);
                 continue;
             }
-
+        }
+        auto vecBatchIndex = std::get<2>(buildTemp[i]);
+        auto buildRowIdx = std::get<3>(buildTemp[i]);
+        BaseVector *buildVector = array[outputCol][vecBatchIndex];
+        if (buildVector->IsNull(buildRowIdx)) {
+            ret->SetNull(i);
+            continue;
+        }
+        if constexpr (isShuffleExchangeBuildPlan) {
+            value = static_cast<Vector<T> *>(buildVector)->GetValue(buildRowIdx);
+        } else {
             if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
                 value = static_cast<Vector<DictionaryContainer<T>> *>(buildVector)->GetValue(buildRowIdx);
             } else {
                 value = static_cast<Vector<T> *>(buildVector)->GetValue(buildRowIdx);
             }
-            ret->SetValue(i, value);
         }
+        ret->SetValue(i, value);
     }
     return ret;
 }
 
+template<bool isInnerJoin, bool isShuffleExchangeBuildPlan>
 static NO_INLINE BaseVector *ConstructBuildVarcharColumn(
     const std::tuple<int32_t, BaseVector ***, uint32_t, uint32_t> *buildTemp, uint32_t outputCol, int32_t numRows)
 {
@@ -1774,24 +1807,29 @@ static NO_INLINE BaseVector *ConstructBuildVarcharColumn(
     std::string_view value;
     for (int32_t i = 0; i < numRows; ++i) {
         BaseVector ***array = std::get<1>(buildTemp[i]);
-        if (array == nullptr) {
-            static_cast<VarcharVector *>(ret)->SetNull(i);
-        } else {
-            auto vecBatchIndex = std::get<2>(buildTemp[i]);
-            auto buildRowIdx = std::get<3>(buildTemp[i]);
-            auto buildVector = array[outputCol][vecBatchIndex];
-            if (buildVector->IsNull(buildRowIdx)) {
-                ret->SetNull(i);
+        if constexpr (!isInnerJoin) {
+            if (array == nullptr) {
+                static_cast<VarcharVector *>(ret)->SetNull(i);
                 continue;
             }
-
+        }
+        auto vecBatchIndex = std::get<2>(buildTemp[i]);
+        auto buildRowIdx = std::get<3>(buildTemp[i]);
+        auto buildVector = array[outputCol][vecBatchIndex];
+        if (buildVector->IsNull(buildRowIdx)) {
+            ret->SetNull(i);
+            continue;
+        }
+        if constexpr (isShuffleExchangeBuildPlan) {
+            value = static_cast<VarcharVector *>(buildVector)->GetValue(buildRowIdx);
+        } else {
             if (buildVector->GetEncoding() == OMNI_DICTIONARY) {
                 value = static_cast<DictionaryVector *>(buildVector)->GetValue(buildRowIdx);
             } else {
                 value = static_cast<VarcharVector *>(buildVector)->GetValue(buildRowIdx);
             }
-            ret->SetValue(i, value);
         }
+        ret->SetValue(i, value);
     }
     return ret;
 }
@@ -1822,6 +1860,7 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructProbeColumns(VectorBatch *vecto
     }
 }
 
+template <bool isInnerJoin, bool isShuffleExchangeBuildPlan>
 void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount)
 {
     // preprocess the pointer to build table vectors -- doing a few levels of
@@ -1834,31 +1873,31 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                buildColumn = ConstructBuildColumn<int64_t>(buildTemp, outputCol, rowCount, OMNI_LANES(int64_t));
+                buildColumn = ConstructBuildColumn<int64_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount, OMNI_LANES(int64_t));
                 break;
             case OMNI_INT:
             case OMNI_DATE32:
-                buildColumn = ConstructBuildColumn<int32_t>(buildTemp, outputCol, rowCount, OMNI_LANES(int32_t));
+                buildColumn = ConstructBuildColumn<int32_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount, OMNI_LANES(int32_t));
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                buildColumn = ConstructBuildVarcharColumn(buildTemp, outputCol, rowCount);
+                buildColumn = ConstructBuildVarcharColumn<isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
             case OMNI_DECIMAL128:
-                buildColumn = ConstructBuildColumn<Decimal128>(buildTemp, outputCol, rowCount);
+                buildColumn = ConstructBuildColumn<Decimal128, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
             case OMNI_SHORT:
 #ifdef ENABLE_SVE
-                buildColumn = ConstructBuildColumn<int16_t>(buildTemp, outputCol, rowCount);
+                buildColumn = ConstructBuildColumn<int16_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
 #else
-                buildColumn = ConstructBuildColumn<int16_t>(buildTemp, outputCol, rowCount, OMNI_LANES(int16_t));
+                buildColumn = ConstructBuildColumn<int16_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount, OMNI_LANES(int16_t));
 #endif
                 break;
             case OMNI_DOUBLE:
-                buildColumn = ConstructBuildColumn<double>(buildTemp, outputCol, rowCount);
+                buildColumn = ConstructBuildColumn<double, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
             case OMNI_BOOLEAN:
-                buildColumn = ConstructBuildColumn<bool>(buildTemp, outputCol, rowCount);
+                buildColumn = ConstructBuildColumn<bool, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
             default:
                 break;
@@ -1870,6 +1909,7 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
 void LookupJoinOutputBuilder::BuildOutput(
     BaseVector **probeOutputColumns,
     JoinType joinType,
+    bool isShuffleExchangeBuildPlan,
     VectorBatch **outputVecBatch)
 {
     auto rowCount = std::min(probeRowCount, maxRowCount);
@@ -1888,7 +1928,16 @@ void LookupJoinOutputBuilder::BuildOutput(
             ConstructProbeColumns(outputPtr, probeOutputColumns, rowCount);
         }
         if (!buildOutputCols.empty()) {
-            ConstructBuildColumns(outputPtr, rowCount);
+            bool isInnerJoin = joinType == OMNI_JOIN_TYPE_INNER;
+            if (isInnerJoin && isShuffleExchangeBuildPlan) {
+                ConstructBuildColumns<true, true>(outputPtr, rowCount);
+            } else if (isInnerJoin) {
+                ConstructBuildColumns<true, false>(outputPtr, rowCount);
+            } else if (isShuffleExchangeBuildPlan) {
+                ConstructBuildColumns<false, true>(outputPtr, rowCount);
+            } else {
+                ConstructBuildColumns<false, false>(outputPtr, rowCount);
+            }
         }
     }
     probeRowOffset += rowCount;

@@ -725,7 +725,7 @@ void StressTestSingleLookupJoinForArrayTable(DataTypes buildTypes, JoinType join
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
-        filter, nullptr);
+        filter, false, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -791,7 +791,7 @@ void StressTestTwoLookupJoinForArrayTable(DataTypes buildTypes, JoinType joinTyp
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
-        filter, nullptr);
+        filter, false, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -943,7 +943,7 @@ void StressTestSingleLookupJoinForSingleKey(DataTypes buildTypes, JoinType joinT
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
-        filter, nullptr);
+        filter, false, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1059,7 +1059,7 @@ void StressTestSingleLookupJoinForVariableKey(DataTypes buildTypes, JoinType joi
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
-        filter, nullptr);
+        filter, false, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1136,7 +1136,7 @@ void StressTestTwoLookupJoinForVariableKey(DataTypes buildTypes, JoinType joinTy
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
-        filter, nullptr);
+        filter, false, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1215,7 +1215,7 @@ void StressTestTwoLookupJoinForSingleKey(DataTypes buildTypes, JoinType joinType
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
-        filter, nullptr);
+        filter, false, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1332,7 +1332,7 @@ void StressTestSingleLookupJoinForTwoFixedKey(DataTypes buildTypes, JoinType joi
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
-        filter, nullptr);
+        filter, false, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
@@ -1410,7 +1410,7 @@ void StressTestTwoLookupJoinForTwoFixedKey(DataTypes buildTypes, JoinType joinTy
     auto hashBuilderFactoryAddr = (int64_t)hashBuilderFactory;
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(buildTypes, buildJoinCols,
         joinColsCount, buildJoinCols, joinColsCount, buildJoinCols, joinColsCount, buildTypes, hashBuilderFactoryAddr,
-        filter, nullptr);
+        filter, false, nullptr);
     auto lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     lookupJoinOperator->AddInput(probeVecBatch1);
     while (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {

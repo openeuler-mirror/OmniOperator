@@ -12,6 +12,7 @@
 #include "operator/aggregation/aggregator/aggregator_factory.h"
 #include "simd/xsimd.h"
 
+
 #if defined(DEBUG_OPERATOR) && defined(TRACE)
 #include <sstream>
 #endif
@@ -687,30 +688,53 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
     int32_t rowCount = vecBatch->GetRowCount();
     auto &arenaAllocator = *(executionContext->GetArena());
     size_t aggNum = aggregators.size();
+    auto *curVector = groupVectors[0];
+    bool isDictEncoded = curVector->GetEncoding();
+
     if (aggNum == 0) {
         // no aggregator, so just perform groupby
-        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
+        if (isDictEncoded) {
+            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                emplaceKey->InsertDictValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
+            }
+        } else {
+            for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
+            }
         }
         return;
     }
-
     // aggNum > 0
     std::vector<AggregateState *> currentRowStates(rowCount);
     AggregateState *currentGroupStates = nullptr;
     std::vector<AggregateState *> newGroupStates;
 
-    for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-        auto ret = emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
-        if (ret.IsInsert()) {
-            currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(totalAggStatesSize));
-            ret.SetValue(currentGroupStates);
-            newGroupStates.emplace_back(currentGroupStates);
-        } else {
-            currentGroupStates = ret.GetValue();
-            arenaAllocator.RollBackContinualMem();
+    if (isDictEncoded) {
+        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            auto ret = emplaceKey->InsertDictValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
+            if (ret.IsInsert()) {
+                currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(totalAggStatesSize));
+                ret.SetValue(currentGroupStates);
+                newGroupStates.emplace_back(currentGroupStates);
+            } else {
+                currentGroupStates = ret.GetValue();
+                arenaAllocator.RollBackContinualMem();
+            }
+            currentRowStates[rowIdx] = currentGroupStates;
         }
-        currentRowStates[rowIdx] = currentGroupStates;
+    } else {
+        for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            auto ret = emplaceKey->InsertValueToHashmap(groupVectors, groupColNum, rowIdx, arenaAllocator);
+            if (ret.IsInsert()) {
+                currentGroupStates = reinterpret_cast<AggregateState *>(arenaAllocator.Allocate(totalAggStatesSize));
+                ret.SetValue(currentGroupStates);
+                newGroupStates.emplace_back(currentGroupStates);
+            } else {
+                currentGroupStates = ret.GetValue();
+                    arenaAllocator.RollBackContinualMem();
+            }
+            currentRowStates[rowIdx] = currentGroupStates;
+        }
     }
 
     if (aggFiltersCount > 0) {
