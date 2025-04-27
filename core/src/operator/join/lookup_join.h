@@ -189,10 +189,6 @@ private:
     void InitFirst();
 
     template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
-    void ArrayJoinProbeSIMD(BaseVector ***buildColumns, size_t probeHashColsCount, T &&arg,
-                            ExecutionContext *contextPtr);
-
-    template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
     void ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size_t probeHashColsCount,
                                                     T &&arg, ExecutionContext *contextPtr);
 

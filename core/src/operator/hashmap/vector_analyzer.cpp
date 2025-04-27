@@ -3,7 +3,6 @@
  */
 
 #include "vector_analyzer.h"
-#include "simd/xsimd.h"
 
 namespace omniruntime {
 namespace op {
