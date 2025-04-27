@@ -2766,3 +2766,70 @@ TEST(BatchFunctionTest, BatchEmptyToNull)
     EXPECT_EQ(outResult[3], nullptr);
     EXPECT_EQ(outLen[3], 0);
 }
+
+TEST(BatchFunctionTest, BatchStaticInvokeVarcharTypeWriteSideCheck)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t  limit = 4;
+    std::vector<std::string> srcStrVec{ "abc", "abcd", "abcde", "abc ", "abcd ", "abced ", "测试超过长度", "测试长度"};
+    std::vector<std::string> matchStrVec{ "abc", "abcd", "", "abc ", "abcd", "", "", "测试长度"};
+    int32_t rowCnt = static_cast<int32_t>(srcStrVec.size()) + 1;
+    char *srcStrs[rowCnt];
+    int32_t srcLens[rowCnt];
+    char *output[rowCnt];
+    int32_t outputLen[rowCnt];
+    for (int32_t row = 0; row < rowCnt - 1; ++row) {
+        srcStrs[row] = const_cast<char *>(srcStrVec[row].c_str());
+        srcLens[row] = srcStrVec[row].size();
+    }
+    srcStrs[rowCnt - 1] = nullptr;
+    srcLens[rowCnt - 1] = 0;
+    bool isAnyNull[] = {false, false, false, false, false, false, false, false, true};
+    BatchStaticInvokeVarcharTypeWriteSideCheck(contextPtr, srcStrs, srcLens, limit,
+        isAnyNull, output, outputLen, rowCnt);
+    for (int32_t row = 0; row < rowCnt; ++row) {
+        if (outputLen[row] == 0) {
+            EXPECT_TRUE(output[row] == nullptr);
+        } else {
+            std::string outStr (output[row], outputLen[row]);
+            EXPECT_EQ(outStr, matchStrVec[row]);
+        }
+    }
+    delete context;
+}
+
+TEST(BatchFunctionTest, BatchStaticInvokeCharReadPadding)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t  limit = 4;
+    std::vector<std::string> srcStrVec{ "1", "12", "123", "1234", "12345", "123456", "测试超过长度", "测试"};
+    std::vector<std::string> matchStrVec{ "1   ", "12  ", "123 ", "1234", "12345", "123456", "测试超过长度", "测试  "};
+    int32_t rowCnt = static_cast<int32_t>(srcStrVec.size()) + 1;
+    char *srcStrs[rowCnt];
+    int32_t srcLens[rowCnt];
+    char *matchStrs[rowCnt];
+    int32_t matchLens[rowCnt];
+    char *output[rowCnt];
+    int32_t outputLen[rowCnt];
+    for (int32_t row = 0; row < rowCnt - 1; ++row) {
+        srcStrs[row] = const_cast<char *>(srcStrVec[row].c_str());
+        srcLens[row] = srcStrVec[row].length();
+        matchStrs[row] = const_cast<char *>(matchStrVec[row].c_str());
+        matchLens[row] = matchStrVec[row].length();
+    }
+    srcStrs[rowCnt - 1] = nullptr;
+    srcLens[rowCnt - 1] = 0;
+    bool isAnyNull[] = {false, false, false, false, false, false, false, false, true};
+    BatchStaticInvokeCharReadPadding(contextPtr, srcStrs, srcLens, limit, isAnyNull, output, outputLen, rowCnt);
+    for (int32_t row = 0; row < rowCnt; ++row) {
+        if (outputLen[row] == 0) {
+            EXPECT_TRUE(output[row] == nullptr);
+        } else {
+            std::string outStr (output[row], outputLen[row]);
+            EXPECT_EQ(outStr, matchStrVec[row]);
+        }
+    }
+    delete context;
+}

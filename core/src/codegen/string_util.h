@@ -19,6 +19,27 @@ static std::string REPLACE_ERR_MSG = "Replace failed";
 static std::string CONCAT_ERR_MSG = "Concat failed";
 static constexpr uint8_t EMPTY[] = "";
 static int32_t STEP = static_cast<int>('a') - static_cast<int>('A');
+static uint8_t BytesOfCodePointInUTF8[] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x00..0F
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x10..1F
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x20..2F
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x30..3F
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x40..4F
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x50..5F
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x60..6F
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x70..7F
+    // Consecutive bytes cannot be used as the first byte
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0x80..8F
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0x90..9F
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0xA0..AF
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0xB0..BF
+    0, 0, // 0xC0..C1 - disallowed in UTF-8
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // 0xC2..CF
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // 0xD0..DF
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // 0xE0..EF
+    4, 4, 4, 4, 4, // 0xF0..F4
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 // 0xF5..FF - disallowed in UTF-8
+};
 
 class StringUtil {
 public:
@@ -196,6 +217,20 @@ public:
         }
 
         return j == matchLen;
+    }
+
+    static inline int32_t NumChars(const char *str, int32_t strLen)
+    {
+        int32_t len = 0;
+        int32_t i = 0;
+
+        while (i < strLen) {
+            len += 1;
+            int32_t offset = str[i] & 0xFF;
+            uint8_t numBytes = BytesOfCodePointInUTF8[offset];
+            i += numBytes == 0 ? 1 : numBytes;
+        }
+        return len;
     }
 }; // class stringUtils
 } // namespace codegen function

@@ -960,4 +960,80 @@ extern "C" DLLEXPORT const char *EmptyToNull(const char *str, int32_t len, bool 
     *outLen = len;
     return str;
 }
+
+extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t contextPtr, const char *str, int32_t len,
+    int32_t limit, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+    int32_t ssLen = StringUtil::NumChars(str, len);
+    if (ssLen <= limit) {
+        *outLen = len;
+        return str;
+    }
+    int32_t numTailSpacesToTrim = ssLen - limit;
+    int32_t endIdx = len - 1;
+    int32_t trimTo = len - numTailSpacesToTrim;
+    while (endIdx >= trimTo && str[endIdx] == 0x20) {
+        endIdx--;
+    }
+    int32_t outByteNum = endIdx + 1;
+    ssLen = StringUtil::NumChars(str, outByteNum);
+    if (ssLen > limit) {
+        std::ostringstream errorMessage;
+        errorMessage << "Exceeds varchar type length limitation: " << limit;
+        SetError(contextPtr, errorMessage.str());
+        *outLen = 0;
+        return nullptr;
+    }
+
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    errno_t res = memcpy_s(padded, outByteNum, str, outByteNum);
+    if (res != EOK) {
+        SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
+        *outLen = 0;
+        return nullptr;
+    }
+    padded[outByteNum] = '\0';
+    *outLen = outByteNum;
+    return padded;
 }
+
+extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr, const char *str, int32_t len,
+    int32_t limit, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    } else if (len == 0) {
+        *outLen = 0;
+        return "";
+    }
+    int32_t ssLen = StringUtil::NumChars(str, len);
+    if (ssLen >= limit) {
+        *outLen = len;
+        return str;
+    }
+    int32_t diff = limit - ssLen;
+    int32_t outByteNum = len + diff + 1;
+    auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
+    errno_t res = memcpy_s(padded, len, str, len);
+    if (res != EOK) {
+        SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+        *outLen = 0;
+        return nullptr;
+    }
+    res = memset_s(padded + len, diff, ' ', diff);
+    if (res != EOK) {
+        SetError(contextPtr, "charReadPadding failed：memset_s error");
+        *outLen = 0;
+        return nullptr;
+    }
+    padded[outByteNum] = '\0';
+    *outLen = outByteNum - 1;
+    return padded;
+}
+}
+

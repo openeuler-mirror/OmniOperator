@@ -129,6 +129,18 @@ const std::string GreatestStrFnStr()
     return greatestStrFnStr;
 }
 
+const std::string StaticInvokeVarcharTypeWriteSideCheckFnStr()
+{
+    const std::string staticInvokeVarcharTypeWriteSideCheckFnStr = "StaticInvokeVarcharTypeWriteSideCheck";
+    return staticInvokeVarcharTypeWriteSideCheckFnStr;
+}
+
+const std::string StaticInvokeCharReadPaddingFnStr()
+{
+    const std::string staticInvokeCharReadPaddingFnStr = "StaticInvokeCharReadPadding";
+    return staticInvokeCharReadPaddingFnStr;
+}
+
 std::vector<Function> StringFunctionRegistry::GetFunctions()
 {
     std::vector<Function> stringFnRegistry = { // concat functions
@@ -241,6 +253,12 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(EmptyToNull), EmptyToNullStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA, false),
+        Function(reinterpret_cast<void *>(StaticInvokeVarcharTypeWriteSideCheck),
+            StaticInvokeVarcharTypeWriteSideCheckFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(StaticInvokeCharReadPadding),
+            StaticInvokeCharReadPaddingFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
+            OMNI_VARCHAR, INPUT_DATA, true)
     };
 
     return stringFnRegistry;

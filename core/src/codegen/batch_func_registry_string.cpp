@@ -34,6 +34,8 @@ const std::string MD5_STR = "batch_Md5";
 const std::string EMPTY2NULL_STR = "batch_empty2null";
 const std::string CONTAINS_FN_STR = "batch_Contains";
 const std::string GREATEST_STR_FN_STR = "batch_Greatest";
+const std::string BATCH_STATIC_INVOKE_VARCHARTYPE_CHECK_FN_STR = "batch_StaticInvokeVarcharTypeWriteSideCheck";
+const std::string BATCH_STATIC_INVOKE_CHAR_READ_PADDING_FN_STR = "batch_StaticInvokeCharReadPadding";
 }
 
 std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
@@ -146,7 +148,13 @@ std::vector<Function> BatchStringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchGreatestStr), GREATEST_STR_FN_STR, {},
             { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_VARCHAR, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(BatchEmptyToNull), EMPTY2NULL_STR, {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
-            INPUT_DATA, false)};
+            INPUT_DATA, false),
+        Function(reinterpret_cast<void *>(BatchStaticInvokeVarcharTypeWriteSideCheck),
+            BATCH_STATIC_INVOKE_VARCHARTYPE_CHECK_FN_STR, {}, { OMNI_VARCHAR, OMNI_INT },
+            OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchStaticInvokeCharReadPadding),
+            BATCH_STATIC_INVOKE_CHAR_READ_PADDING_FN_STR, {}, { OMNI_VARCHAR, OMNI_INT },
+            OMNI_VARCHAR, INPUT_DATA, true)};
 
     return batchStringFnRegistry;
 }
