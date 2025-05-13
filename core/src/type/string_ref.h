@@ -5,7 +5,7 @@
 #define OMNI_RUNTIME_STRING_REF_H
 #include <string>
 #include <cstring>
-#include "xsimd/xsimd.hpp"
+#include <arm_neon.h>
 
 namespace omniruntime {
 namespace type {
@@ -39,15 +39,16 @@ struct StringRef {
             return true;
         }
 
-        size_t simd_size = xsimd::batch<char>::size;
+        constexpr size_t simd_size = 16;
         size_t i = 0;
 
         for (;i + simd_size <= leftSize;i += simd_size) {
-            auto lhs_vec = xsimd::load_unaligned(reinterpret_cast<const char*>(&leftData[i]));
-            auto rhs_vec = xsimd::load_unaligned(reinterpret_cast<const char*>(&rightData[i]));
-            auto equal_mask = lhs_vec == rhs_vec;
+            uint8x16_t lhs_vec = vld1q_u8(leftData + i);
+            uint8x16_t rhs_vec = vld1q_u8(rightData + i);
 
-            if (!xsimd::all(equal_mask)) {
+            uint8x16_t cmp_result = vceqq_u8(lhs_vec, rhs_vec);
+            uint64x2_t cmp_wide = vreinterpretq_u64_u8(cmp_result);
+            if (vgetq_lane_u64(cmp_wide, 0) != ~0ULL || vgetq_lane_u64(cmp_wide, 1) != ~0ULL) {
                 return false;
             }
         }

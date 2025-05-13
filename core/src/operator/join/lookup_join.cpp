@@ -828,8 +828,8 @@ void LookupJoinOperator::ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size
     auto &arrayTable = arg.GetArrayTable(partitionMask);
     bool *isAssigned = arrayTable->GetAssigned();
     auto slots = reinterpret_cast<int64_t *>(arrayTable->GetSlots());
-    alignas(xsimd::default_arch::alignment()) KeyType hashes[vecLanes];
-    alignas(xsimd::default_arch::alignment()) KeyType matches[vecLanes];
+    alignas(ALIGNMENT_SIZE) KeyType hashes[vecLanes];
+    alignas(ALIGNMENT_SIZE) KeyType matches[vecLanes];
     if constexpr (std::is_same_v<KeyType, int16_t>) {
         int16x8_t vMin = vdupq_n_s16(minValue);
         int16x8_t vMax = vdupq_n_s16(maxValue);

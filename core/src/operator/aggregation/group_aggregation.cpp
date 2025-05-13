@@ -550,7 +550,7 @@ void ComputeHashSIMD(int64_t *key, uint8_t nullMask, uint64_t *hashes, int64x2_t
     vHashes.val[2] = vaddq_u64((uint64x2_t)vsubq_s64(vKey.val[2], vMin), vOne);
     vHashes.val[3] = vaddq_u64((uint64x2_t)vsubq_s64(vKey.val[3], vMin), vOne);
     if constexpr (hasNull) {
-        alignas(xsimd::default_arch::alignment()) int64_t nulls[8];
+        alignas(ALIGNMENT_SIZE) int64_t nulls[8];
         nullMask = ~nullMask;
         for (int i = 0; i < vecLanes; i++) {
             nulls[i] = -(((nullMask) >> i) & 1);
@@ -575,7 +575,7 @@ void ComputeHashSIMD(int32_t *key, uint16_t nullMask, uint32_t *hashes, int32x4_
     vHashes.val[2] = vaddq_u32((uint32x4_t)vsubq_s32(vKey.val[2], vMin), vOne);
     vHashes.val[3] = vaddq_u32((uint32x4_t)vsubq_s32(vKey.val[3], vMin), vOne);
     if constexpr (hasNull) {
-        alignas(xsimd::default_arch::alignment()) int32_t nulls[16];
+        alignas(ALIGNMENT_SIZE) int32_t nulls[16];
         nullMask = ~nullMask;
         for (int i = 0; i < vecLanes; i++) {
             nulls[i] = -(((nullMask) >> i) & 1);
@@ -600,7 +600,7 @@ void ComputeHashSIMD(int16_t *key, uint32_t nullMask, uint16_t *hashes, int16x8_
     vHashes.val[2] = vaddq_u16((uint16x8_t)vsubq_s16(vKey.val[2], vMin), vOne);
     vHashes.val[3] = vaddq_u16((uint16x8_t)vsubq_s16(vKey.val[3], vMin), vOne);
     if constexpr (hasNull) {
-        alignas(xsimd::default_arch::alignment()) int16_t nulls[32];
+        alignas(ALIGNMENT_SIZE) int16_t nulls[32];
         nullMask = ~nullMask;
         for (int i = 0; i < vecLanes; i++) {
             nulls[i] = static_cast<int16_t>(-(((nullMask) >> i) & 1));
@@ -657,7 +657,7 @@ void HashAggregationOperator::ArrayGroupProbeSIMD(BaseVector *groupVector, Vecto
     constexpr int32_t simdLen = 64;
     constexpr int32_t vecLanes = simdLen / sizeof(T);
     int32_t end = rowCount / vecLanes * vecLanes;
-    alignas(xsimd::default_arch::alignment()) unsignedT hashes[vecLanes];
+    alignas(ALIGNMENT_SIZE) unsignedT hashes[vecLanes];
     int64_t *matchSlotsData = reinterpret_cast<int64_t *>(rowsAggStates.data());
     if constexpr (std::is_same_v<T, int64_t>) {
         auto nulls = reinterpret_cast<uint8_t *>(unsafe::UnsafeBaseVector::GetNulls(groupVector));
