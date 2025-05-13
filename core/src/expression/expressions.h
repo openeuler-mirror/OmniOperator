@@ -5,12 +5,12 @@
 #ifndef __EXPRESSIONS_H__
 #define __EXPRESSIONS_H__
 
-#include <vector>
-#include <string>
-#include <map>
 #include <codegen/function.h>
-#include "type/decimal128.h"
+#include <map>
+#include <string>
+#include <vector>
 #include "type/data_type.h"
+#include "type/decimal128.h"
 
 class ExprVisitor;
 
@@ -44,12 +44,7 @@ enum class Operator {
     INVALIDOP
 };
 
-enum class OperatorType {
-    COMPARISON,
-    LOGICAL,
-    ARITHMETIC,
-    INVALIDOPTYPE
-};
+enum class OperatorType { COMPARISON, LOGICAL, ARITHMETIC, INVALIDOPTYPE };
 
 enum class ExprType {
     LITERAL_E,
@@ -66,37 +61,19 @@ enum class ExprType {
     INVALID_E,
 };
 
-const std::map<std::string, Operator> OPERATOR_FROM_STRING = {
-    { "EQUAL", Operator::EQ },
-    { "LESS_THAN", Operator::LT },
-    { "LESS_THAN_OR_EQUAL", Operator::LTE },
-    { "GREATER_THAN_OR_EQUAL", Operator::GTE },
-    { "GREATER_THAN", Operator::GT },
-    { "NOT_EQUAL", Operator::NEQ },
-    { "AND", Operator::AND },
-    { "OR", Operator::OR },
-    { "NOT", Operator::NOT },
-    { "not", Operator::NOT },
-    { "ADD", Operator::ADD },
-    { "SUBTRACT", Operator::SUB },
-    { "MULTIPLY", Operator::MUL },
-    { "DIVIDE", Operator::DIV },
-    { "MODULUS", Operator::MOD },
-    {"TRY_ADD", Operator::TRY_ADD},
-    {"TRY_SUBTRACT", Operator::TRY_SUB},
-    {"TRY_MULTIPLY", Operator::TRY_MUL},
-    {"TRY_DIVIDE", Operator::TRY_DIV}
-};
+const std::map<std::string, Operator> OPERATOR_FROM_STRING = {{"EQUAL", Operator::EQ}, {"LESS_THAN", Operator::LT},
+    {"LESS_THAN_OR_EQUAL", Operator::LTE}, {"GREATER_THAN_OR_EQUAL", Operator::GTE}, {"GREATER_THAN", Operator::GT},
+    {"NOT_EQUAL", Operator::NEQ}, {"AND", Operator::AND}, {"OR", Operator::OR}, {"NOT", Operator::NOT},
+    {"not", Operator::NOT}, {"ADD", Operator::ADD}, {"SUBTRACT", Operator::SUB}, {"MULTIPLY", Operator::MUL},
+    {"DIVIDE", Operator::DIV}, {"MODULUS", Operator::MOD}, {"TRY_ADD", Operator::TRY_ADD},
+    {"TRY_SUBTRACT", Operator::TRY_SUB}, {"TRY_MULTIPLY", Operator::TRY_MUL}, {"TRY_DIVIDE", Operator::TRY_DIV}};
 
 bool IsNullLiteral(const std::string &value);
 bool IsComparisonOperator(Operator op);
 bool IsLogicalOperator(Operator op);
 Operator StringToOperator(const std::string &opStr);
 
-enum ExprFunctionType {
-    BUILTIN = 0,
-    HIVE_UDF
-};
+enum ExprFunctionType { BUILTIN = 0, HIVE_UDF };
 
 class Expr {
 public:
@@ -109,8 +86,6 @@ public:
     static void DeleteExprs(const std::vector<Expr *> &exprs);
     static void DeleteExprs(const std::vector<std::vector<Expr *>> &exprs);
 };
-
-using ExprPtr = std::shared_ptr<Expr>;
 
 class LiteralExpr : public Expr {
 public:
@@ -259,8 +234,8 @@ public:
     FuncExpr();
     ~FuncExpr() override;
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType);
-    FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
-        const Function *function);
+    FuncExpr(
+        const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType, const Function *function);
     FuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
         ExprFunctionType functionType);
 
@@ -273,6 +248,6 @@ public:
             e.GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR;
     }
 };
-}
-}
+} // namespace expressions
+} // namespace omniruntime
 #endif

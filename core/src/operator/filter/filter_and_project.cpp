@@ -3,9 +3,11 @@
  * Description: FilterAndProject operator source file
  */
 #include "filter_and_project.h"
-#include "vector/vector_helper.h"
 #include "expression/jsonparser/jsonparser.h"
+#include "operator/config/operator_config.h"
+#include "util/config/QueryConfig.h"
 #include "util/config_util.h"
+#include "vector/vector_helper.h"
 
 namespace omniruntime {
 namespace op {
@@ -70,10 +72,7 @@ bool SimpleFilter::Initialize(OverflowConfig *overflowConfig)
     return true;
 }
 
-set<int32_t> &SimpleFilter::GetVectorIndexes()
-{
-    return this->codegen->vectorIndexes;
-}
+set<int32_t> &SimpleFilter::GetVectorIndexes() { return this->codegen->vectorIndexes; }
 
 bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext)
 {
@@ -84,6 +83,22 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
     return new FilterAndProjectOperator(this->exprEvaluator);
+}
+
+OperatorFactory *CreateFilterOperatorFactory(
+    const std::shared_ptr<const FilterNode> filterNode, const config::QueryConfig &queryConfig)
+{
+    auto filterExpr = filterNode->GetFilterExpr();
+    std::vector<Expr *> projections;
+    const auto &sourceTypes = *(filterNode->OutputType());
+    int32_t idx = 0;
+    for (const auto &item : sourceTypes.Get()) {
+        projections.push_back(new FieldExpr(idx++, item));
+    }
+    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                                                                 : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, sourceTypes, overflowConfig);
+    return new FilterAndProjectOperatorFactory(move(exprEvaluator));
 }
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
@@ -100,14 +115,15 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 int32_t FilterAndProjectOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (this->projectedVecs == nullptr) {
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
         return 0;
     }
-
     int rowCount = this->projectedVecs->GetRowCount();
     *outputVecBatch = this->projectedVecs;
     this->projectedVecs = nullptr;
     UpdateGetOutputInfo(rowCount);
-
     return rowCount;
 }
 
@@ -130,8 +146,8 @@ OmniStatus FilterAndProjectOperator::Close()
  * @param outLens contains null or length of each projection.
  * @return true(filter pass) or false(filter fail).
  */
-bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t inputLens[], int64_t outValueAddrs[],
-    int32_t outLens[])
+bool FilterAndProjectOperator::ProcessRow(
+    int64_t valueAddrs[], const int32_t inputLens[], int64_t outValueAddrs[], int32_t outLens[])
 {
     auto vecCount = exprEvaluator->GetInputDataTypes().GetSize();
     auto dictsAddrs = new int64_t[vecCount];
@@ -217,5 +233,5 @@ bool FilterAndProjectOperator::ProcessRow(int64_t valueAddrs[], const int32_t in
     delete[] offsetsAddrs;
     return true;
 }
-} // end of op
-} // end of omniruntime
+} // namespace op
+} // namespace omniruntime

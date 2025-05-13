@@ -6,14 +6,16 @@
 #define __PROJECTION_H__
 
 #include <vector>
-#include "operator/operator_factory.h"
-#include "operator/operator.h"
-#include "operator/status.h"
-#include "vector/vector_common.h"
-#include "type/data_types.h"
+#include "codegen/expr_evaluator.h"
 #include "expression/expressions.h"
 #include "operator/execution_context.h"
-#include "codegen/expr_evaluator.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "operator/status.h"
+#include "plannode/planNode.h"
+#include "type/data_types.h"
+#include "util/config/QueryConfig.h"
+#include "vector/vector_common.h"
 
 namespace omniruntime {
 namespace op {
@@ -54,7 +56,10 @@ public:
 private:
     std::shared_ptr<ExpressionEvaluator> exprEvaluator;
 };
-}
-}
+
+OperatorFactory *CreateProjectOperatorFactory(
+    std::shared_ptr<const ProjectNode> projectNode, const config::QueryConfig &queryConfig);
+} // namespace op
+} // namespace omniruntime
 
 #endif

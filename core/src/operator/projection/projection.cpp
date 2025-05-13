@@ -3,9 +3,10 @@
  * Description: Projection operator source file
  */
 #include "projection.h"
-#include "vector/vector_helper.h"
 #include "expression/jsonparser/jsonparser.h"
+#include "util/config/QueryConfig.h"
 #include "util/config_util.h"
+#include "vector/vector_helper.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::expressions;
@@ -23,9 +24,23 @@ int32_t ProjectionOperator::AddInput(VectorBatch *vecBatch)
     return 0;
 }
 
+OperatorFactory *CreateProjectOperatorFactory(
+    std::shared_ptr<const ProjectNode> projectNode, const config::QueryConfig &queryConfig)
+{
+    auto projections = projectNode->GetProjections();
+    auto sourceTypes = *(projectNode->OutputType());
+    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                                                                 : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projections, sourceTypes, overflowConfig);
+    return new ProjectionOperatorFactory(move(exprEvaluator));
+}
+
 int32_t ProjectionOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (this->projectedVecs == nullptr) {
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
         return -1;
     }
     int rowCount = this->projectedVecs->GetRowCount();
@@ -47,5 +62,5 @@ omniruntime::op::Operator *ProjectionOperatorFactory::CreateOperator()
 {
     return new ProjectionOperator(this->exprEvaluator);
 }
-}
-}
+} // namespace op
+} // namespace omniruntime
