@@ -4,6 +4,7 @@
 #ifndef SELECTIVITY_VECTOR_H
 #define SELECTIVITY_VECTOR_H
 
+#include <optional>
 #include "util/bits_selectivity_vector.h"
 #include "util/omni_exception.h"
 #include "util/compiler_util.h"

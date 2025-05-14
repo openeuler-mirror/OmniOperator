@@ -171,7 +171,7 @@ std::vector<OperatorFactory *> CreateHashJoinFactory(omniruntime::type::DataType
     Expr *joinFilterExpr = CreateJoinFilterExpr();
     auto lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(sourceTypes, probeOutputCols,
         probeOutputColsCount, probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount,
-        buildOutputTypes, hashBuilderFactoryAddr, joinFilterExpr, overflowConfig);
+        buildOutputTypes, hashBuilderFactoryAddr, joinFilterExpr, false, overflowConfig);
     std::vector<OperatorFactory *> operatorFactories = { hashBuilderFactory, lookupJoinFactory };
     delete joinFilterExpr;
     return operatorFactories;

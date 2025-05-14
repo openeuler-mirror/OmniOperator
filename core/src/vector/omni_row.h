@@ -19,6 +19,7 @@
  * + | 1 0 001 000 (b)| 5 | h e l l o  | + | 1 1 000 000 (b)|
  */
 #include "omni_row_value.h"
+#include "memory/simple_arena_allocator.h"
 
 namespace omniruntime {
 namespace vec {
@@ -355,6 +356,20 @@ public:
             ret += len;
         }
         return ret;
+    }
+
+    int32_t FillBuffer(SimpleArenaAllocator &arena)
+    {
+        oneRowLen = CalculateCompactLength(columnSize);
+        originBuffer = (uint8_t *)(arena.Allocate(oneRowLen));
+        writeBuffer = originBuffer;
+        for (int32_t i = 0; i < columnSize; ++i) {
+            writeBuffer = oneRow[i]->WriteBuffer(writeBuffer);
+        }
+#ifdef DEBUG
+        LogDebug("originBuffer + oneRowLen - writeBuffer = %d\n", originBuffer + oneRowLen - writeBuffer);
+#endif
+        return oneRowLen;
     }
 
     int32_t FillBuffer()

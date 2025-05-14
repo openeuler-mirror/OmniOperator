@@ -22,8 +22,10 @@ public:
         std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize);
     ~LookupJoinOutputBuilder() = default;
     void AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address);
-    void BuildOutput(BaseVector **probeOutputColumns, JoinType joinType, VectorBatch **outputVecBatch);
+    void BuildOutput(BaseVector **probeOutputColumns, JoinType joinType,
+                     bool isShuffleExchangeBuildPlan, VectorBatch **outputVecBatch);
     void ConstructProbeColumns(VectorBatch *vectorBatch, BaseVector **probeAllColumns, int32_t rowCount);
+    template <bool isInnerJoin, bool isShuffleExchangeBuildPlan>
     void ConstructBuildColumns(VectorBatch *vectorBatch, int32_t rowCount);
     template<bool isMatched> void AppendExistenceRow(int32_t probePosition);
     void ConstructExistenceColumn(VectorBatch *vectorBatch);
@@ -131,22 +133,24 @@ public:
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
         const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
-        omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
+        omniruntime::expressions::Expr *filterExpr, bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
     LookupJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
         const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
-        omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount, OverflowConfig *overflowConfig);
+        omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount,
+        bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
     ~LookupJoinOperatorFactory() override;
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
-        int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, OverflowConfig *overflowConfig);
+        int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr,
+        bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
     // this is only for LookupJoinWithExprOperator
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(const DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount,
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
         int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount,
-        OverflowConfig *overflowConfig);
+        bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
     Operator *CreateOperator() override;
 
 private:
@@ -162,6 +166,7 @@ private:
     std::vector<int32_t> buildOutputCols; // output columns for build
     DataTypes buildOutputTypes;           // output column types for build
     HashTableVariants *hashTables;
+    bool isShuffleExchangeBuildPlan;
     int32_t rowSize; // estimation of rowSize
     SimpleFilter *simpleFilter = nullptr;
     // this is for lookup join with expression operator when join key and join filter both are expressions
@@ -173,7 +178,8 @@ public:
     LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
         std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes,
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
-        SimpleFilter *simpleFilter, int32_t originalProbeColsCount, int32_t outputRowSize);
+        SimpleFilter *simpleFilter, int32_t originalProbeColsCount,
+        int32_t outputRowSize, bool isShuffleExchangeBuildPlan);
     ~LookupJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
@@ -181,10 +187,6 @@ public:
 
 private:
     void InitFirst();
-
-    template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
-    void ArrayJoinProbeSIMD(BaseVector ***buildColumns, size_t probeHashColsCount, T &&arg,
-                            ExecutionContext *contextPtr);
 
     template<typename T, bool hasJoinFilter, JoinType joinType, bool hasNull>
     void ArrayJoinProbeSIMDNeon(BaseVector ***buildColumns, size_t probeHashColsCount,
@@ -263,6 +265,7 @@ private:
     uint32_t partitionMask = 0;
     bool isSingleHT;
     bool probeSimd;
+    bool isShuffleExchangeBuildPlan;
 
     // this is for join filter
     SimpleFilter *simpleFilter = nullptr;

@@ -620,7 +620,8 @@ omniruntime::expressions::Expr *CreateJoinFilterExpr(const std::string &filterSt
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLookupJoinOperatorFactory(JNIEnv *env,
     jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jintArray jProbeHashCols, jintArray jBuildOutputCols,
-    jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory, jstring jFilter, jstring jOperatorConfig)
+    jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory, jstring jFilter,
+    jboolean isShuffleExchangeBuildPlan, jstring jOperatorConfig)
 {
     auto probeTypesCharPtr = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     auto probeOutputColsArr = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
@@ -654,7 +655,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinOperatorFactory_createLoo
     JNI_METHOD_START
     lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(probeDataTypes,
         probeOutputColsArr, probeOutputColsCount, probeHashColsArr, probeHashColsCount, buildOutputColsArr,
-        buildOutputColsCount, buildOutputDataTypes, jHashBuilderOperatorFactory, filterExpr, overflowConfig);
+        buildOutputColsCount, buildOutputDataTypes, jHashBuilderOperatorFactory, filterExpr,
+        isShuffleExchangeBuildPlan, overflowConfig);
     JNI_METHOD_END_WITH_EXPRS_RELEASE(0L, { filterExpr })
     Expr::DeleteExprs({ filterExpr });
 
@@ -756,8 +758,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniHashBuilderWithExprOperatorFactory_
 JNIEXPORT jlong JNICALL
 Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_createLookupJoinWithExprOperatorFactory(
     JNIEnv *env, jclass jObj, jstring jProbeTypes, jintArray jProbeOutputCols, jobjectArray jProbeHashKeys,
-    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory, jstring jFilter,
-    jstring jOperatorConfig)
+    jintArray jBuildOutputCols, jstring jBuildOutputTypes, jlong jHashBuilderOperatorFactory,
+    jstring jFilter, jboolean isShuffleExchangeBuildPlan, jstring jOperatorConfig)
 {
     auto probeTypesChars = env->GetStringUTFChars(jProbeTypes, JNI_FALSE);
     auto probeOutputCols = env->GetIntArrayElements(jProbeOutputCols, JNI_FALSE);
@@ -798,7 +800,8 @@ Java_nova_hetu_omniruntime_operator_join_OmniLookupJoinWithExprOperatorFactory_c
     JNI_METHOD_START
     operatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(probeDataTypes,
         probeOutputCols, probeOutputColsCount, probeHashKeysArrExprs, probeHashKeysCount, buildOutputCols,
-        buildOutputColsCount, buildOutputDataTypes, jHashBuilderOperatorFactory, filterExpr, overflowConfig);
+        buildOutputColsCount, buildOutputDataTypes, jHashBuilderOperatorFactory, filterExpr,
+        isShuffleExchangeBuildPlan, overflowConfig);
     JNI_METHOD_END_WITH_MULTI_EXPRS(0L, { filterExpr }, probeHashKeysArrExprs)
     Expr::DeleteExprs({ filterExpr });
     Expr::DeleteExprs(probeHashKeysArrExprs);
