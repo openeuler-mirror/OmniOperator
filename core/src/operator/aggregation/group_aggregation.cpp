@@ -320,6 +320,7 @@ void HashAggregationOperator::MoveEntryArrayTableToHashMap(int64_t minValue)
 
 int32_t HashAggregationOperator::AddInput(VectorBatch *vecBatch)
 {
+    setInputedData(true);
     auto rowCount = vecBatch->GetRowCount();
     if (rowCount <= 0) {
         VectorHelper::FreeVecBatch(vecBatch);
@@ -453,6 +454,9 @@ void HashAggregationOperator::SetVectors(VectorBatch *output, const std::vector<
 
 int32_t HashAggregationOperator::GetOutput(VectorBatch **outputVecBatch)
 {
+    if (!hasInputedData()) {
+        return 0;
+    }
     int32_t expectedBatchSize = 0;
     if (LIKELY(groupByColumnsHandleType == HandleType::serialize)) {
         expectedBatchSize = Output(serialize, outputVecBatch);

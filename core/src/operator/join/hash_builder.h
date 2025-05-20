@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "plannode/planNode.h"
 #include "operator/operator_factory.h"
 #include "operator/operator.h"
 #include "join_hash_table_variants.h"
@@ -28,6 +29,8 @@ public:
         const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
     static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(JoinType joinType, BuildSide buildSide,
         const DataTypes &buildTypes, const int32_t *buildHashCols, int32_t buildHashColsCount, int32_t operatorCount);
+    static HashBuilderOperatorFactory *CreateHashBuilderOperatorFactory(
+        std::shared_ptr<const HashJoinNode> planNode);
     omniruntime::op::Operator *CreateOperator() override;
 
     HashTableVariants *GetHashTablesVariants()

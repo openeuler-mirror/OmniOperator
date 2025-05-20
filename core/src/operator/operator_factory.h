@@ -19,6 +19,11 @@ public:
     {
         return nullptr;
     }
+
+    virtual DataTypes *GetOutputDataTypes()
+    {
+        return nullptr;
+    }
 };
 
 using OperatorType = enum OperatorType {

@@ -24,6 +24,16 @@ SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *ou
       operatorConfig(operatorConfig)
 {}
 
+SortOperatorFactory::SortOperatorFactory(const type::DataTypes &dataTypes, std::vector<int32_t> outputCols,
+    std::vector<int32_t> sortCols, std::vector<int32_t> sortAscendings, std::vector<int32_t> sortNullFirsts,
+    const OperatorConfig &operatorConfig)
+    : sourceTypes(dataTypes),
+      outputCols(outputCols),
+      sortCols(sortCols),
+      sortAscendings(sortAscendings),
+      sortNullFirsts(sortNullFirsts),
+      operatorConfig(operatorConfig) {}
+
 SortOperatorFactory::~SortOperatorFactory() = default;
 
 SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTypes &dataTypes, int32_t *outputCols,
@@ -40,6 +50,19 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTy
 {
     auto pOperatorFactory = new SortOperatorFactory(dataTypes, outputCols, outputColCount, sortCols, sortAscendings,
         sortNullFirsts, sortColCount, operatorConfig);
+    return pOperatorFactory;
+}
+
+SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(std::shared_ptr<const OrderByNode> planNode,
+    const OperatorConfig &config)
+{
+    auto dataTypes = planNode->GetSourceTypes();
+    auto outputCols = planNode->GetOutputCols();
+    auto sortCols = planNode->GetSortCols();
+    auto sortAscending = planNode->GetSortAscending();
+    auto sortNullFirsts = planNode->GetNullFirsts();
+    auto pOperatorFactory = new SortOperatorFactory(*dataTypes.get(), outputCols, sortCols, sortAscending,
+        sortNullFirsts, config);
     return pOperatorFactory;
 }
 
@@ -104,12 +127,25 @@ int32_t SortOperator::AddInput(VectorBatch *vecBatch)
 // return error code
 int32_t SortOperator::GetOutput(VectorBatch **outputVecBatch)
 {
+    if (!noMoreInput_) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
     // input data is empty, or all data has been returned.
     if (totalRowCount == 0 || totalRowCount == rowCountOutputted) {
         pagesIndex->Clear();
-        SetStatus(OMNI_STATUS_FINISHED);
+        if (totalRowCount == 0 && noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+            return 0;
+        }
+        if (totalRowCount == 0) {
+            SetStatus(OMNI_STATUS_NORMAL);
+        } else {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
         return 0;
     }
+
     if (!hasSpill) {
         GetOutputFromMemory(outputVecBatch);
     } else {

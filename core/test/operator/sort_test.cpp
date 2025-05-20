@@ -107,6 +107,7 @@ TEST(NativeOmniSortTest, TestSortPerformance)
     clock_t start = clock();
     auto sortOperator = CreateTestOperator(operatorFactory);
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     while (sortOperator->GetStatus() != OMNI_STATUS_FINISHED) {
         VectorBatch *outputVecBatch = nullptr;
         sortOperator->GetOutput(&outputVecBatch);
@@ -146,6 +147,7 @@ TEST(NativeOmniSortTest, TestSortLongColumn)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -182,6 +184,7 @@ TEST(NativeOmniSortTest, TestSortWithNullFirst)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -256,6 +259,7 @@ TEST(NativeOmniSortTest, TestSortWithNullLast)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -292,6 +296,7 @@ TEST(NativeOmniSortTest, TestSortWithMultiNulls)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -321,6 +326,7 @@ TEST(NativeOmniSortTest, TestSortIntColumnAscSIMD)
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     auto sortOperator = CreateTestOperator(operatorFactory);
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -351,6 +357,7 @@ TEST(NativeOmniSortTest, TestSortIntColumnDescSIMD)
         SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 2);
     auto sortOperator = CreateTestOperator(operatorFactory);
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -391,6 +398,7 @@ TEST(NativeOmniSortTest, TestSortLongColumnAscSIMD)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -436,6 +444,7 @@ TEST(NativeOmniSortTest, TestSortLongColumnDescSIMD)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -609,6 +618,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMDPerformance)
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     auto start = std::chrono::high_resolution_clock::now();
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     auto end = std::chrono::high_resolution_clock::now();
@@ -647,6 +657,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMD)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -694,6 +705,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnDescSIMD)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -736,6 +748,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumn)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -779,6 +792,7 @@ TEST(NativeOmniSortTest, TestSortDuplicatedLongColumn)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     VectorHelper::PrintVecBatch(outputVecBatch);
@@ -809,6 +823,7 @@ TEST(NativeOmniSortTest, TestSortShortColumn)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -848,6 +863,7 @@ TEST(NativeOmniSortTest, TestSortTwoColumnsPerf)
     for (int i = 0; i < VEC_BATCH_COUNT; ++i) {
         sortOperator->AddInput(vecBatches[i]);
     }
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     timer.CalculateElapse();
@@ -909,6 +925,7 @@ void TestOrderBy(struct SortThreadArgs *threadArgs)
     for (int i = 0; i < threadArgs->tableCount; ++i) {
         sortOperator->AddInput(DuplicateVectorBatch(threadArgs->vecBatches[i]));
     }
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1042,6 +1059,7 @@ TEST(NativeOmniSortTest, TestSortTwoVarcharColumn)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1079,6 +1097,7 @@ TEST(NativeOmniSortTest, TestSortTwoCharColumn)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1116,6 +1135,7 @@ TEST(NativeOmniSortTest, TestSortTwoDate32Column)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1153,6 +1173,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal64Column)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1190,6 +1211,7 @@ TEST(NativeOmniSortTest, TestSortTwoDecimal128Column)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1233,6 +1255,7 @@ TEST(NativeOmniSortTest, TestSortTwoDictionaryColumn)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1361,6 +1384,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesAsc)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(sourceVecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1408,6 +1432,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithNulls)
         sortCols, ascendings, nullFirsts, sourceTypesSize);
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(sourceVecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1455,6 +1480,7 @@ TEST(NativeOmniSortTest, TestSortAllTypesWithDictionaryAndNulls)
         sortCols, ascendings, nullFirsts, sourceTypesSize);
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(sourceVecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1496,6 +1522,7 @@ TEST(NativeOmniSortTest, TestSortZeroRowCountInMemory)
     }
 
     sortOperator->AddInput(sourceVecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     EXPECT_EQ(outputVecBatch, nullptr);
@@ -1594,6 +1621,7 @@ TEST(NativeOmniSortTest, TestSortSpillWithDictionaryAndNulls)
     ASSERT_EQ(sortOperator->GetPagesIndex()->GetRowCount(), 0);
     sortOperator->AddInput(sourceVecBatch3);
     ASSERT_EQ(sortOperator->GetPagesIndex()->GetRowCount(), 0);
+    sortOperator->noMoreInput();
 
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
@@ -1655,6 +1683,7 @@ TEST(NativeOmniSortTest, TestSortZeroRowCountInMemoryWithSpill)
     sortOperator->AddInput(sourceVecBatch1);
     sortOperator->AddInput(sourceVecBatch2);
     sortOperator->AddInput(sourceVecBatch3);
+    sortOperator->noMoreInput();
 
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
@@ -1717,6 +1746,7 @@ TEST(NativeOmniSortTest, TestSortSpillWithMemoryThreshold)
     ASSERT_EQ(sortOperator->GetPagesIndex()->GetRowCount(), 0);
     sortOperator->AddInput(sourceVecBatch3);
     ASSERT_EQ(sortOperator->GetPagesIndex()->GetRowCount(), 0);
+    sortOperator->noMoreInput();
 
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
@@ -1778,6 +1808,7 @@ TEST(NativeOmniSortTest, TestSortSpillWithMemoryUnlimit)
     ASSERT_EQ(sortOperator->GetPagesIndex()->GetRowCount(), dataSize * 500 * 2);
     sortOperator->AddInput(sourceVecBatch3);
     ASSERT_EQ(sortOperator->GetPagesIndex()->GetRowCount(), dataSize * 500 * 3);
+    sortOperator->noMoreInput();
 
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
@@ -1829,6 +1860,7 @@ TEST(NativeOmniSortTest, TestSortAscendingWithSpill)
     sortOperator->AddInput(sourceVecBatch2);
     sortOperator->AddInput(sourceVecBatch3);
     sortOperator->AddInput(sourceVecBatch4);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1885,6 +1917,7 @@ TEST(NativeOmniSortTest, TestSortDescendingWithSpill)
     sortOperator->AddInput(sourceVecBatch2);
     sortOperator->AddInput(sourceVecBatch3);
     sortOperator->AddInput(sourceVecBatch4);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1942,6 +1975,7 @@ TEST(NativeOmniSortTest, TestSortAscendingSpillMerge)
     sortOperator->AddInput(sourceVecBatch3);
     sortOperator->AddInput(sourceVecBatch4);
     sortOperator->AddInput(sourceVecBatch5);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -1995,6 +2029,7 @@ TEST(NativeOmniSortTest, TestSortAscendings)
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
 
     sortOperator->AddInput(input);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -2059,6 +2094,7 @@ TEST(NativeOmniSortTest, TestVarcharSortPerformance)
     clock_t start = clock();
     auto sortOperator = CreateTestOperator(operatorFactory);
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -2117,6 +2153,7 @@ TEST(NativeOmniSortTest, DISABLED_TestAllColumnsCanCastToInt64)
     clock_t start = clock();
     auto sortOperator = CreateTestOperator(operatorFactory);
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -2157,6 +2194,7 @@ static void TestInplaceSort(T *sourceData, T *expectData, DataTypes &sourceTypes
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -2236,6 +2274,7 @@ TEST(NativeOmniSortTest, TestInplaceSortWithNullFirst)
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
     sortOperator->AddInput(vectorBatch2);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -2271,6 +2310,7 @@ TEST(NativeOmniSortTest, TestInplaceSortWithNullLast)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
 
@@ -2305,6 +2345,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase0)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -1785730246.200178, -601257107.321106 };
@@ -2337,6 +2378,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase1)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -1785730246.200178, -601257107.321106, -52071258.692677 };
@@ -2370,6 +2412,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase2)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -1785730246.200178, -601257107.321106, -52071258.692677, 863885742.930719 };
@@ -2404,6 +2447,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase3)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -1785730246.200178, -682611980.136355, -682611980.136355, -601257107.321106,
@@ -2439,6 +2483,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase4)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -1785730246.200178, -682611980.136355, -682611980.136355, -601257107.321106,
@@ -2475,6 +2520,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase5)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -45685112558.363,     23.689512254,   226532.362587,
@@ -2512,6 +2558,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase6)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -DBL_MAX,
@@ -2569,6 +2616,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase7)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -DBL_MAX,          -1785730246.200178, -682611980.136355, -682611980.136355,
@@ -2622,6 +2670,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase8)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -DBL_MAX,          -1785730246.200178, -682611980.136355,
@@ -2666,6 +2715,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleAsceCase9)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { -DBL_MAX,           -1787730246.200178, -1786730246.200178,
@@ -2708,6 +2758,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase1)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { 863885742.930719,  402955560.021583,  -52071258.692677,  -601257107.321106,
@@ -2743,6 +2794,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase2)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { 863885742.930719,  402955560.021583,  2355596.356874123, -52071258.692677,
@@ -2779,6 +2831,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase3)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { 235689451232.1178, 11122112.36587, 4556985.556554122562,
@@ -2829,6 +2882,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase4)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { DBL_MAX,           863885742.930719,  402955560.021583,   25658741.36987,
@@ -2871,6 +2925,7 @@ TEST(NativeOmniSortTest, TestSimdSortDoubleDescCase5)
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     sortOperator->AddInput(vecBatch);
+    sortOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     sortOperator->GetOutput(&outputVecBatch);
     double expectData0[dataSize] = { DBL_MAX,
@@ -2938,6 +2993,7 @@ TEST(NativeOmniSortTest, TestSortRadixSort)
 
         auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
         sortOperator->AddInput(vecBatch);
+        sortOperator->noMoreInput();
         VectorBatch *outputVecBatch = nullptr;
         sortOperator->GetOutput(&outputVecBatch);
 

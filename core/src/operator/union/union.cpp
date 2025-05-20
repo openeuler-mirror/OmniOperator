@@ -22,6 +22,14 @@ UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(const typ
     return uOperatorFactory;
 }
 
+UnionOperatorFactory *UnionOperatorFactory::CreateUnionOperatorFactory(std::shared_ptr<const UnionNode> planNode)
+{
+    auto dataTypes = planNode->GetSourceTypes();
+    auto unionOperatorFactory = new UnionOperatorFactory(
+        *dataTypes.get(), (*dataTypes).GetSize(), planNode->IsDistinct());
+    return unionOperatorFactory;
+}
+
 Operator *UnionOperatorFactory::CreateOperator()
 {
     UnionOperator *unionOperator = new UnionOperator(sourceTypes, sourceTypesCount, isDistinct);

@@ -6,6 +6,7 @@
 #define __WINDOW_H__
 
 #include <vector>
+#include "plannode/planNode.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "operator/pages_index.h"
@@ -47,6 +48,9 @@ public:
         int32_t *argumentChannelsField, int32_t argumentChannelsCountField, int32_t *windowFrameTypesField,
         int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
         int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
+
+    static WindowOperatorFactory *CreateWindowOperatorFactory(std::shared_ptr<const WindowNode> planNode,
+        const OperatorConfig &config);
 
     Operator *CreateOperator() override;
 

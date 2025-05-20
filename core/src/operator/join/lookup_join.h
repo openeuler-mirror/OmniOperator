@@ -6,6 +6,7 @@
 #define __LOOKUP_JOIN_H__
 
 #include <memory>
+#include "plannode/planNode.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "operator/filter/filter_and_project.h"
@@ -151,6 +152,8 @@ public:
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
         int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount,
         bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
+    static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
+        HashBuilderOperatorFactory* hashBuilderOperatorFactory, OverflowConfig *overflowConfig);
     Operator *CreateOperator() override;
 
 private:
@@ -184,6 +187,7 @@ public:
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
     OmniStatus Close() override;
+    BlockingReason IsBlocked(ContinueFuture* future) override;
 
 private:
     void InitFirst();

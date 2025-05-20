@@ -110,6 +110,8 @@ public:
     static void DeleteExprs(const std::vector<std::vector<Expr *>> &exprs);
 };
 
+using ExprPtr = std::shared_ptr<Expr>;
+
 class LiteralExpr : public Expr {
 public:
     bool isNull = false;

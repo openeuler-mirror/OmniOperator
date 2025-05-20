@@ -18,6 +18,11 @@ LimitOperatorFactory *LimitOperatorFactory::CreateLimitOperatorFactory(int32_t l
     return new LimitOperatorFactory(limitNum, offsetNum);
 }
 
+LimitOperatorFactory *LimitOperatorFactory::CreateLimitOperatorFactory(std::shared_ptr<const LimitNode> planNode)
+{
+    return new LimitOperatorFactory(planNode->Count(), planNode->Offset());
+}
+
 Operator *LimitOperatorFactory::CreateOperator()
 {
     return new LimitOperator(limit, offset);
@@ -71,12 +76,16 @@ int32_t LimitOperator::GetOutput(VectorBatch **resultVecBatch)
     if (outputVecBatch != nullptr) {
         *resultVecBatch = outputVecBatch;
         outputVecBatch = nullptr;
+        return 0;
     }
 
     if (remainingLimit <= 0) {
         SetStatus(OMNI_STATUS_FINISHED);
+        return 0;
     }
-
+    if (noMoreInput_) {
+        SetStatus(OMNI_STATUS_FINISHED);
+    }
     return 0;
 }
 

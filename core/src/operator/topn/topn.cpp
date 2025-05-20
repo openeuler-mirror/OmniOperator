@@ -24,6 +24,12 @@ TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int
 
 TopNOperatorFactory::~TopNOperatorFactory() = default;
 
+TopNOperatorFactory *TopNOperatorFactory::CreateTopNOperatorFactory(std::shared_ptr<const TopNNode> planNode)
+{
+    // Extract necessary information from planNode and initialize the factory
+    return nullptr;
+}
+
 Operator *TopNOperatorFactory::CreateOperator()
 {
     return new TopNOperator(sourceTypes, limit, offset, sortCols, sortAscendings, sortNullFirsts, sortColCount);

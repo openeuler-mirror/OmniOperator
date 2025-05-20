@@ -15,12 +15,16 @@
 #include "join_hash_table_variants.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
+#include "plannode/planNode.h"
 
 namespace omniruntime {
 namespace op {
 class NestedLoopJoinBuildOperatorFactory : public OperatorFactory {
 public:
     NestedLoopJoinBuildOperatorFactory(DataTypes buildTypes, int32_t *buildOutputCols, int32_t buildOutputColsCount);
+
+    static NestedLoopJoinBuildOperatorFactory *CreateNestedLoopJoinBuildOperatorFactory(
+        std::shared_ptr<const NestedLoopJoinNode> planNode);
 
     ~NestedLoopJoinBuildOperatorFactory() = default;
 
