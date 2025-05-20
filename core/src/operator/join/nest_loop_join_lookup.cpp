@@ -53,6 +53,26 @@ NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNest
         filterPtr, joinedDataTypes, buildOperatorFactoryAddr, overflowConfig);
 }
 
+NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
+    std::shared_ptr<const NestedLoopJoinNode> planNode, NestedLoopJoinBuildOperatorFactory* builderOperatorFactory,
+    OverflowConfig *overflowConfig)
+{
+    auto joinType = planNode->GetJoinType();
+    auto outputTypes = planNode->OutputType();
+    auto filter = new Filter(*planNode->Filter(), *outputTypes, overflowConfig);
+
+    auto buildOutputTypes = planNode->LeftOutputType();
+    auto probeOutputTypes = planNode->RightOutputType();
+    auto probeOutputColsCount = probeOutputTypes->GetSize();
+    std::vector<int32_t> probeOutputCols;
+    for (size_t index = 0; index < probeOutputColsCount; index++) {
+        probeOutputCols.emplace_back(index);
+    }
+
+    return new NestLoopJoinLookupOperatorFactory(joinType, *probeOutputTypes, probeOutputCols.data(),
+        probeOutputColsCount, filter, *outputTypes, (int64_t)builderOperatorFactory, overflowConfig);
+}
+
 Operator *NestLoopJoinLookupOperatorFactory::CreateOperator()
 {
     auto nestedLoopJoinBuilderFactory = reinterpret_cast<NestedLoopJoinBuildOperatorFactory *>(buildOpFactoryAddr);

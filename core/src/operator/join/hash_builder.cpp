@@ -127,6 +127,23 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
         operatorCount);
 }
 
+HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(
+    std::shared_ptr<const HashJoinNode> planNode)
+{
+    // Extract necessary information from planNode
+    auto joinType = planNode->GetJoinType();
+    auto buildTypes = planNode->LeftOutputType();
+
+    auto leftKeysSize = planNode->LeftKeys().size();
+    std::vector<int32_t> buildHashCols;
+    for (size_t index = 0; index < leftKeysSize; index++) {
+        buildHashCols.emplace_back(planNode->LeftKeys()[index]->colVal);
+    }
+
+    auto buildHashColsCount = (int32_t) buildHashCols.size();
+    return new HashBuilderOperatorFactory(joinType, *buildTypes, buildHashCols.data(), buildHashColsCount, 1);
+}
+
 Operator *HashBuilderOperatorFactory::CreateOperator()
 {
     int32_t partitionIndex =
@@ -176,6 +193,7 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
         UpdateGetOutputInfo(hashTableSize);
     }
     SetStatus(OMNI_STATUS_FINISHED);
+    std::visit([&](auto &&arg) { arg.SetStatus(OMNI_STATUS_FINISHED); }, *hashTablesVariants);
     return 0;
 }
 

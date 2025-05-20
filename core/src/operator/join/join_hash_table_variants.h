@@ -9,6 +9,7 @@
 #include <variant>
 #include <vector>
 
+#include "operator/status.h"
 #include "operator/hashmap/crc_hasher.h"
 #include "operator/hashmap/base_hash_map.h"
 #include "operator/hashmap/array_map.h"
@@ -169,6 +170,16 @@ public:
         return buildSide;
     }
 
+    ALWAYS_INLINE void SetStatus(OmniStatus newStatus)
+    {
+        status = newStatus;
+    }
+
+    ALWAYS_INLINE OmniStatus GetStatus() const
+    {
+        return status;
+    }
+
     void BuildHashTable(int32_t partitionIndex);
 
     void Prepare(int32_t partitionIndex);
@@ -266,6 +277,7 @@ private:
     size_t fixedKeysSize = 0;
     size_t sizeOfRowRefList = 0;
     bool isNeedNullKeyTable = false;
+    OmniStatus status = OmniStatus::OMNI_STATUS_NORMAL;
 };
 
 using HashTableVariants =

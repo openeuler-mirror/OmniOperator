@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <memory>
+#include "plannode/planNode.h"
 #include "util/error_code.h"
 #include "operator/operator_factory.h"
 #include "operator/config/operator_config.h"
@@ -24,6 +25,10 @@ public:
         int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount,
         const OperatorConfig &operatorConfig);
 
+    SortOperatorFactory(const type::DataTypes &dataTypes, std::vector<int32_t> outputCols,
+        std::vector<int32_t> sortCols, std::vector<int32_t> sortAscendings, std::vector<int32_t> sortNullFirsts,
+        const OperatorConfig &operatorConfig);
+
     ~SortOperatorFactory() override;
 
     static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols,
@@ -33,6 +38,9 @@ public:
     static SortOperatorFactory *CreateSortOperatorFactory(const type::DataTypes &dataTypes, int32_t *outputCols,
         int32_t outputColCount, int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts,
         int32_t sortColCount, const OperatorConfig &operatorConfig);
+
+    static SortOperatorFactory *CreateSortOperatorFactory(std::shared_ptr<const OrderByNode> planNode,
+        const OperatorConfig &config);
 
     Operator *CreateOperator() override;
 

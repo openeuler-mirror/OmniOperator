@@ -16,7 +16,7 @@
 #include "operator/util/function_type.h"
 #include "operator/join/row_ref.h"
 #include "util/type_util.h"
-#include "src/util/config_util.h"
+#include "util/config_util.h"
 #include "state_flag_operation.h"
 
 namespace omniruntime {

@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <memory>
+#include "plannode/planNode.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "type/data_type_serializer.h"
@@ -20,6 +21,8 @@ public:
 
     static UnionOperatorFactory *CreateUnionOperatorFactory(const type::DataTypes &sourceTypesField,
         int32_t sourceTypesCountField, bool distinct);
+
+    static UnionOperatorFactory *CreateUnionOperatorFactory(std::shared_ptr<const UnionNode> planNode);
 
     Operator *CreateOperator() override;
 

@@ -17,6 +17,7 @@
 #include "operator/operator_factory.h"
 #include "type/data_type.h"
 #include "type/data_types.h"
+#include "nest_loop_join_builder.h"
 
 namespace omniruntime {
 namespace op {
@@ -25,6 +26,11 @@ public:
     static NestLoopJoinLookupOperatorFactory *CreateNestLoopJoinLookupOperatorFactory(JoinType &joinTypePtr,
         DataTypes &probeTypesPtr, int32_t *probeOutputColsPtr, int32_t probeOutputColsCount, Expr *filterExpr,
         int64_t buildOperatorFactoryAddr, OverflowConfig *overflowConfig);
+
+    static NestLoopJoinLookupOperatorFactory *CreateNestLoopJoinLookupOperatorFactory(
+        std::shared_ptr<const NestedLoopJoinNode> planNode,
+        NestedLoopJoinBuildOperatorFactory* builderOperatorFactory,
+        OverflowConfig *overflowConfig);
 
     NestLoopJoinLookupOperatorFactory(JoinType joinType, DataTypes probeTypes, int32_t *probeOutputCols,
         int32_t probeOutputColsCount, Filter *filter, DataTypes joinedTypes, int64_t buildOpFactoryAddr,

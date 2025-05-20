@@ -99,6 +99,13 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
     return operatorFactory;
 }
 
+WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(std::shared_ptr<const WindowNode> planNode,
+    const OperatorConfig &config)
+{
+    // Extract necessary information from the planNode
+    return nullptr;
+}
+
 Operator *WindowOperatorFactory::CreateOperator()
 {
     auto windowOperator = new WindowOperator(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,

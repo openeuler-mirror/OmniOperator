@@ -102,6 +102,42 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     return pOperatorFactory;
 }
 
+LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
+    std::shared_ptr<const HashJoinNode> planNode,
+    HashBuilderOperatorFactory *hashBuilderOperatorFactory,
+    OverflowConfig *overflowConfig)
+{
+    // Extract necessary information from planNode
+    auto buildOutputTypes = planNode->LeftOutputType();
+    auto buildOutputColsCount = buildOutputTypes->GetSize();
+    std::vector<int32_t> buildOutputCols;
+    for (size_t index = 0; index < buildOutputColsCount; index++) {
+        buildOutputCols.emplace_back(index);
+    }
+
+    auto probeOutputTypes = planNode->RightOutputType();
+    auto probeOutputColsCount = probeOutputTypes->GetSize();
+    std::vector<int32_t> probeOutputCols;
+    for (size_t index = 0; index < probeOutputColsCount; index++) {
+        probeOutputCols.emplace_back(index);
+    }
+
+    std::vector<int32_t> probeHashCols;
+    for (const auto& key : planNode->RightKeys()) {
+        probeHashCols.emplace_back(key->colVal);
+    }
+    auto probeHashColsCount = (int32_t) probeHashCols.size();
+
+    auto filter = planNode->Filter();
+    auto isShuffle = planNode->IsShuffle();
+
+    return new LookupJoinOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount,
+                                         probeHashCols.data(), probeHashColsCount, buildOutputCols.data(),
+                                         buildOutputColsCount, *buildOutputTypes,
+                                         hashBuilderOperatorFactory->GetHashTablesVariants(),
+                                         filter.get(), isShuffle, overflowConfig);
+}
+
 Operator *LookupJoinOperatorFactory::CreateOperator()
 {
     auto pLookupJoinOperator = new LookupJoinOperator(probeTypes, probeOutputCols, probeHashCols, probeHashColTypes,
@@ -191,6 +227,15 @@ LookupJoinOperator::~LookupJoinOperator()
     delete[] lengths;
     delete[] probeFilterTypeIds;
     delete[] buildFilterTypeIds;
+}
+
+BlockingReason LookupJoinOperator::IsBlocked(ContinueFuture* future)
+{
+    OmniStatus tableStatus = std::visit([&](auto&& arg) { return arg.GetStatus(); }, *hashTables);
+    if (tableStatus == OmniStatus::OMNI_STATUS_NORMAL) {
+        return BlockingReason::kWaitForJoinBuild;
+    }
+    return BlockingReason::kNotBlocked;
 }
 
 void LookupJoinOperator::PrepareCurrentProbe()

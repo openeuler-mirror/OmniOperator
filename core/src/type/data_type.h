@@ -47,6 +47,12 @@ enum DataTypeId {
     OMNI_VARCHAR = 15,
     OMNI_CHAR = 16,
     OMNI_CONTAINER = 17,
+    OMNI_ARRAY = 30,
+    OMNI_MAP = 31,
+    OMNI_ROW = 32,
+    OMNI_UNKNOWN = 33,
+    OMNI_FUNCTION = 34,
+    OMNI_OPAQUE = 35,
     OMNI_INVALID
 };
 

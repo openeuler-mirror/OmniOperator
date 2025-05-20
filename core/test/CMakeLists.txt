@@ -6,7 +6,9 @@ if (DEFINED ENABLE_DT AND ENABLE_DT STREQUAL "ON")
     add_subdirectory(dt)
 else ()
     # configure
+    add_subdirectory(compute)
     add_subdirectory(operator)
+    add_subdirectory(plannode)
     add_subdirectory(util)
     add_subdirectory(vector)
     add_subdirectory(function)
@@ -30,6 +32,8 @@ endif ()
             typetest
             codegentest
             simdtest
+            planNodeTest
+            computeTest
             )
 
     # find gtest package

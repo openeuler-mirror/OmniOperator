@@ -7,16 +7,20 @@
 
 #include <exception>
 #include <iostream>
+#include "format.h"
 #include "trace_util.h"
 #include "debug.h"
 
-namespace omniruntime {
-namespace exception {
+namespace omniruntime::exception {
 class OmniException : public std::exception {
 public:
     OmniException(const std::string &errorCode, const std::string &message) : errorCode(errorCode), message(message) {}
 
     OmniException(const char *errorCode, const char *message) : errorCode(errorCode), message(message) {}
+
+    OmniException(const char *message) : errorCode("RUNTIME_ERROR:"), message(message) {}
+
+    OmniException(const std::string &message) : errorCode("RUNTIME_ERROR:"), message(message) {}
 
     const char *what() const noexcept override
     {
@@ -36,6 +40,18 @@ private:
     std::string message;
     mutable std::string elaborateMessage;
 };
-} // namespace omniruntime
-} // namespace exception
+}
+
+#define OMNI_THROW(errorCode, ...)                                                                                 \
+    do {                                                                                                           \
+        throw omniruntime::exception::OmniException(errorCode, omniruntime::Format(__VA_ARGS__)); \
+    } while (0)
+
+#define OMNI_CHECK(expr, errMessage)                                           \
+    do {                                                                         \
+        if (UNLIKELY(!(expr))) {                                                   \
+            throw omniruntime::exception::OmniException("CHECK_ERROR:", errMessage); \
+        }                                                                          \
+    } while (0)
+
 #endif // OMNI_RUNTIME_OMNI_EXCEPTION_H

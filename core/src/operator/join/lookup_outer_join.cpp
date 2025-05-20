@@ -33,6 +33,28 @@ LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOute
     return pOperatorFactory;
 }
 
+LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
+    std::shared_ptr<const HashJoinNode> planNode, HashBuilderOperatorFactory* hashBuilderOperatorFactory,
+    OverflowConfig *overflowConfig)
+{
+    auto buildOutputTypes = planNode->LeftOutputType();
+    auto buildOutputColsCount = buildOutputTypes->GetSize();
+    std::vector<int32_t> buildOutputCols;
+    for (size_t index = 0; index < buildOutputColsCount; index++) {
+        buildOutputCols.emplace_back(index);
+    }
+
+    auto probeOutputTypes = planNode->RightOutputType();
+    auto probeOutputColsCount = probeOutputTypes->GetSize();
+    std::vector<int32_t> probeOutputCols;
+    for (size_t index = 0; index < probeOutputColsCount; index++) {
+        probeOutputCols.emplace_back(index);
+    }
+
+    return new LookupOuterJoinOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount,
+        buildOutputCols.data(), *buildOutputTypes, hashBuilderOperatorFactory->GetHashTablesVariants());
+}
+
 Operator *LookupOuterJoinOperatorFactory::CreateOperator()
 {
     auto probeOutputType = std::vector<type::DataTypePtr>();

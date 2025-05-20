@@ -15,6 +15,18 @@ NestedLoopJoinBuildOperatorFactory::NestedLoopJoinBuildOperatorFactory(DataTypes
       buildOutputCols(std::vector<int32_t>(buildOutputCols, buildOutputCols + buildOutputColsCount))
 {}
 
+NestedLoopJoinBuildOperatorFactory *NestedLoopJoinBuildOperatorFactory::CreateNestedLoopJoinBuildOperatorFactory(
+    std::shared_ptr<const NestedLoopJoinNode> planNode)
+{
+    auto buildOutputTypes = planNode->LeftOutputType();
+    auto buildOutputColsCount = buildOutputTypes->GetSize();
+    std::vector<int32_t> buildOutputCols;
+    for (size_t index = 0; index < buildOutputColsCount; index++) {
+        buildOutputCols.emplace_back(index);
+    }
+    return new NestedLoopJoinBuildOperatorFactory(*buildOutputTypes, buildOutputCols.data(), buildOutputColsCount);
+}
+
 VectorBatch *NestedLoopJoinBuildOperatorFactory::GetBuildVectorBatch()
 {
     return this->vectorBatch.get();

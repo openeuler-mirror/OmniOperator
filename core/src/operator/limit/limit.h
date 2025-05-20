@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <memory>
+#include "plannode/planNode.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "type/data_type_serializer.h"
@@ -19,6 +20,8 @@ public:
     ~LimitOperatorFactory() override;
 
     static LimitOperatorFactory *CreateLimitOperatorFactory(int32_t limitNum, int32_t offsetNum);
+
+    static LimitOperatorFactory *CreateLimitOperatorFactory(std::shared_ptr<const LimitNode> planNode);
 
     Operator *CreateOperator() override;
 

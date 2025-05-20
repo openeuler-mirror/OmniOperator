@@ -12,10 +12,12 @@
 #include "vector/vector_batch.h"
 #include "vector/vector_helper.h"
 #include "metrics/metrics.h"
+#include "compute/reason.h"
 
 namespace omniruntime {
 namespace op {
 using namespace omniruntime::vec;
+using namespace omniruntime::compute;
 class Operator {
 public:
     Operator()
@@ -104,10 +106,46 @@ public:
         inputVecBatch = nullptr;
     }
 
+    virtual BlockingReason IsBlocked(ContinueFuture* future)
+    {
+        return BlockingReason::kNotBlocked;
+    }
+
+    virtual void noMoreInput()
+    {
+        noMoreInput_ = true;
+    }
+
+    void setNoMoreInput(bool noMoreInput)
+    {
+        noMoreInput_ = noMoreInput;
+    }
+
+    bool needsInput()
+    {
+        return status != OMNI_STATUS_FINISHED && !noMoreInput_;
+    }
+
+    bool isFinished()
+    {
+        return status == OMNI_STATUS_FINISHED;
+    }
+
+    bool hasInputedData()
+    {
+        return hasInputedData_;
+    }
+
+    void setInputedData(bool hasInputedData)
+    {
+        this->hasInputedData_ = hasInputedData;
+    };
+
 protected:
     int32_t *sourceTypes;
     std::unique_ptr<ExecutionContext> executionContext;
     vec::VectorBatch *inputVecBatch = nullptr;
+    bool noMoreInput_{true};
 
     void UpdateAddInputInfo(int32_t rowCount)
     {
@@ -160,6 +198,9 @@ protected:
 private:
     OmniStatus status;
     Metrics metrics;
+
+    // for pipeline
+    bool hasInputedData_{false};
 };
 }
 }

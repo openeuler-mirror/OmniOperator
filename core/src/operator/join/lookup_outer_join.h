@@ -25,6 +25,9 @@ public:
     static LookupOuterJoinOperatorFactory *CreateLookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
         const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr);
+    static LookupOuterJoinOperatorFactory *CreateLookupOuterJoinOperatorFactory(
+        std::shared_ptr<const HashJoinNode> planNode,
+        HashBuilderOperatorFactory* hashBuilderOperatorFactory, OverflowConfig *overflowConfig);
     Operator *CreateOperator() override;
 
 private:

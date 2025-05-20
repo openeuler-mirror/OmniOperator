@@ -7,7 +7,7 @@
 #define OMNI_RUNTIME_MEMORY_INFO_H
 #include "type/data_types.h"
 #include "unistd.h"
-#include "src/memory/thread_memory_manager.h"
+#include "memory/thread_memory_manager.h"
 namespace omniruntime {
 namespace op {
 class MetricsMemoryInfo {

@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include "unordered_set"
+#include "plannode/planNode.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "vector/vector_batch.h"
@@ -70,6 +71,8 @@ public:
         int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
 
     ~TopNOperatorFactory() override;
+
+    static TopNOperatorFactory *CreateTopNOperatorFactory(std::shared_ptr<const TopNNode> planNode);
 
     Operator *CreateOperator() override;
 

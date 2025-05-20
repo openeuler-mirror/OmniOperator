@@ -7,20 +7,11 @@
 #define __COMMON_JOIN_H__
 
 #include <cstdint>
+#include "plannode/planFragment.h"
 
 namespace omniruntime {
 namespace op {
 constexpr int32_t DEFAULT_ROW_SIZE = sizeof(int32_t);
-
-enum JoinType {
-    OMNI_JOIN_TYPE_INNER = 0,
-    OMNI_JOIN_TYPE_LEFT,
-    OMNI_JOIN_TYPE_RIGHT,
-    OMNI_JOIN_TYPE_FULL,
-    OMNI_JOIN_TYPE_LEFT_SEMI,
-    OMNI_JOIN_TYPE_LEFT_ANTI,
-    OMNI_JOIN_TYPE_EXISTENCE
-};
 
 enum BuildSide {
     OMNI_BUILD_UNKNOWN = 0,
