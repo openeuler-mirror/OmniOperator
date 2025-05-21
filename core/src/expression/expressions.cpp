@@ -9,6 +9,8 @@
 #include "type/data_type.h"
 #include "codegen/func_registry.h"
 #include "util/type_util.h"
+#include "expr_verifier.h"
+#include "expr_printer.h"
 
 using namespace std;
 using namespace omniruntime::type;
@@ -16,6 +18,11 @@ using namespace omniruntime::codegen;
 
 namespace omniruntime {
 namespace expressions {
+
+// Prevent ExprVerifier from being optimized out by the compiler.
+static ExprVerifier globalExprVerifier;
+static ExprPrinter globalExprPrinter;
+
 bool IsNullLiteral(const std::string &value)
 {
     const std::string loweredNullValue = "null";

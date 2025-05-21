@@ -249,6 +249,43 @@ using TimestampDataType = FixedWidthDataType<OMNI_TIMESTAMP>;
 using InvalidDataType = FixedWidthDataType<OMNI_INVALID>;
 using NoneDataType = FixedWidthDataType<OMNI_NONE>;
 
+class RowType : public DataType {
+public:
+    RowType(std::vector<std::shared_ptr<DataType>> &types): DataType(OMNI_ROW), children(std::move(types)) {}
+
+    bool operator ==(const DataType &right) const override
+    {
+        if (&right == this) {
+            return true;
+        }
+        auto otherTyped = reinterpret_cast<const RowType*>(&right);
+        if (otherTyped->Size() != Size()) {
+            return false;
+        }
+        for (size_t i = 0; i < Size(); ++i) {
+            if (children[i] != otherTyped->children[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    size_t Size() const
+    {
+        return children.size();
+    }
+
+    const std::vector<std::shared_ptr<DataType>> &Children() const
+    {
+        return children;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override {}
+
+protected:
+    const std::vector<std::shared_ptr<DataType>> children;
+};
+
 class DecimalDataType : public DataType {
 public:
     int32_t GetPrecision() const

@@ -15,6 +15,12 @@ bool ExprVerifier::VisitExpr(const Expr &e)
     return this->supportedFlag;
 }
 
+bool ExprVerifier::VisitExpr(const std::shared_ptr<const Expr> &e)
+{
+    e->Accept(*this);
+    return this->supportedFlag;
+}
+
 bool ExprVerifier::AreInvalidDataTypes(DataTypeId type1, DataTypeId type2)
 {
     return type1 != type2 && !(TypeUtil::IsStringType(type1) && TypeUtil::IsStringType(type2)) &&
@@ -258,7 +264,7 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
 
 void ExprVerifier::Visit(const SwitchExpr &switchExpr)
 {
-    std::vector<std::pair<Expr *, Expr *>> whenClause = switchExpr.whenClause;
+    std::vector<std::pair<Expr*, Expr*>> whenClause = switchExpr.whenClause;
     auto size = whenClause.size();
 
     for (size_t i = 0; i < size; i++) {

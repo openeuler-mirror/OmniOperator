@@ -7,8 +7,7 @@
 
 #include "expression/expr_visitor.h"
 
-namespace omniruntime {
-namespace expressions {
+namespace omniruntime::expressions {
 class ExprVerifier : public ExprVisitor {
 public:
     void Visit(const omniruntime::expressions::LiteralExpr &literalExpr) override;
@@ -23,12 +22,12 @@ public:
     void Visit(const omniruntime::expressions::FuncExpr &funcExpr) override;
     void Visit(const omniruntime::expressions::SwitchExpr &switchExpr) override;
     bool VisitExpr(const omniruntime::expressions::Expr &e);
+    bool VisitExpr(const std::shared_ptr<const Expr> &e);
 
 private:
     bool supportedFlag = false;
     static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
 };
-}
 }
 
 #endif // OMNI_RUNTIME_EXPR_VERIFIER_H
