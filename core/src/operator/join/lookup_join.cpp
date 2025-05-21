@@ -408,7 +408,9 @@ int32_t LookupJoinOperator::AddInput(VectorBatch *vecBatch)
 int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (curInputBatch == nullptr) {
-        SetStatus(OMNI_STATUS_FINISHED);
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
         return 0;
     }
 

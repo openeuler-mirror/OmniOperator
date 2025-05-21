@@ -173,6 +173,10 @@ int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
 
 int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
+    if (!noMoreInput_) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
     std::visit(
         [&](auto &&arg) {
             arg.Prepare(partitionIndex);
