@@ -22,12 +22,24 @@ TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int
     this->sortNullFirsts.insert(this->sortNullFirsts.end(), sortNullFirsts, sortNullFirsts + sortColCount);
 }
 
+TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t limit, int32_t offset,
+                                         std::vector<int32_t> sortCols, std::vector<int32_t> sortAscendings, std::vector<int32_t> sortNullFirsts, int32_t sortColCount)
+    : sourceTypes(sourceTypes), limit(limit), offset(offset), sortCols(sortCols),
+      sortAscendings(sortAscendings), sortNullFirsts(sortNullFirsts), sortColCount(sortColCount) {}
+
 TopNOperatorFactory::~TopNOperatorFactory() = default;
 
 TopNOperatorFactory *TopNOperatorFactory::CreateTopNOperatorFactory(std::shared_ptr<const TopNNode> planNode)
 {
-    // Extract necessary information from planNode and initialize the factory
-    return nullptr;
+    auto dataTypes = planNode->GetSourceTypes();
+    int32_t cnt = planNode->Count();
+    auto sortCols = planNode->GetSortCols();
+    auto sortAscending = planNode->GetSortAscending();
+    auto sortNullFirsts = planNode->GetNullFirsts();
+    size_t sortColCnt = sortCols.size();
+    auto pOperatorFactory = new TopNOperatorFactory(*dataTypes.get(), cnt, 0, sortCols, sortAscending,
+                                                    sortNullFirsts, sortColCnt);
+    return pOperatorFactory;
 }
 
 Operator *TopNOperatorFactory::CreateOperator()
@@ -269,6 +281,10 @@ void TopNOperator::FillResultVectorBatchList()
 
 int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
 {
+    if (!noMoreInput_) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
     if (!hasFilledResult) {
         if (pq.empty()) {
             SetStatus(OMNI_STATUS_FINISHED);
