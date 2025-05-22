@@ -70,6 +70,9 @@ public:
     TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t limit, int32_t offset,
         int32_t *sortCols, int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortColCount);
 
+    TopNOperatorFactory(const type::DataTypes &sourceTypes, int32_t limit, int32_t offset,
+                        std::vector<int32_t> sortCols, std::vector<int32_t> sortAscendings, std::vector<int32_t> sortNullFirsts, int32_t sortColCount);
+
     ~TopNOperatorFactory() override;
 
     static TopNOperatorFactory *CreateTopNOperatorFactory(std::shared_ptr<const TopNNode> planNode);

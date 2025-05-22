@@ -580,25 +580,42 @@ class TopNNode : public PlanNode {
 public:
     TopNNode(
         const PlanNodeId &id,
-        const std::vector<std::shared_ptr<FieldExpr>> &sortingKeys,
-        const std::vector<SortOrder> &sortingOrders,
+        const std::vector<int32_t> &sortCols,
+        const std::vector<int32_t> &sortAscending,
+        const std::vector<int32_t> &sortNullFirsts,
         int32_t count,
-        bool isPartial,
-        const PlanNodePtr &source);
+        const PlanNodePtr &source)
+        : PlanNode(id),
+        sourceTypes(source->OutputType()),
+        sortCols(sortCols),
+        sortAscending(sortAscending),
+        sortNullFirsts(sortNullFirsts),
+        count(count),
+        sources({source}) {}
 
-    const std::vector<std::shared_ptr<FieldExpr>> &SortingKeys() const
+    const std::vector<int32_t> &GetSortCols() const
     {
-        return sortingKeys;
+        return sortCols;
     }
 
-    const std::vector<SortOrder> &SortingOrders() const
+    const std::vector<int32_t> &GetSortAscending() const
     {
-        return sortingOrders;
+        return sortAscending;
+    }
+
+    const std::vector<int32_t> &GetNullFirsts() const
+    {
+        return sortNullFirsts;
     }
 
     const DataTypesPtr &OutputType() const override
     {
         return sources[0]->OutputType();
+    }
+
+    const DataTypesPtr &GetSourceTypes() const
+    {
+        return sourceTypes;
     }
 
     const std::vector<PlanNodePtr> &Sources() const override
@@ -611,21 +628,17 @@ public:
         return count;
     }
 
-    bool IsPartial() const
-    {
-        return isPartial;
-    }
-
     std::string_view Name() const override
     {
         return "TopN";
     }
 
 private:
-    const std::vector<std::shared_ptr<FieldExpr>> sortingKeys;
-    const std::vector<SortOrder> sortingOrders;
+    const DataTypesPtr sourceTypes;
+    const std::vector<int32_t> sortCols;
+    const std::vector<int32_t> sortAscending;
+    const std::vector<int32_t> sortNullFirsts;
     const int32_t count;
-    const bool isPartial;
     const std::vector<PlanNodePtr> sources;
 };
 
