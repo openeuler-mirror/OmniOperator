@@ -21,19 +21,19 @@ BlockingState::BlockingState(
     numBlockdDrivers_++;
 }
 
-vec::VectorBatch *OmniDriver::Next(ContinueFuture *future)
+vec::VectorBatch *OmniDriver::Next(ContinueFuture *future, StopReason *stopReason)
 {
     auto self = shared_from_this();
     std::shared_ptr<BlockingState> blockingState;
     vec::VectorBatch *result = nullptr;
-    const auto stop = RunInternal(self, blockingState, &result);
+    *stopReason = RunInternal(self, blockingState, &result);
 
     if (blockingState != nullptr) {
         *future = blockingState->Future();
         return nullptr;
     }
 
-    if (stop == StopReason::kPause) {
+    if (*stopReason == StopReason::kPause) {
         return nullptr;
     }
 
@@ -44,6 +44,17 @@ void OmniDriver::init(std::vector<std::unique_ptr<omniruntime::op::Operator>> op
 {
     operators_ = std::move(operators);
     curOperatorId_ = 0;
+}
+
+void OmniDriver::close()
+{
+    if (closed_) {
+        return;
+    }
+    for (auto &op : operators_) {
+        op->Close();
+    }
+    closed_ = true;
 }
 
 StopReason OmniDriver::RunInternal(
@@ -103,6 +114,7 @@ StopReason OmniDriver::RunInternal(
                     bool finished{false};
                     finished = op->isFinished();
                     if (finished) {
+                        close();
                         return StopReason::kAtEnd;
                     }
                 }
