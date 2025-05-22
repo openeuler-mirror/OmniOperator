@@ -121,7 +121,7 @@ StopReason OmniDriver::RunInternal(
             }
         }
     } catch (const std::exception &e) {
-        return StopReason::kAlreadyTerminated;
+        throw std::runtime_error(e.what());
     }
 }
 

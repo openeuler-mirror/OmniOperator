@@ -23,7 +23,7 @@ void planDetail(
     const std::shared_ptr<const PlanNode>& planNode,
     std::vector<OperatorFactory*>* currentOperatorFactories,
     std::vector<std::unique_ptr<DriverFactory>>* driverFactories,
-    OperatorConfig& operatorConfig)
+    const config::QueryConfig& queryConfig)
 {
     OperatorFactory* factory = nullptr;
     if (!currentOperatorFactories) {
@@ -40,14 +40,14 @@ void planDetail(
                 sources[i],
                 MustStartNewPipeline(i) ? nullptr : currentOperatorFactories,
                 driverFactories,
-                operatorConfig);
+                queryConfig);
         }
     }
 
     if (auto orderByNode = std::dynamic_pointer_cast<const OrderByNode>(planNode)) {
-        factory = SortOperatorFactory::CreateSortOperatorFactory(orderByNode, operatorConfig);
+        factory = SortOperatorFactory::CreateSortOperatorFactory(orderByNode, queryConfig);
     } else if (auto windowNode = std::dynamic_pointer_cast<const WindowNode>(planNode)) {
-        factory = WindowOperatorFactory::CreateWindowOperatorFactory(windowNode, operatorConfig);
+        factory = WindowOperatorFactory::CreateWindowOperatorFactory(windowNode, queryConfig);
     } else if (auto topNNode = std::dynamic_pointer_cast<const TopNNode>(planNode)) {
         factory = TopNOperatorFactory::CreateTopNOperatorFactory(topNNode);
     } else if (auto limitNode = std::dynamic_pointer_cast<const LimitNode>(planNode)) {
@@ -59,7 +59,7 @@ void planDetail(
         auto hashBuilderOperatorFactory =
             HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
         factory =
-            LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, nullptr);
+            LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
         auto builderFactories = &driverFactories->back()->operatorFactories;
         builderFactories->emplace_back(hashBuilderOperatorFactory);
     } else if (auto valueStreamNode = std::dynamic_pointer_cast<const ValueStreamNode>(planNode)) {
@@ -75,13 +75,13 @@ void planDetail(
 void LocalPlanner::plan(
     const PlanFragment& fragment,
     std::vector<std::unique_ptr<DriverFactory>>* driverFactories,
-    OperatorConfig& operatorConfig,
+    const config::QueryConfig& queryConfig,
     uint32_t maxDrivers)
 {
     planDetail(fragment.planNode,
         nullptr,
         driverFactories,
-        operatorConfig);
+        queryConfig);
     (*driverFactories)[0]->outputDriver = true;
 
     // Determine the number of drivers for each pipeline

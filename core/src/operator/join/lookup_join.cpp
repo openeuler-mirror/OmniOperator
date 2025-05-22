@@ -103,9 +103,8 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
 }
 
 LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-    std::shared_ptr<const HashJoinNode> planNode,
-    HashBuilderOperatorFactory *hashBuilderOperatorFactory,
-    OverflowConfig *overflowConfig)
+    std::shared_ptr<const HashJoinNode> planNode, HashBuilderOperatorFactory *hashBuilderOperatorFactory,
+    const config::QueryConfig &queryConfig)
 {
     // Extract necessary information from planNode
     auto buildOutputTypes = planNode->LeftOutputType();
@@ -131,6 +130,9 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     auto filter = planNode->Filter();
     auto isShuffle = planNode->IsShuffle();
 
+    auto overflowConfig = queryConfig.IsOverFlowASNull()
+                              ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                              : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     return new LookupJoinOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount,
                                          probeHashCols.data(), probeHashColsCount, buildOutputCols.data(),
                                          buildOutputColsCount, *buildOutputTypes,

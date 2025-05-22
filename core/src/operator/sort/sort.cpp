@@ -54,15 +54,19 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTy
 }
 
 SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(std::shared_ptr<const OrderByNode> planNode,
-    const OperatorConfig &config)
+    const config::QueryConfig &queryConfig)
 {
+    auto spillConfig = planNode->CanSpill(queryConfig)
+                           ? SpillConfig(SPILL_CONFIG_SPARK, true, queryConfig.SpillDir(), queryConfig.maxSpillBytes())
+                           : SpillConfig();
+    OperatorConfig operatorConfig(spillConfig);
     auto dataTypes = planNode->GetSourceTypes();
     auto outputCols = planNode->GetOutputCols();
     auto sortCols = planNode->GetSortCols();
     auto sortAscending = planNode->GetSortAscending();
     auto sortNullFirsts = planNode->GetNullFirsts();
     auto pOperatorFactory = new SortOperatorFactory(*dataTypes.get(), outputCols, sortCols, sortAscending,
-        sortNullFirsts, config);
+        sortNullFirsts, operatorConfig);
     return pOperatorFactory;
 }
 

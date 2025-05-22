@@ -10,6 +10,7 @@
 #include "format.h"
 #include "trace_util.h"
 #include "debug.h"
+#include "util/compiler_util.h"
 
 namespace omniruntime::exception {
 class OmniException : public std::exception {
@@ -47,11 +48,11 @@ private:
         throw omniruntime::exception::OmniException(errorCode, omniruntime::Format(__VA_ARGS__)); \
     } while (0)
 
-#define OMNI_CHECK(expr, errMessage)                                           \
-    do {                                                                         \
-        if (UNLIKELY(!(expr))) {                                                   \
+#define OMNI_CHECK(expr, errMessage)                                                 \
+    do {                                                                             \
+        if (__builtin_expect(!(expr), 0)) {                                           \
             throw omniruntime::exception::OmniException("CHECK_ERROR:", errMessage); \
-        }                                                                          \
+        }                                                                            \
     } while (0)
 
 #endif // OMNI_RUNTIME_OMNI_EXCEPTION_H

@@ -9,9 +9,9 @@
 #include "type/data_types.h"
 #include "operator/config/operator_config.h"
 #include "expression/expressions.h"
+#include "util/config/QueryConfig.h"
 
 namespace omniruntime {
-
 using namespace type;
 using namespace op;
 using namespace expressions;
@@ -74,6 +74,13 @@ public:
         return id;
     }
 
+    /// Returns true if this plan node operator is spillable and 'queryConfig' has
+    /// enabled it.
+    virtual bool CanSpill(const config::QueryConfig &queryConfig) const
+    {
+        return false;
+    }
+
     virtual const std::vector<std::shared_ptr<const PlanNode>> &Sources() const = 0;
 
 private:
@@ -84,17 +91,10 @@ using PlanNodePtr = std::shared_ptr<const PlanNode>;
 
 class OrderByNode : public PlanNode {
 public:
-    OrderByNode(const PlanNodeId &id,
-        const std::vector<int32_t> &sortCols,
-        const std::vector<int32_t> &sortAscending,
-        const std::vector<int32_t> &sortNullFirsts,
-        const PlanNodePtr &source)
-        : PlanNode(id),
-          sourceTypes(source->OutputType()),
-          sortCols(sortCols),
-          sortAscending(sortAscending),
-          sortNullFirsts(sortNullFirsts),
-          sources({source})
+    OrderByNode(const PlanNodeId &id, const std::vector<int32_t> &sortCols, const std::vector<int32_t> &sortAscending,
+        const std::vector<int32_t> &sortNullFirsts, const PlanNodePtr &source)
+        : PlanNode(id), sourceTypes(source->OutputType()), sortCols(sortCols), sortAscending(sortAscending),
+        sortNullFirsts(sortNullFirsts), sources({source})
     {
         outputCols.reserve(sourceTypes->GetSize());
         for (int i = 0; i < sourceTypes->GetSize(); ++i) {
@@ -139,6 +139,11 @@ public:
         return sortNullFirsts;
     }
 
+    bool CanSpill(const config::QueryConfig &queryConfig) const override
+    {
+        return queryConfig.orderBySpillEnabled();
+    }
+
     std::string_view Name() const override
     {
         return "OrderBy";
@@ -156,12 +161,8 @@ private:
 
 class FilterNode : public PlanNode {
 public:
-    FilterNode(const PlanNodeId &id,
-        ExprPtr filter,
-        PlanNodePtr source)
-        : PlanNode(id),
-          sources{std::move(source)},
-          filter(std::move(filter)) {}
+    FilterNode(const PlanNodeId &id, ExprPtr filter, PlanNodePtr source)
+        : PlanNode(id), sources{std::move(source)}, filter(std::move(filter)) {}
 
     ~FilterNode() override = default;
 
@@ -205,8 +206,7 @@ public:
 
     AggregationNode(PlanNodePtr source, std::vector<uint32_t> &funcTypesVector,
         std::vector<std::vector<uint32_t>> &inputColsVector, std::vector<uint32_t> &maskColsVector,
-        std::vector<DataTypes> &outputTypes, std::vector<bool> inputRaws,
-        Step step);
+        std::vector<DataTypes> &outputTypes, std::vector<bool> inputRaws, Step step);
 
     ~AggregationNode() override = default;
 
@@ -237,26 +237,14 @@ class WindowNode : public PlanNode {
 public:
     enum class WindowType { K_RANGE, K_ROWS };
 
-    WindowNode(PlanNodeId id,
-        std::vector<int32_t> outputCols,
-        std::vector<int32_t> windowFunctionTypes,
-        std::vector<int32_t> partitionCols,
-        int32_t partitionCount,
-        std::vector<int32_t> &preGroupedCols,
-        int32_t preGroupedCount,
-        std::vector<int32_t> &sortCols,
-        std::vector<int32_t> &sortAscending,
-        std::vector<int32_t> &sortNullFirsts,
-        int32_t sortColCount, int32_t preSortedChannelPrefix,
-        int32_t expectedPositionsCount,
-        DataTypes &allTypes,
-        std::vector<int32_t> &argumentChannels,
-        int32_t argumentChannelsCount,
-        const std::vector<int32_t> &windowFrameTypes,
-        const std::vector<int32_t> &windowFrameStartTypes,
-        const std::vector<int32_t> &windowFrameStartChannels,
-        const std::vector<int32_t> &windowFrameEndTypes,
-        const std::vector<int32_t> &windowFrameEndChannels);
+    WindowNode(PlanNodeId id, std::vector<int32_t> outputCols, std::vector<int32_t> windowFunctionTypes,
+        std::vector<int32_t> partitionCols, int32_t partitionCount, std::vector<int32_t> &preGroupedCols,
+        int32_t preGroupedCount, std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscending,
+        std::vector<int32_t> &sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
+        int32_t expectedPositionsCount, DataTypes &allTypes, std::vector<int32_t> &argumentChannels,
+        int32_t argumentChannelsCount, const std::vector<int32_t> &windowFrameTypes,
+        const std::vector<int32_t> &windowFrameStartTypes, const std::vector<int32_t> &windowFrameStartChannels,
+        const std::vector<int32_t> &windowFrameEndTypes, const std::vector<int32_t> &windowFrameEndChannels);
 
     ~WindowNode() override = default;
 
@@ -296,24 +284,12 @@ enum JoinType {
 /// class for specific join implementations, e.g. hash and merge joins.
 class AbstractJoinNode : public PlanNode {
 public:
-    AbstractJoinNode(
-        const PlanNodeId &id,
-        JoinType joinType,
-        const std::vector<std::shared_ptr<FieldExpr>> &leftKeys_,
-        const std::vector<std::shared_ptr<FieldExpr>> &rightKeys_,
-        std::shared_ptr<Expr> filter_,
-        PlanNodePtr left_,
-        PlanNodePtr right_,
-        DataTypesPtr leftOutputType_,
-        DataTypesPtr rightOutputType_)
-        : PlanNode(id),
-          joinType(joinType),
-          leftKeys(leftKeys_),
-          rightKeys(rightKeys_),
-          filter(std::move(filter_)),
-          sources({std::move(left_), std::move(right_)}),
-          leftOutputType(std::move(leftOutputType_)),
-          rightOutputType(std::move(rightOutputType_)) {}
+    AbstractJoinNode(const PlanNodeId &id, JoinType joinType, const std::vector<std::shared_ptr<FieldExpr>> &leftKeys_,
+        const std::vector<std::shared_ptr<FieldExpr>> &rightKeys_, std::shared_ptr<Expr> filter_, PlanNodePtr left_,
+        PlanNodePtr right_, DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
+        : PlanNode(id), joinType(joinType), leftKeys(leftKeys_), rightKeys(rightKeys_), filter(std::move(filter_)),
+        sources({std::move(left_), std::move(right_)}), leftOutputType(std::move(leftOutputType_)),
+        rightOutputType(std::move(rightOutputType_)) {}
 
     const std::vector<PlanNodePtr> &Sources() const override
     {
@@ -405,29 +381,12 @@ protected:
 /// EXISTS.
 class HashJoinNode : public AbstractJoinNode {
 public:
-    HashJoinNode(
-        const PlanNodeId &id,
-        JoinType joinType,
-        bool nullAware,
-        bool isShuffle,
+    HashJoinNode(const PlanNodeId &id, JoinType joinType, bool nullAware, bool isShuffle,
         const std::vector<std::shared_ptr<FieldExpr>> &leftKeys,
-        const std::vector<std::shared_ptr<FieldExpr>> &rightKeys,
-        std::shared_ptr<Expr> filter,
-        PlanNodePtr left,
-        PlanNodePtr right,
-        DataTypesPtr leftOutputType,
-        DataTypesPtr rightOutputType)
-        : AbstractJoinNode(
-              id,
-              joinType,
-              leftKeys,
-              rightKeys,
-              std::move(filter),
-              std::move(left),
-              std::move(right),
-              std::move(leftOutputType),
-              std::move(rightOutputType)),
-          nullAware{nullAware}, isShuffle{isShuffle} {}
+        const std::vector<std::shared_ptr<FieldExpr>> &rightKeys, std::shared_ptr<Expr> filter, PlanNodePtr left,
+        PlanNodePtr right, DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
+        : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
+            std::move(leftOutputType), std::move(rightOutputType)), nullAware{nullAware}, isShuffle{isShuffle} {}
 
     std::string_view Name() const override
     {
@@ -456,26 +415,11 @@ private:
 /// exec::Operators.
 class MergeJoinNode : public AbstractJoinNode {
 public:
-    MergeJoinNode(
-        const PlanNodeId &id,
-        JoinType joinType,
-        const std::vector<std::shared_ptr<FieldExpr>> &leftKeys,
-        const std::vector<std::shared_ptr<FieldExpr>> &rightKeys,
-        std::shared_ptr<Expr> filter,
-        PlanNodePtr left,
-        PlanNodePtr right,
-        DataTypesPtr leftOutputType,
-        DataTypesPtr rightOutputType)
-        : AbstractJoinNode(
-            id,
-            joinType,
-            leftKeys,
-            rightKeys,
-            std::move(filter),
-            std::move(left),
-            std::move(right),
-            std::move(leftOutputType),
-            std::move(rightOutputType)) {}
+    MergeJoinNode(const PlanNodeId &id, JoinType joinType, const std::vector<std::shared_ptr<FieldExpr>> &leftKeys,
+        const std::vector<std::shared_ptr<FieldExpr>> &rightKeys, std::shared_ptr<Expr> filter, PlanNodePtr left,
+        PlanNodePtr right, DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
+        : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
+            std::move(leftOutputType), std::move(rightOutputType)) {}
 
     std::string_view Name() const override
     {
@@ -497,20 +441,10 @@ public:
 /// constructor without `joinType` and `joinCondition` parameter.
 class NestedLoopJoinNode : public PlanNode {
 public:
-    NestedLoopJoinNode(
-        const PlanNodeId &id,
-        JoinType joinType,
-        std::shared_ptr<Expr> filter_,
-        PlanNodePtr left_,
-        PlanNodePtr right_,
-        DataTypesPtr leftOutputType_,
-        DataTypesPtr rightOutputType_)
-        : PlanNode(id),
-          joinType(joinType),
-          filter(std::move(filter_)),
-          sources({std::move(left_), std::move(right_)}),
-          leftOutputType(std::move(leftOutputType_)),
-          rightOutputType(std::move(rightOutputType_)) {}
+    NestedLoopJoinNode(const PlanNodeId &id, JoinType joinType, std::shared_ptr<Expr> filter_, PlanNodePtr left_,
+        PlanNodePtr right_, DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
+        : PlanNode(id), joinType(joinType), filter(std::move(filter_)), sources({std::move(left_), std::move(right_)}),
+        leftOutputType(std::move(leftOutputType_)), rightOutputType(std::move(rightOutputType_)) {}
 
     const std::vector<PlanNodePtr> &Sources() const override
     {
@@ -647,17 +581,8 @@ public:
     // @param isPartial Boolean indicating whether Limit node generates partial
     // results on local workers or finalizes the partial results from `PARTIAL`
     // nodes.
-    LimitNode(
-        const PlanNodeId &id,
-        int32_t offset,
-        int32_t count,
-        bool isPartial,
-        const PlanNodePtr &source)
-        : PlanNode(id),
-          offset(offset),
-          count(count),
-          isPartial(isPartial),
-          sources{source} {}
+    LimitNode(const PlanNodeId &id, int32_t offset, int32_t count, bool isPartial, const PlanNodePtr &source)
+        : PlanNode(id), offset(offset), count(count), isPartial(isPartial), sources{source} {}
 
     const DataTypesPtr &OutputType() const override
     {
@@ -698,11 +623,8 @@ private:
 
 class UnionNode : public PlanNode {
 public:
-    UnionNode(
-        const PlanNodeId &id,
-        std::vector<PlanNodePtr> sources, bool isDistinct)
-        : PlanNode(id), isDistinct(isDistinct),
-          sources{std::move(sources)} {}
+    UnionNode(const PlanNodeId &id, std::vector<PlanNodePtr> sources, bool isDistinct)
+        : PlanNode(id), isDistinct(isDistinct), sources{std::move(sources)} {}
 
     const DataTypesPtr &OutputType() const override
     {
@@ -733,5 +655,4 @@ private:
     const bool isDistinct;
     const std::vector<PlanNodePtr> sources;
 };
-
 }

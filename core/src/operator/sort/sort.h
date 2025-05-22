@@ -40,7 +40,7 @@ public:
         int32_t sortColCount, const OperatorConfig &operatorConfig);
 
     static SortOperatorFactory *CreateSortOperatorFactory(std::shared_ptr<const OrderByNode> planNode,
-        const OperatorConfig &config);
+        const config::QueryConfig &queryConfig);
 
     Operator *CreateOperator() override;
 

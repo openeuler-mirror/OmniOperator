@@ -50,7 +50,7 @@ public:
         int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
 
     static WindowOperatorFactory *CreateWindowOperatorFactory(std::shared_ptr<const WindowNode> planNode,
-        const OperatorConfig &config);
+        const config::QueryConfig &queryConfig);
 
     Operator *CreateOperator() override;
 
