@@ -1,7 +1,6 @@
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  */
- 
 #include "task.h"
 #include "local_planner.h"
  
@@ -17,6 +16,7 @@ vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
             drivers.emplace_back(factory->CreateDriver());
         }
         drivers_ = std::move(drivers);
+        std::reverse(drivers_.begin(), drivers_.end());
     }
     const auto numDrivers = drivers_.size();
     auto futures = OmniFuture::createValidFutures(numDrivers);

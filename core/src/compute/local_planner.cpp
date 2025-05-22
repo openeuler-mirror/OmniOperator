@@ -25,16 +25,8 @@ void planDetail(
     std::vector<std::unique_ptr<DriverFactory>>* driverFactories,
     OperatorConfig& operatorConfig)
 {
-    HashBuilderOperatorFactory* hashBuilderOperatorFactory = nullptr;
     OperatorFactory* factory = nullptr;
     if (!currentOperatorFactories) {
-        if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
-            driverFactories->emplace_back(std::make_unique<DriverFactory>());
-            currentOperatorFactories = &driverFactories->back()->operatorFactories;
-            hashBuilderOperatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
-            currentOperatorFactories->emplace_back(hashBuilderOperatorFactory);
-        }
-
         driverFactories->emplace_back(std::make_unique<DriverFactory>());
         currentOperatorFactories = &driverFactories->back()->operatorFactories;
     }
@@ -64,8 +56,12 @@ void planDetail(
         factory = UnionOperatorFactory::CreateUnionOperatorFactory(unionNode);
     } else if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
         // The overflowConfig now is nullptr, need to update it later.
+        auto hashBuilderOperatorFactory =
+            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
         factory =
             LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, nullptr);
+        auto builderFactories = &driverFactories->back()->operatorFactories;
+        builderFactories->emplace_back(hashBuilderOperatorFactory);
     } else if (auto valueStreamNode = std::dynamic_pointer_cast<const ValueStreamNode>(planNode)) {
         factory = ValueStreamFactory::CreateValueStreamFactory(valueStreamNode);
     } else {
