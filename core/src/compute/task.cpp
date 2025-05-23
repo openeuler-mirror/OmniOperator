@@ -38,7 +38,11 @@ vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
             ++runableDrivers;
  
             ContinueFuture driverFuture = OmniFuture::makeEmpty();
-            auto result = drivers_[i]->Next(&driverFuture);
+            StopReason stopReason = StopReason::kNone;
+            auto result = drivers_[i]->Next(&driverFuture, &stopReason);
+            if (stopReason == StopReason::kAtEnd) {
+                drivers_[i] = nullptr;
+            }
             if (result) {
                 return result;
             }

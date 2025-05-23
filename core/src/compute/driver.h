@@ -34,7 +34,7 @@ public:
           blockedOperatorId_(0) {}
  
     // Run this pipeline until it produces a batch of data or get blocked.
-    vec::VectorBatch* Next(ContinueFuture* future);
+    vec::VectorBatch* Next(ContinueFuture* future, StopReason* stopReason);
 
     void addOperator(std::unique_ptr<omniruntime::op::Operator> operatorPtr)
     {
@@ -43,6 +43,8 @@ public:
 
     void init(
         std::vector<std::unique_ptr<omniruntime::op::Operator>> operators);
+
+    void close();
 private:
  
     StopReason RunInternal(
@@ -63,6 +65,7 @@ private:
  
     BlockingReason blockingReason_;
     size_t blockedOperatorId_;
+    std::atomic_bool closed_{false};
 };
 
 class BlockingState {
