@@ -153,7 +153,7 @@ public:
         int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount,
         bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
     static LookupJoinOperatorFactory *CreateLookupJoinOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
-        HashBuilderOperatorFactory* hashBuilderOperatorFactory, OverflowConfig *overflowConfig);
+        HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig &queryConfig);
     Operator *CreateOperator() override;
 
 private:

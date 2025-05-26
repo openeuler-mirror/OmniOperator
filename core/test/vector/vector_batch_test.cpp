@@ -75,6 +75,7 @@ TEST(vector2, vec_batch_resize)
     ASSERT_EQ(pVb->GetRowCount(), pVec2->GetSize());
     ASSERT_EQ(pVb->GetRowCount(), pVec3->GetSize());
 
+    VectorHelper::PrintVecBatch(pVb);
     VectorHelper::FreeVecBatch(pVb);
 }
 }

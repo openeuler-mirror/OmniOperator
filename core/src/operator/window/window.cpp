@@ -100,7 +100,7 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
 }
 
 WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(std::shared_ptr<const WindowNode> planNode,
-    const OperatorConfig &config)
+    const config::QueryConfig &queryConfig)
 {
     // Extract necessary information from the planNode
     return nullptr;

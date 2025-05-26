@@ -19,7 +19,7 @@ public:
     static void plan(
         const omniruntime::PlanFragment& fragment,
         std::vector<std::unique_ptr<omniruntime::compute::DriverFactory>>* driverFactories,
-        OperatorConfig& operatorConfig,
+        const config::QueryConfig& queryConfig,
         uint32_t maxDrivers);
 };
 }  // namespace compute

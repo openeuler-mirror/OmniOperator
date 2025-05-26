@@ -48,9 +48,9 @@ message(STATUS "Option Enable SVE: ${ENABLE_SVE}")
 
 if (ENABLE_SVE)
     add_definitions(-DENABLE_SVE)
-    set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc+sve")
+    set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc+sve -fpermissive")
 else ()
-    set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc")
+    set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc -fpermissive")
 endif ()
 
 #-ffast-math

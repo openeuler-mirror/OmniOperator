@@ -7,6 +7,7 @@
 #include "compute/task.h"
 #include "gtest/gtest.h"
 #include "test/util/test_util.h"
+#include "util/config/QueryConfig.h"
 
 using namespace omniruntime;
 using namespace TestUtil;
@@ -52,7 +53,7 @@ TEST(DriverTest, TestOrderBy)
 
     std::unordered_set<PlanNodeId> emptySet;
     PlanFragment planFragment{orderbyNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
-    auto task = std::make_shared<OmniTask>(planFragment, OperatorConfig());
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
     VectorBatch *vectorBatch = nullptr;
     while (true) {
         auto future = OmniFuture::makeEmpty();

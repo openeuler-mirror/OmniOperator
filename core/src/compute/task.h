@@ -23,9 +23,10 @@ struct DriverFactory;
 
 class OmniTask {
 public:
-    OmniTask(const PlanFragment& planFragment, const OperatorConfig& operatorConfig)
-        : planFragment_(planFragment), operatorConfig_(operatorConfig) {};
-    ~OmniTask() {};
+    OmniTask(const PlanFragment& planFragment,  config::QueryConfig&& queryConfig)
+        : planFragment_(planFragment), queryConfig_(std::move(queryConfig)) {}
+
+    ~OmniTask() {}
  
     vec::VectorBatch* Next(ContinueFuture* future = nullptr);
 
@@ -34,6 +35,7 @@ private:
     std::vector<std::unique_ptr<DriverFactory>> driverFactories_;
     PlanFragment planFragment_;
     OperatorConfig operatorConfig_;
+    const config::QueryConfig queryConfig_;
 };
 } // end of compute
 } // end of omniruntime

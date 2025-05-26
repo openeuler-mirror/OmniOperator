@@ -12,7 +12,6 @@
 #include "vector_helper.h"
 #include "vector/vector_batch.h"
 #include "vector/unsafe_vector.h"
-#include "xsimd/xsimd.hpp"
 
 namespace omniruntime::vec {
 enum class GetSelectivityVectorMethod {
@@ -187,14 +186,6 @@ public:
     {
         Negate(reinterpret_cast<char *>(bits.data()), elementSize);
         UpdateBounds();
-    }
-
-    template <class T> void SetBitsFromSimdMask(const xsimd::batch_bool<T, xsimd::default_arch> &mask, size_t offset)
-    {
-        auto maskLength = xsimd::batch<T>::size;
-        for (auto i = 0; i < maskLength; i++) {
-            this->SetBit(i + offset, mask.get(i) != 0);
-        }
     }
 
 private:

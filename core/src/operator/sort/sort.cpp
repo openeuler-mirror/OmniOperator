@@ -26,7 +26,7 @@ SortOperatorFactory::SortOperatorFactory(const DataTypes &dataTypes, int32_t *ou
 
 SortOperatorFactory::SortOperatorFactory(const type::DataTypes &dataTypes, std::vector<int32_t> outputCols,
     std::vector<int32_t> sortCols, std::vector<int32_t> sortAscendings, std::vector<int32_t> sortNullFirsts,
-    const OperatorConfig &operatorConfig)
+    const OperatorConfig &&operatorConfig)
     : sourceTypes(dataTypes),
       outputCols(outputCols),
       sortCols(sortCols),
@@ -54,15 +54,18 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTy
 }
 
 SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(std::shared_ptr<const OrderByNode> planNode,
-    const OperatorConfig &config)
+    const config::QueryConfig &queryConfig)
 {
+    auto spillConfig = planNode->CanSpill(queryConfig)
+                           ? SpillConfig(SPILL_CONFIG_NONE, true, queryConfig.SpillDir(), queryConfig.maxSpillBytes())
+                           : SpillConfig();
     auto dataTypes = planNode->GetSourceTypes();
     auto outputCols = planNode->GetOutputCols();
     auto sortCols = planNode->GetSortCols();
     auto sortAscending = planNode->GetSortAscending();
     auto sortNullFirsts = planNode->GetNullFirsts();
     auto pOperatorFactory = new SortOperatorFactory(*dataTypes.get(), outputCols, sortCols, sortAscending,
-        sortNullFirsts, config);
+        sortNullFirsts, std::move(OperatorConfig(spillConfig)));
     return pOperatorFactory;
 }
 

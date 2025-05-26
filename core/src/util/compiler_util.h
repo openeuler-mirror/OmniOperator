@@ -14,7 +14,7 @@
 
 #define LIKELY(expr) __builtin_expect((expr), 1)
 #define UNLIKELY(expr) __builtin_expect((expr), 0)
-
+#define ALIGNMENT_SIZE  16
 // for not vectorize replace "tree-vectorize" with "no-tree-vectorize"
 #define VECTORIZE_LOOP __attribute__((optimize("tree-vectorize")))
 #define SIMD_ALWAYS_INLINE inline __attribute__((always_inline))
