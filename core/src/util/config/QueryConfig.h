@@ -32,6 +32,12 @@ namespace omniruntime::config {
 /// Does not allow altering properties on the fly. Only at creation time.
 class QueryConfig {
 public:
+    explicit QueryConfig(): config_{
+        std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>())}
+    {
+        ValidateConfig();
+    }
+
     explicit QueryConfig(const std::unordered_map<std::string, std::string> &values): config_{
         std::make_unique<config::ConfigBase>(std::unordered_map<std::string, std::string>(values))}
     {
@@ -216,7 +222,7 @@ public:
 
     bool orderBySpillEnabled() const
     {
-        return get<bool>(kOrderBySpillEnabled, true);
+        return get<bool>(kOrderBySpillEnabled, false);
     }
 
     bool windowSpillEnabled() const

@@ -27,7 +27,7 @@ public:
 
     SortOperatorFactory(const type::DataTypes &dataTypes, std::vector<int32_t> outputCols,
         std::vector<int32_t> sortCols, std::vector<int32_t> sortAscendings, std::vector<int32_t> sortNullFirsts,
-        const OperatorConfig &operatorConfig);
+        const OperatorConfig &&operatorConfig);
 
     ~SortOperatorFactory() override;
 

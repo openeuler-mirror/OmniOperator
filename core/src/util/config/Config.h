@@ -89,7 +89,7 @@ public:
 
     std::map<std::string, std::string> ToSerdeParams()
     {
-        return std::map{configs_.cbegin(), configs_.cend()};
+        return std::map<std::string, std::string>{configs_.cbegin(), configs_.cend()};
     }
 };
 } // namespace facebook::velox::dwrf
