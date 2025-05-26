@@ -386,7 +386,7 @@ public:
         const std::vector<std::shared_ptr<FieldExpr>> &rightKeys, std::shared_ptr<Expr> filter, PlanNodePtr left,
         PlanNodePtr right, DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
         : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
-            std::move(leftOutputType), std::move(rightOutputType)), nullAware{nullAware}, isShuffle{isShuffle} {}
+          std::move(leftOutputType), std::move(rightOutputType)), nullAware{nullAware}, isShuffle{isShuffle} {}
 
     std::string_view Name() const override
     {

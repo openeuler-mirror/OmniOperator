@@ -510,6 +510,20 @@ TEST(vector, odd_vector_has_null)
     EXPECT_EQ(hasNull, true);
 }
 
+TEST(vector, SliceVector)
+{
+    int vecSize = 25;
+    auto vector = std::make_shared<Vector<int32_t>>(vecSize);
+    for (int i = 0; i < vecSize; i++) {
+        vector->SetValue(i, i);
+    }
+    auto sliceVector = reinterpret_cast<Vector<int32_t>*>(VectorHelper::SliceVector(vector.get(), 3, 5));
+    for (int i = 0; i < 5; i++) {
+        EXPECT_EQ(sliceVector->GetValue(i), i+3);
+    }
+    delete sliceVector;
+}
+
 TEST(vector, string_vec_any_size)
 {
     for (int i = 1; i < 100; i++) {

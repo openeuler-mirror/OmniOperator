@@ -50,16 +50,34 @@ template <typename T>
 T ToT(const std::string &key)
 {
     T converted;
-    std::stringstream(key) >> converted;
-    return converted;
+    if constexpr (std::is_same_v<bool, T>) {
+        if (key == "true") {
+            return true;
+        } else if (key == "false") {
+            return false;
+        } else {
+            OMNI_THROW("RUNTIME_ERROR:", "Unsupported bool value");
+        }
+    } else {
+        std::stringstream(key) >> converted;
+        return converted;
+    }
 }
 
 template <typename T>
 T ToT(const std::string & /* unused */, const std::string &key)
 {
-    T converted;
-    std::stringstream(key) >> converted;
-    return converted;
+    return ToT<T>(key);
+}
+
+template <typename T>
+std::string ToString(const T &val)
+{
+    if constexpr (std::is_same_v<std::remove_cv_t<T>, std::string>) {
+        return val;
+    } else {
+        return std::to_string(val);
+    }
 }
 
 /// The concrete config class should inherit the config base and define all the
@@ -69,7 +87,7 @@ public:
     template <typename T>
     struct Entry {
         Entry(const std::string &_key, const T &_val,
-            std::function<std::string(const T &)> _toStr = [](const T &val) { return std::to_string(val); },
+            std::function<std::string(const T &)> _toStr = [](const T &val) { return ToString(val); },
             std::function<T(const std::string &, const std::string &)> _toT = [
                 ](const std::string &k, const std::string &v) {
                 return ToT<T>(v);
@@ -112,7 +130,13 @@ public:
         return *this;
     }
 
-    ConfigBase &Reset();
+    ConfigBase &Reset()
+    {
+        OMNI_CHECK(mutable_, "Cannot reset in immutable config");
+        std::unique_lock<std::shared_mutex> l(mutex_);
+        configs_.clear();
+        return *this;
+    }
 
     template <typename T>
     T Get(const Entry<T> &entry) const
