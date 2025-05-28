@@ -114,7 +114,8 @@ public:
         return BlockingReason::kNotBlocked;
     }
 
-    virtual void noMoreInput() {
+    virtual void noMoreInput()
+    {
         noMoreInput_ = true;
     }
 
