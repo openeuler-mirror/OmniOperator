@@ -26,8 +26,15 @@ public:
     OmniTask(const PlanFragment& planFragment,  config::QueryConfig&& queryConfig)
         : planFragment_(planFragment), queryConfig_(std::move(queryConfig)) {}
 
-    ~OmniTask() {}
- 
+    ~OmniTask()
+    {
+        for (auto& driver : drivers_) {
+            if (driver) {
+                driver->close();
+            }
+        }
+    }
+
     vec::VectorBatch* Next(ContinueFuture* future = nullptr);
 
 private:
