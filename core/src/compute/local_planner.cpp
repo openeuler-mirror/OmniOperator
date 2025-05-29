@@ -16,70 +16,106 @@ namespace omniruntime::compute {
 // Returns ture if source nodes must run in a separate pipeline
 bool MustStartNewPipeline(int sourceId) { return sourceId != 0; }
 
-void planDetail(const std::shared_ptr<const PlanNode> &planNode,
-    std::vector<OperatorFactory *> *currentOperatorFactories,
-    std::vector<std::unique_ptr<DriverFactory>> *driverFactories, const config::QueryConfig &queryConfig)
+std::shared_ptr<omniruntime::op::Operator> createOperator(OperatorFactory* factory)
 {
-    OperatorFactory *factory = nullptr;
-    if (!currentOperatorFactories) {
-        driverFactories->emplace_back(std::make_unique<DriverFactory>());
-        currentOperatorFactories = &driverFactories->back()->operatorFactories;
-    }
+    std::shared_ptr<omniruntime::op::Operator> operatorPtr(factory->CreateOperator());
+    operatorPtr->setNoMoreInput(false);
+    return std::move(operatorPtr);
+}
 
-    const auto &sources = planNode->Sources();
-    if (sources.empty()) {
-        driverFactories->back()->inputDriver = true;
-    } else {
-        for (int32_t i = 0; i < sources.size(); ++i) {
-            planDetail(
-                sources[i], MustStartNewPipeline(i) ? nullptr : currentOperatorFactories, driverFactories, queryConfig);
-        }
-    }
-
+OperatorFactory* createOperatorFactory(
+    const std::shared_ptr<const PlanNode>& planNode,
+    const config::QueryConfig& queryConfig)
+{
     if (auto orderByNode = std::dynamic_pointer_cast<const OrderByNode>(planNode)) {
-        factory = SortOperatorFactory::CreateSortOperatorFactory(orderByNode, queryConfig);
+        return SortOperatorFactory::CreateSortOperatorFactory(orderByNode, queryConfig);
     } else if (auto projectNode = std::dynamic_pointer_cast<const ProjectNode>(planNode)) {
-        factory = CreateProjectOperatorFactory(projectNode, queryConfig);
+        return CreateProjectOperatorFactory(projectNode, queryConfig);
     } else if (auto filterNode = std::dynamic_pointer_cast<const FilterNode>(planNode)) {
-        factory = CreateFilterOperatorFactory(filterNode, queryConfig);
+        return CreateFilterOperatorFactory(filterNode, queryConfig);
     } else if (auto windowNode = std::dynamic_pointer_cast<const WindowNode>(planNode)) {
-        factory = WindowOperatorFactory::CreateWindowOperatorFactory(windowNode, queryConfig);
+        return WindowOperatorFactory::CreateWindowOperatorFactory(windowNode, queryConfig);
     } else if (auto topNNode = std::dynamic_pointer_cast<const TopNNode>(planNode)) {
-        factory = TopNOperatorFactory::CreateTopNOperatorFactory(topNNode);
+        return TopNOperatorFactory::CreateTopNOperatorFactory(topNNode);
     } else if (auto limitNode = std::dynamic_pointer_cast<const LimitNode>(planNode)) {
-        factory = LimitOperatorFactory::CreateLimitOperatorFactory(limitNode);
+        return LimitOperatorFactory::CreateLimitOperatorFactory(limitNode);
     } else if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
-        factory = UnionOperatorFactory::CreateUnionOperatorFactory(unionNode);
-    } else if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
-        // The overflowConfig now is nullptr, need to update it later.
-        auto hashBuilderOperatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
-        factory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-            joinNode, hashBuilderOperatorFactory, queryConfig);
-        auto builderFactories = &driverFactories->back()->operatorFactories;
-        builderFactories->emplace_back(hashBuilderOperatorFactory);
+        return UnionOperatorFactory::CreateUnionOperatorFactory(unionNode);
     } else if (auto valueStreamNode = std::dynamic_pointer_cast<const ValueStreamNode>(planNode)) {
-        factory = ValueStreamFactory::CreateValueStreamFactory(valueStreamNode);
+        return ValueStreamFactory::CreateValueStreamFactory(valueStreamNode);
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());
     }
-
-    currentOperatorFactories->emplace_back(factory);
 }
 
-void LocalPlanner::plan(const PlanFragment &fragment, std::vector<std::unique_ptr<DriverFactory>> *driverFactories,
-    const config::QueryConfig &queryConfig, uint32_t maxDrivers)
+void planDetail(
+    const std::shared_ptr<const PlanNode>& planNode,
+    std::vector<std::shared_ptr<omniruntime::op::Operator>>* currentOperators,
+    std::vector<std::shared_ptr<OmniDriver>>* drivers,
+    std::vector<OperatorFactory*>* factories,
+    bool isUnionDriver,
+    const config::QueryConfig& queryConfig)
 {
-    planDetail(fragment.planNode, nullptr, driverFactories, queryConfig);
-    (*driverFactories)[0]->outputDriver = true;
-
-    // Determine the number of drivers for each pipeline
-    for (auto &factory : *driverFactories) {
-        // Implement the logic to determine the number of drivers based on the query
-        // configuration and the factory's properties. Placeholder for now.
-        factory->maxDrivers = 1;
-        factory->numDrivers = std::min(factory->maxDrivers, maxDrivers);
-        factory->numTotalDrivers = factory->numDrivers;
+    OperatorFactory* factory = nullptr;
+    if (!currentOperators) {
+        drivers->emplace_back(std::make_unique<OmniDriver>());
+        drivers->back()->unionDriver = isUnionDriver;
+        currentOperators = &drivers->back()->operators();
     }
+
+    const auto &sources = planNode->Sources();
+    if (sources.empty()) {
+        drivers->back()->inputDriver = true;
+    } else {
+        if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
+            isUnionDriver = true;
+        }
+        for (int32_t i = 0; i < sources.size(); ++i) {
+            planDetail(sources[i], MustStartNewPipeline(i) ? nullptr : currentOperators,
+                drivers, factories, isUnionDriver, queryConfig);
+        }
+    }
+
+    if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
+        auto hashBuilderOperatorFactory =
+            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
+        factory =
+            LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
+        auto builderDriver = drivers->back();
+        builderDriver->operators().emplace_back(createOperator(hashBuilderOperatorFactory));
+        factories->emplace_back(hashBuilderOperatorFactory);
+    } else {
+        factory = createOperatorFactory(planNode, queryConfig);
+    }
+
+    auto currentOperator = createOperator(factory);
+    currentOperator->increaseInputOperatorCnt(sources.size());
+    if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
+        for (auto& driver : *drivers) {
+            if (driver->unionDriver) {
+                driver->operators().emplace_back(currentOperator);
+            }
+        }
+        factories->emplace_back(factory);
+    } else {
+        currentOperators->emplace_back(currentOperator);
+        factories->emplace_back(factory);
+    }
+}
+
+void LocalPlanner::plan(
+    const PlanFragment& fragment,
+    std::vector<std::shared_ptr<OmniDriver>>* drivers,
+    std::vector<OperatorFactory*>* factories,
+    const config::QueryConfig& queryConfig)
+{
+    planDetail(fragment.planNode,
+        nullptr,
+        drivers,
+        factories,
+        false,
+        queryConfig);
+    (*drivers)[0]->outputDriver = true;
 }
 } // namespace omniruntime::compute

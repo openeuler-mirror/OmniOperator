@@ -19,7 +19,6 @@ namespace omniruntime {
 namespace compute {
 
 struct OmniDriver;
-struct DriverFactory;
 
 class OmniTask {
 public:
@@ -33,13 +32,16 @@ public:
                 driver->close();
             }
         }
+        for (auto& factory : operatorFactories_) {
+            delete factory;
+        }
     }
 
     vec::VectorBatch* Next(ContinueFuture* future = nullptr);
 
 private:
     std::vector<std::shared_ptr<OmniDriver>> drivers_;
-    std::vector<std::unique_ptr<DriverFactory>> driverFactories_;
+    std::vector<OperatorFactory*> operatorFactories_;
     PlanFragment planFragment_;
     OperatorConfig operatorConfig_;
     const config::QueryConfig queryConfig_;
