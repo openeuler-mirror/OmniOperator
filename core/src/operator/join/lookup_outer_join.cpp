@@ -77,17 +77,14 @@ void LookupOuterJoinOperator::PrepareTotalVisitedCounts()
         while (partitionIndex < arg.GetHashTableSize()) {
             if (arg.GetHashTableTypes(partitionIndex) == HashTableImplementationType::ARRAY_HASH_TABLE) {
                 auto &hashTable = arg.GetArrayTable(partitionIndex);
-                hashTable->ForEachValue(
-                    [&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
+                hashTable->ForEachValue([&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
             } else {
                 auto &hashTable = arg.GetHashTable(partitionIndex);
-                hashTable->hashmap.ForEachValue(
-                    [&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
+                hashTable->hashmap.ForEachValue([&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
             }
             partitionIndex++;
         }
-    },
-    *hashTables);
+    }, *hashTables);
 
     isPrepareTotalVisitedCounts = true;
 }
