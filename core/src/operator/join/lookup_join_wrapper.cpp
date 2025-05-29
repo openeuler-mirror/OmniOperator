@@ -62,8 +62,6 @@ int32_t LookupJoinWrapperOperator::GetOutput(VectorBatch **outputVecBatch)
         return lookupJoinOperator->GetOutput(outputVecBatch);
     } else {
         // when lookup join operator end can execute
-        // PrepareTotalVisitedCounts only execute one time
-        lookupOuterJoinOperator->PrepareTotalVisitedCounts();
         auto result = lookupOuterJoinOperator->GetOutput(outputVecBatch);
         if (lookupOuterJoinOperator->GetStatus() == OMNI_STATUS_FINISHED) {
             SetStatus(OMNI_STATUS_FINISHED);

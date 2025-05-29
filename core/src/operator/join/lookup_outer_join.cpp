@@ -68,10 +68,6 @@ Operator *LookupOuterJoinOperatorFactory::CreateOperator()
 
 void LookupOuterJoinOperator::PrepareTotalVisitedCounts()
 {
-    if (isPrepareTotalVisitedCounts) {
-        return;
-    }
-
     std::visit([&](auto &&arg) {
         size_t partitionIndex = 0;
         while (partitionIndex < arg.GetHashTableSize()) {
@@ -85,8 +81,6 @@ void LookupOuterJoinOperator::PrepareTotalVisitedCounts()
             partitionIndex++;
         }
     }, *hashTables);
-
-    isPrepareTotalVisitedCounts = true;
 }
 
 LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, std::vector<int32_t> &probeOutputCols,
@@ -118,6 +112,11 @@ int32_t LookupOuterJoinOperator::AddInput(VectorBatch *vecBatch)
 
 int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 {
+    if (!isPrepareTotalVisitedCounts) {
+        PrepareTotalVisitedCounts();
+        isPrepareTotalVisitedCounts = true;
+    }
+
     totalRowCount =
         std::visit([&](auto &&arg) { return arg.GetTotalVisitedCounts() - arg.GetVisitedCounts(); }, *hashTables);
     if (totalRowCount <= 0) {
