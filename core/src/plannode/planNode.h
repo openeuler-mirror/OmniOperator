@@ -6,42 +6,33 @@
 
 #include <string>
 #include <vector>
-#include "type/data_types.h"
-#include "operator/config/operator_config.h"
 #include "expression/expressions.h"
+#include "operator/config/operator_config.h"
+#include "type/data_types.h"
 #include "util/config/QueryConfig.h"
 
 namespace omniruntime {
 using namespace type;
 using namespace op;
 using namespace expressions;
+using ExprPtr = Expr *;
 
 using PlanNodeId = std::string;
 
 class SortOrder {
 public:
-    SortOrder(bool ascending, bool nullsFirst) noexcept
-        : ascending(ascending), nullsFirst(nullsFirst) {}
+    SortOrder(bool ascending, bool nullsFirst) noexcept : ascending(ascending), nullsFirst(nullsFirst) {}
 
-    bool IsAscending() const
-    {
-        return ascending;
-    }
+    bool IsAscending() const { return ascending; }
 
-    bool IsNullsFirst() const
-    {
-        return nullsFirst;
-    }
+    bool IsNullsFirst() const { return nullsFirst; }
 
     bool operator==(const SortOrder &other) const
     {
         return std::tie(ascending, nullsFirst) == std::tie(other.ascending, other.nullsFirst);
     }
 
-    bool operator!=(const SortOrder &other) const
-    {
-        return !(*this == other);
-    }
+    bool operator!=(const SortOrder &other) const { return !(*this == other); }
 
     std::string ToString() const
     {
@@ -69,17 +60,11 @@ public:
     /// The name of the plan node, used in toString.
     virtual std::string_view Name() const = 0;
 
-    const PlanNodeId &Id() const
-    {
-        return id;
-    }
+    const PlanNodeId &Id() const { return id; }
 
     /// Returns true if this plan node operator is spillable and 'queryConfig' has
     /// enabled it.
-    virtual bool CanSpill(const config::QueryConfig &queryConfig) const
-    {
-        return false;
-    }
+    virtual bool CanSpill(const config::QueryConfig &queryConfig) const { return false; }
 
     virtual const std::vector<std::shared_ptr<const PlanNode>> &Sources() const = 0;
 
@@ -94,7 +79,7 @@ public:
     OrderByNode(const PlanNodeId &id, const std::vector<int32_t> &sortCols, const std::vector<int32_t> &sortAscending,
         const std::vector<int32_t> &sortNullFirsts, const PlanNodePtr &source)
         : PlanNode(id), sourceTypes(source->OutputType()), sortCols(sortCols), sortAscending(sortAscending),
-        sortNullFirsts(sortNullFirsts), sources({source})
+          sortNullFirsts(sortNullFirsts), sources({source})
     {
         outputCols.reserve(sourceTypes->GetSize());
         for (int i = 0; i < sourceTypes->GetSize(); ++i) {
@@ -104,50 +89,23 @@ public:
 
     ~OrderByNode() override = default;
 
-    const DataTypesPtr &OutputType() const override
-    {
-        return sources[0]->OutputType();
-    }
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
 
-    const std::vector<std::shared_ptr<const PlanNode>> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<std::shared_ptr<const PlanNode>> &Sources() const override { return sources; }
 
-    const std::vector<int32_t> &GetSortCols() const
-    {
-        return sortCols;
-    }
+    const std::vector<int32_t> &GetSortCols() const { return sortCols; }
 
-    const std::vector<int32_t> &GetOutputCols() const
-    {
-        return outputCols;
-    }
+    const std::vector<int32_t> &GetOutputCols() const { return outputCols; }
 
-    const DataTypesPtr &GetSourceTypes() const
-    {
-        return sourceTypes;
-    }
+    const DataTypesPtr &GetSourceTypes() const { return sourceTypes; }
 
-    const std::vector<int32_t> &GetSortAscending() const
-    {
-        return sortAscending;
-    }
+    const std::vector<int32_t> &GetSortAscending() const { return sortAscending; }
 
-    const std::vector<int32_t> &GetNullFirsts() const
-    {
-        return sortNullFirsts;
-    }
+    const std::vector<int32_t> &GetNullFirsts() const { return sortNullFirsts; }
 
-    bool CanSpill(const config::QueryConfig &queryConfig) const override
-    {
-        return queryConfig.orderBySpillEnabled();
-    }
+    bool CanSpill(const config::QueryConfig &queryConfig) const override { return queryConfig.orderBySpillEnabled(); }
 
-    std::string_view Name() const override
-    {
-        return "OrderBy";
-    }
+    std::string_view Name() const override { return "OrderBy"; }
 
 private:
     const DataTypesPtr sourceTypes;
@@ -162,33 +120,43 @@ private:
 class FilterNode : public PlanNode {
 public:
     FilterNode(const PlanNodeId &id, ExprPtr filter, PlanNodePtr source)
-        : PlanNode(id), sources{std::move(source)}, filter(std::move(filter)) {}
+        : PlanNode(id), sources{std::move(source)}, filter(std::move(filter))
+    {}
 
     ~FilterNode() override = default;
 
-    const DataTypesPtr &OutputType() const override
-    {
-        return sources[0]->OutputType();
-    }
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
 
-    const std::vector<PlanNodePtr> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
-    ExprPtr Filter() const
-    {
-        return filter;
-    }
+    ExprPtr GetFilterExpr() const { return filter; }
 
-    std::string_view Name() const override
-    {
-        return "Filter";
-    }
+    std::string_view Name() const override { return "Filter"; }
 
 private:
     const std::vector<PlanNodePtr> sources;
     ExprPtr filter;
+};
+
+class ProjectNode : public PlanNode {
+public:
+    ProjectNode(const PlanNodeId &id, std::vector<ExprPtr> &&projections, PlanNodePtr source)
+        : PlanNode(id), sources{source}, projections(std::move(projections))
+    {}
+
+    ~ProjectNode() override = default;
+
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
+
+    const std::vector<ExprPtr> &GetProjections() const { return projections; }
+
+    std::string_view Name() const override { return "Project"; }
+
+protected:
+    const std::vector<PlanNodePtr> sources;
+    const std::vector<ExprPtr> projections;
 };
 
 class AggregationNode : public PlanNode {
@@ -210,20 +178,11 @@ public:
 
     ~AggregationNode() override = default;
 
-    const std::vector<PlanNodePtr> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
-    const DataTypesPtr &OutputType() const override
-    {
-        return outputType;
-    }
+    const DataTypesPtr &OutputType() const override { return outputType; }
 
-    std::string_view Name() const override
-    {
-        return "Aggregation";
-    }
+    std::string_view Name() const override { return "Aggregation"; }
 
 private:
     const Step step;
@@ -248,22 +207,13 @@ public:
 
     ~WindowNode() override = default;
 
-    const std::vector<PlanNodePtr> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
     /// The outputType is the concatenation of the input columns
     /// with the output columns of each window function.
-    const DataTypesPtr &OutputType() const override
-    {
-        return outputType;
-    }
+    const DataTypesPtr &OutputType() const override { return outputType; }
 
-    std::string_view Name() const override
-    {
-        return "Window";
-    }
+    std::string_view Name() const override { return "Window"; }
 
 private:
     const std::vector<PlanNodePtr> sources;
@@ -288,13 +238,11 @@ public:
         const std::vector<std::shared_ptr<FieldExpr>> &rightKeys_, std::shared_ptr<Expr> filter_, PlanNodePtr left_,
         PlanNodePtr right_, DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
         : PlanNode(id), joinType(joinType), leftKeys(leftKeys_), rightKeys(rightKeys_), filter(std::move(filter_)),
-        sources({std::move(left_), std::move(right_)}), leftOutputType(std::move(leftOutputType_)),
-        rightOutputType(std::move(rightOutputType_)) {}
+          sources({std::move(left_), std::move(right_)}), leftOutputType(std::move(leftOutputType_)),
+          rightOutputType(std::move(rightOutputType_))
+    {}
 
-    const std::vector<PlanNodePtr> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
     const DataTypesPtr &OutputType() const override
     {
@@ -308,55 +256,25 @@ public:
         return std::make_shared<DataTypes>(std::move(joinInputTypes));
     }
 
-    const DataTypesPtr &LeftOutputType() const
-    {
-        return leftOutputType;
-    }
+    const DataTypesPtr &LeftOutputType() const { return leftOutputType; }
 
-    const DataTypesPtr &RightOutputType() const
-    {
-        return rightOutputType;
-    }
+    const DataTypesPtr &RightOutputType() const { return rightOutputType; }
 
-    JoinType GetJoinType() const
-    {
-        return joinType;
-    }
+    JoinType GetJoinType() const { return joinType; }
 
-    bool IsInnerJoin() const
-    {
-        return joinType == OMNI_JOIN_TYPE_INNER;
-    }
+    bool IsInnerJoin() const { return joinType == OMNI_JOIN_TYPE_INNER; }
 
-    bool IsLeftJoin() const
-    {
-        return joinType == JoinType::OMNI_JOIN_TYPE_LEFT;
-    }
+    bool IsLeftJoin() const { return joinType == JoinType::OMNI_JOIN_TYPE_LEFT; }
 
-    bool IsRightJoin() const
-    {
-        return joinType == JoinType::OMNI_JOIN_TYPE_RIGHT;
-    }
+    bool IsRightJoin() const { return joinType == JoinType::OMNI_JOIN_TYPE_RIGHT; }
 
-    bool IsFullJoin() const
-    {
-        return joinType == JoinType::OMNI_JOIN_TYPE_FULL;
-    }
+    bool IsFullJoin() const { return joinType == JoinType::OMNI_JOIN_TYPE_FULL; }
 
-    const std::vector<std::shared_ptr<FieldExpr>> &LeftKeys() const
-    {
-        return leftKeys;
-    }
+    const std::vector<std::shared_ptr<FieldExpr>> &LeftKeys() const { return leftKeys; }
 
-    const std::vector<std::shared_ptr<FieldExpr>> &RightKeys() const
-    {
-        return rightKeys;
-    }
+    const std::vector<std::shared_ptr<FieldExpr>> &RightKeys() const { return rightKeys; }
 
-    const std::shared_ptr<Expr> &Filter() const
-    {
-        return filter;
-    }
+    const std::shared_ptr<Expr> &Filter() const { return filter; }
 
 protected:
     const JoinType joinType;
@@ -386,22 +304,15 @@ public:
         const std::vector<std::shared_ptr<FieldExpr>> &rightKeys, std::shared_ptr<Expr> filter, PlanNodePtr left,
         PlanNodePtr right, DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
         : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
-          std::move(leftOutputType), std::move(rightOutputType)), nullAware{nullAware}, isShuffle{isShuffle} {}
+              std::move(leftOutputType), std::move(rightOutputType)),
+          nullAware{nullAware}, isShuffle{isShuffle}
+    {}
 
-    std::string_view Name() const override
-    {
-        return "HashJoin";
-    }
+    std::string_view Name() const override { return "HashJoin"; }
 
-    bool IsNullAware() const
-    {
-        return nullAware;
-    }
+    bool IsNullAware() const { return nullAware; }
 
-    bool IsShuffle() const
-    {
-        return isShuffle;
-    }
+    bool IsShuffle() const { return isShuffle; }
 
 private:
     const bool nullAware;
@@ -419,12 +330,10 @@ public:
         const std::vector<std::shared_ptr<FieldExpr>> &rightKeys, std::shared_ptr<Expr> filter, PlanNodePtr left,
         PlanNodePtr right, DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
         : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
-            std::move(leftOutputType), std::move(rightOutputType)) {}
+              std::move(leftOutputType), std::move(rightOutputType))
+    {}
 
-    std::string_view Name() const override
-    {
-        return "MergeJoin";
-    }
+    std::string_view Name() const override { return "MergeJoin"; }
 };
 
 /// Represents inner/outer nested loop joins. Translates to an
@@ -444,12 +353,10 @@ public:
     NestedLoopJoinNode(const PlanNodeId &id, JoinType joinType, std::shared_ptr<Expr> filter_, PlanNodePtr left_,
         PlanNodePtr right_, DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
         : PlanNode(id), joinType(joinType), filter(std::move(filter_)), sources({std::move(left_), std::move(right_)}),
-        leftOutputType(std::move(leftOutputType_)), rightOutputType(std::move(rightOutputType_)) {}
+          leftOutputType(std::move(leftOutputType_)), rightOutputType(std::move(rightOutputType_))
+    {}
 
-    const std::vector<PlanNodePtr> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
     const DataTypesPtr &OutputType() const override
     {
@@ -463,30 +370,15 @@ public:
         return std::make_shared<DataTypes>(std::move(joinInputTypes));
     }
 
-    std::string_view Name() const override
-    {
-        return "NestedLoopJoin";
-    }
+    std::string_view Name() const override { return "NestedLoopJoin"; }
 
-    const std::shared_ptr<Expr> &Filter() const
-    {
-        return filter;
-    }
+    const std::shared_ptr<Expr> &Filter() const { return filter; }
 
-    const JoinType GetJoinType() const
-    {
-        return joinType;
-    }
+    const JoinType GetJoinType() const { return joinType; }
 
-    const DataTypesPtr &LeftOutputType() const
-    {
-        return leftOutputType;
-    }
+    const DataTypesPtr &LeftOutputType() const { return leftOutputType; }
 
-    const DataTypesPtr &RightOutputType() const
-    {
-        return rightOutputType;
-    }
+    const DataTypesPtr &RightOutputType() const { return rightOutputType; }
 
     /// If nested loop join supports this join type.
     static bool IsSupported(JoinType joinTypeParam)
@@ -512,60 +404,27 @@ private:
 
 class TopNNode : public PlanNode {
 public:
-    TopNNode(
-        const PlanNodeId &id,
-        const std::vector<int32_t> &sortCols,
-        const std::vector<int32_t> &sortAscending,
-        const std::vector<int32_t> &sortNullFirsts,
-        int32_t count,
-        const PlanNodePtr &source)
-        : PlanNode(id),
-        sourceTypes(source->OutputType()),
-        sortCols(sortCols),
-        sortAscending(sortAscending),
-        sortNullFirsts(sortNullFirsts),
-        count(count),
-        sources({source}) {}
+    TopNNode(const PlanNodeId &id, const std::vector<int32_t> &sortCols, const std::vector<int32_t> &sortAscending,
+        const std::vector<int32_t> &sortNullFirsts, int32_t count, const PlanNodePtr &source)
+        : PlanNode(id), sourceTypes(source->OutputType()), sortCols(sortCols), sortAscending(sortAscending),
+          sortNullFirsts(sortNullFirsts), count(count), sources({source})
+    {}
 
-    const std::vector<int32_t> &GetSortCols() const
-    {
-        return sortCols;
-    }
+    const std::vector<int32_t> &GetSortCols() const { return sortCols; }
 
-    const std::vector<int32_t> &GetSortAscending() const
-    {
-        return sortAscending;
-    }
+    const std::vector<int32_t> &GetSortAscending() const { return sortAscending; }
 
-    const std::vector<int32_t> &GetNullFirsts() const
-    {
-        return sortNullFirsts;
-    }
+    const std::vector<int32_t> &GetNullFirsts() const { return sortNullFirsts; }
 
-    const DataTypesPtr &OutputType() const override
-    {
-        return sources[0]->OutputType();
-    }
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
 
-    const DataTypesPtr &GetSourceTypes() const
-    {
-        return sourceTypes;
-    }
+    const DataTypesPtr &GetSourceTypes() const { return sourceTypes; }
 
-    const std::vector<PlanNodePtr> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
-    int32_t Count() const
-    {
-        return count;
-    }
+    int32_t Count() const { return count; }
 
-    std::string_view Name() const override
-    {
-        return "TopN";
-    }
+    std::string_view Name() const override { return "TopN"; }
 
 private:
     const DataTypesPtr sourceTypes;
@@ -582,37 +441,20 @@ public:
     // results on local workers or finalizes the partial results from `PARTIAL`
     // nodes.
     LimitNode(const PlanNodeId &id, int32_t offset, int32_t count, bool isPartial, const PlanNodePtr &source)
-        : PlanNode(id), offset(offset), count(count), isPartial(isPartial), sources{source} {}
+        : PlanNode(id), offset(offset), count(count), isPartial(isPartial), sources{source}
+    {}
 
-    const DataTypesPtr &OutputType() const override
-    {
-        return sources[0]->OutputType();
-    }
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
 
-    const std::vector<PlanNodePtr> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
-    int32_t Offset() const
-    {
-        return offset;
-    }
+    int32_t Offset() const { return offset; }
 
-    int32_t Count() const
-    {
-        return count;
-    }
+    int32_t Count() const { return count; }
 
-    bool IsPartial() const
-    {
-        return isPartial;
-    }
+    bool IsPartial() const { return isPartial; }
 
-    std::string_view Name() const override
-    {
-        return "Limit";
-    }
+    std::string_view Name() const override { return "Limit"; }
 
 private:
     const int32_t offset;
@@ -624,35 +466,21 @@ private:
 class UnionNode : public PlanNode {
 public:
     UnionNode(const PlanNodeId &id, std::vector<PlanNodePtr> sources, bool isDistinct)
-        : PlanNode(id), isDistinct(isDistinct), sources{std::move(sources)} {}
+        : PlanNode(id), isDistinct(isDistinct), sources{std::move(sources)}
+    {}
 
-    const DataTypesPtr &OutputType() const override
-    {
-        return sources[0]->OutputType();
-    }
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
 
-    const std::vector<PlanNodePtr> &Sources() const override
-    {
-        return sources;
-    }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
-    std::string_view Name() const override
-    {
-        return "Union";
-    }
+    std::string_view Name() const override { return "Union"; }
 
-    const DataTypesPtr &GetSourceTypes() const
-    {
-        return sources[0]->OutputType();
-    }
+    const DataTypesPtr &GetSourceTypes() const { return sources[0]->OutputType(); }
 
-    const bool &IsDistinct() const
-    {
-        return isDistinct;
-    }
+    const bool &IsDistinct() const { return isDistinct; }
 
 private:
     const bool isDistinct;
     const std::vector<PlanNodePtr> sources;
 };
-}
+} // namespace omniruntime

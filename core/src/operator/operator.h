@@ -25,15 +25,18 @@ public:
           executionContext(std::make_unique<ExecutionContext>()),
           inputVecBatch(nullptr),
           status(OMNI_STATUS_NORMAL)
-    {}
+    {
+    }
 
-    virtual ~Operator() {}
+    virtual ~Operator()
+    {
+    }
 
-    virtual int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) = 0;
+    virtual int32_t AddInput(omniruntime::vec::VectorBatch* vecBatch) = 0;
 
-    virtual int32_t GetOutput(omniruntime::vec::VectorBatch **result) = 0;
+    virtual int32_t GetOutput(omniruntime::vec::VectorBatch** result) = 0;
 
-    static void DeleteOperator(Operator *op)
+    static void DeleteOperator(Operator* op)
     {
         op->Close();
         delete op;
@@ -85,17 +88,17 @@ public:
         return 0;
     }
 
-    virtual VectorBatch *AlignSchema(VectorBatch *inputVecBatch)
+    virtual VectorBatch* AlignSchema(VectorBatch* inputVecBatch)
     {
         return inputVecBatch;
     }
 
-    omniruntime::vec::VectorBatch *GetInputVecBatch()
+    omniruntime::vec::VectorBatch* GetInputVecBatch()
     {
         return inputVecBatch;
     }
 
-    void SetInputVecBatch(vec::VectorBatch *inVecBatch)
+    void SetInputVecBatch(vec::VectorBatch* inVecBatch)
     {
         inputVecBatch = inVecBatch;
     }
@@ -142,9 +145,9 @@ public:
     };
 
 protected:
-    int32_t *sourceTypes;
+    int32_t* sourceTypes;
     std::unique_ptr<ExecutionContext> executionContext;
-    vec::VectorBatch *inputVecBatch = nullptr;
+    vec::VectorBatch* inputVecBatch = nullptr;
     bool noMoreInput_{true};
 
     void UpdateAddInputInfo(int32_t rowCount)
@@ -187,7 +190,7 @@ protected:
         metrics.UpdateCloseInfo(executionContext);
     }
 
-    void SetOperatorName(const std::string &operatorName)
+    void SetOperatorName(const std::string& operatorName)
     {
         if (LIKELY(!IsDebugEnable())) {
             return;
@@ -202,6 +205,6 @@ private:
     // for pipeline
     bool hasInputedData_{false};
 };
-}
-}
+}  // namespace op
+}  // namespace omniruntime
 #endif

@@ -8,16 +8,18 @@
 #include <memory>
 #include <vector>
 
-#include "type/data_types.h"
+#include "codegen/expr_evaluator.h"
+#include "codegen/simple_filter_codegen.h"
+#include "expression/expressions.h"
+#include "operator/config/operator_config.h"
+#include "operator/execution_context.h"
 #include "operator/operator.h"
 #include "operator/operator_factory.h"
 #include "operator/status.h"
+#include "plannode/planNode.h"
+#include "type/data_types.h"
+#include "util/config/QueryConfig.h"
 #include "vector/vector_batch.h"
-#include "expression/expressions.h"
-#include "codegen/simple_filter_codegen.h"
-#include "operator/execution_context.h"
-#include "operator/config/operator_config.h"
-#include "codegen/expr_evaluator.h"
 
 namespace omniruntime {
 namespace op {
@@ -40,7 +42,7 @@ public:
 
     SimpleFilter(const SimpleFilter &simpleFilter);
 
-    SimpleFilter& operator=(const SimpleFilter &simpleFilter) = delete;
+    SimpleFilter &operator=(const SimpleFilter &simpleFilter) = delete;
 
     /* *
      * Initialize the filter, this method must be called after the construct
@@ -71,19 +73,14 @@ public:
      * @return true if the data matches the expression, false if it doesn't match
      */
     bool Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, int64_t executionContext);
-    const expressions::Expr *GetExpression()
-    {
-        return this->expression;
-    }
+
+    const expressions::Expr *GetExpression() { return this->expression; }
 
     /* *
      * short-circuit logic for column filter, no need to go through codegen
      * @return is short-circuit
      */
-    bool IsColumnFilter()
-    {
-        return isColumnFilter;
-    }
+    bool IsColumnFilter() { return isColumnFilter; }
 
 private:
     std::shared_ptr<codegen::SimpleFilterCodeGen> codegen;
@@ -94,6 +91,9 @@ private:
     bool initialized;
     bool isColumnFilter = false;
 };
+
+OperatorFactory *CreateFilterOperatorFactory(
+    std::shared_ptr<const FilterNode> filterNode, const config::QueryConfig &queryConfig);
 
 class FilterAndProjectOperator : public Operator {
 public:
@@ -134,6 +134,6 @@ public:
 private:
     std::shared_ptr<ExpressionEvaluator> exprEvaluator;
 };
-} // end of op
-} // end of omniruntime
+} // namespace op
+} // namespace omniruntime
 #endif

@@ -6,6 +6,7 @@
 #include <ctime>
 #include "gtest/gtest.h"
 #include "operator/spill/spiller.h"
+#include "operator/spill/spill_merger.h"
 #include "vector/vector_helper.h"
 #include "type/data_types.h"
 #include "util/test_util.h"
@@ -73,9 +74,9 @@ TEST(SpillTest, TestSpillNoneSinceExceededLimit)
     mkdir(path.c_str(), 0750);
     InitRootSpillTracker(50);
 
-    std::vector<SortOrder> sortOrders;
+    std::vector<omniruntime::op::SortOrder> sortOrders;
     for (size_t i = 0; i < sortCols.size(); i++) {
-        SortOrder sortOrder { sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
+        omniruntime::op::SortOrder sortOrder { sortAscendings[i] == 1, sortNullFirsts[i] == 1 };
         sortOrders.emplace_back(sortOrder);
     }
 
