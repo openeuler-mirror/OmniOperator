@@ -68,19 +68,23 @@ Operator *LookupOuterJoinOperatorFactory::CreateOperator()
 
 void LookupOuterJoinOperator::PrepareTotalVisitedCounts()
 {
-    std::visit([&](auto &&arg) {
-        size_t partitionIndex = 0;
-        while (partitionIndex < arg.GetHashTableSize()) {
-            if (arg.GetHashTableTypes(partitionIndex) == HashTableImplementationType::ARRAY_HASH_TABLE) {
-                auto &hashTable = arg.GetArrayTable(partitionIndex);
-                hashTable->ForEachValue([&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
-            } else {
-                auto &hashTable = arg.GetHashTable(partitionIndex);
-                hashTable->hashmap.ForEachValue([&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
+    std::visit(
+        [&](auto &&arg) {
+            size_t partitionIndex = 0;
+            while (partitionIndex < arg.GetHashTableSize()) {
+                if (arg.GetHashTableTypes(partitionIndex) == HashTableImplementationType::ARRAY_HASH_TABLE) {
+                    auto &hashTable = arg.GetArrayTable(partitionIndex);
+                    hashTable->ForEachValue(
+                        [&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
+                } else {
+                    auto &hashTable = arg.GetHashTable(partitionIndex);
+                    hashTable->hashmap.ForEachValue(
+                        [&](const auto &value, const auto &index) { arg.SetTotalVisitedCounts(value->GetRowCount()); });
+                }
+                partitionIndex++;
             }
-            partitionIndex++;
-        }
-    }, *hashTables);
+        },
+        *hashTables);
 }
 
 LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, std::vector<int32_t> &probeOutputCols,
