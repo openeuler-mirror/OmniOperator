@@ -1,6 +1,7 @@
-//
-// Created by l30065184 on 2025/5/24.
-//
+/*
+ * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * @Description: lookup join implementations
+ */
 
 #ifndef LOOKUP_JOIN_WRAPPER_H
 #define LOOKUP_JOIN_WRAPPER_H
@@ -50,4 +51,4 @@ private:
 }
 }
 
-#endif //LOOKUP_JOIN_WRAPPER_H
+#endif

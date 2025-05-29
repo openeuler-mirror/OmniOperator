@@ -234,34 +234,19 @@ enum JoinType {
 /// class for specific join implementations, e.g. hash and merge joins.
 class AbstractJoinNode : public PlanNode {
 public:
-    AbstractJoinNode(
-        const PlanNodeId &id,
-        JoinType joinType_,
-        const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys_,
-        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys_,
-        ExprPtr filter_,
-        PlanNodePtr left_,
-        PlanNodePtr right_,
-        DataTypesPtr leftOutputType_,
-        DataTypesPtr rightOutputType_)
-        : PlanNode(id),
-          joinType(joinType_),
-          leftKeys(leftKeys_),
-          rightKeys(rightKeys_),
-          filter(std::move(filter_)),
-          sources({std::move(left_), std::move(right_)}),
-          leftOutputType(std::move(leftOutputType_)),
-          rightOutputType(std::move(rightOutputType_)) {
-
+    AbstractJoinNode(const PlanNodeId &id, JoinType joinType_, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys_,
+        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys_, ExprPtr filter_, PlanNodePtr left_, PlanNodePtr right_,
+        DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
+        : PlanNode(id), joinType(joinType_), leftKeys(leftKeys_), rightKeys(rightKeys_), filter(std::move(filter_)), sources({std::move(left_),
+        std::move(right_)}), leftOutputType(std::move(leftOutputType_)), rightOutputType(std::move(rightOutputType_))
+    {
         auto outputSize = leftOutputType->GetSize() + rightOutputType->GetSize();
         std::vector<DataTypePtr> joinInputTypes;
         joinInputTypes.reserve(outputSize);
-
         joinInputTypes.insert(joinInputTypes.end(), leftOutputType->Get().begin(), leftOutputType->Get().end());
         joinInputTypes.insert(joinInputTypes.end(), rightOutputType->Get().begin(), rightOutputType->Get().end());
         this->outputType = std::make_shared<DataTypes>(std::move(joinInputTypes));
     }
-
 
     const std::vector<PlanNodePtr> &Sources() const override
     {
@@ -347,29 +332,11 @@ protected:
 /// EXISTS.
 class HashJoinNode : public AbstractJoinNode {
 public:
-    HashJoinNode(
-        const PlanNodeId &id,
-        JoinType joinType,
-        bool nullAware,
-        bool isShuffle,
-        const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
-        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys,
-        ExprPtr filter,
-        PlanNodePtr left,
-        PlanNodePtr right,
-        DataTypesPtr leftOutputType,
+    HashJoinNode(const PlanNodeId &id, JoinType joinType, bool nullAware, bool isShuffle, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
+        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right, DataTypesPtr leftOutputType,
         DataTypesPtr rightOutputType)
-        : AbstractJoinNode(
-              id,
-              joinType,
-              leftKeys,
-              rightKeys,
-              std::move(filter),
-              std::move(left),
-              std::move(right),
-              std::move(leftOutputType),
-              std::move(rightOutputType)),
-          nullAware{nullAware}, isShuffle{isShuffle} {}
+        : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right), std::move(leftOutputType), std::move(rightOutputType)),
+        nullAware{nullAware}, isShuffle{isShuffle} {}
 
     std::string_view Name() const override
     {
@@ -398,26 +365,11 @@ private:
 /// exec::Operators.
 class MergeJoinNode : public AbstractJoinNode {
 public:
-    MergeJoinNode(
-        const PlanNodeId &id,
-        JoinType joinType,
-        const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
-        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys,
-        ExprPtr filter,
-        PlanNodePtr left,
-        PlanNodePtr right,
-        DataTypesPtr leftOutputType,
-        DataTypesPtr rightOutputType)
-        : AbstractJoinNode(
-            id,
-            joinType,
-            leftKeys,
-            rightKeys,
-            std::move(filter),
-            std::move(left),
-            std::move(right),
-            std::move(leftOutputType),
-            std::move(rightOutputType)) {}
+    MergeJoinNode(const PlanNodeId &id, JoinType joinType, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
+        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right,
+        DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
+        : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
+        std::move(leftOutputType), std::move(rightOutputType)) {}
 
     std::string_view Name() const override
     {
@@ -439,20 +391,11 @@ public:
 /// constructor without `joinType` and `joinCondition` parameter.
 class NestedLoopJoinNode : public PlanNode {
 public:
-    NestedLoopJoinNode(
-        const PlanNodeId &id,
-        JoinType joinType_,
-        ExprPtr filter_,
-        PlanNodePtr left_,
-        PlanNodePtr right_,
-        DataTypesPtr leftOutputType_,
-        DataTypesPtr rightOutputType_)
-            : PlanNode(id),
-              joinType(joinType_),
-              filter(std::move(filter_)),
-              sources({std::move(left_), std::move(right_)}),
-              leftOutputType(std::move(leftOutputType_)),
-              rightOutputType(std::move(rightOutputType_)) {
+    NestedLoopJoinNode(const PlanNodeId &id, JoinType joinType_, ExprPtr filter_, PlanNodePtr left_, PlanNodePtr right_,
+        DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
+        : PlanNode(id), joinType(joinType_), filter(std::move(filter_)), sources({std::move(left_), std::move(right_)}),
+        leftOutputType(std::move(leftOutputType_)), rightOutputType(std::move(rightOutputType_))
+    {
         auto outputSize = leftOutputType->GetSize() + rightOutputType->GetSize();
         std::vector<DataTypePtr> joinInputTypes;
         joinInputTypes.reserve(outputSize);

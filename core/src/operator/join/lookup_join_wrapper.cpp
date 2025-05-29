@@ -36,7 +36,8 @@ LookupJoinWrapperOperator::LookupJoinWrapperOperator(LookupJoinOperator &lookupJ
     : lookupOuterJoinOperator(&lookupOuterJoinOperator),
       lookupJoinOperator(&lookupJoinOperator) {}
 
-LookupJoinWrapperOperator::~LookupJoinWrapperOperator() {
+LookupJoinWrapperOperator::~LookupJoinWrapperOperator()
+{
     delete lookupOuterJoinOperator;
     delete lookupJoinOperator;
     lookupOuterJoinOperator = nullptr;

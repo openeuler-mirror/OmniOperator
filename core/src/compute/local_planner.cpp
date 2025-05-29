@@ -40,9 +40,9 @@ void planDetail(const std::shared_ptr<const PlanNode> &planNode,
     if (auto orderByNode = std::dynamic_pointer_cast<const OrderByNode>(planNode)) {
         currentOperatorFactories->emplace_back(SortOperatorFactory::CreateSortOperatorFactory(orderByNode, queryConfig));
     } else if (auto projectNode = std::dynamic_pointer_cast<const ProjectNode>(planNode)) {
-	    currentOperatorFactories->emplace_back(CreateProjectOperatorFactory(projectNode, queryConfig));
+        currentOperatorFactories->emplace_back(CreateProjectOperatorFactory(projectNode, queryConfig));
     } else if (auto filterNode = std::dynamic_pointer_cast<const FilterNode>(planNode)) {
-	    currentOperatorFactories->emplace_back(CreateFilterOperatorFactory(filterNode, queryConfig));
+        currentOperatorFactories->emplace_back(CreateFilterOperatorFactory(filterNode, queryConfig));
     } else if (auto windowNode = std::dynamic_pointer_cast<const WindowNode>(planNode)) {
         currentOperatorFactories->emplace_back(WindowOperatorFactory::CreateWindowOperatorFactory(windowNode, queryConfig));
     } else if (auto topNNode = std::dynamic_pointer_cast<const TopNNode>(planNode)) {
