@@ -132,16 +132,16 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
 {
     // Extract necessary information from planNode
     auto joinType = planNode->GetJoinType();
-    auto buildTypes = planNode->LeftOutputType();
+    auto buildTypes = planNode->RightOutputType();
 
-    auto leftKeysSize = planNode->LeftKeys().size();
+    auto buildKeysSize = planNode->RightKeys().size();
     std::vector<int32_t> buildHashCols;
-    for (size_t index = 0; index < leftKeysSize; index++) {
-        buildHashCols.emplace_back(planNode->LeftKeys()[index]->colVal);
+    for (size_t index = 0; index < buildKeysSize; index++) {
+        buildHashCols.emplace_back(planNode->RightKeys()[index]->colVal);
     }
 
     auto buildHashColsCount = (int32_t) buildHashCols.size();
-    return new HashBuilderOperatorFactory(joinType, *buildTypes, buildHashCols.data(), buildHashColsCount, 1);
+    return new HashBuilderOperatorFactory(joinType, BuildSide::OMNI_BUILD_RIGHT, *buildTypes, buildHashCols.data(), buildHashColsCount, 1);
 }
 
 Operator *HashBuilderOperatorFactory::CreateOperator()
@@ -175,6 +175,9 @@ int32_t HashBuilderOperator::GetOutput(omniruntime::vec::VectorBatch **outputVec
 {
     if (!noMoreInput_) {
         SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
+    if (this->isFinished()) {
         return 0;
     }
     std::visit(

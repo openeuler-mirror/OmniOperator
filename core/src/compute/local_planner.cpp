@@ -5,6 +5,8 @@
 #include "local_planner.h"
 #include "operator/join/hash_builder.h"
 #include "operator/join/lookup_join.h"
+#include "operator/join/lookup_outer_join.h"
+#include "operator/join/lookup_join_wrapper.h"
 #include "operator/limit/limit.h"
 #include "operator/sort/sort.h"
 #include "operator/topn/topn.h"
@@ -20,7 +22,6 @@ void planDetail(const std::shared_ptr<const PlanNode> &planNode,
     std::vector<OperatorFactory *> *currentOperatorFactories,
     std::vector<std::unique_ptr<DriverFactory>> *driverFactories, const config::QueryConfig &queryConfig)
 {
-    OperatorFactory *factory = nullptr;
     if (!currentOperatorFactories) {
         driverFactories->emplace_back(std::make_unique<DriverFactory>());
         currentOperatorFactories = &driverFactories->back()->operatorFactories;
@@ -37,34 +38,39 @@ void planDetail(const std::shared_ptr<const PlanNode> &planNode,
     }
 
     if (auto orderByNode = std::dynamic_pointer_cast<const OrderByNode>(planNode)) {
-        factory = SortOperatorFactory::CreateSortOperatorFactory(orderByNode, queryConfig);
+        currentOperatorFactories->emplace_back(SortOperatorFactory::CreateSortOperatorFactory(orderByNode, queryConfig));
     } else if (auto projectNode = std::dynamic_pointer_cast<const ProjectNode>(planNode)) {
-        factory = CreateProjectOperatorFactory(projectNode, queryConfig);
+	    currentOperatorFactories->emplace_back(CreateProjectOperatorFactory(projectNode, queryConfig));
     } else if (auto filterNode = std::dynamic_pointer_cast<const FilterNode>(planNode)) {
-        factory = CreateFilterOperatorFactory(filterNode, queryConfig);
+	    currentOperatorFactories->emplace_back(CreateFilterOperatorFactory(filterNode, queryConfig));
     } else if (auto windowNode = std::dynamic_pointer_cast<const WindowNode>(planNode)) {
-        factory = WindowOperatorFactory::CreateWindowOperatorFactory(windowNode, queryConfig);
+        currentOperatorFactories->emplace_back(WindowOperatorFactory::CreateWindowOperatorFactory(windowNode, queryConfig));
     } else if (auto topNNode = std::dynamic_pointer_cast<const TopNNode>(planNode)) {
-        factory = TopNOperatorFactory::CreateTopNOperatorFactory(topNNode);
+        currentOperatorFactories->emplace_back(TopNOperatorFactory::CreateTopNOperatorFactory(topNNode));
     } else if (auto limitNode = std::dynamic_pointer_cast<const LimitNode>(planNode)) {
-        factory = LimitOperatorFactory::CreateLimitOperatorFactory(limitNode);
+        currentOperatorFactories->emplace_back(LimitOperatorFactory::CreateLimitOperatorFactory(limitNode));
     } else if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
-        factory = UnionOperatorFactory::CreateUnionOperatorFactory(unionNode);
+        currentOperatorFactories->emplace_back(UnionOperatorFactory::CreateUnionOperatorFactory(unionNode));
     } else if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
         // The overflowConfig now is nullptr, need to update it later.
-        auto hashBuilderOperatorFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
-        factory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(
-            joinNode, hashBuilderOperatorFactory, queryConfig);
+        auto hashBuilderOperatorFactory =
+            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
+
+        auto joinType = joinNode->GetJoinType();
+        if (joinType == JoinType::OMNI_JOIN_TYPE_FULL || joinType == JoinType::OMNI_JOIN_TYPE_RIGHT) {
+            currentOperatorFactories->emplace_back(LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig));
+        } else {
+            currentOperatorFactories->emplace_back(LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig));
+        }
+
         auto builderFactories = &driverFactories->back()->operatorFactories;
         builderFactories->emplace_back(hashBuilderOperatorFactory);
     } else if (auto valueStreamNode = std::dynamic_pointer_cast<const ValueStreamNode>(planNode)) {
-        factory = ValueStreamFactory::CreateValueStreamFactory(valueStreamNode);
+        currentOperatorFactories->emplace_back(ValueStreamFactory::CreateValueStreamFactory(valueStreamNode));
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());
     }
-
-    currentOperatorFactories->emplace_back(factory);
 }
 
 void LocalPlanner::plan(const PlanFragment &fragment, std::vector<std::unique_ptr<DriverFactory>> *driverFactories,
