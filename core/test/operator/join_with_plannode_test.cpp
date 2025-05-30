@@ -24,7 +24,7 @@ using std::vector;
 
 namespace JoinWithPlanNodeTest {
 void DeleteHashBuilderAndLookupJoinOperatorFactory(HashBuilderOperatorFactory *hashBuilderOperatorFactory,
-                               LookupJoinOperatorFactory *lookupJoinOperatorFactory)
+    LookupJoinOperatorFactory *lookupJoinOperatorFactory)
 {
     delete hashBuilderOperatorFactory;
     delete lookupJoinOperatorFactory;
@@ -32,7 +32,8 @@ void DeleteHashBuilderAndLookupJoinOperatorFactory(HashBuilderOperatorFactory *h
 
 std::shared_ptr<const HashJoinNode> ConstructSimpleJoinKeyHashJoinNode(JoinType joinType, bool nullAware, bool isShuffle, ExprPtr filter)
 {
-    std::vector<std::shared_ptr<const FieldExpr>> leftKeys, rightKeys;
+    std::vector<std::shared_ptr<const FieldExpr>> leftKeys;
+    std::vector<std::shared_ptr<const FieldExpr>> rightKeys;
     leftKeys.reserve(1);
     rightKeys.reserve(1);
     leftKeys.emplace_back(std::make_shared<const FieldExpr>(0, LongType()));
