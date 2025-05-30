@@ -13,6 +13,7 @@
 #include "vector/vector_helper.h"
 #include "metrics/metrics.h"
 #include "compute/reason.h"
+#include "compute/operator_stats.h"
 
 namespace omniruntime {
 namespace op {
@@ -152,6 +153,31 @@ public:
         inputOperatorCnt_ += cnt;
     }
 
+    OperatorStats stats(bool clear)
+    {
+        OperatorStats stats = stats_;
+        if (clear) {
+            stats = stats_;
+            stats_.Clear();
+        }
+        return stats;
+    }
+
+    const std::string& operatorType() const
+    {
+        return operatorType_;
+    }
+
+    const PlanNodeId& planNodeId() const
+    {
+        return planNodeId_;
+    }
+
+    OperatorStats stats()
+    {
+        return stats_;
+    }
+
 protected:
     int32_t* sourceTypes;
     std::unique_ptr<ExecutionContext> executionContext;
@@ -210,9 +236,12 @@ protected:
 private:
     OmniStatus status;
     Metrics metrics;
-
+    const PlanNodeId planNodeId_;
     // for pipeline
     bool hasInputedData_{false};
+    const std::string operatorType_;
+
+    OperatorStats stats_;
 };
 }  // namespace op
 }  // namespace omniruntime
