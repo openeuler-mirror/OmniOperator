@@ -307,15 +307,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_operator_OmniExprVerify_exprV
     jint jParseFormat);
 
 /*
- * Class:     nova_hetu_omniruntime_operator_fusion_OmniFusionOperatorFactory
- * Method:    createFusionOperatorFactory
- * Signature: ([J[ILjava/lang/String;)J
- */
-JNIEXPORT jlong JNICALL
-Java_nova_hetu_omniruntime_operator_fusion_OmniFusionOperatorFactory_createFusionOperatorFactory(JNIEnv *env,
-    jclass jObj, jlongArray jOperatorFactories, jintArray jOperatorTypes, jstring jOperatorConfig);
-
-/*
  * Class:     nova_hetu_omniruntime_operator_filter_OmniBloomFilterOperatorFactory
  * Method:    createBloomFilterOperatorFactory
  * Signature: ([J[ILjava/lang/String;)J
