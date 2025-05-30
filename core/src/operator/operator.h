@@ -116,7 +116,10 @@ public:
 
     virtual void noMoreInput()
     {
-        noMoreInput_ = true;
+        inputOperatorCnt_--;
+        if (inputOperatorCnt_ <= 0) {
+            noMoreInput_ = true;
+        }
     }
 
     void setNoMoreInput(bool noMoreInput)
@@ -131,7 +134,7 @@ public:
 
     bool isFinished()
     {
-        return status == OMNI_STATUS_FINISHED;
+        return inputOperatorCnt_ == 0 && status == OMNI_STATUS_FINISHED;
     }
 
     bool hasInputedData()
@@ -142,13 +145,19 @@ public:
     void setInputedData(bool hasInputedData)
     {
         this->hasInputedData_ = hasInputedData;
-    };
+    }
+
+    void increaseInputOperatorCnt(int32_t cnt)
+    {
+        inputOperatorCnt_ += cnt;
+    }
 
 protected:
     int32_t* sourceTypes;
     std::unique_ptr<ExecutionContext> executionContext;
     vec::VectorBatch* inputVecBatch = nullptr;
     bool noMoreInput_{true};
+    int32_t inputOperatorCnt_{0};
 
     void UpdateAddInputInfo(int32_t rowCount)
     {

@@ -40,12 +40,6 @@ vec::VectorBatch *OmniDriver::Next(ContinueFuture *future, StopReason *stopReaso
     return result;
 }
 
-void OmniDriver::init(std::vector<std::unique_ptr<omniruntime::op::Operator>> operators)
-{
-    operators_ = std::move(operators);
-    curOperatorId_ = 0;
-}
-
 void OmniDriver::close()
 {
     if (closed_) {
@@ -105,7 +99,9 @@ StopReason OmniDriver::RunInternal(
                         }
                     }
                 } else {
-                    op->GetOutput(result);
+                    if (outputDriver) {
+                        op->GetOutput(result);
+                    }
                     if (*result != nullptr) {
                         blockingReason_ = BlockingReason::kWaitForConsumer;
                         return StopReason::kBlock;
@@ -136,22 +132,5 @@ StopReason OmniDriver::BlockDriver(
     blockingState = std::make_shared<BlockingState>(
         self, std::move(future), op, blockingReason_);
     return StopReason::kBlock;
-}
-
-std::shared_ptr<OmniDriver> DriverFactory::CreateDriver()
-{
-    auto driver = std::make_shared<OmniDriver>();
-    std::vector<std::unique_ptr<omniruntime::op::Operator>> operators;
-    operators.reserve(operatorFactories.size());
-
-    for (uint32_t i = 0; i < operatorFactories.size(); i++) {
-        auto factory = operatorFactories[i];
-        std::unique_ptr<omniruntime::op::Operator> operatorPtr(factory->CreateOperator());
-        operatorPtr->setNoMoreInput(false);
-        operators.emplace_back(std::move(operatorPtr));
-    }
-
-    driver->init(std::move(operators));
-    return driver;
 }
 } // end of omniruntime

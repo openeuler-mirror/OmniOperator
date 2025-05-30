@@ -24,7 +24,6 @@ using OperatorSupplier = std::function<
     std::unique_ptr<omniruntime::op::Operator>(const OperatorConfig& operatorConfig)>;
 
 class BlockingState;
-class DriverFactory;
 
 class OmniDriver : public std::enable_shared_from_this<OmniDriver> {
 public:
@@ -41,10 +40,18 @@ public:
         operators_.emplace_back(std::move(operatorPtr));
     }
 
-    void init(
-        std::vector<std::unique_ptr<omniruntime::op::Operator>> operators);
-
     void close();
+
+    std::vector<std::shared_ptr<omniruntime::op::Operator>>& operators()
+    {
+        return operators_;
+    }
+
+public:
+    bool inputDriver{false};
+    bool outputDriver{false};
+    bool unionDriver{false};
+
 private:
  
     StopReason RunInternal(
@@ -61,7 +68,7 @@ private:
     // Index of the current operator to run (or the 1st one if we haven't stated yet).
     size_t curOperatorId_;
  
-    std::vector<std::unique_ptr<omniruntime::op::Operator>> operators_;
+    std::vector<std::shared_ptr<omniruntime::op::Operator>> operators_;
  
     BlockingReason blockingReason_;
     size_t blockedOperatorId_;
@@ -93,34 +100,6 @@ private:
     BlockingReason reason_;
 
     static std::atomic_uint64_t numBlockdDrivers_;
-};
-
-
-class DriverFactory {
-public:
-    std::vector<omniruntime::op::OperatorFactory*> operatorFactories;
-    // Function taht will generate the final operator of a driver being constructed
-    OperatorSupplier consumerSupplier;
-    // Maximum number of drivers that can be run concurrently in this pipeline
-    uint32_t maxDrivers;
-    // Number of drivers that will be run concurrently in this pipeline for the whole task
-    uint32_t numDrivers;
-    // Total number of drivers in this pipeline we expect to be run
-    uint32_t numTotalDrivers;
-    // True if 'planNodes' contains a source node for the task, e.g. TableScan or Exchange
-    bool inputDriver{false};
-    // True if 'planNodes' contains a sync node for the task, e.g. PartitionedOutput
-    bool outputDriver{false};
-
-    std::shared_ptr<OmniDriver> CreateDriver();
-
-    ~DriverFactory()
-    {
-        for (auto* factory : operatorFactories) {
-            delete factory;
-        }
-        operatorFactories.clear();
-    }
 };
 
 } // end of compute
