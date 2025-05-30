@@ -81,7 +81,7 @@ void planDetail(
 
     if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
         auto hashBuilderOperatorFactory =
-                HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
+            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
         auto builderFactories = &driverFactories->back()->operatorFactories;
         builderFactories->emplace_back(hashBuilderOperatorFactory);
         auto builderDriver = drivers->back();
