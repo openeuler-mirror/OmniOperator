@@ -8,15 +8,9 @@ namespace omniruntime::compute {
  
 vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
 {
-    if (driverFactories_.empty()) {
+    if (drivers_.empty()) {
         LocalPlanner::plan(
-            planFragment_, &driverFactories_, queryConfig_, 1);
-        std::vector<std::shared_ptr<OmniDriver>> drivers;
-        for (auto& factory : driverFactories_) {
-            drivers.emplace_back(factory->CreateDriver());
-        }
-        drivers_ = std::move(drivers);
-        std::reverse(drivers_.begin(), drivers_.end());
+            planFragment_, &drivers_, &operatorFactories_, queryConfig_);
     }
     const auto numDrivers = drivers_.size();
     auto futures = OmniFuture::createValidFutures(numDrivers);

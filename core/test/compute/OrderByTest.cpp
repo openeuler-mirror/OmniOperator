@@ -5,6 +5,9 @@
 
 #include "compute/driver.h"
 #include "compute/task.h"
+#include "compute/local_planner.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
 #include "gtest/gtest.h"
 #include "test/util/test_util.h"
 #include "util/config/QueryConfig.h"
@@ -73,5 +76,38 @@ TEST(DriverTest, TestOrderBy)
     ASSERT_TRUE(VecBatchMatch(vecBatchExpect, vectorBatch));
     VectorHelper::FreeVecBatch(vecBatchExpect);
     VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+TEST(DriverTest, TestCreateFactory)
+{
+    std::vector<DataTypePtr> types = {LongType()};
+    DataTypes sourceTypes(types);
+    const int64_t dataSize1 = 6;
+    int64_t data1[dataSize1] = {6, 4, 7, 3, 2, 1};
+    VectorBatch *vecBatch1 = CreateVectorBatch(sourceTypes, dataSize1, data1);
+    std::vector<VectorBatch*> inputVector;
+    inputVector.push_back(vecBatch1);
+
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(std::vector<DataTypePtr>({LongType()}));
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+
+    std::vector<int32_t> c = {0};
+    auto orderbyNode = std::make_shared<const OrderByNode>("order_by", c, c, c, valueStreamNode);
+
+    const auto queryConfig = omniruntime::config::QueryConfig();
+    auto sortFactory =
+        omniruntime::compute::createOperatorFactory(orderbyNode, queryConfig);
+    auto valueStreamFactory =
+        omniruntime::compute::createOperatorFactory(valueStreamNode, queryConfig);
+
+    auto sortOperator = omniruntime::compute::createOperator(sortFactory);
+    auto valueStreamOperator = omniruntime::compute::createOperator(valueStreamFactory);
+
+    delete sortFactory;
+    delete valueStreamFactory;
+
+    VectorHelper::FreeVecBatch(vecBatch1);
 }
 }

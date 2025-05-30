@@ -14,13 +14,19 @@
 
 namespace omniruntime {
 namespace compute {
+
+std::shared_ptr<omniruntime::op::Operator> createOperator(OperatorFactory* factory);
+OperatorFactory* createOperatorFactory(
+    const std::shared_ptr<const PlanNode>& planNode,
+    const config::QueryConfig& queryConfig);
+
 class LocalPlanner {
 public:
     static void plan(
         const omniruntime::PlanFragment& fragment,
-        std::vector<std::unique_ptr<omniruntime::compute::DriverFactory>>* driverFactories,
-        const config::QueryConfig& queryConfig,
-        uint32_t maxDrivers);
+        std::vector<std::shared_ptr<omniruntime::compute::OmniDriver>>* drivers,
+        std::vector<omniruntime::op::OperatorFactory*>* factories,
+        const config::QueryConfig& queryConfig);
 };
 }  // namespace compute
 }  // namespace omniruntime
