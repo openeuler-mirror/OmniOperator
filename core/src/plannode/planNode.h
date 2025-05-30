@@ -402,7 +402,6 @@ public:
 
         joinInputTypes.insert(joinInputTypes.end(), leftOutputType->Get().begin(), leftOutputType->Get().end());
         joinInputTypes.insert(joinInputTypes.end(), rightOutputType->Get().begin(), rightOutputType->Get().end());
-
         this->outputType = std::make_shared<DataTypes>(std::move(joinInputTypes));
     }
 
