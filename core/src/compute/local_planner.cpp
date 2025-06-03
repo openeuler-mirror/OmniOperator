@@ -5,6 +5,8 @@
 #include "local_planner.h"
 #include "operator/join/hash_builder.h"
 #include "operator/join/lookup_join.h"
+#include "operator/join/lookup_outer_join.h"
+#include "operator/join/lookup_join_wrapper.h"
 #include "operator/limit/limit.h"
 #include "operator/sort/sort.h"
 #include "operator/topn/topn.h"
@@ -80,11 +82,18 @@ void planDetail(
     if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
         auto hashBuilderOperatorFactory =
             HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
-        factory =
-            LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
         auto builderDriver = drivers->back();
         builderDriver->operators().emplace_back(createOperator(hashBuilderOperatorFactory));
         factories->emplace_back(hashBuilderOperatorFactory);
+
+        auto joinType = joinNode->GetJoinType();
+        if (joinType == JoinType::OMNI_JOIN_TYPE_FULL || joinType == JoinType::OMNI_JOIN_TYPE_RIGHT) {
+            factory =
+                LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
+        } else {
+            factory =
+                LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
+        }
     } else {
         factory = createOperatorFactory(planNode, queryConfig);
     }

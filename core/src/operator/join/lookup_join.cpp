@@ -42,8 +42,8 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
     : probeTypes(probeTypes),
       buildOutputTypes(buildOutputTypes),
       hashTables(hashTables),
-      originalProbeColsCount(probeTypes.GetSize()),
-      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan)
+      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan),
+      originalProbeColsCount(probeTypes.GetSize())
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
         buildOutputCols, buildOutputColsCount, buildOutputTypes);
@@ -59,8 +59,8 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
     : probeTypes(probeTypes),
       buildOutputTypes(buildOutputTypes),
       hashTables(hashTables),
-      originalProbeColsCount(originalProbeColsCount),
-      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan)
+      isShuffleExchangeBuildPlan(isShuffleExchangeBuildPlan),
+      originalProbeColsCount(originalProbeColsCount)
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
         buildOutputCols, buildOutputColsCount, buildOutputTypes);
@@ -107,14 +107,14 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     const config::QueryConfig &queryConfig)
 {
     // Extract necessary information from planNode
-    auto buildOutputTypes = planNode->LeftOutputType();
+    auto buildOutputTypes = planNode->RightOutputType();
     auto buildOutputColsCount = buildOutputTypes->GetSize();
     std::vector<int32_t> buildOutputCols;
     for (size_t index = 0; index < buildOutputColsCount; index++) {
         buildOutputCols.emplace_back(index);
     }
 
-    auto probeOutputTypes = planNode->RightOutputType();
+    auto probeOutputTypes = planNode->LeftOutputType();
     auto probeOutputColsCount = probeOutputTypes->GetSize();
     std::vector<int32_t> probeOutputCols;
     for (size_t index = 0; index < probeOutputColsCount; index++) {
@@ -122,7 +122,7 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     }
 
     std::vector<int32_t> probeHashCols;
-    for (const auto& key : planNode->RightKeys()) {
+    for (const auto &key : planNode->LeftKeys()) {
         probeHashCols.emplace_back(key->colVal);
     }
     auto probeHashColsCount = (int32_t) probeHashCols.size();
@@ -133,11 +133,16 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     auto overflowConfig = queryConfig.IsOverFlowASNull()
                               ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                               : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    return new LookupJoinOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount,
-                                         probeHashCols.data(), probeHashColsCount, buildOutputCols.data(),
-                                         buildOutputColsCount, *buildOutputTypes,
-                                         hashBuilderOperatorFactory->GetHashTablesVariants(),
-                                         filter.get(), isShuffle, overflowConfig);
+
+    auto pLookupJoinOperatorFactory = new LookupJoinOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount,
+        probeHashCols.data(), probeHashColsCount, buildOutputCols.data(),
+        buildOutputColsCount, *buildOutputTypes,
+        hashBuilderOperatorFactory->GetHashTablesVariants(),
+        filter, isShuffle, overflowConfig);
+
+    delete overflowConfig;
+    overflowConfig = nullptr;
+    return pLookupJoinOperatorFactory;
 }
 
 Operator *LookupJoinOperatorFactory::CreateOperator()
