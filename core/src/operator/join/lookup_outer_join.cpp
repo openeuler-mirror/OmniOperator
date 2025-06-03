@@ -18,7 +18,6 @@ LookupOuterJoinOperatorFactory::LookupOuterJoinOperatorFactory(const type::DataT
     this->probeOutputCols.insert(this->probeOutputCols.end(), probeOutputCols, probeOutputCols + probeOutputColsCount);
     this->buildOutputCols.insert(this->buildOutputCols.end(), buildOutputCols,
         buildOutputCols + buildOutputTypes.GetSize());
-    PrepareTotalVisitedCounts();
 }
 
 LookupOuterJoinOperatorFactory::~LookupOuterJoinOperatorFactory() = default;
@@ -35,19 +34,19 @@ LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOute
 
 LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
     std::shared_ptr<const HashJoinNode> planNode, HashBuilderOperatorFactory* hashBuilderOperatorFactory,
-    OverflowConfig *overflowConfig)
+    const config::QueryConfig& queryConfig)
 {
-    auto buildOutputTypes = planNode->LeftOutputType();
+    auto buildOutputTypes = planNode->RightOutputType();
     auto buildOutputColsCount = buildOutputTypes->GetSize();
     std::vector<int32_t> buildOutputCols;
-    for (size_t index = 0; index < buildOutputColsCount; index++) {
+    for (int32_t index = 0; index < buildOutputColsCount; index++) {
         buildOutputCols.emplace_back(index);
     }
 
-    auto probeOutputTypes = planNode->RightOutputType();
+    auto probeOutputTypes = planNode->LeftOutputType();
     auto probeOutputColsCount = probeOutputTypes->GetSize();
     std::vector<int32_t> probeOutputCols;
-    for (size_t index = 0; index < probeOutputColsCount; index++) {
+    for (int32_t index = 0; index < probeOutputColsCount; index++) {
         probeOutputCols.emplace_back(index);
     }
 
@@ -67,7 +66,7 @@ Operator *LookupOuterJoinOperatorFactory::CreateOperator()
     return lookupOuterJoinOperator;
 }
 
-void LookupOuterJoinOperatorFactory::PrepareTotalVisitedCounts()
+void LookupOuterJoinOperator::PrepareTotalVisitedCounts()
 {
     std::visit(
         [&](auto &&arg) {
@@ -117,6 +116,11 @@ int32_t LookupOuterJoinOperator::AddInput(VectorBatch *vecBatch)
 
 int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 {
+    if (!isPrepareTotalVisitedCounts) {
+        PrepareTotalVisitedCounts();
+        isPrepareTotalVisitedCounts = true;
+    }
+
     totalRowCount =
         std::visit([&](auto &&arg) { return arg.GetTotalVisitedCounts() - arg.GetVisitedCounts(); }, *hashTables);
     if (totalRowCount <= 0) {

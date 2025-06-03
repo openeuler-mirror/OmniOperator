@@ -61,8 +61,8 @@ NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNest
     auto outputTypes = planNode->OutputType();
     auto filter = new Filter(*planNode->Filter(), *outputTypes, overflowConfig);
 
-    auto buildOutputTypes = planNode->LeftOutputType();
-    auto probeOutputTypes = planNode->RightOutputType();
+    auto buildOutputTypes = planNode->RightOutputType();
+    auto probeOutputTypes = planNode->LeftOutputType();
     auto probeOutputColsCount = probeOutputTypes->GetSize();
     std::vector<int32_t> probeOutputCols;
     for (size_t index = 0; index < probeOutputColsCount; index++) {
