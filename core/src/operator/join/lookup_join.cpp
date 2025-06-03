@@ -133,11 +133,15 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     auto overflowConfig = queryConfig.IsOverFlowASNull()
                               ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                               : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    return new LookupJoinOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount,
-                                         probeHashCols.data(), probeHashColsCount, buildOutputCols.data(),
-                                         buildOutputColsCount, *buildOutputTypes,
-                                         hashBuilderOperatorFactory->GetHashTablesVariants(),
-                                         filter, isShuffle, overflowConfig);
+
+    auto pLookupJoinOperatorFactory = new LookupJoinOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount,
+        probeHashCols.data(), probeHashColsCount, buildOutputCols.data(),
+        buildOutputColsCount, *buildOutputTypes,
+        hashBuilderOperatorFactory->GetHashTablesVariants(),
+        filter, isShuffle, overflowConfig);
+
+    free(overflowConfig);
+    return pLookupJoinOperatorFactory;
 }
 
 Operator *LookupJoinOperatorFactory::CreateOperator()
