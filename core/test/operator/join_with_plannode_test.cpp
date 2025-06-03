@@ -104,7 +104,8 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestInnerEqualityJoinWithOneBuildOp)
     VectorBatch *hashBuildOutput = nullptr;
     hashBuilderOperator->GetOutput(&hashBuildOutput);
 
-    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderFactory, config::QueryConfig());
+    auto *queryConfig = new config::QueryConfig();
+    LookupJoinOperatorFactory *lookupJoinFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderFactory, *queryConfig);
     auto *lookupJoinOperator = dynamic_cast<LookupJoinOperator *>(lookupJoinFactory->CreateOperator());
     VectorBatch *probeVecBatch = ConstructSimpleProbeVectorBatch();
     lookupJoinOperator->AddInput(probeVecBatch);
@@ -115,6 +116,7 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestInnerEqualityJoinWithOneBuildOp)
     EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
+    delete queryConfig;
     VectorHelper::FreeVecBatch(outputVecBatch);
     VectorHelper::FreeVecBatch(expectVecBatch);
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
