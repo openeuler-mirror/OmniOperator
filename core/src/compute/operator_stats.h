@@ -8,6 +8,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
  
 #include "cpuWall_timer.h"
 
