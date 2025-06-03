@@ -140,7 +140,8 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
         hashBuilderOperatorFactory->GetHashTablesVariants(),
         filter, isShuffle, overflowConfig);
 
-    free(overflowConfig);
+    delete overflowConfig;
+    overflowConfig = nullptr;
     return pLookupJoinOperatorFactory;
 }
 
