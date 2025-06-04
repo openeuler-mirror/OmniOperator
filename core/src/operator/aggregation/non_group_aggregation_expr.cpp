@@ -159,13 +159,18 @@ int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     VectorHelper::FreeVecBatch(inputVecBatch);
     ResetInputVecBatch();
     aggOperator->AddInput(newInputVecBatch);
+    noMoreInput();
     return 0;
 }
 
 int32_t AggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
-    aggOperator->GetOutput(outputVecBatch);
-    SetStatus(OMNI_STATUS_FINISHED);
+    if (!noMoreInput_) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
+    auto status = aggOperator->GetOutput(outputVecBatch);
+    SetStatus(static_cast<OmniStatus>(status));
     return 0;
 }
 
@@ -174,5 +179,27 @@ OmniStatus AggregationWithExprOperator::Close()
     aggOperator->Close();
     return OMNI_STATUS_NORMAL;
 }
+
+AggregationWithExprOperatorFactory *AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
+    const std::shared_ptr<const AggregationNode> &planNode, const config::QueryConfig &queryConfig)
+{
+    auto groupByKeys = planNode->GetGroupByKeys();
+    auto groupByNum = planNode->GetGroupByNum();
+    auto aggsKeys = planNode->GetAggsKeys();
+    auto sourceDataTypes = planNode->GetSourceDataTypes();
+    auto aggsOutputTypes = planNode->GetAggsOutputTypes();
+    auto aggFuncTypes = planNode->GetAggFuncTypes();
+    auto aggFilters = planNode->GetAggFilters();
+    auto maskColsVector = planNode->GetMaskColumns();
+    auto inputRaws = planNode->GetInputRaws();
+    auto outputPartial = planNode->GetOutputPartials();
+    auto isStatisticalAggregate = planNode->GetIsStatisticalAggregate();
+    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                                                             : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    return new AggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, *sourceDataTypes, aggsOutputTypes,
+        aggFuncTypes, aggFilters, maskColsVector, inputRaws, outputPartial, overflowConfig,
+        isStatisticalAggregate);
+}
+
 }
 }
