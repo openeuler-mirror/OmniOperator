@@ -3,6 +3,7 @@
  * Description: Expression Verifier
  */
 #include "expr_verifier.h"
+#include "codegen/func_registry.h"
 
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
@@ -253,11 +254,19 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
         return;
     }
     int numArgs = funcExpr.arguments.size();
+    std::vector<DataTypeId> params;
     for (int i = 0; i < numArgs; i++) {
+        params.push_back(funcExpr.arguments[i]->GetReturnTypeId());
         if (!VisitExpr(*funcExpr.arguments[i])) {
             this->supportedFlag = false;
             return;
         }
+    }
+    auto signature = FunctionSignature(funcExpr.funcName, params, funcExpr.GetReturnTypeId());
+    auto function = codegen::FunctionRegistry::LookupFunction(&signature);
+    if (function == nullptr) {
+        this->supportedFlag = false;
+        return;
     }
     this->supportedFlag = true;
 }
