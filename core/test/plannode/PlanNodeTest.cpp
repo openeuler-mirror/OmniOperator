@@ -9,8 +9,8 @@ using namespace ::omniruntime;
 
 TEST(TestPlanNode, sortOrder) {
     struct {
-        SortOrder order1;
-        SortOrder order2;
+        SortOrderInfo order1;
+        SortOrderInfo order2;
         int expectedEqual;
 
         std::string debugString() const {

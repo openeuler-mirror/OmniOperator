@@ -8,8 +8,7 @@ target_compile_options(${CODEGEN_TARGET} PRIVATE -D_GNU_SOURCE -D__STDC_CONSTANT
 target_link_libraries(${CODEGEN_TARGET} PRIVATE LLVM-15 securec ${OMNI_VECTOR_SO} util expression udf)
 install(TARGETS ${CODEGEN_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
 
-file(GLOB CODEGEN_HEAD_FILES
-        ${SOURCE_ROOT}/src/codegen/function.h
-        ${SOURCE_ROOT}/src/codegen/func_signature.h
-        ${SOURCE_ROOT}/src/codegen/expr_evaluator.h)
+file(GLOB CODEGEN_HEAD_FILES  ${SOURCE_ROOT}/src/codegen/*.h)
+file(GLOB CODEGEN_FUNCTIONS_HEAD_FILES  ${SOURCE_ROOT}/src/codegen/functions/*.h)
 install(FILES ${CODEGEN_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/codegen)
+install(FILES ${CODEGEN_FUNCTIONS_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/codegen/functions)
