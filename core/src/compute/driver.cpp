@@ -102,7 +102,7 @@ StopReason OmniDriver::RunInternal(
                     if (outputDriver) {
                         op->GetOutput(result);
                     }
-                    if (*result != nullptr) {
+                    if (*result != nullptr  && !op->isFinished()) {
                         blockingReason_ = BlockingReason::kWaitForConsumer;
                         return StopReason::kBlock;
                     }

@@ -25,6 +25,9 @@ public:
 
     ~AggregationWithExprOperatorFactory() override;
 
+    static AggregationWithExprOperatorFactory *CreateAggregationWithExprOperatorFactory(
+        const std::shared_ptr<const AggregationNode> &planNode, const config::QueryConfig &queryConfig);
+
     Operator *CreateOperator() override;
 
 private:
@@ -51,6 +54,8 @@ public:
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
+
+    AggregationOperator *GetAggregationOperator() const { return aggOperator; }
 
 private:
     DataTypes originTypes;

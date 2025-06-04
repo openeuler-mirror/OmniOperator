@@ -12,6 +12,7 @@
 #include "operator/topn/topn.h"
 #include "operator/union/union.h"
 #include "operator/window/window.h"
+#include <operator/aggregation/non_group_aggregation_expr.h>
 
 namespace omniruntime::compute {
 
@@ -45,6 +46,9 @@ OperatorFactory* createOperatorFactory(
         return UnionOperatorFactory::CreateUnionOperatorFactory(unionNode);
     } else if (auto valueStreamNode = std::dynamic_pointer_cast<const ValueStreamNode>(planNode)) {
         return ValueStreamFactory::CreateValueStreamFactory(valueStreamNode);
+    } else if (auto aggregationNode = std::dynamic_pointer_cast<const AggregationNode>(planNode)) {
+        return AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
+            aggregationNode, queryConfig);
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());

@@ -19,20 +19,20 @@ using ExprPtr = Expr *;
 
 using PlanNodeId = std::string;
 
-class SortOrder {
+class SortOrderInfo {
 public:
-    SortOrder(bool ascending, bool nullsFirst) noexcept : ascending(ascending), nullsFirst(nullsFirst) {}
+    SortOrderInfo(bool ascending, bool nullsFirst) noexcept : ascending(ascending), nullsFirst(nullsFirst) {}
 
     bool IsAscending() const { return ascending; }
 
     bool IsNullsFirst() const { return nullsFirst; }
 
-    bool operator==(const SortOrder &other) const
+    bool operator==(const SortOrderInfo &other) const
     {
         return std::tie(ascending, nullsFirst) == std::tie(other.ascending, other.nullsFirst);
     }
 
-    bool operator!=(const SortOrder &other) const { return !(*this == other); }
+    bool operator!=(const SortOrderInfo &other) const { return !(*this == other); }
 
     std::string ToString() const
     {
@@ -44,10 +44,10 @@ private:
     bool nullsFirst;
 };
 
-extern const SortOrder K_ASC_NULLS_FIRST;
-extern const SortOrder K_ASC_NULLS_LAST;
-extern const SortOrder K_DESC_NULLS_FIRST;
-extern const SortOrder K_DESC_NULLS_LAST;
+extern const SortOrderInfo K_ASC_NULLS_FIRST;
+extern const SortOrderInfo K_ASC_NULLS_LAST;
+extern const SortOrderInfo K_DESC_NULLS_FIRST;
+extern const SortOrderInfo K_DESC_NULLS_LAST;
 
 class PlanNode {
 public:
@@ -172,24 +172,61 @@ public:
         K_SINGLE
     };
 
-    AggregationNode(PlanNodePtr source, std::vector<uint32_t> &funcTypesVector,
-        std::vector<std::vector<uint32_t>> &inputColsVector, std::vector<uint32_t> &maskColsVector,
-        std::vector<DataTypes> &outputTypes, std::vector<bool> inputRaws, Step step);
+    AggregationNode(const PlanNodeId &id, const std::vector<ExprPtr> &groupByKeys, const uint32_t groupByNum,
+        const std::vector<std::vector<ExprPtr>> &aggKeys, const DataTypesPtr sourceDataTypes,
+        const std::vector<DataTypes> aggsOutputTypes, const std::vector<uint32_t> &aggFuncTypes,
+        const std::vector<ExprPtr> &aggFilters, const std::vector<uint32_t> &maskColumns,
+        const std::vector<bool> &inputRaws, const std::vector<bool> &outputPartials, const bool isStatisticalAggregate,
+        PlanNodePtr source)
+        : PlanNode(id), groupByKeys(groupByKeys), groupByNum(groupByNum), aggKeys(aggKeys),
+          sourceDataTypes(sourceDataTypes), aggsOutputTypes(aggsOutputTypes), aggFuncTypes(aggFuncTypes),
+          aggFilters(aggFilters), maskColumns(maskColumns), inputRaws(inputRaws), outputPartials(outputPartials),
+          isStatisticalAggregate(isStatisticalAggregate), sources({source})
+    {}
 
     ~AggregationNode() override = default;
 
-    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
-
-    const DataTypesPtr &OutputType() const override { return outputType; }
-
     std::string_view Name() const override { return "Aggregation"; }
 
-private:
-    const Step step;
-    std::vector<uint32_t> funcTypesVector;
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
 
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
+
+    const std::vector<ExprPtr> &GetGroupByKeys() const { return groupByKeys; }
+
+    const uint32_t GetGroupByNum() const { return groupByNum; }
+
+    const std::vector<std::vector<ExprPtr>> GetAggsKeys() const { return aggKeys; }
+
+    DataTypesPtr GetSourceDataTypes() const { return sourceDataTypes; }
+
+    const std::vector<uint32_t> &GetAggFuncTypes() const { return aggFuncTypes; }
+
+    const std::vector<ExprPtr> GetAggFilters() const { return aggFilters; }
+
+    const std::vector<uint32_t> GetMaskColumns() const { return maskColumns; }
+
+    const std::vector<bool> GetInputRaws() const { return inputRaws; }
+
+    const std::vector<bool> GetOutputPartials() const { return outputPartials; }
+
+    const bool GetIsStatisticalAggregate() const { return isStatisticalAggregate; }
+
+    const std::vector<DataTypes> &GetAggsOutputTypes() const { return aggsOutputTypes; }
+
+private:
+    const std::vector<ExprPtr> groupByKeys;
+    const uint32_t groupByNum;
+    const std::vector<std::vector<ExprPtr>> aggKeys;
+    const DataTypesPtr sourceDataTypes;
+    const std::vector<DataTypes> aggsOutputTypes; // 要改成这个
+    const std::vector<uint32_t> aggFuncTypes;
+    const std::vector<ExprPtr> aggFilters;
+    const std::vector<uint32_t> maskColumns;
+    const std::vector<bool> inputRaws;
+    const std::vector<bool> outputPartials;
+    bool isStatisticalAggregate;
     const std::vector<PlanNodePtr> sources;
-    const DataTypesPtr outputType;
 };
 
 class WindowNode : public PlanNode {

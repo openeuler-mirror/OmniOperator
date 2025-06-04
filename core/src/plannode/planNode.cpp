@@ -5,8 +5,8 @@
 #include "planNode.h"
 
 namespace omniruntime {
-const SortOrder K_ASC_NULLS_FIRST(true, true);
-const SortOrder K_ASC_NULLS_LAST(true, false);
-const SortOrder K_DESC_NULLS_FIRST(false, true);
-const SortOrder K_DESC_NULLS_LAST(false, false);
+const SortOrderInfo K_ASC_NULLS_FIRST(true, true);
+const SortOrderInfo K_ASC_NULLS_LAST(true, false);
+const SortOrderInfo K_DESC_NULLS_FIRST(false, true);
+const SortOrderInfo K_DESC_NULLS_LAST(false, false);
 }
