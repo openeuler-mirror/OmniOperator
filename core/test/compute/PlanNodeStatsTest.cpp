@@ -114,4 +114,29 @@ TEST(PlanNodeStatsTest, PlanNodeStatsToString_ShouldReturnCorrectString_WhenIncl
     EXPECT_EQ(result.find("Input: 10 rows (100"), std::string::npos);
     EXPECT_NE(result.find("Output: 20 rows (200"), std::string::npos);
 }
+
+TEST(PlanNodeStatsTest, ToPlanStats_ShouldReturnEmptyMap_WhenInputVectorIsEmpty) {
+    const omniruntime::TaskStats stats;
+    auto result = ToPlanStats(stats);
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(PlanNodeStatsTest, ToPlanStats_ShouldReturnMapWithMultipleElements_WhenInputVectorHasMultipleElements) {
+    omniruntime::TaskStats stats;
+    stats.endTimeMs = 0;
+    stats.numTotalSplits = 1;
+    stats.numTotalSplits = 1;
+    omniruntime::OperatorStats operator_stats;
+    operator_stats.inputPositions = 1;
+    operator_stats.inputBytes = 1;
+    operator_stats.pipelineId = 0;
+    operator_stats.planNodeId = "0";
+    operator_stats.operatorId = 0;
+    operator_stats.operatorType = "OrderBy";
+    omniruntime::PipelineStats pipeline_stats;
+    pipeline_stats.operatorStats.push_back(operator_stats);
+    stats.pipelineStats.push_back(pipeline_stats);
+    auto result = ToPlanStats(stats);
+    EXPECT_EQ(result.size(), 1);
+}
 }
