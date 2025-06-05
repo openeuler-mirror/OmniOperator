@@ -145,11 +145,6 @@ public:
         this->hasInputedData_ = hasInputedData;
     }
 
-    void increaseInputOperatorCnt(int32_t cnt)
-    {
-        inputOperatorCnt_ += cnt;
-    }
-
     OperatorStats stats(bool clear)
     {
         OperatorStats stats = stats_;

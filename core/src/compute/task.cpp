@@ -60,7 +60,7 @@ TaskStats OmniTask::GetTaskStats() const
             continue;
         }
         auto operators = driver->operators();
-        for (auto& op : operators) {
+        for (auto& op : *operators) {
             auto opStatsCopy = op->stats(false);
             int32_t pipelineId = opStatsCopy.pipelineId;
             int32_t operatorId = opStatsCopy.operatorId;
