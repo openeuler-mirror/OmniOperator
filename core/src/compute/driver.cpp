@@ -61,6 +61,9 @@ StopReason OmniDriver::RunInternal(
         ContinueFuture future = OmniFuture::makeEmpty();
         for (;;) {
             for (int32_t i = numOperators - 1; i >= 0; --i) {
+                if (shouldStop) {
+                    return StopReason::kAtEnd;
+                }
                 auto *op = operators_[i].get();
                 curOperatorId_ = i;
 
@@ -99,9 +102,7 @@ StopReason OmniDriver::RunInternal(
                         }
                     }
                 } else {
-                    if (outputDriver) {
-                        op->GetOutput(result);
-                    }
+                    op->GetOutput(result);
                     if (*result != nullptr  && !op->isFinished()) {
                         blockingReason_ = BlockingReason::kWaitForConsumer;
                         return StopReason::kBlock;

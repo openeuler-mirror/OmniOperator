@@ -52,6 +52,8 @@ public:
     bool outputDriver{false};
     bool unionDriver{false};
 
+    bool shouldStop{false};
+
 private:
  
     StopReason RunInternal(

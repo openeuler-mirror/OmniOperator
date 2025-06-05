@@ -29,6 +29,7 @@ public:
     {
         for (auto& driver : drivers_) {
             if (driver) {
+                driver->shouldStop = true;
                 driver->close();
             }
         }
