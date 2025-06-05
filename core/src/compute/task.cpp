@@ -3,12 +3,14 @@
  */
 #include "task.h"
 #include "local_planner.h"
- 
+#include "codegen/time_util.h"
+
 namespace omniruntime::compute {
  
 vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
 {
     if (drivers_.empty()) {
+        taskStats_.executionStartTimeMs = function::TimeUtil::GetCurrentTimeMs();
         LocalPlanner::plan(
             planFragment_, &drivers_, &operatorFactories_, queryConfig_);
     }
@@ -34,9 +36,6 @@ vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
             ContinueFuture driverFuture = OmniFuture::makeEmpty();
             StopReason stopReason = StopReason::kNone;
             auto result = drivers_[i]->Next(&driverFuture, &stopReason);
-            if (stopReason == StopReason::kAtEnd) {
-                drivers_[i] = nullptr;
-            }
             if (result) {
                 return result;
             }
@@ -59,4 +58,38 @@ vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
     }
 }
 
+TaskStats OmniTask::GetTaskStats() const
+{
+    // 'taskStats_' contains task stats plus stats for the completed drivers
+    // (their operators).
+    TaskStats taskStats = taskStats_;
+
+    taskStats.numTotalDrivers = drivers_.size();
+    LogInfo("total driver num is %d", taskStats_.numTotalDrivers);
+    // Add stats of the drivers (their operators) that are still running.
+    for (const auto& driver : drivers_) {
+        // Driver can be null.
+        if (driver == nullptr) {
+            ++taskStats.numCompletedDrivers;
+            continue;
+        }
+        auto operators = driver->operators();
+        for (auto& op : operators) {
+            auto opStatsCopy = op->stats(false);
+            int32_t pipelineId = opStatsCopy.pipelineId;
+            int32_t operatorId = opStatsCopy.operatorId;
+            PlanNodeId planNodeId = opStatsCopy.planNodeId;
+            if (taskStats.pipelineStats.size() <= static_cast<size_t>(pipelineId)) {
+                taskStats.pipelineStats.resize(pipelineId + 1);
+            }
+            if (taskStats.pipelineStats[pipelineId].operatorStats.size() <= static_cast<size_t>(operatorId)) {
+                taskStats.pipelineStats[pipelineId].operatorStats.resize(operatorId + 1);
+            }
+            taskStats.pipelineStats[pipelineId]
+                .operatorStats[operatorId]
+                .Add(opStatsCopy);
+        }
+    }
+    return taskStats;
+}
 } // end of omniruntime

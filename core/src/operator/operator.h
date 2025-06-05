@@ -163,6 +163,11 @@ public:
         return stats;
     }
 
+    void SetOperatorType(string opType)
+    {
+        operatorType_ = opType;
+    }
+
     const std::string& operatorType() const
     {
         return operatorType_;
@@ -173,10 +178,27 @@ public:
         return planNodeId_;
     }
 
-    OperatorStats stats()
+    void SetPlanNodeId(PlanNodeId nodeId)
+    {
+        planNodeId_ = nodeId;
+    }
+
+    int32_t GetOperatorId() const
+    {
+        return operatorId_;
+    }
+
+    void SetOperatorId(int32_t opId)
+    {
+        operatorId_ = opId;
+    }
+
+    OperatorStats& stats()
     {
         return stats_;
     }
+
+    OperatorStats stats_;
 
 protected:
     int32_t* sourceTypes;
@@ -236,12 +258,11 @@ protected:
 private:
     OmniStatus status;
     Metrics metrics;
-    const PlanNodeId planNodeId_;
+    PlanNodeId planNodeId_;
+    std::string operatorType_;
+    int32_t operatorId_;
     // for pipeline
     bool hasInputedData_{false};
-    const std::string operatorType_;
-
-    OperatorStats stats_;
 };
 }  // namespace op
 }  // namespace omniruntime

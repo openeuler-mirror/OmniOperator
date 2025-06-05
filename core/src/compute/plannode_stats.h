@@ -10,6 +10,7 @@
 
 #include "cpuWall_timer.h"
 #include "operator_stats.h"
+#include "task_stats.h"
 
 namespace omniruntime::compute {
 /// Aggregated runtime statistics per plan node.
@@ -137,6 +138,9 @@ struct PlanNodeStats {
 private:
     void AddTotals(const OperatorStats& stats);
 };
+
+std::unordered_map<std::string, PlanNodeStats> ToPlanStats(
+    const TaskStats& taskStats);
 
 using PlanNodeAnnotation =
     std::function<std::string(const PlanNodeId& id)>;

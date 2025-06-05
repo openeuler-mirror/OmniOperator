@@ -22,6 +22,7 @@ OperatorFactory* createOperatorFactory(
 
 class LocalPlanner {
 public:
+    static void buildOperatorStats(std::vector<std::shared_ptr<OmniDriver>>* drivers);
     static void plan(
         const omniruntime::PlanFragment& fragment,
         std::vector<std::shared_ptr<omniruntime::compute::OmniDriver>>* drivers,

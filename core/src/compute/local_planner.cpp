@@ -103,7 +103,8 @@ void planDetail(
     }
 
     auto currentOperator = createOperator(factory);
-    currentOperator->increaseInputOperatorCnt(sources.size());
+    currentOperator->SetPlanNodeId(planNode->Id());
+    currentOperator->SetOperatorType(string(planNode->Name()));
     if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
         for (auto& driver : *drivers) {
             if (driver->unionDriver) {
@@ -114,6 +115,23 @@ void planDetail(
     } else {
         currentOperators->emplace_back(currentOperator);
         factories->emplace_back(factory);
+    }
+}
+
+void LocalPlanner::buildOperatorStats(std::vector<std::shared_ptr<OmniDriver>>* drivers)
+{
+    auto operators = drivers->back()->operators();
+    if (operators.empty()) {
+        LogError("operators is empty");
+        return;
+    }
+    for (auto i = 0; i < operators.size(); ++i) {
+        operators[i]->SetOperatorId(i);
+        operators[i]->stats_ = OperatorStats(
+            operators[i]->GetOperatorId(),
+            0,
+            operators[i]->planNodeId(),
+            operators[i]->operatorType());
     }
 }
 
@@ -130,5 +148,7 @@ void LocalPlanner::plan(
         false,
         queryConfig);
     (*drivers)[0]->outputDriver = true;
+
+    buildOperatorStats(drivers);
 }
 } // namespace omniruntime::compute

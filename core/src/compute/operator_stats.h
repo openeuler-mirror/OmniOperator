@@ -9,7 +9,8 @@
 
 #include <functional>
 #include <optional>
- 
+#include <string>
+
 #include "cpuWall_timer.h"
 
 namespace omniruntime::compute {
@@ -140,6 +141,8 @@ struct OperatorStats {
  
     void Add(const OperatorStats& other)
     {
+        operatorType = other.operatorType;
+        planNodeId = other.planNodeId;
         numSplits += other.numSplits;
         rawInputBytes += other.rawInputBytes;
         rawInputPositions += other.rawInputPositions;

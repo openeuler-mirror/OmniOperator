@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ColumnarBatchIterator.h"
+#include "metrics/omni_metrics.h"
 
 namespace omniruntime {
 
@@ -54,6 +55,8 @@ public:
     {
         return exportNanos_;
     }
+
+    OmniMetrics* getMetrics();
 
 private:
     void CheckValid() const

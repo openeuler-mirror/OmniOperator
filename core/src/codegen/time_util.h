@@ -12,6 +12,7 @@
 #include <map>
 #include <stdlib.h>
 #include "type/date_time_utils.h"
+#include "type/date32.h"
 
 namespace omniruntime::codegen::function {
 static const int YEAR_LENGTH = 4;
@@ -205,6 +206,11 @@ public:
                 "Invalid date 'February 29' as '" + std::to_string(year) + "' is not a leap year");
         }
         return true;
+    }
+
+    static long GetCurrentTimeMs() {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
     }
 
 private:
