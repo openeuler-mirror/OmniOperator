@@ -103,7 +103,6 @@ void planDetail(
     }
 
     auto currentOperator = createOperator(factory);
-    currentOperator->increaseInputOperatorCnt(sources.size());
     if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
         for (auto& driver : *drivers) {
             if (driver->unionDriver) {

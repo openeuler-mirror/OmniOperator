@@ -11,21 +11,15 @@ vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
     if (drivers_.empty()) {
         LocalPlanner::plan(
             planFragment_, &drivers_, &operatorFactories_, queryConfig_);
+        std::reverse(drivers_.begin(), drivers_.end());
     }
     const auto numDrivers = drivers_.size();
     auto futures = OmniFuture::createValidFutures(numDrivers);
     for (;;) {
         int runableDrivers = 0;
-        int blockedDrivers = 0;
         for (auto i = 0; i < numDrivers; ++i) {
             if (drivers_[i] == nullptr) {
                 // This driver has finished processing.
-                continue;
-            }
-
-            if (!OmniFuture::isReady(futures[i])) {
-                // This driver is still blocked.
-                ++blockedDrivers;
                 continue;
             }
  
@@ -45,15 +39,6 @@ vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
         }
  
         if (runableDrivers == 0) {
-            if (blockedDrivers > 0) {
-                std::vector<ContinueFuture> notReadyFutures;
-                for (auto& continueFuture : futures) {
-                    if (continueFuture.valid() && !OmniFuture::isReady(continueFuture)) {
-                        notReadyFutures.emplace_back(std::move(continueFuture));
-                    }
-                }
-                *future = OmniFuture::collectAll(std::move(notReadyFutures));
-            }
             return nullptr;
         }
     }
