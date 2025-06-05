@@ -3,6 +3,9 @@
  */
 
 #include "local_planner.h"
+
+#include <operator/aggregation/group_aggregation_expr.h>
+
 #include "operator/join/hash_builder.h"
 #include "operator/join/lookup_join.h"
 #include "operator/join/lookup_outer_join.h"
@@ -47,7 +50,11 @@ OperatorFactory* createOperatorFactory(
     } else if (auto valueStreamNode = std::dynamic_pointer_cast<const ValueStreamNode>(planNode)) {
         return ValueStreamFactory::CreateValueStreamFactory(valueStreamNode);
     } else if (auto aggregationNode = std::dynamic_pointer_cast<const AggregationNode>(planNode)) {
-        return AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
+        if (aggregationNode->GetGroupByKeys().empty()) {
+            return AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
+                aggregationNode, queryConfig);
+        }
+        return HashAggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
             aggregationNode, queryConfig);
     } else {
         throw omniruntime::exception::OmniException(

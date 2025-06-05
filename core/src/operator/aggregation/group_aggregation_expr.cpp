@@ -119,6 +119,31 @@ HashAggregationWithExprOperatorFactory::~HashAggregationWithExprOperatorFactory(
     aggSimpleFilters.clear();
 }
 
+HashAggregationWithExprOperatorFactory *HashAggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
+    const std::shared_ptr<const AggregationNode> &planNode, const config::QueryConfig &queryConfig)
+{
+    auto groupByKeys = planNode->GetGroupByKeys();
+    auto groupByNum = planNode->GetGroupByNum();
+    auto aggsKeys = planNode->GetAggsKeys();
+    auto sourceDataTypes = planNode->GetSourceDataTypes();
+    auto aggsOutputTypes = planNode->GetAggsOutputTypes();
+    auto aggFuncTypes = planNode->GetAggFuncTypes();
+    auto aggFilters = planNode->GetAggFilters();
+    auto maskColsVector = planNode->GetMaskColumns();
+    auto inputRaws = planNode->GetInputRaws();
+    auto outputPartial = planNode->GetOutputPartials();
+    auto overflowConfig = queryConfig.IsOverFlowASNull() == true
+                              ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                              : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    // check SpillConfig
+    auto operatorConfig = new OperatorConfig(*overflowConfig);
+
+    return new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, aggFilters, *sourceDataTypes,
+                                                      aggsOutputTypes,
+                                                      aggFuncTypes, maskColsVector, inputRaws, outputPartial,
+                                                      *operatorConfig);
+}
+
 Operator *HashAggregationWithExprOperatorFactory::CreateOperator()
 {
     auto hashAggOperator = static_cast<HashAggregationOperator *>(hashAggOperatorFactory->CreateOperator());
