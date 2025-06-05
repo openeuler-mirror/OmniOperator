@@ -15,6 +15,7 @@
 #include "operator/join/common_join.h"
 #include "dynamic_pages_index.h"
 #include "sort_merge_join.h"
+#include "plannode/planNode.h"
 
 namespace omniruntime {
 namespace op {
@@ -24,7 +25,8 @@ public:
         const type::DataTypes &streamedTypes, const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols,
         int32_t streamedKeyExprColsCnt, int32_t *streamedOutputCols, int32_t streamedOutputColsCnt,
         JoinType inputJoinType, std::string &filterExpression, OverflowConfig *overflowConfig);
-
+    static StreamedTableWithExprOperatorFactory* CreateStreamedTableWithExprOperatorFactory(
+        const std::shared_ptr<const MergeJoinNode>& planNode, const config::QueryConfig& queryConfig);
     StreamedTableWithExprOperatorFactory(const type::DataTypes &streamedTypes,
         const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
         int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter,
@@ -72,6 +74,9 @@ public:
         const DataTypes &bufferedTypes, const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols,
         int32_t bufferedKeyExprCnt, int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt,
         int64_t streamedTableFactoryAddr, OverflowConfig *overflowConfig);
+    static BufferedTableWithExprOperatorFactory* CreateBufferedTableWithExprOperatorFactory(
+        const std::shared_ptr<const MergeJoinNode>& planNode, int64_t streamedTableFactoryAddr,
+        const config::QueryConfig& queryConfig);
 
     BufferedTableWithExprOperatorFactory(const type::DataTypes &bufferedTypes,
         const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
@@ -103,6 +108,18 @@ public:
     int32_t GetOutput(VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        auto eOfvectorBatch = new VectorBatch(0);
+        for (int i = 0; i < bufferedTypes.Get().size(); i++) {
+            auto type = bufferedTypes.GetType(i);
+            auto vec = VectorHelper::CreateVector(OMNI_FLAT, static_cast<int32_t>(type->GetId()), 0);
+            eOfvectorBatch->Append(vec);
+        }
+        this->AddInput(eOfvectorBatch);
+    }
 
 private:
     DataTypes bufferedTypes;

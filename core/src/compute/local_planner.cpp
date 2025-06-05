@@ -15,6 +15,7 @@
 #include "operator/topn/topn.h"
 #include "operator/union/union.h"
 #include "operator/window/window.h"
+#include "operator/join/sortmergejoin/sort_merge_join_expr.h"
 #include <operator/aggregation/non_group_aggregation_expr.h>
 #include "operator/expand/expand.h"
 
@@ -110,6 +111,17 @@ void planDetail(
             factory =
                 LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
         }
+    } else if (auto sortMergejoinNode = std::dynamic_pointer_cast<const MergeJoinNode>(planNode)) {
+        auto streamedTableWithExprOperatorFactory =
+            StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
+                sortMergejoinNode, queryConfig);
+        auto bufferedTableWithExprOperatorFactory =
+            BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
+                sortMergejoinNode, reinterpret_cast<int64_t>(streamedTableWithExprOperatorFactory), queryConfig);
+        auto builderDriver = drivers->back();
+        builderDriver->operators()->emplace_back(createOperator(bufferedTableWithExprOperatorFactory, planNode->Id()));
+        factories->emplace_back(bufferedTableWithExprOperatorFactory);
+        factory = streamedTableWithExprOperatorFactory;
     } else {
         factory = createOperatorFactory(planNode, queryConfig);
     }
