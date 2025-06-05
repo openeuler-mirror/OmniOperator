@@ -117,10 +117,7 @@ public:
 
     virtual void noMoreInput()
     {
-        inputOperatorCnt_--;
-        if (inputOperatorCnt_ <= 0) {
-            noMoreInput_ = true;
-        }
+        noMoreInput_ = true;
     }
 
     void setNoMoreInput(bool noMoreInput)
@@ -135,7 +132,7 @@ public:
 
     bool isFinished()
     {
-        return inputOperatorCnt_ == 0 && status == OMNI_STATUS_FINISHED;
+        return status == OMNI_STATUS_FINISHED;
     }
 
     bool hasInputedData()

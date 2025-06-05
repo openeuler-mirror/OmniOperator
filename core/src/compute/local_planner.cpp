@@ -104,7 +104,6 @@ void planDetail(
 
     auto currentOperator = createOperator(factory);
     currentOperator->SetPlanNodeId(planNode->Id());
-    currentOperator->SetOperatorType(string(planNode->Name()));
     if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
         for (auto& driver : *drivers) {
             if (driver->unionDriver) {
