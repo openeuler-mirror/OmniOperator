@@ -24,6 +24,9 @@ public:
 
     ~HashAggregationWithExprOperatorFactory() override;
 
+    static HashAggregationWithExprOperatorFactory *CreateAggregationWithExprOperatorFactory(
+        const std::shared_ptr<const AggregationNode> &planNode, const config::QueryConfig &queryConfig);
+
     Operator *CreateOperator() override;
 
 private:
