@@ -16,6 +16,7 @@
 #include "operator/union/union.h"
 #include "operator/window/window.h"
 #include <operator/aggregation/non_group_aggregation_expr.h>
+#include "operator/expand/expand.h"
 
 namespace omniruntime::compute {
 
@@ -56,6 +57,8 @@ OperatorFactory* createOperatorFactory(
         }
         return HashAggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
             aggregationNode, queryConfig);
+    } else if (auto expandNode = std::dynamic_pointer_cast<const ExpandNode>(planNode)) {
+        return CreateExpandOperatorFactory(expandNode, queryConfig);
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());
