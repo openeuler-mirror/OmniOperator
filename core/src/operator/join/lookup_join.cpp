@@ -437,7 +437,10 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
         curInputBatch = nullptr;
         curProbePosition = 0;
         outputBuilder->Clear();
-        SetStatus(OMNI_STATUS_FINISHED);
+        
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
     }
     if ((*outputVecBatch != nullptr)) {
         UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
