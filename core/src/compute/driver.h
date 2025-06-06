@@ -102,6 +102,11 @@ public:
         return operators_;
     }
 
+    ALWAYS_INLINE bool isFinished() const
+    {
+        return finished_;
+    }
+
 public:
     bool inputDriver{false};
     bool outputDriver{false};
@@ -129,7 +134,6 @@ private:
  
     BlockingReason blockingReason_;
     size_t blockedOperatorId_;
-    std::atomic_bool closed_{false};
     bool trackOperatorCpuUsage_ = true;
 
     OpCallStatus opCallStatus_;
@@ -138,7 +142,8 @@ private:
     template <typename Func>
     void withDeltaCpuWallTimer(omniruntime::op::Operator* op, TimingMemberPtr opTimingMember, Func&& opFunction);
 
-    void updateStats();
+    bool closed_{false};
+    bool finished_{false};
 };
 
 class BlockingState {

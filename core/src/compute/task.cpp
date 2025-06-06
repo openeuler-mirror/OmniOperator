@@ -21,7 +21,7 @@ vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
     for (;;) {
         int runableDrivers = 0;
         for (auto i = 0; i < numDrivers; ++i) {
-            if (drivers_[i] == nullptr) {
+            if (drivers_[i]->isFinished()) {
                 // This driver has finished processing.
                 continue;
             }
