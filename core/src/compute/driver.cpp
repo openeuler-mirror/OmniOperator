@@ -206,7 +206,7 @@ StopReason OmniDriver::RunInternal(
                         CALL_OPERATOR(finished = op->isFinished(), op, curOperatorId_, kOpMethodIsFinished);
                     });
                     if (finished) {
-                        close();
+                        finished_ = true;
                         return StopReason::kAtEnd;
                     }
                 }
