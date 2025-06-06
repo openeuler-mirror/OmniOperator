@@ -54,6 +54,8 @@ public:
 
     size_t GetCapacity();
 
+    uint64_t CalculateTotalSize() const;
+
 private:
     size_t capacity; // max row count that can be held
     size_t rowCnt;
