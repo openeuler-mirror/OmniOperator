@@ -581,4 +581,37 @@ private:
     const bool isDistinct;
     const std::vector<PlanNodePtr> sources;
 };
+
+class ExpandNode : public PlanNode {
+public:
+    ExpandNode(const PlanNodeId &id, std::vector<std::vector<ExprPtr>> &&projections, PlanNodePtr source)
+        : PlanNode(id), sources{source}, projections(std::move(projections))
+    {}
+
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+
+    const DataTypesPtr& inputType() const
+    {
+        return sources[0]->OutputType();
+    }
+
+    const std::vector<PlanNodePtr>& Sources() const override
+    {
+        return sources;
+    }
+
+    const std::vector<std::vector<ExprPtr>>& GetProjections() const
+    {
+        return projections;
+    }
+
+    std::string_view Name() const override
+    {
+        return "Expand";
+    }
+
+private:
+    const std::vector<PlanNodePtr> sources;
+    const std::vector<std::vector<ExprPtr>> projections;
+};
 } // namespace omniruntime

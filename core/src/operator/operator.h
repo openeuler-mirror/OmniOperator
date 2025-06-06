@@ -125,7 +125,7 @@ public:
         noMoreInput_ = noMoreInput;
     }
 
-    bool needsInput()
+    virtual bool needsInput()
     {
         return status != OMNI_STATUS_FINISHED && !noMoreInput_;
     }
