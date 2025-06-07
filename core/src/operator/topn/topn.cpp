@@ -285,6 +285,9 @@ int32_t TopNOperator::GetOutput(VectorBatch **outputVecBatch)
         SetStatus(OMNI_STATUS_NORMAL);
         return 0;
     }
+    if (isFinished()) {
+        return 0;
+    }
     if (!hasFilledResult) {
         if (pq.empty()) {
             SetStatus(OMNI_STATUS_FINISHED);
