@@ -140,13 +140,25 @@ private:
 
 class ProjectNode : public PlanNode {
 public:
-    ProjectNode(const PlanNodeId &id, std::vector<ExprPtr> &&projections, PlanNodePtr source)
-        : PlanNode(id), sources{source}, projections(std::move(projections))
-    {}
+    ProjectNode(const PlanNodeId &id, std::vector<ExprPtr> &&inProjections, PlanNodePtr source)
+        : PlanNode(id), sources{source}, projections(std::move(inProjections)),
+        outputType(MakeOutputType(projections)) {}
+
+    static DataTypesPtr MakeOutputType(const std::vector<ExprPtr> &projections)
+    {
+        std::vector<DataTypePtr> argTypes;
+        for (auto project : projections) {
+            argTypes.push_back(project->GetReturnType());
+        }
+        return std::make_shared<DataTypes>(std::move(argTypes));
+    }
 
     ~ProjectNode() override = default;
 
-    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+    const DataTypesPtr &OutputType() const override
+    {
+        return outputType;
+    }
 
     const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
@@ -157,6 +169,7 @@ public:
 protected:
     const std::vector<PlanNodePtr> sources;
     const std::vector<ExprPtr> projections;
+    const DataTypesPtr outputType;
 };
 
 class AggregationNode : public PlanNode {
