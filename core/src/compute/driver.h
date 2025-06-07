@@ -97,9 +97,9 @@ public:
 
     void close();
 
-    std::vector<std::shared_ptr<omniruntime::op::Operator>>& operators()
+    std::vector<std::shared_ptr<omniruntime::op::Operator>>* operators()
     {
-        return operators_;
+        return &operators_;
     }
 
     ALWAYS_INLINE bool isFinished() const

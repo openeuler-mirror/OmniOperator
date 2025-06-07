@@ -23,10 +23,12 @@ namespace omniruntime::compute {
 // Returns ture if source nodes must run in a separate pipeline
 bool MustStartNewPipeline(int sourceId) { return sourceId != 0; }
 
-std::shared_ptr<omniruntime::op::Operator> createOperator(OperatorFactory* factory)
+std::shared_ptr<omniruntime::op::Operator> createOperator(
+    OperatorFactory* factory, PlanNodeId nodeId)
 {
     std::shared_ptr<omniruntime::op::Operator> operatorPtr(factory->CreateOperator());
     operatorPtr->setNoMoreInput(false);
+    operatorPtr->SetPlanNodeId(nodeId);
     return std::move(operatorPtr);
 }
 
@@ -77,7 +79,7 @@ void planDetail(
     if (!currentOperators) {
         drivers->emplace_back(std::make_unique<OmniDriver>());
         drivers->back()->unionDriver = isUnionDriver;
-        currentOperators = &drivers->back()->operators();
+        currentOperators = drivers->back()->operators();
     }
 
     const auto &sources = planNode->Sources();
@@ -97,7 +99,7 @@ void planDetail(
         auto hashBuilderOperatorFactory =
             HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
         auto builderDriver = drivers->back();
-        builderDriver->operators().emplace_back(createOperator(hashBuilderOperatorFactory));
+        builderDriver->operators()->emplace_back(createOperator(hashBuilderOperatorFactory, planNode->Id()));
         factories->emplace_back(hashBuilderOperatorFactory);
 
         auto joinType = joinNode->GetJoinType();
@@ -112,35 +114,29 @@ void planDetail(
         factory = createOperatorFactory(planNode, queryConfig);
     }
 
-    auto currentOperator = createOperator(factory);
-    currentOperator->SetPlanNodeId(planNode->Id());
-    if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
-        for (auto& driver : *drivers) {
-            if (driver->unionDriver) {
-                driver->operators().emplace_back(currentOperator);
-            }
+    for (auto& driver : *drivers) {
+        if (driver->unionDriver && driver->operators() != currentOperators) {
+            driver->operators()->emplace_back(createOperator(factory, planNode->Id()));
         }
-        factories->emplace_back(factory);
-    } else {
-        currentOperators->emplace_back(currentOperator);
-        factories->emplace_back(factory);
     }
+    currentOperators->emplace_back(createOperator(factory, planNode->Id()));
+    factories->emplace_back(factory);
 }
 
 void LocalPlanner::buildOperatorStats(std::vector<std::shared_ptr<OmniDriver>>* drivers)
 {
     auto operators = drivers->back()->operators();
-    if (operators.empty()) {
+    if (operators->empty()) {
         LogError("operators is empty");
         return;
     }
-    for (auto i = 0; i < operators.size(); ++i) {
-        operators[i]->SetOperatorId(i);
-        operators[i]->stats_ = OperatorStats(
-            operators[i]->GetOperatorId(),
+    for (auto i = 0; i < operators->size(); ++i) {
+        (*operators)[i]->SetOperatorId(i);
+        (*operators)[i]->stats_ = OperatorStats(
+            (*operators)[i]->GetOperatorId(),
             0,
-            operators[i]->planNodeId(),
-            operators[i]->operatorType());
+            (*operators)[i]->planNodeId(),
+            (*operators)[i]->operatorType());
     }
 }
 
