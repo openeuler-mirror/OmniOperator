@@ -22,5 +22,6 @@ install(FILES ${SOURCE_ROOT}/src/operator/util/operator_util.h DESTINATION ${CMA
 install(FILES ${SOURCE_ROOT}/src/operator/projection/projection.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/operator/projection/)
 install(FILES ${SOURCE_ROOT}/src/operator/omni_id_type_vector_traits.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/operator)
 install(FILES ${SOURCE_ROOT}/src/operator/filter/filter_and_project.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/operator/filter)
+install(FILES ${SOURCE_ROOT}/src/operator/window/window_frame.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/operator/window/)
 file(GLOB METRICS_HEAD_FILES ${SOURCE_ROOT}/src/metrics/*.h)
 install(FILES ${METRICS_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/metrics)
