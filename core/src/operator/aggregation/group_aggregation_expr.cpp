@@ -225,8 +225,15 @@ void HashAggregationWithExprOperator::ProcessRow(uintptr_t rowValues[], int32_t 
 
 int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
+    if (!noMoreInput_) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
     int32_t status = hashAggOperator->GetOutput(outputVecBatch);
     SetStatus(hashAggOperator->GetStatus());
+    if (*outputVecBatch == nullptr) {
+        SetStatus(OMNI_STATUS_FINISHED);
+    }
     return status;
 }
 
