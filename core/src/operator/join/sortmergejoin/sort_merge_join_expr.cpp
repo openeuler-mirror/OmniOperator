@@ -18,6 +18,31 @@ StreamedTableWithExprOperatorFactory *StreamedTableWithExprOperatorFactory::Crea
         streamedOutputCols, streamedOutputColsCnt, inputJoinType, filterExpression, overflowConfig);
 }
 
+StreamedTableWithExprOperatorFactory* StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
+    const std::shared_ptr<const MergeJoinNode>& planNode, const config::QueryConfig &queryConfig)
+{
+    auto streamedDataTypes = *(planNode->LeftOutputType());
+    static std::vector<Expr*> streamedKeyExprCols;
+    for (const auto &key : planNode->LeftKeys()) {
+        Expr *keyExpr = (Expr *) key.get();
+        streamedKeyExprCols.push_back(keyExpr);
+    }
+    std::string filterExpression = "";
+    std::vector<int32_t> streamedOutputColsIndex;
+    for (int32_t i = 0; i < planNode->LeftOutputType()->GetSize(); i++) {
+        streamedOutputColsIndex.push_back(static_cast<int32_t>(i));
+    }
+    auto overflowConfig = queryConfig.IsOverFlowASNull() ? new OverflowConfig(OVERFLOW_CONFIG_NULL) :
+                                                           new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    auto joinType = planNode->GetJoinType();
+    auto factory = new StreamedTableWithExprOperatorFactory(streamedDataTypes, streamedKeyExprCols,
+        static_cast<int32_t>(streamedKeyExprCols.size()), streamedOutputColsIndex.data(),
+        static_cast<int32_t>(streamedOutputColsIndex.size()), joinType, filterExpression, overflowConfig);
+    delete overflowConfig;
+    overflowConfig = nullptr;
+    return factory;
+}
+
 StreamedTableWithExprOperatorFactory::StreamedTableWithExprOperatorFactory(const type::DataTypes &streamedTypes,
     const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
     int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter,
@@ -72,8 +97,11 @@ int32_t StreamedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
     return retCode;
 }
 
-int32_t StreamedTableWithExprOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
+int32_t StreamedTableWithExprOperator::GetOutput(omniruntime::vec::VectorBatch** outputVecBatch)
 {
+    if (!noMoreInput_) {
+        return 0;
+    }
     int32_t retCode = smjOperator->GetOutput(outputVecBatch);
     SetStatus(smjOperator->GetStatus());
     return retCode;
@@ -91,6 +119,30 @@ BufferedTableWithExprOperatorFactory *BufferedTableWithExprOperatorFactory::Crea
 {
     return new BufferedTableWithExprOperatorFactory(bufferedTypes, bufferedKeyExprCols, bufferedKeyExprCnt,
         bufferedOutputCols, bufferedOutputColsCnt, streamedTableFactoryAddr, overflowConfig);
+}
+
+BufferedTableWithExprOperatorFactory* BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
+    const std::shared_ptr<const MergeJoinNode>& planNode, int64_t streamedTableFactoryAddr, const config::QueryConfig &queryConfig)
+{
+    auto types = *(planNode->RightOutputType());
+    std::vector<omniruntime::expressions::Expr*> bufferedKeyExprCols;
+    for (const auto &key : planNode->RightKeys()) {
+        Expr *keyExpr = (Expr *) key.get();
+        bufferedKeyExprCols.push_back(static_cast<Expr*>(keyExpr));
+    }
+    std::vector<int32_t> bufferedOutputColsIndex;
+    for (int32_t i = 0; i < planNode->RightOutputType()->GetSize(); i++) {
+        bufferedOutputColsIndex.push_back(static_cast<int32_t>(i));
+    }
+    auto overflowConfig = queryConfig.IsOverFlowASNull() ? new OverflowConfig(OVERFLOW_CONFIG_NULL) :
+                                                           new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    auto bufferedOutputColsCnt = static_cast<int32_t>(bufferedOutputColsIndex.size());
+    auto factory = new BufferedTableWithExprOperatorFactory(types, bufferedKeyExprCols,
+        static_cast<int32_t>(bufferedKeyExprCols.size()), bufferedOutputColsIndex.data(), bufferedOutputColsCnt,
+        streamedTableFactoryAddr, overflowConfig);
+    delete overflowConfig;
+    overflowConfig = nullptr;
+    return factory;
 }
 
 BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const type::DataTypes &bufferedTypes,
@@ -144,6 +196,9 @@ int32_t BufferedTableWithExprOperator::AddInput(omniruntime::vec::VectorBatch *v
 
 int32_t BufferedTableWithExprOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
+    if (!noMoreInput_) {
+        return 0;
+    }
     int32_t retCode = smjOperator->GetOutput(outputVecBatch);
     SetStatus(smjOperator->GetStatus());
     return retCode;
