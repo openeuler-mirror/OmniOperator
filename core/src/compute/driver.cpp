@@ -186,7 +186,6 @@ StopReason OmniDriver::RunInternal(
                         }
                     }
                 } else {
-                    op->GetOutput(result);
                     withDeltaCpuWallTimer(op, &OperatorStats::getOutputTiming, [&]() {
                         CALL_OPERATOR(op->GetOutput(result), op, curOperatorId_, kOpMethodGetOutput);
                         if (*result != nullptr) {
