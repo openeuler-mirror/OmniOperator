@@ -33,8 +33,8 @@ LookupJoinWrapperOperatorFactory *LookupJoinWrapperOperatorFactory::CreateLookup
 
 Operator *LookupJoinWrapperOperatorFactory::CreateOperator()
 {
-    auto lookupJoinOperator = (LookupJoinOperator*) lookupJoinOperatorFactory->CreateOperator();
-    auto lookupOuterJoinOperator = (LookupOuterJoinOperator*) lookupOuterJoinOperatorFactory->CreateOperator();
+    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator*>(lookupJoinOperatorFactory->CreateOperator());
+    auto lookupOuterJoinOperator = dynamic_cast<LookupOuterJoinOperator*>(lookupOuterJoinOperatorFactory->CreateOperator());
     auto pLookupJoinWrapperOperator = new LookupJoinWrapperOperator(*lookupJoinOperator, *lookupOuterJoinOperator, isNeedOuterJoin);
     return pLookupJoinWrapperOperator;
 }
