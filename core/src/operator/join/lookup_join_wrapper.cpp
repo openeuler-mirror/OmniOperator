@@ -10,11 +10,17 @@ namespace omniruntime {
 namespace op {
 LookupJoinWrapperOperatorFactory::LookupJoinWrapperOperatorFactory(LookupJoinOperatorFactory &lookupJoinOperatorFactory,
     LookupOuterJoinOperatorFactory &lookupOuterJoinOperatorFactory, bool isNeedOuterJoin)
-    : lookupJoinOperatorFactory(lookupJoinOperatorFactory),
-      lookupOuterJoinOperatorFactory(lookupOuterJoinOperatorFactory),
+    : lookupJoinOperatorFactory(&lookupJoinOperatorFactory),
+      lookupOuterJoinOperatorFactory(&lookupOuterJoinOperatorFactory),
       isNeedOuterJoin(isNeedOuterJoin) {}
 
-LookupJoinWrapperOperatorFactory::~LookupJoinWrapperOperatorFactory() = default;
+LookupJoinWrapperOperatorFactory::~LookupJoinWrapperOperatorFactory()
+{
+    delete lookupOuterJoinOperatorFactory;
+    delete lookupJoinOperatorFactory;
+    lookupOuterJoinOperatorFactory = nullptr;
+    lookupJoinOperatorFactory = nullptr;
+}
 
 LookupJoinWrapperOperatorFactory *LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
     HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig)
@@ -76,6 +82,13 @@ int32_t LookupJoinWrapperOperator::GetOutput(VectorBatch **outputVecBatch)
             return 0;
         }
     }
+}
+
+OmniStatus LookupJoinWrapperOperator::Close()
+{
+    lookupJoinOperator->Close();
+    lookupOuterJoinOperator->Close();
+    return OMNI_STATUS_NORMAL;
 }
 
 }

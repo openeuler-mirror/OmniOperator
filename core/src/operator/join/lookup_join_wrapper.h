@@ -26,8 +26,8 @@ public:
     Operator *CreateOperator() override;
 
 private:
-    LookupJoinOperatorFactory lookupJoinOperatorFactory;
-    LookupOuterJoinOperatorFactory lookupOuterJoinOperatorFactory;
+    LookupJoinOperatorFactory *lookupJoinOperatorFactory;
+    LookupOuterJoinOperatorFactory *lookupOuterJoinOperatorFactory;
     bool isNeedOuterJoin;
 };
 
@@ -37,6 +37,7 @@ public:
     ~LookupJoinWrapperOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
+    OmniStatus Close() override;
 
     void noMoreInput() override
     {
