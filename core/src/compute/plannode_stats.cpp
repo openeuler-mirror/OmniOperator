@@ -120,7 +120,7 @@ void PlanNodeStats::AddTotals(const OperatorStats& stats)
 
 void appendOperatorStats(
     const OperatorStats& stats,
-    std::unordered_map<PlanNodeId, PlanNodeStats>& planStats)
+    std::unordered_map<std::string, PlanNodeStats>& planStats)
 {
     const auto& planNodeId = stats.planNodeId;
     auto it = planStats.find(planNodeId);
@@ -131,6 +131,26 @@ void appendOperatorStats(
         nodeStats.Add(stats);
         planStats.emplace(planNodeId, std::move(nodeStats));
     }
+}
+
+std::unordered_map<std::string, PlanNodeStats> ToPlanStats(
+    const TaskStats& taskStats)
+{
+    std::unordered_map<PlanNodeId, PlanNodeStats> planStats;
+
+    for (const auto& pipelineStats : taskStats.pipelineStats) {
+        for (const auto& opStats : pipelineStats.operatorStats) {
+            if (opStats.statsSplitter.has_value()) {
+                const auto& multiNodeStats = opStats.statsSplitter.value()(opStats);
+                for (const auto& stats : multiNodeStats) {
+                    appendOperatorStats(stats, planStats);
+                }
+            } else {
+                appendOperatorStats(opStats, planStats);
+            }
+        }
+    }
+    return planStats;
 }
 
 std::string PlanNodeStats::ToString(

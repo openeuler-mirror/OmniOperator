@@ -140,13 +140,25 @@ private:
 
 class ProjectNode : public PlanNode {
 public:
-    ProjectNode(const PlanNodeId &id, std::vector<ExprPtr> &&projections, PlanNodePtr source)
-        : PlanNode(id), sources{source}, projections(std::move(projections))
-    {}
+    ProjectNode(const PlanNodeId &id, std::vector<ExprPtr> &&inProjections, PlanNodePtr source)
+        : PlanNode(id), sources{source}, projections(std::move(inProjections)),
+        outputType(MakeOutputType(projections)) {}
+
+    static DataTypesPtr MakeOutputType(const std::vector<ExprPtr> &projections)
+    {
+        std::vector<DataTypePtr> argTypes;
+        for (auto project : projections) {
+            argTypes.push_back(project->GetReturnType());
+        }
+        return std::make_shared<DataTypes>(std::move(argTypes));
+    }
 
     ~ProjectNode() override = default;
 
-    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+    const DataTypesPtr &OutputType() const override
+    {
+        return outputType;
+    }
 
     const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
@@ -157,6 +169,7 @@ public:
 protected:
     const std::vector<PlanNodePtr> sources;
     const std::vector<ExprPtr> projections;
+    const DataTypesPtr outputType;
 };
 
 class AggregationNode : public PlanNode {
@@ -231,30 +244,114 @@ private:
 
 class WindowNode : public PlanNode {
 public:
-    enum class WindowType { K_RANGE, K_ROWS };
-
-    WindowNode(PlanNodeId id, std::vector<int32_t> outputCols, std::vector<int32_t> windowFunctionTypes,
-        std::vector<int32_t> partitionCols, int32_t partitionCount, std::vector<int32_t> &preGroupedCols,
-        int32_t preGroupedCount, std::vector<int32_t> &sortCols, std::vector<int32_t> &sortAscending,
-        std::vector<int32_t> &sortNullFirsts, int32_t sortColCount, int32_t preSortedChannelPrefix,
-        int32_t expectedPositionsCount, DataTypes &allTypes, std::vector<int32_t> &argumentChannels,
-        int32_t argumentChannelsCount, const std::vector<int32_t> &windowFrameTypes,
-        const std::vector<int32_t> &windowFrameStartTypes, const std::vector<int32_t> &windowFrameStartChannels,
-        const std::vector<int32_t> &windowFrameEndTypes, const std::vector<int32_t> &windowFrameEndChannels);
+    WindowNode(const PlanNodeId &id,
+        const std::vector<int32_t> &windowFunctionTypes,
+        const std::vector<int32_t> &partitionCols,
+        const std::vector<int32_t> &preGroupedCols,
+        const std::vector<int32_t> &sortCols,
+        const std::vector<int32_t> &sortAscending,
+        const std::vector<int32_t> &sortNullFirsts,
+        const int32_t preSortedChannelPrefix,
+        const int32_t expectedPositionsCount,
+        const DataTypesPtr &windowFunctionReturnTypes,
+        const DataTypesPtr &allTypes,
+        const std::vector<int32_t> &argumentChannels,
+        const std::vector<int32_t> &windowFrameTypes,
+        const std::vector<int32_t> &windowFrameStartTypes,
+        const std::vector<int32_t> &windowFrameStartChannels,
+        const std::vector<int32_t> &windowFrameEndTypes,
+        const std::vector<int32_t> &windowFrameEndChannels,
+        const PlanNodePtr &source)
+        : PlanNode(id),
+          windowFunctionTypes(windowFunctionTypes),
+          partitionCols(partitionCols),
+          preGroupedCols(preGroupedCols),
+          sortCols(sortCols),
+          sortAscending(sortAscending),
+          sortNullFirsts(sortNullFirsts),
+          preSortedChannelPrefix(preSortedChannelPrefix),
+          expectedPositionsCount(expectedPositionsCount),
+          windowFunctionReturnTypes(windowFunctionReturnTypes),
+          allTypes(allTypes),
+          argumentChannels(argumentChannels),
+          windowFrameTypes(windowFrameTypes),
+          windowFrameStartTypes(windowFrameStartTypes),
+          windowFrameStartChannels(windowFrameStartChannels),
+          windowFrameEndTypes(windowFrameEndTypes),
+          windowFrameEndChannels(windowFrameEndChannels),
+          sources({source}),
+          sourceTypes(source->OutputType())
+    {
+        outputCols.reserve(sourceTypes->GetSize());
+        for (int i = 0; i < sourceTypes->GetSize(); ++i) {
+            outputCols.push_back(i);
+        }
+    }
 
     ~WindowNode() override = default;
+
+    const DataTypesPtr &GetSourceTypes() const { return sourceTypes; }
+
+    const std::vector<int32_t> &GetOutputCols() const { return outputCols; }
+
+    const std::vector<int32_t> &GetWindowFunctionTypes() const { return windowFunctionTypes; }
+
+    const std::vector<int32_t> &GetPartitionCols() const { return partitionCols; }
+
+    const std::vector<int32_t> &GetPreGroupedCols() const { return preGroupedCols; }
+
+    const std::vector<int32_t> &GetSortCols() const { return sortCols; }
+
+    const std::vector<int32_t> &GetSortAscending() const { return sortAscending; }
+
+    const std::vector<int32_t> &GetNullFirsts() const { return sortNullFirsts; }
+
+    const int32_t GetPreSortedChannelPrefix() const { return preSortedChannelPrefix; }
+
+    const int32_t GetExpectedPositionsCount() const { return expectedPositionsCount; }
+
+    const DataTypesPtr &GetWindowFunctionReturnTypes() const { return windowFunctionReturnTypes; }
+
+    const std::vector<int32_t> &GetArgumentChannels() const { return argumentChannels; }
+
+    const std::vector<int32_t> &GetWindowFrameTypes() const { return windowFrameTypes; }
+
+    const std::vector<int32_t> &GetWindowFrameStartTypes() const { return windowFrameStartTypes; }
+
+    const std::vector<int32_t> &GetWindowFrameStartChannels() const { return windowFrameStartChannels; }
+
+    const std::vector<int32_t> &GetWindowFrameEndTypes() const { return windowFrameEndTypes; }
+
+    const std::vector<int32_t> &GetWindowFrameEndChannels() const{ return windowFrameEndChannels; }
 
     const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
     /// The outputType is the concatenation of the input columns
     /// with the output columns of each window function.
-    const DataTypesPtr &OutputType() const override { return outputType; }
+    const DataTypesPtr &OutputType() const override { return allTypes; }
 
     std::string_view Name() const override { return "Window"; }
 
 private:
+    const DataTypesPtr sourceTypes;
+    std::vector<int32_t> outputCols;
+    const std::vector<int32_t> windowFunctionTypes;
+    const std::vector<int32_t> partitionCols;
+    const std::vector<int32_t> preGroupedCols;
+    const std::vector<int32_t> sortCols;
+    const std::vector<int32_t> sortAscending;
+    const std::vector<int32_t> sortNullFirsts;
+    const int32_t preSortedChannelPrefix;
+    const int32_t expectedPositionsCount;
+    const DataTypesPtr windowFunctionReturnTypes;
+    const DataTypesPtr allTypes;
+    const std::vector<int32_t> argumentChannels;
+    const std::vector<int32_t> windowFrameTypes;
+    const std::vector<int32_t> windowFrameStartTypes;
+    const std::vector<int32_t> windowFrameStartChannels;
+    const std::vector<int32_t> windowFrameEndTypes;
+    const std::vector<int32_t> windowFrameEndChannels;
     const std::vector<PlanNodePtr> sources;
-    const DataTypesPtr outputType;
 };
 
 enum JoinType {
@@ -580,5 +677,38 @@ public:
 private:
     const bool isDistinct;
     const std::vector<PlanNodePtr> sources;
+};
+
+class ExpandNode : public PlanNode {
+public:
+    ExpandNode(const PlanNodeId &id, std::vector<std::vector<ExprPtr>> &&projections, PlanNodePtr source)
+        : PlanNode(id), sources{source}, projections(std::move(projections))
+    {}
+
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+
+    const DataTypesPtr& inputType() const
+    {
+        return sources[0]->OutputType();
+    }
+
+    const std::vector<PlanNodePtr>& Sources() const override
+    {
+        return sources;
+    }
+
+    const std::vector<std::vector<ExprPtr>>& GetProjections() const
+    {
+        return projections;
+    }
+
+    std::string_view Name() const override
+    {
+        return "Expand";
+    }
+
+private:
+    const std::vector<PlanNodePtr> sources;
+    const std::vector<std::vector<ExprPtr>> projections;
 };
 } // namespace omniruntime

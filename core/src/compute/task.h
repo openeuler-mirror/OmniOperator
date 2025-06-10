@@ -11,6 +11,7 @@
 #include <exception>
 
 #include "compute/driver.h"
+#include "compute/task_stats.h"
 #include "vector/vector_batch.h"
 #include "operator/operator.h"
 #include "plannode/planFragment.h"
@@ -18,12 +19,15 @@
 namespace omniruntime {
 namespace compute {
 
-struct OmniDriver;
+class OmniDriver;
 
 class OmniTask {
 public:
     OmniTask(const PlanFragment& planFragment,  config::QueryConfig&& queryConfig)
-        : planFragment_(planFragment), queryConfig_(std::move(queryConfig)) {}
+        : planFragment_(planFragment), queryConfig_(std::move(queryConfig))
+    {
+        taskStats_ = TaskStats();
+    }
 
     ~OmniTask()
     {
@@ -40,11 +44,16 @@ public:
 
     vec::VectorBatch* Next(ContinueFuture* future = nullptr);
 
+    /// Returns Task Stats by copy as other threads might be updating the
+    /// structure.
+    TaskStats GetTaskStats() const;
+
 private:
     std::vector<std::shared_ptr<OmniDriver>> drivers_;
     std::vector<OperatorFactory*> operatorFactories_;
     PlanFragment planFragment_;
     OperatorConfig operatorConfig_;
+    TaskStats taskStats_;
     const config::QueryConfig queryConfig_;
 };
 } // end of compute

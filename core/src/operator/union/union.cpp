@@ -69,7 +69,9 @@ int32_t UnionOperator::GetOutput(VectorBatch **outputVecBatch)
         vecBatchCount = 0;
         vecBatchIndex = 0;
         inputVecBatches.clear();
-        SetStatus(OMNI_STATUS_FINISHED);
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
         return 0;
     }
 
@@ -79,7 +81,9 @@ int32_t UnionOperator::GetOutput(VectorBatch **outputVecBatch)
         vecBatchCount = 0;
         vecBatchIndex = 0;
         inputVecBatches.clear();
-        SetStatus(OMNI_STATUS_FINISHED);
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
     }
 
     return 0;

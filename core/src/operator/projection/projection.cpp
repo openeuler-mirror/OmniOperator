@@ -28,7 +28,7 @@ OperatorFactory *CreateProjectOperatorFactory(
     std::shared_ptr<const ProjectNode> projectNode, const config::QueryConfig &queryConfig)
 {
     auto projections = projectNode->GetProjections();
-    auto sourceTypes = *(projectNode->OutputType());
+    auto sourceTypes = *(projectNode->Sources()[0]->OutputType());
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                                  : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(projections, sourceTypes, overflowConfig);

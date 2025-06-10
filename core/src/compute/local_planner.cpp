@@ -3,6 +3,9 @@
  */
 
 #include "local_planner.h"
+
+#include <operator/aggregation/group_aggregation_expr.h>
+
 #include "operator/join/hash_builder.h"
 #include "operator/join/lookup_join.h"
 #include "operator/join/lookup_outer_join.h"
@@ -12,17 +15,21 @@
 #include "operator/topn/topn.h"
 #include "operator/union/union.h"
 #include "operator/window/window.h"
+#include "operator/join/sortmergejoin/sort_merge_join_expr.h"
 #include <operator/aggregation/non_group_aggregation_expr.h>
+#include "operator/expand/expand.h"
 
 namespace omniruntime::compute {
 
 // Returns ture if source nodes must run in a separate pipeline
 bool MustStartNewPipeline(int sourceId) { return sourceId != 0; }
 
-std::shared_ptr<omniruntime::op::Operator> createOperator(OperatorFactory* factory)
+std::shared_ptr<omniruntime::op::Operator> createOperator(
+    OperatorFactory* factory, PlanNodeId nodeId)
 {
     std::shared_ptr<omniruntime::op::Operator> operatorPtr(factory->CreateOperator());
     operatorPtr->setNoMoreInput(false);
+    operatorPtr->SetPlanNodeId(nodeId);
     return std::move(operatorPtr);
 }
 
@@ -47,8 +54,14 @@ OperatorFactory* createOperatorFactory(
     } else if (auto valueStreamNode = std::dynamic_pointer_cast<const ValueStreamNode>(planNode)) {
         return ValueStreamFactory::CreateValueStreamFactory(valueStreamNode);
     } else if (auto aggregationNode = std::dynamic_pointer_cast<const AggregationNode>(planNode)) {
-        return AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
+        if (aggregationNode->GetGroupByKeys().empty()) {
+            return AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
+                aggregationNode, queryConfig);
+        }
+        return HashAggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
             aggregationNode, queryConfig);
+    } else if (auto expandNode = std::dynamic_pointer_cast<const ExpandNode>(planNode)) {
+        return CreateExpandOperatorFactory(expandNode, queryConfig);
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());
@@ -67,7 +80,7 @@ void planDetail(
     if (!currentOperators) {
         drivers->emplace_back(std::make_unique<OmniDriver>());
         drivers->back()->unionDriver = isUnionDriver;
-        currentOperators = &drivers->back()->operators();
+        currentOperators = drivers->back()->operators();
     }
 
     const auto &sources = planNode->Sources();
@@ -87,7 +100,7 @@ void planDetail(
         auto hashBuilderOperatorFactory =
             HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
         auto builderDriver = drivers->back();
-        builderDriver->operators().emplace_back(createOperator(hashBuilderOperatorFactory));
+        builderDriver->operators()->emplace_back(createOperator(hashBuilderOperatorFactory, planNode->Id()));
         factories->emplace_back(hashBuilderOperatorFactory);
 
         auto joinType = joinNode->GetJoinType();
@@ -98,21 +111,44 @@ void planDetail(
             factory =
                 LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
         }
+    } else if (auto sortMergejoinNode = std::dynamic_pointer_cast<const MergeJoinNode>(planNode)) {
+        auto streamedTableWithExprOperatorFactory =
+            StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
+                sortMergejoinNode, queryConfig);
+        auto bufferedTableWithExprOperatorFactory =
+            BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
+                sortMergejoinNode, reinterpret_cast<int64_t>(streamedTableWithExprOperatorFactory), queryConfig);
+        auto builderDriver = drivers->back();
+        builderDriver->operators()->emplace_back(createOperator(bufferedTableWithExprOperatorFactory, planNode->Id()));
+        factories->emplace_back(bufferedTableWithExprOperatorFactory);
+        factory = streamedTableWithExprOperatorFactory;
     } else {
         factory = createOperatorFactory(planNode, queryConfig);
     }
 
-    auto currentOperator = createOperator(factory);
-    if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
-        for (auto& driver : *drivers) {
-            if (driver->unionDriver) {
-                driver->operators().emplace_back(currentOperator);
-            }
+    for (auto& driver : *drivers) {
+        if (driver->unionDriver && driver->operators() != currentOperators) {
+            driver->operators()->emplace_back(createOperator(factory, planNode->Id()));
         }
-        factories->emplace_back(factory);
-    } else {
-        currentOperators->emplace_back(currentOperator);
-        factories->emplace_back(factory);
+    }
+    currentOperators->emplace_back(createOperator(factory, planNode->Id()));
+    factories->emplace_back(factory);
+}
+
+void LocalPlanner::buildOperatorStats(std::vector<std::shared_ptr<OmniDriver>>* drivers)
+{
+    auto operators = drivers->back()->operators();
+    if (operators->empty()) {
+        LogError("operators is empty");
+        return;
+    }
+    for (auto i = 0; i < operators->size(); ++i) {
+        (*operators)[i]->SetOperatorId(i);
+        (*operators)[i]->stats_ = OperatorStats(
+            (*operators)[i]->GetOperatorId(),
+            0,
+            (*operators)[i]->planNodeId(),
+            (*operators)[i]->operatorType());
     }
 }
 
@@ -129,5 +165,7 @@ void LocalPlanner::plan(
         false,
         queryConfig);
     (*drivers)[0]->outputDriver = true;
+
+    buildOperatorStats(drivers);
 }
 } // namespace omniruntime::compute

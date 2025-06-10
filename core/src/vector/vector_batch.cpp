@@ -91,4 +91,18 @@ size_t VectorBatch::GetCapacity()
 {
     return capacity;
 }
+
+uint64_t VectorBatch::CalculateTotalSize() const
+{
+    if (vectors.empty()) {
+        return 0;
+    }
+
+    uint64_t totalSize = 0;
+    for (const auto& vector : vectors) {
+        totalSize += vector->GetSize() * sizeof(vector[0]);
+    }
+
+    return totalSize;
+}
 }

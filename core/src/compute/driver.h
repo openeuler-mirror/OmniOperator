@@ -24,6 +24,61 @@ using OperatorSupplier = std::function<
     std::unique_ptr<omniruntime::op::Operator>(const OperatorConfig& operatorConfig)>;
 
 class BlockingState;
+class OmniTask;
+
+constexpr const char* kOpMethodNone = "";
+constexpr const char* kOpMethodIsBlocked = "isBlocked";
+constexpr const char* kOpMethodNeedsInput = "needsInput";
+constexpr const char* kOpMethodGetOutput = "getOutput";
+constexpr const char* kOpMethodAddInput = "addInput";
+constexpr const char* kOpMethodNoMoreInput = "noMoreInput";
+constexpr const char* kOpMethodIsFinished = "isFinished";
+
+
+/// Same as the structure below, but does not have atomic members.
+/// Used to return the status from the struct with atomics.
+struct OpCallStatusRaw {
+    /// Time (ms) when the operator call started.
+    size_t timeStartMs{0};
+    /// Id of the operator, method of which is currently running. It is index into
+    /// the vector of Driver's operators.
+    int32_t opId{0};
+    /// Method of the operator, which is currently running.
+    const char* method{kOpMethodNone};
+
+    bool empty() const
+    {
+        return timeStartMs == 0;
+    }
+    size_t callDuration() const;
+};
+
+/// Structure holds the information about the current operator call the driver
+/// is in. Can be used to detect deadlocks and otherwise blocked calls.
+/// If timeStartMs is zero, then we aren't in an operator call.
+struct OpCallStatus {
+    OpCallStatus()
+    {
+    }
+
+    /// The status accessor.
+    OpCallStatusRaw operator()() const
+    {
+        return OpCallStatusRaw{timeStartMs, opId, method};
+    }
+
+    void start(int32_t operatorId, const char* operatorMethod);
+    void stop();
+
+private:
+    /// Time (ms) when the operator call started.
+    std::atomic_size_t timeStartMs{0};
+    /// Id of the operator, method of which is currently running. It is index into
+    /// the vector of Driver's operators.
+    std::atomic_int32_t opId{0};
+    /// Method of the operator, which is currently running.
+    std::atomic<const char*> method{kOpMethodNone};
+};
 
 class OmniDriver : public std::enable_shared_from_this<OmniDriver> {
 public:
@@ -42,9 +97,14 @@ public:
 
     void close();
 
-    std::vector<std::shared_ptr<omniruntime::op::Operator>>& operators()
+    std::vector<std::shared_ptr<omniruntime::op::Operator>>* operators()
     {
-        return operators_;
+        return &operators_;
+    }
+
+    ALWAYS_INLINE bool isFinished() const
+    {
+        return finished_;
     }
 
 public:
@@ -74,7 +134,16 @@ private:
  
     BlockingReason blockingReason_;
     size_t blockedOperatorId_;
-    std::atomic_bool closed_{false};
+    bool trackOperatorCpuUsage_ = true;
+
+    OpCallStatus opCallStatus_;
+    CpuWallTiming processLazyIoStats(omniruntime::op::Operator& op, const CpuWallTiming& timing);
+    using TimingMemberPtr = CpuWallTiming OperatorStats::*;
+    template <typename Func>
+    void withDeltaCpuWallTimer(omniruntime::op::Operator* op, TimingMemberPtr opTimingMember, Func&& opFunction);
+
+    bool closed_{false};
+    bool finished_{false};
 };
 
 class BlockingState {
