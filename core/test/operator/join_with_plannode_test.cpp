@@ -174,3 +174,4 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestFullEqualityJoinWithOneBuildOp)
     delete hashBuilderFactory;
     delete lookupJoinWrapperOperatorFactory;
 }
+}
