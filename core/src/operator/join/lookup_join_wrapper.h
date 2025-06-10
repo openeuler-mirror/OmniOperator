@@ -19,7 +19,7 @@ namespace op {
 class LookupJoinWrapperOperatorFactory : public OperatorFactory {
 public:
     LookupJoinWrapperOperatorFactory(LookupJoinOperatorFactory &lookupJoinOperatorFactory,
-       LookupOuterJoinOperatorFactory &lookupOuterJoinOperatorFactory);
+       LookupOuterJoinOperatorFactory &lookupOuterJoinOperatorFactory, bool isNeedOuterJoin);
     ~LookupJoinWrapperOperatorFactory() override;
     static LookupJoinWrapperOperatorFactory *CreateLookupJoinWrapperOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
         HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig);
@@ -28,11 +28,12 @@ public:
 private:
     LookupJoinOperatorFactory lookupJoinOperatorFactory;
     LookupOuterJoinOperatorFactory lookupOuterJoinOperatorFactory;
+    bool isNeedOuterJoin;
 };
 
 class LookupJoinWrapperOperator : public Operator {
 public:
-    LookupJoinWrapperOperator(LookupJoinOperator &lookupJoinOperatorFactory, LookupOuterJoinOperator &lookupOuterJoinOperatorFactory);
+    LookupJoinWrapperOperator(LookupJoinOperator &lookupJoinOperatorFactory, LookupOuterJoinOperator &lookupOuterJoinOperatorFactory, bool isNeedOuterJoin);
     ~LookupJoinWrapperOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
@@ -46,6 +47,7 @@ public:
 private:
     LookupOuterJoinOperator *lookupOuterJoinOperator;
     LookupJoinOperator *lookupJoinOperator;
+    bool isNeedOuterJoin;
 };
 
 }

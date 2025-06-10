@@ -132,6 +132,7 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
 {
     // Extract necessary information from planNode
     auto joinType = planNode->GetJoinType();
+    auto buildSide = planNode->GetBuildSide();
     auto buildTypes = planNode->RightOutputType();
 
     auto buildKeysSize = planNode->RightKeys().size();
@@ -141,7 +142,7 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
     }
 
     auto buildHashColsCount = (int32_t) buildHashCols.size();
-    return new HashBuilderOperatorFactory(joinType, BuildSide::OMNI_BUILD_RIGHT, *buildTypes, buildHashCols.data(), buildHashColsCount, 1);
+    return new HashBuilderOperatorFactory(joinType, buildSide, *buildTypes, buildHashCols.data(), buildHashColsCount, 1);
 }
 
 Operator *HashBuilderOperatorFactory::CreateOperator()

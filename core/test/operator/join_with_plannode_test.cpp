@@ -42,7 +42,7 @@ std::shared_ptr<const HashJoinNode> ConstructSimpleJoinKeyHashJoinNode(JoinType 
     DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
 
-    return std::make_shared<const HashJoinNode>("0", joinType, nullAware, isShuffle, leftKeys, rightKeys, filter, nullptr, nullptr, probeTypes.Instance(), buildTypes.Instance());
+    return std::make_shared<const HashJoinNode>("0", joinType, BuildSide::OMNI_BUILD_LEFT, nullAware, isShuffle, leftKeys, rightKeys, filter, nullptr, nullptr, probeTypes.Instance(), buildTypes.Instance());
 }
 
 VectorBatch *ConstructSimpleBuildVectorBatch()
