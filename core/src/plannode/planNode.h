@@ -382,7 +382,6 @@ public:
     {
         bool outputMayIncludeLeftColumns = !((IsLeftSemi() || IsExistence()) && IsBuildLeft());
         bool outputMayIncludeRightColumns = !(((IsLeftSemi() || IsExistence()) && IsBuildRight()) || IsLeftAnti());
-
         if (outputMayIncludeLeftColumns && outputMayIncludeRightColumns) {
             auto outputSize = leftOutputType->GetSize() + rightOutputType->GetSize();
             std::vector<DataTypePtr> joinInputTypes;
