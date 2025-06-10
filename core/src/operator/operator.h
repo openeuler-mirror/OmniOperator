@@ -241,6 +241,7 @@ protected:
 
     void SetOperatorName(const std::string& operatorName)
     {
+        operatorType_ = operatorName;
         if (LIKELY(!IsDebugEnable())) {
             return;
         }
