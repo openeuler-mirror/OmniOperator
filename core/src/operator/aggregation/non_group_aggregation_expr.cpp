@@ -159,7 +159,6 @@ int32_t AggregationWithExprOperator::AddInput(VectorBatch *inputVecBatch)
     VectorHelper::FreeVecBatch(inputVecBatch);
     ResetInputVecBatch();
     aggOperator->AddInput(newInputVecBatch);
-    noMoreInput();
     return 0;
 }
 
@@ -167,6 +166,10 @@ int32_t AggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (!noMoreInput_) {
         SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
+    if (isFinished() || aggOperator->isFinished()) {
+        SetStatus(OMNI_STATUS_FINISHED);
         return 0;
     }
     auto status = aggOperator->GetOutput(outputVecBatch);
