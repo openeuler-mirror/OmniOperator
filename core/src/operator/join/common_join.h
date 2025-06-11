@@ -13,12 +13,6 @@ namespace omniruntime {
 namespace op {
 constexpr int32_t DEFAULT_ROW_SIZE = sizeof(int32_t);
 
-enum BuildSide {
-    OMNI_BUILD_UNKNOWN = 0,
-    OMNI_BUILD_LEFT,
-    OMNI_BUILD_RIGHT
-};
-
 enum class SortMergeJoinAddInputCode {
     SMJ_NEED_STREAM_TBL_INFO = 0,
     SMJ_NEED_BUFFER_TBL_INFO = 1,

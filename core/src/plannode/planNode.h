@@ -12,6 +12,13 @@
 #include "util/config/QueryConfig.h"
 
 namespace omniruntime {
+namespace op {
+    enum BuildSide {
+        OMNI_BUILD_UNKNOWN = 0,
+        OMNI_BUILD_LEFT,
+        OMNI_BUILD_RIGHT
+    };
+}
 using namespace type;
 using namespace op;
 using namespace expressions;
@@ -368,18 +375,41 @@ enum JoinType {
 /// class for specific join implementations, e.g. hash and merge joins.
 class AbstractJoinNode : public PlanNode {
 public:
-    AbstractJoinNode(const PlanNodeId &id, JoinType joinType_, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys_,
-        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys_, ExprPtr filter_, PlanNodePtr left_, PlanNodePtr right_,
-        DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
-        : PlanNode(id), joinType(joinType_), leftKeys(leftKeys_), rightKeys(rightKeys_), filter(std::move(filter_)), sources({std::move(left_),
+    AbstractJoinNode(const PlanNodeId &id, JoinType joinType_, BuildSide buildSide_, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys_,
+        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys_, ExprPtr filter_, PlanNodePtr left_, PlanNodePtr right_, DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
+        : PlanNode(id), joinType(joinType_), buildSide(buildSide_), leftKeys(leftKeys_), rightKeys(rightKeys_), filter(std::move(filter_)), sources({std::move(left_),
         std::move(right_)}), leftOutputType(std::move(leftOutputType_)), rightOutputType(std::move(rightOutputType_))
     {
-        auto outputSize = leftOutputType->GetSize() + rightOutputType->GetSize();
-        std::vector<DataTypePtr> joinInputTypes;
-        joinInputTypes.reserve(outputSize);
-        joinInputTypes.insert(joinInputTypes.end(), leftOutputType->Get().begin(), leftOutputType->Get().end());
-        joinInputTypes.insert(joinInputTypes.end(), rightOutputType->Get().begin(), rightOutputType->Get().end());
-        this->outputType = std::make_shared<DataTypes>(std::move(joinInputTypes));
+        bool outputMayIncludeLeftColumns = !((IsLeftSemi() || IsExistence()) && IsBuildLeft());
+        bool outputMayIncludeRightColumns = !(((IsLeftSemi() || IsExistence()) && IsBuildRight()) || IsLeftAnti());
+        if (outputMayIncludeLeftColumns && outputMayIncludeRightColumns) {
+            auto outputSize = leftOutputType->GetSize() + rightOutputType->GetSize();
+            std::vector<DataTypePtr> joinInputTypes;
+            joinInputTypes.reserve(outputSize);
+            joinInputTypes.insert(joinInputTypes.end(), leftOutputType->Get().begin(), leftOutputType->Get().end());
+            joinInputTypes.insert(joinInputTypes.end(), rightOutputType->Get().begin(), rightOutputType->Get().end());
+            this->outputType = std::make_shared<DataTypes>(std::move(joinInputTypes));
+        } else if (outputMayIncludeLeftColumns) {
+            int extraCnt = IsExistence() ? 1 : 0;
+            auto outputSize = leftOutputType->GetSize() + extraCnt;
+            std::vector<DataTypePtr> joinInputTypes;
+            joinInputTypes.reserve(outputSize);
+            joinInputTypes.insert(joinInputTypes.end(), leftOutputType->Get().begin(), leftOutputType->Get().end());
+            if (extraCnt > 0) {
+                joinInputTypes.emplace_back(BooleanDataType::Instance());
+            }
+            this->outputType = std::make_shared<DataTypes>(std::move(joinInputTypes));
+        } else if (outputMayIncludeRightColumns) {
+            int extraCnt = IsExistence() ? 1 : 0;
+            auto outputSize = rightOutputType->GetSize() + extraCnt;
+            std::vector<DataTypePtr> joinInputTypes;
+            joinInputTypes.reserve(outputSize);
+            joinInputTypes.insert(joinInputTypes.end(), rightOutputType->Get().begin(), rightOutputType->Get().end());
+            if (extraCnt > 0) {
+                joinInputTypes.emplace_back(BooleanDataType::Instance());
+            }
+            this->outputType = std::make_shared<DataTypes>(std::move(joinInputTypes));
+        }
     }
 
     const std::vector<PlanNodePtr> &Sources() const override
@@ -407,6 +437,11 @@ public:
         return joinType;
     }
 
+    BuildSide GetBuildSide() const
+    {
+        return buildSide;
+    }
+
     bool IsInnerJoin() const
     {
         return joinType == OMNI_JOIN_TYPE_INNER;
@@ -427,6 +462,31 @@ public:
         return joinType == JoinType::OMNI_JOIN_TYPE_FULL;
     }
 
+    bool IsLeftSemi() const
+    {
+        return joinType == JoinType::OMNI_JOIN_TYPE_LEFT_SEMI;
+    }
+
+    bool IsLeftAnti() const
+    {
+        return joinType == JoinType::OMNI_JOIN_TYPE_LEFT_ANTI;
+    }
+
+    bool IsExistence() const
+    {
+        return joinType == JoinType::OMNI_JOIN_TYPE_EXISTENCE;
+    }
+
+    bool IsBuildLeft() const
+    {
+        return buildSide == BuildSide::OMNI_BUILD_LEFT;
+    }
+
+    bool IsBuildRight() const
+    {
+        return buildSide == BuildSide::OMNI_BUILD_RIGHT;
+    }
+
     const std::vector<std::shared_ptr<const FieldExpr>> &LeftKeys() const
     {
         return leftKeys;
@@ -444,6 +504,7 @@ public:
 
 protected:
     const JoinType joinType;
+    const BuildSide buildSide;
     const std::vector<std::shared_ptr<const FieldExpr>> leftKeys;
     const std::vector<std::shared_ptr<const FieldExpr>> rightKeys;
     // Optional join filter, nullptr if absent. This is applied to
@@ -466,10 +527,10 @@ protected:
 /// EXISTS.
 class HashJoinNode : public AbstractJoinNode {
 public:
-    HashJoinNode(const PlanNodeId &id, JoinType joinType, bool nullAware, bool isShuffle, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
+    HashJoinNode(const PlanNodeId &id, JoinType joinType, BuildSide buildSide, bool nullAware, bool isShuffle, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
         const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right, DataTypesPtr leftOutputType,
         DataTypesPtr rightOutputType)
-        : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right), std::move(leftOutputType), std::move(rightOutputType)),
+        : AbstractJoinNode(id, joinType, buildSide, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right), std::move(leftOutputType), std::move(rightOutputType)),
         nullAware{nullAware}, isShuffle{isShuffle} {}
 
     std::string_view Name() const override
@@ -499,10 +560,9 @@ private:
 /// exec::Operators.
 class MergeJoinNode : public AbstractJoinNode {
 public:
-    MergeJoinNode(const PlanNodeId &id, JoinType joinType, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
-        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right,
-        DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
-        : AbstractJoinNode(id, joinType, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
+    MergeJoinNode(const PlanNodeId &id, JoinType joinType, BuildSide buildSide, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
+        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right, DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
+        : AbstractJoinNode(id, joinType, buildSide, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
         std::move(leftOutputType), std::move(rightOutputType)) {}
 
     std::string_view Name() const override

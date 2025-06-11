@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include "operator/join/hash_builder.h"
 #include "operator/join/lookup_join.h"
+#include "operator/join/lookup_join_wrapper.h"
 #include "plannode/planNode.h"
 #include "vector/vector_helper.h"
 #include "util/config_util.h"
@@ -42,7 +43,7 @@ std::shared_ptr<const HashJoinNode> ConstructSimpleJoinKeyHashJoinNode(JoinType 
     DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
 
-    return std::make_shared<const HashJoinNode>("0", joinType, nullAware, isShuffle, leftKeys, rightKeys, filter, nullptr, nullptr, probeTypes.Instance(), buildTypes.Instance());
+    return std::make_shared<const HashJoinNode>("0", joinType, BuildSide::OMNI_BUILD_LEFT, nullAware, isShuffle, leftKeys, rightKeys, filter, nullptr, nullptr, probeTypes.Instance(), buildTypes.Instance());
 }
 
 VectorBatch *ConstructSimpleBuildVectorBatch()
@@ -122,5 +123,55 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestInnerEqualityJoinWithOneBuildOp)
     omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
     omniruntime::op::Operator::DeleteOperator(lookupJoinOperator);
     DeleteHashBuilderAndLookupJoinOperatorFactory(hashBuilderFactory, lookupJoinFactory);
+}
+
+TEST(NativeOmniJoinWithPlanNodeTest, TestFullEqualityJoinWithOneBuildOp)
+{
+    auto joinNode = ConstructSimpleJoinKeyHashJoinNode(OMNI_JOIN_TYPE_FULL, false, true, nullptr);
+    HashBuilderOperatorFactory *hashBuilderFactory = HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
+    auto *hashBuilderOperator = dynamic_cast<HashBuilderOperator *>(CreateTestOperator(hashBuilderFactory));
+    VectorBatch *vecBatch = ConstructSimpleBuildVectorBatch();
+    hashBuilderOperator->AddInput(vecBatch);
+    VectorBatch *hashBuildOutput = nullptr;
+    hashBuilderOperator->GetOutput(&hashBuildOutput);
+
+    LookupJoinWrapperOperatorFactory *lookupJoinWrapperOperatorFactory = LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, hashBuilderFactory, config::QueryConfig());
+    auto lookupJoinWrapperOperator = lookupJoinWrapperOperatorFactory->CreateOperator();
+    VectorBatch *probeVecBatch = ConstructSimpleProbeVectorBatch();
+    lookupJoinWrapperOperator->AddInput(probeVecBatch);
+    VectorBatch *outputVecBatch = nullptr;
+    lookupJoinWrapperOperator->GetOutput(&outputVecBatch);
+
+    VectorBatch *expectVecBatch = ConstructSimpleExpectedVectorBatch();
+    EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
+
+    VectorBatch *appendOutput;
+    lookupJoinWrapperOperator->GetOutput(&appendOutput);
+    int64_t expectedData0[1] = {0};
+    int64_t expectedData1[1] = {0};
+    int64_t expectedData2[1] = {7};
+    int64_t expectedData3[1] = {70};
+    auto expectedVec0 = CreateVector(1, expectedData0);
+    auto expectedVec1 = CreateVector(1, expectedData1);
+    auto expectedVec2 = CreateVector(1, expectedData2);
+    auto expectedVec3 = CreateVector(1, expectedData3);
+    auto vectorBatch = new VectorBatch(1);
+    vectorBatch->Append(expectedVec0);
+    vectorBatch->Append(expectedVec1);
+    vectorBatch->Append(expectedVec2);
+    vectorBatch->Append(expectedVec3);
+    vectorBatch->Get(0)->SetNull(0);
+    vectorBatch->Get(1)->SetNull(0);
+    EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
+
+    VectorHelper::FreeVecBatch(vectorBatch);
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    VectorHelper::FreeVecBatch(expectVecBatch);
+    VectorHelper::FreeVecBatch(appendOutput);
+    omniruntime::op::Operator::DeleteOperator(lookupJoinWrapperOperator);
+    omniruntime::op::Operator::DeleteOperator(hashBuilderOperator);
+    delete hashBuilderFactory;
+    delete lookupJoinWrapperOperatorFactory;
 }
 }
