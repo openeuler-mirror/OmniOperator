@@ -107,8 +107,9 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     const config::QueryConfig &queryConfig)
 {
     // Extract necessary information from planNode
+    auto joinType = planNode->GetJoinType();
     auto buildOutputTypes = planNode->RightOutputType();
-    auto buildOutputColsCount = buildOutputTypes->GetSize();
+    auto buildOutputColsCount = (planNode->IsLeftSemi() || planNode->IsLeftAnti()) ? 0: buildOutputTypes->GetSize();
     std::vector<int32_t> buildOutputCols;
     for (size_t index = 0; index < buildOutputColsCount; index++) {
         buildOutputCols.emplace_back(index);
@@ -437,7 +438,7 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
         curInputBatch = nullptr;
         curProbePosition = 0;
         outputBuilder->Clear();
-        
+
         if (noMoreInput_) {
             SetStatus(OMNI_STATUS_FINISHED);
         }
