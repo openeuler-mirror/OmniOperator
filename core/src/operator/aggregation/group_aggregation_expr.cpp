@@ -229,6 +229,10 @@ int32_t HashAggregationWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
         SetStatus(OMNI_STATUS_NORMAL);
         return 0;
     }
+    if (isFinished() || hashAggOperator->isFinished()) {
+        SetStatus(OMNI_STATUS_FINISHED);
+        return 0;
+    }
     int32_t status = hashAggOperator->GetOutput(outputVecBatch);
     SetStatus(hashAggOperator->GetStatus());
     if (*outputVecBatch == nullptr) {
