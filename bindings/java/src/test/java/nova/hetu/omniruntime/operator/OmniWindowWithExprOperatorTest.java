@@ -75,13 +75,13 @@ public class OmniWindowWithExprOperatorTest {
                 windowFrameStartTypes, winddowFrameStartChannels, windowFrameEndTypes, winddowFrameEndChannels);
         OmniOperator omniOperator = omniWindowOperatorFactory.createOperator();
 
-        int column = 5;
+        int column = 4;
         int rowNum = 30000;
         VecBatch vecBatch = new VecBatch(buildDataForOutputMultiVectorBatch(rowNum));
         omniOperator.addInput(vecBatch);
 
         // the value rowsPerBatch = (1M / 36) + 1
-        int rowsPerBatch = 29128;
+        int rowsPerBatch = 30000;
         Object[][] expectedData1 = new Object[column][rowsPerBatch];
         Object[][] expectedData2 = new Object[column][rowNum - rowsPerBatch];
         buildIterativeExpectedData(expectedData1, expectedData2, rowsPerBatch, rowNum);
@@ -98,7 +98,6 @@ public class OmniWindowWithExprOperatorTest {
 
         assertEquals(totalRowCount, rowNum);
         assertVecBatchEquals(resultList.get(0), expectedData1);
-        assertVecBatchEquals(resultList.get(1), expectedData2);
 
         for (int i = 0; i < resultList.size(); i++) {
             freeVecBatch(resultList.get(i));
@@ -142,7 +141,7 @@ public class OmniWindowWithExprOperatorTest {
         Iterator<VecBatch> output = omniOperator.getOutput();
         VecBatch outputVecBatch = output.next();
         Object[][] expectedDatas = {{0, 0, 1, 1, 2, 2}, {8L, 8L, 4L, 1L, 5L, 2L}, {6.6D, 3.3D, 2.2D, 5.5D, 1.1D, 4.4D},
-                {56.6D, 53.3D, 52.2D, 55.5D, 51.1D, 54.4D}, {56.6D, 56.6D, 52.2D, 55.5D, 51.1D, 54.4D}};
+                {56.6D, 56.6D, 52.2D, 55.5D, 51.1D, 54.4D}};
         assertVecBatchEquals(outputVecBatch, expectedDatas);
         freeVecBatch(outputVecBatch);
 
@@ -240,7 +239,7 @@ public class OmniWindowWithExprOperatorTest {
         VecBatch outputVecBatch = output.next();
 
         Object[][] expectedDatas = {{0, 0, 1, 1, 2, 2}, {8L, 8L, 4L, 1L, 5L, 2L}, {3.3D, 6.6D, 2.2D, 5.5D, 1.1D, 4.4D},
-                {8L, 8L, 4L, 1L, 5L, 2L}, {1, 2, 1, 2, 1, 2}, {8.0D, 8.0D, 2.5D, 2.5D, 3.5D, 3.5D}};
+                {1, 2, 1, 2, 1, 2}, {8.0D, 8.0D, 2.5D, 2.5D, 3.5D, 3.5D}};
         assertVecBatchEquals(outputVecBatch, expectedDatas);
         freeVecBatch(outputVecBatch);
 
@@ -315,9 +314,7 @@ public class OmniWindowWithExprOperatorTest {
             expectedData1[2][i * 2] = (double) (i + offset2);
             expectedData1[2][i * 2 + 1] = (double) i;
             expectedData1[3][i * 2] = (double) (i + offset2 + 50);
-            expectedData1[3][i * 2 + 1] = (double) (i + 50);
-            expectedData1[4][i * 2] = (double) (i + offset2 + 50);
-            expectedData1[4][i * 2 + 1] = (double) (i + offset2 + 50);
+            expectedData1[3][i * 2 + 1] = (double) (i + offset2 + 50);
         }
 
         int offset3 = offset1 + offset2;
@@ -330,9 +327,7 @@ public class OmniWindowWithExprOperatorTest {
             expectedData2[2][i * 2] = (double) (i + offset3);
             expectedData2[2][i * 2 + 1] = (double) (i + offset1);
             expectedData2[3][i * 2] = (double) (i + 50 + offset3);
-            expectedData2[3][i * 2 + 1] = (double) (i + 50 + offset1);
-            expectedData2[4][i * 2] = (double) (i + 50 + offset3);
-            expectedData2[4][i * 2 + 1] = (double) (i + 50 + offset3);
+            expectedData2[3][i * 2 + 1] = (double) (i + 50 + offset3);
         }
     }
 }

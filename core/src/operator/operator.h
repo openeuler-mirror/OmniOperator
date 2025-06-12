@@ -120,7 +120,7 @@ public:
         noMoreInput_ = true;
     }
 
-    void setNoMoreInput(bool noMoreInput)
+    virtual void setNoMoreInput(bool noMoreInput)
     {
         noMoreInput_ = noMoreInput;
     }

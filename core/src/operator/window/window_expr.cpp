@@ -38,7 +38,7 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
 {
     std::vector<DataTypePtr> newTypes;
     std::vector<int32_t> fullArgumentChannels;
-    int32_t nonFieldProjectCount = OperatorUtil::CreateProjections(sourceTypes, argumentKeys, newTypes,
+    OperatorUtil::CreateProjections(sourceTypes, argumentKeys, newTypes,
         this->projections, this->argumentChannels, operatorConfig.GetOverflowConfig());
     this->sourceTypes = std::make_unique<DataTypes>(newTypes);
 
@@ -61,17 +61,8 @@ WindowWithExprOperatorFactory::WindowWithExprOperatorFactory(const type::DataTyp
         std::end(this->sourceTypes->Get()));
     allTypesVec.insert(allTypesVec.end(), outputDataTypes.Get().begin(), outputDataTypes.Get().end());
     DataTypes allTypes(allTypesVec);
-    auto newOutputColsCount = outputColsCount + nonFieldProjectCount;
-    int newOutputCols[newOutputColsCount];
-    for (int32_t i = 0; i < outputColsCount; i++) {
-        newOutputCols[i] = outputCols[i];
-    }
-    for (int32_t i = 0; i < nonFieldProjectCount; i++) {
-        auto index = outputColsCount + i;
-        newOutputCols[index] = sourceTypes.GetSize() + static_cast<int32_t>(i);
-    }
     this->operatorFactory =
-        WindowOperatorFactory::CreateWindowOperatorFactory(*(this->sourceTypes), newOutputCols, newOutputColsCount,
+        WindowOperatorFactory::CreateWindowOperatorFactory(*(this->sourceTypes), outputCols, outputColsCount,
         windowFunctionTypes, windowFunctionCount, partitionCols, partitionCount, preGroupedCols, preGroupedCount,
         sortCols, sortAscendings, sortNullFirsts, sortColCount, preSortedChannelPrefix, expectedPositions, allTypes,
         fullArgumentChannels.data(), fullArgumentChannels.size(), windowFrameTypesField, windowFrameStartTypesField,
@@ -115,6 +106,41 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
         argumentChannelsCount, windowFrameTypesField, windowFrameStartTypesField, windowFrameStartChannelsField,
         windowFrameEndTypesField, windowFrameEndChannelsField, operatorConfig);
     return factory;
+}
+
+WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(
+    std::shared_ptr<const WindowNode> planNode, const config::QueryConfig &queryConfig)
+{
+    auto dataTypes = planNode->GetSourceTypes();
+    auto outputCols = planNode->GetOutputCols();
+    auto windowFunctionTypes = planNode->GetWindowFunctionTypes();
+    auto partitionCols = planNode->GetPartitionCols();
+    auto preGroupedCols = planNode->GetPreGroupedCols();
+    auto sortCols = planNode->GetSortCols();
+    auto sortAscending = planNode->GetSortAscending();
+    auto sortNullFirsts = planNode->GetNullFirsts();
+    auto preSortedChannelPrefix = planNode->GetPreSortedChannelPrefix();
+    auto expectedPositionsCount = planNode->GetExpectedPositionsCount();
+    auto windowFunctionReturnTypes = planNode->GetWindowFunctionReturnTypes();
+
+    auto argumentKeys = planNode->GetArgumentKeys();
+    auto windowFrameTypes = planNode->GetWindowFrameTypes();
+    auto windowFrameStartTypes = planNode->GetWindowFrameStartTypes();
+    auto windowFrameStartChannels = planNode->GetWindowFrameStartChannels();
+    auto windowFrameEndTypes = planNode->GetWindowFrameEndTypes();
+    auto windowFrameEndChannels = planNode->GetWindowFrameEndChannels();
+    auto spillConfig = planNode->CanSpill(queryConfig)
+                       ? SpillConfig(SPILL_CONFIG_SPARK, true, queryConfig.SpillDir(), queryConfig.maxSpillBytes())
+                       : SpillConfig();
+    OperatorConfig  config(spillConfig);
+
+    auto operatorFactory = new WindowWithExprOperatorFactory(*dataTypes.get(), outputCols.data(), outputCols.size(),
+         windowFunctionTypes.data(), windowFunctionTypes.size(), partitionCols.data(), partitionCols.size(),
+         preGroupedCols.data(), preGroupedCols.size(), sortCols.data(), sortAscending.data(), sortNullFirsts.data(),
+         sortCols.size(), preSortedChannelPrefix, expectedPositionsCount, *windowFunctionReturnTypes.get(),
+         argumentKeys, argumentKeys.size(), windowFrameTypes.data(), windowFrameStartTypes.data(),
+         windowFrameStartChannels.data(), windowFrameEndTypes.data(), windowFrameEndChannels.data(), config);
+    return operatorFactory;
 }
 
 Operator *WindowWithExprOperatorFactory::CreateOperator()
