@@ -109,10 +109,19 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     // Extract necessary information from planNode
     auto joinType = planNode->GetJoinType();
     auto buildOutputTypes = planNode->RightOutputType();
-    auto buildOutputColsCount = (planNode->IsLeftSemi() || planNode->IsLeftAnti()) ? 0: buildOutputTypes->GetSize();
+    auto buildOutputColsCount = buildOutputTypes->GetSize();
+    if (planNode->IsLeftSemi() || planNode->IsLeftAnti()) {
+        buildOutputColsCount = 0;
+    } else if (planNode->IsExistence()) {
+        buildOutputColsCount = 1;
+    }
     std::vector<int32_t> buildOutputCols;
-    for (size_t index = 0; index < buildOutputColsCount; index++) {
-        buildOutputCols.emplace_back(index);
+    if (planNode->IsExistence()) {
+        buildOutputCols.emplace_back(1);
+    } else {
+        for (size_t index = 0; index < buildOutputColsCount; index++) {
+            buildOutputCols.emplace_back(index);
+        }
     }
 
     auto probeOutputTypes = planNode->LeftOutputType();

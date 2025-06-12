@@ -107,7 +107,7 @@ void planDetail(
         factories->emplace_back(hashBuilderOperatorFactory);
 
         auto joinType = joinNode->GetJoinType();
-        if (joinType == JoinType::OMNI_JOIN_TYPE_FULL || joinType == JoinType::OMNI_JOIN_TYPE_RIGHT) {
+        if (joinNode->IsFullJoin() || (joinNode->IsLeftJoin() && joinNode->IsBuildLeft()) || (joinNode->IsRightJoin() && joinNode->IsBuildRight())) {
             factory =
                 LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
         } else {
