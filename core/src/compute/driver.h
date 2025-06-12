@@ -110,7 +110,6 @@ public:
 public:
     bool inputDriver{false};
     bool outputDriver{false};
-    bool unionDriver{false};
 
     bool shouldStop{false};
 

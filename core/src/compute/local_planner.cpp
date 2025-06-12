@@ -52,8 +52,6 @@ OperatorFactory* createOperatorFactory(
         return TopNOperatorFactory::CreateTopNOperatorFactory(topNNode);
     } else if (auto limitNode = std::dynamic_pointer_cast<const LimitNode>(planNode)) {
         return LimitOperatorFactory::CreateLimitOperatorFactory(limitNode);
-    } else if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
-        return UnionOperatorFactory::CreateUnionOperatorFactory(unionNode);
     } else if (auto valueStreamNode = std::dynamic_pointer_cast<const ValueStreamNode>(planNode)) {
         return ValueStreamFactory::CreateValueStreamFactory(valueStreamNode);
     } else if (auto aggregationNode = std::dynamic_pointer_cast<const AggregationNode>(planNode)) {
@@ -76,33 +74,30 @@ void planDetail(
     std::vector<std::shared_ptr<omniruntime::op::Operator>>* currentOperators,
     std::vector<std::shared_ptr<OmniDriver>>* drivers,
     std::vector<OperatorFactory*>* factories,
-    bool isUnionDriver,
     const config::QueryConfig& queryConfig)
 {
     OperatorFactory* factory = nullptr;
     if (!currentOperators) {
         drivers->emplace_back(std::make_unique<OmniDriver>());
-        drivers->back()->unionDriver = isUnionDriver;
         currentOperators = drivers->back()->operators();
     }
 
     const auto &sources = planNode->Sources();
+    std::vector<std::vector<std::shared_ptr<OmniDriver>>> builderDrivers(sources.size());
     if (sources.empty()) {
         drivers->back()->inputDriver = true;
     } else {
-        if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
-            isUnionDriver = true;
-        }
         for (int32_t i = 0; i < sources.size(); ++i) {
             planDetail(sources[i], MustStartNewPipeline(i) ? nullptr : currentOperators,
-                drivers, factories, isUnionDriver, queryConfig);
+                MustStartNewPipeline(i) ? &builderDrivers[i] : drivers, factories, queryConfig);
         }
     }
 
+    // JoinNode and UnionNode has multiple sources, so we need to create a builder driver for each source
     if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
         auto hashBuilderOperatorFactory =
             HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
-        auto builderDriver = drivers->back();
+        auto builderDriver = builderDrivers[1][0];
         builderDriver->operators()->emplace_back(createOperator(hashBuilderOperatorFactory, joinNode));
         factories->emplace_back(hashBuilderOperatorFactory);
 
@@ -121,21 +116,26 @@ void planDetail(
         auto bufferedTableWithExprOperatorFactory =
             BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
                 sortMergejoinNode, reinterpret_cast<int64_t>(streamedTableWithExprOperatorFactory), queryConfig);
-        auto builderDriver = drivers->back();
+        auto builderDriver = builderDrivers[1][0];
         builderDriver->operators()->emplace_back(createOperator(bufferedTableWithExprOperatorFactory, sortMergejoinNode));
         factories->emplace_back(bufferedTableWithExprOperatorFactory);
         factory = streamedTableWithExprOperatorFactory;
+    } else if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
+        factory = UnionOperatorFactory::CreateUnionOperatorFactory(unionNode);
+        for (auto i = 1; i < sources.size(); i++) {
+            auto builderDriver = builderDrivers[i][0];
+            builderDriver->operators()->emplace_back(createOperator(factory, planNode));
+        }
     } else {
         factory = createOperatorFactory(planNode, queryConfig);
     }
 
-    for (auto& driver : *drivers) {
-        if (driver->unionDriver && driver->operators() != currentOperators) {
-            driver->operators()->emplace_back(createOperator(factory, planNode));
-        }
-    }
     currentOperators->emplace_back(createOperator(factory, planNode));
     factories->emplace_back(factory);
+
+    for (auto builderDriver : builderDrivers) {
+        drivers->insert(drivers->end(), builderDriver.begin(), builderDriver.end());
+    }
 }
 
 void LocalPlanner::buildOperatorStats(std::vector<std::shared_ptr<OmniDriver>>* drivers)
@@ -172,7 +172,6 @@ void LocalPlanner::plan(
         nullptr,
         drivers,
         factories,
-        false,
         queryConfig);
     (*drivers)[0]->outputDriver = true;
 
