@@ -197,18 +197,18 @@ public:
         const std::vector<DataTypes> aggsOutputTypes, const std::vector<uint32_t> &aggFuncTypes,
         const std::vector<ExprPtr> &aggFilters, const std::vector<uint32_t> &maskColumns,
         const std::vector<bool> &inputRaws, const std::vector<bool> &outputPartials, const bool isStatisticalAggregate,
-        PlanNodePtr source)
+        const DataTypesPtr outputType, PlanNodePtr source)
         : PlanNode(id), groupByKeys(groupByKeys), groupByNum(groupByNum), aggKeys(aggKeys),
           sourceDataTypes(sourceDataTypes), aggsOutputTypes(aggsOutputTypes), aggFuncTypes(aggFuncTypes),
           aggFilters(aggFilters), maskColumns(maskColumns), inputRaws(inputRaws), outputPartials(outputPartials),
-          isStatisticalAggregate(isStatisticalAggregate), sources({source})
+          isStatisticalAggregate(isStatisticalAggregate), outputType(outputType), sources({source})
     {}
 
     ~AggregationNode() override = default;
 
     std::string_view Name() const override { return "Aggregation"; }
 
-    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+    const DataTypesPtr &OutputType() const override { return outputType; }
 
     const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
@@ -246,6 +246,7 @@ private:
     const std::vector<bool> inputRaws;
     const std::vector<bool> outputPartials;
     bool isStatisticalAggregate;
+    const DataTypesPtr outputType;
     const std::vector<PlanNodePtr> sources;
 };
 
