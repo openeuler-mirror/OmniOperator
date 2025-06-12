@@ -743,11 +743,23 @@ class ExpandNode : public PlanNode {
 public:
     ExpandNode(const PlanNodeId &id, std::vector<std::vector<ExprPtr>> &&projections, PlanNodePtr source)
         : PlanNode(id), sources{source}, projections(std::move(projections))
-    {}
+    {
+        std::vector<DataTypePtr> types;
+        if (this->projections.size() > 0) {
+            types.reserve(this->projections[0].size());
+            for (const auto &projection: this->projections[0]) {
+                types.push_back(projection->GetReturnType());
+            }
+        }
+        this->outputType = std::make_shared<DataTypes>(std::move(types));
+    }
 
-    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+    const DataTypesPtr &OutputType() const override
+    {
+        return outputType;
+    }
 
-    const DataTypesPtr& inputType() const
+    const DataTypesPtr& InputType() const
     {
         return sources[0]->OutputType();
     }
@@ -770,5 +782,6 @@ public:
 private:
     const std::vector<PlanNodePtr> sources;
     const std::vector<std::vector<ExprPtr>> projections;
+    DataTypesPtr outputType;
 };
 } // namespace omniruntime

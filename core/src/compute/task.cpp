@@ -51,7 +51,7 @@ TaskStats OmniTask::GetTaskStats() const
     TaskStats taskStats = taskStats_;
 
     taskStats.numTotalDrivers = drivers_.size();
-    LogInfo("total driver num is %d", taskStats_.numTotalDrivers);
+    LogInfo("total driver num is %d", taskStats.numTotalDrivers);
     // Add stats of the drivers (their operators) that are still running.
     for (const auto& driver : drivers_) {
         // Driver can be null.
