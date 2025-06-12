@@ -49,9 +49,6 @@ public:
         int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField, int32_t *windowFrameEndTypesField,
         int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
 
-    static WindowOperatorFactory *CreateWindowOperatorFactory(std::shared_ptr<const WindowNode> planNode,
-        const config::QueryConfig &queryConfig);
-
     Operator *CreateOperator() override;
 
     const DataTypes &GetSourceTypes() const

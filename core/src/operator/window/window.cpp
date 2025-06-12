@@ -99,42 +99,6 @@ WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(const 
     return operatorFactory;
 }
 
-WindowOperatorFactory *WindowOperatorFactory::CreateWindowOperatorFactory(std::shared_ptr<const WindowNode> planNode,
-    const config::QueryConfig &queryConfig)
-{
-    auto dataTypes = planNode->GetSourceTypes();
-    auto outputCols = planNode->GetOutputCols();
-    auto windowFunctionTypes = planNode->GetWindowFunctionTypes();
-    auto partitionCols = planNode->GetPartitionCols();
-    auto preGroupedCols = planNode->GetPreGroupedCols();
-    auto sortCols = planNode->GetSortCols();
-    auto sortAscending = planNode->GetSortAscending();
-    auto sortNullFirsts = planNode->GetNullFirsts();
-    auto preSortedChannelPrefix = planNode->GetPreSortedChannelPrefix();
-    auto expectedPositionsCount = planNode->GetExpectedPositionsCount();
-    auto allTypes = planNode->OutputType();
-
-    auto argumentChannels = planNode->GetArgumentChannels();
-    auto windowFrameTypes = planNode->GetWindowFrameTypes();
-    auto windowFrameStartTypes = planNode->GetWindowFrameStartTypes();
-    auto windowFrameStartChannels = planNode->GetWindowFrameStartChannels();
-    auto windowFrameEndTypes = planNode->GetWindowFrameEndTypes();
-    auto windowFrameEndChannels = planNode->GetWindowFrameEndChannels();
-    auto spillConfig = planNode->CanSpill(queryConfig)
-                       ? SpillConfig(SPILL_CONFIG_SPARK, true, queryConfig.SpillDir(), queryConfig.maxSpillBytes())
-                       : SpillConfig();
-    OperatorConfig  config(spillConfig);
-
-    auto operatorFactory = new WindowOperatorFactory(*dataTypes.get(), outputCols.data(), outputCols.size(),
-        windowFunctionTypes.data(), windowFunctionTypes.size(), partitionCols.data(), partitionCols.size(),
-        preGroupedCols.data(), preGroupedCols.size(), sortCols.data(), sortAscending.data(), sortNullFirsts.data(),
-        sortCols.size(), preSortedChannelPrefix, expectedPositionsCount, *allTypes.get(), argumentChannels.data(),
-        argumentChannels.size(), windowFrameTypes.data(), windowFrameStartTypes.data(), windowFrameStartChannels.data(),
-        windowFrameEndTypes.data(), windowFrameEndChannels.data(), config);
-    operatorFactory->Init();
-    return operatorFactory;
-}
-
 Operator *WindowOperatorFactory::CreateOperator()
 {
     auto windowOperator = new WindowOperator(sourceTypes, outputCols, outputColsCount, windowFunctionTypes,

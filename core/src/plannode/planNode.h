@@ -263,7 +263,7 @@ public:
         const int32_t expectedPositionsCount,
         const DataTypesPtr &windowFunctionReturnTypes,
         const DataTypesPtr &allTypes,
-        const std::vector<int32_t> &argumentChannels,
+        const std::vector<omniruntime::expressions::Expr *> argumentKeys,
         const std::vector<int32_t> &windowFrameTypes,
         const std::vector<int32_t> &windowFrameStartTypes,
         const std::vector<int32_t> &windowFrameStartChannels,
@@ -281,7 +281,7 @@ public:
           expectedPositionsCount(expectedPositionsCount),
           windowFunctionReturnTypes(windowFunctionReturnTypes),
           allTypes(allTypes),
-          argumentChannels(argumentChannels),
+          argumentKeys(argumentKeys),
           windowFrameTypes(windowFrameTypes),
           windowFrameStartTypes(windowFrameStartTypes),
           windowFrameStartChannels(windowFrameStartChannels),
@@ -320,7 +320,7 @@ public:
 
     const DataTypesPtr &GetWindowFunctionReturnTypes() const { return windowFunctionReturnTypes; }
 
-    const std::vector<int32_t> &GetArgumentChannels() const { return argumentChannels; }
+    const std::vector<omniruntime::expressions::Expr *> &GetArgumentKeys() const { return argumentKeys; }
 
     const std::vector<int32_t> &GetWindowFrameTypes() const { return windowFrameTypes; }
 
@@ -341,8 +341,6 @@ public:
     std::string_view Name() const override { return "Window"; }
 
 private:
-    const DataTypesPtr sourceTypes;
-    std::vector<int32_t> outputCols;
     const std::vector<int32_t> windowFunctionTypes;
     const std::vector<int32_t> partitionCols;
     const std::vector<int32_t> preGroupedCols;
@@ -353,13 +351,15 @@ private:
     const int32_t expectedPositionsCount;
     const DataTypesPtr windowFunctionReturnTypes;
     const DataTypesPtr allTypes;
-    const std::vector<int32_t> argumentChannels;
+    const std::vector<omniruntime::expressions::Expr *> argumentKeys;
     const std::vector<int32_t> windowFrameTypes;
     const std::vector<int32_t> windowFrameStartTypes;
     const std::vector<int32_t> windowFrameStartChannels;
     const std::vector<int32_t> windowFrameEndTypes;
     const std::vector<int32_t> windowFrameEndChannels;
     const std::vector<PlanNodePtr> sources;
+    const DataTypesPtr sourceTypes;
+    std::vector<int32_t> outputCols;
 };
 
 enum JoinType {

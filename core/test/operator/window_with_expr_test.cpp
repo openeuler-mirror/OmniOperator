@@ -64,20 +64,20 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithExpr)
     auto *windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
-        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType(), DoubleType() }));
+        std::vector<DataTypePtr>({ IntType(), LongType(), DoubleType(), ShortType(), DoubleType() }));
     int32_t expectData1[DATA_SIZE] = {0, 0, 1, 1, 2, 2};
     int64_t expectData2[DATA_SIZE] = {8, 8, 4, 1, 5, 2};
     double expectData3[DATA_SIZE] = {6.6, 3.3, 2.2, 5.5, 1.1, 4.4};
     int16_t expectData4[DATA_SIZE] = {6, 3, 2, 5, 1, 4};
-    double expectData5[DATA_SIZE] = {56.6, 53.3, 52.2, 55.5, 51.1, 54.4};
-    double expectData6[DATA_SIZE] = {56.6, 56.6, 52.2, 55.5, 51.1, 54.4};
+    double expectData5[DATA_SIZE] = {56.6, 56.6, 52.2, 55.5, 51.1, 54.4};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData1, expectData2, expectData3,
-        expectData4, expectData5, expectData6);
+        expectData4, expectData5);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
@@ -125,6 +125,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberPartition)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -183,6 +184,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumber)
     auto test = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
     WindowWithExprOperator *windowOperator = test;
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -238,6 +240,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankPartition)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -295,6 +298,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRank)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -357,6 +361,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartition)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -421,6 +426,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberAndRankPartitionWithNull
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -505,6 +511,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRankWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -605,6 +612,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testRowNumberkWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -708,13 +716,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY),
         Date32Type(MILLI), LongType(), Decimal64Type(5, 0), DoubleType(), BooleanType(),
-        VarcharType(3), Decimal128Type(2, 2), IntType(), IntType(), Date32Type(DAY),
+        VarcharType(3), Decimal128Type(2, 2), IntType(), Date32Type(DAY),
         Date32Type(MILLI), LongType(), Decimal128Type(10, 0), DoubleType(), Decimal128Type(4, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 11, 22, 22, 33, 33};
@@ -726,7 +735,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
     std::string expectData7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
     Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(2, 2), Decimal128(2, 2),
         Decimal128(3, 3), Decimal128(3, 3)};
-    int32_t expectData9[DATA_SIZE] = {3, 3, 4, 4, 5, 5};
     int32_t expectData10[DATA_SIZE] = {6, 6, 8, 8, 10, 10};
     int32_t expectData11[DATA_SIZE] = {22, 22, 44, 44, 66, 66};
     int32_t expectData12[DATA_SIZE] = {222, 222, 444, 444, 666, 666};
@@ -738,7 +746,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testSumWithAllDataTypes)
         Decimal128(6, 6), Decimal128(6, 6)};
 
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
-        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
+        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
@@ -813,13 +821,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY),
         Date32Type(MILLI), LongType(), Decimal64Type(5, 2), DoubleType(), BooleanType(),
-        VarcharType(3), Decimal128Type(10, 4), IntType(), DoubleType(), DoubleType(), DoubleType(), DoubleType(),
+        VarcharType(3), Decimal128Type(10, 4), DoubleType(), DoubleType(), DoubleType(), DoubleType(),
         Decimal64Type(10, 4), DoubleType(), Decimal128Type(4, 4) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -831,7 +840,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     std::string expectData7[DATA_SIZE] = {"s1", "s1", "s2", "s2", "s3", "s3"};
     Decimal128 expectData8[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0),
          Decimal128(0, 0), Decimal128(0, 0)};
-    int32_t expectData9[DATA_SIZE] = {13, 35, 35, 57, 57, 79};
     double expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     double expectData11[DATA_SIZE] = {24, 24, 46, 46, 68, 68};
     double expectData12[DATA_SIZE] = {222, 222, 444, 444, 666, 666};
@@ -841,7 +849,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testAvgWithAllDataTypes)
     Decimal128 expectData16[DATA_SIZE] = {Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0), Decimal128(0, 0),
                                           Decimal128(0, 0), Decimal128(0, 0)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
-        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
+        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
@@ -914,13 +922,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
         std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI), LongType(), Decimal64Type(1, 1),
-        DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(), IntType(), Date32Type(DAY),
+        DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), IntType(), Date32Type(DAY),
         Date32Type(MILLI), LongType(), Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -932,7 +941,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
     Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
         Decimal128(5, 5), Decimal128(7, 7)};
-    int64_t expectData9[DATA_SIZE] = {1113, 3335, 3335, 5557, 5557, 7779};
     int32_t expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData11[DATA_SIZE] = {33, 33, 55, 55, 77, 77};
     int32_t expectData12[DATA_SIZE] = {333, 333, 555, 555, 777, 777};
@@ -943,7 +951,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMaxWithAllDataTypes)
     Decimal128 expectData17[DATA_SIZE] = {Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5), Decimal128(5, 5),
         Decimal128(7, 7), Decimal128(7, 7)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
-        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
+        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
@@ -1016,13 +1024,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
         std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
-        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2),
         IntType(), Date32Type(DAY), Date32Type(MILLI), LongType(),
         Decimal64Type(1, 1), DoubleType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
@@ -1035,7 +1044,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
     Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
        Decimal128(5, 5), Decimal128(7, 7)};
-    int64_t expectData9[DATA_SIZE] = {1113, 3335, 3335, 5557, 5557, 7779};
     int32_t expectData10[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData11[DATA_SIZE] = {11, 11, 33, 33, 55, 55};
     int32_t expectData12[DATA_SIZE] = {111, 111, 333, 333, 555, 555};
@@ -1046,7 +1054,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testMinWithAllDataTypes)
     Decimal128 expectData17[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3),
         Decimal128(5, 5), Decimal128(5, 5)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
-        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
+        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
@@ -1118,12 +1126,13 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI), LongType(),
-        Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), IntType(), LongType(),
+        Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(),
         LongType(), LongType(), LongType(), LongType(), LongType(), LongType(), LongType() }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -1135,7 +1144,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
     Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
         Decimal128(5, 5), Decimal128(7, 7)};
-    int32_t expectData9[DATA_SIZE] = {109, 331, 331, 553, 553, 775};
     int64_t expectData10[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     int64_t expectData11[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     int64_t expectData12[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
@@ -1145,7 +1153,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testCountWithAllDataTypes)
     int64_t expectData16[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     int64_t expectData17[DATA_SIZE] = {2, 2, 2, 2, 2, 2};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
-        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
+        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16, expectData17);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
@@ -1224,13 +1232,14 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
     // construct the output data
     DataTypes expectTypes(
         std::vector<DataTypePtr>({ IntType(), Date32Type(DAY), Date32Type(MILLI),
-        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2), LongType(),
+        LongType(), Decimal64Type(1, 1), DoubleType(), BooleanType(), VarcharType(3), Decimal128Type(2, 2),
         LongType(), LongType(), LongType(), LongType(), DoubleType(), VarcharType(3), Decimal128Type(2, 2) }));
     int32_t expectData0[DATA_SIZE] = {1, 1, 2, 2, 3, 3};
     int32_t expectData1[DATA_SIZE] = {11, 33, 33, 55, 55, 77};
@@ -1242,7 +1251,6 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     std::string expectData7[DATA_SIZE] = {"s1", "s3", "s3", "s5", "s5", "s7"};
     Decimal128 expectData8[DATA_SIZE] = {Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3), Decimal128(5, 5),
         Decimal128(5, 5), Decimal128(7, 7)};
-    int64_t expectData9[DATA_SIZE] = {1113, 3335, 3335, 5557, 5557, 7779};
     int64_t expectData10[DATA_SIZE] = {1, 1, 1, 1, 1, 1};
     int64_t expectData11[DATA_SIZE] = {1, 2, 1, 2, 1, 2};
     int64_t expectData12[DATA_SIZE] = {4448, 4448, 8892, 8892, 13336, 13336};
@@ -1252,7 +1260,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testDictionaryVector)
     Decimal128 expectData16[DATA_SIZE] = {Decimal128(1, 1), Decimal128(1, 1), Decimal128(3, 3), Decimal128(3, 3),
         Decimal128(5, 5), Decimal128(5, 5)};
     VectorBatch *expectVecBatch = CreateVectorBatch(expectTypes, DATA_SIZE, expectData0, expectData1, expectData2,
-        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData9, expectData10,
+        expectData3, expectData4, expectData5, expectData6, expectData7, expectData8, expectData10,
         expectData11, expectData12, expectData13, expectData14, expectData15, expectData16);
 
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
@@ -1305,6 +1313,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBound)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -1373,6 +1382,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameBoundedN)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -1441,6 +1451,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testFrameUnBounded)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -1505,6 +1516,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testWindowSpillWithSingleRecord)
     auto windowOperator = dynamic_cast<WindowWithExprOperator *>(CreateTestOperator(operatorFactory));
 
     windowOperator->AddInput(vecBatch);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -1572,6 +1584,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testWindowSpillWithMultiRecords)
 
     windowOperator->AddInput(vecBatch0);
     windowOperator->AddInput(vecBatch1);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -1639,6 +1652,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testWindowSpillWithMultiSmallRecords)
 
     windowOperator->AddInput(vecBatch0);
     windowOperator->AddInput(vecBatch1);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 
@@ -1706,6 +1720,7 @@ TEST(NativeOmniWindowWithExprOperatorTest, testWindowSpillWithSmallLastRecords)
 
     windowOperator->AddInput(vecBatch0);
     windowOperator->AddInput(vecBatch1);
+    windowOperator->noMoreInput();
     VectorBatch *outputVecBatch = nullptr;
     windowOperator->GetOutput(&outputVecBatch);
 

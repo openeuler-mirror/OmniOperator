@@ -41,6 +41,9 @@ public:
         int32_t *windowFrameTypesField, int32_t *windowFrameStartTypesField, int32_t *windowFrameStartChannelsField,
         int32_t *windowFrameEndTypesField, int32_t *windowFrameEndChannelsField, const OperatorConfig &operatorConfig);
 
+    static WindowWithExprOperatorFactory *CreateWindowWithExprOperatorFactory(std::shared_ptr<const WindowNode> planNode,
+        const config::QueryConfig &queryConfig);
+
     Operator *CreateOperator() override;
 
 private:
@@ -64,6 +67,18 @@ public:
     OmniStatus Close() override;
 
     uint64_t GetSpilledBytes() override;
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        windowOperator->noMoreInput();
+    }
+
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        windowOperator->setNoMoreInput(noMoreInput);
+    }
 
 private:
     type::DataTypes sourceTypes;
