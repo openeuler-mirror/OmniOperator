@@ -77,6 +77,7 @@ struct OmniMetrics {
 
     explicit OmniMetrics(const unsigned int numMetrics) : numMetrics(numMetrics), array(new long[numMetrics * kNum])
     {
+        memset_s(array.get(), numMetrics * kNum * sizeof(long), 0, numMetrics * kNum * sizeof(long));
         arrayRawPtr = array.get();
     }
 
