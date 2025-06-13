@@ -7,7 +7,7 @@
 #include "compute/task.h"
 #include "plannode/planNode.h"
 #include "util/format.h"
-
+#include "metrics/metrics_config.h"
 #include <unordered_map>
 
 namespace omniruntime::compute {
@@ -15,21 +15,21 @@ PlanNodeStats& PlanNodeStats::operator+=(const PlanNodeStats& another)
 {
     inputRows += another.inputRows;
     inputBytes += another.inputBytes;
-    inputVectors += another.inputVectors;
+    numInputVecBatches += another.numInputVecBatches;
 
     rawInputRows += another.inputRows;
     rawInputBytes += another.rawInputBytes;
 
     outputRows += another.outputRows;
     outputBytes += another.outputBytes;
-    outputVectors += another.outputVectors;
+    numOutputVecBatches += another.numOutputVecBatches;
 
     isBlockedTiming.Add(another.isBlockedTiming);
-    addInputTiming.Add(another.addInputTiming);
-    getOutputTiming.Add(another.getOutputTiming);
+    addInputTime.Add(another.addInputTime);
+    getOutputTime.Add(another.getOutputTime);
     finishTiming.Add(another.finishTiming);
-    cpuWallTiming.Add(another.addInputTiming);
-    cpuWallTiming.Add(another.getOutputTiming);
+    cpuWallTiming.Add(another.addInputTime);
+    cpuWallTiming.Add(another.getOutputTime);
     cpuWallTiming.Add(another.finishTiming);
     cpuWallTiming.Add(another.isBlockedTiming);
 
@@ -50,7 +50,6 @@ PlanNodeStats& PlanNodeStats::operator+=(const PlanNodeStats& another)
 
     numSplits += another.numSplits;
 
-    spilledInputBytes += another.spilledInputBytes;
     spilledBytes += another.spilledBytes;
     spilledRows += another.spilledRows;
     spilledPartitions += another.spilledPartitions;
@@ -58,6 +57,29 @@ PlanNodeStats& PlanNodeStats::operator+=(const PlanNodeStats& another)
 
     return *this;
 }
+
+// Returns true if an operator is a hash join operator given 'operatorType'.
+void PlanNodeStats::HashJoinOperator(const OperatorStats& stats)
+{
+    const std::string& opType = stats.operatorType;
+
+    if (opType == opNameForHashBuilder) {
+        buildInputRows += stats.inputRows;
+        buildAddInputTime.Add(stats.addInputTime);
+        buildGetOutputTime.Add(stats.getOutputTime);
+        buildNumInputVecBatches += stats.numInputVecBatches;
+    }
+
+    if (opType == opNameForLookUpJoin) {
+        lookupInputRows += stats.inputRows;
+        lookupOutputRows += stats.outputRows;
+        lookupAddInputTime.Add(stats.addInputTime);
+        lookupGetOutputTime.Add(stats.getOutputTime);
+        lookupNumInputVecBatches += stats.numInputVecBatches;
+        lookupNumOutputVecBatches += stats.numOutputVecBatches;
+    }
+}
+
 
 void PlanNodeStats::Add(const OperatorStats& stats)
 {
@@ -74,31 +96,25 @@ void PlanNodeStats::Add(const OperatorStats& stats)
 
 void PlanNodeStats::AddTotals(const OperatorStats& stats)
 {
-    inputRows += stats.inputPositions;
+    inputRows += stats.inputRows;
     inputBytes += stats.inputBytes;
-    inputVectors += stats.inputVectors;
+    numInputVecBatches += stats.numInputVecBatches;
 
-    rawInputRows += stats.rawInputPositions;
+    rawInputRows += stats.rawInputRows;
     rawInputBytes += stats.rawInputBytes;
 
-    outputRows += stats.outputPositions;
+    outputRows += stats.outputRows;
     outputBytes += stats.outputBytes;
-    outputVectors += stats.outputVectors;
+    numOutputVecBatches += stats.numOutputVecBatches;
 
     isBlockedTiming.Add(stats.isBlockedTiming);
-    addInputTiming.Add(stats.addInputTiming);
-    getOutputTiming.Add(stats.getOutputTiming);
+    addInputTime.Add(stats.addInputTime);
+    getOutputTime.Add(stats.getOutputTime);
     finishTiming.Add(stats.finishTiming);
-    cpuWallTiming.Add(stats.addInputTiming);
-    cpuWallTiming.Add(stats.getOutputTiming);
+    cpuWallTiming.Add(stats.addInputTime);
+    cpuWallTiming.Add(stats.getOutputTime);
     cpuWallTiming.Add(stats.finishTiming);
     cpuWallTiming.Add(stats.isBlockedTiming);
-
-    backgroundTiming.Add(stats.backgroundTiming);
-
-    blockedWallNanos += stats.blockedWallNanos;
-
-    physicalWrittenBytes += stats.physicalWrittenBytes;
 
     // Populating number of drivers for plan nodes with multiple operators is not
     // useful. Each operator could have been executed in different pipelines with
@@ -111,11 +127,12 @@ void PlanNodeStats::AddTotals(const OperatorStats& stats)
 
     numSplits += stats.numSplits;
 
-    spilledInputBytes += stats.spilledInputBytes;
     spilledBytes += stats.spilledBytes;
     spilledRows += stats.spilledRows;
     spilledPartitions += stats.spilledPartitions;
     spilledFiles += stats.spilledFiles;
+
+    HashJoinOperator(stats);
 }
 
 void appendOperatorStats(
@@ -159,14 +176,14 @@ std::string PlanNodeStats::ToString(
     std::stringstream out;
     if (includeInputStats) {
         out << "Input: " << inputRows << " rows (" << inputBytes
-            << ", " << inputVectors << " batches), ";
+            << ", " << numInputVecBatches << " batches), ";
         if ((rawInputRows > 0) && (rawInputRows != inputRows)) {
             out << "Raw Input: " << rawInputRows << " rows ("
                 << rawInputBytes << "), ";
         }
     }
     out << "Output: " << outputRows << " rows (" << outputBytes
-        << ", " << outputVectors << " batches)";
+        << ", " << numOutputVecBatches << " batches)";
     if (physicalWrittenBytes > 0) {
         out << ", Physical written output: " << physicalWrittenBytes;
     }
@@ -181,8 +198,8 @@ std::string PlanNodeStats::ToString(
             << spilledBytes << ", " << spilledFiles << " files)";
     out << ", CPU breakdown: B/I/O/F "
         << Format(
-            "({}/{}/{}/{})", isBlockedTiming.cpuNanos, addInputTiming.cpuNanos,
-            getOutputTiming.cpuNanos, finishTiming.cpuNanos);
+            "({}/{}/{}/{})", isBlockedTiming.cpuNanos, addInputTime.cpuNanos,
+            getOutputTime.cpuNanos, finishTiming.cpuNanos);
     return out.str();
 }
 

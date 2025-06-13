@@ -3,6 +3,7 @@
  */
  
 #include "driver.h"
+#include "codegen/time_util.h"
 #include <memory>
 
 namespace omniruntime::compute {
@@ -53,21 +54,20 @@ void OmniDriver::close()
 
 // Call an Operator method. record silenced throws, but not a query
 // terminating throw. Annotate exceptions with Operator info.
-#define CALL_OPERATOR(call, operatorPtr, operatorId, operatorMethod)                             \
-    try {                                                                                        \
-        opCallStatus_.start(operatorId, operatorMethod);                                         \
-        opCallStatus_.stop();                                                                    \
-        call;                                                                                    \
-    } catch (const std::exception& e) {                                                          \
-        LogError("Operator::%d failed for [operator: %d, plan node ID: %d]: %d", operatorMethod, \
-            (operatorPtr)->operatorType(), (operatorPtr)->planNodeId(), e.what());               \
-    }
+#define CALL_OPERATOR(call, operatorPtr, operatorId, operatorMethod)                                    \
+    try {                                                                                               \
+        opCallStatus_.start(operatorId, operatorMethod);                                                \
+        call;                                                                                           \
+        opCallStatus_.costTimeStatistic(operatorPtr, operatorMethod);                                   \
+        opCallStatus_.stop();                                                                           \
+    } catch (const std::exception& e) {                                                                 \
+        LogError("Operator::%d failed for [operator: %d, plan node ID: %d]: %d", operatorMethod,        \
+            (operatorPtr)->operatorType(), (operatorPtr)->planNodeId(), e.what());                      \
+    }                                                                                                   \
 
 void OpCallStatus::start(int32_t operatorId, const char* operatorMethod)
 {
-    auto start = std::chrono::system_clock::now();
-    timeStartMs = std::chrono::duration_cast<std::chrono::milliseconds>(start.time_since_epoch())
-      .count();
+    timeStartMs = function::TimeUtil::GetCurrentTimeMs();
     opId = operatorId;
     method = operatorMethod;
 }
@@ -77,10 +77,9 @@ void OpCallStatus::stop()
     timeStartMs = 0;
 }
 
-size_t OpCallStatusRaw::callDuration() const
+size_t  OpCallStatus::callDuration() const
 {
-    return empty() ? 0 : (std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count() - timeStartMs);
+    return empty() ? 0 : function::TimeUtil::GetCurrentTimeMs() - timeStartMs;
 }
 
 CpuWallTiming OmniDriver::processLazyIoStats(op::Operator& op, const CpuWallTiming& timing)
@@ -94,7 +93,7 @@ CpuWallTiming OmniDriver::processLazyIoStats(op::Operator& op, const CpuWallTimi
     uint64_t inputBytesDelta = 0;
     wallDelta = std::min<int64_t>(wallDelta, timing.wallNanos);
     lockStats = operators_[0]->stats();
-    lockStats.getOutputTiming.Add(CpuWallTiming{
+    lockStats.getOutputTime.Add(CpuWallTiming{
         1, wallDelta, 0
     });
     lockStats.inputBytes += inputBytesDelta;
@@ -104,6 +103,26 @@ CpuWallTiming OmniDriver::processLazyIoStats(op::Operator& op, const CpuWallTimi
         timing.wallNanos - wallDelta,
         timing.cpuNanos - 0,
     };
+}
+
+void OpCallStatus::costTimeStatistic(op::Operator* op, const char* operatorMethod) const
+{
+    constexpr std::string_view opMethodAddInput = kOpMethodAddInput;
+    constexpr std::string_view opMethodGetOutput = kOpMethodGetOutput;
+
+    std::string_view opMethod(operatorMethod);
+    if (opMethod != opMethodAddInput && opMethod != opMethodGetOutput) {
+        return;
+    }
+    const auto timeSegment = callDuration();
+    auto &lockedStats = op->stats();
+    if (opMethod == opMethodAddInput) {
+        lockedStats.addInputTime.cpuNanos = static_cast<int64_t>(timeSegment);
+        lockedStats.addInputTime.count = 1;
+    } else if (opMethod == opMethodGetOutput) {
+        lockedStats.getOutputTime.cpuNanos = static_cast<int64_t>(timeSegment);
+        lockedStats.getOutputTime.count = 1;
+    }
 }
 
 StopReason OmniDriver::RunInternal(
@@ -144,21 +163,21 @@ StopReason OmniDriver::RunInternal(
                     if (needsInput) {
                         uint64_t resultBytes = 0;
                         vec::VectorBatch *intermediateResult = nullptr;
-                        withDeltaCpuWallTimer(op, &OperatorStats::getOutputTiming, [&]() {
+                        withDeltaCpuWallTimer(op, &OperatorStats::getOutputTime, [&]() {
                             CALL_OPERATOR(op->GetOutput(&intermediateResult), op, curOperatorId_, kOpMethodGetOutput);
                             if (intermediateResult) {
                                 resultBytes = intermediateResult->CalculateTotalSize();
                                 {
                                     auto &lockedStats = op->stats();
-                                    lockedStats.AddOutputVector(resultBytes, intermediateResult->GetCapacity());
+                                    lockedStats.AddOutputVector(resultBytes, intermediateResult->GetVectorCount(), intermediateResult->GetRowCount());
                                 }
                             }
                         });
                         if (intermediateResult != nullptr) {
-                            withDeltaCpuWallTimer(nextOp, &OperatorStats::addInputTiming, [&]() {
+                            withDeltaCpuWallTimer(nextOp, &OperatorStats::addInputTime, [&]() {
                                 {
                                     auto &lockedStats = nextOp->stats();
-                                    lockedStats.addInputVector(resultBytes, intermediateResult->GetCapacity());
+                                    lockedStats.AddInputVector(resultBytes, intermediateResult->GetVectorCount(), intermediateResult->GetRowCount());
                                 }
                                 CALL_OPERATOR(nextOp->AddInput(intermediateResult), nextOp, curOperatorId_ + 1,
                                               kOpMethodAddInput);
@@ -186,12 +205,12 @@ StopReason OmniDriver::RunInternal(
                         }
                     }
                 } else {
-                    withDeltaCpuWallTimer(op, &OperatorStats::getOutputTiming, [&]() {
+                    withDeltaCpuWallTimer(op, &OperatorStats::getOutputTime, [&]() {
                         CALL_OPERATOR(op->GetOutput(result), op, curOperatorId_, kOpMethodGetOutput);
                         if (*result != nullptr) {
                             {
                                 auto &lockedStats = op->stats();
-                                lockedStats.AddOutputVector((*result)->CalculateTotalSize(), (*result)->GetCapacity());
+                                lockedStats.AddOutputVector((*result)->CalculateTotalSize(), (*result)->GetVectorCount(), (*result)->GetRowCount());
                             }
                         }
                     });

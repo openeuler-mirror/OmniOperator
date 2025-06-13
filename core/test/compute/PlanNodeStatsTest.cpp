@@ -44,7 +44,7 @@ TEST(PlanNodeStatsTest, PlanNodeStatsAdd_ShouldAddStats_WhenOperatorTypeExists) 
     operatorStats.operatorType = "TestOperator";
 
     // Set some initial values for operatorStats
-    operatorStats.inputPositions = 10;
+    operatorStats.inputRows = 10;
     operatorStats.inputBytes = 100;
 
     // Add the operatorStats to planNodeStats
@@ -66,7 +66,7 @@ TEST(PlanNodeStatsTest, PlanNodeStatsAdd_ShouldAddStats_WhenOperatorTypeNotExist
     operatorStats.operatorType = "TestOperator";
 
     // Set some initial values for operatorStats
-    operatorStats.inputPositions = 10;
+    operatorStats.inputRows = 10;
     operatorStats.inputBytes = 100;
 
     // Add the operatorStats to planNodeStats
@@ -127,7 +127,7 @@ TEST(PlanNodeStatsTest, ToPlanStats_ShouldReturnMapWithMultipleElements_WhenInpu
     stats.numTotalSplits = 1;
     stats.numTotalSplits = 1;
     omniruntime::OperatorStats operator_stats;
-    operator_stats.inputPositions = 1;
+    operator_stats.inputRows = 1;
     operator_stats.inputBytes = 1;
     operator_stats.pipelineId = 0;
     operator_stats.planNodeId = "0";

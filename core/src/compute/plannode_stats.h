@@ -37,30 +37,20 @@ struct PlanNodeStats {
     /// Sum of input rows for all corresponding operators. Useful primarily for
     /// leaf plan nodes or plan nodes that correspond to a single operator type.
     uint64_t inputRows{0};
-
-    /// Sum of input batches for all corresponding operators.
-    size_t inputVectors{0};
-
-    /// Sum of input bytes for all corresponding operators.
+    size_t numInputVecBatches{0};
     uint64_t inputBytes{0};
-
+    std::string operatorType;
     /// Sum of raw input rows for all corresponding operators. Applies primarily
     /// to TableScan operator which reports rows before pushed down filter as raw
     /// input.
     uint64_t rawInputRows{0};
-
-    /// Sum of raw input bytes for all corresponding operators.
     uint64_t rawInputBytes{0};
 
     /// Sum of output rows for all corresponding operators. When
     /// plan node corresponds to multiple operator types, operators of only one of
     /// these types report non-zero output rows.
     uint64_t outputRows{0};
-
-    /// Sum of output batches for all corresponding operators.
-    size_t outputVectors{0};
-
-    /// Sum of output bytes for all corresponding operators.
+    size_t numOutputVecBatches{0};
     uint64_t outputBytes{0};
 
     // Sum of CPU, scheduled and wall times for isBLocked call for all
@@ -69,7 +59,7 @@ struct PlanNodeStats {
 
     // Sum of CPU, scheduled and wall times for addInput call for all
     // corresponding operators.
-    CpuWallTiming addInputTiming;
+    CpuWallTiming addInputTime;
 
     // Sum of CPU, scheduled and wall times for noMoreInput call for all
     // corresponding operators.
@@ -77,7 +67,7 @@ struct PlanNodeStats {
 
     // Sum of CPU, scheduled and wall times for getOutput call for all
     // corresponding operators.
-    CpuWallTiming getOutputTiming;
+    CpuWallTiming getOutputTime;
 
     /// Sum of CPU, scheduled and wall times for all corresponding operators. For
     /// each operator, timing of addInput, getOutput and finish calls are added
@@ -109,20 +99,24 @@ struct PlanNodeStats {
     /// Number of total splits.
     int numSplits{0};
 
-    /// Total bytes in memory for spilling
-    uint64_t spilledInputBytes{0};
-
     /// Total bytes written for spilling.
     uint64_t spilledBytes{0};
-
-    /// Total rows written for spilling.
     uint64_t spilledRows{0};
-
-    /// Total spilled partitions.
     uint32_t spilledPartitions{0};
-
-    /// Total spilled files.
     uint32_t spilledFiles{0};
+
+    // For BHJ/SHJ
+    uint64_t buildInputRows;
+    uint64_t buildNumInputVecBatches;
+    CpuWallTiming buildAddInputTime;
+    CpuWallTiming buildGetOutputTime;
+
+    uint64_t lookupInputRows;
+    uint64_t lookupNumInputVecBatches;
+    uint64_t lookupOutputRows;
+    uint64_t lookupNumOutputVecBatches;
+    CpuWallTiming lookupAddInputTime;
+    CpuWallTiming lookupGetOutputTime;
 
     /// Add stats for a single operator instance.
     void Add(const OperatorStats& stats);
@@ -136,6 +130,7 @@ struct PlanNodeStats {
     }
 
 private:
+    void HashJoinOperator(const OperatorStats& stats);
     void AddTotals(const OperatorStats& stats);
 };
 

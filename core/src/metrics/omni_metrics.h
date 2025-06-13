@@ -23,15 +23,19 @@ struct OmniMetrics {
         kBegin = 0,
 
         kInputRows = kBegin,
-        kInputVectors,
+        kNumInputVecBatches,
         kInputBytes,
+
+        kAddInputTime,
+
+        kOutputRows,
+        kNumOutputVecBatches,
+        kOutputBytes,
+
+        kGetOutputTime,
 
         kRawInputRows,
         kRawInputBytes,
-
-        kOutputRows,
-        kOutputVectors,
-        kOutputBytes,
 
         // CpuWallTiming.
         kCpuCount,
@@ -46,6 +50,19 @@ struct OmniMetrics {
         kSpilledRows,
         kSpilledPartitions,
         kSpilledFiles,
+
+        // For BHJ/SHJ
+        kBuildInputRows,
+        kBuildNumInputVecBatches,
+        kBuildAddInputTime,
+        kBuildGetOutputTime,
+
+        kLookupInputRows,
+        kLookupNumInputVecBatches,
+        kLookupOutputRows,
+        kLookupNumOutputVecBatches,
+        kLookupAddInputTime,
+        kLookupGetOutputTime,
 
         // Runtime OmniMetrics.
         kNumDynamicFiltersProduced,

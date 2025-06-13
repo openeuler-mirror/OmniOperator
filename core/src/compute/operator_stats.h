@@ -10,8 +10,10 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <sstream>
 
 #include "cpuWall_timer.h"
+#include "metrics/metrics_config.h"
 
 namespace omniruntime::compute {
 using namespace std;
@@ -46,43 +48,23 @@ struct OperatorStats {
  
     CpuWallTiming isBlockedTiming;
  
-    /// Bytes read from raw source, e.g. compressed file or network connection.
+    /// For Scan
     uint64_t rawInputBytes{0};
-    uint64_t rawInputPositions{0};
- 
-    CpuWallTiming addInputTiming;
+    uint64_t rawInputRows{0};
  
     /// Bytes of input in terms of retained size of input vectors.
+    uint64_t inputRows{0};
     uint64_t inputBytes{0};
-    uint64_t inputPositions{0};
- 
-    /// Number of input batches / vectors. Allows to compute an average batch
-    /// size.
-    uint64_t inputVectors{0};
- 
-    CpuWallTiming getOutputTiming;
+    uint64_t numInputVecBatches{0};
+
+    CpuWallTiming addInputTime;
  
     /// Bytes of output in terms of retained size of vectors.
     uint64_t outputBytes{0};
-    uint64_t outputPositions{0};
- 
-    /// Number of output batches / vectors. Allows to compute an average batch
-    /// size.
-    uint64_t outputVectors{0};
- 
-    uint64_t physicalWrittenBytes{0};
- 
-    uint64_t blockedWallNanos{0};
- 
-    CpuWallTiming finishTiming;
- 
-    // CPU time spent on background activities (activities that are not
-    // running on driver threads). Operators are responsible to report background
-    // CPU time at a reasonable time granularity.
-    CpuWallTiming backgroundTiming;
- 
-    // Total bytes in memory for spilling
-    uint64_t spilledInputBytes{0};
+    uint64_t outputRows{0};
+    uint64_t numOutputVecBatches{0};
+
+    CpuWallTiming getOutputTime;
  
     // Total bytes written to file for spilling.
     uint64_t spilledBytes{0};
@@ -95,18 +77,23 @@ struct OperatorStats {
  
     // Total current spilled files.
     uint32_t spilledFiles{0};
- 
-    // Last recorded values for lazy loading times for loads triggered by 'this'.
-    int64_t lastLazyCpuNanos{0};
-    int64_t lastLazyWallNanos{0};
-    int64_t lastLazyInputBytes{0};
- 
-    // Total null keys processed by the operator.
-    // Currently populated only by HashJoin/HashBuild.
-    // HashProbe doesn't populate numNullKeys when build side is empty.
-    int64_t numNullKeys{0};
+
+    CpuWallTiming finishTiming;
 
     int numDrivers = 0;
+
+    // For BHJ/SHJ
+    uint64_t buildInputRows;
+    uint64_t buildNumInputVecBatches;
+    CpuWallTiming buildAddInputTime;
+    CpuWallTiming buildGetOutputTime;
+
+    uint64_t lookupInputRows;
+    uint64_t lookupNumInputVecBatches;
+    uint64_t lookupOutputRows;
+    uint64_t lookupNumOutputVecBatches;
+    CpuWallTiming lookupAddInputTime;
+    CpuWallTiming lookupGetOutputTime;
  
     OperatorStats() = default;
  
@@ -125,86 +112,95 @@ struct OperatorStats {
         statsSplitter = std::move(splitter);
     }
  
-    void addInputVector(uint64_t bytes, uint64_t positions)
+    void AddInputVector(uint64_t bytes, uint64_t inputVecBatches, uint64_t rowCount)
     {
         inputBytes += bytes;
-        inputPositions += positions;
-        inputVectors += 1;
+        numInputVecBatches += 1;
+        inputRows += rowCount;
     }
  
-    void AddOutputVector(uint64_t bytes, uint64_t positions)
+    void AddOutputVector(uint64_t bytes, uint64_t outputVecBatches, uint64_t rowCount)
     {
         outputBytes += bytes;
-        outputPositions += positions;
-        outputVectors += 1;
+        numOutputVecBatches += 1;
+        outputRows += rowCount;
     }
- 
+
+    void HashJoinOperator(const OperatorStats& stats)
+    {
+        const std::string& opType = stats.operatorType;
+
+        if (opType == opNameForLookUpJoin) {
+            buildInputRows += stats.inputRows;
+            buildAddInputTime.Add(stats.addInputTime);
+            buildGetOutputTime.Add(stats.getOutputTime);
+            buildNumInputVecBatches += stats.numInputVecBatches;
+        }
+
+        if (opType == opNameForLookUpJoin) {
+            lookupInputRows += stats.inputRows;
+            lookupOutputRows += stats.outputRows;
+            lookupAddInputTime.Add(stats.addInputTime);
+            lookupGetOutputTime.Add(stats.getOutputTime);
+            lookupNumInputVecBatches += stats.numInputVecBatches;
+            lookupNumOutputVecBatches += stats.numOutputVecBatches;
+        }
+    }
+
     void Add(const OperatorStats& other)
     {
+        HashJoinOperator(other);
+
         operatorType = other.operatorType;
         planNodeId = other.planNodeId;
         numSplits += other.numSplits;
         rawInputBytes += other.rawInputBytes;
-        rawInputPositions += other.rawInputPositions;
+        rawInputRows += other.rawInputRows;
  
-        addInputTiming.Add(other.addInputTiming);
+        addInputTime.Add(other.addInputTime);
         inputBytes += other.inputBytes;
-        inputPositions += other.inputPositions;
-        inputVectors += other.inputVectors;
+        inputRows += other.inputRows;
+        numInputVecBatches += other.numInputVecBatches;
  
-        getOutputTiming.Add(other.getOutputTiming);
+        getOutputTime.Add(other.getOutputTime);
         outputBytes += other.outputBytes;
-        outputPositions += other.outputPositions;
-        outputVectors += other.outputVectors;
- 
-        physicalWrittenBytes += other.physicalWrittenBytes;
- 
-        blockedWallNanos += other.blockedWallNanos;
- 
-        finishTiming.Add(other.finishTiming);
+        numOutputVecBatches += other.numOutputVecBatches;
+        outputRows += other.outputRows;
  
         isBlockedTiming.Add(other.isBlockedTiming);
- 
-        backgroundTiming.Add(other.backgroundTiming);
- 
+
         numDrivers += other.numDrivers;
-        spilledInputBytes += other.spilledInputBytes;
         spilledBytes += other.spilledBytes;
         spilledRows += other.spilledRows;
         spilledPartitions += other.spilledPartitions;
         spilledFiles += other.spilledFiles;
- 
-        numNullKeys += other.numNullKeys;
+
+        finishTiming.Add(other.finishTiming);
     }
  
     void Clear()
     {
         numSplits = 0;
         rawInputBytes = 0;
-        rawInputPositions = 0;
+        rawInputRows = 0;
  
-        addInputTiming.Clear();
+        addInputTime.Clear();
         inputBytes = 0;
-        inputPositions = 0;
+        inputRows = 0;
+        numInputVecBatches = 0;
  
-        getOutputTiming.Clear();
+        getOutputTime.Clear();
         outputBytes = 0;
-        outputPositions = 0;
- 
-        physicalWrittenBytes = 0;
- 
-        blockedWallNanos = 0;
- 
-        finishTiming.Clear();
- 
-        backgroundTiming.Clear();
+        outputRows = 0;
+        numOutputVecBatches = 0;
  
         numDrivers = 0;
-        spilledInputBytes = 0;
         spilledBytes = 0;
         spilledRows = 0;
         spilledPartitions = 0;
         spilledFiles = 0;
+
+        finishTiming.Clear();
     }
 };
 } // omniruntime::compute

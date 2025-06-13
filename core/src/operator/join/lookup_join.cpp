@@ -202,7 +202,7 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
         buildOutputCols, buildOutputTypes.GetIds(), outputRowSize);
     this->probeHashColumns = new BaseVector *[probeHashCols.size()]();     // 2D array
     this->probeOutputColumns = new BaseVector *[probeOutputCols.size()](); // 2D array
-    SetOperatorName(metricsNameLookUpJoin);
+    SetOperatorName(opNameForLookUpJoin);
     if (simpleFilter != nullptr) {
         auto usedColumns = simpleFilter->GetVectorIndexes();
         for (const auto &col : usedColumns) {
