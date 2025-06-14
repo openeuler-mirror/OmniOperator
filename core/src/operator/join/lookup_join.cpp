@@ -114,6 +114,7 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
         buildOutputColsCount = 0;
     } else if (planNode->IsExistence()) {
         buildOutputColsCount = 1;
+        buildOutputTypes = std::make_shared<DataTypes>(DataTypes({BooleanType()}));
     }
     std::vector<int32_t> buildOutputCols;
     if (planNode->IsExistence()) {
