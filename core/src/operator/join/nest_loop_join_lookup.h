@@ -30,7 +30,7 @@ public:
     static NestLoopJoinLookupOperatorFactory *CreateNestLoopJoinLookupOperatorFactory(
         std::shared_ptr<const NestedLoopJoinNode> planNode,
         NestedLoopJoinBuildOperatorFactory* builderOperatorFactory,
-        OverflowConfig *overflowConfig);
+        const config::QueryConfig &queryConfig);
 
     NestLoopJoinLookupOperatorFactory(JoinType joinType, DataTypes probeTypes, int32_t *probeOutputCols,
         int32_t probeOutputColsCount, Filter *filter, DataTypes joinedTypes, int64_t buildOpFactoryAddr,
