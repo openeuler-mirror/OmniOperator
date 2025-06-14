@@ -45,6 +45,12 @@ public:
         lookupJoinOperator->noMoreInput();
     }
 
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        lookupJoinOperator->setNoMoreInput(noMoreInput);
+    }
+
 private:
     LookupOuterJoinOperator *lookupOuterJoinOperator;
     LookupJoinOperator *lookupJoinOperator;
