@@ -156,7 +156,7 @@ HashBuilderOperator::HashBuilderOperator(const DataTypes &buildTypes, HashTableV
     int32_t partitionIndex)
     : buildTypes(buildTypes), partitionIndex(partitionIndex), hashTablesVariants(hashTables)
 {
-    SetOperatorName(metricsNameHashBuilder);
+    SetOperatorName(opNameForHashBuilder);
 }
 
 int32_t HashBuilderOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)

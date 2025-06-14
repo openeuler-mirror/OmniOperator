@@ -45,12 +45,6 @@ struct OpCallStatusRaw {
     int32_t opId{0};
     /// Method of the operator, which is currently running.
     const char* method{kOpMethodNone};
-
-    bool empty() const
-    {
-        return timeStartMs == 0;
-    }
-    size_t callDuration() const;
 };
 
 /// Structure holds the information about the current operator call the driver
@@ -69,10 +63,16 @@ struct OpCallStatus {
 
     void start(int32_t operatorId, const char* operatorMethod);
     void stop();
+    void costTimeStatistic(op::Operator* op, const char* operatorMethod) const;
+    bool empty() const
+    {
+        return timeStartMs == 0;
+    }
+    size_t  callDuration() const;
 
 private:
     /// Time (ms) when the operator call started.
-    std::atomic_size_t timeStartMs{0};
+    size_t  timeStartMs{0};
     /// Id of the operator, method of which is currently running. It is index into
     /// the vector of Driver's operators.
     std::atomic_int32_t opId{0};

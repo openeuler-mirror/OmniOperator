@@ -208,9 +208,9 @@ public:
         return true;
     }
 
-    static long GetCurrentTimeMs()
+    static size_t GetCurrentTimeMs()
     {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count();
     }
 
