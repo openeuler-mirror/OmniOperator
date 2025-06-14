@@ -85,6 +85,14 @@ void CopyVectorToVector(BaseVector *destVector, int32_t index, BaseVector *sourc
 
 int32_t NestedLoopJoinBuildOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
+    if (!noMoreInput_) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
+    if (this->isFinished()) {
+        return 0;
+    }
+
     this->inputVectorBatch = std::make_unique<VectorBatch>(inputRowCnt);
     auto *vectorBatchPtr = inputVectorBatch.get();
     if (!inputVectorBatches.empty()) {

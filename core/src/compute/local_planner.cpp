@@ -10,6 +10,8 @@
 #include "operator/join/lookup_join.h"
 #include "operator/join/lookup_outer_join.h"
 #include "operator/join/lookup_join_wrapper.h"
+#include "operator/join/nest_loop_join_builder.h"
+#include "operator/join/nest_loop_join_lookup_wrapper.h"
 #include "operator/limit/limit.h"
 #include "operator/sort/sort.h"
 #include "operator/topn/topn.h"
@@ -126,6 +128,15 @@ void planDetail(
             auto builderDriver = builderDrivers[i][0];
             builderDriver->operators()->emplace_back(createOperator(factory, planNode));
         }
+    } else if (auto nestedLoopJoinNode = std::dynamic_pointer_cast<const NestedLoopJoinNode>(planNode)) {
+        auto nestedLoopJoinBuilderOperatorFactory =
+            NestedLoopJoinBuildOperatorFactory::CreateNestedLoopJoinBuildOperatorFactory(nestedLoopJoinNode);
+        auto nestedLoopJoinLookupWrapperOperatorFactory =
+            NestLoopJoinLookupWrapperOperatorFactory::CreateNestLoopJoinLookupWrapperOperatorFactory(nestedLoopJoinNode, nestedLoopJoinBuilderOperatorFactory, queryConfig);
+        auto builderDriver = builderDrivers[1][0];
+        builderDriver->operators()->emplace_back(createOperator(nestedLoopJoinBuilderOperatorFactory, nestedLoopJoinNode));
+        factories->emplace_back(nestedLoopJoinBuilderOperatorFactory);
+        factory = nestedLoopJoinLookupWrapperOperatorFactory;
     } else {
         factory = createOperatorFactory(planNode, queryConfig);
     }

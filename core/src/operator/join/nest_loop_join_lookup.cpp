@@ -55,11 +55,19 @@ NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNest
 
 NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNestLoopJoinLookupOperatorFactory(
     std::shared_ptr<const NestedLoopJoinNode> planNode, NestedLoopJoinBuildOperatorFactory* builderOperatorFactory,
-    OverflowConfig *overflowConfig)
+    const config::QueryConfig &queryConfig)
 {
+    auto overflowConfig = queryConfig.IsOverFlowASNull()
+                          ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                          : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+
     auto joinType = planNode->GetJoinType();
     auto outputTypes = planNode->OutputType();
-    auto filter = new Filter(*planNode->Filter(), *outputTypes, overflowConfig);
+    Filter *filterPtr = nullptr;
+    auto filterExpr = planNode->Filter();
+    if (filterExpr != nullptr) {
+        filterPtr = new Filter(*filterExpr, *outputTypes, overflowConfig);
+    }
 
     auto buildOutputTypes = planNode->RightOutputType();
     auto probeOutputTypes = planNode->LeftOutputType();
@@ -70,7 +78,7 @@ NestLoopJoinLookupOperatorFactory *NestLoopJoinLookupOperatorFactory::CreateNest
     }
 
     return new NestLoopJoinLookupOperatorFactory(joinType, *probeOutputTypes, probeOutputCols.data(),
-        probeOutputColsCount, filter, *outputTypes, (int64_t)builderOperatorFactory, overflowConfig);
+        probeOutputColsCount, filterPtr, *outputTypes, (int64_t)builderOperatorFactory, overflowConfig);
 }
 
 Operator *NestLoopJoinLookupOperatorFactory::CreateOperator()
@@ -352,7 +360,9 @@ void NestLoopJoinLookupOperator::BuildOutput(VectorBatch **outputVecBatch)
 int32_t NestLoopJoinLookupOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (curInputBatch == nullptr) {
-        SetStatus(OMNI_STATUS_FINISHED);
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
         return 0;
     }
     auto inputRowCount = curInputBatch->GetRowCount();
@@ -365,7 +375,10 @@ int32_t NestLoopJoinLookupOperator::GetOutput(VectorBatch **outputVecBatch)
         VectorHelper::FreeVecBatch(curInputBatch);
         curInputBatch = nullptr;
         curProbePosition = 0;
-        SetStatus(OMNI_STATUS_FINISHED);
+
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
     }
     if ((*outputVecBatch != nullptr)) {
         UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
