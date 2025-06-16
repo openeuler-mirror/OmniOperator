@@ -44,6 +44,7 @@ NestLoopJoinLookupWrapperOperator::~NestLoopJoinLookupWrapperOperator()
 void NestLoopJoinLookupWrapperOperator::InitOperator()
 {
     this->nestLoopJoinLookupOperator = dynamic_cast<NestLoopJoinLookupOperator*>(nestLoopJoinLookupOperatorFactory->CreateOperator());
+    this->nestLoopJoinLookupOperator->setNoMoreInput(false);
 }
 
 int32_t NestLoopJoinLookupWrapperOperator::AddInput(VectorBatch *vecBatch)
@@ -83,6 +84,8 @@ OmniStatus NestLoopJoinLookupWrapperOperator::Close()
 {
     if (nestLoopJoinLookupOperator != nullptr) {
         nestLoopJoinLookupOperator->Close();
+        delete nestLoopJoinLookupOperator;
+        nestLoopJoinLookupOperator = nullptr;
     }
     if (nestLoopJoinLookupOperatorFactory != nullptr) {
         delete nestLoopJoinLookupOperatorFactory;
