@@ -38,7 +38,9 @@ constexpr const char* kOpMethodIsFinished = "isFinished";
 /// Same as the structure below, but does not have atomic members.
 /// Used to return the status from the struct with atomics.
 struct OpCallStatusRaw {
-    /// Time (ms) when the operator call started.
+    /// cpu time (ms) when the operator call started.
+    clock_t cpuTimeStartMs{0};
+    /// wall Time (ms) when the operator call started.
     size_t timeStartMs{0};
     /// Id of the operator, method of which is currently running. It is index into
     /// the vector of Driver's operators.
@@ -58,20 +60,21 @@ struct OpCallStatus {
     /// The status accessor.
     OpCallStatusRaw operator()() const
     {
-        return OpCallStatusRaw{timeStartMs, opId, method};
+        return OpCallStatusRaw{cpuTimeStartMs, timeStartMs, opId, method};
     }
 
-    void start(int32_t operatorId, const char* operatorMethod);
-    void stop();
-    void costTimeStatistic(op::Operator* op, const char* operatorMethod) const;
+    void Start(int32_t operatorId, const char* operatorMethod);
+    void Stop();
+    void TimeSegmentStatistic(op::Operator* op, const char* operatorMethod) const;
     bool empty() const
     {
         return timeStartMs == 0;
     }
-    size_t  callDuration() const;
 
 private:
-    /// Time (ms) when the operator call started.
+    /// cpu time (ms) when the operator call started.
+    clock_t cpuTimeStartMs{0};
+    /// wall Time (ms) when the operator call started.
     size_t  timeStartMs{0};
     /// Id of the operator, method of which is currently running. It is index into
     /// the vector of Driver's operators.

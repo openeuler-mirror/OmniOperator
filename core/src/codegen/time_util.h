@@ -208,9 +208,9 @@ public:
         return true;
     }
 
-    static size_t GetCurrentTimeMs()
+    static size_t GetWallTimeMillis()
     {
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count();
     }
 
