@@ -56,9 +56,9 @@ SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(const DataTy
 SortOperatorFactory *SortOperatorFactory::CreateSortOperatorFactory(std::shared_ptr<const OrderByNode> planNode,
     const config::QueryConfig &queryConfig)
 {
-    auto spillConfig = planNode->CanSpill(queryConfig)
-                           ? SpillConfig(SPILL_CONFIG_NONE, true, queryConfig.SpillDir(), queryConfig.maxSpillBytes())
-                           : SpillConfig();
+    auto spillConfig =  SparkSpillConfig(planNode->CanSpill(queryConfig) & queryConfig.orderBySpillEnabled(),
+        queryConfig.SpillDir(), queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillSortRowThreshold(),
+        queryConfig.SpillMemThreshold(), queryConfig.SpillWriteBufferSize());
     auto dataTypes = planNode->GetSourceTypes();
     auto outputCols = planNode->GetOutputCols();
     auto sortCols = planNode->GetSortCols();

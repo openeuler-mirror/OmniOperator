@@ -135,8 +135,10 @@ HashAggregationWithExprOperatorFactory *HashAggregationWithExprOperatorFactory::
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true
                               ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                               : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
-    // check SpillConfig
-    auto operatorConfig = new OperatorConfig(*overflowConfig);
+    auto spillConfig = new SparkSpillConfig(queryConfig.aggregationSpillEnabled(), queryConfig.SpillDir(),
+        queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillHashAggRowThreshold(),
+        queryConfig.minSpillableReservationPct(), queryConfig.SpillWriteBufferSize());
+    auto operatorConfig = new OperatorConfig(spillConfig, overflowConfig);
 
     return new HashAggregationWithExprOperatorFactory(groupByKeys, groupByNum, aggsKeys, aggFilters, *sourceDataTypes,
                                                       aggsOutputTypes,

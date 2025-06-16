@@ -150,6 +150,14 @@ public:
     static constexpr const char *KSpillDir = "spill_dir";
     static constexpr const char *KIsOverFlowASNull = "is_overflow_as_null";
 
+    // spill config
+    static constexpr const char *KSpillHashAggRowThreshold = "spill_hash_agg_row_threshold";
+    static constexpr const char *KSpillSortRowThreshold = "spill_sort_row_threshold";
+
+    static constexpr const char *KColumnarSpillMemThreshold = "columnar_spil_mem_threshold";
+    static constexpr const char *KColumnarSpillWriteBufferSize = "columnar_spill_write_buffer_size";
+    static constexpr const char *KColumnarSpillDirDiskReserveSize = "columnar_spil_dir_disk_reserve_size";
+
     uint64_t maxRowCount() const
     {
         static constexpr uint64_t kDefault = 12UL << 20;
@@ -306,6 +314,36 @@ public:
     std::optional<T> get(const std::string &key) const
     {
         return std::optional<T>(config_->Get<T>(key));
+    }
+
+    uint64_t SpillMemThreshold() const
+    {
+        constexpr uint64_t kDefaultValue = 90;
+        return get<uint64_t>(KColumnarSpillMemThreshold, kDefaultValue);
+    }
+
+    uint64_t SpillWriteBufferSize() const
+    {
+        constexpr uint64_t kDefaultValue = 4121440L;
+        return get<uint64_t>(KColumnarSpillWriteBufferSize, kDefaultValue);
+    }
+
+    uint64_t SpillDirDiskReserveSize() const
+    {
+        constexpr uint64_t kDefaultValue = 10737418240L;
+        return get<uint64_t>(KColumnarSpillDirDiskReserveSize, kDefaultValue);
+    }
+
+    int32_t SpillHashAggRowThreshold() const
+    {
+        constexpr int32_t kDefaultValue = INT32_MAX;
+        return get<int32_t>(KSpillHashAggRowThreshold, kDefaultValue);
+    }
+
+    int32_t SpillSortRowThreshold() const
+    {
+        constexpr int32_t kDefaultValue = INT32_MAX;
+        return get<int32_t>(KSpillSortRowThreshold, kDefaultValue);
     }
 
     /// Test-only method to override the current query config properties.
