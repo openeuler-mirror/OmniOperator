@@ -56,30 +56,27 @@ void OmniDriver::close()
 // terminating throw. Annotate exceptions with Operator info.
 #define CALL_OPERATOR(call, operatorPtr, operatorId, operatorMethod)                                    \
     try {                                                                                               \
-        opCallStatus_.start(operatorId, operatorMethod);                                                \
+        opCallStatus_.Start(operatorId, operatorMethod);                                                \
         call;                                                                                           \
-        opCallStatus_.costTimeStatistic(operatorPtr, operatorMethod);                                   \
-        opCallStatus_.stop();                                                                           \
+        opCallStatus_.TimeSegmentStatistic(operatorPtr, operatorMethod);                                \
+        opCallStatus_.Stop();                                                                           \
     } catch (const std::exception& e) {                                                                 \
         LogError("Operator::%d failed for [operator: %d, plan node ID: %d]: %d", operatorMethod,        \
             (operatorPtr)->operatorType(), (operatorPtr)->planNodeId(), e.what());                      \
     }                                                                                                   \
 
-void OpCallStatus::start(int32_t operatorId, const char* operatorMethod)
+void OpCallStatus::Start(int32_t operatorId, const char* operatorMethod)
 {
-    timeStartMs = function::TimeUtil::GetCurrentTimeMs();
     opId = operatorId;
     method = operatorMethod;
+    timeStartMs = function::TimeUtil::GetWallTimeMillis();
+    cpuTimeStartMs = std::clock();
 }
 
-void OpCallStatus::stop()
+void OpCallStatus::Stop()
 {
+    cpuTimeStartMs = 0;
     timeStartMs = 0;
-}
-
-size_t  OpCallStatus::callDuration() const
-{
-    return empty() ? 0 : function::TimeUtil::GetCurrentTimeMs() - timeStartMs;
 }
 
 CpuWallTiming OmniDriver::processLazyIoStats(op::Operator& op, const CpuWallTiming& timing)
@@ -105,22 +102,25 @@ CpuWallTiming OmniDriver::processLazyIoStats(op::Operator& op, const CpuWallTimi
     };
 }
 
-void OpCallStatus::costTimeStatistic(op::Operator* op, const char* operatorMethod) const
+void OpCallStatus::TimeSegmentStatistic(op::Operator* op, const char* operatorMethod) const
 {
     constexpr std::string_view opMethodAddInput = kOpMethodAddInput;
     constexpr std::string_view opMethodGetOutput = kOpMethodGetOutput;
-
+    auto cpuEndTime = std::clock();
+    size_t wallTimeSegment = empty() ? 0 : function::TimeUtil::GetWallTimeMillis() - timeStartMs;
+    double cpuTimeSegment = static_cast<double>(cpuEndTime - cpuTimeStartMs) / CLOCKS_PER_SEC;
     std::string_view opMethod(operatorMethod);
     if (opMethod != opMethodAddInput && opMethod != opMethodGetOutput) {
         return;
     }
-    const auto timeSegment = callDuration();
     auto &lockedStats = op->stats();
     if (opMethod == opMethodAddInput) {
-        lockedStats.addInputTime.cpuNanos = static_cast<int64_t>(timeSegment);
+        lockedStats.addInputTime.wallNanos = static_cast<int64_t>(wallTimeSegment);
+        lockedStats.addInputTime.cpuNanos = static_cast<long long>(cpuTimeSegment * 1e3);
         lockedStats.addInputTime.count = 1;
     } else if (opMethod == opMethodGetOutput) {
-        lockedStats.getOutputTime.cpuNanos = static_cast<int64_t>(timeSegment);
+        lockedStats.getOutputTime.cpuNanos = static_cast<long long>(cpuTimeSegment * 1e3);
+        lockedStats.getOutputTime.wallNanos = static_cast<int64_t>(wallTimeSegment);
         lockedStats.getOutputTime.count = 1;
     }
 }

@@ -100,7 +100,7 @@ uint64_t VectorBatch::CalculateTotalSize() const
 
     uint64_t totalSize = 0;
     for (const auto& vector : vectors) {
-        totalSize += vector->GetSize() * sizeof(vector[0]);
+        totalSize += static_cast<uint64_t>(vector->GetSize());
     }
 
     return totalSize;

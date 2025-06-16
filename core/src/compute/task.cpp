@@ -10,8 +10,7 @@ namespace omniruntime::compute {
 vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
 {
     if (drivers_.empty()) {
-        taskStats_.executionStartTimeMs =  static_cast<uint64_t>(
-            function::TimeUtil::GetCurrentTimeMs());
+        taskStats_.executionStartTimeMs =  function::TimeUtil::GetWallTimeMillis();
         LocalPlanner::plan(
             planFragment_, &drivers_, &operatorFactories_, queryConfig_);
         std::reverse(drivers_.begin(), drivers_.end());
@@ -51,7 +50,7 @@ TaskStats OmniTask::GetTaskStats() const
     TaskStats taskStats = taskStats_;
 
     taskStats.numTotalDrivers = drivers_.size();
-    LogInfo("total driver num is %d", taskStats.numTotalDrivers);
+    LogDebug("total driver num is %d", taskStats.numTotalDrivers);
     // Add stats of the drivers (their operators) that are still running.
     for (const auto& driver : drivers_) {
         // Driver can be null.
