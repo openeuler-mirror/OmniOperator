@@ -7,6 +7,7 @@
 #include "codegen/context_helper.h"
 #include "type/date32.h"
 #include "codegen/time_util.h"
+#include <algorithm>
 
 namespace omniruntime::codegen::function {
 extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t timeLen, bool isNullTimeStr,
@@ -65,9 +66,26 @@ extern "C" DLLEXPORT char *FromUnixTime(int64_t contextPtr, bool *isNull, int64_
     int32_t resultLen = fmtLen + 3;
     auto result = ArenaAllocatorMalloc(contextPtr, resultLen);
     std::string fmtStr1(fmtStr, fmtLen);
-    auto ret = strftime(result, resultLen, fmtStr1.c_str(), &ltm);
+    std::string fmtOmniTimeStr = toOmniTimeFormat(fmtStr1);
+    auto ret = strftime(result, resultLen, fmtOmniTimeStr.c_str(), &ltm);
     *isNull = static_cast<int32_t>(ret) == 0;
     *outLen = ret;
+    return result;
+}
+
+std::string toOmniTimeFormat(const std::string &format)
+{
+    std::string result = format;
+    const std::pair<std::string, std::string> replacements[] = {
+        {"yyyy", "%Y"}, {"MM", "%m"}, {"dd", "%d"},
+        {"HH", "%H"},   {"mm", "%M"}, {"ss", "%S"}};
+    for (const auto &[from, to] : replacements) {
+        size_t pos = 0;
+        while ((pos = result.find(from, pos)) != std::string::npos) {
+            result.replace(pos, from.length(), to);
+            pos += to.length();
+        }
+    }
     return result;
 }
 
