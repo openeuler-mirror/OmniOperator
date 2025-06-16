@@ -40,6 +40,7 @@ struct OmniMetrics {
         // CpuWallTiming.
         kCpuCount,
         kWallNanos,
+        kCpuNanos,
 
         kPeakMemoryBytes,
         kNumMemoryAllocations,
