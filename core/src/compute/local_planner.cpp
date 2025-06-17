@@ -91,13 +91,11 @@ void planDetail(
     std::vector<std::shared_ptr<omniruntime::op::Operator>>* currentOperators,
     std::vector<std::shared_ptr<OmniDriver>>* drivers,
     std::vector<OperatorFactory*>* factories,
-    bool isUnionDriver,
     const config::QueryConfig& queryConfig)
 {
     OperatorFactory* factory = nullptr;
     if (!currentOperators) {
         drivers->emplace_back(std::make_unique<OmniDriver>());
-        drivers->back()->unionDriver = isUnionDriver;
         currentOperators = drivers->back()->operators();
     }
 
@@ -106,12 +104,9 @@ void planDetail(
     if (sources.empty()) {
         drivers->back()->inputDriver = true;
     } else {
-        if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
-            isUnionDriver = true;
-        }
         for (int32_t i = 0; i < sources.size(); ++i) {
             planDetail(sources[i], MustStartNewPipeline(i) ? nullptr : currentOperators,
-                MustStartNewPipeline(i) ? &builderDrivers[i] : drivers, factories, isUnionDriver, queryConfig);
+                MustStartNewPipeline(i) ? &builderDrivers[i] : drivers, factories, queryConfig);
         }
     }
 
@@ -158,6 +153,13 @@ void planDetail(
     currentOperators->emplace_back(createOperator(factory, planNode));
     factories->emplace_back(factory);
 
+    if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
+        for (auto i = 1; i < sources.size(); i++) {
+            auto builderDriver = builderDrivers[i][0];
+            builderDriver->unionDriver = true;
+        }
+    }
+
     for (auto builderDriver : builderDrivers) {
         drivers->insert(drivers->end(), builderDriver.begin(), builderDriver.end());
     }
@@ -199,7 +201,6 @@ void LocalPlanner::plan(
         nullptr,
         drivers,
         factories,
-        false,
         queryConfig);
     (*drivers)[0]->outputDriver = true;
 
