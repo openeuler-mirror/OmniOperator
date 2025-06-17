@@ -27,12 +27,14 @@ struct OmniMetrics {
         kInputBytes,
 
         kAddInputTime,
+        kAddInputCpuCount,
 
         kOutputRows,
         kNumOutputVecBatches,
         kOutputBytes,
 
         kGetOutputTime,
+        kGetOutputCpuCount,
 
         kRawInputRows,
         kRawInputBytes,
