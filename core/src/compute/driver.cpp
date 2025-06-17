@@ -48,6 +48,7 @@ void OmniDriver::close()
     }
     for (auto &op : operators_) {
         op->Close();
+        op = nullptr;
     }
     closed_ = true;
 }

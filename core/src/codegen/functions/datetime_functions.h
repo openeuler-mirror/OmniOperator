@@ -7,7 +7,7 @@
 #define OMNI_RUNTIME_DATETIME_FUNCTIONS_H
 
 #include <cstdint>
-
+#include <string>
 // All extern functions go here temporarily
 #ifdef _WIN32
 #define DLLEXPORT __declspec(dllexport)
@@ -32,5 +32,7 @@ extern "C" DLLEXPORT char *FromUnixTimeRetNull(int64_t contextPtr, bool *isNull,
 extern "C" DLLEXPORT int32_t DateTrunc(int64_t contextPtr, int32_t days, const char *levelStr, int32_t len);
 
 extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const char *levelStr, int32_t len);
+
+std::string toOmniTimeFormat(const std::string& format);
 }
 #endif // OMNI_RUNTIME_DATETIME_FUNCTIONS_H
