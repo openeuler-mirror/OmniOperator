@@ -66,10 +66,6 @@ struct OpCallStatus {
     void Start(int32_t operatorId, const char* operatorMethod);
     void Stop();
     void TimeSegmentStatistic(op::Operator* op, const char* operatorMethod) const;
-    bool empty() const
-    {
-        return timeStartMs == 0;
-    }
 
 private:
     /// cpu time (ms) when the operator call started.
