@@ -11,7 +11,13 @@ namespace op {
 NestLoopJoinLookupWrapperOperatorFactory::NestLoopJoinLookupWrapperOperatorFactory(NestLoopJoinLookupOperatorFactory &nestLoopJoinLookupOperatorFactory)
     : nestLoopJoinLookupOperatorFactory(&nestLoopJoinLookupOperatorFactory) {}
 
-NestLoopJoinLookupWrapperOperatorFactory::~NestLoopJoinLookupWrapperOperatorFactory() {}
+NestLoopJoinLookupWrapperOperatorFactory::~NestLoopJoinLookupWrapperOperatorFactory()
+{
+    if (nestLoopJoinLookupOperatorFactory != nullptr) {
+        delete nestLoopJoinLookupOperatorFactory;
+        nestLoopJoinLookupOperatorFactory = nullptr;
+    }
+}
 
 NestLoopJoinLookupWrapperOperatorFactory *NestLoopJoinLookupWrapperOperatorFactory::CreateNestLoopJoinLookupWrapperOperatorFactory(std::shared_ptr<const NestedLoopJoinNode> planNode,
     NestedLoopJoinBuildOperatorFactory* builderOperatorFactory, const config::QueryConfig& queryConfig)
@@ -34,10 +40,6 @@ NestLoopJoinLookupWrapperOperator::~NestLoopJoinLookupWrapperOperator()
     if (nestLoopJoinLookupOperator != nullptr) {
         delete nestLoopJoinLookupOperator;
         nestLoopJoinLookupOperator = nullptr;
-    }
-    if (nestLoopJoinLookupOperatorFactory != nullptr) {
-        delete nestLoopJoinLookupOperatorFactory;
-        nestLoopJoinLookupOperatorFactory = nullptr;
     }
 }
 
@@ -66,6 +68,9 @@ int32_t NestLoopJoinLookupWrapperOperator::GetOutput(VectorBatch **outputVecBatc
     }
 
     if (this->nestLoopJoinLookupOperator == nullptr) {
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
         return 0;
     }
 
@@ -86,10 +91,6 @@ OmniStatus NestLoopJoinLookupWrapperOperator::Close()
         nestLoopJoinLookupOperator->Close();
         delete nestLoopJoinLookupOperator;
         nestLoopJoinLookupOperator = nullptr;
-    }
-    if (nestLoopJoinLookupOperatorFactory != nullptr) {
-        delete nestLoopJoinLookupOperatorFactory;
-        nestLoopJoinLookupOperatorFactory = nullptr;
     }
     return OMNI_STATUS_NORMAL;
 }
