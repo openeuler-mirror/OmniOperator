@@ -18,16 +18,19 @@ extern "C" DLLEXPORT int64_t UnixTimestampFromStr(const char *timeStr, int32_t t
         *retIsNull = true;
         return 0;
     }
-    if (!TimeUtil::IsTimeValid(timeStr, timeLen, fmtStr, fmtLen, policyStr)) {
+    std::string timeStr1(timeStr, timeLen);
+    std::string fmtStr1(fmtStr, fmtLen);
+    std::string fmtOmniTimeStr = toOmniTimeFormat(fmtStr1);
+    int fmtOmniTimeStrLen = fmtOmniTimeStr.length();
+    if (!TimeUtil::IsTimeValid(timeStr, timeLen, fmtOmniTimeStr.c_str(),
+                               fmtOmniTimeStrLen, policyStr)) {
         *retIsNull = true;
         return 0;
     }
     setenv("TZ", TimeZoneUtil::GetTZ(tzStr), 1);
     tzset();
     struct tm timeInfo = { 0 };
-    std::string timeStr1(timeStr, timeLen);
-    std::string fmtStr1(fmtStr, fmtLen);
-    strptime(timeStr1.c_str(), fmtStr1.c_str(), &timeInfo);
+    strptime(timeStr1.c_str(), fmtOmniTimeStr.c_str(), &timeInfo);
     time_t timeStamp = mktime(&timeInfo);
     if (TimeZoneUtil::JudgeDSTByUnixTimestampFromStr(tzStr, tzLen, &timeInfo, timeStr, timeLen, fmtStr, fmtLen)) {
         timeStamp -= type::SECOND_OF_HOUR;
