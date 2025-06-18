@@ -135,19 +135,14 @@ StopReason OmniDriver::RunInternal(
                 auto *op = operators_[i].get();
                 curOperatorId_ = i;
 
-                withDeltaCpuWallTimer(op, &OperatorStats::isBlockedTiming, [&]() {
-                    CALL_OPERATOR(blockingReason_ = op->IsBlocked(&future), op, curOperatorId_, kOpMethodIsBlocked);
-                });
+                blockingReason_ = op->IsBlocked(&future);
                 if (blockingReason_ != BlockingReason::kNotBlocked) {
                     return BlockDriver(self, i, std::move(future), blockingState);
                 }
 
                 if (i < numOperators - 1) {
                     auto *nextOp = operators_[i + 1].get();
-                    withDeltaCpuWallTimer(nextOp, &OperatorStats::isBlockedTiming, [&]() {
-                       CALL_OPERATOR(blockingReason_ = nextOp->IsBlocked(&future), nextOp, curOperatorId_ + 1,
-                                     kOpMethodIsBlocked);
-                    });
+                    blockingReason_ = nextOp->IsBlocked(&future);
                     if (blockingReason_ != BlockingReason::kNotBlocked) {
                         return BlockDriver(self, i + 1, std::move(future), blockingState);
                     }
@@ -182,18 +177,12 @@ StopReason OmniDriver::RunInternal(
                             i += 2;
                             continue;
                         } else {
-                            withDeltaCpuWallTimer(op, &OperatorStats::isBlockedTiming, [&]() {
-                                CALL_OPERATOR(blockingReason_ = op->IsBlocked(&future), op, curOperatorId_,
-                                              kOpMethodIsBlocked);
-                            });
+                            blockingReason_ = op->IsBlocked(&future);
                             if (blockingReason_ != BlockingReason::kNotBlocked) {
                                 return BlockDriver(self, i, std::move(future), blockingState);
                             }
                             if (op->isFinished()) {
-                                withDeltaCpuWallTimer(nextOp, &OperatorStats::finishTiming, [this, &nextOp]() {
-                                        CALL_OPERATOR(nextOp->noMoreInput(), nextOp, curOperatorId_ + 1,
-                                                      kOpMethodNoMoreInput);
-                                });
+                                nextOp->noMoreInput();
                                 break;
                             }
                         }
@@ -214,9 +203,7 @@ StopReason OmniDriver::RunInternal(
                     }
 
                     bool finished{false};
-                    withDeltaCpuWallTimer(op, &OperatorStats::finishTiming, [&]() {
-                        CALL_OPERATOR(finished = op->isFinished(), op, curOperatorId_, kOpMethodIsFinished);
-                    });
+                    finished = op->isFinished();
                     if (finished) {
                         finished_ = true;
                         return StopReason::kAtEnd;
