@@ -22,7 +22,7 @@ StreamedTableWithExprOperatorFactory* StreamedTableWithExprOperatorFactory::Crea
     const std::shared_ptr<const MergeJoinNode>& planNode, const config::QueryConfig &queryConfig)
 {
     auto streamedDataTypes = *(planNode->LeftOutputType());
-    static std::vector<Expr*> streamedKeyExprCols;
+    std::vector<Expr*> streamedKeyExprCols;
     for (const auto &key : planNode->LeftKeys()) {
         Expr *keyExpr = (Expr *) key.get();
         streamedKeyExprCols.push_back(keyExpr);
