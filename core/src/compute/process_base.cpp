@@ -9,10 +9,16 @@ namespace omniruntime::compute {
 
 const int64_t NANOS_PER_SEC = 1'000'000'000;
 
-    int64_t ThreadCpuNanos()
-    {
-        timespec ts;
+static int64_t ThreadCpuNanos()
+{
+#ifdef __aarch64__
+        int64_t time;
+        asm volatile("mrs %0, cntvct_el0" : "=r" (time));
+        return time;
+#else
+        timespec ts{};
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
         return ts.tv_sec * NANOS_PER_SEC + ts.tv_nsec;
-    }
-} // namespace omniruntime
+#endif
+}
+} // namespace omniruntime::compute

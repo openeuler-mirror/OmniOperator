@@ -65,12 +65,12 @@ void OpCallStatus::Start(int32_t operatorId, const char* operatorMethod)
 {
     opId = operatorId;
     method = operatorMethod;
-    cpuTimeStartMs = std::clock();
+    cpuTimeStartNs = ThreadCpuNanos();
 }
 
 void OpCallStatus::Stop()
 {
-    cpuTimeStartMs = 0;
+    cpuTimeStartNs = 0;
 }
 
 CpuWallTiming OmniDriver::processLazyIoStats(op::Operator& op, const CpuWallTiming& timing)
@@ -98,18 +98,18 @@ CpuWallTiming OmniDriver::processLazyIoStats(op::Operator& op, const CpuWallTimi
 
 void OpCallStatus::TimeSegmentStatistic(op::Operator* op, const char* operatorMethod) const
 {
-    auto cpuEndTime = std::clock();
-    double cpuTimeSegment = static_cast<double>(cpuEndTime - cpuTimeStartMs) / CLOCKS_PER_SEC;
+    const int64_t cpuTimeSegment = ThreadCpuNanos() - cpuTimeStartNs;
     std::string_view opMethod(operatorMethod);
     if (opMethod != kOpMethodAddInput && opMethod != kOpMethodGetOutput) {
+        LogDebug("not input or output for operator");
         return;
     }
     auto &lockedStats = op->stats();
     if (opMethod == kOpMethodAddInput) {
-        lockedStats.addInputTime.cpuNanos = static_cast<long long>(cpuTimeSegment * 1e3);
+        lockedStats.addInputTime.cpuNanos = cpuTimeSegment / static_cast<int64_t>(1e6);
         lockedStats.addInputTime.count = 1;
     } else if (opMethod == kOpMethodGetOutput) {
-        lockedStats.getOutputTime.cpuNanos = static_cast<long long>(cpuTimeSegment * 1e3);
+        lockedStats.getOutputTime.cpuNanos = cpuTimeSegment / static_cast<int64_t>(1e6);
         lockedStats.getOutputTime.count = 1;
     }
 }
