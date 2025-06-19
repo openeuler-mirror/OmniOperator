@@ -56,16 +56,10 @@ void OmniDriver::close()
 // Call an Operator method. record silenced throws, but not a query
 // terminating throw. Annotate exceptions with Operator info.
 #define CALL_OPERATOR(call, operatorPtr, operatorId, operatorMethod)                                    \
-    try {                                                                                               \
         opCallStatus_.Start(operatorId, operatorMethod);                                                \
         call;                                                                                           \
         opCallStatus_.TimeSegmentStatistic(operatorPtr, operatorMethod);                                \
         opCallStatus_.Stop();                                                                           \
-    } catch (const std::exception& e) {                                                                 \
-        LogError("Operator::%d failed for [operator: %d, plan node ID: %d]: %d", operatorMethod,        \
-            (operatorPtr)->operatorType(), (operatorPtr)->planNodeId(), e.what());                      \
-        throw omniruntime::exception::OmniException("CALL_OPERATOR_ERROR", "call operator failed");     \
-    }                                                                                                   \
 
 void OpCallStatus::Start(int32_t operatorId, const char* operatorMethod)
 {
