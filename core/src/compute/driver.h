@@ -60,7 +60,7 @@ struct OpCallStatus {
     /// The status accessor.
     OpCallStatusRaw operator()() const
     {
-        return OpCallStatusRaw{cpuTimeStartMs, timeStartMs, opId, method};
+        return OpCallStatusRaw{cpuTimeStartNs, timeStartMs, opId, method};
     }
 
     void Start(int32_t operatorId, const char* operatorMethod);
@@ -68,8 +68,8 @@ struct OpCallStatus {
     void TimeSegmentStatistic(op::Operator* op, const char* operatorMethod) const;
 
 private:
-    /// cpu time (ms) when the operator call started.
-    clock_t cpuTimeStartMs{0};
+    /// cpu time (ns) when the operator call started.
+    int64_t cpuTimeStartNs{0};
     /// wall Time (ms) when the operator call started.
     size_t  timeStartMs{0};
     /// Id of the operator, method of which is currently running. It is index into
