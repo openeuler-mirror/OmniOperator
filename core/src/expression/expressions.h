@@ -100,7 +100,7 @@ public:
     LiteralExpr();
     ~LiteralExpr() override;
     explicit LiteralExpr(bool val, DataTypePtr colType);
-    explicit LiteralExpr(int32_t val, DataTypePtr colType);
+    explicit LiteralExpr(int32_t val, DataTypePtr colType, bool isNull = false);
     explicit LiteralExpr(int64_t val, DataTypePtr colType);
     explicit LiteralExpr(double val, DataTypePtr colType);
     explicit LiteralExpr(std::string *val, DataTypePtr colType);

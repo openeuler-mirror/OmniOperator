@@ -353,6 +353,6 @@ public:
 private:
     void ValidateConfig() {}
 
-    std::unique_ptr<ConfigBase> config_;
+    std::shared_ptr<ConfigBase> config_;
 };
 } // namespace facebook::velox::core
