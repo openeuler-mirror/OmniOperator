@@ -64,6 +64,7 @@ void OmniDriver::close()
     } catch (const std::exception& e) {                                                                 \
         LogError("Operator::%d failed for [operator: %d, plan node ID: %d]: %d", operatorMethod,        \
             (operatorPtr)->operatorType(), (operatorPtr)->planNodeId(), e.what());                      \
+        throw omniruntime::exception::OmniException("CALL_OPERATOR_ERROR", "call operator failed");     \
     }                                                                                                   \
 
 void OpCallStatus::Start(int32_t operatorId, const char* operatorMethod)
