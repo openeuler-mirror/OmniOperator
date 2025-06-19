@@ -22,6 +22,7 @@ constexpr uint32_t SHIFT_SIZE_16 = 16;
 class SortMergeJoinOperator : public Operator {
 public:
     SortMergeJoinOperator(JoinType joinType, std::string &filter);
+    SortMergeJoinOperator(JoinType joinType, Expr* filter);
 
     ~SortMergeJoinOperator() override;
 
@@ -44,6 +45,7 @@ public:
     OmniStatus Close() override;
 
     void InitScannerAndResultBuilder(OverflowConfig *overflowConfig);
+    void InitScannerAndResultBuilderWithFilterExpr(OverflowConfig *overflowConfig);
 
 private:
     int32_t GetJoinResult();
@@ -61,7 +63,10 @@ private:
     DynamicPagesIndex *bufferedTblPagesIndex;
 
     JoinType joinType;
+    // When using the adapter, the incoming filter is of type String. When using the Gluten engine, the incoming filter
+    // is of type Expr*.
     std::string filter;
+    Expr* filterExpr = nullptr;
 
     SortMergeJoinScanner *smjScanner;
     JoinResultBuilder *joinResultBuilder;
