@@ -27,7 +27,7 @@ StreamedTableWithExprOperatorFactory* StreamedTableWithExprOperatorFactory::Crea
         Expr *keyExpr = (Expr *) key.get();
         streamedKeyExprCols.push_back(keyExpr);
     }
-    std::string filterExpression = "";
+    auto filterExpression = planNode->Filter();
     std::vector<int32_t> streamedOutputColsIndex;
     for (int32_t i = 0; i < planNode->LeftOutputType()->GetSize(); i++) {
         streamedOutputColsIndex.push_back(static_cast<int32_t>(i));
@@ -57,6 +57,24 @@ StreamedTableWithExprOperatorFactory::StreamedTableWithExprOperatorFactory(const
         streamedOutputCols + streamedOutputColsCnt);
     smjOperator->ConfigStreamedTblInfo(*(this->streamedTypes), streamedKeyCols, this->streamedOutputCols,
         streamedTypes.GetSize());
+}
+
+StreamedTableWithExprOperatorFactory::StreamedTableWithExprOperatorFactory(const type::DataTypes& streamedTypes,
+    const std::vector<omniruntime::expressions::Expr*>& streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
+    int32_t* streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, Expr* filter,
+    OverflowConfig* overflowConfig)
+    : joinType(joinType),
+      filterExpr(filter),
+      smjOperator(new SortMergeJoinOperator(joinType, filter))
+{
+    std::vector<DataTypePtr> newBuildTypes;
+    OperatorUtil::CreateProjections(
+        streamedTypes, streamedKeyExprCols, newBuildTypes, projections, streamedKeyCols, overflowConfig);
+    this->streamedTypes = std::make_unique<DataTypes>(newBuildTypes);
+    this->streamedOutputCols.insert(
+        this->streamedOutputCols.end(), streamedOutputCols, streamedOutputCols + streamedOutputColsCnt);
+    smjOperator->ConfigStreamedTblInfo(
+        *(this->streamedTypes), streamedKeyCols, this->streamedOutputCols, streamedTypes.GetSize());
 }
 
 StreamedTableWithExprOperatorFactory::~StreamedTableWithExprOperatorFactory()
@@ -139,29 +157,34 @@ BufferedTableWithExprOperatorFactory* BufferedTableWithExprOperatorFactory::Crea
     auto bufferedOutputColsCnt = static_cast<int32_t>(bufferedOutputColsIndex.size());
     auto factory = new BufferedTableWithExprOperatorFactory(types, bufferedKeyExprCols,
         static_cast<int32_t>(bufferedKeyExprCols.size()), bufferedOutputColsIndex.data(), bufferedOutputColsCnt,
-        streamedTableFactoryAddr, overflowConfig);
+        streamedTableFactoryAddr, overflowConfig, false);
     delete overflowConfig;
     overflowConfig = nullptr;
     return factory;
 }
 
-BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const type::DataTypes &bufferedTypes,
-    const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
-    int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt, int64_t streamedTableFactoryAddr,
-    OverflowConfig *overflowConfig)
+BufferedTableWithExprOperatorFactory::BufferedTableWithExprOperatorFactory(const type::DataTypes& bufferedTypes,
+    const std::vector<omniruntime::expressions::Expr*>& bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
+    int32_t* bufferedOutputCols, int32_t bufferedOutputColsCnt, int64_t streamedTableFactoryAddr,
+    OverflowConfig* overflowConfig, bool filterIsString)
     : streamTblWithExprOperatorFactory(
-    reinterpret_cast<StreamedTableWithExprOperatorFactory *>(streamedTableFactoryAddr))
+          reinterpret_cast<StreamedTableWithExprOperatorFactory*>(streamedTableFactoryAddr))
 {
+    this->filterIsString = filterIsString;
     std::vector<DataTypePtr> newBuildTypes;
-    OperatorUtil::CreateProjections(bufferedTypes, bufferedKeyExprCols, newBuildTypes, projections, bufferedKeyCols,
-        overflowConfig);
+    OperatorUtil::CreateProjections(
+        bufferedTypes, bufferedKeyExprCols, newBuildTypes, projections, bufferedKeyCols, overflowConfig);
     this->bufferedTypes = std::make_unique<DataTypes>(newBuildTypes);
     this->bufferedOutputCols.insert(this->bufferedOutputCols.end(), bufferedOutputCols,
         bufferedOutputCols + bufferedOutputColsCnt);
 
     streamTblWithExprOperatorFactory->GetSmjOperator()->ConfigBufferedTblInfo(*(this->bufferedTypes), bufferedKeyCols,
         this->bufferedOutputCols, bufferedTypes.GetSize());
-    streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilder(overflowConfig);
+    if (filterIsString) {
+        streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilder(overflowConfig);
+    } else {
+        streamTblWithExprOperatorFactory->GetSmjOperator()->InitScannerAndResultBuilderWithFilterExpr(overflowConfig);
+    }
 }
 
 BufferedTableWithExprOperatorFactory::~BufferedTableWithExprOperatorFactory() = default;

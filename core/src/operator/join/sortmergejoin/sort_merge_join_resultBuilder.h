@@ -18,11 +18,16 @@ namespace omniruntime {
 namespace op {
 class JoinResultBuilder {
 public:
-    JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOutputTypes, int32_t *leftTableOutputCols,
-        int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex *leftTablePagesIndex,
-        const std::vector<DataTypePtr> &rightTableOutputTypes, int32_t *rightTableOutputCols,
-        int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex *rightTablePagesIndex,
-        std::string &filter, JoinType joinType, OverflowConfig *overflowConfig);
+    JoinResultBuilder(const std::vector<DataTypePtr>& leftTableOutputTypes, int32_t* leftTableOutputCols,
+        int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex* leftTablePagesIndex,
+        const std::vector<DataTypePtr>& rightTableOutputTypes, int32_t* rightTableOutputCols,
+        int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex* rightTablePagesIndex,
+        std::string& filter, JoinType joinType, OverflowConfig* overflowConfig);
+    JoinResultBuilder(const std::vector<DataTypePtr>& leftTableOutputTypes, int32_t* leftTableOutputCols,
+        int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex* leftTablePagesIndex,
+        const std::vector<DataTypePtr>& rightTableOutputTypes, int32_t* rightTableOutputCols,
+        int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex* rightTablePagesIndex,
+        Expr* filter, JoinType joinType, OverflowConfig* overflowConfig);
 
     void ParsingAndOrganizationResultsForLeftTable(int32_t leftBatchId, int32_t leftRowId);
 
@@ -137,6 +142,7 @@ private:
     };
 
     void JoinFilterCodeGen(OverflowConfig *overflowConfig);
+    void JoinFilterExprCodeGen(OverflowConfig *overflowConfig);
 
     void FreeVectorBatches(bool isPreMatched, int32_t leftBatchId, int32_t rightBatchId);
 
@@ -184,6 +190,7 @@ private:
     int32_t originalRightTableColsCount;
     DynamicPagesIndex *rightTablePagesIndex;
     std::string filterExpStr;
+    Expr* filterExpr = nullptr;
 
     int32_t lastUnMatchedStreamedBatchId = -1;
     int32_t lastUnMatchedBufferedBatchId = -1;

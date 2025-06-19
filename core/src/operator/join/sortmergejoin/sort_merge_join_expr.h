@@ -31,6 +31,10 @@ public:
         const std::vector<omniruntime::expressions::Expr *> &streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
         int32_t *streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, std::string &filter,
         OverflowConfig *overflowConfig);
+    StreamedTableWithExprOperatorFactory(const type::DataTypes& streamedTypes,
+        const std::vector<omniruntime::expressions::Expr*>& streamedKeyExprCols, int32_t streamedKeyExprColsCnt,
+        int32_t* streamedOutputCols, int32_t streamedOutputColsCnt, JoinType joinType, Expr* filter,
+        OverflowConfig* overflowConfig);
 
     ~StreamedTableWithExprOperatorFactory() override;
 
@@ -44,7 +48,8 @@ private:
     std::vector<int32_t> streamedOutputCols;
     JoinType joinType;
     std::string filter;
-    SortMergeJoinOperator *smjOperator;
+    Expr* filterExpr = nullptr;
+    SortMergeJoinOperator* smjOperator;
     std::vector<std::unique_ptr<Projection>> projections;
 };
 
@@ -81,13 +86,14 @@ public:
     BufferedTableWithExprOperatorFactory(const type::DataTypes &bufferedTypes,
         const std::vector<omniruntime::expressions::Expr *> &bufferedKeyExprCols, int32_t bufferedKeyExprCnt,
         int32_t *bufferedOutputCols, int32_t bufferedOutputColsCnt, int64_t streamedTableFactoryAddr,
-        OverflowConfig *overflowConfig);
+        OverflowConfig *overflowConfig, bool filterIsString = true);
 
     ~BufferedTableWithExprOperatorFactory() override;
 
     omniruntime::op::Operator *CreateOperator() override;
 
 private:
+    bool filterIsString = true;
     std::unique_ptr<DataTypes> bufferedTypes;
     std::vector<int32_t> bufferedKeyCols;
     std::vector<int32_t> bufferedOutputCols;
