@@ -14,7 +14,8 @@
 #include "operator/join/nest_loop_join_lookup_wrapper.h"
 #include "operator/limit/limit.h"
 #include "operator/sort/sort.h"
-#include "operator/topn/topn.h"
+#include "operator/topn/topn_expr.h"
+#include "operator/topnsort/topn_sort_expr.h"
 #include "operator/union/union.h"
 #include "operator/window/window_expr.h"
 #include "operator/join/sortmergejoin/sort_merge_join_expr.h"
@@ -51,7 +52,10 @@ OperatorFactory* createOperatorFactory(
     } else if (auto windowNode = std::dynamic_pointer_cast<const WindowNode>(planNode)) {
         return WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(windowNode, queryConfig);
     } else if (auto topNNode = std::dynamic_pointer_cast<const TopNNode>(planNode)) {
-        return TopNOperatorFactory::CreateTopNOperatorFactory(topNNode);
+        return TopNWithExprOperatorFactory::CreateTopNWithExprOperatorFactory(topNNode, queryConfig);
+    } else if (auto topNSortNode = std::dynamic_pointer_cast<const TopNSortNode>(planNode)) {
+        return TopNSortWithExprOperatorFactory::CreateTopNSortWithExprOperatorFactory(
+            topNSortNode, queryConfig);
     } else if (auto limitNode = std::dynamic_pointer_cast<const LimitNode>(planNode)) {
         return LimitOperatorFactory::CreateLimitOperatorFactory(limitNode);
     } else if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
