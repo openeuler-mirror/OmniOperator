@@ -42,24 +42,86 @@ JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr> &leftTableOu
     allTypes.insert(allTypes.cend(), rightTableOutputTypes.cbegin(), rightTableOutputTypes.cend());
 }
 
-void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig *overflowConfig)
+JoinResultBuilder::JoinResultBuilder(const std::vector<DataTypePtr>& leftTableOutputTypes, int32_t* leftTableOutputCols,
+    int32_t leftTableOutputColsCount, int32_t originalLeftTableColsCount, DynamicPagesIndex* leftTablePagesIndex,
+    const std::vector<DataTypePtr>& rightTableOutputTypes, int32_t* rightTableOutputCols,
+    int32_t rightTableOutputColsCount, int32_t originalRightTableColsCount, DynamicPagesIndex* rightTablePagesIndex,
+    Expr* filter, JoinType joinType, OverflowConfig* overflowConfig)
+    : leftTableOutputTypes(leftTableOutputTypes),
+      leftTableOutputCols(leftTableOutputCols),
+      leftTableOutputColsCount(leftTableOutputColsCount),
+      originalLeftTableColsCount(originalLeftTableColsCount),
+      leftTablePagesIndex(leftTablePagesIndex),
+      rightTableOutputTypes(rightTableOutputTypes),
+      rightTableOutputCols(rightTableOutputCols),
+      rightTableOutputColsCount(rightTableOutputColsCount),
+      originalRightTableColsCount(originalRightTableColsCount),
+      rightTablePagesIndex(rightTablePagesIndex),
+      filterExpr(filter),
+      joinType(joinType)
+{
+    int32_t leftRowSize = OperatorUtil::GetRowSize(leftTableOutputTypes);
+    int32_t rightRowSize = OperatorUtil::GetRowSize(rightTableOutputTypes);
+    int32_t outputRowSize = leftRowSize + rightRowSize;
+    this->maxRowCount = OperatorUtil::GetMaxRowCount(outputRowSize != 0 ? outputRowSize : DEFAULT_ROW_SIZE);
+    this->JoinFilterExprCodeGen(overflowConfig);
+    allTypes.insert(allTypes.cend(), leftTableOutputTypes.cbegin(), leftTableOutputTypes.cend());
+    allTypes.insert(allTypes.cend(), rightTableOutputTypes.cbegin(), rightTableOutputTypes.cend());
+}
+
+void JoinResultBuilder::JoinFilterCodeGen(OverflowConfig* overflowConfig)
 {
     if (filterExpStr.empty()) {
         return;
     }
 
     executionContext = new ExecutionContext();
-    omniruntime::expressions::Expr *filterExpr = JSONParser::ParseJSON(filterExpStr);
+    omniruntime::expressions::Expr* filterExpression = JSONParser::ParseJSON(filterExpStr);
+    simpleFilter = new SimpleFilter(*filterExpression);
+    auto result = simpleFilter->Initialize(overflowConfig);
+    if (!result) {
+        delete executionContext;
+        delete simpleFilter;
+        simpleFilter = nullptr;
+        delete filterExpression;
+        throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "The expression is not supported yet.");
+    }
+    delete filterExpression;
+
+    streamedColsInFilter = new int32_t[originalLeftTableColsCount];
+    bufferedColsInFilter = new int32_t[originalRightTableColsCount];
+    auto colsInFilter = simpleFilter->GetVectorIndexes();
+    for (auto col : colsInFilter) {
+        if (col < originalLeftTableColsCount) {
+            streamedColsInFilter[streamedColsCountInFilter++] = col;
+        } else {
+            bufferedColsInFilter[bufferedColsCountInFilter++] = col - originalLeftTableColsCount;
+        }
+    }
+    auto originalAllColsCount = originalLeftTableColsCount + originalRightTableColsCount;
+    values = new int64_t[originalAllColsCount];
+    nulls = new bool[originalAllColsCount];
+    lengths = new int32_t[originalAllColsCount];
+    memset_sp(values, sizeof(int64_t) * originalAllColsCount, 0, sizeof(int64_t) * originalAllColsCount);
+    memset_sp(nulls, sizeof(bool) * originalAllColsCount, 0, sizeof(bool) * originalAllColsCount);
+    memset_sp(lengths, sizeof(int32_t) * originalAllColsCount, 0, sizeof(int32_t) * originalAllColsCount);
+}
+
+void JoinResultBuilder::JoinFilterExprCodeGen(OverflowConfig *overflowConfig)
+{
+    if (filterExpr == nullptr) {
+        return;
+    }
+
+    executionContext = new ExecutionContext();
     simpleFilter = new SimpleFilter(*filterExpr);
     auto result = simpleFilter->Initialize(overflowConfig);
     if (!result) {
         delete executionContext;
         delete simpleFilter;
         simpleFilter = nullptr;
-        delete filterExpr;
         throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "The expression is not supported yet.");
     }
-    delete filterExpr;
 
     streamedColsInFilter = new int32_t[originalLeftTableColsCount];
     bufferedColsInFilter = new int32_t[originalRightTableColsCount];
