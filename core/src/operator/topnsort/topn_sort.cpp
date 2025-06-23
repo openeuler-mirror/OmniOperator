@@ -743,6 +743,10 @@ int32_t TopNSortOperator::AddInput(omniruntime::vec::VectorBatch *inputVecBatch)
 
 int32_t TopNSortOperator::GetOutput(omniruntime::vec::VectorBatch **outputVecBatch)
 {
+    if (!noMoreInput_) {
+        SetStatus(OMNI_STATUS_NORMAL);
+        return 0;
+    }
     int32_t outputRowCount = 0;
     std::unordered_map<type::StringRef, PartitionValue *, PartitionHash>::iterator mapPos;
     auto mapEnd = partitionedMap.end();

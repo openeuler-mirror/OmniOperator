@@ -75,8 +75,6 @@ public:
 
     ~TopNOperatorFactory() override;
 
-    static TopNOperatorFactory *CreateTopNOperatorFactory(std::shared_ptr<const TopNNode> planNode);
-
     Operator *CreateOperator() override;
 
 private:

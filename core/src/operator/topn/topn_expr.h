@@ -17,6 +17,9 @@ public:
 
     ~TopNWithExprOperatorFactory() override;
 
+    static TopNWithExprOperatorFactory *CreateTopNWithExprOperatorFactory(
+        std::shared_ptr<const TopNNode> planNode, const config::QueryConfig &queryConfig);
+
     Operator *CreateOperator() override;
 
 private:
@@ -38,6 +41,18 @@ public:
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
+
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        topNOperator->setNoMoreInput(noMoreInput);
+    }
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        topNOperator->noMoreInput();
+    }
 
 private:
     omniruntime::type::DataTypes sourceTypes;

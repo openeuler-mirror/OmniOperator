@@ -660,13 +660,14 @@ private:
 
 class TopNNode : public PlanNode {
 public:
-    TopNNode(const PlanNodeId &id, const std::vector<int32_t> &sortCols, const std::vector<int32_t> &sortAscending,
-        const std::vector<int32_t> &sortNullFirsts, int32_t count, const PlanNodePtr &source)
+    TopNNode(const PlanNodeId &id, const std::vector<omniruntime::expressions::Expr *> &sortCols,
+        const std::vector<int32_t> &sortAscending, const std::vector<int32_t> &sortNullFirsts,
+        int32_t count, const PlanNodePtr &source)
         : PlanNode(id), sourceTypes(source->OutputType()), sortCols(sortCols), sortAscending(sortAscending),
           sortNullFirsts(sortNullFirsts), count(count), sources({source})
     {}
 
-    const std::vector<int32_t> &GetSortCols() const { return sortCols; }
+    const std::vector<omniruntime::expressions::Expr *> &GetSortCols() const { return sortCols; }
 
     const std::vector<int32_t> &GetSortAscending() const { return sortAscending; }
 
@@ -684,10 +685,42 @@ public:
 
 private:
     const DataTypesPtr sourceTypes;
-    const std::vector<int32_t> sortCols;
+    const std::vector<omniruntime::expressions::Expr *> sortCols;
     const std::vector<int32_t> sortAscending;
     const std::vector<int32_t> sortNullFirsts;
     const int32_t count;
+    const std::vector<PlanNodePtr> sources;
+};
+
+class TopNSortNode : public PlanNode {
+public:
+    TopNSortNode(const PlanNodeId &id, const std::vector<omniruntime::expressions::Expr*>& partitionKeys,
+        const std::vector<omniruntime::expressions::Expr*>& sortKeys, const std::vector<int32_t>& sortAscendings,
+        const std::vector<int32_t>& sortNullFirsts, int32_t n, bool isStrictTopN, const PlanNodePtr &source)
+        : PlanNode(id), sourceTypes(source->OutputType()), n(n), isStrictTopN(isStrictTopN), partitionKeys(partitionKeys),
+        sortKeys(sortKeys), sortAscendings(sortAscendings), sortNullFirsts(sortNullFirsts), sources({source})
+    {}
+
+    DataTypesPtr getSourceTypes() const { return sourceTypes; }
+    int32_t getN() const { return n; }
+    bool getIsStrictTopN() const { return isStrictTopN; }
+    const std::vector<omniruntime::expressions::Expr*>& getPartitionKeys() const { return partitionKeys; }
+    const std::vector<omniruntime::expressions::Expr*>& getSortKeys() const { return sortKeys; }
+    const std::vector<int32_t>& getSortAscendings() const { return sortAscendings; }
+    const std::vector<int32_t>& getSortNullFirsts() const { return sortNullFirsts; }
+
+    std::string_view Name() const override { return "TopNSort"; }
+    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
+
+private:
+    const DataTypesPtr sourceTypes;
+    const int32_t n;
+    const bool isStrictTopN;
+    const std::vector<omniruntime::expressions::Expr *> partitionKeys;
+    const std::vector<omniruntime::expressions::Expr *> sortKeys;
+    const std::vector<int32_t> sortAscendings;
+    const std::vector<int32_t> sortNullFirsts;
     const std::vector<PlanNodePtr> sources;
 };
 

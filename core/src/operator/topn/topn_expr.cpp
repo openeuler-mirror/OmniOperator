@@ -19,6 +19,22 @@ TopNWithExprOperatorFactory::TopNWithExprOperatorFactory(const type::DataTypes &
     limit, offset, this->sortCols.data(), sortAsc, sortNullFirsts, sortKeyCount);
 }
 
+TopNWithExprOperatorFactory *TopNWithExprOperatorFactory::CreateTopNWithExprOperatorFactory(
+    std::shared_ptr<const TopNNode> planNode, const config::QueryConfig &queryConfig)
+{
+    auto dataTypes = planNode->GetSourceTypes();
+    int32_t cnt = planNode->Count();
+    auto sortCols = planNode->GetSortCols();
+    auto sortAscending = planNode->GetSortAscending();
+    auto sortNullFirsts = planNode->GetNullFirsts();
+    size_t sortColCnt = sortCols.size();
+    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                                                                         : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    auto pOperatorFactory = new TopNWithExprOperatorFactory(*dataTypes.get(), cnt, 0, sortCols, sortAscending.data(),
+                                                    sortNullFirsts.data(), sortColCnt, overflowConfig);
+    return pOperatorFactory;
+}
+
 TopNWithExprOperatorFactory::~TopNWithExprOperatorFactory() = default;
 
 Operator *TopNWithExprOperatorFactory::CreateOperator()

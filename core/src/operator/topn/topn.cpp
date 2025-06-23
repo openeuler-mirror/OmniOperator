@@ -29,19 +29,6 @@ TopNOperatorFactory::TopNOperatorFactory(const type::DataTypes &sourceTypes, int
 
 TopNOperatorFactory::~TopNOperatorFactory() = default;
 
-TopNOperatorFactory *TopNOperatorFactory::CreateTopNOperatorFactory(std::shared_ptr<const TopNNode> planNode)
-{
-    auto dataTypes = planNode->GetSourceTypes();
-    int32_t cnt = planNode->Count();
-    auto sortCols = planNode->GetSortCols();
-    auto sortAscending = planNode->GetSortAscending();
-    auto sortNullFirsts = planNode->GetNullFirsts();
-    size_t sortColCnt = sortCols.size();
-    auto pOperatorFactory = new TopNOperatorFactory(*dataTypes.get(), cnt, 0, sortCols, sortAscending,
-                                                    sortNullFirsts, sortColCnt);
-    return pOperatorFactory;
-}
-
 Operator *TopNOperatorFactory::CreateOperator()
 {
     return new TopNOperator(sourceTypes, limit, offset, sortCols, sortAscendings, sortNullFirsts, sortColCount);

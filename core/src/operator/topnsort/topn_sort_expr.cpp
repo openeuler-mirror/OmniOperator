@@ -25,6 +25,23 @@ TopNSortWithExprOperatorFactory::TopNSortWithExprOperatorFactory(const type::Dat
         this->partitionCols, this->sortCols, sortAscendings, sortNullFirsts);
 }
 
+TopNSortWithExprOperatorFactory* TopNSortWithExprOperatorFactory::CreateTopNSortWithExprOperatorFactory(
+    std::shared_ptr<const TopNSortNode> planNode, const config::QueryConfig &queryConfig)
+{
+    auto sourceTypes = planNode->getSourceTypes();
+    auto partitionKeys = planNode->getPartitionKeys();
+    auto sortKeys = planNode->getSortKeys();
+    auto n = planNode->getN();
+    auto isStrictTopN = planNode->getIsStrictTopN();
+    auto sortAscendings = planNode->getSortAscendings();
+    auto sortNullFirsts = planNode->getSortNullFirsts();
+    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                                                                         : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+
+    return new TopNSortWithExprOperatorFactory(*sourceTypes.get(), n, isStrictTopN, partitionKeys, sortKeys,
+        sortAscendings, sortNullFirsts, overflowConfig);
+}
+
 TopNSortWithExprOperatorFactory::~TopNSortWithExprOperatorFactory() = default;
 
 Operator *TopNSortWithExprOperatorFactory::CreateOperator()

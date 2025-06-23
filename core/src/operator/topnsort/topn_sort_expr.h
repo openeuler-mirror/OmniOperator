@@ -16,6 +16,9 @@ public:
         const std::vector<omniruntime::expressions::Expr *> &sortKeys, std::vector<int32_t> &sortAscendings,
         std::vector<int32_t> &sortNullFirsts, OverflowConfig *overflowConfig);
 
+    static TopNSortWithExprOperatorFactory* CreateTopNSortWithExprOperatorFactory(
+        std::shared_ptr<const TopNSortNode> planNode, const config::QueryConfig &queryConfig);
+
     ~TopNSortWithExprOperatorFactory() override;
 
     Operator *CreateOperator() override;
@@ -41,6 +44,18 @@ public:
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
+
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        topNSortOperator->setNoMoreInput(noMoreInput);
+    }
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        topNSortOperator->noMoreInput();
+    }
 
 private:
     omniruntime::type::DataTypes sourceTypes;
