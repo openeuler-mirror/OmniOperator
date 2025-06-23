@@ -10,7 +10,7 @@ namespace omniruntime::compute {
 vec::VectorBatch* OmniTask::Next(ContinueFuture* future)
 {
     if (drivers_.empty()) {
-        taskStats_.executionStartTimeMs =  function::TimeUtil::GetWallTimeMillis();
+        taskStats_.executionStartTimeMs = static_cast<uint64_t>(ThreadCpuNanos());
         LocalPlanner::plan(
             planFragment_, &drivers_, &operatorFactories_, queryConfig_);
         std::reverse(drivers_.begin(), drivers_.end());

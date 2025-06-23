@@ -52,7 +52,7 @@ public:
  
 private:
     int64_t cpuTimeStart_;
-    std::chrono::steady_clock::time_point wallTimeStart_;
+    int64_t wallTimeStart_;
     CpuWallTiming& timing_;
 };
  
@@ -60,7 +60,7 @@ private:
 class DeltaCpuWallTimeStopWatch {
 public:
     explicit DeltaCpuWallTimeStopWatch()
-        : wallTimeStart_(std::chrono::steady_clock::now()),
+        : wallTimeStart_(0),
         cpuTimeStart_(ThreadCpuNanos()) {}
  
     CpuWallTiming Elapsed() const
@@ -69,17 +69,14 @@ public:
         // so as to avoid the counter-intuitive phenomenon that the final calculated
         // cpu-time is slightly larger than the wall-time.
         int64_t cpuTimeDuration = ThreadCpuNanos() - cpuTimeStart_;
-        int64_t wallTimeDuration =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now() - wallTimeStart_)
-                .count();
+        int64_t wallTimeDuration = 0;
         return CpuWallTiming{1, wallTimeDuration, cpuTimeDuration};
     }
  
 private:
     // NOTE: Put `wallTimeStart_` before `cpuTimeStart_`, so that wall-time starts
     // counting earlier than cpu-time.
-    const std::chrono::steady_clock::time_point wallTimeStart_;
+    const int64_t wallTimeStart_;
     const int64_t cpuTimeStart_;
 };
  
