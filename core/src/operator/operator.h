@@ -190,6 +190,11 @@ public:
         return stats_;
     }
 
+    void setInputOperatorCnt(int32_t cnt)
+    {
+        inputOperatorCnt_ = cnt;
+    }
+
     OperatorStats stats_;
 
 protected:
