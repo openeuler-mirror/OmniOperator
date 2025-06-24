@@ -10,15 +10,13 @@ namespace omniruntime::compute {
     {
         ++timing_.count;
         cpuTimeStart_ = ThreadCpuNanos();
-        wallTimeStart_ = std::chrono::steady_clock::now();
+        wallTimeStart_ = 0;
     }
 
     CpuWallTimer::~CpuWallTimer()
     {
         timing_.cpuNanos += ThreadCpuNanos() - cpuTimeStart_;
-        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now() - wallTimeStart_);
-        timing_.wallNanos += duration.count();
+        timing_.wallNanos += 0;
     }
 
 } // namespace omniruntime::compute
