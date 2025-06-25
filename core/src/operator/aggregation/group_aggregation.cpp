@@ -859,7 +859,7 @@ void HashAggregationOperator::Emplace(Serialize &emplaceKey, VectorBatch *vecBat
             if (!newGroupStates.empty()) {
                 aggregator->InitStates(newGroupStates);
             }
-            if (hasAggFilters[aggIdx] == 1) {
+            if (aggIdx < hasAggFilters.size() && hasAggFilters[aggIdx] == 1) {
                 aggregator->ProcessGroupFilter(currentRowStates, aggIdx, vecBatch, filterOffset, 0);
                 filterOffset++;
             } else {
