@@ -13,7 +13,7 @@
 #include "operator/join/nest_loop_join_builder.h"
 #include "operator/join/nest_loop_join_lookup_wrapper.h"
 #include "operator/limit/limit.h"
-#include "operator/sort/sort.h"
+#include "operator/sort/sort_expr.h"
 #include "operator/topn/topn_expr.h"
 #include "operator/topnsort/topn_sort_expr.h"
 #include "operator/union/union.h"
@@ -44,7 +44,7 @@ OperatorFactory* createOperatorFactory(
     const config::QueryConfig& queryConfig)
 {
     if (auto orderByNode = std::dynamic_pointer_cast<const OrderByNode>(planNode)) {
-        return SortOperatorFactory::CreateSortOperatorFactory(orderByNode, queryConfig);
+        return SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(orderByNode, queryConfig);
     } else if (auto projectNode = std::dynamic_pointer_cast<const ProjectNode>(planNode)) {
         return CreateProjectOperatorFactory(projectNode, queryConfig);
     } else if (auto filterNode = std::dynamic_pointer_cast<const FilterNode>(planNode)) {

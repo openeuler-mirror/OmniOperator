@@ -52,7 +52,9 @@ TEST(DriverTest, TestOrderBy)
     auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
 
     std::vector<int32_t> c = {0};
-    auto orderbyNode = std::make_shared<const OrderByNode>("order_by", c, c, c, valueStreamNode);
+    auto expr = new FieldExpr(0, LongType());
+    std::vector<Expr*> expressions = {static_cast<Expr*>(expr)};
+    auto orderbyNode = std::make_shared<const OrderByNode>("order_by", c, c, c, valueStreamNode, expressions);
 
     std::unordered_set<PlanNodeId> emptySet;
     PlanFragment planFragment{orderbyNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
@@ -76,5 +78,6 @@ TEST(DriverTest, TestOrderBy)
     ASSERT_TRUE(VecBatchMatch(vecBatchExpect, vectorBatch));
     VectorHelper::FreeVecBatch(vecBatchExpect);
     VectorHelper::FreeVecBatch(vectorBatch);
+    delete expr;
 }
 }
