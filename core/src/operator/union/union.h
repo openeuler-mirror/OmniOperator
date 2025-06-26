@@ -44,6 +44,16 @@ public:
 
     OmniStatus Close() override;
 
+    BlockingReason IsBlocked(ContinueFuture* future) override;
+
+    void noMoreInput() override
+    {
+        inputOperatorCnt_--;
+        if (inputOperatorCnt_ <= 0) {
+            noMoreInput_ = true;
+        }
+    }
+
 private:
     type::DataTypes sourceTypes;
     int32_t sourceTypesCount;
@@ -51,6 +61,35 @@ private:
     std::vector<vec::VectorBatch *> inputVecBatches;
     int32_t vecBatchCount = 0;
     int32_t vecBatchIndex = 0;
+};
+
+class UnionBuildOperator : public Operator {
+public:
+    explicit UnionBuildOperator(std::shared_ptr<Operator> unionOperator) : unionOperator(unionOperator) {}
+
+    ~UnionBuildOperator() override = default;
+
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override
+    {
+        return unionOperator->AddInput(vecBatch);
+    }
+
+    int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override
+    {
+        if (noMoreInput_) {
+            SetStatus(OMNI_STATUS_FINISHED);
+        }
+        return 0;
+    }
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        unionOperator->noMoreInput();
+    }
+
+private:
+    std::shared_ptr<Operator> unionOperator;
 };
 }
 }

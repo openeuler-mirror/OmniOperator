@@ -39,6 +39,19 @@ std::shared_ptr<omniruntime::op::Operator> createOperator(
     return std::move(operatorPtr);
 }
 
+std::shared_ptr<omniruntime::op::Operator> createUnionBuildOperator(
+    std::shared_ptr<omniruntime::op::Operator> unionOperator,
+    const std::shared_ptr<const PlanNode>& planNode)
+{
+    std::shared_ptr<omniruntime::op::Operator> unionBuildOperator = std::make_shared<UnionBuildOperator>(unionOperator);
+    unionBuildOperator->setNoMoreInput(false);
+    unionBuildOperator->SetPlanNodeId(planNode->Id());
+    if (unionBuildOperator->operatorType().empty()) {
+        unionBuildOperator->SetOperatorType(string(planNode->Name()));
+    }
+    return std::move(unionBuildOperator);
+}
+
 OperatorFactory* createOperatorFactory(
     const std::shared_ptr<const PlanNode>& planNode,
     const config::QueryConfig& queryConfig)
@@ -74,19 +87,6 @@ OperatorFactory* createOperatorFactory(
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());
-    }
-}
-
-void planDetailUnion(
-    const std::shared_ptr<const PlanNode>& planNode,
-    std::vector<std::shared_ptr<omniruntime::op::Operator>>* currentOperators,
-    std::vector<std::shared_ptr<OmniDriver>>* drivers,
-    OperatorFactory* factory)
-{
-    for (auto& driver : *drivers) {
-        if (driver->unionDriver && driver->operators() != currentOperators) {
-            driver->operators()->emplace_back(createOperator(factory, planNode));
-        }
     }
 }
 
@@ -154,21 +154,21 @@ void planDetail(
         factory = createOperatorFactory(planNode, queryConfig);
     }
 
-    currentOperators->emplace_back(createOperator(factory, planNode));
+    auto currentOperator = createOperator(factory, planNode);
+    currentOperator->setInputOperatorCnt(sources.size());
+    currentOperators->emplace_back(currentOperator);
     factories->emplace_back(factory);
 
     if (auto unionNode = std::dynamic_pointer_cast<const UnionNode>(planNode)) {
         for (auto i = 1; i < sources.size(); i++) {
             auto builderDriver = builderDrivers[i][0];
-            builderDriver->unionDriver = true;
+            builderDriver->operators()->emplace_back(createUnionBuildOperator(currentOperator, planNode));
         }
     }
 
     for (auto builderDriver : builderDrivers) {
         drivers->insert(drivers->end(), builderDriver.begin(), builderDriver.end());
     }
-
-    planDetailUnion(planNode, currentOperators, drivers, factory);
 }
 
 void LocalPlanner::buildOperatorStats(std::vector<std::shared_ptr<OmniDriver>>* drivers)

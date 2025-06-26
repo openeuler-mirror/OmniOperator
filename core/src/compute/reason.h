@@ -111,6 +111,7 @@ enum class BlockingReason {
     /// Operator is blocked waiting for its associated query memory arbitration to
     /// finish.
     kWaitForArbitration,
+    kWaitForUnionBuild,
 };
 } // end of compute
 } // end of omniruntime

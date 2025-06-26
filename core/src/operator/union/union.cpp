@@ -97,5 +97,13 @@ OmniStatus UnionOperator::Close()
     }
     return OMNI_STATUS_NORMAL;
 }
+
+BlockingReason UnionOperator::IsBlocked(ContinueFuture* future)
+{
+    if (inputOperatorCnt_ > 1) {
+        return BlockingReason::kWaitForUnionBuild;
+    }
+    return BlockingReason::kNotBlocked;
+}
 }
 }
