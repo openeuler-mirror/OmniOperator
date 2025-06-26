@@ -130,7 +130,7 @@ struct OperatorStats {
     {
         const std::string& opType = stats.operatorType;
 
-        if (opType == opNameForLookUpJoin) {
+        if (opType == opNameForHashBuilder) {
             buildInputRows += stats.inputRows;
             buildAddInputTime.Add(stats.addInputTime);
             buildGetOutputTime.Add(stats.getOutputTime);
