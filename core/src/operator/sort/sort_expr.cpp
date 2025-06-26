@@ -22,6 +22,24 @@ SortWithExprOperatorFactory *SortWithExprOperatorFactory::CreateSortWithExprOper
     return pOperatorFactory;
 }
 
+SortWithExprOperatorFactory* SortWithExprOperatorFactory::CreateSortWithExprOperatorFactory(
+    std::shared_ptr<const OrderByNode> planNode, const config::QueryConfig& queryConfig)
+{
+    auto sourceTypes = planNode->GetSourceTypes();
+    auto outputCols = const_cast<int32_t*>(planNode->GetOutputCols().data());
+    auto outputColsCount = static_cast<int32_t>(planNode->GetOutputCols().size());
+    auto sortExpressions = planNode->GetExpressions();
+    auto sortAscendings = const_cast<int32_t*>(planNode->GetSortAscending().data());
+    auto sortNullFirsts = const_cast<int32_t*>(planNode->GetNullFirsts().data());
+    auto expressionCount = static_cast<int32_t>(sortExpressions.size());
+    auto spillConfig = SparkSpillConfig(planNode->CanSpill(queryConfig) & queryConfig.orderBySpillEnabled(),
+        queryConfig.SpillDir(), queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillSortRowThreshold(),
+        queryConfig.SpillMemThreshold(), queryConfig.SpillWriteBufferSize());
+    auto pOperatorFactory = new SortWithExprOperatorFactory(*sourceTypes, outputCols, outputColsCount, sortExpressions,
+        sortAscendings, sortNullFirsts, expressionCount, OperatorConfig(spillConfig));
+    return pOperatorFactory;
+}
+
 SortWithExprOperatorFactory::SortWithExprOperatorFactory(const type::DataTypes &sourceTypes, int32_t *outputCols,
     int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys, int32_t *sortAscendings,
     int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig)

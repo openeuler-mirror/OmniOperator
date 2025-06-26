@@ -19,6 +19,8 @@ public:
     static SortWithExprOperatorFactory *CreateSortWithExprOperatorFactory(const type::DataTypes &sourceTypes,
         int32_t *outputCols, int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys,
         int32_t *sortAscendings, int32_t *sortNullFirsts, int32_t sortKeysCount, const OperatorConfig &operatorConfig);
+    static SortWithExprOperatorFactory* CreateSortWithExprOperatorFactory(
+        std::shared_ptr<const OrderByNode> planNode, const config::QueryConfig& queryConfig);
 
     static SortWithExprOperatorFactory *CreateSortWithExprOperatorFactory(const type::DataTypes &sourceTypes,
         int32_t *outputCols, int32_t outputColsCount, const std::vector<omniruntime::expressions::Expr *> &sortKeys,
@@ -53,6 +55,17 @@ public:
     OmniStatus Close() override;
 
     uint64_t GetSpilledBytes() override;
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        sortOperator->setNoMoreInput(noMoreInput);
+    }
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        sortOperator->noMoreInput();
+    }
 
 private:
     DataTypes sourceTypes;

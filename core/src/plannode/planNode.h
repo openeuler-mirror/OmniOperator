@@ -83,10 +83,16 @@ using PlanNodePtr = std::shared_ptr<const PlanNode>;
 
 class OrderByNode : public PlanNode {
 public:
-    OrderByNode(const PlanNodeId &id, const std::vector<int32_t> &sortCols, const std::vector<int32_t> &sortAscending,
-        const std::vector<int32_t> &sortNullFirsts, const PlanNodePtr &source)
-        : PlanNode(id), sourceTypes(source->OutputType()), sortCols(sortCols), sortAscending(sortAscending),
-          sortNullFirsts(sortNullFirsts), sources({source})
+    OrderByNode(const PlanNodeId& id, const std::vector<int32_t>& sortCols, const std::vector<int32_t>& sortAscending,
+        const std::vector<int32_t>& sortNullFirsts, const PlanNodePtr& source,
+        std::vector<omniruntime::expressions::Expr*>& sortExpressions)
+        : PlanNode(id),
+          sourceTypes(source->OutputType()),
+          sortCols(sortCols),
+          sortAscending(sortAscending),
+          sortNullFirsts(sortNullFirsts),
+          sources({source}),
+          sortExpressions(sortExpressions)
     {
         outputCols.reserve(sourceTypes->GetSize());
         for (int i = 0; i < sourceTypes->GetSize(); ++i) {
@@ -103,6 +109,10 @@ public:
     const std::vector<int32_t> &GetSortCols() const { return sortCols; }
 
     const std::vector<int32_t> &GetOutputCols() const { return outputCols; }
+    const std::vector<omniruntime::expressions::Expr*>& GetExpressions() const
+    {
+        return sortExpressions;
+    }
 
     const DataTypesPtr &GetSourceTypes() const { return sourceTypes; }
 
@@ -122,6 +132,7 @@ private:
     const std::vector<int32_t> sortNullFirsts;
     const std::vector<PlanNodePtr> sources;
     const OperatorConfig operatorConfig;
+    std::vector<omniruntime::expressions::Expr *> sortExpressions;
 };
 
 class FilterNode : public PlanNode {
