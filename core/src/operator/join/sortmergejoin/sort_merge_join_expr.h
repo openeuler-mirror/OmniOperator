@@ -67,6 +67,18 @@ public:
 
     OmniStatus Close() override;
 
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        auto eOfvectorBatch = new VectorBatch(0);
+        for (int i = 0; i < streamedTypes.Get().size(); i++) {
+            auto type = streamedTypes.GetType(i);
+            auto vec = VectorHelper::CreateVector(OMNI_FLAT, static_cast<int32_t>(type->GetId()), 0);
+            eOfvectorBatch->Append(vec);
+        }
+        this->AddInput(eOfvectorBatch);
+    }
+
 private:
     const DataTypes &streamedTypes;
     std::vector<std::unique_ptr<Projection>> &projections;

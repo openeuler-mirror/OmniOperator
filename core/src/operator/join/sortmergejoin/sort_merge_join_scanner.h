@@ -312,6 +312,7 @@ private:
     std::vector<int64_t> streamedValueAddress;
     std::vector<int64_t> bufferedValueAddress;
     std::vector<int64_t> preBufferedValueAddress;
+    bool streamedLastScanFinished = false;
 };
 }
 }
