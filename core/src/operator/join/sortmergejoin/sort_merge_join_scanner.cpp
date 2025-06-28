@@ -214,7 +214,9 @@ void SortMergeJoinScanner::FullOuterJoin()
     if (streamedPagesIndex->IsDataFinish(streamedPagesIndexPosition) &&
         bufferedPagesIndex->IsDataFinish(bufferedPagesIndexPosition)) {
         preStatus->Set(JoinTableCode::SCAN_FINISHED, JoinTableCode::SCAN_FINISHED, HasResult());
-        return;
+        if (streamedLastScanFinished || bufferedPagesIndex->IsEmptyBatch()) {
+            return;
+        }
     }
     if (preStatus->NewStreamedDataAdded()) {
         // new streamed add data
@@ -677,6 +679,7 @@ void SortMergeJoinScanner::StreamMissingRowsForCompareValue()
 bool SortMergeJoinScanner::HandleFullOuterStreamedIsFinishedSituation()
 {
     if (streamedPagesIndex->IsEmptyBatch() || streamedPagesIndex->IsDataFinish(streamedPagesIndexPosition)) {
+        streamedLastScanFinished = true;
         if (!curBufferRowMatchFlag) {
             StreamMissingRowsForStreamIsFinished();
             curBufferRowMatchFlag = true;
