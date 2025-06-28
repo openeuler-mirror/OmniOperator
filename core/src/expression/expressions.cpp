@@ -106,10 +106,11 @@ LiteralExpr::LiteralExpr(bool val, DataTypePtr dt)
     boolVal = val;
 }
 
-LiteralExpr::LiteralExpr(int32_t val, DataTypePtr dt)
+LiteralExpr::LiteralExpr(int32_t val, DataTypePtr dt, bool isNulls)
 {
     dataType = std::move(dt);
     intVal = val;
+    isNull = isNulls;
 }
 
 LiteralExpr::LiteralExpr(int64_t val, DataTypePtr dt)

@@ -21,6 +21,7 @@
 #include "operator/join/sortmergejoin/sort_merge_join_expr.h"
 #include <operator/aggregation/non_group_aggregation_expr.h>
 #include "operator/expand/expand.h"
+#include "operator/grouping/grouping.h"
 
 namespace omniruntime::compute {
 
@@ -79,6 +80,10 @@ OperatorFactory* createOperatorFactory(
         if (aggregationNode->GetGroupByKeys().empty()) {
             return AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
                 aggregationNode, queryConfig);
+        }
+        if (aggregationNode->HashOptimize()) {
+            auto expandNode = dynamic_pointer_cast<const ExpandNode>(aggregationNode->OptimizePlanNode());
+            return GroupingOperatorFactory::CreateGroupingOperatorFactory(aggregationNode, expandNode, queryConfig);
         }
         return HashAggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
             aggregationNode, queryConfig);
