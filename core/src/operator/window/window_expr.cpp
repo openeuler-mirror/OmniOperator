@@ -129,10 +129,11 @@ WindowWithExprOperatorFactory *WindowWithExprOperatorFactory::CreateWindowWithEx
     auto windowFrameStartChannels = planNode->GetWindowFrameStartChannels();
     auto windowFrameEndTypes = planNode->GetWindowFrameEndTypes();
     auto windowFrameEndChannels = planNode->GetWindowFrameEndChannels();
-    auto spillConfig = planNode->CanSpill(queryConfig)
-                       ? SpillConfig(SPILL_CONFIG_SPARK, true, queryConfig.SpillDir(), queryConfig.maxSpillBytes())
-                       : SpillConfig();
-    OperatorConfig  config(spillConfig);
+    SpillConfig *spillConfig = planNode->CanSpill(queryConfig)
+                       ? new SpillConfig(SPILL_CONFIG_SPARK, true, queryConfig.SpillDir(), queryConfig.maxSpillBytes())
+                       : new SpillConfig();
+    OverflowConfig *overflowConfig = queryConfig.IsOverFlowASNull()? new OverflowConfig(OVERFLOW_CONFIG_NULL) : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    OperatorConfig config(spillConfig, overflowConfig);
 
     auto operatorFactory = new WindowWithExprOperatorFactory(*dataTypes.get(), outputCols.data(), outputCols.size(),
          windowFunctionTypes.data(), windowFunctionTypes.size(), partitionCols.data(), partitionCols.size(),
