@@ -6,9 +6,8 @@
 
 #include <operator/aggregation/group_aggregation_expr.h>
 
-#include "operator/join/hash_builder.h"
-#include "operator/join/lookup_join.h"
-#include "operator/join/lookup_outer_join.h"
+#include "operator/join/hash_builder_expr.h"
+#include "operator/join/lookup_join_expr.h"
 #include "operator/join/lookup_join_wrapper.h"
 #include "operator/join/nest_loop_join_builder.h"
 #include "operator/join/nest_loop_join_lookup_wrapper.h"
@@ -122,7 +121,7 @@ void planDetail(
     // JoinNode and UnionNode has multiple sources, so we need to create a builder driver for each source
     if (auto joinNode = std::dynamic_pointer_cast<const HashJoinNode>(planNode)) {
         auto hashBuilderOperatorFactory =
-            HashBuilderOperatorFactory::CreateHashBuilderOperatorFactory(joinNode);
+            HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(joinNode, queryConfig);
         auto builderDriver = builderDrivers[1][0];
         builderDriver->operators()->emplace_back(createOperator(hashBuilderOperatorFactory, joinNode));
         factories->emplace_back(hashBuilderOperatorFactory);
@@ -133,7 +132,7 @@ void planDetail(
                 LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
         } else {
             factory =
-                LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
+                LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
         }
     } else if (auto sortMergejoinNode = std::dynamic_pointer_cast<const MergeJoinNode>(planNode)) {
         auto streamedTableWithExprOperatorFactory =

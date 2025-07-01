@@ -10,30 +10,31 @@
 #include "operator/operator_factory.h"
 #include "type/data_types.h"
 #include "type/data_type.h"
-#include "hash_builder.h"
-#include "operator/join/lookup_join.h"
-#include "operator/join/lookup_outer_join.h"
+#include "hash_builder_expr.h"
+#include "operator/join/lookup_join_expr.h"
+#include "operator/join/lookup_outer_join_expr.h"
 
 namespace omniruntime {
 namespace op {
 class LookupJoinWrapperOperatorFactory : public OperatorFactory {
 public:
-    LookupJoinWrapperOperatorFactory(LookupJoinOperatorFactory &lookupJoinOperatorFactory,
-       LookupOuterJoinOperatorFactory &lookupOuterJoinOperatorFactory, bool isNeedOuterJoin);
+    LookupJoinWrapperOperatorFactory(LookupJoinWithExprOperatorFactory &lookupJoinWithExprOperatorFactory,
+       LookupOuterJoinWithExprOperatorFactory &lookupOuterJoinWithExprOperatorFactory, bool isNeedOuterJoin);
     ~LookupJoinWrapperOperatorFactory() override;
     static LookupJoinWrapperOperatorFactory *CreateLookupJoinWrapperOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
-        HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig);
+        HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig);
     Operator *CreateOperator() override;
 
 private:
-    LookupJoinOperatorFactory *lookupJoinOperatorFactory;
-    LookupOuterJoinOperatorFactory *lookupOuterJoinOperatorFactory;
+    LookupJoinWithExprOperatorFactory *lookupJoinWithExprOperatorFactory;
+    LookupOuterJoinWithExprOperatorFactory *lookupOuterJoinWithExprOperatorFactory;
     bool isNeedOuterJoin;
 };
 
 class LookupJoinWrapperOperator : public Operator {
 public:
-    LookupJoinWrapperOperator(LookupJoinOperator &lookupJoinOperatorFactory, LookupOuterJoinOperator &lookupOuterJoinOperatorFactory, bool isNeedOuterJoin);
+    LookupJoinWrapperOperator(LookupJoinWithExprOperator &lookupJoinWithExprOperatorFactory,
+        LookupOuterJoinWithExprOperator &lookupOuterJoinWithExprOperatorFactory, bool isNeedOuterJoin);
     ~LookupJoinWrapperOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
@@ -42,18 +43,18 @@ public:
     void noMoreInput() override
     {
         noMoreInput_ = true;
-        lookupJoinOperator->noMoreInput();
+        lookupJoinWithExprOperator->noMoreInput();
     }
 
     void setNoMoreInput(bool noMoreInput) override
     {
         noMoreInput_ = noMoreInput;
-        lookupJoinOperator->setNoMoreInput(noMoreInput);
+        lookupJoinWithExprOperator->setNoMoreInput(noMoreInput);
     }
 
 private:
-    LookupOuterJoinOperator *lookupOuterJoinOperator;
-    LookupJoinOperator *lookupJoinOperator;
+    LookupOuterJoinWithExprOperator *lookupOuterJoinWithExprOperator;
+    LookupJoinWithExprOperator *lookupJoinWithExprOperator;
     bool isNeedOuterJoin;
 };
 

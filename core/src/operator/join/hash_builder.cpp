@@ -138,7 +138,8 @@ HashBuilderOperatorFactory *HashBuilderOperatorFactory::CreateHashBuilderOperato
     auto buildKeysSize = planNode->RightKeys().size();
     std::vector<int32_t> buildHashCols;
     for (size_t index = 0; index < buildKeysSize; index++) {
-        buildHashCols.emplace_back(planNode->RightKeys()[index]->colVal);
+        auto key = dynamic_cast<FieldExpr *>(planNode->RightKeys()[index]);
+        buildHashCols.emplace_back(key->colVal);
     }
 
     auto buildHashColsCount = (int32_t) buildHashCols.size();

@@ -10,6 +10,7 @@
 #include "operator/operator_factory.h"
 #include "operator/projection/projection.h"
 #include "operator/join/lookup_outer_join.h"
+#include "operator/join/hash_builder_expr.h"
 #include "type/data_types.h"
 #include "operator/status.h"
 
@@ -21,6 +22,9 @@ public:
         const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount,
         const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
         int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr);
+    static LookupOuterJoinWithExprOperatorFactory *CreateLookupOuterJoinWithExprOperatorFactory(
+        std::shared_ptr<const HashJoinNode> planNode,
+        HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig);
     LookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
         int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
         int32_t probeHashKeysCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
@@ -42,6 +46,18 @@ public:
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
     OmniStatus Close() override;
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        lookupOuterJoinOperator->noMoreInput();
+    }
+
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        lookupOuterJoinOperator->setNoMoreInput(noMoreInput);
+    }
 
 private:
     LookupOuterJoinOperator *lookupOuterJoinOperator;

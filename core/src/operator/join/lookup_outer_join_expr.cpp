@@ -23,6 +23,30 @@ LookupOuterJoinWithExprOperatorFactory::CreateLookupOuterJoinWithExprOperatorFac
     return operatorFactory;
 }
 
+LookupOuterJoinWithExprOperatorFactory *LookupOuterJoinWithExprOperatorFactory::CreateLookupOuterJoinWithExprOperatorFactory(
+    std::shared_ptr<const HashJoinNode> planNode, HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig)
+{
+    auto buildOutputTypes = planNode->RightOutputType();
+    auto buildOutputColsCount = buildOutputTypes->GetSize();
+    std::vector<int32_t> buildOutputCols;
+    for (int32_t index = 0; index < buildOutputColsCount; index++) {
+        buildOutputCols.emplace_back(index);
+    }
+
+    auto probeOutputTypes = planNode->LeftOutputType();
+    auto probeOutputColsCount = probeOutputTypes->GetSize();
+    std::vector<int32_t> probeOutputCols;
+    for (int32_t index = 0; index < probeOutputColsCount; index++) {
+        probeOutputCols.emplace_back(index);
+    }
+
+    auto probeHashKeys = planNode->LeftKeys();
+    auto probeHashKeysCount = static_cast<int>(probeHashKeys.size());
+
+    return new LookupOuterJoinWithExprOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount, probeHashKeys, probeHashKeysCount,
+        buildOutputCols.data(), *buildOutputTypes, reinterpret_cast<int64_t>(hashBuilderOperatorFactory));
+}
+
 LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes,
     int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,

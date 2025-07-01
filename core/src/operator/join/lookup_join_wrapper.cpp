@@ -3,59 +3,59 @@
  * @Description: lookup outer join implementations
  */
 
-#include "hash_builder.h"
+#include "hash_builder_expr.h"
 #include "lookup_join_wrapper.h"
 
 namespace omniruntime {
 namespace op {
-LookupJoinWrapperOperatorFactory::LookupJoinWrapperOperatorFactory(LookupJoinOperatorFactory &lookupJoinOperatorFactory,
-    LookupOuterJoinOperatorFactory &lookupOuterJoinOperatorFactory, bool isNeedOuterJoin)
-    : lookupJoinOperatorFactory(&lookupJoinOperatorFactory),
-      lookupOuterJoinOperatorFactory(&lookupOuterJoinOperatorFactory),
+LookupJoinWrapperOperatorFactory::LookupJoinWrapperOperatorFactory(LookupJoinWithExprOperatorFactory &lookupJoinWithExprOperatorFactory,
+    LookupOuterJoinWithExprOperatorFactory &lookupOuterJoinWithExprOperatorFactory, bool isNeedOuterJoin)
+    : lookupJoinWithExprOperatorFactory(&lookupJoinWithExprOperatorFactory),
+      lookupOuterJoinWithExprOperatorFactory(&lookupOuterJoinWithExprOperatorFactory),
       isNeedOuterJoin(isNeedOuterJoin) {}
 
 LookupJoinWrapperOperatorFactory::~LookupJoinWrapperOperatorFactory()
 {
-    delete lookupOuterJoinOperatorFactory;
-    delete lookupJoinOperatorFactory;
-    lookupOuterJoinOperatorFactory = nullptr;
-    lookupJoinOperatorFactory = nullptr;
+    delete lookupOuterJoinWithExprOperatorFactory;
+    delete lookupJoinWithExprOperatorFactory;
+    lookupOuterJoinWithExprOperatorFactory = nullptr;
+    lookupJoinWithExprOperatorFactory = nullptr;
 }
 
 LookupJoinWrapperOperatorFactory *LookupJoinWrapperOperatorFactory::CreateLookupJoinWrapperOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
-    HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig)
+    HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig)
 {
     auto isNeedOuterJoin = planNode->IsFullJoin() || (planNode->IsLeftJoin() && planNode->IsBuildLeft()) || (planNode->IsRightJoin() && planNode->IsBuildRight());
-    auto lookupJoinOperatorFactory = LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(planNode, hashBuilderOperatorFactory, queryConfig);
-    auto lookupOuterJoinOperatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(planNode, hashBuilderOperatorFactory, queryConfig);
-    return new LookupJoinWrapperOperatorFactory(*lookupJoinOperatorFactory, *lookupOuterJoinOperatorFactory, isNeedOuterJoin);
+    auto lookupJoinWithExprOperatorFactory = LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(planNode, hashBuilderOperatorFactory, queryConfig);
+    auto lookupOuterJoinWithExprOperatorFactory = LookupOuterJoinWithExprOperatorFactory::CreateLookupOuterJoinWithExprOperatorFactory(planNode, hashBuilderOperatorFactory, queryConfig);
+    return new LookupJoinWrapperOperatorFactory(*lookupJoinWithExprOperatorFactory, *lookupOuterJoinWithExprOperatorFactory, isNeedOuterJoin);
 }
 
 Operator *LookupJoinWrapperOperatorFactory::CreateOperator()
 {
-    auto lookupJoinOperator = dynamic_cast<LookupJoinOperator*>(lookupJoinOperatorFactory->CreateOperator());
-    auto lookupOuterJoinOperator = dynamic_cast<LookupOuterJoinOperator*>(lookupOuterJoinOperatorFactory->CreateOperator());
-    auto pLookupJoinWrapperOperator = new LookupJoinWrapperOperator(*lookupJoinOperator, *lookupOuterJoinOperator, isNeedOuterJoin);
+    auto lookupJoinWithExprOperator = dynamic_cast<LookupJoinWithExprOperator*>(lookupJoinWithExprOperatorFactory->CreateOperator());
+    auto lookupOuterJoinWithExprOperator = dynamic_cast<LookupOuterJoinWithExprOperator*>(lookupOuterJoinWithExprOperatorFactory->CreateOperator());
+    auto pLookupJoinWrapperOperator = new LookupJoinWrapperOperator(*lookupJoinWithExprOperator, *lookupOuterJoinWithExprOperator, isNeedOuterJoin);
     return pLookupJoinWrapperOperator;
 }
 
-LookupJoinWrapperOperator::LookupJoinWrapperOperator(LookupJoinOperator &lookupJoinOperator,
-    LookupOuterJoinOperator &lookupOuterJoinOperator, bool isNeedOuterJoin)
-    : lookupOuterJoinOperator(&lookupOuterJoinOperator),
-      lookupJoinOperator(&lookupJoinOperator),
+LookupJoinWrapperOperator::LookupJoinWrapperOperator(LookupJoinWithExprOperator &lookupJoinWithExprOperator,
+    LookupOuterJoinWithExprOperator &lookupOuterJoinWithExprOperator, bool isNeedOuterJoin)
+    : lookupOuterJoinWithExprOperator(&lookupOuterJoinWithExprOperator),
+      lookupJoinWithExprOperator(&lookupJoinWithExprOperator),
       isNeedOuterJoin(isNeedOuterJoin) {}
 
 LookupJoinWrapperOperator::~LookupJoinWrapperOperator()
 {
-    delete lookupOuterJoinOperator;
-    delete lookupJoinOperator;
-    lookupOuterJoinOperator = nullptr;
-    lookupJoinOperator = nullptr;
+    delete lookupOuterJoinWithExprOperator;
+    delete lookupJoinWithExprOperator;
+    lookupOuterJoinWithExprOperator = nullptr;
+    lookupJoinWithExprOperator = nullptr;
 }
 
 int32_t LookupJoinWrapperOperator::AddInput(VectorBatch *vecBatch)
 {
-    auto result = lookupJoinOperator->AddInput(vecBatch);
+    auto result = lookupJoinWithExprOperator->AddInput(vecBatch);
     // set operator pipeline status
     SetStatus(OMNI_STATUS_NORMAL);
     return result;
@@ -67,13 +67,13 @@ int32_t LookupJoinWrapperOperator::GetOutput(VectorBatch **outputVecBatch)
         return 0;
     }
 
-    if (lookupJoinOperator->GetStatus() != OMNI_STATUS_FINISHED) {
-        return lookupJoinOperator->GetOutput(outputVecBatch);
+    if (lookupJoinWithExprOperator->GetStatus() != OMNI_STATUS_FINISHED) {
+        return lookupJoinWithExprOperator->GetOutput(outputVecBatch);
     } else {
         if (isNeedOuterJoin) {
             // when lookup join operator end can execute
-            auto result = lookupOuterJoinOperator->GetOutput(outputVecBatch);
-            if (lookupOuterJoinOperator->GetStatus() == OMNI_STATUS_FINISHED) {
+            auto result = lookupOuterJoinWithExprOperator->GetOutput(outputVecBatch);
+            if (lookupOuterJoinWithExprOperator->GetStatus() == OMNI_STATUS_FINISHED) {
                 SetStatus(OMNI_STATUS_FINISHED);
             }
             return result;
@@ -86,8 +86,8 @@ int32_t LookupJoinWrapperOperator::GetOutput(VectorBatch **outputVecBatch)
 
 OmniStatus LookupJoinWrapperOperator::Close()
 {
-    lookupJoinOperator->Close();
-    lookupOuterJoinOperator->Close();
+    lookupJoinWithExprOperator->Close();
+    lookupOuterJoinWithExprOperator->Close();
     return OMNI_STATUS_NORMAL;
 }
 

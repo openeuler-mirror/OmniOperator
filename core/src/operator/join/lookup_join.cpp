@@ -134,7 +134,8 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
 
     std::vector<int32_t> probeHashCols;
     for (const auto &key : planNode->LeftKeys()) {
-        probeHashCols.emplace_back(key->colVal);
+        auto fieldKey = dynamic_cast<FieldExpr *>(key);
+        probeHashCols.emplace_back(fieldKey->colVal);
     }
     auto probeHashColsCount = (int32_t) probeHashCols.size();
 

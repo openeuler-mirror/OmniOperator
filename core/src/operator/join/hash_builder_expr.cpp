@@ -30,6 +30,24 @@ HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHa
                                                   buildHashKeys, hashTableCount, overflowConfig);
 }
 
+HashBuilderWithExprOperatorFactory *HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(
+    std::shared_ptr<const HashJoinNode> planNode, const config::QueryConfig &queryConfig)
+{
+    auto joinType = planNode->GetJoinType();
+    auto buildSide = planNode->GetBuildSide();
+    auto buildTypes = planNode->RightOutputType();
+    auto buildKeys = planNode->RightKeys();
+
+    auto overflowConfig = queryConfig.IsOverFlowASNull()
+                          ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                          : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+    auto hashBuilderWithExprOperatorFactory = new HashBuilderWithExprOperatorFactory(joinType, buildSide, *buildTypes, buildKeys, 1, overflowConfig);
+
+    delete overflowConfig;
+    overflowConfig = nullptr;
+    return hashBuilderWithExprOperatorFactory;
+}
+
 HashBuilderWithExprOperatorFactory::HashBuilderWithExprOperatorFactory(JoinType joinType,
     const type::DataTypes &buildTypes, const std::vector<omniruntime::expressions::Expr *> &buildHashKeys,
     int32_t hashTableCount, OverflowConfig *overflowConfig)
@@ -94,7 +112,7 @@ int32_t HashBuilderWithExprOperator::AddInput(VectorBatch *vecBatch)
 int32_t HashBuilderWithExprOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     hashBuilderOperator->GetOutput(outputVecBatch);
-    SetStatus(OMNI_STATUS_FINISHED);
+    SetStatus(hashBuilderOperator->GetStatus());
     return 0;
 }
 

@@ -25,6 +25,9 @@ public:
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t hashTableCount,
         OverflowConfig *overflowConfig);
 
+    static HashBuilderWithExprOperatorFactory *CreateHashBuilderWithExprOperatorFactory(
+        std::shared_ptr<const HashJoinNode> planNode, const config::QueryConfig &queryConfig);
+
     HashBuilderWithExprOperatorFactory(JoinType joinType, const DataTypes &buildTypes,
         const std::vector<omniruntime::expressions::Expr *> &buildHashKeys, int32_t hashTableCount,
         OverflowConfig *overflowConfig);
@@ -61,6 +64,18 @@ public:
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        hashBuilderOperator->noMoreInput();
+    }
+
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        hashBuilderOperator->setNoMoreInput(noMoreInput);
+    }
 
 private:
     const DataTypes buildTypes;
