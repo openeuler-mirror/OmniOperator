@@ -22,11 +22,7 @@ StreamedTableWithExprOperatorFactory* StreamedTableWithExprOperatorFactory::Crea
     const std::shared_ptr<const MergeJoinNode>& planNode, const config::QueryConfig &queryConfig)
 {
     auto streamedDataTypes = *(planNode->LeftOutputType());
-    std::vector<Expr*> streamedKeyExprCols;
-    for (const auto &key : planNode->LeftKeys()) {
-        Expr *keyExpr = (Expr *) key.get();
-        streamedKeyExprCols.push_back(keyExpr);
-    }
+    auto streamedKeyExprCols = planNode->LeftKeys();
     auto filterExpression = planNode->Filter();
     std::vector<int32_t> streamedOutputColsIndex;
     for (int32_t i = 0; i < planNode->LeftOutputType()->GetSize(); i++) {
@@ -143,15 +139,12 @@ BufferedTableWithExprOperatorFactory* BufferedTableWithExprOperatorFactory::Crea
     const std::shared_ptr<const MergeJoinNode>& planNode, int64_t streamedTableFactoryAddr, const config::QueryConfig &queryConfig)
 {
     auto types = *(planNode->RightOutputType());
-    std::vector<omniruntime::expressions::Expr*> bufferedKeyExprCols;
-    for (const auto &key : planNode->RightKeys()) {
-        Expr *keyExpr = (Expr *) key.get();
-        bufferedKeyExprCols.push_back(static_cast<Expr*>(keyExpr));
-    }
+    auto bufferedKeyExprCols = planNode->RightKeys();
     std::vector<int32_t> bufferedOutputColsIndex;
     for (int32_t i = 0; i < planNode->RightOutputType()->GetSize(); i++) {
         bufferedOutputColsIndex.push_back(static_cast<int32_t>(i));
     }
+
     auto overflowConfig = queryConfig.IsOverFlowASNull() ? new OverflowConfig(OVERFLOW_CONFIG_NULL) :
                                                            new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto bufferedOutputColsCnt = static_cast<int32_t>(bufferedOutputColsIndex.size());

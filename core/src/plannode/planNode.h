@@ -399,8 +399,8 @@ enum JoinType {
 /// class for specific join implementations, e.g. hash and merge joins.
 class AbstractJoinNode : public PlanNode {
 public:
-    AbstractJoinNode(const PlanNodeId &id, JoinType joinType_, BuildSide buildSide_, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys_,
-        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys_, ExprPtr filter_, PlanNodePtr left_, PlanNodePtr right_, DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
+    AbstractJoinNode(const PlanNodeId &id, JoinType joinType_, BuildSide buildSide_, const std::vector<ExprPtr> &leftKeys_, const std::vector<ExprPtr> &rightKeys_,
+        ExprPtr filter_, PlanNodePtr left_, PlanNodePtr right_, DataTypesPtr leftOutputType_, DataTypesPtr rightOutputType_)
         : PlanNode(id), joinType(joinType_), buildSide(buildSide_), leftKeys(leftKeys_), rightKeys(rightKeys_), filter(std::move(filter_)), sources({std::move(left_),
         std::move(right_)}), leftOutputType(std::move(leftOutputType_)), rightOutputType(std::move(rightOutputType_))
     {
@@ -511,12 +511,12 @@ public:
         return buildSide == BuildSide::OMNI_BUILD_RIGHT;
     }
 
-    const std::vector<std::shared_ptr<const FieldExpr>> &LeftKeys() const
+    const std::vector<ExprPtr> &LeftKeys() const
     {
         return leftKeys;
     }
 
-    const std::vector<std::shared_ptr<const FieldExpr>> &RightKeys() const
+    const std::vector<ExprPtr> &RightKeys() const
     {
         return rightKeys;
     }
@@ -529,8 +529,8 @@ public:
 protected:
     const JoinType joinType;
     const BuildSide buildSide;
-    const std::vector<std::shared_ptr<const FieldExpr>> leftKeys;
-    const std::vector<std::shared_ptr<const FieldExpr>> rightKeys;
+    const std::vector<ExprPtr> leftKeys;
+    const std::vector<ExprPtr> rightKeys;
     // Optional join filter, nullptr if absent. This is applied to
     // join hits and if this is false, the hit turns into a miss, which
     // has a special meaning for outer joins. For inner joins, this is
@@ -551,8 +551,8 @@ protected:
 /// EXISTS.
 class HashJoinNode : public AbstractJoinNode {
 public:
-    HashJoinNode(const PlanNodeId &id, JoinType joinType, BuildSide buildSide, bool nullAware, bool isShuffle, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
-        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right, DataTypesPtr leftOutputType,
+    HashJoinNode(const PlanNodeId &id, JoinType joinType, BuildSide buildSide, bool nullAware, bool isShuffle, const std::vector<ExprPtr> &leftKeys,
+        const std::vector<ExprPtr> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right, DataTypesPtr leftOutputType,
         DataTypesPtr rightOutputType)
         : AbstractJoinNode(id, joinType, buildSide, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right), std::move(leftOutputType), std::move(rightOutputType)),
         nullAware{nullAware}, isShuffle{isShuffle} {}
@@ -584,8 +584,8 @@ private:
 /// exec::Operators.
 class MergeJoinNode : public AbstractJoinNode {
 public:
-    MergeJoinNode(const PlanNodeId &id, JoinType joinType, BuildSide buildSide, const std::vector<std::shared_ptr<const FieldExpr>> &leftKeys,
-        const std::vector<std::shared_ptr<const FieldExpr>> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right, DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
+    MergeJoinNode(const PlanNodeId &id, JoinType joinType, BuildSide buildSide, const std::vector<ExprPtr> &leftKeys,
+        const std::vector<ExprPtr> &rightKeys, ExprPtr filter, PlanNodePtr left, PlanNodePtr right, DataTypesPtr leftOutputType, DataTypesPtr rightOutputType)
         : AbstractJoinNode(id, joinType, buildSide, leftKeys, rightKeys, std::move(filter), std::move(left), std::move(right),
         std::move(leftOutputType), std::move(rightOutputType)) {}
 

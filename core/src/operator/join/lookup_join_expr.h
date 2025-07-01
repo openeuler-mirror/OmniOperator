@@ -10,6 +10,7 @@
 #include "operator/operator_factory.h"
 #include "operator/projection/projection.h"
 #include "operator/join/lookup_join.h"
+#include "operator/join/hash_builder_expr.h"
 #include "type/data_types.h"
 #include "operator/status.h"
 
@@ -23,6 +24,9 @@ public:
         int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
         int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr,
         bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
+
+    static LookupJoinWithExprOperatorFactory *CreateLookupJoinWithExprOperatorFactory(std::shared_ptr<const HashJoinNode> planNode,
+        HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig &queryConfig);
 
     LookupJoinWithExprOperatorFactory(const DataTypes &probeTypes, int32_t *probeOutputCols,
         int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
@@ -54,6 +58,20 @@ public:
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
 
     OmniStatus Close() override;
+
+    BlockingReason IsBlocked(ContinueFuture* future) override;
+
+    void noMoreInput() override
+    {
+        noMoreInput_ = true;
+        lookupJoinOperator->noMoreInput();
+    }
+
+    void setNoMoreInput(bool noMoreInput) override
+    {
+        noMoreInput_ = noMoreInput;
+        lookupJoinOperator->setNoMoreInput(noMoreInput);
+    }
 
 private:
     DataTypes probeTypes;
