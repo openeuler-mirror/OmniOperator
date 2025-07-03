@@ -100,8 +100,9 @@ std::string GetCharValOutput(const LiteralExpr &e)
         output += TypeUtil::TypeToString(e.GetReturnTypeId()) + +"[" +
             to_string(static_cast<CharDataType *>(e.dataType.get())->GetWidth()) + "]" + ":'" + *(e.stringVal) + "'";
     } else {
+        std::string tmp = e.stringVal == nullptr ? "null" : *e.stringVal;
         // meant to look like "%s:'%s'"
-        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + ":'" + *(e.stringVal) + "'";
+        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + ":'" + tmp + "'";
     }
     return output;
 }

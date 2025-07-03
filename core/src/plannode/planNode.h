@@ -208,12 +208,11 @@ public:
         const std::vector<DataTypes> aggsOutputTypes, const std::vector<uint32_t> &aggFuncTypes,
         const std::vector<ExprPtr> &aggFilters, const std::vector<uint32_t> &maskColumns,
         const std::vector<bool> &inputRaws, const std::vector<bool> &outputPartials, const bool isStatisticalAggregate,
-        const DataTypesPtr outputType, PlanNodePtr source, const PlanNodePtr &optimizePlanNode = nullptr)
+        const DataTypesPtr outputType, PlanNodePtr source)
         : PlanNode(id), groupByKeys(groupByKeys), groupByNum(groupByNum), aggKeys(aggKeys),
           sourceDataTypes(sourceDataTypes), aggsOutputTypes(aggsOutputTypes), aggFuncTypes(aggFuncTypes),
           aggFilters(aggFilters), maskColumns(maskColumns), inputRaws(inputRaws), outputPartials(outputPartials),
-        isStatisticalAggregate(isStatisticalAggregate), outputType(outputType), sources({source}),
-        optimizePlanNode(optimizePlanNode) {}
+        isStatisticalAggregate(isStatisticalAggregate), outputType(outputType), sources({source}) {}
 
     ~AggregationNode() override = default;
 
@@ -245,16 +244,6 @@ public:
 
     const std::vector<DataTypes> &GetAggsOutputTypes() const { return aggsOutputTypes; }
 
-    bool HashOptimize() const
-    {
-        return optimizePlanNode != nullptr;
-    }
-
-    PlanNodePtr OptimizePlanNode() const
-    {
-        return optimizePlanNode;
-    }
-
 private:
     const std::vector<ExprPtr> groupByKeys;
     const uint32_t groupByNum;
@@ -269,8 +258,6 @@ private:
     bool isStatisticalAggregate;
     const DataTypesPtr outputType;
     const std::vector<PlanNodePtr> sources;
-    bool hasOptimize = false;
-    const PlanNodePtr optimizePlanNode;
 };
 
 class WindowNode : public PlanNode {
@@ -840,5 +827,44 @@ private:
     const std::vector<PlanNodePtr> sources;
     const std::vector<std::vector<ExprPtr>> projections;
     DataTypesPtr outputType;
+};
+
+class GroupingNode : public PlanNode {
+public:
+    GroupingNode(const PlanNodeId &id, const std::shared_ptr<const ExpandNode> &expandPlanNode,
+        const std::shared_ptr<const AggregationNode> &aggregationNode)
+        : PlanNode(id), expandPlanNode_(expandPlanNode), aggregationNode_(aggregationNode),
+        sources_(expandPlanNode_->Sources()), outputType_(aggregationNode_->OutputType()) {}
+
+    std::shared_ptr<const ExpandNode> GetExpandPlanNode() const
+    {
+        return expandPlanNode_;
+    }
+
+    std::shared_ptr<const AggregationNode> GetAggregationNode() const
+    {
+        return aggregationNode_;
+    }
+
+    const DataTypesPtr &OutputType() const override
+    {
+        return outputType_;
+    }
+
+    const std::vector<PlanNodePtr> &Sources() const override
+    {
+        return sources_;
+    }
+
+    std::string_view Name() const override
+    {
+        return "Grouping";
+    }
+
+private:
+    const std::shared_ptr<const ExpandNode> expandPlanNode_;
+    const std::shared_ptr<const AggregationNode> aggregationNode_;
+    const std::vector<PlanNodePtr> sources_;
+    DataTypesPtr outputType_;
 };
 } // namespace omniruntime

@@ -162,10 +162,12 @@ TEST(DriverTest, TestGroupingOperator)
     bool isStatisticalAggregate = false;
     auto aggregationNode = std::make_shared<AggregationNode>("AggregationNode", groupingExprs, groupByNum, aggsKeys,
         sourceDataTypes, outPutDataTypes, aggFuncTypes, aggFilters, maskColumns, inputRaws, outputPartial,
-        isStatisticalAggregate, sourceDataTypes, valueStreamNode, expandNode);
+        isStatisticalAggregate, sourceDataTypes, valueStreamNode);
+
+    auto groupingNode = std::make_shared<GroupingNode>("GroupingNode", expandNode, aggregationNode);
 
     std::unordered_set<PlanNodeId> emptySet;
-    PlanFragment planFragment{aggregationNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
+    PlanFragment planFragment{groupingNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
     auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
     int32_t outputRow = 0;
     while (true) {
