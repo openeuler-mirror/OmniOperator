@@ -80,14 +80,12 @@ OperatorFactory* createOperatorFactory(
             return AggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
                 aggregationNode, queryConfig);
         }
-        if (aggregationNode->HashOptimize()) {
-            auto expandNode = dynamic_pointer_cast<const ExpandNode>(aggregationNode->OptimizePlanNode());
-            return GroupingOperatorFactory::CreateGroupingOperatorFactory(aggregationNode, expandNode, queryConfig);
-        }
         return HashAggregationWithExprOperatorFactory::CreateAggregationWithExprOperatorFactory(
             aggregationNode, queryConfig);
     } else if (auto expandNode = std::dynamic_pointer_cast<const ExpandNode>(planNode)) {
         return CreateExpandOperatorFactory(expandNode, queryConfig);
+    } else if (auto groupingNode = std::dynamic_pointer_cast<const GroupingNode>(planNode)) {
+        return GroupingOperatorFactory::CreateGroupingOperatorFactory(groupingNode, queryConfig);
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());
