@@ -100,6 +100,7 @@ LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, st
     int32_t outputRowSize =
         OperatorUtil::GetRowSize(this->buildOutputTypes.Get()) + OperatorUtil::GetRowSize(this->probeOutputTypes.Get());
     maxRowCount = OperatorUtil::GetMaxRowCount((outputColsCount == 0) ? DEFAULT_ROW_SIZE : outputRowSize);
+    SetOperatorName(opNameForLookUpJoin);
 }
 
 LookupOuterJoinOperator::~LookupOuterJoinOperator()

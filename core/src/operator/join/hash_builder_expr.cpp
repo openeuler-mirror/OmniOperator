@@ -86,7 +86,9 @@ Operator *HashBuilderWithExprOperatorFactory::CreateOperator()
 HashBuilderWithExprOperator::HashBuilderWithExprOperator(const DataTypes &buildTypes,
     std::vector<std::unique_ptr<Projection>> &projections, HashBuilderOperator *hashBuilderOperator)
     : buildTypes(buildTypes), projections(projections), hashBuilderOperator(hashBuilderOperator)
-{}
+{
+    SetOperatorName(opNameForHashBuilder);
+}
 
 HashBuilderWithExprOperator::~HashBuilderWithExprOperator()
 {

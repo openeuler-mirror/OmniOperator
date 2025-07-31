@@ -109,7 +109,9 @@ LookupJoinWithExprOperator::LookupJoinWithExprOperator(const type::DataTypes &pr
     : probeTypes(probeTypes),
       projections(projections),
       lookupJoinOperator(lookupJoinOperator)
-{}
+{
+    SetOperatorName(opNameForLookUpJoin);
+}
 
 LookupJoinWithExprOperator::~LookupJoinWithExprOperator()
 {
