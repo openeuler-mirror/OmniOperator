@@ -43,7 +43,10 @@ LookupJoinWrapperOperator::LookupJoinWrapperOperator(LookupJoinWithExprOperator 
     LookupOuterJoinWithExprOperator &lookupOuterJoinWithExprOperator, bool isNeedOuterJoin)
     : lookupOuterJoinWithExprOperator(&lookupOuterJoinWithExprOperator),
       lookupJoinWithExprOperator(&lookupJoinWithExprOperator),
-      isNeedOuterJoin(isNeedOuterJoin) {}
+      isNeedOuterJoin(isNeedOuterJoin)
+{
+    SetOperatorName(opNameForLookUpJoin);
+}
 
 LookupJoinWrapperOperator::~LookupJoinWrapperOperator()
 {

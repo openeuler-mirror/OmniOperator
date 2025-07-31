@@ -76,7 +76,9 @@ Operator *LookupOuterJoinWithExprOperatorFactory::CreateOperator()
 
 LookupOuterJoinWithExprOperator::LookupOuterJoinWithExprOperator(LookupOuterJoinOperator *lookupJoinOperator)
     : lookupOuterJoinOperator(lookupJoinOperator)
-{}
+{
+    SetOperatorName(opNameForLookUpJoin);
+}
 
 LookupOuterJoinWithExprOperator::~LookupOuterJoinWithExprOperator()
 {
