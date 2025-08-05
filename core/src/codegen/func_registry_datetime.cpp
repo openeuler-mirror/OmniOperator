@@ -24,7 +24,9 @@ std::vector<Function> DateTimeFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(DateTrunc), "trunc_date", {}, { OMNI_DATE32, OMNI_VARCHAR },
             OMNI_DATE32, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(DateTruncRetNull), "trunc_date_null", {}, { OMNI_DATE32, OMNI_VARCHAR },
-            OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL) };
+            OMNI_DATE32, INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(DateAdd), "date_add", {}, {OMNI_DATE32, OMNI_INT}, OMNI_DATE32, INPUT_DATA)
+    };
 
     return dateTimeFnRegistry;
 }

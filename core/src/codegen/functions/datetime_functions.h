@@ -33,6 +33,8 @@ extern "C" DLLEXPORT int32_t DateTrunc(int64_t contextPtr, int32_t days, const c
 
 extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const char *levelStr, int32_t len);
 
+extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left);
+
 std::string toOmniTimeFormat(const std::string& format);
 }
 #endif // OMNI_RUNTIME_DATETIME_FUNCTIONS_H
