@@ -20,6 +20,16 @@ LookupOuterJoinOperatorFactory::LookupOuterJoinOperatorFactory(const type::DataT
         buildOutputCols + buildOutputTypes.GetSize());
 }
 
+LookupOuterJoinOperatorFactory::LookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
+    int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
+    const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables, BuildSide buildSide)
+    : buildOutputTypes(buildOutputTypes), probeTypes(probeTypes), hashTables(hashTables), buildSide(buildSide)
+{
+    this->probeOutputCols.insert(this->probeOutputCols.end(), probeOutputCols, probeOutputCols + probeOutputColsCount);
+    this->buildOutputCols.insert(this->buildOutputCols.end(), buildOutputCols,
+                                 buildOutputCols + buildOutputTypes.GetSize());
+}
+
 LookupOuterJoinOperatorFactory::~LookupOuterJoinOperatorFactory() = default;
 
 LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
@@ -29,6 +39,16 @@ LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOute
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupOuterJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         buildOutputCols, buildOutputTypes, hashBuilderFactory->GetHashTablesVariants());
+    return pOperatorFactory;
+}
+
+LookupOuterJoinOperatorFactory *LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(
+    const type::DataTypes &probeTypes, int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
+    const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr, BuildSide buildSide)
+{
+    auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
+    auto pOperatorFactory = new LookupOuterJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
+        buildOutputCols, buildOutputTypes, hashBuilderFactory->GetHashTablesVariants(), buildSide);
     return pOperatorFactory;
 }
 
@@ -62,7 +82,7 @@ Operator *LookupOuterJoinOperatorFactory::CreateOperator()
     }
     auto probeOutputTypes = DataTypes(probeOutputType);
     auto lookupOuterJoinOperator =
-        new LookupOuterJoinOperator(probeOutputTypes, probeOutputCols, buildOutputCols, buildOutputTypes, hashTables);
+        new LookupOuterJoinOperator(probeOutputTypes, probeOutputCols, buildOutputCols, buildOutputTypes, hashTables, buildSide);
     return lookupOuterJoinOperator;
 }
 
@@ -103,6 +123,23 @@ LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, st
     SetOperatorName(opNameForLookUpJoin);
 }
 
+LookupOuterJoinOperator::LookupOuterJoinOperator(DataTypes &probeOutputTypes, std::vector<int32_t> &probeOutputCols,
+    std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables, BuildSide buildSide)
+    : probeOutputTypes(probeOutputTypes),
+      probeOutputCols(probeOutputCols),
+      buildOutputCols(buildOutputCols),
+      buildOutputTypes(buildOutputTypes),
+      hashTables(hashTables),
+      iterator(new LookupOuterPositionIterator(hashTables)),
+      outputColsCount(static_cast<int32_t>(probeOutputCols.size() + buildOutputCols.size())),
+      buildSide(buildSide)
+{
+    int32_t outputRowSize =
+            OperatorUtil::GetRowSize(this->buildOutputTypes.Get()) + OperatorUtil::GetRowSize(this->probeOutputTypes.Get());
+    maxRowCount = OperatorUtil::GetMaxRowCount((outputColsCount == 0) ? DEFAULT_ROW_SIZE : outputRowSize);
+    SetOperatorName(opNameForLookUpJoin);
+}
+
 LookupOuterJoinOperator::~LookupOuterJoinOperator()
 {
     delete iterator;
@@ -133,6 +170,10 @@ int32_t LookupOuterJoinOperator::GetOutput(VectorBatch **outputVecBatch)
     auto result = std::make_unique<VectorBatch>(rowCount);
     auto resultPtr = result.get();
     BuildVecBatch(resultPtr);
+    if (buildSide == OMNI_BUILD_LEFT) {
+        BaseVector **pVector = resultPtr->GetVectors();
+        std::rotate(pVector, pVector + probeOutputCols.size(), pVector + resultPtr->GetVectorCount());
+    }
     *outputVecBatch = result.release();
     outputtedRowCount += rowCount;
     if (!HasNext()) {

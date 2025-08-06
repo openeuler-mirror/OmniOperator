@@ -42,9 +42,10 @@ LookupOuterJoinWithExprOperatorFactory *LookupOuterJoinWithExprOperatorFactory::
 
     auto probeHashKeys = planNode->LeftKeys();
     auto probeHashKeysCount = static_cast<int>(probeHashKeys.size());
+    auto buildSide = planNode->GetBuildSide();
 
     return new LookupOuterJoinWithExprOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount, probeHashKeys, probeHashKeysCount,
-        buildOutputCols.data(), *buildOutputTypes, reinterpret_cast<int64_t>(hashBuilderOperatorFactory));
+        buildOutputCols.data(), *buildOutputTypes, reinterpret_cast<int64_t>(hashBuilderOperatorFactory), buildSide);
 }
 
 LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes,
@@ -61,6 +62,22 @@ LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(c
     this->operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(*(this->probeTypes),
         probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes,
         (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()));
+}
+
+LookupOuterJoinWithExprOperatorFactory::LookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes,
+    int32_t *probeOutputCols, int32_t probeOutputColsCount,
+    const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
+    int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr, BuildSide buildSide)
+{
+    std::vector<DataTypePtr> newProbeTypes;
+    OperatorUtil::CreateProjections(probeTypes, probeHashKeys, newProbeTypes, this->projections, this->probeHashCols,
+                                    nullptr);
+    this->probeTypes = std::make_unique<DataTypes>(DataTypes(newProbeTypes));
+    auto hashBuilderWithExprOperatorFactory =
+            reinterpret_cast<HashBuilderWithExprOperatorFactory *>(hashBuilderFactoryAddr);
+    this->operatorFactory = LookupOuterJoinOperatorFactory::CreateLookupOuterJoinOperatorFactory(*(this->probeTypes),
+        probeOutputCols, probeOutputColsCount, buildOutputCols, buildOutputTypes,
+        (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()), buildSide);
 }
 
 LookupOuterJoinWithExprOperatorFactory::~LookupOuterJoinWithExprOperatorFactory()
