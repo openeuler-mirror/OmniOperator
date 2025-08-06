@@ -29,6 +29,10 @@ public:
         int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
         int32_t probeHashKeysCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
         int64_t hashBuilderFactoryAddr);
+    LookupOuterJoinWithExprOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
+        int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
+        int32_t probeHashKeysCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
+        int64_t hashBuilderFactoryAddr, BuildSide buildSide);
     ~LookupOuterJoinWithExprOperatorFactory() override;
     Operator *CreateOperator() override;
 
