@@ -120,4 +120,9 @@ extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const 
     }
     return result;
 }
+
+extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left)
+{
+    return right + left;
+}
 }
