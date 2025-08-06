@@ -21,10 +21,16 @@ public:
     LookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
         int32_t probeOutputColsCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
         HashTableVariants *hashTables);
+    LookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
+        int32_t probeOutputColsCount, int32_t *buildOutputCols, const type::DataTypes &buildOutputTypes,
+        HashTableVariants *hashTables, BuildSide buildSide);
     ~LookupOuterJoinOperatorFactory() override;
     static LookupOuterJoinOperatorFactory *CreateLookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
         int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
         const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr);
+    static LookupOuterJoinOperatorFactory *CreateLookupOuterJoinOperatorFactory(const type::DataTypes &probeTypes,
+        int32_t *probeOutputCols, int32_t probeOutputColsCount, int32_t *buildOutputCols,
+        const type::DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr, BuildSide buildSide);
     static LookupOuterJoinOperatorFactory *CreateLookupOuterJoinOperatorFactory(
         std::shared_ptr<const HashJoinNode> planNode,
         HashBuilderOperatorFactory* hashBuilderOperatorFactory, const config::QueryConfig& queryConfig);
@@ -36,6 +42,7 @@ private:
     DataTypes probeTypes;                 // all types for probe
     std::vector<int32_t> probeOutputCols; // output columns for probe
     HashTableVariants *hashTables;
+    BuildSide buildSide;
 };
 
 class LookupOuterPositionIterator {
@@ -58,6 +65,8 @@ class LookupOuterJoinOperator : public Operator {
 public:
     LookupOuterJoinOperator(DataTypes &probeOutputTypes, std::vector<int32_t> &probeOutputCols,
         std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables);
+    LookupOuterJoinOperator(DataTypes &probeOutputTypes, std::vector<int32_t> &probeOutputCols,
+        std::vector<int32_t> &buildOutputCols, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables, BuildSide buildSide);
     ~LookupOuterJoinOperator() override;
     int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
     int32_t GetOutput(omniruntime::vec::VectorBatch **outputVecBatch) override;
@@ -83,6 +92,7 @@ private:
     bool isPrepareTotalVisitedCounts = false;
     std::vector<uint32_t> hashTableIndexes;
     std::vector<std::pair<uint32_t, uint32_t>> addresses;
+    BuildSide buildSide;
 
     bool HasNext()
     {
