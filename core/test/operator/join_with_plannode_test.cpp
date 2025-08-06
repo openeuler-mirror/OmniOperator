@@ -179,6 +179,8 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestFullEqualityJoinWithOneBuildOp)
     vectorBatch->Append(expectedVec3);
     vectorBatch->Get(0)->SetNull(0);
     vectorBatch->Get(1)->SetNull(0);
+    BaseVector **pVectorAppend = appendOutput->GetVectors();
+    std::rotate(pVectorAppend, pVectorAppend + 2, pVectorAppend + appendOutput->GetVectorCount());
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(appendOutput, vectorBatch));
 
     delete leftKey;
