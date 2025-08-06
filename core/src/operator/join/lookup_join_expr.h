@@ -32,7 +32,7 @@ public:
         int32_t probeOutputColsCount, const std::vector<omniruntime::expressions::Expr *> &probeHashKeys,
         int32_t probeHashKeysCount, int32_t *buildOutputCols, int32_t buildOutputColsCount,
         const DataTypes &buildOutputTypes, int64_t hashBuilderFactoryAddr,
-        Expr *filterExpr, bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig);
+        Expr *filterExpr, bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig, int32_t *outputList = nullptr);
 
     ~LookupJoinWithExprOperatorFactory() override;
 

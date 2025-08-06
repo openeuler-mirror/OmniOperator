@@ -37,7 +37,7 @@ HashBuilderOperatorFactory::HashBuilderOperatorFactory(JoinType joinType, BuildS
         || (joinType == OMNI_JOIN_TYPE_RIGHT && buildSide == OMNI_BUILD_RIGHT)) {
         hashTablesVariants = InitVariant<RowRefListWithFlags>(buildHashColsCount, operatorCount, joinType, buildSide);
     } else {
-        hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType);
+        hashTablesVariants = InitVariant<RowRefList>(buildHashColsCount, operatorCount, joinType, buildSide);
     }
 }
 

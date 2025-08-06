@@ -397,9 +397,9 @@ public class OmniHashJoinWithExprOperatorsTest {
         VecBatch resultVecBatch = results.next();
         assertEquals(resultVecBatch.getRowCount(), 18);
         Object[][] expectedDatas = {{1L, 1L, 1L, 2L, 2L, 1L, 1L, 1L, 2L, 2L, 3L, 3L, 4L, 5L, 6L, 1L, 1L, 1L},
-                {79L, 79L, 79L, 79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L},
+                {78L, 78L, 82L, 78L, 82L, 78L, 78L, 82L, 78L, 82L, 78L, 65L, 78L, 78L, 78L, 78L, 78L, 82L},
                 {1L, 1L, 1L, 2L, 2L, 1L, 1L, 1L, 2L, 2L, 3L, 3L, 4L, 5L, 6L, 1L, 1L, 1L},
-                {78L, 78L, 82L, 78L, 82L, 78L, 78L, 82L, 78L, 82L, 78L, 65L, 78L, 78L, 78L, 78L, 78L, 82L}};
+                {79L, 79L, 79L, 79L, 79L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L, 70L}};
         assertVecBatchEqualsIgnoreOrder(resultVecBatch, expectedDatas);
         Iterator<VecBatch> appendResults = lookupOuterJoinOperator.getOutput();
         VecBatch appendBatch = appendResults.next();

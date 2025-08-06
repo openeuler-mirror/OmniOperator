@@ -44,8 +44,16 @@ std::tuple<std::shared_ptr<const HashJoinNode>, FieldExpr *, FieldExpr *> Constr
 
     DataTypes probeTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
     DataTypes buildTypes(std::vector<DataTypePtr>({ LongType(), LongType() }));
+    std::vector<omniruntime::expressions::Expr*> partitionKeys;
+    int index = 0;
+    for (; index < probeTypes.GetSize(); index++) {
+        partitionKeys.push_back(new FieldExpr(index, probeTypes.GetType(index)));
+    }
+    for (; index < buildTypes.GetSize() + probeTypes.GetSize(); index++) {
+        partitionKeys.push_back(new FieldExpr(index, buildTypes.GetType(index - probeTypes.GetSize())));
+    }
 
-    return {std::make_shared<const HashJoinNode>("0", joinType, BuildSide::OMNI_BUILD_LEFT, nullAware, isShuffle, leftKeys, rightKeys, filter, nullptr, nullptr, probeTypes.Instance(), buildTypes.Instance()), leftKey, rightKey};
+    return {std::make_shared<const HashJoinNode>("0", joinType, BuildSide::OMNI_BUILD_LEFT, nullAware, isShuffle, leftKeys, rightKeys, filter, nullptr, nullptr, probeTypes.Instance(), buildTypes.Instance(), partitionKeys), leftKey, rightKey};
 }
 
 VectorBatch *ConstructSimpleBuildVectorBatch()
@@ -116,6 +124,8 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestInnerEqualityJoinWithOneBuildOp)
     lookupJoinOperator->GetOutput(&outputVecBatch);
 
     VectorBatch *expectVecBatch = ConstructSimpleExpectedVectorBatch();
+    BaseVector **pVector = outputVecBatch->GetVectors();
+    std::rotate(pVector, pVector + 2, pVector + outputVecBatch->GetVectorCount());
     EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 
@@ -147,6 +157,8 @@ TEST(NativeOmniJoinWithPlanNodeTest, TestFullEqualityJoinWithOneBuildOp)
     lookupJoinWrapperOperator->GetOutput(&outputVecBatch);
 
     VectorBatch *expectVecBatch = ConstructSimpleExpectedVectorBatch();
+    BaseVector **pVector = outputVecBatch->GetVectors();
+    std::rotate(pVector, pVector + 2, pVector + outputVecBatch->GetVectorCount());
     EXPECT_EQ(outputVecBatch->GetRowCount(), expectVecBatch->GetRowCount());
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectVecBatch));
 

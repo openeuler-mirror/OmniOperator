@@ -874,7 +874,8 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinAndBuildLeft)
     lookupJoinOperator->AddInput(probeVecBatch);
     VectorBatch *outputVecBatch = nullptr;
     lookupJoinOperator->GetOutput(&outputVecBatch);
-
+	BaseVector **pVector = outputVecBatch->GetVectors();
+	std::rotate(pVector, pVector + 2, pVector + outputVecBatch->GetVectorCount());
     const int32_t expectedDataSize = 2;
     DataTypes expectedTypes(std::vector<DataTypePtr>({ LongType(), LongType(), LongType(), LongType() }));
     int64_t expectedDatas[4][expectedDataSize] = {

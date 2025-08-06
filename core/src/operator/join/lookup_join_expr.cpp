@@ -27,32 +27,112 @@ LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLook
     return operatorFactory;
 }
 
-LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
-    std::shared_ptr<const HashJoinNode> planNode, HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory,
-    const config::QueryConfig &queryConfig)
+void setOutputColsExpr(std::shared_ptr<const HashJoinNode> planNode,
+                       std::vector<int32_t> &buildOutputCols,
+                       std::vector<int32_t> &probeOutputCols,
+                       int32_t probeOutputColsCount, int32_t buildOutputColsCount)
 {
-    auto buildOutputTypes = planNode->RightOutputType();
-    auto buildOutputColsCount = buildOutputTypes->GetSize();
-    if (planNode->IsLeftSemi() || planNode->IsLeftAnti()) {
-        buildOutputColsCount = 0;
-    } else if (planNode->IsExistence()) {
-        buildOutputColsCount = 1;
-        buildOutputTypes = std::make_shared<DataTypes>(DataTypes({BooleanType()}));
-    }
-    std::vector<int32_t> buildOutputCols;
+    auto partitionKeys = planNode->PartitionKeys();
     if (planNode->IsExistence()) {
         buildOutputCols.emplace_back(1);
+    }
+    if (planNode->IsBuildRight() && !partitionKeys.empty()) {
+        for (auto &partitionKey : partitionKeys) {
+            auto x = dynamic_cast<FieldExpr *>(partitionKey);
+            if (x->colVal >= probeOutputColsCount) {
+                buildOutputCols.emplace_back(x->colVal - probeOutputColsCount);
+            } else {
+                probeOutputCols.emplace_back(x->colVal);
+            }
+        }
+    } else if (!partitionKeys.empty()) {
+        for (auto &partitionKey : partitionKeys) {
+            auto x = dynamic_cast<FieldExpr *>(partitionKey);
+            if (x->colVal < buildOutputColsCount) {
+                buildOutputCols.emplace_back(x->colVal);
+            } else {
+                probeOutputCols.emplace_back(x->colVal - buildOutputColsCount);
+            }
+        }
     } else {
         for (size_t index = 0; index < buildOutputColsCount; index++) {
             buildOutputCols.emplace_back(index);
         }
+        for (size_t index = 0; index < probeOutputColsCount; index++) {
+            probeOutputCols.emplace_back(index);
+        }
+    }
+}
+
+void getOutputList(std::shared_ptr<const HashJoinNode> planNode,
+                   std::vector<int32_t> &buildOutputCols,
+                   std::vector<int32_t> &probeOutputCols,
+                   std::vector<int32_t> &outputList)
+{
+    auto keys = planNode->PartitionKeys();
+    auto probeIndex = 0;
+    int frontSize;
+    int lastSize;
+    if (planNode->IsBuildRight()) {
+        frontSize = planNode->LeftOutputType()->GetSize();
+        lastSize = planNode->RightOutputType()->GetSize();
+    } else {
+        frontSize = planNode->RightOutputType()->GetSize();
+        lastSize = planNode->LeftOutputType()->GetSize();
+    }
+    auto buildIndex = probeOutputCols.size();
+    for (auto key : keys) {
+        for (int i = 0; i < frontSize; i++) {
+            if (dynamic_cast<FieldExpr *>(key)->colVal == i) {
+                outputList.push_back(probeIndex);
+                probeIndex++;
+                break;
+            }
+        }
+        for (int i = 0; i < lastSize; i++) {
+            if (dynamic_cast<FieldExpr *>(key)->colVal == i + frontSize) {
+                outputList.push_back(buildIndex);
+                buildIndex++;
+                break;
+            }
+        }
+    }
+}
+
+LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(
+    std::shared_ptr<const HashJoinNode> planNode, HashBuilderWithExprOperatorFactory* hashBuilderOperatorFactory,
+    const config::QueryConfig &queryConfig)
+{
+    auto buildTypes = planNode->RightOutputType();
+    auto buildOutputColsCount = buildTypes->GetSize();
+    if (planNode->IsLeftSemi() || planNode->IsLeftAnti()) {
+        buildOutputColsCount = 0;
+    } else if (planNode->IsExistence()) {
+        buildOutputColsCount = 1;
+        buildTypes = std::make_shared<DataTypes>(DataTypes({BooleanType()}));
     }
 
-    auto probeOutputTypes = planNode->LeftOutputType();
-    auto probeOutputColsCount = probeOutputTypes->GetSize();
+    std::vector<int32_t> buildOutputCols;
+    auto probeTypes = planNode->LeftOutputType();
+    auto probeOutputColsCount = probeTypes->GetSize();
     std::vector<int32_t> probeOutputCols;
-    for (size_t index = 0; index < probeOutputColsCount; index++) {
-        probeOutputCols.emplace_back(index);
+
+    setOutputColsExpr(planNode, buildOutputCols, probeOutputCols, probeOutputColsCount, buildOutputColsCount);
+
+    std::vector<int32_t> outputList;
+
+    if (planNode->IsBuildRight()) {
+        getOutputList(planNode, buildOutputCols, probeOutputCols, outputList);
+    } else {
+        getOutputList(planNode, probeOutputCols, buildOutputCols, outputList);
+    }
+
+    if (!planNode->IsExistence()) {
+        std::vector<std::shared_ptr<DataType>> outType;
+        for (auto col:buildOutputCols) {
+            outType.push_back(buildTypes->GetType(col));
+        }
+        buildTypes = std::make_shared<DataTypes>(outType);
     }
 
     auto probeHashCols = planNode->LeftKeys();
@@ -65,9 +145,9 @@ LookupJoinWithExprOperatorFactory *LookupJoinWithExprOperatorFactory::CreateLook
                           ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                           : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
 
-    auto pLookupJoinWithExprOperatorFactory = new LookupJoinWithExprOperatorFactory(*probeOutputTypes, probeOutputCols.data(), probeOutputColsCount,
-        probeHashCols, probeHashColsCount, buildOutputCols.data(), buildOutputColsCount, *buildOutputTypes,
-    reinterpret_cast<int64_t>(hashBuilderOperatorFactory), filter, isShuffle, overflowConfig);
+    auto pLookupJoinWithExprOperatorFactory = new LookupJoinWithExprOperatorFactory(*probeTypes, probeOutputCols.data(), probeOutputCols.size(),
+        probeHashCols, probeHashColsCount, buildOutputCols.data(), buildOutputCols.size(), *buildTypes,
+    reinterpret_cast<int64_t>(hashBuilderOperatorFactory), filter, isShuffle, overflowConfig, outputList.data());
 
     delete overflowConfig;
     overflowConfig = nullptr;
@@ -78,7 +158,8 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
     int32_t *probeOutputCols, int32_t probeOutputColsCount,
     const std::vector<omniruntime::expressions::Expr *> &probeHashKeys, int32_t probeHashKeysCount,
     int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
-    int64_t hashBuilderFactoryAddr, Expr *filterExpr, bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig)
+    int64_t hashBuilderFactoryAddr, Expr *filterExpr, bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig,
+    int32_t *outputList)
 {
     std::vector<DataTypePtr> newProbeTypes;
     OperatorUtil::CreateProjections(probeTypes, probeHashKeys, newProbeTypes, this->projections, this->probeHashCols,
@@ -90,7 +171,7 @@ LookupJoinWithExprOperatorFactory::LookupJoinWithExprOperatorFactory(const DataT
         LookupJoinOperatorFactory::CreateLookupJoinOperatorFactory(*(this->probeTypes), probeOutputCols,
         probeOutputColsCount, this->probeHashCols.data(), probeHashKeysCount, buildOutputCols, buildOutputColsCount,
         std::move(buildOutputTypes), (int64_t)(hashBuilderWithExprOperatorFactory->GetHashBuilderOperatorFactory()),
-        filterExpr, probeTypes.GetSize(), isShuffleExchangeBuildPlan, overflowConfig);
+        filterExpr, probeTypes.GetSize(), isShuffleExchangeBuildPlan, overflowConfig, outputList);
 }
 
 LookupJoinWithExprOperatorFactory::~LookupJoinWithExprOperatorFactory()

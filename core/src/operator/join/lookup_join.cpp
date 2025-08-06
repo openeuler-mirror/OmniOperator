@@ -18,16 +18,23 @@ namespace omniruntime::op {
 
 void LookupJoinOperatorFactory::CommonInitActions(const type::DataTypes &probeTypes, int32_t *probeOutputCols,
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
-    int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes)
+    int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, int32_t *outputList)
 {
     int32_t tempProbeHashColTypes[probeHashColsCount];
     auto probeTypeIds = probeTypes.GetIds();
     for (int32_t i = 0; i < probeHashColsCount; i++) {
         tempProbeHashColTypes[i] = probeTypeIds[probeHashCols[i]];
     }
-    this->probeOutputCols = std::vector<int>(probeOutputCols, probeOutputCols + probeOutputColsCount);
+    if (probeOutputCols != nullptr) {
+    	this->probeOutputCols = std::vector<int>(probeOutputCols, probeOutputCols + probeOutputColsCount);
+    }
     this->probeHashCols = std::vector<int>(probeHashCols, probeHashCols + probeHashColsCount);
-    this->buildOutputCols = std::vector<int>(buildOutputCols, buildOutputCols + buildOutputColsCount);
+    if (buildOutputCols != nullptr) {
+        this->buildOutputCols = std::vector<int>(buildOutputCols, buildOutputCols + buildOutputColsCount);
+    }
+    if (outputList != nullptr) {
+    	this->outputList = std::vector<int>(outputList, outputList + buildOutputColsCount + probeOutputColsCount);
+    }
     this->probeHashColTypes = std::vector<int32_t>(tempProbeHashColTypes, tempProbeHashColTypes + probeHashColsCount);
     this->rowSize = OperatorUtil::GetOutputRowSize(probeTypes.Get(), probeOutputCols, probeOutputColsCount);
     if (buildOutputColsCount != 0) {
@@ -55,7 +62,7 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
     int32_t probeOutputColsCount, int32_t *probeHashCols, int32_t probeHashColsCount, int32_t *buildOutputCols,
     int32_t buildOutputColsCount, const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables,
     omniruntime::expressions::Expr *filterExpr, int32_t originalProbeColsCount,
-    bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig)
+    bool isShuffleExchangeBuildPlan, OverflowConfig *overflowConfig, int32_t *outputList)
     : probeTypes(probeTypes),
       buildOutputTypes(buildOutputTypes),
       hashTables(hashTables),
@@ -63,7 +70,7 @@ LookupJoinOperatorFactory::LookupJoinOperatorFactory(const type::DataTypes &prob
       originalProbeColsCount(originalProbeColsCount)
 {
     CommonInitActions(probeTypes, probeOutputCols, probeOutputColsCount, probeHashCols, probeHashColsCount,
-        buildOutputCols, buildOutputColsCount, buildOutputTypes);
+        buildOutputCols, buildOutputColsCount, buildOutputTypes, outputList);
     std::visit([&](auto &&arg) { arg.SetProbeTypes(&(this->probeTypes)); }, *hashTables);
     JoinFilterCodeGen(filterExpr, overflowConfig);
 }
@@ -92,13 +99,13 @@ LookupJoinOperatorFactory *LookupJoinOperatorFactory::CreateLookupJoinOperatorFa
     int32_t *buildOutputCols, int32_t buildOutputColsCount, const DataTypes &buildOutputTypes,
     int64_t hashBuilderFactoryAddr, omniruntime::expressions::Expr *filterExpr,
     int32_t originalProbeColsCount, bool isShuffleExchangeBuildPlan,
-    OverflowConfig *overflowConfig)
+    OverflowConfig *overflowConfig, int32_t *outputList)
 {
     auto hashBuilderFactory = reinterpret_cast<HashBuilderOperatorFactory *>(hashBuilderFactoryAddr);
     auto pOperatorFactory = new LookupJoinOperatorFactory(probeTypes, probeOutputCols, probeOutputColsCount,
         probeHashCols, probeHashColsCount, buildOutputCols, buildOutputColsCount, buildOutputTypes,
         hashBuilderFactory->GetHashTablesVariants(), filterExpr,
-        originalProbeColsCount, isShuffleExchangeBuildPlan, overflowConfig);
+        originalProbeColsCount, isShuffleExchangeBuildPlan, overflowConfig, outputList);
     return pOperatorFactory;
 }
 
@@ -161,7 +168,7 @@ Operator *LookupJoinOperatorFactory::CreateOperator()
 {
     auto pLookupJoinOperator = new LookupJoinOperator(probeTypes, probeOutputCols, probeHashCols, probeHashColTypes,
         buildOutputCols, buildOutputTypes, hashTables, simpleFilter,
-        originalProbeColsCount, rowSize, isShuffleExchangeBuildPlan);
+        originalProbeColsCount, rowSize, isShuffleExchangeBuildPlan, outputList);
     return pLookupJoinOperator;
 }
 
@@ -234,6 +241,18 @@ LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::v
             this->buildFilterTypeIds[i] = buildTypeIds[this->buildFilterCols[i] - originalProbeColsCount];
         }
     }
+}
+
+LookupJoinOperator::LookupJoinOperator(const type::DataTypes &probeTypes, std::vector<int32_t> &probeOutputCols,
+    std::vector<int32_t> &probeHashCols, std::vector<int32_t> &probeHashColTypes, std::vector<int32_t> &buildOutputCols,
+    const type::DataTypes &buildOutputTypes, HashTableVariants *hashTables, SimpleFilter *simpleFilter,
+    int32_t originalProbeColsCount, int32_t outputRowSize, bool isShuffleExchangeBuildPlan, std::vector<int32_t> &outputList)
+    : LookupJoinOperator(probeTypes, probeOutputCols, probeHashCols, probeHashColTypes, buildOutputCols, buildOutputTypes,
+    hashTables, simpleFilter, originalProbeColsCount, outputRowSize, isShuffleExchangeBuildPlan)
+{
+	this->outputBuilder = std::make_unique<LookupJoinOutputBuilder>(probeOutputCols, probeOutputTypes.GetIds(),
+																	buildOutputCols, buildOutputTypes.GetIds(),
+																    outputRowSize, outputList);
 }
 
 LookupJoinOperator::~LookupJoinOperator()
@@ -442,7 +461,7 @@ int32_t LookupJoinOperator::GetOutput(VectorBatch **outputVecBatch)
 
     // handle the output
     if (!outputBuilder->IsEmpty()) {
-        outputBuilder->BuildOutput(probeOutputColumns, joinType, isShuffleExchangeBuildPlan, outputVecBatch);
+        outputBuilder->BuildOutput(probeOutputColumns, joinType, isShuffleExchangeBuildPlan, outputVecBatch, buildSide);
     }
     if (curProbePosition >= inputRowCount && outputBuilder->IsEmpty()) {
         VectorHelper::FreeVecBatch(curInputBatch);
@@ -1621,6 +1640,21 @@ LookupJoinOutputBuilder::LookupJoinOutputBuilder(std::vector<int32_t> &probeOutp
     }
 }
 
+LookupJoinOutputBuilder::LookupJoinOutputBuilder(std::vector<int32_t> &probeOutputCols, const int32_t *probeOutputTypes,
+    std::vector<int32_t> &buildOutputCols, const int32_t *buildOutputTypes, int32_t outputRowSize, std::vector<int32_t> &outputList)
+    : probeOutputCols(probeOutputCols),
+      probeOutputTypes(probeOutputTypes),
+      buildOutputCols(buildOutputCols),
+      buildOutputTypes(buildOutputTypes),
+      outputList(outputList)
+{
+    // if the probe and build do not have output columns, the row size is setted to DEFAULT_ROW_SIZE
+    this->maxRowCount = OperatorUtil::GetMaxRowCount((outputRowSize != 0) ? outputRowSize : DEFAULT_ROW_SIZE);
+    if (!probeOutputCols.empty() || !buildOutputCols.empty()) {
+        probeBuildIndex.reserve(maxRowCount);
+    }
+}
+
 void NO_INLINE LookupJoinOutputBuilder::AppendRow(int32_t probePosition, BaseVector ***array, uint64_t address)
 {
     probeRowCount++;
@@ -1893,7 +1927,8 @@ void LookupJoinOutputBuilder::BuildOutput(
     BaseVector **probeOutputColumns,
     JoinType joinType,
     bool isShuffleExchangeBuildPlan,
-    VectorBatch **outputVecBatch)
+    VectorBatch **outputVecBatch,
+    BuildSide buildSide)
 {
     auto rowCount = std::min(probeRowCount, maxRowCount);
     auto output = std::make_unique<VectorBatch>(rowCount);
@@ -1922,6 +1957,29 @@ void LookupJoinOutputBuilder::BuildOutput(
                 ConstructBuildColumns<false, false>(outputPtr, rowCount);
             }
         }
+    }
+    if (buildSide == OMNI_BUILD_LEFT) {
+    	BaseVector **pVector = output->GetVectors();
+    	std::rotate(pVector, pVector + probeOutputCols.size(), pVector + output->GetVectorCount());
+    }
+    std::vector<int32_t> tmpVec(outputList);
+    if (!tmpVec.empty()) {
+    	BaseVector **pVector = output->GetVectors();
+    	for (int i =0; i < tmpVec.size(); i++) {
+    		if (tmpVec[i] != i) {
+    			auto temp = pVector[i];
+    			int src = tmpVec[i];
+    			int dst = i;
+    			do {
+    				pVector[dst] = pVector[src];
+    				tmpVec[dst] = dst;
+    				dst = src;
+    				src = tmpVec[dst];
+    			} while (src != i);
+    			pVector[dst] = temp;
+    			tmpVec[dst] = dst;
+    		}
+    	}
     }
     probeRowOffset += rowCount;
     probeRowCount -= rowCount;
