@@ -981,6 +981,8 @@ TEST(NativeOmniJoinTest, TestLeftEqualityJoinAndBuildLeftWithArray)
             {11, 12, 10}};
     auto *expectedVecbatch = CreateVectorBatch(expectedTypes, expectedDataSize, expectedDatas[0], expectedDatas[1],
                                                expectedDatas[2], expectedDatas[3]);
+    BaseVector **pVector = outputVecBatch->GetVectors();
+    std::rotate(pVector, pVector + 2, pVector + outputVecBatch->GetVectorCount());
     EXPECT_TRUE(VecBatchMatchIgnoreOrder(outputVecBatch, expectedVecbatch));
 
     VectorBatch *appendOutput;
