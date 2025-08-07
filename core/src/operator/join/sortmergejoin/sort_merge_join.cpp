@@ -215,6 +215,8 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     resultCode = SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH), resultCode);
     if (returnVectorBatch == nullptr) {
         joinResultBuilder->Finish();
+        joinResultBuilder->Clear();
+        SetStatus(OMNI_STATUS_FINISHED);
     } else {
         resultCode = SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
     }
