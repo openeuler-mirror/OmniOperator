@@ -153,9 +153,7 @@ public:
 
     ~FilterNode() override = default;
 
-    const DataTypesPtr &OutputType() const override {
-        return outputType;
-    }
+    const DataTypesPtr &OutputType() const override { return outputType; }
 
     const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
