@@ -137,23 +137,37 @@ private:
 
 class FilterNode : public PlanNode {
 public:
-    FilterNode(const PlanNodeId &id, ExprPtr filter, PlanNodePtr source)
-        : PlanNode(id), sources{std::move(source)}, filter(std::move(filter))
-    {}
+    FilterNode(const PlanNodeId &id, ExprPtr filter, PlanNodePtr source, const std::vector<ExprPtr> &projectList)
+        : PlanNode(id), sources{std::move(source)}, filter(std::move(filter)), projectList(projectList)
+    {
+        std::vector<DataTypePtr> joinInputTypes;
+        if (!projectList.empty()) {
+            for (int i = 0; i < projectList.size(); i++) {
+                joinInputTypes.push_back(projectList[i]->dataType);
+            }
+            this->outputType = std::make_shared<DataTypes>(std::move(joinInputTypes));
+        } else {
+            this->outputType = sources[0]->OutputType();
+        }
+    }
 
     ~FilterNode() override = default;
 
-    const DataTypesPtr &OutputType() const override { return sources[0]->OutputType(); }
+    const DataTypesPtr &OutputType() const override { return outputType; }
 
     const std::vector<PlanNodePtr> &Sources() const override { return sources; }
 
     ExprPtr GetFilterExpr() const { return filter; }
+
+    const std::vector<ExprPtr> &ProjectList() const {return projectList; }
 
     std::string_view Name() const override { return "Filter"; }
 
 private:
     const std::vector<PlanNodePtr> sources;
     ExprPtr filter;
+    const std::vector<ExprPtr> projectList;
+    DataTypesPtr outputType;
 };
 
 class ProjectNode : public PlanNode {

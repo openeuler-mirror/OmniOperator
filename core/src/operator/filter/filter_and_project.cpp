@@ -90,10 +90,14 @@ OperatorFactory *CreateFilterOperatorFactory(
 {
     auto filterExpr = filterNode->GetFilterExpr();
     std::vector<Expr *> projections;
-    const auto &sourceTypes = *(filterNode->OutputType());
+    const auto &sourceTypes = *(filterNode->Sources()[0]->OutputType());
     int32_t idx = 0;
-    for (const auto &item : sourceTypes.Get()) {
-        projections.push_back(new FieldExpr(idx++, item));
+    if (filterNode->ProjectList().empty()) {
+        for (const auto &item : sourceTypes.Get()) {
+            projections.push_back(new FieldExpr(idx++, item));
+        }
+    } else {
+        projections = filterNode->ProjectList();
     }
     auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
                                                                  : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
