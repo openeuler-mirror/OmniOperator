@@ -55,6 +55,8 @@ public:
 
     /// Aggregation spilling flag, only applies if "spill_enabled" flag is set.
     static constexpr const char *kAggregationSpillEnabled = "aggregation_spill_enabled";
+    //
+    static constexpr const char *kMemFraction = "mem_fraction";
 
     /// Join spilling flag, only applies if "spill_enabled" flag is set.
     static constexpr const char *kJoinSpillEnabled = "join_spill_enabled";
@@ -291,6 +293,12 @@ public:
     {
         constexpr int32_t kDefaultPct = 5;
         return get<int32_t>(kMinSpillableReservationPct, kDefaultPct);
+    }
+
+    int32_t memFractionPct() const
+    {
+        constexpr int32_t kDefaultPct = 10;
+        return get<int32_t>(kMemFraction, kDefaultPct);
     }
 
     int32_t spillableReservationGrowthPct() const
