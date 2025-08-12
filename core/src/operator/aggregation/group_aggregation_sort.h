@@ -24,6 +24,7 @@ public:
     void ResizeKvVector(size_t size)
     {
         kvVec.resize(size);
+        kvString.resize(size);
         groupCount = size;
     }
 
@@ -39,15 +40,16 @@ public:
     void ParseHashMapToVector(const T &key, AggregateState *value, size_t groupIndex)
     {
         auto &kv = kvVec[groupIndex];
-        std::string s = std::to_string(key);
-        kv.keyAddr = const_cast<char *>(s.c_str());
-        kv.keyLen = sizeof(key);
+        kvString[groupIndex] = std::to_string(key);
+        kv.keyAddr = const_cast<char *>(kvString[groupIndex].c_str());
+        kv.keyLen = kvString[groupIndex].size();
         kv.value = value;
     }
 
     void ClearVector()
     {
         kvVec.clear();
+        kvString.clear();
     }
 
     size_t GetRowCount()
@@ -65,6 +67,7 @@ public:
 private:
     std::vector<std::unique_ptr<Aggregator>> &aggregators;
     std::vector<omniruntime::op::KeyValue> kvVec;
+    std::vector<std::string> kvString;
     std::vector<AggregateState *> groupStates;
     size_t groupCount = 0;
     std::vector<int32_t> aggVectorCounts;

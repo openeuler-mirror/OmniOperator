@@ -1262,22 +1262,19 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithoutAgg(VectorBatch *o
         auto currentRowIndex = spillMerger->CurrentRowIndex();
         if (nextKeyIsNew) {
             // construct the final output
+            auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(0));
+            auto key = keyVector->GetValue(currentRowIndex);
+            StringRef keyRef(const_cast<char *>(key.data()), key.size());
             if (serialize != nullptr) {
-                auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(0));
-                auto key = keyVector->GetValue(currentRowIndex);
-                StringRef keyRef(const_cast<char *>(key.data()), key.size());
                 serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, rowIdx);
             } else if (fixedInt32 != nullptr) {
-                auto keyVector = static_cast<Vector<int32_t> *>(currentVecBatch->Get(0));
-                auto key = keyVector->GetValue(currentRowIndex);
+                auto key = static_cast<int32_t>(std::stoi(keyRef.ToString()));
                 fixedInt32->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
             } else if (fixedInt64 != nullptr) {
-                auto keyVector = static_cast<Vector<int64_t> *>(currentVecBatch->Get(0));
-                auto key = keyVector->GetValue(currentRowIndex);
+                auto key = static_cast<int64_t>(std::stoi(keyRef.ToString()));
                 fixedInt64->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
             } else if (fixedInt16 != nullptr) {
-                auto keyVector = static_cast<Vector<int16_t> *>(currentVecBatch->Get(0));
-                auto key = keyVector->GetValue(currentRowIndex);
+                auto key = static_cast<int16_t>(std::stoi(keyRef.ToString()));
                 fixedInt16->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
             }
             rowIdx++;
@@ -1341,22 +1338,19 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
         auto currentRowIndex = spillMerger->CurrentRowIndex(isLastRow);
         if (nextKeyIsNew) {
             // this is a new key
+            auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(0));
+            auto key = keyVector->GetValue(currentRowIndex);
+            StringRef keyRef(const_cast<char *>(key.data()), key.size());
             if (serialize != nullptr) {
-                auto keyVector = static_cast<Vector<LargeStringContainer<std::string_view>> *>(currentVecBatch->Get(0));
-                auto key = keyVector->GetValue(currentRowIndex);
-                StringRef keyRef(const_cast<char *>(key.data()), key.size());
                 serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, rowIdx);
             } else if (fixedInt32 != nullptr) {
-                auto keyVector = static_cast<Vector<int32_t> *>(currentVecBatch->Get(0));
-                auto key = keyVector->GetValue(currentRowIndex);
+                auto key = static_cast<int32_t>(std::stoi(keyRef.ToString()));
                 fixedInt32->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
             } else if (fixedInt64 != nullptr) {
-                auto keyVector = static_cast<Vector<int64_t> *>(currentVecBatch->Get(0));
-                auto key = keyVector->GetValue(currentRowIndex);
+                auto key = static_cast<int64_t>(std::stoi(keyRef.ToString()));
                 fixedInt64->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
             } else if (fixedInt16 != nullptr) {
-                auto keyVector = static_cast<Vector<int16_t> *>(currentVecBatch->Get(0));
-                auto key = keyVector->GetValue(currentRowIndex);
+                auto key = static_cast<int16_t>(std::stoi(keyRef.ToString()));
                 fixedInt16->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
             }
 
