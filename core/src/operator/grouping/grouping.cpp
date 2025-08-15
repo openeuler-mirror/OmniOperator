@@ -30,7 +30,7 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
                           : std::make_shared<OverflowConfig>(OVERFLOW_CONFIG_EXCEPTION);
     aggFactor_ = CreateOperatorFactory(aggPlanNode_, queryConfig_);
     int32_t index = 0;
-    auto nullSizeEnd = projections.size() - 1;
+    auto nullSizeEnd = aggPlanNode_->GetGroupByNum() - 1;
     auto nullSizeFrond = nullSizeEnd - 1;
     aggOperators_.resize(projections.size());
     residualAggFactor_ = CreateResidualOperatorFactory(aggPlanNode_, residualOutputType, nullSizeEnd + 1, queryConfig_);
