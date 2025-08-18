@@ -292,7 +292,8 @@ std::vector<VectorSerializer> vectorSerializerCenter = {
     nullptr,                                        // OMNI_INTERVAL_DAY_TIME
     SerializeValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
     SerializeValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr                                         // OMNI_CONTAINER,
+    nullptr,                                        // OMNI_CONTAINER,
+    SerializeValueIntoArena<type::OMNI_BYTE>        // OMNI_BYTE
 };
 
 std::vector<VectorSerializer> dicVectorSerializerCenter = {
@@ -313,7 +314,8 @@ std::vector<VectorSerializer> dicVectorSerializerCenter = {
     nullptr,                                                  // OMNI_INTERVAL_DAY_TIME
     SerializeDictionaryValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
     SerializeDictionaryValueIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr                                                   // OMNI_CONTAINER,
+    nullptr,                                                  // OMNI_CONTAINER,
+    SerializeDictionaryValueIntoArena<type::OMNI_BYTE>        // OMNI_BYTE
 };
 
 std::vector<VectorDeSerializer> vectorDeSerializerCenter = {
@@ -334,7 +336,8 @@ std::vector<VectorDeSerializer> vectorDeSerializerCenter = {
     nullptr,                                       // OMNI_INTERVAL_DAY_TIME
     DeserializeFromPointer<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
     DeserializeFromPointer<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr                                        // OMNI_CONTAINER,
+    nullptr,                                       // OMNI_CONTAINER,
+    DeserializeFromPointer<type::OMNI_BYTE>        // OMNI_BYTE
 };
 
 template <typename RawDataType>
@@ -445,7 +448,8 @@ std::vector<VectorSerializerIgnoreNull> vectorSerializerIgnoreNullCenter = {
     nullptr,                                                  // OMNI_INTERVAL_DAY_TIME
     SerializeValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
     SerializeValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr                                                   // OMNI_CONTAINER,
+    nullptr,                                                  // OMNI_CONTAINER,
+    SerializeValueIgnoreNullIntoArena<type::OMNI_BYTE>        // OMNI_BYTE
 };
 
 std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter = {
@@ -466,7 +470,8 @@ std::vector<VectorSerializerIgnoreNull> dicVectorSerializerIgnoreNullCenter = {
     nullptr,                                                            // OMNI_INTERVAL_DAY_TIME
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_VARCHAR
     SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_VARCHAR>,    // OMNI_CHAR,
-    nullptr                                                             // OMNI_CONTAINER,
+    nullptr,                                                            // OMNI_CONTAINER,
+    SerializeDictionaryValueIgnoreNullIntoArena<type::OMNI_BYTE>        // OMNI_BYTE
 };
 
 template <typename RawDataType>
@@ -578,7 +583,8 @@ std::vector<FixedKeyVectorSerializerIgnoreNull> vectorSerializerFixedKeysIgnoreN
     nullptr,                                                      // OMNI_INTERVAL_DAY_TIME
     nullptr,                                                      // OMNI_VARCHAR
     nullptr,                                                      // OMNI_CHAR,
-    nullptr                                                       // OMNI_CONTAINER,
+    nullptr,                                                      // OMNI_CONTAINER,
+    SerializeFixedKeysIgnoreNullIntoArena<type::OMNI_BYTE>        // OMNI_BYTE
 };
 
 std::vector<FixedKeyVectorSerializerIgnoreNull> dicVectorSerializerFixedKeysIgnoreNullCenter = {
@@ -599,7 +605,8 @@ std::vector<FixedKeyVectorSerializerIgnoreNull> dicVectorSerializerFixedKeysIgno
     nullptr,                                                                // OMNI_INTERVAL_DAY_TIME
     nullptr,                                                                // OMNI_VARCHAR
     nullptr,                                                                // OMNI_CHAR,
-    nullptr                                                                 // OMNI_CONTAINER,
+    nullptr,                                                                // OMNI_CONTAINER,
+    SerializeDictionaryFixedKeysIgnoreNullIntoArena<type::OMNI_BYTE>        // OMNI_BYTE
 };
 
 std::vector<FixedKeyVectorSerializerIgnoreNullSimd> vectorSerializerFixedKeysIgnoreNullCenterSimd = {
@@ -616,11 +623,12 @@ std::vector<FixedKeyVectorSerializerIgnoreNullSimd> vectorSerializerFixedKeysIgn
     SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32
     SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64
     SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                                      // OMNI_INTERVAL_MONTHS
-    nullptr,                                                      // OMNI_INTERVAL_DAY_TIME
-    nullptr,                                                      // OMNI_VARCHAR
-    nullptr,                                                      // OMNI_CHAR,
-    nullptr                                                       // OMNI_CONTAINER,
+    nullptr,                                                          // OMNI_INTERVAL_MONTHS
+    nullptr,                                                          // OMNI_INTERVAL_DAY_TIME
+    nullptr,                                                          // OMNI_VARCHAR
+    nullptr,                                                          // OMNI_CHAR,
+    nullptr,                                                          // OMNI_CONTAINER,
+    SerializeFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BYTE>        // OMNI_BYTE
 };
 
 std::vector<FixedKeyVectorSerializerIgnoreNullSimd> dicVectorSerializerFixedKeysIgnoreNullCenterSimd = {
@@ -637,11 +645,12 @@ std::vector<FixedKeyVectorSerializerIgnoreNullSimd> dicVectorSerializerFixedKeys
     SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_INT>,        // OMNI_TIME32
     SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIME64
     SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_LONG>,       // OMNI_TIMESTAMP
-    nullptr,                                                                // OMNI_INTERVAL_MONTHS
-    nullptr,                                                                // OMNI_INTERVAL_DAY_TIME
-    nullptr,                                                                // OMNI_VARCHAR
-    nullptr,                                                                // OMNI_CHAR,
-    nullptr                                                                 // OMNI_CONTAINER,
+    nullptr,                                                                    // OMNI_INTERVAL_MONTHS
+    nullptr,                                                                    // OMNI_INTERVAL_DAY_TIME
+    nullptr,                                                                    // OMNI_VARCHAR
+    nullptr,                                                                    // OMNI_CHAR,
+    nullptr,                                                                    // OMNI_CONTAINER,
+    SerializeDictionaryFixedKeysIgnoreNullIntoArenaSimd<type::OMNI_BYTE>        // OMNI_BYTE
 };
 }
 }

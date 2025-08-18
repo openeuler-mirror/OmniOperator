@@ -25,6 +25,11 @@ using DecimalPartialResult = struct DecimalPartialResult {
 
 template <type::DataTypeId dataTypeId> struct AggNativeAndVectorType {};
 
+template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_BYTE> {
+    using type = int8_t;
+    using vector = Vector<type>;
+};
+
 template <> struct AggNativeAndVectorType<type::DataTypeId::OMNI_BOOLEAN> {
     using type = int8_t;
     using vector = Vector<type>;

@@ -207,6 +207,409 @@ TEST(FunctionTest, Abs)
     EXPECT_EQ(0, Abs<int64_t>(0));
 }
 
+TEST(FunctionTest, CastInt8ToInt64)
+{
+    int8_t test1 = 10;
+    int8_t test2 = -24;
+    int8_t test3 = 0;
+    int8_t test4 = std::numeric_limits<int8_t>::min();
+    int8_t test5 = std::numeric_limits<int8_t>::max();
+    int64_t baseline = 1;
+    auto result = CastInt8ToInt64(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, CastInt8ToInt64(result));
+
+    result = CastInt8ToInt64(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastInt8ToInt64(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, CastInt8ToInt64(result));
+
+    result = CastInt8ToInt64(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(std::numeric_limits<int8_t>::min(), result);
+
+    result = CastInt8ToInt64(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(std::numeric_limits<int8_t>::max(), result);
+}
+
+TEST(FunctionTest, CastInt8ToInt32)
+{
+    int8_t test1 = 10;
+    int8_t test2 = -24;
+    int8_t test3 = 0;
+    int8_t test4 = std::numeric_limits<int8_t>::min();
+    int8_t test5 = std::numeric_limits<int8_t>::max();
+    int32_t baseline = 1;
+    auto result = CastInt8ToInt32(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, CastInt8ToInt32(result));
+
+    result = CastInt8ToInt32(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastInt8ToInt32(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, CastInt8ToInt32(result));
+
+    result = CastInt8ToInt32(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(std::numeric_limits<int8_t>::min(), result);
+
+    result = CastInt8ToInt32(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(std::numeric_limits<int8_t>::max(), result);
+}
+
+TEST(FunctionTest, CastInt16ToInt64)
+{
+    int16_t test1 = 10;
+    int16_t test2 = -24;
+    int16_t test3 = 0;
+    int16_t test4 = std::numeric_limits<int16_t>::min();
+    int16_t test5 = std::numeric_limits<int16_t>::max();
+    int64_t baseline = 1;
+    auto result = CastInt16ToInt64(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, CastInt16ToInt64(result));
+
+    result = CastInt16ToInt64(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastInt16ToInt64(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, CastInt16ToInt64(result));
+
+    result = CastInt16ToInt64(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(std::numeric_limits<int16_t>::min(), result);
+
+    result = CastInt16ToInt64(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(std::numeric_limits<int16_t>::max(), result);
+}
+
+TEST(FunctionTest, CastInt16ToInt32)
+{
+    int16_t test1 = 10;
+    int16_t test2 = -24;
+    int16_t test3 = 0;
+    int16_t test4 = std::numeric_limits<int16_t>::min();
+    int16_t test5 = std::numeric_limits<int16_t>::max();
+    int32_t baseline = 1;
+    auto result = CastInt16ToInt32(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, CastInt16ToInt32(result));
+
+    result = CastInt16ToInt32(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastInt16ToInt32(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, CastInt16ToInt32(result));
+
+    result = CastInt16ToInt32(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(std::numeric_limits<int16_t>::min(), result);
+
+    result = CastInt16ToInt32(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(std::numeric_limits<int16_t>::max(), result);
+}
+
+
+TEST(FunctionTest, CastInt16ToDouble)
+{
+    int16_t test1 = 10;
+    int16_t test2 = -24;
+    int16_t test3 = 0;
+    int16_t test4 = std::numeric_limits<int16_t>::min();
+    int16_t test5 = std::numeric_limits<int16_t>::max();
+    double baseline = 11.13;
+    auto result = CastInt16ToDouble(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10.00, result);
+
+    result = CastInt16ToDouble(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24.00, result);
+
+    result = CastInt16ToDouble(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0.00, result);
+
+    result = CastInt16ToDouble(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(static_cast<double>(std::numeric_limits<int16_t>::min()), result);
+
+    result = CastInt16ToDouble(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(static_cast<double>(std::numeric_limits<int16_t>::max()), result);
+}
+
+TEST(FunctionTest, CastInt8ToDouble)
+{
+    int8_t test1 = 10;
+    int8_t test2 = -24;
+    int8_t test3 = 0;
+    int8_t test4 = std::numeric_limits<int8_t>::min();
+    int8_t test5 = std::numeric_limits<int8_t>::max();
+    double baseline = 11.13;
+    auto result = CastInt8ToDouble(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10.00, result);
+
+    result = CastInt8ToDouble(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24.00, result);
+
+    result = CastInt8ToDouble(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0.00, result);
+
+    result = CastInt8ToDouble(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(static_cast<double>(std::numeric_limits<int8_t>::min()), result);
+
+    result = CastInt8ToDouble(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(static_cast<double>(std::numeric_limits<int8_t>::max()), result);
+}
+
+TEST(FunctionTest, CastInt32ToInt16)
+{
+    int32_t test1 = 10;
+    int32_t test2 = -24;
+    int32_t test3 = 0;
+    int16_t baseline = 1;
+    auto result = CastInt32ToInt16(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, CastInt32ToInt16(result));
+
+    result = CastInt32ToInt16(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastInt32ToInt16(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, CastInt32ToInt16(result));
+}
+
+TEST(FunctionTest, CastInt32ToInt8)
+{
+    int32_t test1 = 10;
+    int32_t test2 = -24;
+    int32_t test3 = 0;
+    int8_t baseline = 1;
+    auto result = CastInt32ToInt8(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, CastInt32ToInt8(result));
+
+    result = CastInt32ToInt8(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastInt32ToInt8(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, CastInt32ToInt8(result));
+}
+
+TEST(FunctionTest, CastDoubleToInt16)
+{
+    double test1 = 10.00;
+    double test2 = -24.00;
+    double test3 = 0.0;
+    double test4 = 113.1313;
+    double test5 = -2000.989;
+    int16_t baseline = 1;
+    auto result = CastDoubleToInt16HalfUp(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, result);
+
+    result = CastDoubleToInt16HalfUp(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastDoubleToInt16HalfUp(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, result);
+
+    result = CastDoubleToInt16HalfUp(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(113, result);
+
+    result = CastDoubleToInt16HalfUp(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-2001, result);
+
+    result = CastDoubleToInt16Down(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(113, result);
+}
+
+TEST(FunctionTest, CastDoubleToInt8)
+{
+    double test1 = 10.00;
+    double test2 = -24.00;
+    double test3 = 0.0;
+    double test4 = 113.1313;
+    int8_t baseline = 1;
+    auto result = CastDoubleToInt8HalfUp(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, result);
+
+    result = CastDoubleToInt8HalfUp(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastDoubleToInt8HalfUp(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, result);
+
+    result = CastDoubleToInt8HalfUp(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(113, result);
+
+    result = CastDoubleToInt8Down(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(113, result);
+}
+
+TEST(FunctionTest, CastStringToInt16)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
+    std::string s = " 23423 ";
+    int16_t result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 23423);
+    s = "100123";
+    result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = "123.123";
+    result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 0);
+    s = "2147483648";
+    result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = "2a147483648";
+    result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = " -10078 ";
+    result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, -10078);
+    EXPECT_FALSE(context->HasError());
+    s = "2123123123147483648";
+    result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = "-2123123123147483648";
+    result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = "-2123123123147-483648";
+    result = CastStringToShort(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    delete context;
+}
+
+TEST(FunctionTest, CastStringToInt8)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+
+    std::string s = " 127 ";
+    int8_t result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 127);
+    s = "100123";
+    result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = "123.123";
+    result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, 0);
+    s = "2147483648";
+    result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = "2a147483648";
+    result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = " -78 ";
+    result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_EQ(result, -78);
+    context->ResetError();
+    s = "2123123123147483648";
+    result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = "-2123123123147483648";
+    result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    context->ResetError();
+    s = "-2123123123147-483648";
+    result = CastStringToByte(contextPtr, s.c_str(), static_cast<int32_t>(s.size()), false);
+    EXPECT_TRUE(context->HasError());
+    delete context;
+}
+
 TEST(FunctionTest, CastInt32ToInt64)
 {
     int32_t test1 = 10;
@@ -239,6 +642,74 @@ TEST(FunctionTest, CastInt32ToInt64)
     isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
     EXPECT_TRUE(isSameType);
     EXPECT_EQ(std::numeric_limits<int32_t>::max(), result);
+}
+
+TEST(FunctionTest, CastInt64ToInt8)
+{
+    int64_t test1 = 10;
+    int64_t test2 = -24;
+    int64_t test3 = 0;
+    int64_t test4 = std::numeric_limits<int64_t>::min();
+    int64_t test5 = std::numeric_limits<int64_t>::max();
+    int8_t baseline = 1;
+    auto result = CastInt64ToInt8(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, result);
+
+    result = CastInt64ToInt8(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastInt64ToInt8(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, CastInt64ToInt8(result));
+
+    result = CastInt64ToInt8(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, result);
+
+    result = CastInt64ToInt8(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-1, result);
+}
+
+TEST(FunctionTest, CastInt64ToInt16)
+{
+    int64_t test1 = 10;
+    int64_t test2 = -24;
+    int64_t test3 = 0;
+    int64_t test4 = std::numeric_limits<int64_t>::min();
+    int64_t test5 = std::numeric_limits<int64_t>::max();
+    int16_t baseline = 1;
+    auto result = CastInt64ToInt16(test1);
+    bool isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(10, result);
+
+    result = CastInt64ToInt16(test2);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-24, result);
+
+    result = CastInt64ToInt16(test3);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, CastInt64ToInt16(result));
+
+    result = CastInt64ToInt16(test4);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(0, result);
+
+    result = CastInt64ToInt16(test5);
+    isSameType = std::is_same<decltype(baseline), decltype(result)>::value;
+    EXPECT_TRUE(isSameType);
+    EXPECT_EQ(-1, result);
 }
 
 TEST(FunctionTest, CastInt64ToInt32)
@@ -456,9 +927,47 @@ TEST(FunctionTest, Pmod)
     }
 }
 
+TEST(FunctionTest, Add)
+{
+    auto res1 = AddInt8(3, 5);
+    EXPECT_EQ(res1, 8);
+
+    auto res2 = AddInt16(111, 1000);
+    EXPECT_EQ(res2, 1111);
+
+    auto res3 = AddInt32(10240, 2);
+    EXPECT_EQ(res3, 10242);
+
+    auto res4 = AddInt64(3000000, 5000000);
+    EXPECT_EQ(res4, 8000000);
+}
+
+TEST(FunctionTest, Sub)
+{
+    auto res1 = SubtractInt8(3, 5);
+    EXPECT_EQ(res1, -2);
+
+    auto res2 = SubtractInt16(111, 1000);
+    EXPECT_EQ(res2, -889);
+
+    auto res3 = SubtractInt32(10240, 2);
+    EXPECT_EQ(res3, 10238);
+
+    auto res4 = SubtractInt64(3000000, 5000000);
+    EXPECT_EQ(res4, -2000000);
+}
+
 TEST(FunctionTest, TryAdd)
 {
     bool overflowFlag = false;
+    EXPECT_EQ(AddInt8RetNull(&overflowFlag, 127, 1), -128);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(AddInt16RetNull(&overflowFlag, 32767, 1), -32768);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
     EXPECT_EQ(AddInt32RetNull(&overflowFlag, 2147483647, 1), -2147483648);
     EXPECT_TRUE(overflowFlag);
 
@@ -478,6 +987,14 @@ TEST(FunctionTest, TryAdd)
 TEST(FunctionTest, TrySubtract)
 {
     bool overflowFlag = false;
+    EXPECT_EQ(SubtractInt8RetNull(&overflowFlag, 127, -1), -128);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(SubtractInt16RetNull(&overflowFlag, 32767, -1), -32768);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
     EXPECT_EQ(SubtractInt32RetNull(&overflowFlag, 2147483647, -1), -2147483648);
     EXPECT_TRUE(overflowFlag);
 
@@ -497,6 +1014,15 @@ TEST(FunctionTest, TrySubtract)
 TEST(FunctionTest, TryMultiply)
 {
     bool overflowFlag = false;
+
+    EXPECT_EQ(MultiplyInt8RetNull(&overflowFlag, 64, 2), -128);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(MultiplyInt16RetNull(&overflowFlag, 16384, 2), -32768);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
     EXPECT_EQ(MultiplyInt32RetNull(&overflowFlag, 1073741824, 2), -2147483648);
     EXPECT_TRUE(overflowFlag);
 
@@ -513,11 +1039,33 @@ TEST(FunctionTest, TryMultiply)
     EXPECT_TRUE(overflowFlag);
 }
 
+TEST(FunctionTest, Multiply)
+{
+    auto res1 = MultiplyInt8(3, 5);
+    EXPECT_EQ(res1, 15);
+
+    auto res2 = MultiplyInt16(16, 16);
+    EXPECT_EQ(res2, 256);
+}
+
 TEST(FunctionTest, Divide)
 {
     bool nullFlag = false;
+
+    DivideInt8(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    DivideInt16(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
     DivideInt32(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    EXPECT_EQ(1, DivideInt32(&nullFlag, 3, 2));
+    EXPECT_FALSE(nullFlag);
 
     nullFlag = false;
     DivideInt64(&nullFlag, 1, 0);
@@ -526,21 +1074,268 @@ TEST(FunctionTest, Divide)
     nullFlag = false;
     DivideDouble(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    auto res1 = DivideInt8(&nullFlag, 111, 3);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res1, 37);
+
+    nullFlag = false;
+    auto res2 = DivideInt16(&nullFlag, 1024, 16);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res2, 64);
+
+    nullFlag = false;
+    auto res3 = DivideInt32(&nullFlag, 65536, 4);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res3, 16384);
+
+    nullFlag = false;
+    auto res4 = DivideInt64(&nullFlag, 10000000, 1000);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res4, 10000);
+
+    nullFlag = false;
+    auto res5 = DivideDouble(&nullFlag, 6.4, 3.2);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res5, 2.0);
 }
 
 TEST(FunctionTest, Mod)
 {
     bool nullFlag = false;
+
+    ModulusInt8(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    EXPECT_EQ(1, ModulusInt8(&nullFlag, 16, 3));
+    EXPECT_FALSE(nullFlag);
+
+    nullFlag = false;
+    ModulusInt16(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    EXPECT_EQ(2, ModulusInt16(&nullFlag, 29, 3));
+    EXPECT_FALSE(nullFlag);
+
+    nullFlag = false;
     ModulusInt32(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
 
     nullFlag = false;
-    ModulusInt64(&nullFlag, 1, 0);
-    EXPECT_TRUE(nullFlag);
+    EXPECT_EQ(2, ModulusInt32(&nullFlag, 5, 3));
+    EXPECT_FALSE(nullFlag);
 
     nullFlag = false;
     ModulusInt64(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
+}
+
+TEST(FunctionTest, LT)
+{
+    bool ans = LessThanInt8(3, 7);
+    EXPECT_TRUE(ans);
+    ans = LessThanInt8(11, 1);
+    EXPECT_FALSE(ans);
+
+    ans = LessThanInt16(13, 10210);
+    EXPECT_TRUE(ans);
+    ans = LessThanInt16(12311, 1123);
+    EXPECT_FALSE(ans);
+
+    ans = LessThanInt32(123456, 1234567);
+    EXPECT_TRUE(ans);
+    ans = LessThanInt32(10, 2);
+    EXPECT_FALSE(ans);
+
+    ans = LessThanInt64(10, 10000000);
+    EXPECT_TRUE(ans);
+    ans = LessThanInt64(10000000, 1);
+    EXPECT_FALSE(ans);
+}
+
+TEST(FunctionTest, GT)
+{
+    bool ans = GreaterThanInt8(3, 7);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanInt8(11, 1);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanInt16(13, 10210);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanInt16(12311, 1123);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanInt32(123456, 1234567);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanInt32(10, 2);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanInt64(10, 10000000);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanInt64(10000000, 1);
+    EXPECT_TRUE(ans);
+}
+
+TEST(FunctionTest, LTE)
+{
+    bool ans = LessThanEqualInt8(3, 7);
+    EXPECT_TRUE(ans);
+    ans = LessThanEqualInt8(11, 1);
+    EXPECT_FALSE(ans);
+    ans = LessThanEqualInt8(100, 100);
+    EXPECT_TRUE(ans);
+
+    ans = LessThanEqualInt16(13, 10210);
+    EXPECT_TRUE(ans);
+    ans = LessThanEqualInt16(12311, 1123);
+    EXPECT_FALSE(ans);
+    ans = LessThanEqualInt16(8192, 8192);
+    EXPECT_TRUE(ans);
+
+    ans = LessThanEqualInt32(123456, 1234567);
+    EXPECT_TRUE(ans);
+    ans = LessThanEqualInt32(10, 2);
+    EXPECT_FALSE(ans);
+    ans = LessThanEqualInt32(65536, 65536);
+    EXPECT_TRUE(ans);
+
+    ans = LessThanEqualInt64(10, 10000000);
+    EXPECT_TRUE(ans);
+    ans = LessThanEqualInt64(10000000, 1);
+    EXPECT_FALSE(ans);
+    ans = LessThanEqualInt64(123456789, 123456789);
+    EXPECT_TRUE(ans);
+}
+
+TEST(FunctionTest, GTE)
+{
+    bool ans = GreaterThanEqualInt8(3, 7);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanEqualInt8(11, 1);
+    EXPECT_TRUE(ans);
+    ans = GreaterThanEqualInt8(100, 100);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanEqualInt16(13, 10210);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanEqualInt16(12311, 1123);
+    EXPECT_TRUE(ans);
+    ans = GreaterThanEqualInt16(8192, 8192);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanEqualInt32(123456, 1234567);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanEqualInt32(10, 2);
+    EXPECT_TRUE(ans);
+    ans = GreaterThanEqualInt32(65536, 65536);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanEqualInt64(10, 10000000);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanEqualInt64(10000000, 1);
+    EXPECT_TRUE(ans);
+    ans = GreaterThanEqualInt64(123456789, 123456789);
+    EXPECT_TRUE(ans);
+}
+
+TEST(FunctionTest, EQ)
+{
+    bool ans;
+    ans = EqualInt8(17, 17);
+    EXPECT_TRUE(ans);
+    ans = EqualInt8(11, 123);
+    EXPECT_FALSE(ans);
+
+    ans = EqualInt16(171, 171);
+    EXPECT_TRUE(ans);
+    ans = EqualInt16(11, 12345);
+    EXPECT_FALSE(ans);
+
+    ans = EqualInt32(123456, 123456);
+    EXPECT_TRUE(ans);
+    ans = EqualInt32(0, 123456);
+    EXPECT_FALSE(ans);
+
+    ans = EqualInt64(123456000, 123456000);
+    EXPECT_TRUE(ans);
+    ans = EqualInt64(11, 12348765);
+    EXPECT_FALSE(ans);
+}
+
+TEST(FunctionTest, NEQ)
+{
+    bool ans;
+    ans = NotEqualInt8(17, 17);
+    EXPECT_FALSE(ans);
+    ans = NotEqualInt8(11, 123);
+    EXPECT_TRUE(ans);
+
+    ans = NotEqualInt16(171, 171);
+    EXPECT_FALSE(ans);
+    ans = NotEqualInt16(11, 12345);
+    EXPECT_TRUE(ans);
+
+    ans = NotEqualInt32(123456, 123456);
+    EXPECT_FALSE(ans);
+    ans = NotEqualInt32(0, 123456);
+    EXPECT_TRUE(ans);
+
+    ans = NotEqualInt64(123456000, 123456000);
+    EXPECT_FALSE(ans);
+    ans = NotEqualInt64(11, 12348765);
+    EXPECT_TRUE(ans);
+}
+
+TEST(FunctionTest, LessThanEqualDouble)
+{
+    double left = 3.5;
+    double right = 3.0;
+    EXPECT_FALSE(LessThanEqualDouble(left, right));
+}
+
+TEST(FunctionTest, CastNumToString)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+
+    int8_t int_8 = -12;
+    int16_t int_16 = 123;
+    int32_t int_32 = 456;
+    int64_t int_64 = 789;
+    double num_double = 3.56;
+    
+    int outLen = 0;
+    std::string actual;
+    const char *result;
+
+    result = CastInt8ToString(contextptr, int_8, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("-12", actual);
+    EXPECT_EQ(3, outLen);
+
+    result = CastInt16ToString(contextptr, int_16, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("123", actual);
+    EXPECT_EQ(3, outLen);
+
+    result = CastIntToString(contextptr, int_32, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("456", actual);
+    EXPECT_EQ(3, outLen);
+
+    result = CastLongToString(contextptr, int_64, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("789", actual);
+    EXPECT_EQ(3, outLen);
+
+    result = CastDoubleToString(contextptr, num_double, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("3.56", actual);
+    EXPECT_EQ(4, outLen);
+    delete context;
 }
 
 TEST(FunctionTest, Round)
@@ -2000,6 +2795,83 @@ TEST(FunctionTest, CastStringToIntRetNull)
     s = "-123.";
     result = CastStringToIntRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
     EXPECT_EQ(result, -123);
+}
+
+TEST(FunctionTest, CastStringToShortRetNull)
+{
+    bool isNull = false;
+    std::string s = "23423";
+    int32_t result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, 23423);
+    EXPECT_FALSE(isNull);
+    s = "123.123";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, 123);
+    EXPECT_FALSE(isNull);
+    s = "2a147483648";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "-10078";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, -10078);
+    EXPECT_FALSE(isNull);
+    s = "2123123123147483648";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "-2123123123147483648";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "-2123123123147-483648";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "+45";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, 45);
+    EXPECT_FALSE(isNull);
+    s = "-45";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, -45);
+    EXPECT_FALSE(isNull);
+    s = "3.14159";
+    result = CastStringToShortRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, 3);
+    EXPECT_FALSE(isNull);
+}
+
+TEST(FunctionTest, CastStringToByteRetNull)
+{
+    bool isNull = false;
+    std::string s = "123";
+    int8_t result = CastStringToByteRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, 123);
+    EXPECT_FALSE(isNull);
+    s = "123.123";
+    result = CastStringToByteRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, 123);
+    EXPECT_FALSE(isNull);
+    s = "2147483648";
+    result = CastStringToByteRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "2a147483648";
+    result = CastStringToByteRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "2123123123147483648";
+    result = CastStringToByteRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "-2123123123147483648";
+    result = CastStringToIntRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "-2123123123147-483648";
+    result = CastStringToByteRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_TRUE(isNull);
+    s = "+45";
+    result = CastStringToByteRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, 45);
+    EXPECT_FALSE(isNull);
+    s = "-45";
+    result = CastStringToByteRetNull(&isNull, s.c_str(), static_cast<int32_t>(s.size()));
+    EXPECT_EQ(result, -45);
+    EXPECT_FALSE(isNull);
 }
 
 TEST(FunctionTest, CastStringToLongRetNull)

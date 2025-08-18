@@ -200,6 +200,10 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(CastIntToString), CastFnStr(), {}, { OMNI_INT }, OMNI_VARCHAR, INPUT_DATA,
             true),
+        Function(reinterpret_cast<void *>(CastInt16ToString), CastFnStr(), {}, { OMNI_SHORT }, OMNI_VARCHAR, INPUT_DATA,
+            true),
+        Function(reinterpret_cast<void *>(CastInt8ToString), CastFnStr(), {}, { OMNI_BYTE }, OMNI_VARCHAR, INPUT_DATA,
+            true),
         Function(reinterpret_cast<void *>(CastLongToString), CastFnStr(), {}, { OMNI_LONG }, OMNI_VARCHAR, INPUT_DATA,
             true),
         Function(reinterpret_cast<void *>(CastDoubleToString), CastFnStr(), {}, { OMNI_DOUBLE }, OMNI_VARCHAR,
@@ -211,9 +215,12 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastDateToString), CastFnStr(), {}, { OMNI_DATE32 }, OMNI_VARCHAR, INPUT_DATA,
             true),
 
+        Function(reinterpret_cast<void *>(CastStringToByte), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_BYTE, INPUT_DATA,
+            true),
+        Function(reinterpret_cast<void *>(CastStringToShort), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_SHORT, INPUT_DATA,
+            true),
         Function(reinterpret_cast<void *>(CastStringToInt), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT, INPUT_DATA,
             true),
-
         Function(reinterpret_cast<void *>(CastStringToLong), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_LONG, INPUT_DATA,
             true),
         Function(reinterpret_cast<void *>(CastStringToDouble), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_DOUBLE,
@@ -245,6 +252,10 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(CastIntToStringRetNull), CastNullFnStr(), {}, { OMNI_INT }, OMNI_VARCHAR,
             INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastInt16ToStringRetNull), CastNullFnStr(), {}, { OMNI_SHORT }, OMNI_VARCHAR,
+            INPUT_DATA_AND_OVERFLOW_NULL, true),
+        Function(reinterpret_cast<void *>(CastInt8ToStringRetNull), CastNullFnStr(), {}, { OMNI_BYTE }, OMNI_VARCHAR,
+            INPUT_DATA_AND_OVERFLOW_NULL, true),
         Function(reinterpret_cast<void *>(CastLongToStringRetNull), CastNullFnStr(), {}, { OMNI_LONG }, OMNI_VARCHAR,
             INPUT_DATA_AND_OVERFLOW_NULL, true),
         Function(reinterpret_cast<void *>(CastDoubleToStringRetNull), CastNullFnStr(), {}, { OMNI_DOUBLE },
@@ -256,6 +267,10 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastDateToStringRetNull), CastNullFnStr(), {}, { OMNI_DATE32 }, OMNI_VARCHAR,
             INPUT_DATA_AND_OVERFLOW_NULL, true),
 
+        Function(reinterpret_cast<void *>(CastStringToByteRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_BYTE,
+            INPUT_DATA_AND_OVERFLOW_NULL),
+        Function(reinterpret_cast<void *>(CastStringToShortRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_SHORT,
+            INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToIntRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_INT,
             INPUT_DATA_AND_OVERFLOW_NULL),
         Function(reinterpret_cast<void *>(CastStringToLongRetNull), CastNullFnStr(), {}, { OMNI_VARCHAR }, OMNI_LONG,

@@ -65,6 +65,9 @@ HashTableVariants *HashBuilderOperatorFactory::InitVariant(int32_t buildHashCols
             case OMNI_SHORT:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int16_t, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
+            case OMNI_BYTE:
+                return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<int8_t, RowRefListType>>,
+                    operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
             case OMNI_DECIMAL128:
                 return new HashTableVariants{ std::in_place_type<JoinHashTableVariants<Decimal128, RowRefListType>>,
                     operatorCount, &(this->buildTypes), this->buildHashCols, joinType, buildSide };
@@ -94,6 +97,9 @@ int32_t GetTypeLength(int buildHashColsCount, DataTypes& buildTypes, std::vector
     int32_t lengthCount = 0;
     for (int i = 0; i < buildHashColsCount; i++) {
         switch (buildTypes.GetIds()[buildHashCols[i]]) {
+            case OMNI_BYTE:
+                lengthCount += BITS_OF_BYTE;
+                break;
             case OMNI_SHORT:
                 lengthCount += BITS_OF_SHORT;
                 break;

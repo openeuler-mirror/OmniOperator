@@ -21,6 +21,13 @@ template <typename T> extern DLLEXPORT T Abs(T x)
 {
     return std::abs(x);
 }
+extern "C" DLLEXPORT int16_t CastInt32ToInt16(int32_t x);
+
+extern "C" DLLEXPORT int8_t CastInt32ToInt8(int32_t x);
+
+extern "C" DLLEXPORT int16_t CastInt64ToInt16(int64_t x);
+
+extern "C" DLLEXPORT int8_t CastInt64ToInt8(int64_t x);
 
 extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x);
 
@@ -30,11 +37,39 @@ extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x);
 
 extern "C" DLLEXPORT int32_t CastInt64ToInt32(int64_t x);
 
+extern "C" DLLEXPORT int32_t CastInt16ToInt32(int16_t x);
+
+extern "C" DLLEXPORT int32_t CastInt8ToInt32(int8_t x);
+
+extern "C" DLLEXPORT int64_t CastInt16ToInt64(int16_t x);
+
+extern "C" DLLEXPORT int64_t CastInt8ToInt64(int8_t x);
+
 extern "C" DLLEXPORT int32_t CastDoubleToInt32HalfUp(double x);
+
+extern "C" DLLEXPORT double CastInt16ToDouble(int16_t x);
+
+extern "C" DLLEXPORT double CastInt8ToDouble(int8_t x);
+
+extern "C" DLLEXPORT int32_t CastInt16ToInt32(int16_t x);
+
+extern "C" DLLEXPORT int32_t CastInt8ToInt32(int8_t x);
+
+extern "C" DLLEXPORT int64_t CastInt16ToInt64(int16_t x);
+
+extern "C" DLLEXPORT int64_t CastInt8ToInt64(int8_t x);
+
+extern "C" DLLEXPORT int16_t CastDoubleToInt16HalfUp(double x);
+
+extern "C" DLLEXPORT int8_t CastDoubleToInt8HalfUp(double x);
 
 extern "C" DLLEXPORT int64_t CastDoubleToInt64HalfUp(double x);
 
 extern "C" DLLEXPORT int32_t CastDoubleToInt32Down(double x);
+
+extern "C" DLLEXPORT int16_t CastDoubleToInt16Down(double x);
+
+extern "C" DLLEXPORT int8_t CastDoubleToInt8Down(double x);
 
 extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x);
 
@@ -66,7 +101,6 @@ extern "C" DLLEXPORT double NormalizeNaNAndZero(double value);
 extern "C" DLLEXPORT double PowerDouble(double base, double exponent);
 
 // long binary operations
-
 extern "C" DLLEXPORT int64_t AddInt64(int64_t left, int64_t right);
 
 extern "C" DLLEXPORT int64_t SubtractInt64(int64_t left, int64_t right);
@@ -95,6 +129,7 @@ extern "C" DLLEXPORT bool EqualInt64(int64_t left, int64_t right);
 
 extern "C" DLLEXPORT bool NotEqualInt64(int64_t left, int64_t right);
 
+// int binary operations
 extern "C" DLLEXPORT int32_t AddInt32(int32_t left, int32_t right);
 
 extern "C" DLLEXPORT int32_t SubtractInt32(int32_t left, int32_t right);
@@ -127,6 +162,64 @@ extern "C" DLLEXPORT int32_t Pmod(int32_t x, int32_t y);
 
 extern "C" DLLEXPORT int64_t RoundLong(int64_t num, int32_t decimals);
 
+// short binary operations
+extern "C" DLLEXPORT int16_t AddInt16(int16_t left, int16_t right);
+
+extern "C" DLLEXPORT int16_t SubtractInt16(int16_t left, int16_t right);
+
+extern "C" DLLEXPORT int16_t MultiplyInt16(int16_t left, int16_t right);
+
+extern "C" DLLEXPORT int16_t DivideInt16(bool *isNull, int16_t divident, int16_t divisor);
+
+extern "C" DLLEXPORT int16_t ModulusInt16(bool *isNull, int16_t divident, int16_t divisor);
+
+extern "C" DLLEXPORT int16_t AddInt16RetNull(bool *isNull, int16_t left, int16_t right);
+
+extern "C" DLLEXPORT int16_t SubtractInt16RetNull(bool *isNull, int16_t left, int16_t right);
+
+extern "C" DLLEXPORT int16_t MultiplyInt16RetNull(bool *isNull, int16_t left, int16_t right);
+
+extern "C" DLLEXPORT bool LessThanInt16(int16_t left, int16_t right);
+
+extern "C" DLLEXPORT bool LessThanEqualInt16(int16_t left, int16_t right);
+
+extern "C" DLLEXPORT bool GreaterThanInt16(int16_t left, int16_t right);
+
+extern "C" DLLEXPORT bool GreaterThanEqualInt16(int16_t left, int16_t right);
+
+extern "C" DLLEXPORT bool EqualInt16(int16_t left, int16_t right);
+
+extern "C" DLLEXPORT bool NotEqualInt16(int16_t left, int16_t right);
+
+// byte binary operations
+extern "C" DLLEXPORT int8_t AddInt8(int8_t left, int8_t right);
+
+extern "C" DLLEXPORT int8_t SubtractInt8(int8_t left, int8_t right);
+
+extern "C" DLLEXPORT int8_t MultiplyInt8(int8_t left, int8_t right);
+
+extern "C" DLLEXPORT int8_t DivideInt8(bool *isNull, int8_t divident, int8_t divisor);
+
+extern "C" DLLEXPORT int8_t ModulusInt8(bool *isNull, int8_t divident, int8_t divisor);
+
+extern "C" DLLEXPORT int8_t AddInt8RetNull(bool *isNull, int8_t left, int8_t right);
+
+extern "C" DLLEXPORT int8_t SubtractInt8RetNull(bool *isNull, int8_t left, int8_t right);
+
+extern "C" DLLEXPORT int8_t MultiplyInt8RetNull(bool *isNull, int8_t left, int8_t right);
+
+extern "C" DLLEXPORT bool LessThanInt8(int8_t left, int8_t right);
+
+extern "C" DLLEXPORT bool LessThanEqualInt8(int8_t left, int8_t right);
+
+extern "C" DLLEXPORT bool GreaterThanInt8(int8_t left, int8_t right);
+
+extern "C" DLLEXPORT bool GreaterThanEqualInt8(int8_t left, int8_t right);
+
+extern "C" DLLEXPORT bool EqualInt8(int8_t left, int8_t right);
+
+extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right);
+
 template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
 {
     if (std::isnan(num) || std::isinf(num)) {
@@ -151,6 +244,32 @@ template <typename T> extern DLLEXPORT T Greatest(T lValue, bool lIsNull, T rVal
         return rValue;
     }
     return lValue;
+}
+
+template <typename T> extern DLLEXPORT T BitwiseAndFunction(T a, T b)
+{
+    return a & b;
+}
+
+template <typename T1, typename T2> T1 ShiftRight(T1 a, T2 b)
+{
+    if constexpr (std::is_same_v<T1, int32_t>) {
+        if (b < 0) {
+            b = b % 32 + 32;
+        }
+        if (b >= 32) {
+            b = b % 32;
+        }
+    }
+    if constexpr (std::is_same_v<T1, int64_t>) {
+        if (b < 0) {
+            b = b % 64 + 64;
+        }
+        if (b >= 64) {
+            b = b % 64;
+        }
+    }
+    return a >> b;
 }
 }
 

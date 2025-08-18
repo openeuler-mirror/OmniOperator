@@ -213,6 +213,8 @@ template class CountColumnAggregator<OMNI_NONE, OMNI_LONG>;
 
 template class CountColumnAggregator<OMNI_BOOLEAN, OMNI_LONG>;
 
+template class CountColumnAggregator<OMNI_BYTE, OMNI_LONG>;
+
 template class CountColumnAggregator<OMNI_SHORT, OMNI_LONG>;
 
 template class CountColumnAggregator<OMNI_DATE32, OMNI_LONG>;

@@ -21,6 +21,7 @@
 namespace omniruntime {
 namespace op {
 
+constexpr int32_t BITS_OF_BYTE = 8;
 constexpr int32_t BITS_OF_SHORT = 16;
 constexpr int32_t BITS_OF_INT = 32;
 constexpr int32_t BITS_OF_LONG = 64;

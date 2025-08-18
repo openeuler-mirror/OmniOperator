@@ -158,7 +158,13 @@ private:
 
     void BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
         Value *rightIsNull, PHINode **leftPhi, PHINode **rightPhi);
+    
+    llvm::Value *BinaryExprByteHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull, Value *nullFlag = nullptr);
 
+    llvm::Value *BinaryExprShortHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull, Value *nullFlag = nullptr);
+        
     llvm::Value *BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
         Value *rightIsNull, Value *nullFlag = nullptr);
 

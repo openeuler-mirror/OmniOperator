@@ -526,6 +526,132 @@ TEST(ProjectionTest, Doubles_DivideByZero)
     delete overflowConfig;
 }
 
+TEST(ProjectionTest, Bytes_DivideByZero)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    int32_t numRows = 5;
+    int8_t *col1 = MakeBytes(numRows, -4);
+    int8_t *col2 = MakeBytes(numRows, -3);
+
+    col2[3] = 0;
+
+    auto *divLeft = new FieldExpr(0, ByteType());
+    auto *divRight = new FieldExpr(1, ByteType());
+    auto *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, divLeft, divRight, ByteType());
+    std::vector<Expr *> exprs = { divExpr };
+    std::vector<DataTypePtr> vecOfTypes = { ByteType(), ByteType() };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
+    op->AddInput(t);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    EXPECT_TRUE(outputVecBatch->Get(0)->IsNull(3));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete[] col1;
+    delete[] col2;
+    delete op;
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, Shorts_DivideByZero)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    int32_t numRows = 5;
+    short *col1 = MakeShorts(numRows, -4);
+    short *col2 = MakeShorts(numRows, -3);
+
+    col2[3] = 0;
+
+    auto *divLeft = new FieldExpr(0, ShortType());
+    auto *divRight = new FieldExpr(1, ShortType());
+    auto *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, divLeft, divRight, ShortType());
+    std::vector<Expr *> exprs = { divExpr };
+    std::vector<DataTypePtr> vecOfTypes = { ShortType(), ShortType() };
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2);
+    op->AddInput(t);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    EXPECT_TRUE(outputVecBatch->Get(0)->IsNull(3));
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete[] col1;
+    delete[] col2;
+    delete op;
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, testModShort) {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 1;
+    auto left = new LiteralExpr(static_cast<int16_t>(12250), ShortType());
+    auto right = new LiteralExpr(static_cast<int16_t>(125), ShortType());
+
+    auto *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, left, right, ShortType());
+
+    std::vector<Expr *> exprs = { modExpr };
+    std::vector<DataTypePtr> vecOfTypes = {};
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
+    op->AddInput(t);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    int16_t val0 = (reinterpret_cast<Vector<int16_t> *>(outputVecBatch->Get(0)))->GetValue(0);
+    EXPECT_EQ(val0, 0);
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(op);
+
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(ProjectionTest, testModByte) {
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 1;
+    auto left = new LiteralExpr(static_cast<int8_t>(100), ByteType());
+    auto right = new LiteralExpr(static_cast<int8_t>(5), ByteType());
+
+    auto *modExpr = new BinaryExpr(omniruntime::expressions::Operator::MOD, left, right, ByteType());
+
+    std::vector<Expr *> exprs = { modExpr };
+    std::vector<DataTypePtr> vecOfTypes = {};
+    DataTypes inputTypes(vecOfTypes);
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows);
+    op->AddInput(t);
+    VectorBatch *outputVecBatch = nullptr;
+    op->GetOutput(&outputVecBatch);
+    int8_t val0 = (reinterpret_cast<Vector<int8_t> *>(outputVecBatch->Get(0)))->GetValue(0);
+    EXPECT_EQ(val0, 0);
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    omniruntime::op::Operator::DeleteOperator(op);
+
+    delete factory;
+    delete overflowConfig;
+}
+
 TEST(ProjectionTest, testModDoubles)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);

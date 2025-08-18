@@ -40,6 +40,8 @@ public:
 
     llvm::PointerType *I8PtrType();
 
+    llvm::PointerType *I16PtrType();
+
     llvm::PointerType *I32PtrType();
 
     llvm::PointerType *I64PtrType();
@@ -49,6 +51,10 @@ public:
     llvm::PointerType *I128PtrType();
 
     llvm::Value *CreateConstantBool(bool n);
+
+    llvm::Value *CreateConstantByte(int8_t n);
+
+    llvm::Value *CreateConstantShort(int16_t n);
 
     llvm::Value *CreateConstantInt(int32_t n);
 

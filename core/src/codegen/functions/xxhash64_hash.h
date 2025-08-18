@@ -13,6 +13,8 @@ namespace omniruntime::codegen::function {
 #else
 #define DLLEXPORT
 #endif
+extern "C" DLLEXPORT int64_t XxH64Int8(int8_t val, bool isValNull, int64_t seed, bool isSeedNull);
+
 extern "C" DLLEXPORT int64_t XxH64Int16(int16_t val, bool isValNull, int64_t seed, bool isSeedNull);
 
 extern "C" DLLEXPORT int64_t XxH64Int32(int32_t val, bool isValNull, int64_t seed, bool isSeedNull);

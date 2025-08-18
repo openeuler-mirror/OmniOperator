@@ -320,6 +320,78 @@ TEST(FilterTest, LessThan)
     delete overflowConfig;
 }
 
+TEST(FilterTest, Shorts_LessThan)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 32768;
+    int16_t *col1 = new int16_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = static_cast<int16_t>(i);
+    }
+
+    DataTypes inputTypes(std::vector<DataTypePtr>({ ShortType() }));
+    VectorBatch *in1 = CreateVectorBatch(inputTypes, numRows, col1);
+
+    std::vector<Expr *> projections = { new FieldExpr(0, ShortType()) };
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, ShortType()),
+        new LiteralExpr(static_cast<int16_t>(2000), ShortType()), BooleanType());
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    EXPECT_EQ(numReturned, 2000);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int16_t val = (reinterpret_cast<Vector<int16_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+        EXPECT_TRUE(val < 2000);
+    }
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete[] col1;
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, Bytes_LessThan)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 256;
+    int8_t *col1 = new int8_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = static_cast<int8_t>(i);
+    }
+
+    DataTypes inputTypes(std::vector<DataTypePtr>({ ByteType() }));
+    VectorBatch *in1 = CreateVectorBatch(inputTypes, numRows, col1);
+
+    std::vector<Expr *> projections = { new FieldExpr(0, ByteType()) };
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::LT, new FieldExpr(0, ByteType()),
+        new LiteralExpr(static_cast<int8_t>(20), ByteType()), BooleanType());
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    EXPECT_EQ(numReturned, 148);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int8_t val = (reinterpret_cast<Vector<int8_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+        EXPECT_TRUE(val < 20);
+    }
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete[] col1;
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
 TEST(FilterTest, LessThanWihtoutParsing)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
@@ -389,6 +461,94 @@ TEST(FilterTest, GreaterThan)
     EXPECT_EQ(numReturned, 800);
     for (int32_t i = 0; i < numReturned; i++) {
         int32_t val0 = (reinterpret_cast<Vector<int32_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+        int64_t val1 = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(1)))->GetValue(i);
+        EXPECT_TRUE(val0 > 20);
+        EXPECT_EQ(val1, 3e9L);
+    }
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete[] col1;
+    delete[] col2;
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, Shorts_GreaterThan)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 32768;
+    int16_t *col1 = new int16_t[numRows];
+    int64_t *col2 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = static_cast<int16_t>(i % 25);
+        col2[i] = 3e9;
+    }
+    DataTypes inputTypes(std::vector<DataTypePtr>({ ShortType(), LongType() }));
+    VectorBatch *in1 = CreateVectorBatch(inputTypes, numRows, col1, col2);
+
+    auto *col0Expr = new FieldExpr(0, ShortType());
+    auto *col1Expr = new FieldExpr(1, LongType());
+    std::vector<Expr *> projections = { col0Expr, col1Expr };
+
+    auto *gtLeft = new FieldExpr(0, ShortType());
+    auto *gtRight = new LiteralExpr(static_cast<int16_t>(20), ShortType());
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    EXPECT_EQ(numReturned, 5240);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int16_t val0 = (reinterpret_cast<Vector<int16_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+        int64_t val1 = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(1)))->GetValue(i);
+        EXPECT_TRUE(val0 > 20);
+        EXPECT_EQ(val1, 3e9L);
+    }
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete[] col1;
+    delete[] col2;
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, Bytes_GreaterThan)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 256;
+    int8_t *col1 = new int8_t[numRows];
+    int64_t *col2 = new int64_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = static_cast<int8_t>(i % 25);
+        col2[i] = 3e9;
+    }
+    DataTypes inputTypes(std::vector<DataTypePtr>({ ByteType(), LongType() }));
+    VectorBatch *in1 = CreateVectorBatch(inputTypes, numRows, col1, col2);
+
+    auto *col0Expr = new FieldExpr(0, ByteType());
+    auto *col1Expr = new FieldExpr(1, LongType());
+    std::vector<Expr *> projections = { col0Expr, col1Expr };
+
+    auto *gtLeft = new FieldExpr(0, ByteType());
+    auto *gtRight = new LiteralExpr(static_cast<int8_t>(20), ByteType());
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::GT, gtLeft, gtRight, BooleanType());
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    EXPECT_EQ(numReturned, 40);
+    for (int32_t i = 0; i < numReturned; i++) {
+        int8_t val0 = (reinterpret_cast<Vector<int8_t> *>(outputVecBatch->Get(0)))->GetValue(i);
         int64_t val1 = (reinterpret_cast<Vector<int64_t> *>(outputVecBatch->Get(1)))->GetValue(i);
         EXPECT_TRUE(val0 > 20);
         EXPECT_EQ(val1, 3e9L);
@@ -523,6 +683,88 @@ TEST(FilterTest, NotEqualTo)
     double cnt = 1;
     for (int32_t i = 0; i < numReturned; i++) {
         double val0 = (reinterpret_cast<Vector<double> *>(outputVecBatch->Get(0)))->GetValue(i);
+        EXPECT_EQ(val0, cnt++);
+    }
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete[] col1;
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, Shorts_NotEqualTo)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 32768;
+    int16_t *col1 = new int16_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = static_cast<int16_t>(i);
+    }
+
+    DataTypes inputTypes(std::vector<DataTypePtr>({ ShortType() }));
+    VectorBatch *in1 = CreateVectorBatch(inputTypes, numRows, col1);
+
+    auto *col0Expr = new FieldExpr(0, ShortType());
+    std::vector<Expr *> projections = { col0Expr };
+    auto *neqLeft = new FieldExpr(0, ShortType());
+    auto *neqRight = new LiteralExpr(0, ShortType());
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, neqLeft, neqRight, BooleanType());
+
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    EXPECT_EQ(numReturned, 32767);
+    int16_t cnt = 1;
+    for (int32_t i = 0; i < numReturned; i++) {
+        int16_t val0 = (reinterpret_cast<Vector<int16_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+        EXPECT_NE(val0, 0);
+        EXPECT_EQ(val0, cnt++);
+    }
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete[] col1;
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    delete overflowConfig;
+}
+
+TEST(FilterTest, Bytes_NotEqualTo)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+    const int32_t numRows = 256;
+    int8_t *col1 = new int8_t[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = static_cast<int8_t>(i);
+    }
+
+    DataTypes inputTypes(std::vector<DataTypePtr>({ ByteType() }));
+    VectorBatch *in1 = CreateVectorBatch(inputTypes, numRows, col1);
+
+    auto *col0Expr = new FieldExpr(0, ByteType());
+    std::vector<Expr *> projections = { col0Expr };
+    auto *neqLeft = new FieldExpr(0, ByteType());
+    auto *neqRight = new LiteralExpr(0, ByteType());
+    auto *filterExpr = new BinaryExpr(omniruntime::expressions::Operator::NEQ, neqLeft, neqRight, BooleanType());
+
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    auto *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+
+    op->AddInput(in1);
+    VectorBatch *outputVecBatch = nullptr;
+    int32_t numReturned = op->GetOutput(&outputVecBatch);
+    EXPECT_EQ(numReturned, 255);
+    int8_t cnt = 1;
+    for (int32_t i = 0; i < numReturned; i++) {
+        int8_t val0 = (reinterpret_cast<Vector<int8_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+        EXPECT_NE(val0, 0);
         EXPECT_EQ(val0, cnt++);
     }
 

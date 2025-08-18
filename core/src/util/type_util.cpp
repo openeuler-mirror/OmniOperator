@@ -31,6 +31,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Int32";
         case OMNI_SHORT:
             return "Int16";
+        case OMNI_BYTE:
+            return "Int8";
         case OMNI_LONG:
             return "Int64";
         case OMNI_DATE64:
@@ -77,6 +79,8 @@ std::string TypeUtil::TypeToStringLog(omniruntime::type::DataTypeId id)
             return "int32";
         case OMNI_SHORT:
             return "int16";
+        case OMNI_BYTE:
+            return "int8";
         case OMNI_LONG:
             return "int64";
         case OMNI_TIMESTAMP:
@@ -113,6 +117,11 @@ std::shared_ptr<DataType> NoneType()
 std::shared_ptr<DataType> IntType()
 {
     return IntDataType::Instance();
+}
+
+std::shared_ptr<DataType> ByteType()
+{
+    return ByteDataType::Instance();
 }
 
 std::shared_ptr<DataType> ShortType()
