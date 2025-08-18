@@ -145,6 +145,8 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
     const std::vector<omniruntime::type::DataTypeId> doubleParams = { OMNI_DOUBLE, OMNI_DOUBLE };
     const std::vector<omniruntime::type::DataTypeId> longParams = { OMNI_LONG, OMNI_LONG };
     const std::vector<omniruntime::type::DataTypeId> intParams = { OMNI_INT, OMNI_INT };
+    const std::vector<omniruntime::type::DataTypeId> shortParams = { OMNI_SHORT, OMNI_SHORT };
+    const std::vector<omniruntime::type::DataTypeId> byteParams = { OMNI_BYTE, OMNI_BYTE} ;
 
     std::vector<Function> mathFnRegistry = {
         // insert native functions for each absolute math function
@@ -246,7 +248,47 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(Greatest<bool>), GreatestFnStr(), {}, { OMNI_BOOLEAN, OMNI_BOOLEAN },
             OMNI_BOOLEAN, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(Greatest<double>), GreatestFnStr(), {}, { OMNI_DOUBLE, OMNI_DOUBLE },
-            OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
+            OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+
+        // insert native function for each short operations
+        Function(reinterpret_cast<void *>(AddInt16), AddFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(SubtractInt16), SubtractFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(MultiplyInt16), MultiplyFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(DivideInt16), DivideFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(ModulusInt16), ModulusFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(AddInt16RetNull), TryAddFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(SubtractInt16RetNull), TrySubtractFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(MultiplyInt16RetNull), TryMultiplyFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(DivideInt16), TryDivideFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(LessThanInt16), LessThanFnStr(), {}, shortParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(LessThanEqualInt16), LessThanEqualFnStr(), {}, shortParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(GreaterThanInt16), GreaterThanFnStr(), {}, shortParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(GreaterThanEqualInt16), GreaterThanEqualFnStr(), {}, shortParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(EqualInt16), EqualFnStr(), {}, shortParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(NotEqualInt16), NotEqualFnStr(), {}, shortParams, OMNI_BOOLEAN, INPUT_DATA),
+
+        // insert native function for each byte operations
+        Function(reinterpret_cast<void *>(AddInt8), AddFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(SubtractInt8), SubtractFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(MultiplyInt8), MultiplyFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(DivideInt8), DivideFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(ModulusInt8), ModulusFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(AddInt8RetNull), TryAddFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(SubtractInt8RetNull), TrySubtractFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(MultiplyInt8RetNull), TryMultiplyFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(DivideInt8), TryDivideFnStr(), {}, byteParams, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(LessThanInt8), LessThanFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(LessThanEqualInt8), LessThanEqualFnStr(), {}, byteParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(GreaterThanInt8), GreaterThanFnStr(), {}, byteParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(GreaterThanEqualInt8), GreaterThanEqualFnStr(), {}, byteParams, OMNI_BOOLEAN,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(EqualInt8), EqualFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(NotEqualInt8), NotEqualFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
     };
 
     return mathFnRegistry;

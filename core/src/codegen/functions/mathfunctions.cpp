@@ -410,3 +410,175 @@ extern "C" DLLEXPORT int64_t RoundLong(int64_t num, int32_t decimals)
     return RoundOperator(num, decimals);
 }
 }
+
+// short functions
+
+extern "C" DLLEXPORT int16_t AddInt16(int16_t left, int16_t right)
+{
+    return left + right;
+}
+
+extern "C" DLLEXPORT int16_t SubtractInt16(int16_t left, int16_t right)
+{
+    return left - right;
+}
+
+extern "C" DLLEXPORT int16_t MultiplyInt16(int16_t left, int16_t right)
+{
+    return left * right;
+}
+
+extern "C" DLLEXPORT int16_t DivideInt16(bool *isNull, int16_t divident, int16_t divisor)
+{
+    if (divisor == 0) {
+        *isNull = true;
+        return 0;
+    }
+    return divident / divisor;
+}
+
+extern "C" DLLEXPORT int16_t ModulusInt16(bool *isNull, int16_t divident, int16_t divisor)
+{
+    if (divisor == 0) {
+        *isNull = true;
+        return 0;
+    }
+    return divident % divisor;
+}
+
+extern "C" DLLEXPORT int16_t AddInt16RetNull(bool *isNull, int16_t left, int16_t right)
+{
+    int16_t result;
+    *isNull = __builtin_add_overflow(left, right, &result);
+    return result;
+}
+
+extern "C" DLLEXPORT int16_t SubtractInt16RetNull(bool *isNull, int16_t left, int16_t right)
+{
+    int16_t result;
+    *isNull = __builtin_sub_overflow(left, right, &result);
+    return result;
+}
+
+extern "C" DLLEXPORT int16_t MultiplyInt16RetNull(bool *isNull, int16_t left, int16_t right)
+{
+    int16_t result;
+    *isNull = __builtin_mul_overflow(left, right, &result);
+    return result;
+}
+
+extern "C" DLLEXPORT bool LessThanInt16(int16_t left, int16_t right)
+{
+    return left < right;
+}
+
+extern "C" DLLEXPORT bool LessThanEqualInt16(int16_t left, int16_t right)
+{
+    return left <= right;
+}
+
+extern "C" DLLEXPORT bool GreaterThanInt16(int16_t left, int16_t right)
+{
+    return left > right;
+}
+
+extern "C" DLLEXPORT bool GreaterThanEqualInt16(int16_t left, int16_t right)
+{
+    return left >= right;
+}
+
+extern "C" DLLEXPORT bool EqualInt16(int16_t left, int16_t right)
+{
+    return left == right;
+}
+
+extern "C" DLLEXPORT bool NotEqualInt16(int16_t left, int16_t right)
+{
+    return left != right;
+}
+
+// byte functions
+
+extern "C" DLLEXPORT int8_t AddInt8(int8_t left, int8_t right)
+{
+    return left + right;
+}
+
+extern "C" DLLEXPORT int8_t SubtractInt8(int8_t left, int8_t right)
+{
+    return left - right;
+}
+
+extern "C" DLLEXPORT int8_t MultiplyInt8(int8_t left, int8_t right)
+{
+    return left * right;
+}
+
+extern "C" DLLEXPORT int8_t DivideInt8(bool *isNull, int8_t divident, int8_t divisor)
+{
+    if (divisor == 0) {
+        *isNull = true;
+        return 0;
+    }
+    return divident / divisor;
+}
+
+extern "C" DLLEXPORT int8_t ModulusInt8(bool *isNull, int8_t divident, int8_t divisor)
+{
+    if (divisor == 0) {
+        *isNull = true;
+        return 0;
+    }
+    return divident % divisor;
+}
+
+extern "C" DLLEXPORT int8_t AddInt8RetNull(bool *isNull, int8_t left, int8_t right)
+{
+    int8_t result;
+    *isNull = __builtin_add_overflow(left, right, &result);
+    return result;
+}
+
+extern "C" DLLEXPORT int8_t SubtractInt8RetNull(bool *isNull, int8_t left, int8_t right)
+{
+    int8_t result;
+    *isNull = __builtin_sub_overflow(left, right, &result);
+    return result;
+}
+
+extern "C" DLLEXPORT int8_t MultiplyInt8RetNull(bool *isNull, int8_t left, int8_t right)
+{
+    int8_t result;
+    *isNull = __builtin_mul_overflow(left, right, &result);
+    return result;
+}
+
+extern "C" DLLEXPORT bool LessThanInt8(int8_t left, int8_t right)
+{
+    return left < right;
+}
+
+extern "C" DLLEXPORT bool LessThanEqualInt8(int8_t left, int8_t right)
+{
+    return left <= right;
+}
+
+extern "C" DLLEXPORT bool GreaterThanInt8(int8_t left, int8_t right)
+{
+    return left > right;
+}
+
+extern "C" DLLEXPORT bool GreaterThanEqualInt8(int8_t left, int8_t right)
+{
+    return left >= right;
+}
+
+extern "C" DLLEXPORT bool EqualInt8(int8_t left, int8_t right)
+{
+    return left == right;
+}
+
+extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right)
+{
+    return left != right;
+}

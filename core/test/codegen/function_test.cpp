@@ -927,9 +927,47 @@ TEST(FunctionTest, Pmod)
     }
 }
 
+TEST(FunctionTest, Add)
+{
+    auto res1 = AddInt8(3, 5);
+    EXPECT_EQ(res1, 8);
+
+    auto res2 = AddInt16(111, 1000);
+    EXPECT_EQ(res2, 1111);
+
+    auto res3 = AddInt32(10240, 2);
+    EXPECT_EQ(res3, 10242);
+
+    auto res4 = AddInt64(3000000, 5000000);
+    EXPECT_EQ(res4, 8000000);
+}
+
+TEST(FunctionTest, Sub)
+{
+    auto res1 = SubtractInt8(3, 5);
+    EXPECT_EQ(res1, -2);
+
+    auto res2 = SubtractInt16(111, 1000);
+    EXPECT_EQ(res2, -889);
+
+    auto res3 = SubtractInt32(10240, 2);
+    EXPECT_EQ(res3, 10238);
+
+    auto res4 = SubtractInt64(3000000, 5000000);
+    EXPECT_EQ(res4, -2000000);
+}
+
 TEST(FunctionTest, TryAdd)
 {
     bool overflowFlag = false;
+    EXPECT_EQ(AddInt8RetNull(&overflowFlag, 127, 1), -128);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(AddInt16RetNull(&overflowFlag, 32767, 1), -32768);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
     EXPECT_EQ(AddInt32RetNull(&overflowFlag, 2147483647, 1), -2147483648);
     EXPECT_TRUE(overflowFlag);
 
@@ -949,6 +987,14 @@ TEST(FunctionTest, TryAdd)
 TEST(FunctionTest, TrySubtract)
 {
     bool overflowFlag = false;
+    EXPECT_EQ(SubtractInt8RetNull(&overflowFlag, 127, -1), -128);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(SubtractInt16RetNull(&overflowFlag, 32767, -1), -32768);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
     EXPECT_EQ(SubtractInt32RetNull(&overflowFlag, 2147483647, -1), -2147483648);
     EXPECT_TRUE(overflowFlag);
 
@@ -968,6 +1014,15 @@ TEST(FunctionTest, TrySubtract)
 TEST(FunctionTest, TryMultiply)
 {
     bool overflowFlag = false;
+
+    EXPECT_EQ(MultiplyInt8RetNull(&overflowFlag, 64, 2), -128);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
+    EXPECT_EQ(MultiplyInt16RetNull(&overflowFlag, 16384, 2), -32768);
+    EXPECT_TRUE(overflowFlag);
+
+    overflowFlag = false;
     EXPECT_EQ(MultiplyInt32RetNull(&overflowFlag, 1073741824, 2), -2147483648);
     EXPECT_TRUE(overflowFlag);
 
@@ -987,6 +1042,15 @@ TEST(FunctionTest, TryMultiply)
 TEST(FunctionTest, Divide)
 {
     bool nullFlag = false;
+
+    DivideInt8(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    DivideInt16(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
     DivideInt32(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
 
@@ -1001,11 +1065,45 @@ TEST(FunctionTest, Divide)
     nullFlag = false;
     DivideDouble(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    auto res1 = DivideInt8(&nullFlag, 111, 3);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res1, 37);
+
+    nullFlag = false;
+    auto res2 = DivideInt16(&nullFlag, 1024, 16);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res2, 64);
+
+    nullFlag = false;
+    auto res3 = DivideInt32(&nullFlag, 65536, 4);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res3, 16384);
+
+    nullFlag = false;
+    auto res4 = DivideInt64(&nullFlag, 10000000, 1000);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res4, 10000);
+
+    nullFlag = false;
+    auto res5 = DivideDouble(&nullFlag, 6.4, 3.2);
+    EXPECT_FALSE(nullFlag);
+    EXPECT_EQ(res5, 2.0);
 }
 
 TEST(FunctionTest, Mod)
 {
     bool nullFlag = false;
+
+    ModulusInt8(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    ModulusInt16(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
     ModulusInt32(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
 
@@ -1020,6 +1118,162 @@ TEST(FunctionTest, Mod)
     nullFlag = false;
     ModulusInt64(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
+}
+
+TEST(FunctionTest, LT)
+{
+    bool ans = LessThanInt8(3, 7);
+    EXPECT_TRUE(ans);
+    ans = LessThanInt8(11, 1);
+    EXPECT_FALSE(ans);
+
+    ans = LessThanInt16(13, 10210);
+    EXPECT_TRUE(ans);
+    ans = LessThanInt16(12311, 1123);
+    EXPECT_FALSE(ans);
+
+    ans = LessThanInt32(123456, 1234567);
+    EXPECT_TRUE(ans);
+    ans = LessThanInt32(10, 2);
+    EXPECT_FALSE(ans);
+
+    ans = LessThanInt64(10, 10000000);
+    EXPECT_TRUE(ans);
+    ans = LessThanInt64(10000000, 1);
+    EXPECT_FALSE(ans);
+}
+
+TEST(FunctionTest, GT)
+{
+    bool ans = GreaterThanInt8(3, 7);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanInt8(11, 1);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanInt16(13, 10210);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanInt16(12311, 1123);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanInt32(123456, 1234567);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanInt32(10, 2);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanInt64(10, 10000000);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanInt64(10000000, 1);
+    EXPECT_TRUE(ans);
+}
+
+TEST(FunctionTest, LTE)
+{
+    bool ans = LessThanEqualInt8(3, 7);
+    EXPECT_TRUE(ans);
+    ans = LessThanEqualInt8(11, 1);
+    EXPECT_FALSE(ans);
+    ans = LessThanEqualInt8(100, 100);
+    EXPECT_TRUE(ans);
+
+    ans = LessThanEqualInt16(13, 10210);
+    EXPECT_TRUE(ans);
+    ans = LessThanEqualInt16(12311, 1123);
+    EXPECT_FALSE(ans);
+    ans = LessThanEqualInt16(8192, 8192);
+    EXPECT_TRUE(ans);
+
+    ans = LessThanEqualInt32(123456, 1234567);
+    EXPECT_TRUE(ans);
+    ans = LessThanEqualInt32(10, 2);
+    EXPECT_FALSE(ans);
+    ans = LessThanEqualInt32(65536, 65536);
+    EXPECT_TRUE(ans);
+
+    ans = LessThanEqualInt64(10, 10000000);
+    EXPECT_TRUE(ans);
+    ans = LessThanEqualInt64(10000000, 1);
+    EXPECT_FALSE(ans);
+    ans = LessThanEqualInt64(123456789, 123456789);
+    EXPECT_TRUE(ans);
+}
+
+TEST(FunctionTest, GTE)
+{
+    bool ans = GreaterThanEqualInt8(3, 7);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanEqualInt8(11, 1);
+    EXPECT_TRUE(ans);
+    ans = GreaterThanEqualInt8(100, 100);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanEqualInt16(13, 10210);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanEqualInt16(12311, 1123);
+    EXPECT_TRUE(ans);
+    ans = GreaterThanEqualInt16(8192, 8192);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanEqualInt32(123456, 1234567);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanEqualInt32(10, 2);
+    EXPECT_TRUE(ans);
+    ans = GreaterThanEqualInt32(65536, 65536);
+    EXPECT_TRUE(ans);
+
+    ans = GreaterThanEqualInt64(10, 10000000);
+    EXPECT_FALSE(ans);
+    ans = GreaterThanEqualInt64(10000000, 1);
+    EXPECT_TRUE(ans);
+    ans = GreaterThanEqualInt64(123456789, 123456789);
+    EXPECT_TRUE(ans);
+}
+
+TEST(FunctionTest, EQ)
+{
+    bool ans;
+    ans = EqualInt8(17, 17);
+    EXPECT_TRUE(ans);
+    ans = EqualInt8(11, 123);
+    EXPECT_FALSE(ans);
+
+    ans = EqualInt16(171, 171);
+    EXPECT_TRUE(ans);
+    ans = EqualInt16(11, 12345);
+    EXPECT_FALSE(ans);
+
+    ans = EqualInt32(123456, 123456);
+    EXPECT_TRUE(ans);
+    ans = EqualInt32(0, 123456);
+    EXPECT_FALSE(ans);
+
+    ans = EqualInt64(123456000, 123456000);
+    EXPECT_TRUE(ans);
+    ans = EqualInt64(11, 12348765);
+    EXPECT_FALSE(ans);
+}
+
+TEST(FunctionTest, NEQ)
+{
+    bool ans;
+    ans = NotEqualInt8(17, 17);
+    EXPECT_FALSE(ans);
+    ans = NotEqualInt8(11, 123);
+    EXPECT_TRUE(ans);
+
+    ans = NotEqualInt16(171, 171);
+    EXPECT_FALSE(ans);
+    ans = NotEqualInt16(11, 12345);
+    EXPECT_TRUE(ans);
+
+    ans = NotEqualInt32(123456, 123456);
+    EXPECT_FALSE(ans);
+    ans = NotEqualInt32(0, 123456);
+    EXPECT_TRUE(ans);
+
+    ans = NotEqualInt64(123456000, 123456000);
+    EXPECT_FALSE(ans);
+    ans = NotEqualInt64(11, 12348765);
+    EXPECT_TRUE(ans);
 }
 
 TEST(FunctionTest, LessThanEqualDouble)
