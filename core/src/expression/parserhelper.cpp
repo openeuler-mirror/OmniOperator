@@ -34,6 +34,7 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
             }
         }
     } else {
+        printf("GetDefaultValueForType\n");
         destType = std::make_shared<DataType>(destTypeId);
         switch (destTypeId) {
             case OMNI_BYTE:

@@ -1117,6 +1117,10 @@ TEST(FunctionTest, Mod)
     EXPECT_TRUE(nullFlag);
 
     nullFlag = false;
+    EXPECT_EQ(2, ModulusInt32(&nullFlag, 5, 3));
+    EXPECT_FALSE(nullFlag);
+
+    nullFlag = false;
     EXPECT_EQ(2, ModulusInt16(&nullFlag, 29, 3));
     EXPECT_FALSE(nullFlag);
 
@@ -1306,7 +1310,56 @@ TEST(FunctionTest, CastNumToString)
     int32_t int_32 = 456;
     int64_t int_64 = 789;
     double num_double = 3.56;
-    
+
+    int outLen = 0;
+    std::string actual;
+    const char *result;
+
+    result = CastInt8ToString(contextptr, int_8, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("-12", actual);
+    EXPECT_EQ(3, outLen);
+
+    result = CastInt16ToString(contextptr, int_16, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("123", actual);
+    EXPECT_EQ(3, outLen);
+
+    result = CastIntToString(contextptr, int_32, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("456", actual);
+    EXPECT_EQ(3, outLen);
+
+    result = CastLongToString(contextptr, int_64, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("789", actual);
+    EXPECT_EQ(3, outLen);
+
+    result = CastDoubleToString(contextptr, num_double, false, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ("3.56", actual);
+    EXPECT_EQ(4, outLen);
+    delete context;
+}
+
+TEST(FunctionTest, LessThanEqualDouble)
+{
+    double left = 3.5;
+    double right = 3.0;
+    EXPECT_FALSE(LessThanEqualDouble(left, right));
+}
+
+TEST(FunctionTest, CastNumToString)
+{
+    auto context = new ExecutionContext();
+    int64_t contextptr = reinterpret_cast<int64_t>(context);
+
+    int8_t int_8 = -12;
+    int16_t int_16 = 123;
+    int32_t int_32 = 456;
+    int64_t int_64 = 789;
+    double num_double = 3.56;
+
     int outLen = 0;
     std::string actual;
     const char *result;
