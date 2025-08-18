@@ -1143,6 +1143,10 @@ TEST(FunctionTest, Mod)
     nullFlag = false;
     ModulusInt64(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    ModulusInt64(&nullFlag, 1, 0);
+    EXPECT_TRUE(nullFlag);
 }
 
 TEST(FunctionTest, LT)
