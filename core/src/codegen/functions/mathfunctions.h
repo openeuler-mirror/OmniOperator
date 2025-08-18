@@ -73,6 +73,34 @@ extern "C" DLLEXPORT int8_t CastDoubleToInt8Down(double x);
 
 extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x);
 
+extern "C" DLLEXPORT double CastInt16ToDouble(int16_t x);
+
+extern "C" DLLEXPORT double CastInt8ToDouble(int8_t x);
+
+extern "C" DLLEXPORT int32_t CastInt16ToInt32(int16_t x);
+
+extern "C" DLLEXPORT int32_t CastInt8ToInt32(int8_t x);
+
+extern "C" DLLEXPORT int64_t CastInt16ToInt64(int16_t x);
+
+extern "C" DLLEXPORT int64_t CastInt8ToInt64(int8_t x);
+
+extern "C" DLLEXPORT int32_t CastDoubleToInt32HalfUp(double x);
+
+extern "C" DLLEXPORT int16_t CastDoubleToInt16HalfUp(double x);
+
+extern "C" DLLEXPORT int8_t CastDoubleToInt8HalfUp(double x);
+
+extern "C" DLLEXPORT int64_t CastDoubleToInt64HalfUp(double x);
+
+extern "C" DLLEXPORT int32_t CastDoubleToInt32Down(double x);
+
+extern "C" DLLEXPORT int16_t CastDoubleToInt16Down(double x);
+
+extern "C" DLLEXPORT int8_t CastDoubleToInt8Down(double x);
+
+extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x);
+
 // double binary operations
 extern "C" DLLEXPORT double AddDouble(double left, double right);
 
