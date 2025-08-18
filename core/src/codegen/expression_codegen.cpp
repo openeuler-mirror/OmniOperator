@@ -1847,6 +1847,16 @@ CodeGenValue *ExpressionCodeGen::LiteralExprConstantHelper(const LiteralExpr &lE
                 llvmTypes->CreateConstantBool(isNullLiteral));
             break;
         }
+        case OMNI_BYTE:{
+            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantByte(lExpr.byteVal),
+                llvmTypes->CreateConstantBool(isNullLiteral));
+            break;
+        }
+        case OMNI_SHORT:{
+            codeGenValue = new CodeGenValue(llvmTypes->CreateConstantShort(lExpr.shortVal),
+                llvmTypes->CreateConstantBool(isNullLiteral));
+            break;
+        }
         case OMNI_TIMESTAMP:
         case OMNI_LONG: {
             codeGenValue = new CodeGenValue(llvmTypes->CreateConstantLong(lExpr.longVal),
@@ -2049,6 +2059,12 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(const omniruntime::type::Data
     DataTypeId typeId = dataType.GetId();
     FunctionSignature dictionaryFuncSignature;
     switch (typeId) {
+        case OMNI_BYTE:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetByteStr, paramTypes, OMNI_BYTE);
+            break;
+        case OMNI_SHORT:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetShortStr, paramTypes, OMNI_SHORT);
+            break;
         case OMNI_INT:
         case OMNI_DATE32:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetIntStr, paramTypes, OMNI_INT);

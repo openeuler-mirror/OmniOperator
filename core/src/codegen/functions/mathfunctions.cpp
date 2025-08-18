@@ -21,6 +21,26 @@ const uint64_t DOUBLE_BIT_MASK = ((static_cast<uint64_t>(1) << (sizeof(double) *
 namespace omniruntime::codegen::function {
 static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
 
+extern "C" DLLEXPORT int16_t CastInt32ToInt16(int32_t x)
+{
+    return static_cast<int16_t>(x);
+}
+
+extern "C" DLLEXPORT int8_t CastInt32ToInt8(int32_t x)
+{
+    return static_cast<int8_t>(x);
+}
+
+extern "C" DLLEXPORT int16_t CastInt64ToInt16(int64_t x)
+{
+    return static_cast<int16_t>(x);
+}
+
+extern "C" DLLEXPORT int8_t CastInt64ToInt8(int64_t x)
+{
+    return static_cast<int8_t>(x);
+}
+
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
 {
     return static_cast<int64_t>(x);
@@ -29,6 +49,37 @@ extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
 extern "C" DLLEXPORT int32_t CastInt64ToInt32(int64_t x)
 {
     return static_cast<int32_t>(x);
+}
+
+
+extern "C" DLLEXPORT int32_t CastInt16ToInt32(int16_t x)
+{
+    return static_cast<int32_t>(x);
+}
+
+extern "C" DLLEXPORT int32_t CastInt8ToInt32(int8_t x)
+{
+    return static_cast<int32_t>(x);
+}
+
+extern "C" DLLEXPORT int64_t CastInt16ToInt64(int16_t x)
+{
+    return static_cast<int64_t>(x);
+}
+
+extern "C" DLLEXPORT int64_t CastInt8ToInt64(int8_t x)
+{
+    return static_cast<int64_t>(x);
+}
+
+extern "C" DLLEXPORT double CastInt16ToDouble(int16_t x)
+{
+    return static_cast<double>(x);
+}
+
+extern "C" DLLEXPORT double CastInt8ToDouble(int8_t x)
+{
+    return static_cast<double>(x);
 }
 
 extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x)
@@ -46,6 +97,16 @@ extern "C" DLLEXPORT int32_t CastDoubleToInt32Down(double x)
     return static_cast<int32_t>(x);
 }
 
+extern "C" DLLEXPORT int16_t CastDoubleToInt16Down(double x)
+{
+    return static_cast<int16_t>(x);
+}
+
+extern "C" DLLEXPORT int8_t CastDoubleToInt8Down(double x)
+{
+    return static_cast<int8_t>(x);
+}
+
 extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x)
 {
     return static_cast<int64_t>(x);
@@ -54,6 +115,16 @@ extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x)
 extern "C" DLLEXPORT int32_t CastDoubleToInt32HalfUp(double x)
 {
     return static_cast<int32_t>(Round(x, 0));
+}
+
+extern "C" DLLEXPORT int16_t CastDoubleToInt16HalfUp(double x)
+{
+    return static_cast<int16_t>(Round(x, 0));
+}
+
+extern "C" DLLEXPORT int8_t CastDoubleToInt8HalfUp(double x)
+{
+    return static_cast<int8_t>(Round(x, 0));
 }
 
 extern "C" DLLEXPORT int64_t CastDoubleToInt64HalfUp(double x)

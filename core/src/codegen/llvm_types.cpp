@@ -13,6 +13,8 @@ using namespace omniruntime::type;
 using namespace llvm;
 
 namespace {
+const int INT8_VALUE = 8;
+const int INT16_VALUE = 16;
 const int INT32_VALUE = 32;
 const int INT64_VALUE = 64;
 const int INT128_VALUE = 128;
@@ -24,6 +26,7 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
         { OMNI_LONG, I64Type() },
         { OMNI_DOUBLE, DoubleType() },
         { OMNI_BOOLEAN, I1Type() },
+        { OMNI_BYTE, I8Type() },
         { OMNI_SHORT, I16Type() },
         { OMNI_DECIMAL64, I64Type() },
         { OMNI_DECIMAL128, I128Type() },
@@ -41,6 +44,16 @@ LLVMTypes::~LLVMTypes() = default;
 Value *LLVMTypes::CreateConstantBool(bool v)
 {
     return ConstantInt::get(context, APInt(1, v));
+}
+
+Value *LLVMTypes::CreateConstantByte(int8_t v)
+{
+    return ConstantInt::get(context, APInt(INT8_VALUE, v, true));
+}
+
+Value *LLVMTypes::CreateConstantShort(int16_t v)
+{
+    return ConstantInt::get(context, APInt(INT16_VALUE, v, true));
 }
 
 Value *LLVMTypes::CreateConstantInt(int32_t v)
@@ -118,6 +131,11 @@ llvm::PointerType *LLVMTypes::I8PtrType()
     return PtrType(I8Type());
 }
 
+llvm::PointerType *LLVMTypes::I16PtrType()
+{
+    return PtrType(I16Type());
+}
+
 llvm::PointerType *LLVMTypes::I32PtrType()
 {
     return PtrType(I32Type());
@@ -154,6 +172,10 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
     switch (typeId) {
         case OMNI_BOOLEAN:
             return I1PtrType();
+        case OMNI_BYTE:
+            return I8PtrType();
+        case OMNI_SHORT:
+            return I16PtrType();
         case OMNI_INT:
         case OMNI_DATE32:
             return I32PtrType();
@@ -179,6 +201,10 @@ llvm::Type *LLVMTypes::ToBatchDataPointerType(DataTypeId typeId)
     switch (typeId) {
         case OMNI_BOOLEAN:
             return I1PtrType();
+        case OMNI_BYTE:
+            return I8PtrType();
+        case OMNI_SHORT:
+            return I16PtrType();
         case OMNI_INT:
         case OMNI_DATE32:
             return I32PtrType();

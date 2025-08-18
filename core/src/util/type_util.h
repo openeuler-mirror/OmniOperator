@@ -20,6 +20,9 @@ public:
             case omniruntime::type::OMNI_SHORT: {
                 return sizeof(int16_t);
             }
+            case omniruntime::type::OMNI_BYTE: {
+                return sizeof(int8_t);
+            }
             case omniruntime::type::OMNI_LONG: {
                 return sizeof(int64_t);
             }
@@ -50,6 +53,8 @@ std::shared_ptr<omniruntime::type::DataType> InvalidType();
 std::shared_ptr<omniruntime::type::DataType> NoneType();
 
 std::shared_ptr<omniruntime::type::DataType> IntType();
+
+std::shared_ptr<omniruntime::type::DataType> ByteType();
 
 std::shared_ptr<omniruntime::type::DataType> ShortType();
 

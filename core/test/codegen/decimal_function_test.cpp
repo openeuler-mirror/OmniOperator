@@ -386,6 +386,9 @@ TEST(FunctionTest, CastDecimal128To128)
     CastDecimal128To128(contextPtr, 0, 129234454, 38, 0, false, 38, 30, &high, &low);
     std::string message = context->GetError();
     EXPECT_EQ(message, "Cannot cast DECIMAL(38, 0) '129234454' to DECIMAL(38, 30)");
+    CastDecimal128To128(contextPtr, 0, 123, 38, 0, true, 20, 0, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 0);
     delete context;
 }
 
@@ -407,6 +410,9 @@ TEST(FunctionTest, CastDecimal64To128)
     CastDecimal64To128(contextPtr, 123123, 17, 3, false, 38, 37, &high, &low);
     std::string message = context->GetError();
     EXPECT_EQ(message, "Cannot cast DECIMAL(17, 3) '123.123' to DECIMAL(38, 37)");
+    CastDecimal64To128(contextPtr, 123125, 17, 3, true, 38, 2, &high, &low);
+    EXPECT_EQ(high, 0);
+    EXPECT_EQ(low, 0);
     delete context;
 }
 
@@ -427,6 +433,56 @@ TEST(FunctionTest, CastDecimal128To64)
     Decimal128Wrapper x("12345120000000000000000");
     result = CastDecimal128To64(contextPtr, x.HighBits(), x.LowBits(), 38, 18, false, 7, 2);
     EXPECT_EQ(result, 1234512);
+    delete context;
+}
+
+TEST(FunctionTest, CastInt8ToDecimal64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int8_t s = 111;
+    int64_t result = CastInt8ToDecimal64(contextPtr, s, false, 17, 0);
+    EXPECT_EQ(result, 111);
+    s = -12;
+    result = CastInt8ToDecimal64(contextPtr, s, false, 17, 3);
+    EXPECT_EQ(result, -12000);
+    s = 0;
+    result = CastInt8ToDecimal64(contextPtr, s, false, 17, 0);
+    EXPECT_EQ(result, 0);
+    s = 127;
+    result = CastInt8ToDecimal64(contextPtr, s, false, 18, 0);
+    EXPECT_EQ(result, 127);
+    s = 127;
+    result = CastInt8ToDecimal64(contextPtr, s, false, 5, 4);
+    EXPECT_EQ(result, 0);
+    s = 123;
+    result = CastInt8ToDecimal64(contextPtr, s, false, 18, 19);
+    EXPECT_EQ(result, 0);
+    delete context;
+}
+
+TEST(FunctionTest, CastInt16ToDecimal64)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int16_t s = 9123;
+    int64_t result = CastInt16ToDecimal64(contextPtr, s, false, 17, 0);
+    EXPECT_EQ(result, 9123);
+    s = -4559;
+    result = CastInt16ToDecimal64(contextPtr, s, false, 17, 3);
+    EXPECT_EQ(result, -4559000);
+    s = 0;
+    result = CastInt16ToDecimal64(contextPtr, s, false, 17, 0);
+    EXPECT_EQ(result, 0);
+    s = 32767;
+    result = CastInt16ToDecimal64(contextPtr, s, false, 18, 0);
+    EXPECT_EQ(result, 32767);
+    s = 32767;
+    result = CastInt16ToDecimal64(contextPtr, s, false, 5, 4);
+    EXPECT_EQ(result, 0);
+    s = 123;
+    result = CastInt16ToDecimal64(contextPtr, s, false, 18, 19);
+    EXPECT_EQ(result, 0);
     delete context;
 }
 
@@ -510,6 +566,50 @@ TEST(FunctionTest, CastDoubleToDecimal64)
     delete context;
 }
 
+TEST(FunctionTest, CastInt8ToDecimal128)
+{
+    int64_t high = 0;
+    uint64_t low = 0;
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int8_t s = 123;
+    CastInt8ToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 123);
+    s = -1;
+    CastInt8ToDecimal128(contextPtr, s, false, 38, 2, &high, &low);
+    EXPECT_EQ(low, -100);
+    s = 0;
+    CastInt8ToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 0);
+    s = 127;
+    CastInt8ToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 127);
+    delete context;
+}
+
+TEST(FunctionTest, CastInt16ToDecimal128)
+{
+    int64_t high = 0;
+    uint64_t low = 0;
+
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int16_t s = 9123;
+    CastInt16ToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 9123);
+    s = -4;
+    CastInt16ToDecimal128(contextPtr, s, false, 38, 3, &high, &low);
+    EXPECT_EQ(low, -4000);
+    s = 0;
+    CastInt16ToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 0);
+    s = 32767 ;
+    CastInt16ToDecimal128(contextPtr, s, false, 38, 0, &high, &low);
+    EXPECT_EQ(low, 32767);
+    delete context;
+}
+
 TEST(FunctionTest, CastIntToDecimal128)
 {
     int64_t high = 0;
@@ -574,6 +674,66 @@ TEST(FunctionTest, CastDoubleToDecimal128)
     CastDoubleToDecimal128(contextPtr, s, false, 18, 0, &high, &low);
     EXPECT_EQ(context->GetError(), "Cannot cast DOUBLE '1.11e+100' to DECIMAL(18, 0). Value too large.");
     EXPECT_TRUE(context->HasError());
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal64ToInt16)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int16_t result = CastDecimal64ToInt16Down(contextPtr, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToInt16HalfUp(contextPtr, 99, 38, 1, false);
+    EXPECT_EQ(result, 10);
+    result = CastDecimal64ToInt16Down(contextPtr, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToInt16HalfUp(contextPtr, 8888, 38, 2, false);
+    EXPECT_EQ(result, 89);
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal64ToInt8)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int8_t result = CastDecimal64ToInt8Down(contextPtr, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToInt8HalfUp(contextPtr, 99, 38, 1, false);
+    EXPECT_EQ(result, 10);
+    result = CastDecimal64ToInt8Down(contextPtr, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal64ToInt8HalfUp(contextPtr, 8888, 38, 2, false);
+    EXPECT_EQ(result, 89);
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToInt16)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int16_t result = CastDecimal128ToInt16HalfUp(contextPtr, 0, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal128ToInt16HalfUp(contextPtr, 0, 99, 38, 1, false);
+    EXPECT_EQ(result, 10);
+    result = CastDecimal128ToInt16HalfUp(contextPtr, 1, 100, 38, 0, false);
+    EXPECT_EQ(result, 0);
+    result = CastDecimal128ToInt16HalfUp(contextPtr, 0, 8888, 38, 2, false);
+    EXPECT_EQ(result, 89);
+    delete context;
+}
+
+TEST(FunctionTest, CastDecimal128ToInt8)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int8_t result = CastDecimal128ToInt8HalfUp(contextPtr, 0, 100, 38, 0, false);
+    EXPECT_EQ(result, 100);
+    result = CastDecimal128ToInt8HalfUp(contextPtr, 0, 99, 38, 1, false);
+    EXPECT_EQ(result, 10);
+    result = CastDecimal128ToInt8HalfUp(contextPtr, 1, 100, 38, 0, false);
+    EXPECT_EQ(result, 0);
+    result = CastDecimal128ToInt8HalfUp(contextPtr, 0, 8888, 38, 2, false);
+    EXPECT_EQ(result, 89);
     delete context;
 }
 

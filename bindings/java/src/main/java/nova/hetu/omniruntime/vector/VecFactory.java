@@ -52,6 +52,8 @@ public class VecFactory {
                 return new DoubleVec(nativeVector);
             case OMNI_SHORT:
                 return new ShortVec(nativeVector);
+            case OMNI_BYTE:
+                return new ByteVec(nativeVector);
             case OMNI_BOOLEAN:
                 return new BooleanVec(nativeVector);
             case OMNI_VARCHAR:
@@ -112,6 +114,8 @@ public class VecFactory {
                 return new DoubleVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_SHORT:
                 return new ShortVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_BYTE:
+                return new ByteVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_BOOLEAN:
                 return new BooleanVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_VARCHAR:
@@ -146,6 +150,8 @@ public class VecFactory {
                 return new DoubleVec(size);
             case OMNI_SHORT:
                 return new ShortVec(size);
+            case OMNI_BYTE:
+                return new ByteVec(size);
             case OMNI_BOOLEAN:
                 return new BooleanVec(size);
             case OMNI_VARCHAR:

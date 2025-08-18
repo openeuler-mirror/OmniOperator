@@ -148,6 +148,10 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
 
     std::vector<Function> mathFnRegistry = {
         // insert native functions for each absolute math function
+        Function(reinterpret_cast<void *>(CastInt32ToInt16), MathCastFnStr(), {}, { OMNI_INT }, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastInt32ToInt8), MathCastFnStr(), {}, { OMNI_INT }, OMNI_BYTE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastInt64ToInt16), MathCastFnStr(), {}, { type::OMNI_LONG }, OMNI_SHORT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastInt64ToInt8), MathCastFnStr(), {}, { type::OMNI_LONG }, OMNI_BYTE, INPUT_DATA),
         Function(reinterpret_cast<void *>(Abs<int32_t>), AbsFnStr(), {}, { OMNI_INT }, OMNI_INT, INPUT_DATA),
         Function(reinterpret_cast<void *>(Abs<int64_t>), AbsFnStr(), {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(Abs<double>), AbsFnStr(), {}, { OMNI_DOUBLE }, OMNI_DOUBLE, INPUT_DATA),
@@ -159,6 +163,14 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(CastInt32ToInt64), MathCastFnStr(), {}, { OMNI_INT }, OMNI_LONG, INPUT_DATA),
         Function(reinterpret_cast<void *>(CastInt64ToInt32), MathCastFnStr(), {}, { OMNI_LONG }, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastInt16ToInt32), MathCastFnStr(), {}, { OMNI_SHORT }, OMNI_INT, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastInt8ToInt32), MathCastFnStr(), {}, { OMNI_BYTE }, OMNI_INT, INPUT_DATA),
+
+        Function(reinterpret_cast<void *>(CastInt16ToInt64), MathCastFnStr(), {}, { OMNI_SHORT }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastInt8ToInt64), MathCastFnStr(), {}, { OMNI_BYTE }, OMNI_LONG, INPUT_DATA),
+
+        Function(reinterpret_cast<void *>(CastInt16ToDouble), MathCastFnStr(), {}, { OMNI_SHORT }, OMNI_DOUBLE, INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastInt8ToDouble), MathCastFnStr(), {}, { OMNI_BYTE }, OMNI_DOUBLE, INPUT_DATA),
 
         // insert native function for each double operations
         Function(reinterpret_cast<void *>(AddDouble), AddFnStr(), {}, doubleParams, OMNI_DOUBLE, INPUT_DATA),
@@ -248,6 +260,10 @@ std::vector<Function> MathFunctionRegistryHalfUp::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(CastDoubleToInt32HalfUp), MathCastFnStr(), {}, { OMNI_DOUBLE }, OMNI_INT,
             INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastDoubleToInt16HalfUp), MathCastFnStr(), {}, { OMNI_DOUBLE }, OMNI_SHORT,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastDoubleToInt8HalfUp), MathCastFnStr(), {}, { OMNI_DOUBLE }, OMNI_BYTE,
+            INPUT_DATA),
     };
 
     return mathFnRegistry;
@@ -260,6 +276,10 @@ std::vector<Function> MathFunctionRegistryDown::GetFunctions()
         Function(reinterpret_cast<void *>(CastDoubleToInt64Down), MathCastFnStr(), {}, { OMNI_DOUBLE }, OMNI_LONG,
             INPUT_DATA),
         Function(reinterpret_cast<void *>(CastDoubleToInt32Down), MathCastFnStr(), {}, { OMNI_DOUBLE }, OMNI_INT,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastDoubleToInt16Down), MathCastFnStr(), {}, { OMNI_DOUBLE }, OMNI_SHORT,
+            INPUT_DATA),
+        Function(reinterpret_cast<void *>(CastDoubleToInt8Down), MathCastFnStr(), {}, { OMNI_DOUBLE }, OMNI_BYTE,
             INPUT_DATA),
     };
 

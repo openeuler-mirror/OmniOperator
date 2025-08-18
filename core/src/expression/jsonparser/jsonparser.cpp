@@ -64,6 +64,14 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
             bool boolVal = jsonExpr["value"].get<bool>();
             return new LiteralExpr(boolVal, std::make_shared<BooleanDataType>());
         }
+        case OMNI_BYTE: {
+            auto byteVal = jsonExpr["value"].get<int8_t>();
+            return new LiteralExpr(byteVal, std::make_shared<ByteDataType>());
+        }
+        case OMNI_SHORT: {
+            auto shortVal = jsonExpr["value"].get<int16_t>();
+            return new LiteralExpr(shortVal, std::make_shared<ShortDataType>());
+        }
         case OMNI_INT: {
             auto intVal = jsonExpr["value"].get<int32_t>();
             return new LiteralExpr(intVal, std::make_shared<IntDataType>());

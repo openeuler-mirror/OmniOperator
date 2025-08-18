@@ -722,6 +722,54 @@ public:
         return !operator<(right);
     }
 
+    OpStatus ToInt8(int8_t &res) const
+    {
+        Decimal128Wrapper result = this->Divide(Decimal128Wrapper(TenOfScaleMultipliers[scale]), 0);
+        if (signum == 0) {
+            res = 0;
+            return OpStatus::SUCCESS;
+        }
+        if (signum > 0) {
+            if (result > INT8_MAX) {
+                return OpStatus::OP_OVERFLOW;
+            }
+            res = static_cast<int8_t>(result.val);
+        } else {
+            // '1L + INT8_MAX', which is positive, is implicitly converted to Decimal128Wrapper with signum_=1,
+            // comparing it with result, which is negative, can never detect overflow
+            // that is why here, we should compare '1L + INT8_MAX' with result.val_ not result itself
+            if (result.val > 1L + INT8_MAX) {
+                return OpStatus::OP_OVERFLOW;
+            }
+            res = static_cast<int8_t>(-result.val);
+        }
+        return OpStatus::SUCCESS;
+    }
+
+    OpStatus ToInt16(int16_t &res) const
+    {
+        Decimal128Wrapper result = this->Divide(Decimal128Wrapper(TenOfScaleMultipliers[scale]), 0);
+        if (signum == 0) {
+            res = 0;
+            return OpStatus::SUCCESS;
+        }
+        if (signum > 0) {
+            if (result > INT16_MAX) {
+                return OpStatus::OP_OVERFLOW;
+            }
+            res = static_cast<int16_t>(result.val);
+        } else {
+            // '1L + INT16_MAX', which is positive, is implicitly converted to Decimal128Wrapper with signum_=1,
+            // comparing it with result, which is negative, can never detect overflow
+            // that is why here, we should compare '1L + INT16_MAX' with result.val_ not result itself
+            if (result.val > 1L + INT16_MAX) {
+                return OpStatus::OP_OVERFLOW;
+            }
+            res = static_cast<int16_t>(-result.val);
+        }
+        return OpStatus::SUCCESS;
+    }
+
     OpStatus ToInt(int32_t &res) const
     {
         Decimal128Wrapper result = this->Divide(Decimal128Wrapper(TenOfScaleMultipliers[scale]), 0);
@@ -768,6 +816,26 @@ public:
             res = static_cast<int64_t>(-result.val);
         }
         return OpStatus::SUCCESS;
+    }
+
+    explicit operator int8_t() const
+    {
+        int8_t result;
+        if (ToInt8(result) != OpStatus::SUCCESS) {
+            throw std::overflow_error("Overflow when Decimal128 cast to int8");
+        } else {
+            return result;
+        }
+    }
+
+    explicit operator int16_t() const
+    {
+        int16_t result;
+        if (ToInt16(result) != OpStatus::SUCCESS) {
+            throw std::overflow_error("Overflow when Decimal128 cast to int16");
+        } else {
+            return result;
+        }
     }
 
     explicit operator int32_t() const
@@ -1137,6 +1205,16 @@ public:
         val = 0;
     }
 
+    Decimal64(int8_t inputVal)
+    {
+        val = inputVal;
+    }
+
+    Decimal64(int16_t inputVal)
+    {
+        val = inputVal;
+    }
+
     Decimal64(int32_t inputVal)
     {
         val = inputVal;
@@ -1423,6 +1501,48 @@ public:
         return *this;
     }
 
+    OpStatus ToInt8(int8_t &res) const
+    {
+        auto tenOfScale = static_cast<int64_t>(TenOfScaleMultipliers[scale]);
+        int64_t res64;
+        if (scale == 0) {
+            res64 = val;
+        } else {
+            res64 = val / tenOfScale;
+            auto reminder = val % tenOfScale;
+            if (std::abs(2 * reminder) >= tenOfScale) {
+                res64 += ((val < 0) ? -1 : 1);
+            }
+        }
+        if (res64 > INT8_MAX || res64 < INT8_MIN) {
+            return OpStatus::OP_OVERFLOW;
+        } else {
+            res = static_cast<int8_t>(res64);
+            return OpStatus::SUCCESS;
+        }
+    }
+
+    OpStatus ToInt16(int16_t &res) const
+    {
+        auto tenOfScale = static_cast<int64_t>(TenOfScaleMultipliers[scale]);
+        int64_t res64;
+        if (scale == 0) {
+            res64 = val;
+        } else {
+            res64 = val / tenOfScale;
+            auto reminder = val % tenOfScale;
+            if (std::abs(2 * reminder) >= tenOfScale) {
+                res64 += ((val < 0) ? -1 : 1);
+            }
+        }
+        if (res64 > INT16_MAX || res64 < INT16_MIN) {
+            return OpStatus::OP_OVERFLOW;
+        } else {
+            res = static_cast<int16_t>(res64);
+            return OpStatus::SUCCESS;
+        }
+    }
+
     OpStatus ToInt(int32_t &res) const
     {
         auto tenOfScale = static_cast<int64_t>(TenOfScaleMultipliers[scale]);
@@ -1457,6 +1577,26 @@ public:
             }
         }
         return OpStatus::SUCCESS;
+    }
+
+    explicit operator int8_t() const
+    {
+        int8_t result;
+        if (ToInt8(result) != OpStatus::SUCCESS) {
+            throw std::overflow_error("Overflow when Decimal64 cast to int8");
+        } else {
+            return result;
+        }
+    }
+
+    explicit operator int16_t() const
+    {
+        int16_t result;
+        if (ToInt16(result) != OpStatus::SUCCESS) {
+            throw std::overflow_error("Overflow when Decimal64 cast to int16");
+        } else {
+            return result;
+        }
     }
 
     explicit operator int32_t() const

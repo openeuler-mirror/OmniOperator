@@ -29,6 +29,12 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_SHORT> {
     using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
 };
 
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_BYTE> {
+    using type = int8_t;
+    using vector = vec::Vector<type>;
+    using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
+};
+
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_INT> {
     using type = int32_t;
     using vector = vec::Vector<type>;

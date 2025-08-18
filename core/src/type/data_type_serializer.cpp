@@ -54,6 +54,8 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
             return DoubleType();
         case OMNI_BOOLEAN:
             return BooleanType();
+        case OMNI_BYTE:
+            return ByteType();
         case OMNI_SHORT:
             return ShortType();
         case OMNI_DECIMAL64:

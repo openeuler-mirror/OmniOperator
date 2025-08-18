@@ -327,6 +327,16 @@ extern "C" DLLEXPORT const char *CastIntToString(int64_t contextPtr, int32_t val
     return ret;
 }
 
+extern "C" DLLEXPORT const char *CastInt16ToString(int64_t contextPtr, int16_t value, bool isNull, int32_t *outLen)
+{
+    return CastIntToString(contextPtr, static_cast<int32_t>(value), isNull, outLen);
+}
+
+extern "C" DLLEXPORT const char *CastInt8ToString(int64_t contextPtr, int8_t value, bool isNull, int32_t *outLen)
+{
+    return CastIntToString(contextPtr, static_cast<int32_t>(value), isNull, outLen);
+}
+
 extern "C" DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t value, bool isNull, int32_t *outLen)
 {
     if (isNull) {
@@ -407,6 +417,59 @@ extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const
 }
 
 // Cast std::string to numeric type
+extern "C" DLLEXPORT int16_t CastStringToShort(int64_t contextPtr, const char *str, int32_t strLen, bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    int16_t result;
+    Status status = ConvertStringToInteger<int16_t, false>(result, str, strLen);
+    if (status == Status::IS_NOT_A_NUMBER) {
+        std::string s(str, strLen);
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast '" << s << "' to INTEGER. Value is not a number.";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+
+    if (status == Status::CONVERT_OVERFLOW) {
+        std::string s(str, strLen);
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast '" << s << "' to INTEGER. Value too large or too small.";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+    return result;
+}
+
+extern "C" DLLEXPORT int8_t CastStringToByte(int64_t contextPtr, const char *str, int32_t strLen, bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    int8_t result = 0;
+    Status status = ConvertStringToInteger<int8_t, false>(result, str, strLen);
+    std::ostringstream errorMessage;
+    SetError(contextPtr, errorMessage.str());
+    if (status == Status::IS_NOT_A_NUMBER) {
+        std::string s(str, strLen);
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast '" << s << "' to BYTE. Value is not a number.";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+
+    if (status == Status::CONVERT_OVERFLOW) {
+        std::string s(str, strLen);
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast '" << s << "' to BYTE. Value too large or too small.";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+
+    return result;
+}
+
 extern "C" DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str, int32_t strLen, bool isNull)
 {
     if (isNull) {
@@ -429,7 +492,6 @@ extern "C" DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str
         SetError(contextPtr, errorMessage.str());
         return 0;
     }
-
     return result;
 }
 
@@ -661,6 +723,18 @@ extern "C" DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool
     return ret;
 }
 
+extern "C" DLLEXPORT const char *CastInt16ToStringRetNull(int64_t contextPtr, bool *isNull, int16_t value,
+    int32_t *outLen)
+{
+    return CastIntToStringRetNull(contextPtr, isNull, static_cast<int32_t>(value), outLen);
+}
+
+extern "C" DLLEXPORT const char *CastInt8ToStringRetNull(int64_t contextPtr, bool *isNull, int8_t value,
+    int32_t *outLen)
+{
+    return CastIntToStringRetNull(contextPtr, isNull, static_cast<int32_t>(value), outLen);
+}
+
 extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, bool *isNull, int64_t value,
     int32_t *outLen)
 {
@@ -713,6 +787,22 @@ extern "C" DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPt
         return nullptr;
     }
     return ret;
+}
+
+extern "C" DLLEXPORT int8_t CastStringToByteRetNull(bool *isNull, const char *str, int32_t strLen)
+{
+    int8_t result = -6;
+    Status status = ConvertStringToInteger<int8_t>(result, str, strLen);
+    *isNull = status != Status::CONVERT_SUCCESS;
+    return result;
+}
+
+extern "C" DLLEXPORT int16_t CastStringToShortRetNull(bool *isNull, const char *str, int32_t strLen)
+{
+    int16_t result = 0;
+    Status status = ConvertStringToInteger<int16_t>(result, str, strLen);
+    *isNull = status != Status::CONVERT_SUCCESS;
+    return result;
 }
 
 extern "C" DLLEXPORT int32_t CastStringToIntRetNull(bool *isNull, const char *str, int32_t strLen)
