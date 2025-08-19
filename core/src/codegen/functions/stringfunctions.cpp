@@ -126,6 +126,27 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
     return ret;
 }
 
+extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    bool separatorIsNull, const char *ap, int32_t apLen, const char *bp, int32_t bpLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    if (separatorIsNull) {
+        *outLen = 0;
+        isNull = true;
+        return nullptr;
+    }
+
+    bool hasErr = false;
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, ap, apLen, bp, bpLen, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
 extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
     bool isNull)
 {

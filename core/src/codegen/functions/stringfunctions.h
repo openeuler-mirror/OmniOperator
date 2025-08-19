@@ -50,6 +50,9 @@ extern "C" DLLEXPORT const char *ConcatCharStr(int64_t contextPtr, const char *a
 extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *ap, int32_t apLen, const char *bp,
     int32_t bWidth, int32_t bpLen, bool isNull, int32_t *outLen);
 
+extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    bool separatorIsNull, const char *ap, int32_t apLen, const char *bp, int32_t bpLen, bool isNull, int32_t *outLen);
+
 extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
     bool isNull);
 

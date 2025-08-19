@@ -114,6 +114,26 @@ public:
         return ret;
     }
 
+    static inline const char *ConcatWsStrDiffWidths(int64_t contextPtr, const char *separator, int32_t separatorLen,
+        const char *ap, int32_t apLen, const char *bp, int32_t bpLen, bool *hasErr, int32_t *outLen)
+    {
+        *outLen = apLen + separatorLen + bpLen;
+        if (*outLen <= 0) {
+            *outLen = 0;
+            return reinterpret_cast<const char *>(EMPTY);
+        }
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
+        errno_t res2 = memcpy_s(ret + apLen, *outLen + 1 - apLen, separator, separatorLen);
+        errno_t res3 = memcpy_s(ret + apLen + separatorLen, *outLen + 1 - apLen - separatorLen, bp, bpLen);
+        if (res1 != EOK || res2 != EOK || res3 != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        return ret;
+    }
+
     static inline const char *ReplaceWithSearchNotEmpty(int64_t contextPtr, const char *str, int32_t strLen,
         const char *searchStr, int32_t searchLen, const char *replaceStr, int32_t replaceLen, bool *hasErr,
         int32_t *outLen)

@@ -21,6 +21,12 @@ const std::string ConcatFnStr()
     return concatFnStr;
 }
 
+const std::string ConcatWsFnStr()
+{
+    const std::string concatWsFnStr = "concat_ws";
+    return concatWsFnStr;
+}
+
 const std::string LikeFnStr()
 {
     const std::string likeFnStr = "LIKE";
@@ -152,6 +158,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
             INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ConcatStrChar), ConcatFnStr(), {}, { OMNI_VARCHAR, OMNI_CHAR }, OMNI_CHAR,
             INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(ConcatWsStr), ConcatWsFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR },
+            OMNI_VARCHAR, INPUT_DATA, true),
 
         Function(reinterpret_cast<void *>(LikeStr), LikeFnStr(), {}, { OMNI_VARCHAR, OMNI_VARCHAR }, OMNI_BOOLEAN,
             INPUT_DATA),
