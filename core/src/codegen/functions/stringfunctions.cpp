@@ -5,6 +5,7 @@
 #include "stringfunctions.h"
 #include "md5.h"
 #include "dtoa.h"
+#include "type/string_Impl.h"
 
 namespace omniruntime::codegen::function {
 /**
@@ -1145,6 +1146,58 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
     padded[outByteNum] = '\0';
     *outLen = outByteNum - 1;
     return padded;
+}
+
+extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *str, int32_t strLen, const char *delim,
+    int32_t delimLen, int32_t count, bool isNull, int32_t *outLen)
+{
+    if (count == 0 || isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+
+    int64_t index;
+    if (count > 0) {
+        index = stringImpl::StringPosition<true, true>(std::string_view(str, strLen), std::string_view(delim, delimLen),
+            count);
+    } else {
+        index = stringImpl::StringPosition<true, false>(std::string_view(str, strLen),
+            std::string_view(delim, delimLen), -count);
+    }
+
+    // If 'delim' is not found or found fewer than 'count' times,
+    // return the input string directly.
+    if (index == 0) {
+        auto result = ArenaAllocatorMalloc(contextPtr, strLen);
+        errno_t res = memcpy_s(result, strLen, str, strLen);
+        if (res != EOK) {
+            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        *outLen = strLen;
+        return result;
+    }
+
+    auto start = 0;
+    auto length = strLen;
+    const auto delimLength = delimLen;
+    if (count > 0) {
+        length = index - 1;
+    } else {
+        start = index + delimLength - 1;
+        length -= start;
+    }
+
+    auto result = ArenaAllocatorMalloc(contextPtr, length);
+    errno_t res = memcpy_s(result, length, str + start, length);
+    if (res != EOK) {
+        SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+        *outLen = 0;
+        return nullptr;
+    }
+    *outLen = length;
+    return result;
 }
 }
 

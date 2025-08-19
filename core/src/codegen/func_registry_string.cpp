@@ -279,9 +279,10 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(StaticInvokeVarcharTypeWriteSideCheck),
             StaticInvokeVarcharTypeWriteSideCheckFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
             OMNI_VARCHAR, INPUT_DATA, true),
-        Function(reinterpret_cast<void *>(StaticInvokeCharReadPadding),
-            StaticInvokeCharReadPaddingFnStr(), {}, { OMNI_VARCHAR, OMNI_INT },
-            OMNI_VARCHAR, INPUT_DATA, true)
+        Function(reinterpret_cast<void *>(StaticInvokeCharReadPadding), StaticInvokeCharReadPaddingFnStr(), {},
+            {OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(SubstringIndex), "substring_index", {},
+            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true)
     };
 
     return stringFnRegistry;
