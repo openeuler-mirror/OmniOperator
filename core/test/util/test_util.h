@@ -164,6 +164,10 @@ void AssertBoolEquals(std::vector<bool> &expected, bool *result);
 
 std::string GenerateSpillPath();
 
+int8_t *MakeBytes(int32_t size, const int32_t start = 0);
+
+int16_t *MakeShorts(int32_t size, const int32_t start = 0);
+
 int32_t *MakeInts(int32_t size, const int32_t start = 0);
 
 int64_t *MakeDecimals(int32_t size, const int32_t start = 0);

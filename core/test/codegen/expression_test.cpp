@@ -217,6 +217,188 @@ TEST(ExpressionTest, q1LongType)
     delete[] col3;
 }
 
+// Test projection on int8_t data type
+// Formula: l_extendprice * (10 - l_discount) * (10 + l_tax)
+// Purpose: just test expression on int8_t data type
+TEST(ExpressionTest, q1ByteType)
+{
+    const int32_t numRows = 200;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
+
+    // prepare data
+    auto *col1 = new int8_t[numRows];
+    auto *col2 = new int8_t[numRows];
+    auto *col3 = new int8_t[numRows];
+
+    for (int64_t i = 0; i < numRows; i++) {
+        col1[i] = rand() % 2 + 1;
+        col2[i] = rand() % 5;
+        col3[i] = rand() % 3;
+    }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ ByteType(), ByteType(), ByteType() });
+    DataTypes inputTypes(vecOfTypes);
+
+    // prepare expression
+    LiteralExpr *subLeft = new LiteralExpr(static_cast<int8_t>(10), ByteType(), false);
+    FieldExpr *subRight = new FieldExpr(1, ByteType());
+    BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, ByteType());
+    LiteralExpr *addLeft = new LiteralExpr(static_cast<int8_t>(10), ByteType());
+    FieldExpr *addRight = new FieldExpr(2, ByteType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, ByteType());
+    FieldExpr *mulLeft = new FieldExpr(0, ByteType());
+    BinaryExpr *mulExpr1 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, ByteType());
+    BinaryExpr *mulExpr2 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, ByteType());
+    std::vector<Expr *> exprs = { mulExpr2 };
+
+    Timer timer;
+    timer.SetStart();
+
+    // make row vector
+    timer.Reset();
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
+    timer.CalculateElapse();
+    std::cout << "make row vector: "
+              << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
+
+    // prepare projection operator
+    timer.Reset();
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    timer.CalculateElapse();
+    std::cout << "prepare projection operator : "
+              << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
+
+    double wallTime[rounds];
+    double cpuTime[rounds];
+    for (int i = 0; i < rounds; i++) {
+        // evaluate
+        auto copy = DuplicateVectorBatch(t);
+        VectorBatch *outputVecBatch = nullptr;
+
+        timer.Reset();
+        op->AddInput(copy);
+        op->GetOutput(&outputVecBatch);
+        timer.CalculateElapse();
+        wallTime[i] = timer.GetWallElapse();
+        cpuTime[i] = timer.GetCpuElapse();
+        std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
+
+        // verify result
+        for (int i = 0; i < numRows; i++) {
+            int8_t result = (reinterpret_cast<Vector<int8_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+            int8_t actualByte = ((reinterpret_cast<Vector<int8_t> *>(t->Get(0)))->GetValue(i)) *
+                (10 - (reinterpret_cast<Vector<int8_t> *>(t->Get(1)))->GetValue(i)) *
+                (10 + (reinterpret_cast<Vector<int8_t> *>(t->Get(2)))->GetValue(i));
+            EXPECT_EQ(result, actualByte);
+        }
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
+
+    PrintValueLine(wallTime, cpuTime, rounds);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    VectorHelper::FreeVecBatch(t);
+    delete overflowConfig;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+}
+
+// Test projection on int16_t data type
+// Formula: l_extendprice * (100 - l_discount) * (100 + l_tax)
+// Purpose: just test expression on int16_t data type
+TEST(ExpressionTest, q1ShortType)
+{
+    const int32_t numRows = 200;
+    const int32_t rounds = TEST_EXPR_PERF_TIME;
+
+    // prepare data
+    auto *col1 = new int16_t[numRows];
+    auto *col2 = new int16_t[numRows];
+    auto *col3 = new int16_t[numRows];
+
+    for (int64_t i = 0; i < numRows; i++) {
+        col1[i] = rand() % 5;
+        col2[i] = rand() % 50 + 20;
+        col3[i] = rand() % 50 + 3;
+    }
+
+    auto vecOfTypes = std::vector<DataTypePtr>({ ShortType(), ShortType(), ShortType() });
+    DataTypes inputTypes(vecOfTypes);
+
+    // prepare expression
+    LiteralExpr *subLeft = new LiteralExpr(static_cast<int16_t>(100), ShortType(), false);
+    FieldExpr *subRight = new FieldExpr(1, ShortType());
+    BinaryExpr *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, ShortType());
+    LiteralExpr *addLeft = new LiteralExpr(static_cast<int16_t>(100), ShortType());
+    FieldExpr *addRight = new FieldExpr(2, ShortType());
+    BinaryExpr *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, ShortType());
+    FieldExpr *mulLeft = new FieldExpr(0, ShortType());
+    BinaryExpr *mulExpr1 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, subExpr, ShortType());
+    BinaryExpr *mulExpr2 = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulExpr1, addExpr, ShortType());
+    std::vector<Expr *> exprs = { mulExpr2 };
+
+    Timer timer;
+    timer.SetStart();
+
+    // make row vector
+    timer.Reset();
+    VectorBatch *t = CreateVectorBatch(inputTypes, numRows, col1, col2, col3);
+    timer.CalculateElapse();
+    std::cout << "make row vector: "
+              << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
+
+    // prepare projection operator
+    timer.Reset();
+    auto overflowConfig = new OverflowConfig();
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
+    auto *factory = new ProjectionOperatorFactory(move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
+    timer.CalculateElapse();
+    std::cout << "prepare projection operator : "
+              << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
+
+    double wallTime[rounds];
+    double cpuTime[rounds];
+    for (int i = 0; i < rounds; i++) {
+        // evaluate
+        auto copy = DuplicateVectorBatch(t);
+        VectorBatch *outputVecBatch = nullptr;
+
+        timer.Reset();
+        op->AddInput(copy);
+        op->GetOutput(&outputVecBatch);
+        timer.CalculateElapse();
+        wallTime[i] = timer.GetWallElapse();
+        cpuTime[i] = timer.GetCpuElapse();
+        std::cout << "evaluate round: " << i + 1 << " wall " << wallTime[i] << " cpu " << cpuTime[i] << std::endl;
+
+        // verify result
+        for (int i = 0; i < numRows; i++) {
+            int16_t result = (reinterpret_cast<Vector<int16_t> *>(outputVecBatch->Get(0)))->GetValue(i);
+            int16_t actualShort = ((reinterpret_cast<Vector<int16_t> *>(t->Get(0)))->GetValue(i)) *
+                (100 - (reinterpret_cast<Vector<int16_t> *>(t->Get(1)))->GetValue(i)) *
+                (100 + (reinterpret_cast<Vector<int16_t> *>(t->Get(2)))->GetValue(i));
+            EXPECT_EQ(result, actualShort);
+        }
+        VectorHelper::FreeVecBatch(outputVecBatch);
+    }
+
+    PrintValueLine(wallTime, cpuTime, rounds);
+
+    omniruntime::op::Operator::DeleteOperator(op);
+    delete factory;
+    VectorHelper::FreeVecBatch(t);
+    delete overflowConfig;
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+}
+
 // Test projection on double data type
 // Formula: l_extendprice * (1 - l_discount) * (1 + l_tax)
 // Purpose: just test expression on double data type

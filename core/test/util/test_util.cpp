@@ -578,6 +578,34 @@ int32_t *MakeInts(int32_t size, int32_t start)
     }
 }
 
+int8_t *MakeBytes(int32_t size, int32_t start)
+{
+    if (size > 0) {
+        auto *arr = new int8_t[size];
+        int32_t idx = 0;
+        for (int32_t i = start; i < start + size; i++) {
+            arr[idx++] = i;
+        }
+        return arr;
+    } else {
+        return nullptr;
+    }
+}
+
+int16_t *MakeShorts(int32_t size, int32_t start)
+{
+    if (size > 0) {
+        auto *arr = new int16_t[size];
+        int32_t idx = 0;
+        for (int32_t i = start; i < start + size; i++) {
+            arr[idx++] = i;
+        }
+        return arr;
+    } else {
+        return nullptr;
+    }
+}
+
 int64_t *MakeDecimals(int32_t size, int32_t start)
 {
     if (size > 0) {

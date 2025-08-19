@@ -1039,6 +1039,15 @@ TEST(FunctionTest, TryMultiply)
     EXPECT_TRUE(overflowFlag);
 }
 
+TEST(FunctionTest, Multiply)
+{
+    auto res1 = MultiplyInt8(3, 5);
+    EXPECT_EQ(res1, 15);
+
+    auto res2 = MultiplyInt16(16, 16);
+    EXPECT_EQ(res2, 256);
+}
+
 TEST(FunctionTest, Divide)
 {
     bool nullFlag = false;
@@ -1100,8 +1109,16 @@ TEST(FunctionTest, Mod)
     EXPECT_TRUE(nullFlag);
 
     nullFlag = false;
+    EXPECT_EQ(1, ModulusInt8(&nullFlag, 16, 3));
+    EXPECT_FALSE(nullFlag);
+
+    nullFlag = false;
     ModulusInt16(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
+
+    nullFlag = false;
+    EXPECT_EQ(2, ModulusInt16(&nullFlag, 29, 3));
+    EXPECT_FALSE(nullFlag);
 
     nullFlag = false;
     ModulusInt32(&nullFlag, 1, 0);
@@ -1110,10 +1127,6 @@ TEST(FunctionTest, Mod)
     nullFlag = false;
     EXPECT_EQ(2, ModulusInt32(&nullFlag, 5, 3));
     EXPECT_FALSE(nullFlag);
-
-    nullFlag = false;
-    ModulusInt64(&nullFlag, 1, 0);
-    EXPECT_TRUE(nullFlag);
 
     nullFlag = false;
     ModulusInt64(&nullFlag, 1, 0);

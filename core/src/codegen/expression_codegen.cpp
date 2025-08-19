@@ -256,7 +256,23 @@ void ExpressionCodeGen::Visit(const BinaryExpr &binaryExpr)
             builder->CreateAnd(right->isNull, builder->CreateNot(left->data)))));
         return;
     }
-    if (bExpr->left->GetReturnTypeId() == OMNI_INT || bExpr->left->GetReturnTypeId() == OMNI_DATE32) {
+    if (bExpr->left->GetReturnTypeId() == OMNI_BYTE) {
+        Value *nullFlag = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "null_flag");
+        builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), nullFlag);
+        this->value = make_shared<CodeGenValue>(
+            this->BinaryExprByteHelper(bExpr, left->data, right->data, left->isNull, right->isNull, nullFlag),
+            builder->CreateOr(builder->CreateOr(left->isNull, right->isNull),
+                              builder->CreateLoad(llvmTypes->I1Type(), nullFlag)));
+        return;
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_SHORT) {
+        Value *nullFlag = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "null_flag");
+        builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), nullFlag);
+        this->value = make_shared<CodeGenValue>(
+            this->BinaryExprShortHelper(bExpr, left->data, right->data, left->isNull, right->isNull, nullFlag),
+            builder->CreateOr(builder->CreateOr(left->isNull, right->isNull),
+                              builder->CreateLoad(llvmTypes->I1Type(), nullFlag)));
+        return;
+    } else if (bExpr->left->GetReturnTypeId() == OMNI_INT || bExpr->left->GetReturnTypeId() == OMNI_DATE32) {
         Value *nullFlag = builder->CreateAlloca(Type::getInt1Ty(*context), nullptr, "null_flag");
         builder->CreateStore(ConstantInt::get(IntegerType::getInt1Ty(*context), 0), nullFlag);
         this->value = make_shared<CodeGenValue>(
@@ -1345,6 +1361,126 @@ void ExpressionCodeGen::BinaryExprNullHelper(const BinaryExpr *binaryExpr, Value
 }
 
 // Helper methods to parse binary expressions
+llvm::Value *ExpressionCodeGen::BinaryExprByteHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
+    Value *leftIsNull, Value *rightIsNull, Value *nullFlag)
+{
+    PHINode *leftPhi;
+    PHINode *rightPhi;
+    Value *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
+    std::vector<omniruntime::type::DataTypeId> byteParams = { OMNI_BYTE, OMNI_BYTE };
+    BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi);
+    switch (binaryExpr->op) {
+        case omniruntime::expressions::Operator::LT:
+            return builder->CreateAnd(isNeitherNull,
+                CallExternFunction("lessThan", byteParams, OMNI_BOOLEAN, { left, right }, nullptr, "relational_lt"));
+        case omniruntime::expressions::Operator::GT:
+            return builder->CreateAnd(isNeitherNull,
+                CallExternFunction("greaterThan", byteParams, OMNI_BOOLEAN, { left, right }, nullptr, "relational_gt"));
+        case omniruntime::expressions::Operator::LTE:
+            return builder->CreateAnd(isNeitherNull, CallExternFunction("lessThanEqual", byteParams, OMNI_BOOLEAN,
+                { left, right }, nullptr, "relational_le"));
+        case omniruntime::expressions::Operator::GTE:
+            return builder->CreateAnd(isNeitherNull, CallExternFunction("greaterThanEqual", byteParams, OMNI_BOOLEAN,
+                { left, right }, nullptr, "relational_ge"));
+        case omniruntime::expressions::Operator::EQ:
+            return builder->CreateAnd(isNeitherNull,
+                CallExternFunction("equal", byteParams, OMNI_BOOLEAN, { left, right }, nullptr, "relational_eq"));
+        case omniruntime::expressions::Operator::NEQ:
+            return builder->CreateAnd(isNeitherNull,
+                CallExternFunction("notEqual", byteParams, OMNI_BOOLEAN, { left, right }, nullptr, "relational_neq"));
+        case omniruntime::expressions::Operator::ADD:
+            return CallExternFunction("add", byteParams, OMNI_BYTE, { leftPhi, rightPhi }, nullptr, "arithmetic_add");
+        case omniruntime::expressions::Operator::SUB:
+            return CallExternFunction("subtract", byteParams, OMNI_BYTE, { leftPhi, rightPhi }, nullptr,
+                "arithmetic_sub");
+        case omniruntime::expressions::Operator::MUL:
+            return CallExternFunction("multiply", byteParams, OMNI_BYTE, { leftPhi, rightPhi }, nullptr,
+                "arithmetic_mul");
+        case omniruntime::expressions::Operator::DIV:
+            return CallExternFunction("divide", byteParams, OMNI_BYTE, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_div");
+        case omniruntime::expressions::Operator::MOD:
+            return CallExternFunction("modulus", byteParams, OMNI_BYTE, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_mod");
+        case omniruntime::expressions::Operator::TRY_ADD:
+            return CallExternFunction("try_add", byteParams, OMNI_BYTE, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_add");
+        case omniruntime::expressions::Operator::TRY_SUB:
+            return CallExternFunction("try_subtract", byteParams, OMNI_BYTE, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_sub");
+        case omniruntime::expressions::Operator::TRY_MUL:
+            return CallExternFunction("try_multiply", byteParams, OMNI_BYTE, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_mul");
+        case omniruntime::expressions::Operator::TRY_DIV:
+            return CallExternFunction("divide", byteParams, OMNI_BYTE, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_div");
+        default: {
+            LogError("Unsupported byte binary operator %u", static_cast<uint32_t>(binaryExpr->op));
+            return nullptr;
+        }
+    }
+}
+
+llvm::Value *ExpressionCodeGen::BinaryExprShortHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
+    Value *leftIsNull, Value *rightIsNull, Value *nullFlag)
+{
+    PHINode *leftPhi;
+    PHINode *rightPhi;
+    Value *isNeitherNull = builder->CreateNot(builder->CreateOr(leftIsNull, rightIsNull));
+    std::vector<omniruntime::type::DataTypeId> shortParams = { OMNI_SHORT, OMNI_SHORT };
+    BinaryExprNullHelper(binaryExpr, left, right, leftIsNull, rightIsNull, &leftPhi, &rightPhi);
+    switch (binaryExpr->op) {
+        case omniruntime::expressions::Operator::LT:
+            return builder->CreateAnd(isNeitherNull,
+                CallExternFunction("lessThan", shortParams, OMNI_BOOLEAN, { left, right }, nullptr, "relational_lt"));
+        case omniruntime::expressions::Operator::GT:
+            return builder->CreateAnd(isNeitherNull,
+                CallExternFunction("greaterThan", shortParams, OMNI_BOOLEAN, { left, right }, nullptr, "relational_gt"));
+        case omniruntime::expressions::Operator::LTE:
+            return builder->CreateAnd(isNeitherNull, CallExternFunction("lessThanEqual", shortParams, OMNI_BOOLEAN,
+                { left, right }, nullptr, "relational_le"));
+        case omniruntime::expressions::Operator::GTE:
+            return builder->CreateAnd(isNeitherNull, CallExternFunction("greaterThanEqual", shortParams, OMNI_BOOLEAN,
+                { left, right }, nullptr, "relational_ge"));
+        case omniruntime::expressions::Operator::EQ:
+            return builder->CreateAnd(isNeitherNull,
+                CallExternFunction("equal", shortParams, OMNI_BOOLEAN, { left, right }, nullptr, "relational_eq"));
+        case omniruntime::expressions::Operator::NEQ:
+            return builder->CreateAnd(isNeitherNull,
+                CallExternFunction("notEqual", shortParams, OMNI_BOOLEAN, { left, right }, nullptr, "relational_neq"));
+        case omniruntime::expressions::Operator::ADD:
+            return CallExternFunction("add", shortParams, OMNI_SHORT, { leftPhi, rightPhi }, nullptr, "arithmetic_add");
+        case omniruntime::expressions::Operator::SUB:
+            return CallExternFunction("subtract", shortParams, OMNI_SHORT, { leftPhi, rightPhi }, nullptr,
+                "arithmetic_sub");
+        case omniruntime::expressions::Operator::MUL:
+            return CallExternFunction("multiply", shortParams, OMNI_SHORT, { leftPhi, rightPhi }, nullptr,
+                "arithmetic_mul");
+        case omniruntime::expressions::Operator::DIV:
+            return CallExternFunction("divide", shortParams, OMNI_SHORT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_div");
+        case omniruntime::expressions::Operator::MOD:
+            return CallExternFunction("modulus", shortParams, OMNI_SHORT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_mod");
+        case omniruntime::expressions::Operator::TRY_ADD:
+            return CallExternFunction("try_add", shortParams, OMNI_SHORT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_add");
+        case omniruntime::expressions::Operator::TRY_SUB:
+            return CallExternFunction("try_subtract", shortParams, OMNI_SHORT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_sub");
+        case omniruntime::expressions::Operator::TRY_MUL:
+            return CallExternFunction("try_multiply", shortParams, OMNI_SHORT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_mul");
+        case omniruntime::expressions::Operator::TRY_DIV:
+            return CallExternFunction("divide", shortParams, OMNI_SHORT, {nullFlag, leftPhi, rightPhi },
+                                      nullptr, "arithmetic_try_div");
+        default: {
+            LogError("Unsupported short binary operator %u", static_cast<uint32_t>(binaryExpr->op));
+            return nullptr;
+        }
+    }
+}
+
 llvm::Value *ExpressionCodeGen::BinaryExprIntHelper(const BinaryExpr *binaryExpr, Value *left, Value *right,
     Value *leftIsNull, Value *rightIsNull, Value *nullFlag)
 {
