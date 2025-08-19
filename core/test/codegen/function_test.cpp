@@ -1117,6 +1117,10 @@ TEST(FunctionTest, Mod)
     EXPECT_TRUE(nullFlag);
 
     nullFlag = false;
+    EXPECT_EQ(2, ModulusInt16(&nullFlag, 29, 3));
+    EXPECT_FALSE(nullFlag);
+
+    nullFlag = false;
     ModulusInt32(&nullFlag, 1, 0);
     EXPECT_TRUE(nullFlag);
 
