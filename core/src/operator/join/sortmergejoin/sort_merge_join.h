@@ -47,8 +47,41 @@ public:
     void InitScannerAndResultBuilder(OverflowConfig *overflowConfig);
     void InitScannerAndResultBuilderWithFilterExpr(OverflowConfig *overflowConfig);
 
+    void decodeOpStatus(int32_t resultCode)
+    {
+        flowControlCode = static_cast<int32_t>(resultCode >> 16);
+        resCode = static_cast<int32_t>(resultCode & 0xFFFF);
+    }
+
+    bool isNeedAddBuffer() const
+    {
+        return static_cast<SortMergeJoinAddInputCode>(flowControlCode) ==
+               SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA;
+    }
+
+    bool isNeedAddStream() const
+    {
+        return static_cast<SortMergeJoinAddInputCode>(flowControlCode) ==
+               SortMergeJoinAddInputCode::SMJ_NEED_ADD_STREAM_TBL_DATA;
+    }
+
+    bool isScanFinish() const
+    {
+        return static_cast<SortMergeJoinAddInputCode>(flowControlCode) ==
+               SortMergeJoinAddInputCode::SMJ_SCAN_FINISH;
+    }
+
+    bool isJoinHasData() const
+    {
+        return static_cast<SortMergeJoinAddInputCode>(resCode) ==
+               SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA;
+    }
+
 private:
     int32_t GetJoinResult();
+
+    int32_t flowControlCode = static_cast<int32_t>(SortMergeJoinAddInputCode::SMJ_NEED_ADD_BUFFER_TBL_DATA);
+    int32_t resCode = 0;
 
     const type::DataTypes *streamedTypes;
     std::vector<int32_t> streamedKeysCols;

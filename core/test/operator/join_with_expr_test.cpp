@@ -302,7 +302,8 @@ TEST(JoinWithExprTest, TestFullEqualityJoinOnKeyWithoutExpr)
         LongType()) };
     int32_t hashTableCount = 1;
     HashBuilderWithExprOperatorFactory *hashBuilderWithExprOperatorFactory =
-        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_FULL, buildTypes,
+        HashBuilderWithExprOperatorFactory::CreateHashBuilderWithExprOperatorFactory(OMNI_JOIN_TYPE_FULL,
+        OMNI_BUILD_RIGHT, buildTypes,
         buildHashKeys, hashTableCount, nullptr);
     auto *hashBuilderWithExprOperator = CreateTestOperator(hashBuilderWithExprOperatorFactory);
     hashBuilderWithExprOperator->AddInput(buildVecBatch);

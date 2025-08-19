@@ -17,7 +17,7 @@
 #include "operator/topnsort/topn_sort_expr.h"
 #include "operator/union/union.h"
 #include "operator/window/window_expr.h"
-#include "operator/join/sortmergejoin/sort_merge_join_expr.h"
+#include "operator/join/sortmergejoin/sort_merge_join_expr_v2.h"
 #include <operator/aggregation/non_group_aggregation_expr.h>
 #include "operator/expand/expand.h"
 #include "operator/grouping/grouping.h"
@@ -133,16 +133,16 @@ void planDetail(
                 LookupJoinWithExprOperatorFactory::CreateLookupJoinWithExprOperatorFactory(joinNode, hashBuilderOperatorFactory, queryConfig);
         }
     } else if (auto sortMergejoinNode = std::dynamic_pointer_cast<const MergeJoinNode>(planNode)) {
-        auto streamedTableWithExprOperatorFactory =
-            StreamedTableWithExprOperatorFactory::CreateStreamedTableWithExprOperatorFactory(
+        auto streamedTableWithExprOperatorFactoryV2 =
+            StreamedTableWithExprOperatorFactoryV2::CreateStreamedTableWithExprOperatorFactoryV2(
                 sortMergejoinNode, queryConfig);
-        auto bufferedTableWithExprOperatorFactory =
-            BufferedTableWithExprOperatorFactory::CreateBufferedTableWithExprOperatorFactory(
-                sortMergejoinNode, reinterpret_cast<int64_t>(streamedTableWithExprOperatorFactory), queryConfig);
+        auto bufferedTableWithExprOperatorFactoryV2 =
+            BufferedTableWithExprOperatorFactoryV2::CreateBufferedTableWithExprOperatorFactoryV2(
+                sortMergejoinNode, reinterpret_cast<int64_t>(streamedTableWithExprOperatorFactoryV2), queryConfig);
         auto builderDriver = builderDrivers[1][0];
-        builderDriver->operators()->emplace_back(createOperator(bufferedTableWithExprOperatorFactory, sortMergejoinNode));
-        factories->emplace_back(bufferedTableWithExprOperatorFactory);
-        factory = streamedTableWithExprOperatorFactory;
+        builderDriver->operators()->emplace_back(createOperator(bufferedTableWithExprOperatorFactoryV2, sortMergejoinNode));
+        factories->emplace_back(bufferedTableWithExprOperatorFactoryV2);
+        factory = streamedTableWithExprOperatorFactoryV2;
     } else if (auto nestedLoopJoinNode = std::dynamic_pointer_cast<const NestedLoopJoinNode>(planNode)) {
         auto nestedLoopJoinBuilderOperatorFactory =
             NestedLoopJoinBuildOperatorFactory::CreateNestedLoopJoinBuildOperatorFactory(nestedLoopJoinNode);

@@ -42,7 +42,7 @@ private:
     DataTypes probeTypes;                 // all types for probe
     std::vector<int32_t> probeOutputCols; // output columns for probe
     HashTableVariants *hashTables;
-    BuildSide buildSide;
+    BuildSide buildSide = OMNI_BUILD_RIGHT;
 };
 
 class LookupOuterPositionIterator {
@@ -92,7 +92,7 @@ private:
     bool isPrepareTotalVisitedCounts = false;
     std::vector<uint32_t> hashTableIndexes;
     std::vector<std::pair<uint32_t, uint32_t>> addresses;
-    BuildSide buildSide;
+    BuildSide buildSide = OMNI_BUILD_RIGHT;
 
     bool HasNext()
     {

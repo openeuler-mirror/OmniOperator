@@ -215,8 +215,6 @@ int32_t SortMergeJoinOperator::GetJoinResult()
     resultCode = SetAddFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_SCAN_FINISH), resultCode);
     if (returnVectorBatch == nullptr) {
         joinResultBuilder->Finish();
-        joinResultBuilder->Clear();
-        SetStatus(OMNI_STATUS_FINISHED);
     } else {
         resultCode = SetFetchFlag(static_cast<int16_t>(SortMergeJoinAddInputCode::SMJ_FETCH_JOIN_DATA), resultCode);
     }
@@ -231,7 +229,9 @@ int32_t SortMergeJoinOperator::AddStreamedTableInput(omniruntime::vec::VectorBat
         streamedTblPagesIndex->AddVecBatch(vecBatch);
     }
     SetStatus(OMNI_STATUS_NORMAL);
-    return GetJoinResult();
+    int32_t joinResult = GetJoinResult();
+    decodeOpStatus(joinResult);
+    return joinResult;
 }
 
 int32_t SortMergeJoinOperator::AddBufferedTableInput(omniruntime::vec::VectorBatch *vecBatch)
@@ -242,7 +242,9 @@ int32_t SortMergeJoinOperator::AddBufferedTableInput(omniruntime::vec::VectorBat
         bufferedTblPagesIndex->AddVecBatch(vecBatch);
     }
     SetStatus(OMNI_STATUS_NORMAL);
-    return GetJoinResult();
+    int32_t joinResult = GetJoinResult();
+    decodeOpStatus(joinResult);
+    return joinResult;
 }
 
 int32_t SortMergeJoinOperator::AddInput(omniruntime::vec::VectorBatch *vecBatch)
@@ -260,6 +262,7 @@ int32_t SortMergeJoinOperator::GetOutput(omniruntime::vec::VectorBatch **outputV
     } else {
         joinResultBuilder->Clear();
         SetStatus(OMNI_STATUS_FINISHED);
+        resCode = 0;
     }
     return 0;
 }

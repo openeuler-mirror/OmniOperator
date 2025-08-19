@@ -267,51 +267,54 @@ void SortMergeJoinScanner::ErrorJoin()
 
 template <JoinType templateJoinType> void SortMergeJoinScanner::RunInnerJoin()
 {
-    if (!AdvancedStreamedWithNullFreeJoinKey()) {
-        preStatus->TransToNeedStreamedData(HasResult());
-        return;
+    while (true) {
+        if (!AdvancedStreamedWithNullFreeJoinKey()) {
+            preStatus->TransToNeedStreamedData(HasResult());
+            break;
+        }
+        if (PreKeyMatched()) {
+            SavePrevMatchingRows<templateJoinType>(1);
+            continue;
+        }
+        if (!FindMatchingRows<templateJoinType>()) {
+            break;
+        }
     }
-    if (PreKeyMatched()) {
-        SavePrevMatchingRows<templateJoinType>(1);
-        return RunInnerJoin<templateJoinType>();
-    }
-    if (!FindMatchingRows<templateJoinType>()) {
-        return;
-    }
-    return RunInnerJoin<templateJoinType>();
 }
 
 template <JoinType templateJoinType> void SortMergeJoinScanner::RunLeftOuterJoin()
 {
-    if (!AdvancedStreamedJoinKey()) {
-        preStatus->TransToNeedStreamedData(HasResult());
-        return;
+    while (true) {
+        if (!AdvancedStreamedJoinKey()) {
+            preStatus->TransToNeedStreamedData(HasResult());
+            break;
+        }
+        if (PreKeyMatchedWithNullValue()) {
+            SavePrevMatchingRows<templateJoinType>(1);
+            continue;
+        }
+        if (!LeftOuterFindJoinRows<templateJoinType>()) {
+            break;
+        }
     }
-    if (PreKeyMatchedWithNullValue()) {
-        SavePrevMatchingRows<templateJoinType>(1);
-        return RunLeftOuterJoin<templateJoinType>();
-    }
-    if (!LeftOuterFindJoinRows<templateJoinType>()) {
-        return;
-    }
-    return RunLeftOuterJoin<templateJoinType>();
 }
 
 void SortMergeJoinScanner::RunFullOuterJoin()
 {
-    if (!AdvancedStreamedJoinKey()) {
-        preStatus->TransToNeedStreamedData(HasResult());
-        return;
-    }
-    if (PreKeyMatchedWithNullValue()) {
-        SavePrevMatchingRowsForFullOuter(streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition), 1);
-        return RunFullOuterJoin();
-    }
+    while (true) {
+        if (!AdvancedStreamedJoinKey()) {
+            preStatus->TransToNeedStreamedData(HasResult());
+            break;
+        }
+        if (PreKeyMatchedWithNullValue()) {
+            SavePrevMatchingRowsForFullOuter(streamedPagesIndex->GetValueAddresses(streamedPagesIndexPosition), 1);
+            continue;
+        }
 
-    if (!FullOuterFindJoinRows()) {
-        return;
+        if (!FullOuterFindJoinRows()) {
+            break;
+        }
     }
-    return RunFullOuterJoin();
 }
 
 template <JoinType templateJoinType> bool SortMergeJoinScanner::FindMatchingRows()
