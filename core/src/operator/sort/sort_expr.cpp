@@ -32,11 +32,13 @@ SortWithExprOperatorFactory* SortWithExprOperatorFactory::CreateSortWithExprOper
     auto sortAscendings = const_cast<int32_t*>(planNode->GetSortAscending().data());
     auto sortNullFirsts = const_cast<int32_t*>(planNode->GetNullFirsts().data());
     auto expressionCount = static_cast<int32_t>(sortExpressions.size());
-    auto spillConfig = SparkSpillConfig(planNode->CanSpill(queryConfig) & queryConfig.orderBySpillEnabled(),
+    auto spillConfig = new SparkSpillConfig(planNode->CanSpill(queryConfig) & queryConfig.orderBySpillEnabled(),
         queryConfig.SpillDir(), queryConfig.SpillDirDiskReserveSize(), queryConfig.SpillSortRowThreshold(),
         queryConfig.SpillMemThreshold(), queryConfig.SpillWriteBufferSize());
+    auto overflowConfig = queryConfig.IsOverFlowASNull() == true ? new OverflowConfig(OVERFLOW_CONFIG_NULL)
+                                                                 : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
     auto pOperatorFactory = new SortWithExprOperatorFactory(*sourceTypes, outputCols, outputColsCount, sortExpressions,
-        sortAscendings, sortNullFirsts, expressionCount, OperatorConfig(spillConfig));
+        sortAscendings, sortNullFirsts, expressionCount, OperatorConfig(spillConfig, overflowConfig));
     return pOperatorFactory;
 }
 
