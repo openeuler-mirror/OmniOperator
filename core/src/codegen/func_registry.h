@@ -20,6 +20,7 @@
 #include "func_registry_varchar_vector.h"
 #include "func_registry_hive_udf.h"
 #include "func_registry_datetime.h"
+#include "func_registry_json.h"
 
 #include "batch_func_registry_decimal.h"
 #include "batch_func_registry_dictionary.h"

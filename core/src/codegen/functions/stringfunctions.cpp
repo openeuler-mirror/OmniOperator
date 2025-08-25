@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2024. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
  * Description: registry  function  implementation
  */
 #include "stringfunctions.h"
