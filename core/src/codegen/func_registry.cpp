@@ -32,6 +32,7 @@ vector<unique_ptr<BaseFunctionRegistry>> FunctionRegistry::GetRowFunctionRegistr
     functionRegistries.push_back(make_unique<HiveUdfRegistry>());
     functionRegistries.push_back(make_unique<StringFunctionRegistry>());
     functionRegistries.push_back(make_unique<DateTimeFunctionRegistry>());
+    functionRegistries.push_back(make_unique<JsonFunctionRegistry>());
 
     auto policy = GetProperties().GetPolicy();
     if (policy->GetRoundingRule() == RoundingRule::HALF_UP) {
