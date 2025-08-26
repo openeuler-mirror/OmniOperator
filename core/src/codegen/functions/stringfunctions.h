@@ -360,5 +360,8 @@ extern "C" DLLEXPORT const char *GreatestStr(const char *lValue, int32_t lLen, b
 
 extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *str, int32_t strLen, const char *delim,
     int32_t delimLen, int32_t count, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *Re2SearchAndExtract(int64_t contextPtr, const char *str, int32_t strLen, const char *pattern,
+    int32_t patternLen, int32_t idx, bool isNull, int32_t *outLen);
 }
 #endif

@@ -43,6 +43,8 @@ if (CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
+find_package(re2 REQUIRED)
+
 option(ENABLE_SVE "Enable SVE" OFF)
 message(STATUS "Option Enable SVE: ${ENABLE_SVE}")
 

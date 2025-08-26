@@ -51,7 +51,8 @@ endif ()
             pthread
             stdc++
             dl
-            LLVM-15)
+            LLVM-15
+            re2::re2)
     target_compile_options(${OM_TEST_TARGET} PUBLIC -g -O2 -fPIC)
 
     # dependent include
