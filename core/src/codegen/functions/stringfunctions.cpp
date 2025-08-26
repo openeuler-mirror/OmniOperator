@@ -2,6 +2,8 @@
  * Copyright (c) Huawei Technologies Co., Ltd. 2021-2025. All rights reserved.
  * Description: registry  function  implementation
  */
+
+#include <re2/re2.h>
 #include "stringfunctions.h"
 #include "md5.h"
 #include "dtoa.h"
@@ -1263,6 +1265,30 @@ extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *
     }
     *outLen = length;
     return result;
+}
+
+extern "C" DLLEXPORT const char *Re2SearchAndExtract(int64_t contextPtr, const char *str, int32_t strLen,
+    const char *pattern, int32_t patternLen, int32_t idx, bool isNull, int32_t *outLen)
+{
+    auto re = RE2(re2::StringPiece(pattern, patternLen), RE2::Quiet);
+    std::vector<re2::StringPiece> groups(idx + 1);
+    auto input = re2::StringPiece(str, strLen);
+    if (!re.Match(input, 0, strLen, RE2::UNANCHORED, groups.data(), idx + 1)) {
+        *outLen = 0;
+        auto result = ArenaAllocatorMalloc(contextPtr, 1);
+        return result;
+    } else {
+        const re2::StringPiece extracted = groups[idx];
+        auto result = ArenaAllocatorMalloc(contextPtr, extracted.size());
+        errno_t res = memcpy_s(result, extracted.size(), extracted.data(), extracted.size());
+        if (res != EOK) {
+            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        *outLen = extracted.size();
+        return result;
+    }
 }
 }
 
