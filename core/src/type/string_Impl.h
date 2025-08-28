@@ -19,6 +19,7 @@
 #pragma once
 
 #include <string>
+#include <re2/re2.h>
 #include "util/compiler_util.h"
 
 namespace omniruntime::stringImpl {
@@ -136,5 +137,114 @@ ALWAYS_INLINE int64_t StringPosition(std::string_view string, std::string_view s
     // Return the number of characters from the beginning of the string to
     // byteIndex.
     return length<isAscii>(std::string_view(string.data(), byteIndex)) + 1;
+}
+/// Return the size in bytes for the char pointed to by u_input.
+/// This function is not part of the original utf8proc, it is a simplified
+/// verion of utf8proc_codepoint. It assumes a valid utf8 input otherwise output
+/// is undefined.
+inline int utf8proc_char_length(const char *u_input)
+{
+    auto u = (const unsigned char *) u_input;
+    unsigned char u0 = u[0];
+    if (u0 <= 127) {
+        return 1;
+    }
+
+    if (u0 >= 192 && u0 <= 223) {
+        return 2;
+    }
+
+    if (u0 >= 224 && u0 <= 239) {
+        return 3;
+    }
+
+    if (u0 >= 240 && u0 <= 247) {
+        return 4;
+    }
+    return -1;
+}
+
+ALWAYS_INLINE int64_t cappedByteLengthUnicode(const char *input, int64_t size, int64_t maxChars)
+{
+    int64_t utf8Position = 0;
+    int64_t numCharacters = 0;
+    while (utf8Position < size && numCharacters < maxChars) {
+        auto charSize = utf8proc_char_length(input + utf8Position);
+        utf8Position += UNLIKELY(charSize < 0) ? 1 : charSize;
+        numCharacters++;
+    }
+    return utf8Position;
+}
+
+template <bool isAscii, typename TString>
+ALWAYS_INLINE int64_t cappedByteLength(const TString &input, size_t maxCharacters)
+{
+    if constexpr (isAscii) {
+        return input.size() > maxCharacters ? maxCharacters : input.size();
+    } else {
+        return cappedByteLengthUnicode(input.data(), input.size(), maxCharacters);
+    }
+}
+
+template <typename T>
+re2::StringPiece toStringPiece(const T &s)
+{
+    return re2::StringPiece(s.data(), s.size());
+}
+
+inline bool performChecks(std::string &result, const std::string &stringInput, const std::string &pattern,
+    const std::string &replace, const int32_t &position)
+{
+    if (position > stringInput.size()) {
+        result = stringInput;
+        return true;
+    }
+
+    if (stringInput.size() == 0 && pattern.size() == 0 && position == 1) {
+        result = replace;
+        return true;
+    }
+    return false;
+}
+
+/// This function preprocesses an input replacement string to follow RE2 syntax
+/// for java.util.regex used by Presto and Spark. These are the replacements
+/// that are required.
+/// 1. RE2 replacement only supports group index capture, so we need to convert
+/// group name captures to group index captures.
+/// 2. Group index capture in java.util.regex replacement is '$N', while in RE2
+/// replacement it is '\N'. We need to convert it.
+/// 3. Replacement in RE2 only supports '\' followed by a digit or another '\',
+/// while java.util.regex will ignore '\' in replacements, so we need to
+/// unescape it.
+ALWAYS_INLINE std::string PrepareRegexpReplaceReplacement(const RE2 &re, const std::string &replacement)
+{
+    if (replacement.size() == 0) {
+        return std::string{};
+    }
+
+    auto newReplacement = replacement;
+    static const RE2 kExtractRegex(R"(\${([^}]*)})");
+
+    // If newReplacement contains a reference to a
+    // named capturing group ${name}, replace the name with its index.
+    re2::StringPiece groupName[2];
+    while (kExtractRegex.Match(newReplacement, 0, newReplacement.size(), RE2::UNANCHORED, groupName, 2)) {
+        auto groupIter = re.NamedCapturingGroups().find(std::string(groupName[1]));
+        if (groupIter == re.NamedCapturingGroups().end()) {}
+
+        RE2::GlobalReplace(&newReplacement, Format(R"(\${{{}}})", std::string(groupName[1])),
+            Format("${}", groupIter->second));
+    }
+
+    // Convert references to numbered capturing groups from $g to \g.
+    static const RE2 kConvertRegex(R"(\$(\d+))");
+    RE2::GlobalReplace(&newReplacement, kConvertRegex, R"(\\\1)");
+
+    // Un-escape character except digit or '\\'
+    static const RE2 kUnescapeRegex(R"(\\([^0-9\\]))");
+    RE2::GlobalReplace(&newReplacement, kUnescapeRegex, R"(\1)");
+
+    return newReplacement;
 }
 }

@@ -307,7 +307,9 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(SubstringIndex), "substring_index", {},
             {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(Re2SearchAndExtract), "regexp_extract", {},
-            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true)
+            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(RegexpReplace), "regexp_replace", {},
+            {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_VARCHAR, INPUT_DATA, true)
     };
 
     return stringFnRegistry;

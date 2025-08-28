@@ -1290,5 +1290,69 @@ extern "C" DLLEXPORT const char *Re2SearchAndExtract(int64_t contextPtr, const c
         return result;
     }
 }
+
+extern "C" DLLEXPORT const char *RegexpReplace(int64_t contextPtr, const char *stringInput, int32_t stringInputLen,
+    const char *pattern, int32_t patternLen, const char *replacement, int32_t replacementLen, int32_t position,
+    bool isNull, int32_t *outLen)
+{
+    auto input = std::string(stringInput, stringInputLen);
+    auto p = std::string(pattern, patternLen);
+    auto r = std::string(replacement, replacementLen);
+    std::string out;
+    if (stringImpl::performChecks(out, input, p, r, position - 1)) {
+        auto result = ArenaAllocatorMalloc(contextPtr, out.size());
+        errno_t res = memcpy_s(result, out.size(), out.data(), out.size());
+        if (res != EOK) {
+            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        *outLen = out.size();
+        return result;
+    }
+    size_t start = stringImpl::cappedByteLength<false>(input, position - 1);
+    if (start > stringInputLen + 1) {
+        auto result = ArenaAllocatorMalloc(contextPtr, stringInputLen);
+        errno_t res = memcpy_s(result, stringInputLen, stringInput, stringInputLen);
+        if (res != EOK) {
+            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+            *outLen = 0;
+            return nullptr;
+        }
+        *outLen = 0;
+        return result;
+    }
+
+    static const RE2 kRegex("[(][?]<([^>]*)>");
+
+    std::string newPattern = std::string(pattern, patternLen);
+    RE2::GlobalReplace(&newPattern, kRegex, R"((?P<\1>)");
+    auto re = std::make_unique<RE2>(stringImpl::toStringPiece(newPattern), RE2::Quiet);
+
+    const auto &processedReplacement = stringImpl::PrepareRegexpReplaceReplacement(*re, r);
+
+    std::string prefix(stringInput, position - 1);
+    std::string targetString(stringInput, stringInputLen);
+
+    RE2::GlobalReplace(&targetString, *re, processedReplacement);
+    auto buf = prefix + targetString;
+
+    auto length = prefix.size() + targetString.size();
+    auto result = ArenaAllocatorMalloc(contextPtr, length);
+    errno_t res = 0;
+    if (!prefix.empty()) {
+        res = memcpy_s(result, prefix.size(), prefix.data(), prefix.size());
+    }
+    if (!targetString.empty()) {
+        res = memcpy_s(result + prefix.size(), targetString.size(), targetString.data(), targetString.size());
+    }
+    if (res != EOK) {
+        SetError(contextPtr, "charReadPadding failed：memcpy_s error");
+        *outLen = 0;
+        return nullptr;
+    }
+    *outLen = length;
+    return result;
+}
 }
 
