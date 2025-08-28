@@ -53,6 +53,12 @@ public:
         this->nullsBuffer = std::make_shared<NullsBuffer>(size, nullsBufferPtr, sliceOffset);
     }
 
+    BaseVector(int32_t size, Encoding encoding, DataTypeId dataTypeId, NullsBuffer *nullsBufferPtr = nullptr, int32_t sliceOffset = 0)
+            : size(size), encoding(encoding),dataTypeId(dataTypeId), offset(0), isSliced(false)
+    {
+        this->nullsBuffer = std::make_shared<NullsBuffer>(size, nullsBufferPtr, sliceOffset);
+    }
+
     virtual ~BaseVector() = default;
 
     /* *
