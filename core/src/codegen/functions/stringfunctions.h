@@ -367,5 +367,17 @@ extern "C" DLLEXPORT const char *Re2SearchAndExtract(int64_t contextPtr, const c
 extern "C" DLLEXPORT const char *RegexpReplace(int64_t contextPtr, const char *stringInput, int32_t stringInputLen,
     const char *pattern, int32_t patternLen, const char *replacement, int32_t replacementLen, int32_t count,
     bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *TrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *Trim1Str(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, bool isNull,
+    int32_t *outLen);
+
+extern "C" DLLEXPORT const char *LeftTrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *RightTrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen);
 }
 #endif
