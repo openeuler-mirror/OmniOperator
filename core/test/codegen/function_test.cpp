@@ -1606,6 +1606,118 @@ TEST(FunctionTest, ConcatCharStr)
     delete context;
 }
 
+TEST(FunctionTest, Trim)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int outLen = 0;
+    const char *result;
+    std::string actual;
+    bool isNull = false;
+
+    result = TrimStr(contextPtr, " ", 1, "  hello  ", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = TrimStr(contextPtr, "xy", 2, "xxxyyhelloxyyxx", 15, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = TrimStr(contextPtr, "z", 1, "hello", 5, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = TrimStr(contextPtr, "ab", 2, "ababab", 6, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = TrimStr(contextPtr, " ", 1, "", 0, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = TrimStr(contextPtr, "", 0, "  hello  ", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "  hello  ");
+    EXPECT_EQ(outLen, 9);
+    delete context;
+}
+
+TEST(FunctionTest, RTrim)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int outLen = 0;
+    const char *result;
+    std::string actual;
+    bool isNull = false;
+    result = RightTrimStr(contextPtr, " ", 1, "hello    ", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = RightTrimStr(contextPtr, "xy", 2, "helloxyxy", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = RightTrimStr(contextPtr, "x", 1, "hello", 5, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = RightTrimStr(contextPtr, "abc", 3, "abcabc", 6, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = RightTrimStr(contextPtr, " ", 1, "", 0, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+    delete context;
+}
+
+TEST(FunctionTest, LTrim)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int outLen = 0;
+    const char *result;
+    std::string actual;
+    bool isNull = false;
+
+    result = LeftTrimStr(contextPtr, " ", 1, "   hello", 8, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = LeftTrimStr(contextPtr, "xy", 2, "xyxyhello", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = LeftTrimStr(contextPtr, "x", 1, "hello", 5, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = LeftTrimStr(contextPtr, "abc", 3, "abcabc", 6, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = LeftTrimStr(contextPtr, " ", 1, "", 0, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+    delete context;
+}
+
 TEST(FunctionTest, Substr)
 {
     auto context = new ExecutionContext();

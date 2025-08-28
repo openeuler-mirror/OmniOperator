@@ -1354,5 +1354,67 @@ extern "C" DLLEXPORT const char *RegexpReplace(int64_t contextPtr, const char *s
     *outLen = length;
     return result;
 }
+
+extern "C" DLLEXPORT const char *TrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    bool hasErr = false;
+    const char *ret = StringUtil::Trim(contextPtr, srcStr, srcStrLen, trimStr, trimStrLen, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, " trim failed ");
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *Trim1Str(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, bool isNull,
+    int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    bool hasErr = false;
+    const char *ret = StringUtil::Trim(contextPtr, srcStr, srcStrLen, " ", 1, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, " trim failed ");
+        return nullptr;
+    }
+    return ret;
+}
+
+
+extern "C" DLLEXPORT const char *LeftTrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    bool hasErr = false;
+    const char *ret = StringUtil::LTrim(contextPtr, srcStr, srcStrLen, trimStr, trimStrLen, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, " ltrim failed ");
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *RightTrimStr(int64_t contextPtr, const char *trimStr, int32_t trimStrLen,
+    const char *srcStr, int32_t srcStrLen, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        return nullptr;
+    }
+    bool hasErr = false;
+    const char *ret = StringUtil::RTrim(contextPtr, srcStr, srcStrLen, trimStr, trimStrLen, &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, " rtrim failed ");
+        return nullptr;
+    }
+    return ret;
+}
+
 }
 

@@ -252,6 +252,155 @@ public:
         }
         return len;
     }
+
+    static inline void CopyChars(const char *srcStr, int32_t srcStrLen, int32_t startIdx, int32_t copyLen,
+        char *outStr, int32_t outStrLen, bool *hasErr)
+    {
+        int32_t maxCopy = std::min({srcStrLen - startIdx, copyLen, outStrLen});
+        error_t res = memcpy_s(outStr, outStrLen, srcStr + startIdx, maxCopy);
+        if (res != EOK) {
+            *hasErr = true;
+        }
+    }
+
+    static inline int32_t FindChar(const char *str, int32_t strLen, const char *searchChar, int32_t searchCharLen,
+        int32_t start)
+    {
+        while (start <= strLen - searchCharLen) {
+            if (std::memcmp(str + start, searchChar, searchCharLen) == 0) {
+                return start;
+            }
+            start += 1;
+        }
+        return -1;
+    }
+
+    static inline std::string StringTrimLeft(const std::string &srcStr, const std::string &trimStr, bool *hasErr)
+    {
+        int32_t searchIdx = 0;
+        int32_t trimIdx = 0;
+        while (searchIdx < srcStr.size()) {
+            int32_t searchCharBytes = NumBytesForFirstByte(srcStr[searchIdx]);
+            char searchChar[searchCharBytes] = {0};
+            CopyChars(srcStr.c_str(), srcStr.size(), searchIdx, searchCharBytes, searchChar, searchCharBytes, hasErr);
+            if (FindChar(trimStr.c_str(), trimStr.size(), searchChar, searchCharBytes, 0) >= 0) {
+                trimIdx += searchCharBytes;
+            } else {
+                break;
+            }
+            searchIdx += searchCharBytes;
+        }
+        if (searchIdx == 0) {
+            return srcStr;
+        }
+        if (trimIdx >= srcStr.size()) {
+            return "";
+        }
+        return srcStr.substr(trimIdx);
+    }
+
+    static inline std::string StringTrimRight(const std::string &srcStr, const std::string &trimStr, bool *hasErr)
+    {
+        int32_t charIdx = 0;
+        int32_t numChars = 0;
+        int32_t stringCharLen[srcStr.size()] = {};
+        int32_t stringCharPos[srcStr.size()] = {};
+
+        while (charIdx < srcStr.size()) {
+            stringCharPos[numChars] = charIdx;
+            stringCharLen[numChars] = NumBytesForFirstByte(srcStr[charIdx]);
+            charIdx += stringCharLen[numChars];
+            numChars++;
+        }
+
+        int32_t trimEnd = srcStr.size() - 1;
+        while (numChars > 0) {
+            int32_t searchIdx = stringCharPos[numChars - 1];
+            int32_t searchCharBytes = stringCharLen[numChars - 1];
+            char searchChar[searchCharBytes] = {0};
+            CopyChars(srcStr.c_str(), srcStr.size(), searchIdx, searchCharBytes, searchChar, searchCharBytes, hasErr);
+            if (FindChar(trimStr.c_str(), trimStr.size(), searchChar, searchCharBytes, 0) >= 0) {
+                trimEnd -= searchCharBytes;
+            } else {
+                break;
+            }
+            numChars --;
+        }
+        if (trimEnd == srcStr.size() - 1) {
+            return srcStr;
+        }
+        if (trimEnd < 0) {
+            return "";
+        }
+        return srcStr.substr(0, trimEnd + 1);
+    }
+
+    static inline const char *Trim(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, const char *trimStr,
+        int32_t trimStrLen, bool *hasErr, int32_t *outLen)
+    {
+        std::string src = std::string(srcStr, srcStrLen);
+        std::string trim = std::string(trimStr, trimStrLen);
+        std::string result = StringTrimRight(StringTrimLeft(src, trim, hasErr), trim, hasErr);
+        if (*hasErr) {
+        *outLen = 0;
+        return nullptr;
+        }
+        *outLen = static_cast<int32_t>(result.length());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        return ret;
+    }
+
+    static inline const char *LTrim(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, const char *trimStr,
+        int32_t trimStrLen, bool *hasErr, int32_t *outLen)
+    {
+        std::string src = std::string(srcStr, srcStrLen);
+        std::string trim = std::string(trimStr, trimStrLen);
+        std::string result = StringTrimLeft(src, trim, hasErr);
+        if (*hasErr) {
+        *outLen = 0;
+        return nullptr;
+        }
+        *outLen = static_cast<int32_t>(result.length());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        return ret;
+    }
+
+    static inline const char *RTrim(int64_t contextPtr, const char *srcStr, int32_t srcStrLen, const char *trimStr,
+        int32_t trimStrLen, bool *hasErr, int32_t *outLen)
+    {
+        std::string src = std::string(srcStr, srcStrLen);
+        std::string trim = std::string(trimStr, trimStrLen);
+        std::string result = StringTrimRight(src, trim, hasErr);
+        if (*hasErr) {
+        *outLen = 0;
+        return nullptr;
+        }
+        *outLen = static_cast<int32_t>(result.length());
+        auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
+        if (memcpy_s(ret, *outLen + 1, result.c_str(), result.length()) != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
+        return ret;
+    }
+
+    static inline int32_t NumBytesForFirstByte(const char c)
+    {
+        uint8_t offset = c & 0xFF;
+        uint8_t numBytes = BytesOfCodePointInUTF8[offset];
+        return (numBytes == 0) ? 1 : numBytes;
+    }
 }; // class stringUtils
 } // namespace codegen function
 
