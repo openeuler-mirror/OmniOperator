@@ -33,6 +33,10 @@ public class DataType implements Serializable {
         return id;
     }
 
+    public int getIdValue() {
+        return id.toValue();
+    }
+
     /**
      * Create a data type object.
      *

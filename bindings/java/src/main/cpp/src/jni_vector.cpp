@@ -13,6 +13,7 @@
 #include "operator/aggregation/container_vector.h"
 #include "type/data_type_serializer.h"
 #include "memory/thread_memory_manager.h"
+#include "util/data_type_util.h"
 
 using namespace omniruntime::vec;
 using namespace omniruntime::mem;
@@ -307,12 +308,28 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexCa
 
 
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexVectorNative
-        (JNIEnv *env, jclass jcls, jint jSize, jint jVectorEncodingId, jobjectArray jDateTypes)
+        (JNIEnv *env, jclass jcls, jint jSize, jint jVectorEncodingId, jobjectArray jDataTypes)
 {
     BaseVector *vector = nullptr;
     // TODO
     DataType* dataType = nullptr;
     JNI_METHOD_START
+        jsize len = env->GetArrayLength(jDataTypes);
+        if (len == 0) {
+            throw omniruntime::exception::OmniException("INVALID_ARGUMENT", "DataType array is empty");
+        }
+
+        std::vector<std::shared_ptr<DataType>> children = DataTypeUtil::ConvertJavaDataTypesToCpp(env, jDataTypes);
+        if (jVectorEncodingId == OMNI_ENCODING_MAP) {
+            dataType = new MapType(children[0],children[1]);
+        } else if (jVectorEncodingId == OMNI_ENCODING_STRUCT) {
+            dataType = new RowType(children);
+        } else {
+            std::string omniExceptionInfo =
+                "In function CreateVector, no such encoding type " + std::to_string(jVectorEncodingId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+
         vector = VectorHelper::CreateComplexVector(dataType, jSize);
         if (UNLIKELY(vector == nullptr)) {
             throw omniruntime::exception::OmniException("CREATE_COMPLEX_VECTOR_FAILED",
@@ -323,4 +340,20 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexV
     RecordStack(vector, env);
 #endif
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getValuesAddrNative
+    (JNIEnv *env, jclass jlcls, jlong jNativeVector)
+{
+    MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
+    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector->GetKeys().get()));
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getKeysAddrNative
+    (JNIEnv *env, jclass jlcls, jlong jNativeVector)
+{
+    MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
+    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector->GetValues().get()));
 }

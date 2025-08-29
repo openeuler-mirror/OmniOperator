@@ -14,7 +14,7 @@ import nova.hetu.omniruntime.type.DataType;
 public abstract class ComplexVec extends Vec {
 
     public ComplexVec(long nativeVector, int capacityInBytes, int size, DataType dataType) {
-        super(nativeVector, getValuesNative(nativeVector), getValueNullsNative(nativeVector), capacityInBytes, size,
+        super(nativeVector, 0, getValueNullsNative(nativeVector), capacityInBytes, size,
             dataType);
     }
 
