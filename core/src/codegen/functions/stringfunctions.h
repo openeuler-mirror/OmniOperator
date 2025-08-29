@@ -51,7 +51,19 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
     int32_t bWidth, int32_t bpLen, bool isNull, int32_t *outLen);
 
 extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *ap, int32_t apLen, const char *bp, int32_t bpLen, bool isNull, int32_t *outLen);
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *ConcatWs3Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, bool isNull,
+    int32_t *outLen);
+
+extern "C" DLLEXPORT const char *ConcatWs4Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *ConcatWs5Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, const char *s5, int32_t s5Len, bool isNull, int32_t *outLen);
 
 extern "C" DLLEXPORT int32_t CastStringToDateNotAllowReducePrecison(int64_t contextPtr, const char *str, int32_t strLen,
     bool isNull);
