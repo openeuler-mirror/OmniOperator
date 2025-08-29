@@ -15,27 +15,27 @@ import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_STRUCT;
  */
 public class StructVec extends ComplexVec {
 
-  public StructVec(StructDataType type, int size) {
-    this(newComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes()), type, size);
-  }
+    public StructVec(StructDataType type, int size) {
+        this(newComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes()), type, size);
+    }
 
-  public StructVec(long nativeVector, StructDataType type, int size) {
-    super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, type);
-  }
+    public StructVec(long nativeVector, StructDataType type, int size) {
+        super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, type);
+    }
 
-  @Override
-  public Vec slice(int start, int length) {
-    return null;
-  }
+    @Override
+    public Vec slice(int start, int length) {
+        return null;
+    }
 
-  @Override
-  public Vec copyPositions(int[] positions, int offset, int length) {
-    return null;
-  }
+    @Override
+    public Vec copyPositions(int[] positions, int offset, int length) {
+        return null;
+    }
 
-  @Override
-  public int getRealValueBufCapacityInBytes() {
-    return 0;
-  }
+    @Override
+    public int getRealValueBufCapacityInBytes() {
+        return 0;
+    }
 
 }
