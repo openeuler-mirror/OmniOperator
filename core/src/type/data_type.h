@@ -295,6 +295,7 @@ public:
         return children;
     }
 
+<<<<<<< HEAD
     void Serialize(nlohmann::json &nlohmannJson) const override {}
 
 protected:
@@ -338,13 +339,22 @@ public:
     size_t Size() const
     {
         return 2;
+=======
+    std::shared_ptr<DataType> Type(int index) const
+    {
+        return children[index];
+>>>>>>> 930c25a9 (fix bug)
     }
 
     void Serialize(nlohmann::json &nlohmannJson) const override {}
 
 protected:
+<<<<<<< HEAD
     std::shared_ptr<DataType> keyType;
     std::shared_ptr<DataType> valueType;
+=======
+    const std::vector<std::shared_ptr<DataType>> children;
+>>>>>>> 930c25a9 (fix bug)
 };
 
 class DecimalDataType : public DataType {
@@ -413,7 +423,7 @@ public:
         return valueType;
     }
 
-    const std::vector<std::shared_ptr<DataType>> Children() const
+    std::vector<std::shared_ptr<DataType>> Children() const
     {
         return {keyType, valueType};
     }

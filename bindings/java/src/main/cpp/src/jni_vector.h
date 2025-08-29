@@ -201,6 +201,22 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_Vec_setNullFlagNative(J
  */
 JNIEXPORT jboolean JNICALL Java_nova_hetu_omniruntime_vector_Vec_hasNullNative(JNIEnv *, jclass, jlong);
 
+/*
+ * Class:     nova_hetu_omniruntime_vector_ComplexVec
+ * Method:    getComplexCapacityNative
+ * Signature: (JI)I
+ */
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexCapacityNative
+        (JNIEnv *, jclass, jlong, jint);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ComplexVec
+ * Method:    newComplexVectorNative
+ * Signature: (II[Lnova/hetu/omniruntime/type/DataType;)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexVectorNative
+        (JNIEnv *, jclass, jint, jint, jobjectArray);
+
 
 #ifdef __cplusplus
 }

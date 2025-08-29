@@ -11,6 +11,8 @@
 #include "vector_batch.h"
 #include "operator/aggregation/container_vector.h"
 #include "omni_row.h"
+#include "row_vector.h"
+#include "map_vector.h"
 
 namespace omniruntime::vec {
 class VectorHelper {
@@ -96,6 +98,30 @@ public:
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
         }
     }
+
+    static BaseVector *CreateComplexVector(DataType* dataType, int32_t size)
+    {
+        using namespace omniruntime::type;
+        auto fieldType = dataType->GetId();
+        if (fieldType == OMNI_ROW) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto rowType = static_cast<RowType*>(dataType);
+            for (int i = 0; i < rowType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(rowType->Type(i).get(), size)));
+            }
+            return new RowVector(size, children);
+        } else if (fieldType == OMNI_MAP) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto mapType = static_cast<MapType*>(dataType);
+            for (int i = 0; i < mapType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(mapType->Children()[i].get(), size)));
+            }
+            return new MapVector(size, children[0], children[1]);
+        } else {
+            return CreateFlatVector(fieldType, size);
+        }
+    }
+
 
     static BaseVector *CreateFlatVector(int32_t dataTypeId, int32_t size, int32_t capacityInBytes = INITIAL_STRING_SIZE)
     {

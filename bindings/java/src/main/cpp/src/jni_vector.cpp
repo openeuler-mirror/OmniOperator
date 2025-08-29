@@ -297,3 +297,30 @@ JNIEXPORT jboolean JNICALL Java_nova_hetu_omniruntime_vector_Vec_hasNullNative(J
     BaseVector *nativeVector = TransformVector(jNativeVector);
     return nativeVector->HasNull();
 }
+
+
+JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexCapacityNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector, jint jVecEncoding)
+{
+
+}
+
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexVectorNative
+        (JNIEnv *env, jclass jcls, jint jSize, jint jVectorEncodingId, jobjectArray jDateTypes)
+{
+    BaseVector *vector = nullptr;
+    // TODO
+    DataType* dataType = nullptr;
+    JNI_METHOD_START
+        vector = VectorHelper::CreateComplexVector(dataType, jSize);
+        if (UNLIKELY(vector == nullptr)) {
+            throw omniruntime::exception::OmniException("CREATE_COMPLEX_VECTOR_FAILED",
+                                                        "return a null pointer when creating complex vector");
+        }
+    JNI_METHOD_END(0)
+#ifdef TRACE
+    RecordStack(vector, env);
+#endif
+    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
+}
