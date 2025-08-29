@@ -295,7 +295,6 @@ public:
         return children;
     }
 
-<<<<<<< HEAD
     void Serialize(nlohmann::json &nlohmannJson) const override {}
 
 protected:
@@ -344,14 +343,23 @@ public:
     {
         return children[index];
 >>>>>>> 930c25a9 (fix bug)
+=======
+    std::shared_ptr<DataType> Type(int index) const
+    {
+        return children[index];
+>>>>>>> 930c25a9 (fix bug)
     }
 
     void Serialize(nlohmann::json &nlohmannJson) const override {}
 
 protected:
 <<<<<<< HEAD
+<<<<<<< HEAD
     std::shared_ptr<DataType> keyType;
     std::shared_ptr<DataType> valueType;
+=======
+    const std::vector<std::shared_ptr<DataType>> children;
+>>>>>>> 930c25a9 (fix bug)
 =======
     const std::vector<std::shared_ptr<DataType>> children;
 >>>>>>> 930c25a9 (fix bug)
