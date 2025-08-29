@@ -43,11 +43,11 @@ public:
         return offsets[index + 1] - offsets[index];
     }
 
-    const std::shared_ptr<BaseVector> GetKeys const {
+    const std::shared_ptr<BaseVector> GetKeys() const {
         return keys;
     }
 
-    const std::shared_ptr<BaseVector> GetValues const {
+    const std::shared_ptr<BaseVector> GetValues() const {
         return values;
     }
 
