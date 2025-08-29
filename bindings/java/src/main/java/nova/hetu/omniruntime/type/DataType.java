@@ -66,7 +66,13 @@ public class DataType implements Serializable {
         OMNI_CHAR(16),
         OMNI_CONTAINER(17),
         OMNI_BYTE(18),
-        OMNI_INVALID(19);
+        OMNI_ARRAY(30),
+        OMNI_MAP(31),
+        OMNI_ROW(32),
+        OMNI_UNKNOWN(33),
+        OMNI_FUNCTION(34),
+        OMNI_OPAQUE(35),
+        OMNI_INVALID(36);
 
         private final int value;
 

@@ -10,6 +10,7 @@
 #include <optional>
 #include "codegen/context_helper.h"
 #include "nlohmann/json.hpp"
+#include <optional>
 using json = nlohmann::json;
 
 namespace omniruntime::codegen::function {

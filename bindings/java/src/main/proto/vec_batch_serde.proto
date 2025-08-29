@@ -13,7 +13,7 @@ message VecBatch {
 
 message Vec {
     DataTypeExt typeExt = 1;
-    VecEncoding  vecEncoding = 2;
+    VecEncoding vecEncoding = 2;
     int32 size = 3;
     int32 offset = 4;
     bytes values = 5;
@@ -46,7 +46,14 @@ message DataTypeExt {
         OMNI_VARCHAR = 15;
         OMNI_CHAR = 16;
         OMNI_CONTAINER = 17;
-        OMNI_INVALID = 18;
+        OMNI_BYTE = 18;
+        OMNI_ARRAY = 30;
+        OMNI_MAP = 31;
+        OMNI_ROW = 32;
+        OMNI_UNKNOWN = 33;
+        OMNI_FUNCTION = 34;
+        OMNI_OPAQUE = 35;
+        OMNI_INVALID = 36;
     }
     DataTypeId id = 1;
     int32 width = 2;
@@ -64,4 +71,5 @@ message DataTypeExt {
         NANOSEC = 3;
     }
     TimeUnit timeUnit = 6;
+    repeated DataTypeExt children = 7;
 }
