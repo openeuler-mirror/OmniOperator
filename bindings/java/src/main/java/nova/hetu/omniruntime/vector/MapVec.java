@@ -16,12 +16,16 @@ import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_MAP;
  */
 public class MapVec extends ComplexVec {
 
+    protected OmniBuffer keysBuf;
+
     public MapVec(MapDataType type, int size) {
         this(newComplexVectorNative(size, OMNI_ENCODING_MAP.ordinal(), new DataType[]{type.getKeyType(), type.getValueType()}), type, size);
     }
 
     public MapVec(long nativeVector, MapDataType type, int size) {
         super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_MAP.ordinal()), size, type);
+        this.keysBuf = OmniBufferFactory.create(getKeysAddrNative(nativeVector), capacityInBytes);
+        this.valuesBuf = OmniBufferFactory.create(getValuesAddrNative(nativeVector), capacityInBytes);
     }
 
     @Override
@@ -38,5 +42,9 @@ public class MapVec extends ComplexVec {
     public int getRealValueBufCapacityInBytes() {
         return 0;
     }
+
+    protected static native long getKeysAddrNative(long nativeVector);
+
+    protected static native long getValuesAddrNative(long nativeVector);
 
 }
