@@ -36,6 +36,9 @@ enum Encoding {
     OMNI_DICTIONARY = 1,         // dictionary vector, dictionary can be combined with varchar
     OMNI_ENCODING_CONTAINER = 2, // the temporarily added code is mainly used for the agg avg partial, and the vector
                                  // implementation is also placed in the hash agg module
+    OMNI_ENCODING_MAP = 3,
+    OMNI_ENCODING_ARRAY = 4,
+    OMNI_ENCODING_STRUCT = 5,
     OMNI_ENCODING_INVALID
 };
 
