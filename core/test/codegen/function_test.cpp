@@ -1545,6 +1545,312 @@ TEST(FunctionTest, ConcatCharStr)
     delete context;
 }
 
+TEST(FunctionTest, ConcatWsStr)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outlen = 0;
+    const char *result;
+    std::string actual;
+
+    result = ConcatWsStr(contextPtr, ",", 1, "hello", 5, "world", 5, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 11);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "hello,world");
+
+    result = ConcatWsStr(contextPtr, "", 0, "hello", 5, "world", 5, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 10);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "helloworld");
+
+    result = ConcatWsStr(contextPtr, "-", 1, "", 0, "world", 5, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 6);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "-world");
+
+    result = ConcatWsStr(contextPtr, "-", 1, "hello", 5, "", 0, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 6);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "hello-");
+
+    result = ConcatWsStr(contextPtr, "-", 1, "", 0, "", 0, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 1);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "-");
+
+    result = ConcatWsStr(contextPtr, "-", 1, "", 0, "world", 5, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 6);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "-world");
+
+    result = ConcatWsStr(contextPtr, "-", 1, "a", 0, "b", 1, true, &outlen);
+    EXPECT_EQ(outlen, 0);
+    EXPECT_EQ(result, nullptr);
+
+    result = ConcatWsStr(contextPtr, "-", 1, nullptr, 0, "b", 1, false, &outlen);
+    EXPECT_EQ(outlen, 0);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "");
+
+    delete context;
+}
+
+TEST(FunctionTest, ConcatWs3Str)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outlen = 0;
+    const char *result;
+    std::string actual;
+
+    result = ConcatWs3Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 5);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "a,b,c");
+
+    result = ConcatWs3Str(contextPtr, "=", 1, "a", 1, "", 0, "c", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 4);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "a==c");
+
+    result = ConcatWs3Str(contextPtr, "=", 1, "", 0, "b", 1, "c", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 4);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "=b=c");
+
+    result = ConcatWs3Str(contextPtr, "=", 1, "a", 1, "b", 1, "", 0, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 4);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "a=b=");
+
+    result = ConcatWs3Str(contextPtr, "=", 1, "", 0, "", 0, "", 0, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 2);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "==");
+
+    result = ConcatWs3Str(contextPtr, "", 0, "a", 1, "b", 1, "c", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 3);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "abc");
+
+    delete context;
+}
+
+TEST(FunctionTest, ConcatWs4Str)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outlen = 0;
+    const char *result;
+    std::string actual;
+
+    result = ConcatWs4Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, "d", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 7);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "a,b,c,d");
+
+    result = ConcatWs4Str(contextPtr, ",", 1, "a", 1, "b", 1, "", 0, "d", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 6);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "a,b,,d");
+
+    result = ConcatWs4Str(contextPtr, ",", 1, "", 0, "b", 1, "c", 1, "", 0, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 5);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, ",b,c,");
+
+    result = ConcatWs4Str(contextPtr, ",", 1, "", 0, "", 0, "", 0, "", 0, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 3);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, ",,,");
+
+    result = ConcatWs4Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, "d", 1, true, &outlen);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+
+    result = ConcatWs4Str(contextPtr, "", 0, "a", 1, "b", 1, "c", 1, "d", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 4);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "abcd");
+
+    delete context;
+}
+
+TEST(FunctionTest, ConcatWs5Str)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outlen = 0;
+    const char *result;
+    std::string actual;
+
+    result = ConcatWs5Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, "d", 1, "e", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 9);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "a,b,c,d,e");
+
+    result = ConcatWs5Str(contextPtr, ",", 1, "a", 1, "b", 1, "", 0, "d", 1, "e", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 8);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "a,b,,d,e");
+
+    result = ConcatWs5Str(contextPtr, ",", 1, "", 0, "b", 1, "c", 1, "d", 1, "", 0, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 7);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, ",b,c,d,");
+
+    result = ConcatWs5Str(contextPtr, ",", 1, "", 0, "", 0, "", 0, "", 0, "", 0, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 4);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, ",,,,");
+
+    result = ConcatWs5Str(contextPtr, ",", 1, "a", 1, "b", 1, "c", 1, "d", 1, "e", 1, true, &outlen);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+
+    result = ConcatWs5Str(contextPtr, "", 0, "a", 1, "b", 1, "c", 1, "d", 1, "e", 1, false, &outlen);
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(outlen, 5);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "abcde");
+
+    delete context;
+}
+
+
+TEST(FunctionTest, Trim)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int outLen = 0;
+    const char *result;
+    std::string actual;
+    bool isNull = false;
+
+    result = TrimStr(contextPtr, " ", 1, "  hello  ", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = TrimStr(contextPtr, "xy", 2, "xxxyyhelloxyyxx", 15, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = TrimStr(contextPtr, "z", 1, "hello", 5, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = TrimStr(contextPtr, "ab", 2, "ababab", 6, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = TrimStr(contextPtr, " ", 1, "", 0, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = TrimStr(contextPtr, "", 0, "  hello  ", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "  hello  ");
+    EXPECT_EQ(outLen, 9);
+    delete context;
+}
+
+TEST(FunctionTest, RTrim)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int outLen = 0;
+    const char *result;
+    std::string actual;
+    bool isNull = false;
+    result = RightTrimStr(contextPtr, " ", 1, "hello    ", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = RightTrimStr(contextPtr, "xy", 2, "helloxyxy", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = RightTrimStr(contextPtr, "x", 1, "hello", 5, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = RightTrimStr(contextPtr, "abc", 3, "abcabc", 6, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = RightTrimStr(contextPtr, " ", 1, "", 0, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+    delete context;
+}
+
+TEST(FunctionTest, LTrim)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    int outLen = 0;
+    const char *result;
+    std::string actual;
+    bool isNull = false;
+
+    result = LeftTrimStr(contextPtr, " ", 1, "   hello", 8, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = LeftTrimStr(contextPtr, "xy", 2, "xyxyhello", 9, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = LeftTrimStr(contextPtr, "x", 1, "hello", 5, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "hello");
+    EXPECT_EQ(outLen, 5);
+
+    result = LeftTrimStr(contextPtr, "abc", 3, "abcabc", 6, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+
+    result = LeftTrimStr(contextPtr, " ", 1, "", 0, isNull, &outLen);
+    actual = std::string(result, outLen);
+    EXPECT_EQ(actual, "");
+    EXPECT_EQ(outLen, 0);
+    delete context;
+}
+
 TEST(FunctionTest, Substr)
 {
     auto context = new ExecutionContext();
@@ -3501,5 +3807,25 @@ TEST(FunctionTest, StaticInvokeCharReadPadding)
     std::string ss7(cs7, outLen);
     EXPECT_TRUE(cs7 == nullptr);
     delete context;
+}
+
+std::string RegexpReplaceTest(const std::string &stringInput, const std::string &pattern,
+    const std::string &replacement, int32_t position)
+{
+    auto context = new ExecutionContext();
+    auto contextPtr = reinterpret_cast<int64_t>(context);
+    int32_t outLen = 0;
+    auto res = RegexpReplace(contextPtr, stringInput.data(), stringInput.size(), pattern.data(), pattern.size(),
+        replacement.data(), replacement.size(), position, false, &outLen);
+    auto temp = std::string(res, static_cast<size_t>(outLen));
+    delete context;
+    return temp;
+}
+
+TEST(FunctionTest, RegexpReplace)
+{
+    EXPECT_EQ(RegexpReplaceTest("abc123xyz", "[0-9]", "X", 1), "abcXXXxyz");
+    EXPECT_EQ(RegexpReplaceTest("abc123xyz", "[A-Za-z]", "", 1), "123");
+    EXPECT_EQ(RegexpReplaceTest("abc123xyz", "$2-$1", "", 1), "abc123xyz");
 }
 }
