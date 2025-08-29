@@ -379,6 +379,52 @@ protected:
     int32_t scale;
 };
 
+class MapType : public DataType {
+public:
+    explicit MapType(std::shared_ptr<DataType> keyType, std::shared_ptr<DataType> valueType)
+        : DataType(OMNI_MAP),
+        keyType(std::move(keyType)),
+        valueType(std::move(valueType)) {}
+
+    bool operator ==(const DataType &right) const override
+    {
+        if (&right == this) {
+            return true;
+        }
+        if (right.GetId() != DataTypeId::OMNI_MAP) {
+            return false;
+        }
+        auto otherTyped = reinterpret_cast<const MapType*>(&right);
+        return (*keyType == *(otherTyped->keyType)) && (*valueType == *(otherTyped->valueType));
+    }
+
+    const std::shared_ptr<DataType> &Key() const
+    {
+        return keyType;
+    }
+
+    const std::shared_ptr<DataType> &Value() const
+    {
+        return valueType;
+    }
+
+    const std::vector<std::shared_ptr<DataType>> Children() const
+    {
+        return {keyType, valueType};
+    }
+
+    size_t Size() const
+    {
+        return 2;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override {}
+
+protected:
+    std::shared_ptr<DataType> keyType;
+    std::shared_ptr<DataType> valueType;
+};
+
 class Decimal64DataType : public DecimalDataType {
 public:
     Decimal64DataType() : Decimal64DataType(DECIMAL64_DEFAULT_PRECISION, DECIMAL64_DEFAULT_SCALE) {}

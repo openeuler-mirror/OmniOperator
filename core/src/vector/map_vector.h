@@ -14,7 +14,7 @@ namespace omniruntime::vec {
 class MapVector : public BaseVector {
 public:
     MapVector(int32_t size, std::shared_ptr<BaseVector> keyVector, std::shared_ptr<BaseVector> valueVector)
-        : BaseVector(size, OMNI_ENCODING_MAP),
+        : BaseVector(size, OMNI_ENCODING_MAP, OMNI_MAP),
           keys(std::move(keyVector)),
           values(std::move(valueVector))
     {
@@ -59,4 +59,4 @@ protected:
 };
 }
 
-#endif // OMNI_RUNTIME_MAP_VECTOR_H
+#endif // OMNI_RUNTIME_MAP_VECTOR_H
