@@ -130,19 +130,111 @@ extern "C" DLLEXPORT const char *ConcatStrChar(int64_t contextPtr, const char *a
 }
 
 extern "C" DLLEXPORT const char *ConcatWsStr(int64_t contextPtr, const char *separator, int32_t separatorLen,
-    bool separatorIsNull, const char *ap, int32_t apLen, const char *bp, int32_t bpLen, bool isNull, int32_t *outLen)
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, bool isNull, int32_t *outLen)
 {
     if (isNull) {
+        *outLen = 0;
         return nullptr;
     }
-    if (separatorIsNull) {
+    bool hasErr = false;
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs3Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, bool isNull,
+    int32_t *outLen)
+{
+    if (isNull) {
         *outLen = 0;
-        isNull = true;
         return nullptr;
     }
 
     bool hasErr = false;
-    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, ap, apLen, bp, bpLen, &hasErr, outLen);
+    int32_t tmpLen = 0;
+    const char *tmp = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmpLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp, tmpLen, s3, s3Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs4Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+
+    bool hasErr = false;
+    int32_t tmp1Len = 0, tmp2Len = 0;
+    const char *tmp1 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmp1Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp2 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp1, tmp1Len, s3, s3Len,
+    &hasErr, &tmp2Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp2, tmp2Len, s4, s4Len,
+    &hasErr, outLen);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    return ret;
+}
+
+extern "C" DLLEXPORT const char *ConcatWs5Str(int64_t contextPtr, const char *separator, int32_t separatorLen,
+    const char *s1, int32_t s1Len, const char *s2, int32_t s2Len, const char *s3, int32_t s3Len, const char *s4,
+    int32_t s4Len, const char *s5, int32_t s5Len, bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+
+    bool hasErr = false;
+    int32_t tmp1Len = 0, tmp2Len = 0, tmp3Len = 0;
+    const char *tmp1 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, s1, s1Len, s2, s2Len,
+    &hasErr, &tmp1Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp2 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp1, tmp1Len, s3, s3Len,
+    &hasErr, &tmp2Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *tmp3 = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp2, tmp2Len, s4, s4Len,
+    &hasErr, &tmp3Len);
+    if (hasErr) {
+        SetError(contextPtr, CONCAT_ERR_MSG);
+        return nullptr;
+    }
+    const char *ret = StringUtil::ConcatWsStrDiffWidths(contextPtr, separator, separatorLen, tmp3, tmp3Len, s5, s5Len,
+    &hasErr, outLen);
     if (hasErr) {
         SetError(contextPtr, CONCAT_ERR_MSG);
         return nullptr;
