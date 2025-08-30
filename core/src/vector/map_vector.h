@@ -13,47 +13,62 @@ namespace omniruntime::vec {
 
 class MapVector : public BaseVector {
 public:
-    MapVector(int32_t size, std::shared_ptr<BaseVector> keyVector, std::shared_ptr<BaseVector> valueVector)
+    MapVector(int64_t size, std::shared_ptr<BaseVector> keyVector, std::shared_ptr<BaseVector> valueVector)
         : BaseVector(size, OMNI_ENCODING_MAP, OMNI_MAP),
           keys(std::move(keyVector)),
           values(std::move(valueVector))
     {
-        offsetsBuffer = std::make_shared<AlignedBuffer<int32_t>>(size + 1);
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
         offsets = offsetsBuffer->GetBuffer();
         offsets[0] = 0;
     }
 
-    const std::shared_ptr<AlignedBuffer<int32_t>>& GetOffsetsBuffer() const
+    MapVector(int64_t size) : BaseVector(size, OMNI_ENCODING_MAP, OMNI_MAP)
+    {
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
+        offsets = offsetsBuffer->GetBuffer();
+        offsets[0] = 0;
+    }
+
+    const std::shared_ptr<AlignedBuffer<int64_t>>& GetOffsetsBuffer() const
     {
         return offsetsBuffer;
     }
 
-    const int32_t* GetOffsets() const
+    int64_t* GetOffsets()
     {
         return offsets;
     }
 
-    int32_t GetOffset(int32_t index)
+    int64_t GetOffset(int64_t index)
     {
         return offsets[index];
     }
 
-    int32_t GetSize(int32_t index)
+    int64_t GetSize(int64_t index)
     {
         return offsets[index + 1] - offsets[index];
     }
 
-    const std::shared_ptr<BaseVector> GetKeys() const {
+    const std::shared_ptr<BaseVector> GetKeyVector() const {
         return keys;
     }
 
-    const std::shared_ptr<BaseVector> GetValues() const {
+    const std::shared_ptr<BaseVector> GetValueVector() const {
         return values;
     }
 
+    void SetKeyVector(std::shared_ptr<BaseVector> keyVector) {
+        keys = std::move(keyVector);
+    }
+    
+    void SetValueVector(std::shared_ptr<BaseVector> valueVector) {
+        values = std::move(valueVector);
+    }
+
 protected:
-    int32_t* offsets;
-    std::shared_ptr<AlignedBuffer<int32_t>> offsetsBuffer;
+    int64_t* offsets;
+    std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;
     std::shared_ptr<BaseVector> keys;
     std::shared_ptr<BaseVector> values;
 };
