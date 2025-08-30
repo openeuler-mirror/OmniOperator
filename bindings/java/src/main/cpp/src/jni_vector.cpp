@@ -347,7 +347,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getValuesAddrNa
     (JNIEnv *env, jclass jlcls, jlong jNativeVector)
 {
     MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
-    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector->GetKeyVector().get()));
+    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector->GetValueVector().get()));
 }
 
 extern "C"
@@ -355,5 +355,5 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getKeysAddrNati
     (JNIEnv *env, jclass jlcls, jlong jNativeVector)
 {
     MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
-    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector->GetValueVector().get()));
+    return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector->GetKeyVector().get()));
 }
