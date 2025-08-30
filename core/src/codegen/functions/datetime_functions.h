@@ -39,5 +39,7 @@ extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, con
     bool isNull, int32_t *outLen);
 
 std::string toOmniTimeFormat(const std::string& format);
+
+extern "C" DLLEXPORT int32_t DateDiff(int32_t endDate, bool endIsNull, int32_t startDate, bool startIsNull, bool *retIsNull);
 }
 #endif // OMNI_RUNTIME_DATETIME_FUNCTIONS_H
