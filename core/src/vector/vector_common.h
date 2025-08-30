@@ -11,6 +11,8 @@
 #include "vector_batch.h"
 #include "vector_helper.h"
 #include "omni_row.h"
+#include "map_vector.h"
+#include "row_vector.h"
 #include "memory/allocator.h"
 #include "memory/memory_manager.h"
 #include "memory/memory_trace.h"
