@@ -188,4 +188,12 @@ extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, con
     return result;
 }
 
+extern "C" DLLEXPORT int32_t DateDiff(int32_t endDate, bool endIsNull, int32_t startDate, bool startIsNull, bool *retIsNull)
+{
+    if (endIsNull || startIsNull) {
+        *retIsNull = true;
+        return 0;
+    }
+    return endDate - startDate;
+}
 }
