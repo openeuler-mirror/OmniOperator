@@ -38,14 +38,14 @@ public:
 
     static jobjectArray GetContainerFieldTypes(JNIEnv *env, jobject jDataType) {
         jclass containerTypeClass = env->GetObjectClass(jDataType);
-        jmethodID getFieldTypesMethod = env->GetMethodID(containerTypeClass, "getFieldTypes", "()[LDataType;");
+        jmethodID getFieldTypesMethod = env->GetMethodID(containerTypeClass, "getFieldTypes", "()[Lnova/hetu/omniruntime/type/DataType;");
         return (jobjectArray) env->CallObjectMethod(jDataType, getFieldTypesMethod);
     }
 
     static void GetMapKeyValueTypes(JNIEnv *env, jobject jDataType, jobject *keyType, jobject *valueType) {
         jclass mapTypeClass = env->GetObjectClass(jDataType);
-        jmethodID getKeyTypeMethod = env->GetMethodID(mapTypeClass, "getKeyType", "()LDataType;");
-        jmethodID getValueTypeMethod = env->GetMethodID(mapTypeClass, "getValueType", "()LDataType;");
+        jmethodID getKeyTypeMethod = env->GetMethodID(mapTypeClass, "getKeyType", "()Lnova/hetu/omniruntime/type/DataType;");
+        jmethodID getValueTypeMethod = env->GetMethodID(mapTypeClass, "getValueType", "()Lnova/hetu/omniruntime/type/DataType;");
         *keyType = env->CallObjectMethod(jDataType, getKeyTypeMethod);
         *valueType = env->CallObjectMethod(jDataType, getValueTypeMethod);
     }
