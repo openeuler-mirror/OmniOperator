@@ -19,7 +19,7 @@ namespace omniruntime::vec {
             : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW) {}
 
         RowVector(int32_t size, std::vector<std::shared_ptr<BaseVector>> children)
-                : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW), childrenSize_(children.size()),
+                : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW),
                   children_(std::move(children)) {}
 
         ~RowVector() override = default;
