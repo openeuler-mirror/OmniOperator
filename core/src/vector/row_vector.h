@@ -15,9 +15,12 @@ namespace omniruntime::vec {
         RowVector(const RowVector&) = delete;
         RowVector& operator=(const RowVector&) = delete;
 
+        RowVector(int32_t size)
+            : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW) {}
+
         RowVector(int32_t size, std::vector<std::shared_ptr<BaseVector>> children)
-            : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW), childrenSize_(children.size()),
-              children_(std::move(children)) {}
+                : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW), childrenSize_(children.size()),
+                  children_(std::move(children)) {}
 
         ~RowVector() override = default;
 
@@ -26,17 +29,20 @@ namespace omniruntime::vec {
             return children_[index];
         }
 
-        std::vector<std::shared_ptr<BaseVector>> Children() {
+        std::vector<std::shared_ptr<BaseVector>>& Children() {
             return children_;
         }
 
+        void AddChild(std::shared_ptr<BaseVector> child) {
+            children_.push_back(std::move(child));
+        }
+
         int32_t ChildSize() const {
-            return childrenSize_;
+            return children_.size();
         }
 
         private:
         std::vector<std::shared_ptr<BaseVector>> children_;
-        const int32_t childrenSize_;
     };
 }
 
