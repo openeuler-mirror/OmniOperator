@@ -374,3 +374,35 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getSizeNative
     MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
     return nativeVector->GetSize(rowId);
 }
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_addVecNative
+  (JNIEnv *env, jclass jcls, jlong rowVecAddr, jint index, jlong addedVecAddr)
+{
+    auto rowVec = reinterpret_cast<RowVector *>(rowVecAddr);
+    auto addedVec =  reinterpret_cast<BaseVector *>(addedVecAddr);
+    rowVec->Add(index, addedVec);
+}
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddKeysNative
+(JNIEnv *env, jclass jcls, jlong mapVecAddr, jlong keysAddr) {
+    auto mapVec = reinterpret_cast<MapVector *>(mapVecAddr);
+    auto keys =  reinterpret_cast<BaseVector *>(keysAddr);
+    mapVec->AddKeys(keys);
+}
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddValuesNative
+  (JNIEnv *env, jclass jcls, jlong mapVecAddr, jlong valuesAddr) {
+    auto mapVec = reinterpret_cast<MapVector *>(mapVecAddr);
+    auto values =  reinterpret_cast<BaseVector *>(valuesAddr);
+    mapVec->AddValues(values);
+}
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddOffsetsNative
+  (JNIEnv *env, jclass jcls, jlong mapVecAddr, jintArray offsetsAddr) {
+    auto mapVec = reinterpret_cast<MapVector *>(mapVecAddr);
+    jsize length = env->GetArrayLength(offsetsAddr);
+    jint* elements = env->GetIntArrayElements(offsetsAddr, nullptr);
+    for (jsize i = 0; i < length; i++) {
+        mapVec->SetOffset(i, elements[i]);
+    }
+}

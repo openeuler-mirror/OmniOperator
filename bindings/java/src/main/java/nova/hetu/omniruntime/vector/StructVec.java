@@ -42,4 +42,9 @@ public class StructVec extends ComplexVec {
         return 0;
     }
 
+     public void add(int index, Vec addedVec) {
+        addVecNative(this.nativeVector, index, addedVec.nativeVector);
+     }
+
+     protected static native void addVecNative(long nativeVector, int index, long addedVec);
 }
