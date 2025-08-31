@@ -22,6 +22,10 @@ public class MapVec extends ComplexVec {
         this(newComplexVectorNative(size, OMNI_ENCODING_MAP.ordinal(), new DataType[]{type.getKeyType(), type.getValueType()}), type, size);
     }
 
+    public MapVec(long nativeVector, MapDataType type) {
+        this(nativeVector, type, getSizeNative(nativeVector));
+    }
+
     public MapVec(long nativeVector, MapDataType type, int size) {
         super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_MAP.ordinal()), size, type);
         this.keysBuf = OmniBufferFactory.create(getKeysAddrNative(nativeVector), capacityInBytes);
@@ -43,8 +47,19 @@ public class MapVec extends ComplexVec {
         return 0;
     }
 
+    public long getOffset(long rowId) {
+        return getOffsetNative(nativeVector, rowId);
+    }
+
+    public long getSize(long rowId) {
+        return getSizeNative(nativeVector, rowId);
+    }
+
     protected static native long getKeysAddrNative(long nativeVector);
 
     protected static native long getValuesAddrNative(long nativeVector);
 
+    protected static native long getOffsetNative(long nativeVector, long rowId);
+
+    protected static native long getSizeNative(long nativeVector, long rowId);
 }

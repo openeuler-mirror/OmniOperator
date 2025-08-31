@@ -357,3 +357,20 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getKeysAddrNati
     MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
     return reinterpret_cast<uintptr_t>(VectorHelper::UnsafeGetValues(nativeVector->GetKeyVector().get()));
 }
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getOffsetNative
+    (JNIEnv *env, jclass jlcls, jlong jNativeVector, jlong rowId)
+{
+    MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
+
+    return nativeVector->GetOffset(rowId);
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_getSizeNative
+    (JNIEnv *env, jclass jlcls, jlong jNativeVector, jlong rowId)
+{
+    MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
+    return nativeVector->GetSize(rowId);
+}
