@@ -5,6 +5,8 @@
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.MapDataType;
+import nova.hetu.omniruntime.type.StructDataType;
 
 /**
  * vec factory.
@@ -31,6 +33,12 @@ public class VecFactory {
                 break;
             case OMNI_VEC_ENCODING_CONTAINER:
                 vector = new ContainerVec(nativeVector);
+                break;
+            case OMNI_ENCODING_MAP:
+                vector = new MapVec(nativeVector, (MapDataType) dataType);
+                break;
+            case OMNI_ENCODING_STRUCT:
+                vector = new StructVec(nativeVector, (StructDataType) dataType);
                 break;
             default:
                 throw new IllegalArgumentException("Not Support Vec Encoding " + encoding);
