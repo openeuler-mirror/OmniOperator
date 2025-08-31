@@ -5,6 +5,8 @@
 package nova.hetu.omniruntime.vector;
 
 import nova.hetu.omniruntime.type.DataType;
+import nova.hetu.omniruntime.type.MapDataType;
+import nova.hetu.omniruntime.type.StructDataType;
 
 /**
  * base class of complex vec.
@@ -23,6 +25,45 @@ public abstract class ComplexVec extends Vec {
     protected static native long newComplexVectorNative(int size, int vecEncodingId, DataType[] dataType);
 
     protected static native long newEmptyComplexVectorNative(int size, int vecEncodingId, DataType[] dataType);
+
+    public static Vec createVec(long nativeVector , DataType dataType){
+        switch (dataType.getId()) {
+            case OMNI_BOOLEAN: {
+                return new BooleanVec(nativeVector);
+            }
+            case OMNI_SHORT: {
+                return new ShortVec(nativeVector);
+            }
+            case OMNI_DATE32:
+            case OMNI_INT: {
+                return new IntVec(nativeVector);
+            }
+            case OMNI_LONG:
+            case OMNI_TIMESTAMP:
+            case OMNI_DECIMAL64: {
+                return new LongVec(nativeVector);
+            }
+            case OMNI_DOUBLE: {
+                return new DoubleVec(nativeVector);
+            }
+            case OMNI_VARCHAR: {
+                return new VarcharVec(nativeVector);
+            }
+            case OMNI_DECIMAL128: {
+                return new Decimal128Vec(nativeVector);
+            }
+            case OMNI_MAP: {
+                return new MapVec(nativeVector, (MapDataType) dataType);
+            }
+            case OMNI_ROW: {
+                return new StructVec(nativeVector, (StructDataType) dataType);
+            }
+            default: {
+                throw new RuntimeException("UnSupport type for ColumnarFileScan:" +
+                        dataType.getId());
+            }
+        }
+    }
 }
 
 
