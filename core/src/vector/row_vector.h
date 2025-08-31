@@ -41,6 +41,10 @@ namespace omniruntime::vec {
             return children_.size();
         }
 
+        void Add(int32_t index, BaseVector* addedVec) {
+            children_[index] = std::shared_ptr<BaseVector>(addedVec);
+        }
+
         private:
         std::vector<std::shared_ptr<BaseVector>> children_;
     };

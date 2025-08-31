@@ -66,6 +66,18 @@ public:
         values = std::move(valueVector);
     }
 
+    void SetOffset(int32_t index, int32_t offset) {
+        offsets[index] = offset;
+    }
+
+    void AddKeys(BaseVector* addedKeys) {
+        keys = std::shared_ptr<BaseVector>(addedKeys);
+    }
+
+    void AddValues(BaseVector* addedValues) {
+        values = std::shared_ptr<BaseVector>(addedValues);
+    }
+
 protected:
     int64_t* offsets;
     std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;

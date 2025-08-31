@@ -217,6 +217,38 @@ JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexCa
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexVectorNative
         (JNIEnv *, jclass, jint, jint, jobjectArray);
 
+ /*
+  * Class:     nova_hetu_omniruntime_vector_StructVec
+  * Method:    addVecNative
+  * Signature: (JIJ)V
+  */
+ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_addVecNative
+   (JNIEnv *env, jclass jcls, jlong rowVecAddr, jint index, jlong addedVecAddr);
+
+ /*
+  * Class:     nova_hetu_omniruntime_vector_MapVec
+  * Method:    AddKeysNative
+  * Signature: (JJ)V
+  */
+ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddKeysNative
+ (JNIEnv *env, jclass jcls, jlong mapVecAddr, jlong keysAddr);
+
+
+ /*
+ * Class:     nova_hetu_omniruntime_vector_MapVec
+ * Method:    AddValuesNative
+ * Signature: (JJ)V
+ */
+ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddValuesNative
+   (JNIEnv *env, jclass jcls, jlong mapVecAddr, jlong valuesAddr);
+
+ /*
+  * Class:     nova_hetu_omniruntime_vector_MapVec
+  * Method:    AddOffsetsNative
+  * Signature: (J[I)V
+  */
+ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddOffsetsNative
+   (JNIEnv *env, jclass jcls, jlong mapVecAddr, jintArray offsetsAddr);
 
 #ifdef __cplusplus
 }

@@ -55,6 +55,18 @@ public class MapVec extends ComplexVec {
         return getSizeNative(nativeVector, rowId);
     }
 
+    public void AddKeys(Vec keys){
+        AddKeysNative(this.nativeVector, keys.nativeVector);
+    }
+
+    public void AddValues(Vec values){
+        AddValuesNative(this.nativeVector, values.nativeVector);
+    }
+
+    public void AddOffsets(int[] offsets){
+        AddOffsetsNative(this.nativeVector, offsets);
+    }
+
     protected static native long getKeysAddrNative(long nativeVector);
 
     protected static native long getValuesAddrNative(long nativeVector);
@@ -62,4 +74,10 @@ public class MapVec extends ComplexVec {
     protected static native long getOffsetNative(long nativeVector, long rowId);
 
     protected static native long getSizeNative(long nativeVector, long rowId);
+
+    protected static native void AddKeysNative(long nativeVector, long keys);
+
+    protected static native void AddValuesNative(long nativeVector, long values);
+
+    protected static native void AddOffsetsNative(long nativeVector, int[] offsets);
 }
