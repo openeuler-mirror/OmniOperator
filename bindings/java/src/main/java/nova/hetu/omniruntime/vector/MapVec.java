@@ -19,7 +19,12 @@ public class MapVec extends ComplexVec {
     protected OmniBuffer keysBuf;
 
     public MapVec(MapDataType type, int size) {
-        this(newComplexVectorNative(size, OMNI_ENCODING_MAP.ordinal(), new DataType[]{type.getKeyType(), type.getValueType()}), type, size);
+        this(type, size, false);
+    }
+
+    public MapVec(MapDataType type, int size, boolean isEmpty) {
+        this(isEmpty ? newEmptyComplexVectorNative(size, OMNI_ENCODING_MAP.ordinal(), new DataType[]{type.getKeyType(), type.getValueType()})
+                : newComplexVectorNative(size, OMNI_ENCODING_MAP.ordinal(), new DataType[]{type.getKeyType(), type.getValueType()}), type, size);
     }
 
     public MapVec(long nativeVector, MapDataType type) {

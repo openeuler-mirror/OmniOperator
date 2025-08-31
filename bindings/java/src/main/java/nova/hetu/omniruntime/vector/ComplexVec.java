@@ -21,6 +21,8 @@ public abstract class ComplexVec extends Vec {
     protected static native int getComplexCapacityNative(long nativeVector, int vecEncodingId);
 
     protected static native long newComplexVectorNative(int size, int vecEncodingId, DataType[] dataType);
+
+    protected static native long newEmptyComplexVectorNative(int size, int vecEncodingId, DataType[] dataType);
 }
 
 
