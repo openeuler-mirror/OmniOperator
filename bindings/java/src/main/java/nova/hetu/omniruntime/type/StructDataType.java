@@ -53,4 +53,8 @@ public class StructDataType extends DataType {
     public DataType[] getFieldTypes() {
         return fieldTypes;
     }
+
+    public DataType getFieldType(int index) {
+        return fieldTypes[index];
+    }
 }
