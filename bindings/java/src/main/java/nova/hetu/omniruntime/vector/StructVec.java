@@ -15,6 +15,8 @@ import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_STRUCT;
  */
 public class StructVec extends ComplexVec {
 
+    private Vec[] children;
+
     public StructVec(StructDataType type, int size) {
         this(type, size, false);
     }
@@ -31,6 +33,14 @@ public class StructVec extends ComplexVec {
 
     public StructVec(long nativeVector, StructDataType type, int size) {
         super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, type);
+        initChildren(type);
+    }
+
+    private void initChildren(StructDataType type) {
+        children = new Vec[type.getFieldTypes().length];
+        for (int i = 0; i < children.length; i++) {
+            children[i] = createVec(getChildAddrNative(nativeVector, i), type.getFieldType(i));
+        }
     }
 
     @Override
@@ -53,4 +63,10 @@ public class StructVec extends ComplexVec {
      }
 
      protected static native void addVecNative(long nativeVector, int index, long addedVec);
+
+    protected static native long getChildAddrNative(long nativeVector, int index);
+
+    public Vec getChild(int index) {
+        return children[index];
+    }
 }

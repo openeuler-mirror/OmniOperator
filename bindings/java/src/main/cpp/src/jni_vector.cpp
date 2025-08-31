@@ -442,3 +442,11 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newEmptyCom
 #endif
     return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
 }
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_StructVec_getChildAddrNative
+    (JNIEnv *env, jclass jcls, jlong jNativeVector, jint index)
+{
+    RowVector *nativeVector = reinterpret_cast<RowVector *>(jNativeVector);
+    return reinterpret_cast<uintptr_t>(nativeVector->ChildAt(index).get());
+}
