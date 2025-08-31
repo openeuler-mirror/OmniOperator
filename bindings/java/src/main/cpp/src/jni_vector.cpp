@@ -406,3 +406,39 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_MapVec_AddOffsetsNative
         mapVec->SetOffset(i, elements[i]);
     }
 }
+
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newEmptyComplexVectorNative
+    (JNIEnv *env, jclass jcls, jint jSize, jint jVectorEncodingId, jobjectArray jDataTypes)
+{
+    BaseVector *vector = nullptr;
+    DataType* dataType = nullptr;
+    JNI_METHOD_START
+        jsize len = env->GetArrayLength(jDataTypes);
+        if (len == 0) {
+            throw omniruntime::exception::OmniException("INVALID_ARGUMENT", "DataType array is empty");
+        }
+
+        std::vector<std::shared_ptr<DataType>> children = DataTypeUtil::ConvertJavaDataTypesToCpp(env, jDataTypes);
+        if (jVectorEncodingId == OMNI_ENCODING_MAP) {
+            dataType = new MapType(children[0],children[1]);
+        } else if (jVectorEncodingId == OMNI_ENCODING_STRUCT) {
+            dataType = new RowType(children);
+        } else {
+            std::string omniExceptionInfo =
+                "In function CreateVector, no such encoding type " + std::to_string(jVectorEncodingId);
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+        }
+
+        vector = VectorHelper::CreateEmptyComplexVector(dataType, jSize);
+        if (UNLIKELY(vector == nullptr)) {
+            throw omniruntime::exception::OmniException("CREATE_COMPLEX_VECTOR_FAILED",
+                                                        "return a null pointer when creating complex vector");
+        }
+    JNI_METHOD_END(0)
+#ifdef TRACE
+    RecordStack(vector, env);
+#endif
+    return reinterpret_cast<uintptr_t>(reinterpret_cast<void *>(vector));
+}

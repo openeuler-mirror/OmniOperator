@@ -16,8 +16,14 @@ import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_STRUCT;
 public class StructVec extends ComplexVec {
 
     public StructVec(StructDataType type, int size) {
-        this(newComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes()), type, size);
+        this(type, size, false);
     }
+
+    public StructVec(StructDataType type, int size, boolean isEmpty) {
+        this(isEmpty ? newEmptyComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes())
+                : newComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes()), type, size);
+    }
+
 
     public StructVec(long nativeVector, StructDataType type) {
         this(nativeVector, type, getSizeNative(nativeVector));
