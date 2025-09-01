@@ -82,51 +82,12 @@ namespace omniruntime::vec {
             }
 
             for (int i = 0; i < children_.size(); i++) {
-                newRowVector->Append(CopyChildPositionsVector(children_[i].get(), positions, positionOffset, length));
+                newRowVector->Append(children_[i]->CopyPositions(positions, positionOffset, length));
             }
         }
 
     private:
         std::vector<std::shared_ptr<BaseVector>> children_;
-
-        BaseVector *CopyChildPositionsVector(BaseVector *vector, const int *positions, int offset, int length)
-        {
-            DataTypeId dataTypeId = vector->GetTypeId();
-            switch (dataTypeId) {
-                case type::OMNI_INT:
-                case type::OMNI_DATE32: {
-                    return reinterpret_cast<Vector<int32_t> *>(vector)->CopyPositions(positions, offset, length);
-                }
-                case type::OMNI_SHORT: {
-                    return reinterpret_cast<Vector<int16_t> *>(vector)->CopyPositions(positions, offset, length);
-                }
-                case type::OMNI_LONG:
-                case type::OMNI_TIMESTAMP:
-                case type::OMNI_DATE64:
-                case type::OMNI_DECIMAL64: {
-                    return reinterpret_cast<Vector<int64_t> *>(vector)->CopyPositions(positions, offset, length);
-                }
-                case type::OMNI_DOUBLE: {
-                    return reinterpret_cast<Vector<double> *>(vector)->CopyPositions(positions, offset, length);
-                }
-                case type::OMNI_BOOLEAN: {
-                    return reinterpret_cast<Vector<bool> *>(vector)->CopyPositions(positions, offset, length);
-                }
-                case type::OMNI_VARCHAR:
-                case type::OMNI_CHAR: {
-                    return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->CopyPositions(
-                        positions, offset, length);
-                }
-                case type::OMNI_DECIMAL128: {
-                    return reinterpret_cast<Vector<type::Decimal128> *>(vector)->CopyPositions(positions, offset, length);
-                }
-                default: {
-                    std::string omniExceptionInfo =
-                        "In function CopyChildPositionsVector, no such data type " + std::to_string(dataTypeId);
-                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
-                }
-            }
-        }
     };
 }
 
