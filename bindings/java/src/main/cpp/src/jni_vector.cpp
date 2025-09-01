@@ -303,7 +303,7 @@ JNIEXPORT jboolean JNICALL Java_nova_hetu_omniruntime_vector_Vec_hasNullNative(J
 JNIEXPORT jint JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexCapacityNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector, jint jVecEncoding)
 {
-
+    return 0;
 }
 
 
