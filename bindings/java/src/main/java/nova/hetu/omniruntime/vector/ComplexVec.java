@@ -20,6 +20,10 @@ public abstract class ComplexVec extends Vec {
             dataType);
     }
 
+    public ComplexVec(Vec vec, int offset, int length, int capacityInBytes) {
+        super(vec, offset, length, capacityInBytes);
+    }
+
     protected static native int getComplexCapacityNative(long nativeVector, int vecEncodingId);
 
     protected static native long newComplexVectorNative(int size, int vecEncodingId, DataType[] dataType);

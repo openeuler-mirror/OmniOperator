@@ -23,17 +23,24 @@ public class StructVec extends ComplexVec {
 
     public StructVec(StructDataType type, int size, boolean isEmpty) {
         this(isEmpty ? newEmptyComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes())
-                : newComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes()), type, size);
+                : newComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes()), type, size, isEmpty);
     }
 
 
     public StructVec(long nativeVector, StructDataType type) {
-        this(nativeVector, type, getSizeNative(nativeVector));
+        this(nativeVector, type, getSizeNative(nativeVector), false);
     }
 
-    public StructVec(long nativeVector, StructDataType type, int size) {
+    public StructVec(long nativeVector, StructDataType type, int size, boolean isEmpty) {
         super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, type);
-        initChildren(type);
+        if (!isEmpty) {
+            initChildren(type);
+        }
+    }
+
+    private StructVec(StructVec vector, int offset, int length) {
+        super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_STRUCT.ordinal()));
+        initChildren((StructDataType) getType());
     }
 
     private void initChildren(StructDataType type) {
@@ -44,8 +51,8 @@ public class StructVec extends ComplexVec {
     }
 
     @Override
-    public Vec slice(int start, int length) {
-        return null;
+    public StructVec slice(int start, int length) {
+        return new StructVec(this, start, length);
     }
 
     @Override
