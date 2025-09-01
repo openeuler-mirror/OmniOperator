@@ -49,12 +49,13 @@ namespace omniruntime::vec {
             children_.emplace_back(std::shared_ptr<BaseVector>(appendedVec));
         }
 
-        BaseVector* Slice(int offset, int length) {
+        RowVector *Slice(int positionOffset, int length, bool isCopy = false) override {
             // TODO
             return nullptr;
         }
 
-        BaseVector* CopyPositions(const int32_t *selectedRows, int32_t numSelectedRows, BaseVector *colVec) {
+
+        RowVector* CopyPositions(const int *positions, int positionOffset, int length) override {
             // TODO
             return nullptr;
         }

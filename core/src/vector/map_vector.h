@@ -78,7 +78,7 @@ public:
         values = std::shared_ptr<BaseVector>(addedValues);
     }
 
-    BaseVector* Slice(int offset, int length) {
+    MapVector *Slice(int positionOffset, int length, bool isCopy = false) {
         // TODO
         return nullptr;
     }
@@ -89,7 +89,7 @@ public:
      * @param offset
      * @param length
      */
-    MapVector* CopyPositions(const int *positions, int positionOffset, int length)
+    MapVector* CopyPositions(const int *positions, int positionOffset, int length) override
     {
         if ((positions == nullptr) || (length < 0)) {
             std::string message("MapVector positions is null or the input length is incorrect: %d.", length);
@@ -97,7 +97,7 @@ public:
         }
 
         MapVector* newMapVector = new MapVector(length);
-        int* startPositions = positions + positionOffset;
+        auto startPositions = positions + positionOffset;
 
         std::vector<int> keyPositions;
         int keyLength = 0;
@@ -117,11 +117,11 @@ public:
         newMapVector->SetOffset(length, keyLength);
 
         auto keyVector = this->GetKeyVector();
-        auto newKeyVector = CopyChildPositionsVector(keyVector.get(), keyPositions.data(), 0, keyLength);
+        auto newKeyVector = keyVector->CopyPositions(keyPositions.data(), 0, keyLength);
         newMapVector->AddKeys(newKeyVector);
 
         auto valueVector = this->GetValueVector();
-        auto newValueVector = CopyChildPositionsVector(valueVector.get(), keyPositions.data(), 0, keyLength);
+        auto newValueVector = valueVector->CopyPositions(keyPositions.data(), 0, keyLength);
         newMapVector->AddValues(newValueVector);
 
         return newMapVector;
@@ -140,44 +140,6 @@ private:
         }
     }
 
-    BaseVector *CopyChildPositionsVector(BaseVector *vector, int *positions, int offset, int length)
-    {
-        DataTypeId dataTypeId = vector->GetTypeId();
-        switch (dataTypeId) {
-            case type::OMNI_INT:
-            case type::OMNI_DATE32: {
-                return reinterpret_cast<Vector<int32_t> *>(vector)->CopyPositions(positions, offset, length);
-            }
-            case type::OMNI_SHORT: {
-                return reinterpret_cast<Vector<int16_t> *>(vector)->CopyPositions(positions, offset, length);
-            }
-            case type::OMNI_LONG:
-            case type::OMNI_TIMESTAMP:
-            case type::OMNI_DATE64:
-            case type::OMNI_DECIMAL64: {
-                return reinterpret_cast<Vector<int64_t> *>(vector)->CopyPositions(positions, offset, length);
-            }
-            case type::OMNI_DOUBLE: {
-                return reinterpret_cast<Vector<double> *>(vector)->CopyPositions(positions, offset, length);
-            }
-            case type::OMNI_BOOLEAN: {
-                return reinterpret_cast<Vector<bool> *>(vector)->CopyPositions(positions, offset, length);
-            }
-            case type::OMNI_VARCHAR:
-            case type::OMNI_CHAR: {
-                return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->CopyPositions(
-                    positions, offset, length);
-            }
-            case type::OMNI_DECIMAL128: {
-                return reinterpret_cast<Vector<type::Decimal128> *>(vector)->CopyPositions(positions, offset, length);
-            }
-            default: {
-                std::string omniExceptionInfo =
-                    "In function CopyChildPositionsVector, no such data type " + std::to_string(dataTypeId);
-                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
-            }
-        }
-    }
 };
 }
 
