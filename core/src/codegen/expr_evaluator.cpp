@@ -328,6 +328,38 @@ BaseVector *Projection::ColumnProjectionFlatVectorSliceHelper(int32_t numSelecte
     return reinterpret_cast<Vector<T> *>(colVec)->Slice(0, numSelectedRows);
 }
 
+BaseVector *Projection::ColumnProjectionStructVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+    int32_t numSelectedRows) const
+{
+    auto colVec = vecBatch->Get(this->columnProjectionIndex);
+    auto rowCnt = vecBatch->GetRowCount();
+    auto rowVector = dynamic_cast<RowVector*>(colVec);
+    if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
+        return rowVector->Slice(0, numSelectedRows);
+    }
+
+    if (selectedRows != nullptr && numSelectedRows != 0) {
+        return rowVector->CopyPositions(selectedRows, numSelectedRows, colVec);
+    }
+    return nullptr;
+}
+
+BaseVector *Projection::ColumnProjectionMapVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+    int32_t numSelectedRows) const
+{
+    auto colVec = vecBatch->Get(this->columnProjectionIndex);
+    auto rowCnt = vecBatch->GetRowCount();
+    auto mapVector = dynamic_cast<MapVector*>(colVec);
+    if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
+        return mapVector->Slice(0, numSelectedRows);
+    }
+
+    if (selectedRows != nullptr && numSelectedRows != 0) {
+        return mapVector->CopyPositions(selectedRows, numSelectedRows, colVec);
+    }
+    return nullptr;
+}
+
 template <typename T>
 BaseVector *Projection::ColumnProjectionDictionaryVectorSliceHelper(int32_t numSelectedRows, BaseVector *colVec) const
 {
@@ -385,6 +417,10 @@ BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t sel
         case OMNI_VARCHAR:
         case OMNI_CHAR:
             return ColumnProjectionVarCharVectorHelper<std::string_view>(vecBatch, selectedRows, numSelectedRows);
+        case OMNI_MAP:
+            return ColumnProjectionMapVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);
+        case OMNI_ROW:
+            return ColumnProjectionStructVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);
         case OMNI_TIMESTAMP_WITHOUT_TIME_ZONE:
             return ColumnProjectionHelper<int64_t>(vecBatch, selectedRows, numSelectedRows);
         default:

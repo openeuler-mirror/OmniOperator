@@ -493,6 +493,12 @@ public:
                 return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
                     length);
             }
+            case type::OMNI_MAP: {
+                return static_cast<MapVector*>(vector)->Slice(positionOffset, length);
+            }
+            case type::OMNI_ROW: {
+                return static_cast<RowVector*>(vector)->Slice(positionOffset, length);
+            }
             default: {
                 std::string omniExceptionInfo =
                     "In function SliceVector, no such data type " + std::to_string(dataTypeId);

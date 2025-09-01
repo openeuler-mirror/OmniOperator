@@ -45,6 +45,20 @@ namespace omniruntime::vec {
             children_[index] = std::shared_ptr<BaseVector>(addedVec);
         }
 
+        void Append(BaseVector* appendedVec) {
+            children_.emplace_back(std::shared_ptr<BaseVector>(appendedVec));
+        }
+
+        BaseVector* Slice(int offset, int length) {
+            // TODO
+            return nullptr;
+        }
+
+        BaseVector* CopyPositions(const int32_t *selectedRows, int32_t numSelectedRows, BaseVector *colVec) {
+            // TODO
+            return nullptr;
+        }
+
         private:
         std::vector<std::shared_ptr<BaseVector>> children_;
     };
