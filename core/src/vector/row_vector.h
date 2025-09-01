@@ -49,9 +49,21 @@ namespace omniruntime::vec {
             children_.emplace_back(std::shared_ptr<BaseVector>(appendedVec));
         }
 
-        RowVector *Slice(int positionOffset, int length, bool isCopy = false) override {
-            // TODO
-            return nullptr;
+
+        RowVector *Slice(int positionOffset, int length, bool isCopy = false) override
+        {
+            if (UNLIKELY(positionOffset + length > size)) {
+                std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                                    size);
+                throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+            }
+            auto sliced = new RowVector(length);
+            sliced->offset = offset + positionOffset; // update offset
+            sliced->isSliced = true;
+            for (int i = 0; i < children_.size(); ++i) {
+                sliced->AddChild(std::shared_ptr<BaseVector>(ChildAt(i)->Slice(positionOffset, length, isCopy)));
+            }
+            return sliced;
         }
 
 

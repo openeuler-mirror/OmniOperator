@@ -381,6 +381,9 @@ public:
             case type::OMNI_CONTAINER:
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<ContainerVector *>(vector)));
+            case type::OMNI_MAP:
+            case type::OMNI_ROW:
+                return 0;
             default: {
                 std::string omniExceptionInfo =
                     "In function UnsafeGetValues, no such data type " + std::to_string(dataTypeId);
@@ -494,10 +497,10 @@ public:
                     length);
             }
             case type::OMNI_MAP: {
-                return static_cast<MapVector*>(vector)->Slice(positionOffset, length);
+                return reinterpret_cast<MapVector *>(vector)->Slice(positionOffset, length);
             }
             case type::OMNI_ROW: {
-                return static_cast<RowVector*>(vector)->Slice(positionOffset, length);
+                return reinterpret_cast<RowVector *>(vector)->Slice(positionOffset, length);
             }
             default: {
                 std::string omniExceptionInfo =

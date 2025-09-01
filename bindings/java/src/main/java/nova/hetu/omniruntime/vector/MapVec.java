@@ -8,6 +8,7 @@ import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.MapDataType;
 
 import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_MAP;
+import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_STRUCT;
 
 /**
  * map vec.
@@ -25,22 +26,30 @@ public class MapVec extends ComplexVec {
 
     public MapVec(MapDataType type, int size, boolean isEmpty) {
         this(isEmpty ? newEmptyComplexVectorNative(size, OMNI_ENCODING_MAP.ordinal(), new DataType[]{type.getKeyType(), type.getValueType()})
-                : newComplexVectorNative(size, OMNI_ENCODING_MAP.ordinal(), new DataType[]{type.getKeyType(), type.getValueType()}), type, size);
+                : newComplexVectorNative(size, OMNI_ENCODING_MAP.ordinal(), new DataType[]{type.getKeyType(), type.getValueType()}), type, size, isEmpty);
     }
 
     public MapVec(long nativeVector, MapDataType type) {
-        this(nativeVector, type, getSizeNative(nativeVector));
+        this(nativeVector, type, getSizeNative(nativeVector),false);
     }
 
-    public MapVec(long nativeVector, MapDataType type, int size) {
+    public MapVec(long nativeVector, MapDataType type, int size, boolean isEmpty) {
         super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_MAP.ordinal()), size, type);
-        this.keyVec = createVec(getKeysAddrNative(nativeVector), type.getKeyType());
-        this.valueVec = createVec(getValuesAddrNative(nativeVector), type.getValueType());
+        if (!isEmpty){
+            this.keyVec = createVec(getKeysAddrNative(nativeVector), type.getKeyType());
+            this.valueVec = createVec(getValuesAddrNative(nativeVector), type.getValueType());
+        }
+    }
+
+    private MapVec(MapVec vector, int offset, int length) {
+        super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_STRUCT.ordinal()));
+        this.keyVec = createVec(getKeysAddrNative(nativeVector), ((MapDataType) getType()).getKeyType());
+        this.valueVec = createVec(getValuesAddrNative(nativeVector), ((MapDataType) getType()).getValueType());
     }
 
     @Override
-    public Vec slice(int start, int length) {
-        return null;
+    public MapVec slice(int start, int length) {
+        return new MapVec(this, start, length);
     }
 
     @Override

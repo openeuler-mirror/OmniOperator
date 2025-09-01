@@ -78,7 +78,32 @@ public:
         values = std::shared_ptr<BaseVector>(addedValues);
     }
 
-    MapVector *Slice(int positionOffset, int length, bool isCopy = false) {
+    MapVector *Slice(int positionOffset, int length, bool isCopy = false) override
+    {
+        if (UNLIKELY(positionOffset + length > size)) {
+            std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
+                                size);
+            throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+        }
+        auto sliced = new MapVector(length);
+        sliced->isSliced = true;
+        int32_t startOffset = GetOffset(positionOffset);
+        for (int i = 0; i < length; ++i) {
+            sliced->SetOffset(i + 1, GetOffset(positionOffset + 1 + i) - startOffset);
+        }
+        for (int i = 0; i < length; ++i) {
+            if (IsNull(positionOffset + i)) {
+                sliced->SetNull(i);
+            }
+        }
+        sliced->SetKeyVector(
+            std::shared_ptr<BaseVector>(GetKeyVector()->Slice(startOffset, sliced->GetOffset(length), isCopy)));
+        sliced->SetValueVector(
+            std::shared_ptr<BaseVector>(GetValueVector()->Slice(startOffset, sliced->GetOffset(length), isCopy)));
+        return sliced;
+    }
+
+    BaseVector* CopyPositions(const int32_t *selectedRows, int32_t numSelectedRows, BaseVector *colVec) {
         // TODO
         return nullptr;
     }
