@@ -339,7 +339,7 @@ BaseVector *Projection::ColumnProjectionStructVectorSliceHelper(VectorBatch *vec
     }
 
     if (selectedRows != nullptr && numSelectedRows != 0) {
-        return rowVector->CopyPositions(selectedRows, numSelectedRows, colVec);
+        return rowVector->CopyPositions(selectedRows, 0, numSelectedRows);
     }
     return nullptr;
 }
@@ -355,7 +355,7 @@ BaseVector *Projection::ColumnProjectionMapVectorSliceHelper(VectorBatch *vecBat
     }
 
     if (selectedRows != nullptr && numSelectedRows != 0) {
-        return mapVector->CopyPositions(selectedRows, numSelectedRows, colVec);
+        return mapVector->CopyPositions(selectedRows, 0, numSelectedRows);
     }
     return nullptr;
 }
