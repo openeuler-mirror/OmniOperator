@@ -19,8 +19,8 @@ namespace omniruntime::vec {
             : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW) {}
 
         RowVector(int32_t size, std::vector<std::shared_ptr<BaseVector>> children)
-                : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW),
-                  children_(std::move(children)) {}
+            : BaseVector(size, Encoding::OMNI_ENCODING_STRUCT, DataTypeId::OMNI_ROW),
+              children_(std::move(children)) {}
 
         ~RowVector() override = default;
 
@@ -66,14 +66,67 @@ namespace omniruntime::vec {
             return sliced;
         }
 
+        BaseVector* CopyPositions(const int *positions, int positionOffset, int length)  {
+            if (UNLIKELY((positions == nullptr) || (length < 0))) {
+                std::string message("StructVector positions is null or the input length is incorrect: %d.", length);
+                throw OmniException("OPERATOR_RUNTIME_ERROR", message);
+            }
 
-        RowVector* CopyPositions(const int *positions, int positionOffset, int length) override {
-            // TODO
-            return nullptr;
+            RowVector* newRowVector = new RowVector(static_cast<int32_t>(length));
+            const int* startPositions = positions + positionOffset;
+            for (int32_t i = 0; i < length; i++) {
+                int position = startPositions[i];
+                if (UNLIKELY(IsNull(position))) {
+                    newRowVector->SetNull(i);
+                }
+            }
+
+            for (int i = 0; i < children_.size(); i++) {
+                newRowVector->Append(CopyChildPositionsVector(children_[i].get(), positions, positionOffset, length));
+            }
         }
 
-        private:
+    private:
         std::vector<std::shared_ptr<BaseVector>> children_;
+
+        BaseVector *CopyChildPositionsVector(BaseVector *vector, const int *positions, int offset, int length)
+        {
+            DataTypeId dataTypeId = vector->GetTypeId();
+            switch (dataTypeId) {
+                case type::OMNI_INT:
+                case type::OMNI_DATE32: {
+                    return reinterpret_cast<Vector<int32_t> *>(vector)->CopyPositions(positions, offset, length);
+                }
+                case type::OMNI_SHORT: {
+                    return reinterpret_cast<Vector<int16_t> *>(vector)->CopyPositions(positions, offset, length);
+                }
+                case type::OMNI_LONG:
+                case type::OMNI_TIMESTAMP:
+                case type::OMNI_DATE64:
+                case type::OMNI_DECIMAL64: {
+                    return reinterpret_cast<Vector<int64_t> *>(vector)->CopyPositions(positions, offset, length);
+                }
+                case type::OMNI_DOUBLE: {
+                    return reinterpret_cast<Vector<double> *>(vector)->CopyPositions(positions, offset, length);
+                }
+                case type::OMNI_BOOLEAN: {
+                    return reinterpret_cast<Vector<bool> *>(vector)->CopyPositions(positions, offset, length);
+                }
+                case type::OMNI_VARCHAR:
+                case type::OMNI_CHAR: {
+                    return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->CopyPositions(
+                        positions, offset, length);
+                }
+                case type::OMNI_DECIMAL128: {
+                    return reinterpret_cast<Vector<type::Decimal128> *>(vector)->CopyPositions(positions, offset, length);
+                }
+                default: {
+                    std::string omniExceptionInfo =
+                        "In function CopyChildPositionsVector, no such data type " + std::to_string(dataTypeId);
+                    throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+                }
+            }
+        }
     };
 }
 
