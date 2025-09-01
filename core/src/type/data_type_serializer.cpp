@@ -81,6 +81,18 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
             }
             return ContainerType(fieldTypes);
         }
+        case OMNI_MAP: {
+            DataTypePtr keyType = DataTypeJsonParser(dataTypeJson["keyType"]);
+            DataTypePtr valueType = DataTypeJsonParser(dataTypeJson["valueType"]);
+            return std::make_shared<MapType>(keyType, valueType);
+        }
+        case OMNI_ROW: {
+            std::vector<DataTypePtr> fieldTypes;
+            for (const auto &fieldJson: dataTypeJson[FIELD_TYPES]) {
+                fieldTypes.push_back(DataTypeJsonParser(fieldJson));
+            }
+            return std::make_shared<RowType>(fieldTypes);
+        }
         default:
             LogError("Not Supported Data Type : %d", dataTypeId);
             return nullptr;
