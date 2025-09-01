@@ -78,6 +78,16 @@ public:
         values = std::shared_ptr<BaseVector>(addedValues);
     }
 
+    BaseVector* Slice(int offset, int length) {
+        // TODO
+        return nullptr;
+    }
+
+    BaseVector* CopyPositions(const int32_t *selectedRows, int32_t numSelectedRows, BaseVector *colVec) {
+        // TODO
+        return nullptr;
+    }
+
 protected:
     int64_t* offsets;
     std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;

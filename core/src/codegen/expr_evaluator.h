@@ -152,6 +152,12 @@ private:
     BaseVector *ColumnProjectionFlatVectorCopyPositionsHelper(const int32_t *selectedRows, int32_t numSelectedRows,
         BaseVector *colVec) const;
 
+    BaseVector *ColumnProjectionStructVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+        int32_t numSelectedRows) const;
+
+    BaseVector *ColumnProjectionMapVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+        int32_t numSelectedRows) const;
+
     bool SetLiteralValue(const LiteralExpr *literalExpr);
 
     bool NullColumnProjection(ExecutionContext *context, BaseVector *outVec);
