@@ -139,6 +139,10 @@ public:
         return dataTypeId;
     }
 
+    virtual BaseVector *CopyPositions(const int *positions, int positionOffset, int length) = 0;
+
+    virtual BaseVector *Slice(int positionOffset, int length, bool isCopy = false) = 0;
+
 protected:
     friend class unsafe::UnsafeBaseVector;
     int32_t size;
@@ -283,7 +287,7 @@ public:
      * @param offset
      * @param length
      */
-    Vector<RAW_DATA_TYPE> *CopyPositions(const int *positions, int positionOffset, int length)
+    Vector<RAW_DATA_TYPE> *CopyPositions(const int *positions, int positionOffset, int length) override
     {
         if (UNLIKELY((positions == nullptr) || (length < 0))) {
             std::string message("positions is null or the input length is incorrect: %d.", length);
@@ -310,7 +314,7 @@ public:
      * @param length
      * @param isCopy reserved parameters
      */
-    Vector<RAW_DATA_TYPE> *Slice(int positionOffset, int length, bool isCopy = false)
+    Vector<RAW_DATA_TYPE> *Slice(int positionOffset, int length, bool isCopy = false) override
     {
         if (UNLIKELY(positionOffset + length > size)) {
             std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
