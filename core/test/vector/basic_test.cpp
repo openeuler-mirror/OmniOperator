@@ -601,6 +601,51 @@ TEST(vector, copy_positions_dec128)
     vector_copy_positions_value<int128_t>();
 }
 
+TEST(vector, copy_positions_map)
+{
+    int mapSize = 4;
+    int keySize = 11;
+
+    vec::Vector<double> keys{ keySize };
+    vec::Vector<int32_t> values{ keySize };
+
+    vec::MapVector* mapVec = new MapVector(mapSize);
+
+    mapVec->SetOffset(0, 0);
+    mapVec->SetOffset(1, 3);
+    mapVec->SetOffset(2, 5);
+    mapVec->SetOffset(3, 9);
+    mapVec->SetOffset(4, 11);
+
+    for(int i = 0; i < keySize; i++) {
+        keys.SetValue(i, 0.1 * i);
+        values.SetValue(i, i);
+    }
+
+    mapVec->AddKeys(&keys);
+    mapVec->AddValues(&values);
+
+    int positions[] = {1, 3};
+    auto newMapVector = (MapVector*)(mapVec->CopyPositions((const int*)positions, 0, 2));
+    EXPECT_EQ(newMapVector->GetOffset(0), 0);
+    EXPECT_EQ(newMapVector->GetOffset(1), 2);
+    EXPECT_EQ(newMapVector->GetOffset(2), 4);
+
+    auto newKeys = (vec::Vector<double>*)newMapVector->GetKeyVector().get();
+    EXPECT_EQ(newKeys->GetValue(0), 0.3);
+    EXPECT_EQ(newKeys->GetValue(1), 0.4);
+    EXPECT_EQ(newKeys->GetValue(2), 0.9);
+    EXPECT_EQ(newKeys->GetValue(3), 1.0);
+
+    auto newValues = (vec::Vector<int32_t>*)newMapVector->GetValueVector().get();
+    EXPECT_EQ(newValues->GetValue(0), 3);
+    EXPECT_EQ(newValues->GetValue(1), 4);
+    EXPECT_EQ(newValues->GetValue(2), 9);
+    EXPECT_EQ(newValues->GetValue(3), 10);
+    delete mapVec;
+    delete newMapVector;
+}
+
 TEST(vector, dict_get_value_with_null_int32)
 {
     dict_vector_get_value_with_null<int32_t>();
