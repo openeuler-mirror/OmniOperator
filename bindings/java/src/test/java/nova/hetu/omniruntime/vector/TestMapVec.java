@@ -84,4 +84,52 @@ public class TestMapVec {
         sliceMapVec1.close();
         mapVec.close();
     }
+
+    /**
+     * test value null
+     */
+    @Test
+    public void testValueNull() {
+        // 2,null,8
+        int kvSize = 10;
+        int rowSize = 3;
+        MapDataType mapDataType = new MapDataType(new VarcharDataType(16), new VarcharDataType(16));
+        MapVec mapVec = new MapVec(mapDataType, rowSize,true);
+        VarcharVec originalVec = new VarcharVec(kvSize);
+        String tmpStr = "testvarchar";
+        for (int i = 0; i < kvSize; i++) {
+            String str = tmpStr.substring(0, i) + i;
+            originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+
+        VarcharVec valueVec = new VarcharVec(kvSize);
+        String tmpValStr = "testvarcharVal";
+        for (int i = 0; i < kvSize; i++) {
+            String str = tmpValStr.substring(0, i) + i;
+            valueVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+        mapVec.setNull(1);
+
+        int[] offsets = new int[]{0, 2, 2, 10};
+        mapVec.AddKeys(originalVec);
+        mapVec.AddValues(valueVec);
+        mapVec.AddOffsets(offsets);
+
+        int offset = 1;
+        MapVec sliceMapVec1 = mapVec.slice(offset, 2);
+        assertTrue(sliceMapVec1.isNull(0));
+
+        VarcharVec sliceVec1 = (VarcharVec) (sliceMapVec1.getKeyVec());
+        assertEquals(sliceVec1.getSize(), 8);
+
+        for (int i = 0; i < sliceVec1.getSize(); i++) {
+            byte[] actualValue = sliceVec1.get(i);
+            byte[] expectedValue = originalVec.get(i + offsets[offset]);
+            assertEquals(actualValue, expectedValue);
+        }
+
+
+        sliceMapVec1.close();
+        mapVec.close();
+    }
 }

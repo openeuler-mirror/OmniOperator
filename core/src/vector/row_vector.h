@@ -60,6 +60,11 @@ namespace omniruntime::vec {
             auto sliced = new RowVector(length);
             sliced->offset = offset + positionOffset; // update offset
             sliced->isSliced = true;
+            for (int i = 0; i < length; ++i) {
+                if (IsNull(positionOffset + i)) {
+                    sliced->SetNull(i);
+                }
+            }
             for (int i = 0; i < children_.size(); ++i) {
                 sliced->AddChild(std::shared_ptr<BaseVector>(ChildAt(i)->Slice(positionOffset, length, isCopy)));
             }

@@ -257,6 +257,9 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newEmptyCom
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_StructVec_getChildAddrNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector, jint index);
 
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_appendVecNative
+    (JNIEnv *env, jclass jcls, jlong jNativeVector, jlong appendedVecAddr);
+
 #ifdef __cplusplus
 }
 #endif
