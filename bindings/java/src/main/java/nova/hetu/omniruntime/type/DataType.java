@@ -44,7 +44,7 @@ public class DataType implements Serializable {
      * @return data type
      */
     public static DataType create(int typeId) {
-        return new DataType(DataTypeId.values()[typeId]);
+        return new DataType(DataTypeId.fromValue(typeId));
     }
 
     /**
@@ -79,6 +79,15 @@ public class DataType implements Serializable {
         OMNI_INVALID(36);
 
         private final int value;
+
+        public static DataTypeId fromValue(int value) {
+            for (DataTypeId type : DataTypeId.values()) {
+                if (type.value == value) {
+                    return type;
+                }
+            }
+            throw new IllegalArgumentException("Unknown value: " + value);
+        }
 
         DataTypeId(int value) {
             this.value = value;

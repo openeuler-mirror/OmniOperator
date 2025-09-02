@@ -5,6 +5,7 @@
 #ifndef JNI_VECTOR_H
 #define JNI_VECTOR_H
 #include <jni.h>
+#include <mutex>
 
 #ifdef __cplusplus
 extern "C" {
@@ -259,6 +260,33 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_StructVec_getChildAddr
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_appendVecNative
     (JNIEnv *env, jclass jcls, jlong jNativeVector, jlong appendedVecAddr);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ComplexVec
+ * Method:    getComplexDataTypeNative
+ * Signature: (J)Lnova/hetu/omniruntime/type/DataType;
+ */
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexDataTypeNative
+        (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_MapVec
+ * Method:    setSizeByIndexNative
+ * Signature: (JII)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_setSizeByIndexNative
+        (JNIEnv *, jclass, jlong, jint, jint);
+
+static std::once_flag loadDataTypeClsFlag;
+
+static jclass dataTypeCls = nullptr;
+static jclass structDataTypeCls = nullptr;
+static jclass mapDataTypeCls = nullptr;
+
+static jmethodID createMethodId = nullptr;
+static jmethodID structDataTypeInitMethodId = nullptr;
+static jmethodID mapDataTypeInitMethodId = nullptr;
+
 
 #ifdef __cplusplus
 }

@@ -6,11 +6,20 @@
 #define __EXPRESSIONS_H__
 
 #include <codegen/function.h>
+<<<<<<< HEAD
 #include <map>
 #include <string>
 #include <vector>
 #include "type/data_type.h"
 #include "type/decimal128.h"
+=======
+#include <locale>
+#include <regex>
+#include <codecvt>
+#include "type/decimal128.h"
+#include "type/data_type.h"
+#include "vector/vector_common.h"
+>>>>>>> e3729048 (filter support nested type in vectorized)
 
 class ExprVisitor;
 
@@ -85,6 +94,21 @@ public:
     virtual void Accept(ExprVisitor &visitor) const = 0;
     static void DeleteExprs(const std::vector<Expr *> &exprs);
     static void DeleteExprs(const std::vector<std::vector<Expr *>> &exprs);
+
+    virtual uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) { return nullptr; }
+
+    virtual void init(const int32_t size) {
+        bitSize = size;
+        bitMarkBuf = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(size) + 8);
+        bitMark = bitMarkBuf->GetBuffer();
+    }
+
+    virtual bool supportVectorized() { return false; }
+
+protected:
+    int32_t bitSize = 0;
+    std::unique_ptr<omniruntime::mem::AlignedBuffer<uint8_t>> bitMarkBuf;
+    uint8_t *bitMark = nullptr;
 };
 
 class LiteralExpr : public Expr {
@@ -109,18 +133,37 @@ public:
     explicit LiteralExpr(std::string *val, DataTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+    bool supportVectorized() override {
+        return true;
+    }
 };
 
 class FieldExpr : public Expr {
 public:
     bool isNull = false;
     int32_t colVal = 0;
+    int32_t oColVal = -1;
+    int32_t ordinal = -1;
+    Expr* input = nullptr;
+
+    bool operator==(const FieldExpr &other) const {
+        return isNull == other.isNull && colVal == other.colVal &&
+               ordinal == other.ordinal && input == other.input;
+    }
 
     FieldExpr();
     ~FieldExpr() override;
     FieldExpr(int32_t colIdx, DataTypePtr colType);
+    FieldExpr(int32_t colIdx, DataTypePtr colType, int32_t oridinal);
+    FieldExpr(int32_t colIdx, DataTypePtr colType, int32_t oridinal, Expr* input);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    omniruntime::vec::BaseVector *GetFieldVector(omniruntime::vec::VectorBatch *vecBatch);
+
+    bool supportVectorized() override {
+        return this->dataType->GetId() == OMNI_ROW || this->dataType->GetId() == OMNI_VARCHAR || this->dataType->GetId() == OMNI_MAP ;
+    }
 };
 
 class UnaryExpr : public Expr {
@@ -135,6 +178,18 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    uint8_t* computeNOT(omniruntime::vec::VectorBatch *vecBatch);
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) override;
+
+    void init(const int32_t size) override {
+        Expr::init(size);
+        exp->init(size);
+    }
+
+    bool supportVectorized() override {
+        return exp->supportVectorized();
+    }
 };
 
 class BinaryExpr : public Expr {
@@ -148,6 +203,22 @@ public:
     BinaryExpr(Operator bop, Expr *leftExpr, Expr *rightExpr, DataTypePtr dt);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    uint8_t* computeEQ(omniruntime::vec::VectorBatch *vecBatch);
+    uint8_t* computeAND(omniruntime::vec::VectorBatch *vecBatch);
+    uint8_t* computeOR(omniruntime::vec::VectorBatch *vecBatch);
+    uint8_t* computeNEQ(omniruntime::vec::VectorBatch *vecBatch);
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) override;
+
+    void init(const int32_t size) override {
+        Expr::init(size);
+        left->init(size);
+        right->init(size);
+    }
+
+    bool supportVectorized() override {
+        return left->supportVectorized() && right->supportVectorized();
+    }
 };
 
 class InExpr : public Expr {
@@ -225,6 +296,12 @@ public:
 
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) override;
+
+    bool supportVectorized() override {
+        return value->supportVectorized();
+    }
 };
 
 class FuncExpr : public Expr {
@@ -249,6 +326,13 @@ public:
         return (e.funcName == "CAST" || e.funcName == "CAST_null") &&
             e.arguments[0]->GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR &&
             e.GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR;
+    }
+
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) override;
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
+
+    bool supportVectorized() override {
+        return funcName == "RLike";
     }
 };
 } // namespace expressions

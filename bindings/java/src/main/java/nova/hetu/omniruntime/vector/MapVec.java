@@ -93,6 +93,12 @@ public class MapVec extends ComplexVec {
         AddOffsetsNative(this.nativeVector, offsets);
     }
 
+    public void setSize(int index, int size){
+        setSizeByIndexNative(this.nativeVector, index, size);
+    }
+
+    protected static native long setSizeByIndexNative(long nativeVector, int index, int size);
+
     protected static native long getKeysAddrNative(long nativeVector);
 
     protected static native long getValuesAddrNative(long nativeVector);

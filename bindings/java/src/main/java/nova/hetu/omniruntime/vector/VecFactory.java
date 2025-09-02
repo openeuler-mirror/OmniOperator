@@ -102,9 +102,13 @@ public class VecFactory {
                 vector = new ContainerVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
                 break;
             case OMNI_ENCODING_MAP:
-                vector = new MapVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, (MapDataType)dataType);
+                MapDataType mapType = (MapDataType) ComplexVec.getComplexDataTypeNative(nativeVector);
+                vector = new MapVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, mapType);
+                break;
             case OMNI_ENCODING_STRUCT:
-                vector = new StructVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, (StructDataType)dataType);
+                StructDataType structDataType = (StructDataType) ComplexVec.getComplexDataTypeNative(nativeVector);
+                vector = new StructVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, structDataType);
+                break;
             default:
                 throw new IllegalArgumentException("Not Support Vec Encoding " + encoding);
         }
