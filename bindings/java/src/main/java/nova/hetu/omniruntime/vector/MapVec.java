@@ -30,7 +30,11 @@ public class MapVec extends ComplexVec {
     }
 
     public MapVec(long nativeVector, MapDataType type) {
-        this(nativeVector, type, getSizeNative(nativeVector),false);
+        this(nativeVector, type, getSizeNative(nativeVector), false);
+    }
+
+    public MapVec(long nativeVector, MapDataType type, int size) {
+        this(nativeVector, type, size,false);
     }
 
     public MapVec(long nativeVector, MapDataType type, int size, boolean isEmpty) {

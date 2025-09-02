@@ -25,10 +25,13 @@ public class StructVec extends ComplexVec {
         this(isEmpty ? newEmptyComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes())
                 : newComplexVectorNative(size, OMNI_ENCODING_STRUCT.ordinal(), type.getFieldTypes()), type, size, isEmpty);
     }
-
-
+    
     public StructVec(long nativeVector, StructDataType type) {
         this(nativeVector, type, getSizeNative(nativeVector), false);
+    }
+
+    public StructVec(long nativeVector, StructDataType type, int size) {
+        this(nativeVector, type, size, false);
     }
 
     public StructVec(long nativeVector, StructDataType type, int size, boolean isEmpty) {
