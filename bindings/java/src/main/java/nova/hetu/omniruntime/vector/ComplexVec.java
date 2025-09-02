@@ -24,11 +24,20 @@ public abstract class ComplexVec extends Vec {
         super(vec, offset, length, capacityInBytes);
     }
 
+    public ComplexVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+              int capacityInBytes, int size, DataType dataType) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, capacityInBytes, size,
+            dataType);
+    }
+
+
     protected static native int getComplexCapacityNative(long nativeVector, int vecEncodingId);
 
     protected static native long newComplexVectorNative(int size, int vecEncodingId, DataType[] dataType);
 
     protected static native long newEmptyComplexVectorNative(int size, int vecEncodingId, DataType[] dataType);
+
+    protected static native DataType getComplexDataTypeNative(long nativeVector);
 
     public static Vec createVec(long nativeVector , DataType dataType){
         switch (dataType.getId()) {
@@ -50,6 +59,7 @@ public abstract class ComplexVec extends Vec {
             case OMNI_DOUBLE: {
                 return new DoubleVec(nativeVector);
             }
+            case OMNI_CHAR:
             case OMNI_VARCHAR: {
                 return new VarcharVec(nativeVector);
             }
@@ -63,7 +73,7 @@ public abstract class ComplexVec extends Vec {
                 return new StructVec(nativeVector, (StructDataType) dataType);
             }
             default: {
-                throw new RuntimeException("UnSupport type for ColumnarFileScan:" +
+                throw new RuntimeException("UnSupport type :" +
                         dataType.getId());
             }
         }

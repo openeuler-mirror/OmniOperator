@@ -89,6 +89,7 @@ namespace omniruntime::vec {
             for (int i = 0; i < children_.size(); i++) {
                 newRowVector->Append(children_[i]->CopyPositions(positions, positionOffset, length));
             }
+            return newRowVector;
         }
 
     private:

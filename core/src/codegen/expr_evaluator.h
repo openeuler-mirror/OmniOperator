@@ -196,6 +196,11 @@ public:
         return outputTypes;
     }
 
+    Expr *GetFilterExpression()
+    {
+        return filterExpr;
+    }
+
     FilterFunc GetFilterFunc()
     {
         return filter->GetFilterFunc();

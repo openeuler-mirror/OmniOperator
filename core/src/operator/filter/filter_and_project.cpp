@@ -82,7 +82,12 @@ bool SimpleFilter::Evaluate(int64_t *values, bool *isNulls, int32_t *lengths, in
 
 Operator *FilterAndProjectOperatorFactory::CreateOperator()
 {
-    return new FilterAndProjectOperator(this->exprEvaluator);
+    return new FilterAndProjectOperator(this->exprEvaluator, supportVectorized);
+}
+
+bool FilterAndProjectOperatorFactory::SupportVectorizedCheck(Expr * filter)
+{
+    return filter->supportVectorized();
 }
 
 OperatorFactory *CreateFilterOperatorFactory(
@@ -107,6 +112,11 @@ OperatorFactory *CreateFilterOperatorFactory(
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
+    if (supportVectorized) {
+        HandleVectorizedFilter(vecBatch);
+        return 0;
+    }
+
     if (vecBatch->GetRowCount() > 0) {
         projectedVecs = this->exprEvaluator->Evaluate(vecBatch, executionContext.get(), &selectedRowsBuffer);
     }
@@ -114,6 +124,231 @@ int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
     VectorHelper::FreeVecBatch(vecBatch);
     ResetInputVecBatch();
     return 0;
+}
+
+
+template <typename FlatVector, typename RAW_DATA_TYPE>
+void FilterAndProjectOperator::SetFlatVectorValue(int32_t rowCount, BaseVector *baseVector, BaseVector *selectedBaseVector, const uint8_t *bitMark)
+{
+    int32_t index = 0;
+    int32_t j = 0;
+    uint8_t mask;
+    const BitMaskIndex bitMaskIndex;
+    const int32_t batchStep = 8;
+    for (; j + batchStep <= rowCount; j += batchStep) {
+        mask = bitMark[j >> 3];
+        if (mask == 0) {
+            continue;
+        }
+        const uint8_t *maskArr = bitMaskIndex[mask];
+        for (int i = 1; i <= *maskArr; i++) {
+            auto offset = j + maskArr[i];
+            if (UNLIKELY(baseVector->IsNull(offset))) {
+                static_cast<FlatVector *>(selectedBaseVector)->SetNull(index++);
+            } else {
+                auto value = static_cast<FlatVector *>(baseVector)->GetValue(offset);
+                static_cast<FlatVector *>(selectedBaseVector)->SetValue(index++, value);
+            }
+        }
+    }
+    for (; j < rowCount; j++) {
+        if (BitUtil::IsBitSet(bitMark, j)) {
+            if (UNLIKELY(baseVector->IsNull(j))) {
+                static_cast<FlatVector *>(selectedBaseVector)->SetNull(index++);
+            } else {
+                auto value = static_cast<FlatVector *>(baseVector)->GetValue(j);
+                static_cast<FlatVector *>(selectedBaseVector)->SetValue(index++, value);
+            }
+        }
+    }
+}
+
+void FilterAndProjectOperator::SetStringVectorValue(int32_t rowCount, Vector<LargeStringContainer<std::string_view>> *baseVector,
+        Vector<LargeStringContainer<std::string_view>> *selectedBaseVector, const uint8_t *bitMark)
+{
+    int32_t index = 0;
+    int32_t j = 0;
+    uint8_t mask;
+
+    const BitMaskIndex bitMaskIndex;
+    const int32_t batchStep = 8;
+
+    for (; j + batchStep <= rowCount; j += batchStep) {
+        mask = bitMark[j >> 3];
+        if (mask == 0) {
+            continue;
+        }
+        const uint8_t *maskArr = bitMaskIndex[mask];
+        for (int i = 1; i <= *maskArr; i++) {
+            auto offset = j + maskArr[i];
+            if (UNLIKELY(baseVector->IsNull(offset))) {
+                selectedBaseVector->SetNull(index++);
+            } else {
+                auto value = baseVector->GetValue(offset);
+                selectedBaseVector->SetValue(index++, value);
+            }
+        }
+    }
+    for (; j < rowCount; j++) {
+        if (BitUtil::IsBitSet(bitMark, j)) {
+            if (UNLIKELY(baseVector->IsNull(j))) {
+                selectedBaseVector->SetNull(index++);
+            } else {
+                auto value = baseVector->GetValue(j);
+                selectedBaseVector->SetValue(index++, value);
+            }
+        }
+    }
+}
+
+void FilterAndProjectOperator::SetMapVectorValue(int32_t rowCount, MapVector *baseVector, MapVector *selectedBaseVector, const uint8_t *bitMark)
+{
+    auto resultSize = selectedBaseVector->vec::BaseVector::GetSize();
+
+    std::vector<int> keyPositions;
+    int keyLength = 0;
+    int32_t j = 0;
+    int32_t index = 0;
+    for (; j < rowCount; j++) {
+        if (BitUtil::IsBitSet(bitMark, j)) {
+            if (UNLIKELY(baseVector->IsNull(j))) {
+                selectedBaseVector->SetNull(index);
+            }
+            int keyIndex = baseVector->GetOffset(j);
+            int keySize = baseVector->GetSize(j);
+            selectedBaseVector->SetOffset(index, keyLength);
+            keyLength += keySize;
+            index++;
+            MapVector::updateKeyPositions(keyPositions, keyIndex, keySize);
+        }
+    }
+    selectedBaseVector->SetOffset(resultSize, keyLength);
+
+    auto keyVector = baseVector->GetKeyVector();
+    auto newKeyVector = keyVector->CopyPositions(keyPositions.data(), 0, keyLength);
+    selectedBaseVector->AddKeys(newKeyVector);
+
+    auto valueVector = baseVector->GetValueVector();
+    auto newValueVector = valueVector->CopyPositions(keyPositions.data(), 0, keyLength);
+    selectedBaseVector->AddValues(newValueVector);
+}
+
+BaseVector *FilterAndProjectOperator::CopyPositionsFromBitMark(DataTypeId dataType, int rowCount, BaseVector *baseVector, const uint8_t *bitMark, int32_t length) {
+    switch (dataType) {
+        case OMNI_INT:
+        case OMNI_DATE32: {
+            auto selectedBaseVector = new Vector<int32_t>(length);
+            SetFlatVectorValue<Vector<int32_t>, int32_t>(rowCount, baseVector, selectedBaseVector, bitMark);
+            return selectedBaseVector;
+        }
+        case OMNI_SHORT: {
+            auto selectedBaseVector = new Vector<int16_t>(length);
+            SetFlatVectorValue<Vector<int16_t>, int16_t>(rowCount, baseVector, selectedBaseVector, bitMark);
+            return selectedBaseVector;
+        }
+        case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DECIMAL64: {
+            auto selectedBaseVector = new Vector<int64_t>(length);
+            SetFlatVectorValue<Vector<int64_t>, int64_t>(rowCount, baseVector, selectedBaseVector, bitMark);
+            return selectedBaseVector;
+        }
+        case OMNI_DOUBLE: {
+            auto selectedBaseVector = new Vector<double>(length);
+            SetFlatVectorValue<Vector<double>, double>(rowCount, baseVector, selectedBaseVector, bitMark);
+            return selectedBaseVector;
+        }
+        case OMNI_BOOLEAN: {
+            auto selectedBaseVector = new Vector<bool>(length);
+            SetFlatVectorValue<Vector<bool>, bool>(rowCount, baseVector, selectedBaseVector, bitMark);
+            return selectedBaseVector;
+        }
+        case OMNI_DECIMAL128: {
+            auto selectedBaseVector = new Vector<Decimal128>(length);
+            SetFlatVectorValue<Vector<Decimal128>, Decimal128>(rowCount, baseVector, selectedBaseVector, bitMark);
+            return selectedBaseVector;
+        }
+        case OMNI_VARCHAR:
+        case OMNI_CHAR: {
+            auto selectedBaseVector = new Vector<LargeStringContainer<std::string_view>>(length);
+            SetStringVectorValue(rowCount, dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(baseVector),
+                                 dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(selectedBaseVector), bitMark);
+            return selectedBaseVector;
+        }
+        case OMNI_MAP: {
+            auto selectedBaseVector = new MapVector(length);
+            SetMapVectorValue(rowCount, dynamic_cast<MapVector*>(baseVector), selectedBaseVector, bitMark);
+            return selectedBaseVector;
+        }
+        case OMNI_ROW: {
+            RowVector* selectedBaseVector = new RowVector(static_cast<int32_t>(length));
+
+            std::vector<int> keyPositions;
+            int32_t j = 0;
+            int32_t index = 0;
+            for (; j < rowCount; j++) {
+                if (BitUtil::IsBitSet(bitMark, j)) {
+                    if (UNLIKELY(baseVector->IsNull(j))) {
+                        selectedBaseVector->SetNull(index);
+                    }
+                    keyPositions.push_back(j);
+                }
+            }
+
+            auto originalRowVector = reinterpret_cast<RowVector*>(baseVector);
+            for (int i = 0; i < originalRowVector->ChildSize(); i++) {
+                auto childVector = originalRowVector->ChildAt(i);
+                selectedBaseVector->Append(childVector->CopyPositions(keyPositions.data(), 0, length));
+            }
+            return selectedBaseVector;
+        }
+        default: {
+            LogError("No such %d type support", dataType);
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
+                                                        "unsupported selectivity type: " + std::to_string(static_cast<int>(dataType)));
+        }
+    }
+}
+
+omniruntime::vec::VectorBatch* FilterAndProjectOperator::GetVecBatchFromBitMark(omniruntime::vec::VectorBatch &vecBatch,
+            uint8_t *bitMark, int32_t originalRowCount) {
+    int32_t resultSize = BitUtil::CountBits(reinterpret_cast<const uint64_t *>(bitMark), 0, originalRowCount);
+
+    auto result = new VectorBatch(resultSize);
+
+    for (int32_t i = 0; i < vecBatch.GetVectorCount(); i++) {
+        auto baseVector = vecBatch.Get(i);
+        auto dataType = baseVector->GetTypeId();
+        // new vector
+        auto selectedBaseVector = CopyPositionsFromBitMark(dataType, originalRowCount, baseVector, bitMark, resultSize);
+        result->Append(selectedBaseVector);
+    }
+    return result;
+}
+
+void FilterAndProjectOperator::HandleVectorizedFilter(omniruntime::vec::VectorBatch *vecBatch)
+{
+    // update projectedVecs
+    UpdateAddInputInfo(vecBatch->GetRowCount());
+
+    // init
+    auto size = vecBatch->GetRowCount();
+    filterExpr->init((int32_t) size);
+
+    uint8_t *bitMark = filterExpr->compute(vecBatch);
+    auto selectedRows = omniruntime::BitUtil::CountBits(reinterpret_cast<const uint64_t *>(bitMark), 0, size);
+
+
+    if (selectedRows == 0) {
+        // set projectedVecs nulllptr if no data selected
+        projectedVecs = nullptr;
+    } else if (selectedRows == size) {
+        // select all data
+        projectedVecs = vecBatch;
+    } else {
+        projectedVecs = GetVecBatchFromBitMark(*vecBatch, bitMark, size);
+        VectorHelper::FreeVecBatch(vecBatch);
+    }
 }
 
 int32_t FilterAndProjectOperator::GetOutput(VectorBatch **outputVecBatch)

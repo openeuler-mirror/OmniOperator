@@ -70,6 +70,10 @@ public:
         offsets[index] = offset;
     }
 
+    void SetSize(int32_t index, int32_t size) {
+        offsets[index + 1] = offsets[index] + size;
+    }
+
     void AddKeys(BaseVector* addedKeys) {
         keys = std::shared_ptr<BaseVector>(addedKeys);
     }
@@ -152,18 +156,17 @@ public:
         return newMapVector;
     }
 
+    static void updateKeyPositions(std::vector<int> &keyPositions, int index, int size){
+        for(int i = 0; i < size; i++) {
+            keyPositions.push_back(index++);
+        }
+    }
+
 protected:
     int64_t* offsets;
     std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;
     std::shared_ptr<BaseVector> keys;
     std::shared_ptr<BaseVector> values;
-
-private:
-    void updateKeyPositions(std::vector<int> keyPositions, int index, int size){
-        for(int i = 0; i < size; i++) {
-            keyPositions.push_back(index++);
-        }
-    }
 
 };
 }

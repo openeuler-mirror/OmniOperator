@@ -32,7 +32,7 @@ public class StructVec extends ComplexVec {
 
     public StructVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size, StructDataType type) {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress,
-            getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, StructDataType.STRUCT, type);
+            getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, type);
         initChildren(type);
     }
 
@@ -87,7 +87,6 @@ public class StructVec extends ComplexVec {
     protected static native void appendVecNative(long nativeVector, long appendedVec);
 
     protected static native long getChildAddrNative(long nativeVector, long addedVec);
-
 
     public Vec getChild(int index) {
         return children[index];

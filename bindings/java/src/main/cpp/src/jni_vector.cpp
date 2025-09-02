@@ -457,3 +457,88 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_appendVecNati
     auto addedVec =  reinterpret_cast<BaseVector *>(appendedVecAddr);
     rowVec->Append(addedVec);
 }
+
+static void LoadDataTypeCls(JNIEnv *env) {
+    if (dataTypeCls == nullptr) {
+
+        dataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/DataType");
+        createMethodId = env->GetStaticMethodID(
+                dataTypeCls,
+                "create",
+                "(I)Lnova/hetu/omniruntime/type/DataType;"
+        );
+
+        structDataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/StructDataType");
+        structDataTypeInitMethodId = env->GetMethodID(
+                structDataTypeCls,
+                "<init>",
+                "([Lnova/hetu/omniruntime/type/DataType;)V"
+        );
+
+        mapDataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/MapDataType");
+        mapDataTypeInitMethodId = env->GetMethodID(
+                mapDataTypeCls,
+                "<init>",
+                "(Lnova/hetu/omniruntime/type/DataType;Lnova/hetu/omniruntime/type/DataType;)V"
+        );
+
+    }
+}
+
+static jobject GetDataType(JNIEnv *env, BaseVector *vec)
+{
+    auto id = vec->GetTypeId();
+    switch (id) {
+        case OMNI_ROW: {
+            auto row = static_cast<RowVector*>(vec);
+            const jint n = static_cast<jint>(row->ChildSize());
+            jobjectArray children = env->NewObjectArray(n, dataTypeCls, nullptr);
+
+            for (jint i = 0; i < n; ++i) {
+                BaseVector* child = row->ChildAt(i).get();
+                jobject childType = GetDataType(env, child);
+                env->SetObjectArrayElement(children, i, childType);
+                env->DeleteLocalRef(childType);
+            }
+
+            jobject rowType = env->NewObject(structDataTypeCls, structDataTypeInitMethodId, children);
+            env->DeleteLocalRef(children);
+            return rowType;
+        }
+        case OMNI_MAP: {
+            auto mapVec = reinterpret_cast<MapVector *>(vec);
+            jobject keyType = GetDataType(env, mapVec->GetKeyVector().get());
+            jobject valueType = GetDataType(env, mapVec->GetValueVector().get());
+            jobject mapType = env->NewObject(mapDataTypeCls, mapDataTypeInitMethodId, keyType, valueType);
+            env->DeleteLocalRef(keyType);
+            env->DeleteLocalRef(valueType);
+            return mapType;
+        }
+        default: {
+            jobject flatType = env->CallStaticObjectMethod(dataTypeCls, createMethodId, (jint) id);
+            return flatType;
+        }
+    }
+}
+
+
+
+JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexDataTypeNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    // create java DataType
+    std::call_once(loadDataTypeClsFlag, LoadDataTypeCls, env);
+
+    auto vec = reinterpret_cast<BaseVector *>(jNativeVector);
+    jobject dataType = GetDataType(env, vec);
+    return dataType;
+}
+
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_setSizeByIndexNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector, jint index, jint size)
+{
+    MapVector *nativeVector = reinterpret_cast<MapVector *>(jNativeVector);
+    nativeVector->SetSize(index, size);
+    return 0;
+}
+

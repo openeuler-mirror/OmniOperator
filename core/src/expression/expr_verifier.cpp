@@ -43,6 +43,7 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_BOOLEAN:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
+        case OMNI_ROW:
             this->supportedFlag = true;
             break;
         default:
@@ -66,6 +67,7 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_BOOLEAN:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
+        case OMNI_ROW:
             this->supportedFlag = true;
             break;
         default:
@@ -161,6 +163,7 @@ void ExprVerifier::Visit(const InExpr &inExpr)
         case OMNI_VARCHAR:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
+        case OMNI_ROW:
             break;
         default:
             this->supportedFlag = false;

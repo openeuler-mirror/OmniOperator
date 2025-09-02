@@ -17,6 +17,12 @@ Expr *JSONParser::ParseJSONFieldRef(const Json &jsonExpr)
 {
     auto typeId = static_cast<DataTypeId>(jsonExpr["dataType"].get<int32_t>());
     DataTypePtr retType;
+    if (jsonExpr.find("input") != jsonExpr.end()) {
+        int ordinal = jsonExpr["ordinal"].get<int32_t>();
+        auto input = ParseJSONFieldRef(jsonExpr["input"]);
+        retType = std::make_shared<DataType>(typeId);
+        return new FieldExpr(-1, std::move(retType), ordinal, input);
+    }
     auto colVal = jsonExpr["colVal"].get<int32_t>();
     if (TypeUtil::IsStringType(typeId)) {
         int width = jsonExpr["width"].get<int32_t>();
