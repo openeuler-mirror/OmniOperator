@@ -101,6 +101,10 @@ public class VecFactory {
             case OMNI_VEC_ENCODING_CONTAINER:
                 vector = new ContainerVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
                 break;
+            case OMNI_ENCODING_MAP:
+                vector = new MapVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, (MapDataType)dataType);
+            case OMNI_ENCODING_STRUCT:
+                vector = new StructVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size, (StructDataType)dataType);
             default:
                 throw new IllegalArgumentException("Not Support Vec Encoding " + encoding);
         }

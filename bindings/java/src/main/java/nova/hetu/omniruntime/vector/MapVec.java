@@ -34,7 +34,14 @@ public class MapVec extends ComplexVec {
     }
 
     public MapVec(long nativeVector, MapDataType type, int size) {
-        this(nativeVector, type, size,false);
+        this(nativeVector, type, size, false);
+    }
+
+    public MapVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size, MapDataType type) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress,
+            getComplexCapacityNative(nativeVector, OMNI_ENCODING_MAP.ordinal()), size, type);
+        this.keyVec = createVec(getKeysAddrNative(nativeVector), type.getKeyType());
+        this.valueVec = createVec(getValuesAddrNative(nativeVector), type.getValueType());
     }
 
     public MapVec(long nativeVector, MapDataType type, int size, boolean isEmpty) {
@@ -46,7 +53,7 @@ public class MapVec extends ComplexVec {
     }
 
     private MapVec(MapVec vector, int offset, int length) {
-        super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_STRUCT.ordinal()));
+        super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_MAP.ordinal()));
         this.keyVec = createVec(getKeysAddrNative(nativeVector), ((MapDataType) getType()).getKeyType());
         this.valueVec = createVec(getValuesAddrNative(nativeVector), ((MapDataType) getType()).getValueType());
     }

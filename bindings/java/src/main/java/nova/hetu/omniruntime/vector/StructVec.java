@@ -30,6 +30,12 @@ public class StructVec extends ComplexVec {
         this(nativeVector, type, getSizeNative(nativeVector), false);
     }
 
+    public StructVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress, int size, StructDataType type) {
+        super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress,
+            getComplexCapacityNative(nativeVector, OMNI_ENCODING_STRUCT.ordinal()), size, StructDataType.STRUCT, type);
+        initChildren(type);
+    }
+
     public StructVec(long nativeVector, StructDataType type, int size) {
         this(nativeVector, type, size, false);
     }
