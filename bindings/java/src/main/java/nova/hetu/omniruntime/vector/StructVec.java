@@ -65,13 +65,20 @@ public class StructVec extends ComplexVec {
         return 0;
     }
 
-     public void add(int index, Vec addedVec) {
+    public void add(int index, Vec addedVec) {
         addVecNative(this.nativeVector, index, addedVec.nativeVector);
-     }
+    }
 
-     protected static native void addVecNative(long nativeVector, int index, long addedVec);
+    public void append(Vec appendedVec) {
+        appendVecNative(this.nativeVector,appendedVec.nativeVector);
+    }
 
-    protected static native long getChildAddrNative(long nativeVector, int index);
+    protected static native void addVecNative(long nativeVector, int index, long addedVec);
+
+    protected static native void appendVecNative(long nativeVector, long appendedVec);
+
+    protected static native long getChildAddrNative(long nativeVector, long addedVec);
+
 
     public Vec getChild(int index) {
         return children[index];

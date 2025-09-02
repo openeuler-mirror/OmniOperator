@@ -86,4 +86,47 @@ public class TestStructVec {
         sliceStructVec1.close();
         structVec.close();
     }
+
+    /**
+     * test value null
+     */
+    @Test
+    public void testValueNull() {
+        DataType[] fieldTypes = new DataType[]{new VarcharDataType(16)};
+
+        // 10 row
+        // index: 0,null,2,null,4,null,6,null,8,null
+        int size = 10;
+        StructDataType structDataType = new StructDataType(fieldTypes);
+        StructVec structVec = new StructVec(structDataType, size, true);
+        VarcharVec originalVec = new VarcharVec(10);
+        String tmpStr = "testvarchar";
+        for (int i = 0; i < size; i++) {
+            if (i % 2 == 0) {
+                String str = tmpStr.substring(0, i) + i;
+                originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+            } else {
+                originalVec.setNull(i);
+                structVec.setNull(i);
+            }
+        }
+        structVec.append(originalVec);
+
+        int offset = 4;
+        StructVec sliceStructVec1 = structVec.slice(offset, 4);
+        VarcharVec sliceVec1 = (VarcharVec) (sliceStructVec1.getChild(0));
+        assertEquals(sliceVec1.getSize(), 4);
+
+        for (int i = 0; i < sliceVec1.getSize(); i++) {
+            byte[] actualValue = sliceVec1.get(i);
+            byte[] expectedValue = originalVec.get(i + offset);
+            assertEquals(actualValue, expectedValue);
+            if (i % 2 != 0) {
+                assertTrue(sliceStructVec1.isNull(i));
+            }
+        }
+
+        sliceStructVec1.close();
+        structVec.close();
+    }
 }

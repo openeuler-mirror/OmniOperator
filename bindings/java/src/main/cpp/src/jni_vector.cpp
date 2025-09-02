@@ -449,3 +449,11 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_StructVec_getChildAddr
     RowVector *nativeVector = reinterpret_cast<RowVector *>(jNativeVector);
     return reinterpret_cast<uintptr_t>(nativeVector->ChildAt(index).get());
 }
+
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_appendVecNative
+    (JNIEnv *env, jclass jcls, jlong jNativeVector, jlong appendedVecAddr)
+{
+    auto rowVec = reinterpret_cast<RowVector *>(jNativeVector);
+    auto addedVec =  reinterpret_cast<BaseVector *>(appendedVecAddr);
+    rowVec->Append(addedVec);
+}
