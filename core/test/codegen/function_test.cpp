@@ -3542,6 +3542,35 @@ TEST(FunctionTest, FromUnixTimeWithoutTz)
     delete context;
 }
 
+TEST(FunctionTest, DateFormat)
+{
+    auto context = new ExecutionContext();
+    int64_t contextPtr = reinterpret_cast<int64_t>(context);
+    bool isNull = false;
+    std::string fmtStr = "yyyy-MM-dd";
+    int32_t outlen = 0;
+    char *result = nullptr;
+    std::string actual;
+
+    result = DateFormat(contextPtr, 0, fmtStr.c_str(), fmtStr.length(), isNull, &outlen);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "1970-01-01");
+    EXPECT_EQ(outlen, 10);
+
+    result = DateFormat(contextPtr, 1767196799000000, fmtStr.c_str(), fmtStr.length(), isNull, &outlen);
+    actual = std::string(result, outlen);
+    EXPECT_EQ(actual, "2025-12-31");
+    EXPECT_EQ(outlen, 10);
+
+    result = DateFormat(contextPtr, 1767196799000000, "yy-MM-dd", 8, isNull, &outlen);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+
+    result = DateFormat(contextPtr, 0, nullptr, 0, true, &outlen);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(outlen, 0);
+}
+
 TEST(FunctionTest, RegexMatch)
 {
     std::string input("");

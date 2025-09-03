@@ -155,4 +155,37 @@ extern "C" DLLEXPORT int32_t DateAdd(int32_t right, int32_t left)
 {
     return right + left;
 }
+
+extern "C" DLLEXPORT char *DateFormat(int64_t contextPtr, int64_t timestamp, const char *fmtStr, int32_t fmtLen,
+    bool isNull, int32_t *outLen)
+{
+    if (isNull) {
+        *outLen = 0;
+        return nullptr;
+    }
+    if (fmtStr == nullptr || std::memcpy(fmtStr, "yyyy-MM-dd", 10) != 0 ) {
+        *outLen = 0;
+        SetError(contextPtr, " Error: date_format now only support formatStr = \"yyyy-MM-dd\" ! ");
+        return nullptr;
+    }
+    const char *tzStr = "UTC";
+    time_t timeStampVal = timestamp / 1e6;
+    setenv("TZ",TimeZoneUtil::GetTZ(tzStr), 1);
+    tzset();
+    struct tm ltm;
+    localtime_r(&timeStampVal, &ltm);
+    int32_t resultLen = fmtLen + 3;
+    auto result = ArenaAllocatorMalloc(contextPtr, resultLen);
+    std::string fmtStr1(fmtStr, fmtLen);
+    std::string fmtOmniTimeStr = toOmniTimeFormat(fmtStr1);
+    auto ret = strftime(result, resultLen, fmtOmniTimeStr.c_str(), &ltm);
+    if (ret == 0) {
+        SetError(contextPtr, " Error: date_format strftime failed ! ");
+        *outLen = 0;
+        return nullptr;
+    }
+    *outLen = ret;
+    return result;
+}
+
 }
