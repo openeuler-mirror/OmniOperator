@@ -260,6 +260,21 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
         this->supportedFlag = false;
         return;
     }
+
+    if (funcExpr.funcName == "DateFormat") {
+        if (funcExpr.arguments.size() >= 2) {
+            auto literalArg = dynamic_cast<LiteralExpr*>(funcExpr.arguments[1]);
+            if (literalArg != nullptr) {
+                std::string fmtStr = *(literalArg->stringVal);
+                if (fmtStr != "yyyy-MM-dd") {
+                    this->supportedFlag = false;
+                    std::cout << "WARN : date_format fallback, due to unsupported formatStr, only support yyyy-MM-dd." << std::endl;
+                    return ;
+                }
+            }
+        }
+    }
+
     int numArgs = funcExpr.arguments.size();
     std::vector<DataTypeId> params;
     for (int i = 0; i < numArgs; i++) {
