@@ -99,7 +99,7 @@ public:
 
     virtual void init(const int32_t size) {
         bitSize = size;
-        bitMarkBuf = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(size) + 8);
+        bitMarkBuf = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(size) + 8, true);
         bitMark = bitMarkBuf->GetBuffer();
     }
 

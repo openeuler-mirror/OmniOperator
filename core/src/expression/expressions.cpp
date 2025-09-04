@@ -584,10 +584,14 @@ uint8_t* IsNullExpr::compute(omniruntime::vec::VectorBatch *vecBatch)
     }
     auto vector = expr->GetFieldVector(vecBatch);
     auto rowSize = vecBatch->GetRowCount();
-    errno_t opIsNullRet = memcpy_s(bitMark, BitUtil::Nbytes(rowSize),
-            vec::unsafe::UnsafeBaseVector::GetNulls(vector), BitUtil::Nbytes(rowSize));
-    if (UNLIKELY(opIsNullRet != EOK)) {
-        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "IS_NULL memcpy_s fail.");
+    if (vector->HasNull()) {
+        errno_t opIsNullRet = memcpy_s(bitMark, BitUtil::Nbytes(rowSize),
+        vec::unsafe::UnsafeBaseVector::GetNulls(vector), BitUtil::Nbytes(rowSize));
+        if (UNLIKELY(opIsNullRet != EOK)) {
+            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "IS_NULL memcpy_s fail.");
+        }
+    } else {
+        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0, BitUtil::Nbytes(rowSize));
     }
     return bitMark;
 }
