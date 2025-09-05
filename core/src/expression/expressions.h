@@ -6,20 +6,15 @@
 #define __EXPRESSIONS_H__
 
 #include <codegen/function.h>
-<<<<<<< HEAD
 #include <map>
 #include <string>
 #include <vector>
 #include "type/data_type.h"
 #include "type/decimal128.h"
-=======
 #include <locale>
 #include <regex>
 #include <codecvt>
-#include "type/decimal128.h"
-#include "type/data_type.h"
 #include "vector/vector_common.h"
->>>>>>> e3729048 (filter support nested type in vectorized)
 
 class ExprVisitor;
 

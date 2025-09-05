@@ -9,12 +9,9 @@
 #include "type/data_type.h"
 #include "codegen/func_registry.h"
 #include "util/type_util.h"
-<<<<<<< HEAD
 #include "expr_verifier.h"
 #include "expr_printer.h"
-=======
 #include "arm_neon.h"
->>>>>>> e3729048 (filter support nested type in vectorized)
 
 using namespace std;
 using namespace omniruntime::type;
@@ -23,13 +20,10 @@ using namespace omniruntime::codegen;
 namespace omniruntime {
 namespace expressions {
 
-<<<<<<< HEAD
 // Prevent ExprVerifier from being optimized out by the compiler.
 static ExprVerifier globalExprVerifier;
 static ExprPrinter globalExprPrinter;
-=======
 const static int32_t NEON_BYTE_SIZE = 16;
->>>>>>> e3729048 (filter support nested type in vectorized)
 
 bool IsNullLiteral(const std::string &value)
 {

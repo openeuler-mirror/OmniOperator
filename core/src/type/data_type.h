@@ -290,74 +290,15 @@ public:
         return children;
     }
 
-    void Serialize(nlohmann::json &nlohmannJson) const override {}
-
-protected:
-    const std::vector<std::shared_ptr<DataType>> children;
-};
-
-class MapType : public DataType {
-public:
-    explicit MapType(std::shared_ptr<DataType> keyType, std::shared_ptr<DataType> valueType)
-        : DataType(OMNI_MAP),
-        keyType(std::move(keyType)),
-        valueType(std::move(valueType)) {}
-
-    bool operator ==(const DataType &right) const override
-    {
-        if (&right == this) {
-            return true;
-        }
-        if (right.GetId() != DataTypeId::OMNI_MAP) {
-            return false;
-        }
-        auto otherTyped = reinterpret_cast<const MapType*>(&right);
-        return (*keyType == *(otherTyped->keyType)) && (*valueType == *(otherTyped->valueType));
-    }
-
-    const std::shared_ptr<DataType> &Key() const
-    {
-        return keyType;
-    }
-
-    const std::shared_ptr<DataType> &Value() const
-    {
-        return valueType;
-    }
-
-    const std::vector<std::shared_ptr<DataType>> Children() const
-    {
-        return {keyType, valueType};
-    }
-
-    size_t Size() const
-    {
-        return 2;
-=======
     std::shared_ptr<DataType> Type(int index) const
     {
         return children[index];
->>>>>>> 930c25a9 (fix bug)
-=======
-    std::shared_ptr<DataType> Type(int index) const
-    {
-        return children[index];
->>>>>>> 930c25a9 (fix bug)
     }
 
     void Serialize(nlohmann::json &nlohmannJson) const override {}
 
 protected:
-<<<<<<< HEAD
-<<<<<<< HEAD
-    std::shared_ptr<DataType> keyType;
-    std::shared_ptr<DataType> valueType;
-=======
     const std::vector<std::shared_ptr<DataType>> children;
->>>>>>> 930c25a9 (fix bug)
-=======
-    const std::vector<std::shared_ptr<DataType>> children;
->>>>>>> 930c25a9 (fix bug)
 };
 
 class DecimalDataType : public DataType {
