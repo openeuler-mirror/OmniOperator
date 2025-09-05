@@ -14,8 +14,6 @@
 #include <locale>
 #include <regex>
 #include <codecvt>
-#include "type/decimal128.h"
-#include "type/data_type.h"
 #include "vector/vector_common.h"
 
 class ExprVisitor;
