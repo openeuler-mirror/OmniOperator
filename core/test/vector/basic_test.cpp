@@ -257,8 +257,8 @@ template <typename T> void vector_copy_positions_value()
     int offset1 = 0;
     int offset2 = 1;
     int copySize = 4;
-    auto v1OffsetZero = vector.CopyPositions(index, offset1, copySize);
-    auto v2OffsetNotZero = vector.CopyPositions(index, offset2, copySize);
+    auto v1OffsetZero = (Vector<T> *)(vector.CopyPositions(index, offset1, copySize));
+    auto v2OffsetNotZero = (Vector<T> *)(vector.CopyPositions(index, offset2, copySize));
 
     for (int32_t i = 0; i < copySize; i++) {
         if (i % 2 == 0) {
@@ -270,7 +270,7 @@ template <typename T> void vector_copy_positions_value()
         EXPECT_EQ(v1OffsetZero->GetValue(i), expected[index[i + offset1]]);
     }
 
-    auto v3Empty = vector.CopyPositions(index, offset2, 0);
+    auto v3Empty = (Vector<T> *)(vector.CopyPositions(index, offset2, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector.CopyPositions(index, offset1, -1));
     delete v1OffsetZero;
@@ -299,7 +299,7 @@ template <typename T> void dict_copy_positions_value()
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
     int32_t newValueSize = 3;
-    auto copyPositions = vector->CopyPositions(positions, offset, newValueSize);
+    auto copyPositions = (Vector<DictionaryContainer<T>> *)(vector->CopyPositions(positions, offset, newValueSize));
 
     for (int i = 0; i < newValueSize; i++) {
         if (values[positions[i + offset]] % 2 == 0) {
@@ -310,7 +310,7 @@ template <typename T> void dict_copy_positions_value()
         EXPECT_EQ(dictionary->GetValue(values[positions[i + offset]]), expectValue);
     }
 
-    auto v3Empty = vector->CopyPositions(positions, offset, 0);
+    auto v3Empty = (Vector<DictionaryContainer<T>> *)(vector->CopyPositions(positions, offset, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector->CopyPositions(positions, offset, -1));
     delete copyPositions;
@@ -342,7 +342,7 @@ template <> void dict_copy_positions_value<std::string_view>()
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
     int32_t newValueSize = 3;
-    auto copyPositions = vector->CopyPositions(positions, offset, newValueSize);
+    auto copyPositions =(Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *)(vector->CopyPositions(positions, offset, newValueSize));
 
     for (int i = 0; i < newValueSize; i++) {
         if (values[positions[i + offset]] % 2 == 0) {
@@ -353,7 +353,7 @@ template <> void dict_copy_positions_value<std::string_view>()
         EXPECT_EQ(dictionary->GetValue(values[positions[i + offset]]), expectValue);
     }
 
-    auto v3Empty = vector->CopyPositions(positions, offset, 0);
+    auto v3Empty = (Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *)(vector->CopyPositions(positions, offset, 0));
     EXPECT_EQ(v3Empty->GetSize(), 0);
     EXPECT_ANY_THROW(vector->CopyPositions(positions, offset, -1));
     delete copyPositions;
@@ -609,40 +609,40 @@ TEST(vector, copy_positions_map)
     vec::Vector<double> keys{ keySize };
     vec::Vector<int32_t> values{ keySize };
 
-    vec::MapVector* mapVec = new MapVector(mapSize);
+    vec::MapVector mapVec(mapSize);
 
-    mapVec->SetOffset(0, 0);
-    mapVec->SetOffset(1, 3);
-    mapVec->SetOffset(2, 5);
-    mapVec->SetOffset(3, 9);
-    mapVec->SetOffset(4, 11);
+    mapVec.SetOffset(0, 0);
+    mapVec.SetOffset(1, 3);
+    mapVec.SetOffset(2, 5);
+    mapVec.SetOffset(3, 9);
+    mapVec.SetOffset(4, 11);
 
     for(int i = 0; i < keySize; i++) {
         keys.SetValue(i, 0.1 * i);
         values.SetValue(i, i);
     }
 
-    mapVec->AddKeys(&keys);
-    mapVec->AddValues(&values);
+    mapVec.AddKeys(&keys);
+    mapVec.AddValues(&values);
 
     int positions[] = {1, 3};
-    auto newMapVector = (MapVector*)(mapVec->CopyPositions((const int*)positions, 0, 2));
+    auto newMapVector = mapVec.CopyPositions((const int*)positions, 0, 2);
     EXPECT_EQ(newMapVector->GetOffset(0), 0);
     EXPECT_EQ(newMapVector->GetOffset(1), 2);
     EXPECT_EQ(newMapVector->GetOffset(2), 4);
 
-    auto newKeys = (vec::Vector<double>*)newMapVector->GetKeyVector().get();
-    EXPECT_EQ(newKeys->GetValue(0), 0.3);
-    EXPECT_EQ(newKeys->GetValue(1), 0.4);
-    EXPECT_EQ(newKeys->GetValue(2), 0.9);
-    EXPECT_EQ(newKeys->GetValue(3), 1.0);
+    auto newKeys = std::dynamic_pointer_cast<vec::Vector<double>>(newMapVector->GetKeyVector());
+    EXPECT_NEAR(newKeys->GetValue(0), 0.3, 0.000001);
+    EXPECT_NEAR(newKeys->GetValue(1), 0.4, 0.000001);
+    EXPECT_NEAR(newKeys->GetValue(2), 0.9, 0.000001);
+    EXPECT_NEAR(newKeys->GetValue(3), 1.0, 0.000001);
 
-    auto newValues = (vec::Vector<int32_t>*)newMapVector->GetValueVector().get();
+    auto newValues = std::dynamic_pointer_cast<vec::Vector<int32_t>>(newMapVector->GetValueVector());
     EXPECT_EQ(newValues->GetValue(0), 3);
     EXPECT_EQ(newValues->GetValue(1), 4);
     EXPECT_EQ(newValues->GetValue(2), 9);
     EXPECT_EQ(newValues->GetValue(3), 10);
-    delete mapVec;
+
     delete newMapVector;
 }
 
