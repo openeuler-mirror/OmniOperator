@@ -143,6 +143,14 @@ public:
 
     virtual BaseVector *Slice(int positionOffset, int length, bool isCopy = false) = 0;
 
+    void SetOffset(int32_t offset) {
+        this->offset = offset;
+    }
+
+    void SetSliced(bool isSliced) {
+        this->isSliced = isSliced;
+    }
+
 protected:
     friend class unsafe::UnsafeBaseVector;
     int32_t size;
@@ -287,7 +295,7 @@ public:
      * @param offset
      * @param length
      */
-    Vector<RAW_DATA_TYPE> *CopyPositions(const int *positions, int positionOffset, int length) override
+    BaseVector* CopyPositions(const int *positions, int positionOffset, int length) override
     {
         if (UNLIKELY((positions == nullptr) || (length < 0))) {
             std::string message("positions is null or the input length is incorrect: %d.", length);
@@ -314,7 +322,7 @@ public:
      * @param length
      * @param isCopy reserved parameters
      */
-    Vector<RAW_DATA_TYPE> *Slice(int positionOffset, int length, bool isCopy = false) override
+    BaseVector* Slice(int positionOffset, int length, bool isCopy = false) override
     {
         if (UNLIKELY(positionOffset + length > size)) {
             std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
@@ -580,7 +588,7 @@ public:
      * @param offset
      * @param length
      */
-    Vector<LargeStringContainer<std::string_view>> *CopyPositions(const int *positions, int offset, int length)
+    BaseVector* CopyPositions(const int *positions, int offset, int length) override
     {
         if (UNLIKELY((positions == nullptr) || (length < 0))) {
             std::string message("positions is null or the input length is incorrect: %d.", length);
@@ -609,7 +617,7 @@ public:
      * @param positionOffset
      * @param length
      */
-    Vector<LargeStringContainer<std::string_view>> *Slice(int positionOffset, int length, bool isCopy = false)
+    BaseVector* Slice(int positionOffset, int length, bool isCopy = false) override
     {
         if (UNLIKELY(positionOffset + length > this->size)) {
             std::string message("slice vector out of range(needed size:%d, real size:%d).", positionOffset + length,
@@ -619,8 +627,8 @@ public:
         // copy the data field shared_ptr
         auto sliced = new Vector<LargeStringContainer<std::string_view>>(length, container, this->nullsBuffer.get(),
             this->dataTypeId, positionOffset);
-        sliced->offset = this->offset + positionOffset; // update offset
-        sliced->isSliced = true;
+        sliced->SetOffset(this->offset + positionOffset); // update offset
+        sliced->SetSliced(true);
         return std::move(sliced);
     }
 

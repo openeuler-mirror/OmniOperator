@@ -20,14 +20,14 @@ TEST(Decimal128Vector, SliceVector)
     }
 
     int32_t offset = 3;
-    auto slice1 = originalVector->Slice(offset, 4);
+    auto slice1 = (Vector<Decimal128> *)(originalVector->Slice(offset, 4));
     EXPECT_EQ(slice1->GetOffset(), offset);
     EXPECT_EQ(slice1->GetSize(), 4);
     for (int32_t i = 0; i < slice1->GetSize(); i++) {
         EXPECT_TRUE(slice1->GetValue(i) == originalVector->GetValue(i + offset));
     }
 
-    auto slice2 = slice1->Slice(1, 2);
+    auto slice2 = (Vector<Decimal128> *)(slice1->Slice(1, 2));
     for (int32_t i = 0; i < slice2->GetSize(); i++) {
         EXPECT_TRUE(slice2->GetValue(i) == originalVector->GetValue(i + offset + 1));
     }
@@ -80,7 +80,7 @@ TEST(Decimal128Vector, CopyPositions)
     auto *possions = new int32_t[2];
     possions[0] = 1;
     possions[1] = 3;
-    auto copyPostionVector = originalVector->CopyPositions(possions, 0, 2);
+    auto copyPostionVector = (Vector<Decimal128> *)(originalVector->CopyPositions(possions, 0, 2));
 
     for (int32_t i = 0; i < copyPostionVector->GetSize(); i++) {
         EXPECT_TRUE(copyPostionVector->GetValue(i) == originalVector->GetValue(possions[i]));

@@ -20,7 +20,7 @@ template <typename T> void v2_slice_get_set_value()
         parent->SetValue(i, value);
     }
 
-    auto vector = parent->Slice(g_offset, g_len, false);
+    auto vector = (Vector<T> *)(parent->Slice(g_offset, g_len, false));
     EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
     delete parent;
 
@@ -40,7 +40,7 @@ template <> void v2_slice_get_set_value<std::string_view>()
         parent->SetValue(i, value);
     }
 
-    auto vector = parent->Slice(g_offset, g_len, false);
+    auto vector = (Vector<LargeStringContainer<std::string_view>> *)(parent->Slice(g_offset, g_len, false));
     EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
     delete parent;
 
