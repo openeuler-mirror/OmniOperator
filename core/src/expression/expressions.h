@@ -90,20 +90,10 @@ public:
     static void DeleteExprs(const std::vector<Expr *> &exprs);
     static void DeleteExprs(const std::vector<std::vector<Expr *>> &exprs);
 
-    virtual uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) { return nullptr; }
-
-    virtual void init(const int32_t size) {
-        bitSize = size;
-        bitMarkBuf = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(size) + 8, true);
-        bitMark = bitMarkBuf->GetBuffer();
-    }
+    virtual uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) { return nullptr; }
 
     virtual bool supportVectorized() { return false; }
 
-protected:
-    int32_t bitSize = 0;
-    std::unique_ptr<omniruntime::mem::AlignedBuffer<uint8_t>> bitMarkBuf;
-    uint8_t *bitMark = nullptr;
 };
 
 class LiteralExpr : public Expr {
@@ -187,13 +177,8 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 
-    uint8_t* computeNOT(omniruntime::vec::VectorBatch *vecBatch);
-    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) override;
-
-    void init(const int32_t size) override {
-        Expr::init(size);
-        exp->init(size);
-    }
+    uint8_t* computeNOT(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
     bool supportVectorized() override {
         return exp->supportVectorized();
@@ -212,17 +197,11 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 
-    uint8_t* computeEQ(omniruntime::vec::VectorBatch *vecBatch);
-    uint8_t* computeAND(omniruntime::vec::VectorBatch *vecBatch);
-    uint8_t* computeOR(omniruntime::vec::VectorBatch *vecBatch);
-    uint8_t* computeNEQ(omniruntime::vec::VectorBatch *vecBatch);
-    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) override;
-
-    void init(const int32_t size) override {
-        Expr::init(size);
-        left->init(size);
-        right->init(size);
-    }
+    uint8_t* computeEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t* computeAND(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t* computeOR(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t* computeNEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
     bool supportVectorized() override {
         return left->supportVectorized() && right->supportVectorized();
@@ -305,7 +284,7 @@ public:
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
 
-    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) override;
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
     bool supportVectorized() override {
         return value->supportVectorized();
@@ -336,7 +315,7 @@ public:
             e.GetReturnTypeId() == omniruntime::type::OMNI_VARCHAR;
     }
 
-    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch) override;
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatc, uint8_t *bitMark) override;
     std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 
     bool supportVectorized() override {

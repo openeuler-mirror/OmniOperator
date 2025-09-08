@@ -11,6 +11,8 @@
 #include "codegen/bloom_filter.h"
 #include "util/test_util.h"
 #include "util/config_util.h"
+#include "expression/jsonparser/jsonparser.h"
+#include "type/data_type_serializer.h"
 
 using namespace omniruntime::op;
 using namespace omniruntime::vec;
@@ -3516,5 +3518,53 @@ TEST(ProjectionTest, Nulls)
     omniruntime::op::Operator::DeleteOperator(op);
     delete factory;
     delete overflowConfig;
+}
+TEST(ProjectionTest, Struct)
+{
+    std::string inputTypesCharPtr =
+        R"([{"id":32,"fieldTypes":[{"id":32,"fieldTypes":[{"id":1,"idValue":1}],"idValue":32},{"id":1,"idValue":1}],"idValue":32}])";
+    auto inputDataTypes = Deserialize(inputTypesCharPtr);
+    auto overflowConfig = new OverflowConfig();
+    std::string exprs[1];
+    exprs[0] = R"({
+  "exprType" : "BINARY",
+  "returnType" : 1,
+  "operator" : "ADD",
+  "left" : {
+    "exprType" : "FIELD_REFERENCE",
+    "dataType" : 1,
+    "ordinal" : 0,
+    "input" : {
+      "exprType" : "FIELD_REFERENCE",
+      "dataType" : 32,
+      "ordinal" : 0,
+      "input" : {
+        "exprType" : "FIELD_REFERENCE",
+        "dataType" : 32,
+        "colVal" : 0
+      }
+    }
+  },
+  "right" : {
+    "exprType" : "FIELD_REFERENCE",
+    "dataType" : 1,
+    "ordinal" : 1,
+    "input" : {
+      "exprType" : "FIELD_REFERENCE",
+      "dataType" : 32,
+      "colVal" : 0
+    }
+  }
+})";
+    std::vector<omniruntime::expressions::Expr *> expressions;
+    nlohmann::json jsonExprs[1];
+    for (int32_t i = 0; i < 1; i++) {
+        jsonExprs[i] = nlohmann::json::parse(exprs[i]);
+    }
+    expressions = JSONParser::ParseJSON(jsonExprs, 1);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(expressions, inputDataTypes, overflowConfig);
+    auto factory = new ProjectionOperatorFactory(std::move(exprEvaluator));
+    delete overflowConfig;
+    delete factory;
 }
 }

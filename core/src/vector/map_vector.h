@@ -145,14 +145,22 @@ public:
         }
         newMapVector->SetOffset(length, keyLength);
 
+        // FIXME use constant vector instead of create empty base vector in future
         auto keyVector = this->GetKeyVector();
-        auto newKeyVector = keyVector->CopyPositions(keyPositions.data(), 0, keyLength);
-        newMapVector->AddKeys(newKeyVector);
+        if (UNLIKELY(keyLength == 0)) {
+            newMapVector->AddKeys(new BaseVector(0, keyVector->GetEncoding(), keyVector->GetTypeId()));
+        } else {
+            auto newKeyVector = keyVector->CopyPositions(keyPositions.data(), 0, keyLength);
+            newMapVector->AddKeys(newKeyVector);
+        }
 
         auto valueVector = this->GetValueVector();
-        auto newValueVector = valueVector->CopyPositions(keyPositions.data(), 0, keyLength);
-        newMapVector->AddValues(newValueVector);
-
+        if (UNLIKELY(keyLength == 0)) {
+            newMapVector->AddValues(new BaseVector(0, valueVector->GetEncoding(), valueVector->GetTypeId()));
+        } else {
+            auto newValueVector = valueVector->CopyPositions(keyPositions.data(), 0, keyLength);
+            newMapVector->AddValues(newValueVector);
+        }
         return newMapVector;
     }
 

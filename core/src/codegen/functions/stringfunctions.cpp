@@ -1133,6 +1133,25 @@ extern "C" DLLEXPORT bool EndsWithStr(const char *srcStr, int32_t srcLen, const 
     return memcmp(srcStr + srcLen - matchLen, matchStr, matchLen) == 0;
 }
 
+extern "C" DLLEXPORT bool RLikeStr(const char *str, int32_t strLen, const char *regexToMatch, int32_t regexLen,
+    bool isNull)
+{
+    if (isNull) {
+        return false;
+    }
+    std::string s = std::string(str, strLen);
+    std::string r = std::string(regexToMatch, regexLen);
+
+    thread_local std::string cachedPattern;
+    thread_local std::wregex cachedRegex;
+    if (cachedPattern != r) {
+        cachedPattern = r;
+        cachedRegex = std::wregex(StringUtil::ToWideString(r));
+    }
+
+    return std::regex_search(StringUtil::ToWideString(s), cachedRegex);
+}
+
 extern "C" DLLEXPORT bool RegexMatch(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen,
     bool isNull)
 {

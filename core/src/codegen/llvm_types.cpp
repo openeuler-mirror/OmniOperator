@@ -36,7 +36,9 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
         { OMNI_INTERVAL_MONTHS, I32Type() },
         { OMNI_INTERVAL_DAY_TIME, I32Type() },
         { OMNI_VARCHAR, I8PtrType() },
-        { OMNI_CHAR, I8PtrType() } };
+        { OMNI_CHAR, I8PtrType() },
+        { OMNI_ROW, I64Type() }
+    };
 }
 
 LLVMTypes::~LLVMTypes() = default;

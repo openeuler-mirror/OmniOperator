@@ -311,7 +311,6 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexV
         (JNIEnv *env, jclass jcls, jint jSize, jint jVectorEncodingId, jobjectArray jDataTypes)
 {
     BaseVector *vector = nullptr;
-    // TODO
     DataType* dataType = nullptr;
     JNI_METHOD_START
         jsize len = env->GetArrayLength(jDataTypes);
@@ -335,7 +334,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexV
             throw omniruntime::exception::OmniException("CREATE_COMPLEX_VECTOR_FAILED",
                                                         "return a null pointer when creating complex vector");
         }
-    JNI_METHOD_END(0)
+        delete dataType;
+    JNI_METHOD_END_WITH_COMPLEX_VECTOR(0, dataType, vector)
 #ifdef TRACE
     RecordStack(vector, env);
 #endif
@@ -435,7 +435,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newEmptyCom
             throw omniruntime::exception::OmniException("CREATE_COMPLEX_VECTOR_FAILED",
                                                         "return a null pointer when creating complex vector");
         }
-    JNI_METHOD_END(0)
+        delete dataType;
+    JNI_METHOD_END_WITH_COMPLEX_VECTOR(0, dataType, vector)
 #ifdef TRACE
     RecordStack(vector, env);
 #endif

@@ -139,9 +139,15 @@ public:
         return dataTypeId;
     }
 
-    virtual BaseVector *CopyPositions(const int *positions, int positionOffset, int length) = 0;
+    virtual BaseVector *CopyPositions(const int *positions, int positionOffset, int length)
+    {
+        return nullptr;
+    }
 
-    virtual BaseVector *Slice(int positionOffset, int length, bool isCopy = false) = 0;
+    virtual BaseVector *Slice(int positionOffset, int length, bool isCopy = false)
+    {
+        return nullptr;
+    }
 
     void SetOffset(int32_t offset) {
         this->offset = offset;
