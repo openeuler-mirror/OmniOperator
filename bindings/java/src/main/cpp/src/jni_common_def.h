@@ -53,6 +53,16 @@
     }                                                                                                 \
     // macro end
 
+#define JNI_METHOD_END_WITH_COMPLEX_VECTOR(fallBackExpr, toDeleteType, toVector) \
+    }                                                                                                 \
+    catch (const std::exception &e)                                                                   \
+    {                                                                                                 \
+        delete (toDeleteType);                                                                        \
+        delete (toVector);                                                                            \
+        env->ThrowNew(omniRuntimeExceptionClass, e.what());                                           \
+        return fallBackExpr;                                                                          \
+    }                                                                                                 \
+    // macro end
 
 #define JNI_METHOD_END_WITH_OVERFLOW(fallBackExpr, overflowConfig) \
     }                                                              \

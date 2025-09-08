@@ -28,6 +28,8 @@ public:
 
     static CheckReScaleRule GetCheckReScaleRule();
 
+    static IsComplexTypeWithCodegen GetIsComplexTypeWithCodegen();
+
     static void SetEmptySearchStrReplaceRule(EmptySearchStrReplaceRule rule);
 
     static EmptySearchStrReplaceRule GetEmptySearchStrReplaceRule();
@@ -75,6 +77,8 @@ private:
     static void InitRoundingRule(Policy *policy, const std::string &ruleValueStr);
 
     static void InitCheckReScaleRule(Policy *policy, const std::string &ruleValueStr);
+
+    static void InitIsComplexTypeWithCodegen(Policy *policy, const std::string &ruleValueStr);
 
     static void InitEmptySearchStrReplaceRule(Policy *policy, const std::string &ruleValueStr);
 

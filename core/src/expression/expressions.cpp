@@ -150,7 +150,13 @@ LiteralExpr::LiteralExpr(std::string *val, DataTypePtr dt)
 // FieldExpr
 FieldExpr::FieldExpr() = default;
 
-FieldExpr::~FieldExpr() = default;
+FieldExpr::~FieldExpr()
+{
+    if (input != nullptr) {
+        delete input;
+        input = nullptr;
+    }
+}
 
 ExprType FieldExpr::GetType() const
 {
@@ -225,11 +231,18 @@ ExprType BinaryExpr::GetType() const
     return ExprType::BINARY_E;
 }
 
-uint8_t* BinaryExpr::computeAND(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* BinaryExpr::computeAND(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     auto vectorSize = vecBatch->GetRowCount();
-    uint8_t *leftResult = left->compute(vecBatch);
-    uint8_t *rightResult = right->compute(vecBatch);
+
+    auto bitMarkBufLeft = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(
+            BitUtil::Nbytes(vectorSize) + 8, true);
+    uint8_t *leftResult = left->compute(vecBatch, bitMarkBufLeft->GetBuffer());
+
+    auto bitMarkBufRight = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(
+            BitUtil::Nbytes(vectorSize) + 8, true);
+    uint8_t *rightResult = right->compute(vecBatch, bitMarkBufRight->GetBuffer());
+
     int32_t step = static_cast<int32_t>(NEON_BYTE_SIZE / sizeof(uint8_t));
     int32_t byteLen = BitUtil::Nbytes(vectorSize);
     int32_t index = 0;
@@ -245,11 +258,18 @@ uint8_t* BinaryExpr::computeAND(omniruntime::vec::VectorBatch *vecBatch)
     return bitMark;
 }
 
-uint8_t* BinaryExpr::computeOR(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* BinaryExpr::computeOR(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     auto vectorSize = vecBatch->GetRowCount();
-    uint8_t *leftResult = left->compute(vecBatch);
-    uint8_t *rightResult = right->compute(vecBatch);
+
+    auto bitMarkBufLeft = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(
+            BitUtil::Nbytes(vectorSize) + 8, true);
+    uint8_t *leftResult = left->compute(vecBatch, bitMarkBufLeft->GetBuffer());
+
+    auto bitMarkBufRight = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(
+            BitUtil::Nbytes(vectorSize) + 8, true);
+    uint8_t *rightResult = right->compute(vecBatch, bitMarkBufRight->GetBuffer());
+
     int32_t step = static_cast<int32_t>(NEON_BYTE_SIZE / sizeof(uint8_t));
     int32_t byteLen = BitUtil::Nbytes(vectorSize);
     int32_t index = 0;
@@ -270,7 +290,7 @@ bool ALWAYS_INLINE IsEqual(std::string_view src, std::string* target)
     return src == *target;
 }
 
-uint8_t* BinaryExpr::computeEQ(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* BinaryExpr::computeEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     auto field = dynamic_cast<FieldExpr*>(left);
     if (!field) {
@@ -321,7 +341,7 @@ uint8_t* BinaryExpr::computeEQ(omniruntime::vec::VectorBatch *vecBatch)
     return bitMark;
 }
 
-uint8_t* BinaryExpr::computeNEQ(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* BinaryExpr::computeNEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     auto field = dynamic_cast<FieldExpr*>(left);
     if (!field) {
@@ -372,17 +392,17 @@ uint8_t* BinaryExpr::computeNEQ(omniruntime::vec::VectorBatch *vecBatch)
     return bitMark;
 }
 
-uint8_t* BinaryExpr::compute(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* BinaryExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     switch (op) {
         case Operator::EQ:
-            return computeEQ(vecBatch);
+            return computeEQ(vecBatch, bitMark);
         case Operator::AND:
-            return computeAND(vecBatch);
+            return computeAND(vecBatch, bitMark);
         case Operator::OR:
-            return computeOR(vecBatch);
+            return computeOR(vecBatch, bitMark);
         case Operator::NEQ:
-            return computeNEQ(vecBatch);
+            return computeNEQ(vecBatch, bitMark);
         default:
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "BinaryExpr Not Support: " +
                 std::to_string(static_cast<int>(op)));
@@ -412,14 +432,14 @@ ExprType UnaryExpr::GetType() const
     return ExprType::UNARY_E;
 }
 
-uint8_t* UnaryExpr::computeNOT(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* UnaryExpr::computeNOT(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     auto childExpr = dynamic_cast<IsNullExpr*>(this->exp);
     if (!childExpr) {
         throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "Not Only Support isNullExpr.");
     }
     auto vectorSize = vecBatch->GetRowCount();
-    uint8_t *childResult = childExpr->compute(vecBatch);
+    uint8_t *childResult = childExpr->compute(vecBatch, bitMark);
     int32_t step = static_cast<int32_t>(NEON_BYTE_SIZE / sizeof(uint8_t));
     int32_t byteLen = BitUtil::Nbytes(vectorSize);
     int32_t index = 0;
@@ -434,12 +454,12 @@ uint8_t* UnaryExpr::computeNOT(omniruntime::vec::VectorBatch *vecBatch)
     return bitMark;
 }
 
-uint8_t* UnaryExpr::compute(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* UnaryExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     switch (op)
     {
         case Operator::NOT:
-            return computeNOT(vecBatch);
+            return computeNOT(vecBatch, bitMark);
         default:
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "UnaryExpr Not Support: " + std::to_string(static_cast<int>(op)));
     }
@@ -570,7 +590,7 @@ IsNullExpr::IsNullExpr(Expr *value)
     this->value = value;
 }
 
-uint8_t* IsNullExpr::compute(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* IsNullExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     auto expr = dynamic_cast<FieldExpr*>(value);
     if (!expr) {
@@ -639,7 +659,7 @@ bool ALWAYS_INLINE RLikeStr(std::string_view src, std::wregex re)
     return std::regex_search(convert.from_bytes(std::string(src)), re);
 }
 
-uint8_t* FuncExpr::compute(omniruntime::vec::VectorBatch *vecBatch)
+uint8_t* FuncExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     if (funcName == "RLike") {
 

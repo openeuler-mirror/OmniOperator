@@ -234,6 +234,7 @@ private:
     bool hasFilter = false;
     DataTypes inputTypes;
     std::vector<type::DataTypePtr> outputTypes;
+    std::vector<std::vector<FieldExpr *>> fieldExprMap;
 
     std::unique_ptr<Filter> filter;
     std::vector<std::unique_ptr<Projection>> projections;

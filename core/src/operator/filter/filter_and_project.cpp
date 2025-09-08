@@ -224,13 +224,22 @@ void FilterAndProjectOperator::SetMapVectorValue(int32_t rowCount, MapVector *ba
     }
     selectedBaseVector->SetOffset(resultSize, keyLength);
 
+    // FIXME use constant vector instead of create empty base vector in future
     auto keyVector = baseVector->GetKeyVector();
-    auto newKeyVector = keyVector->CopyPositions(keyPositions.data(), 0, keyLength);
-    selectedBaseVector->AddKeys(newKeyVector);
+    if (UNLIKELY(keyLength == 0)) {
+        selectedBaseVector->AddKeys(new BaseVector(0, keyVector->GetEncoding(), keyVector->GetTypeId()));
+    } else {
+        auto newKeyVector = keyVector->CopyPositions(keyPositions.data(), 0, keyLength);
+        selectedBaseVector->AddKeys(newKeyVector);
+    }
 
     auto valueVector = baseVector->GetValueVector();
-    auto newValueVector = valueVector->CopyPositions(keyPositions.data(), 0, keyLength);
-    selectedBaseVector->AddValues(newValueVector);
+    if (UNLIKELY(keyLength == 0)) {
+        selectedBaseVector->AddValues(new BaseVector(0, valueVector->GetEncoding(), valueVector->GetTypeId()));
+    } else {
+        auto newValueVector = valueVector->CopyPositions(keyPositions.data(), 0, keyLength);
+        selectedBaseVector->AddValues(newValueVector);
+    }
 }
 
 BaseVector *FilterAndProjectOperator::CopyPositionsFromBitMark(DataTypeId dataType, int rowCount, BaseVector *baseVector, const uint8_t *bitMark, int32_t length) {
@@ -333,15 +342,16 @@ void FilterAndProjectOperator::HandleVectorizedFilter(omniruntime::vec::VectorBa
 
     // init
     auto size = vecBatch->GetRowCount();
-    filterExpr->init((int32_t) size);
+    auto bitMarkBuf = std::make_unique<omniruntime::mem::AlignedBuffer<uint8_t>>(BitUtil::Nbytes(size) + 8, true);
 
-    uint8_t *bitMark = filterExpr->compute(vecBatch);
+    uint8_t *bitMark = filterExpr->compute(vecBatch, bitMarkBuf->GetBuffer());
     auto selectedRows = omniruntime::BitUtil::CountBits(reinterpret_cast<const uint64_t *>(bitMark), 0, size);
 
 
     if (selectedRows == 0) {
         // set projectedVecs nulllptr if no data selected
         projectedVecs = nullptr;
+        VectorHelper::FreeVecBatch(vecBatch);
     } else if (selectedRows == size) {
         // select all data
         projectedVecs = vecBatch;

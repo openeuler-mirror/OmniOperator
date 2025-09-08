@@ -166,11 +166,18 @@ public:
     explicit FilterAndProjectOperatorFactory(std::shared_ptr<ExpressionEvaluator> &&exprEvaluator)
         : exprEvaluator(std::move(exprEvaluator))
     {
+        auto policy = GetProperties().GetPolicy();
+        if (policy->GetIsComplexTypeWithCodegen() == IsComplexTypeWithCodegen::TRUE) {
+            this->exprEvaluator->FilterFuncGeneration();
+            supportVectorized = false;
+            return;
+        }
         if (SupportVectorizedCheck(this->exprEvaluator->GetFilterExpression())) {
             supportVectorized = true;
         } else {
             this->exprEvaluator->FilterFuncGeneration();
             supportVectorized = false;
+            return;
         }
     }
 

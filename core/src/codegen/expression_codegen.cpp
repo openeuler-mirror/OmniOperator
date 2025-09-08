@@ -2223,6 +2223,9 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(const omniruntime::type::Data
         case OMNI_VARCHAR:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VARCHAR);
             break;
+        case OMNI_ROW:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetLongStr, paramTypes, OMNI_LONG);
+            break;
         default:
             LogWarn("Unsupported dictionary value type: %d", typeId);
             return nullptr;

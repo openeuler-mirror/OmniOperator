@@ -33,6 +33,12 @@ void VectorBatch::Append(BaseVector *vector)
     vectors.emplace_back(vector);
 }
 
+void VectorBatch::AppendFlat(BaseVector *vector)
+{
+    vectors.emplace_back(vector);
+    ++flatSize;
+}
+
 BaseVector **VectorBatch::GetVectors()
 {
     return vectors.data();
@@ -58,8 +64,8 @@ void VectorBatch::ResizeVectorCount(size_t vectorCnt)
 
 void VectorBatch::FreeAllVectors()
 {
-    auto vectorSize = vectors.size();
-    for (size_t vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
+    int32_t vectorSize = static_cast<int32_t>(vectors.size()) - flatSize;
+    for (int32_t vecIndex = 0; vecIndex < vectorSize; ++vecIndex) {
         delete vectors[vecIndex];
         vectors[vecIndex] = nullptr;
     }
