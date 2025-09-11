@@ -259,6 +259,38 @@ using TimestampDataType = FixedWidthDataType<OMNI_TIMESTAMP>;
 using InvalidDataType = FixedWidthDataType<OMNI_INVALID>;
 using NoneDataType = FixedWidthDataType<OMNI_NONE>;
 
+class ArrayType : public DataType {
+public:
+    explicit ArrayType(std::shared_ptr<DataType> type): DataType(OMNI_ARRAY), child(std::move(type)) {}
+
+    bool operator ==(const DataType &right) const override
+    {
+        if (&right == this) {
+            return true;
+        }
+        if (right.GetId() != DataTypeId::OMNI_ARRAY) {
+            return false;
+        }
+        auto otherTyped = reinterpret_cast<const ArrayType*>(&right);
+        return *child == *(otherTyped->child);
+    }
+
+    const std::shared_ptr<DataType> ElementType() const
+    {
+        return child;
+    }
+
+    size_t Size() const
+    {
+        return 1;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override {}
+
+protected:
+    std::shared_ptr<DataType> child;
+};
+
 class RowType : public DataType {
 public:
     RowType(std::vector<std::shared_ptr<DataType>> &types): DataType(OMNI_ROW), children(std::move(types)) {}

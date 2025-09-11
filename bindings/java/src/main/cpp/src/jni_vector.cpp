@@ -9,6 +9,7 @@
 #include "vector/unsafe_vector.h"
 #include "vector/vector_helper.h"
 #include "vector/vector.h"
+#include "vector/array_vector.h"
 #include "jni_common_def.h"
 #include "operator/aggregation/container_vector.h"
 #include "type/data_type_serializer.h"
@@ -321,6 +322,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexV
         std::vector<std::shared_ptr<DataType>> children = DataTypeUtil::ConvertJavaDataTypesToCpp(env, jDataTypes);
         if (jVectorEncodingId == OMNI_ENCODING_MAP) {
             dataType = new MapType(children[0], children[1]);
+        } else if (jVectorEncodingId == OMNI_ENCODING_ARRAY) {
+            dataType = new ArrayType(children[0]);
         } else if (jVectorEncodingId == OMNI_ENCODING_STRUCT) {
             dataType = new RowType(children);
         } else {
@@ -422,6 +425,8 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newEmptyCom
         std::vector<std::shared_ptr<DataType>> children = DataTypeUtil::ConvertJavaDataTypesToCpp(env, jDataTypes);
         if (jVectorEncodingId == OMNI_ENCODING_MAP) {
             dataType = new MapType(children[0], children[1]);
+        } else if (jVectorEncodingId == OMNI_ENCODING_ARRAY) {
+            dataType = new ArrayType(children[0]);
         } else if (jVectorEncodingId == OMNI_ENCODING_STRUCT) {
             dataType = new RowType(children);
         } else {
@@ -540,3 +545,54 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_setSizeByIndexN
     return 0;
 }
 
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_setSizeByIndexNative
+        (JNIEnv *env, jclass jcls, jlong jNativeVector, jint index, jint size)
+{
+    ArrayVector *nativeVector = reinterpret_cast<ArrayVector *>(jNativeVector);
+    nativeVector->SetSize(index, size);
+    return 0;
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getElementsAddrNative(JNIEnv *env, jclass jcls, jlong jNativeVector)
+{
+    ArrayVector *nativeVector = reinterpret_cast<ArrayVector *>(jNativeVector);
+    return reinterpret_cast<uintptr_t>(nativeVector->GetElementVector().get());
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getOffsetNative(JNIEnv *env, jclass jcls, jlong jNativeVector,
+    jlong rowId)
+{
+    ArrayVector *nativeVector = reinterpret_cast<ArrayVector *>(jNativeVector);
+    return nativeVector->GetOffset(rowId);
+}
+
+extern "C"
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getSizeNative(JNIEnv *env, jclass jcls, jlong jNativeVector,
+    jlong rowId)
+{
+    ArrayVector *nativeVector = reinterpret_cast<ArrayVector *>(jNativeVector);
+    return nativeVector->GetSize(rowId);
+}
+
+extern "C"
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addElementsNative(JNIEnv *env, jclass jcls, jlong arrayVecAddr,
+    jlong elementsAddr)
+{
+    auto arrayVec = reinterpret_cast<ArrayVector *>(arrayVecAddr);
+    auto elements = reinterpret_cast<BaseVector *>(elementsAddr);
+    arrayVec->AddElements(elements);
+}
+
+extern "C"
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addOffsetsNative(JNIEnv *env, jclass jcls, jlong arrayVecAddr,
+    jintArray offsetsAddr)
+{
+    auto arrayVec = reinterpret_cast<ArrayVector *>(arrayVecAddr);
+    jsize length = env->GetArrayLength(offsetsAddr);
+    jint* elements = env->GetIntArrayElements(offsetsAddr, nullptr);
+    for (jsize i = 0; i < length; i++) {
+        arrayVec->SetOffset(i, elements[i]);
+    }
+}

@@ -158,6 +158,9 @@ private:
     BaseVector *ColumnProjectionMapVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
         int32_t numSelectedRows) const;
 
+    BaseVector *ColumnProjectionArrayVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+        int32_t numSelectedRows) const;
+
     bool SetLiteralValue(const LiteralExpr *literalExpr);
 
     bool NullColumnProjection(ExecutionContext *context, BaseVector *outVec);

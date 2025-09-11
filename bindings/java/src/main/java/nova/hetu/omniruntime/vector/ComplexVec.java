@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
  */
 
 package nova.hetu.omniruntime.vector;
@@ -9,6 +9,7 @@ import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_PARAM_ERROR;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.MapDataType;
 import nova.hetu.omniruntime.type.StructDataType;
+import nova.hetu.omniruntime.type.ArrayDataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 /**
@@ -68,6 +69,9 @@ public abstract class ComplexVec extends Vec {
             case OMNI_DECIMAL128: {
                 return new Decimal128Vec(nativeVector);
             }
+            case OMNI_ARRAY: {
+                return new ArrayVec(nativeVector, (ArrayDataType) dataType);
+            }
             case OMNI_MAP: {
                 return new MapVec(nativeVector, (MapDataType) dataType);
             }
@@ -75,7 +79,7 @@ public abstract class ComplexVec extends Vec {
                 return new StructVec(nativeVector, (StructDataType) dataType);
             }
             default: {
-                throw new OmniRuntimeException(OMNI_PARAM_ERROR, "UnSupport type :" + dataType.getId());
+                throw new OmniRuntimeException(OMNI_PARAM_ERROR, "UnSupported type :" + dataType.getId());
             }
         }
     }

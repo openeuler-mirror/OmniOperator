@@ -497,6 +497,22 @@ BaseVector *Projection::ColumnProjectionMapVectorSliceHelper(VectorBatch *vecBat
     return nullptr;
 }
 
+BaseVector *Projection::ColumnProjectionArrayVectorSliceHelper(VectorBatch *vecBatch, const int32_t *selectedRows,
+    int32_t numSelectedRows) const
+{
+    auto colVec = vecBatch->Get(this->columnProjectionIndex);
+    auto rowCnt = vecBatch->GetRowCount();
+    auto arrayVector = dynamic_cast<ArrayVector*>(colVec);
+    if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
+        return arrayVector->Slice(0, numSelectedRows);
+    }
+
+    if (selectedRows != nullptr && numSelectedRows != 0) {
+        return arrayVector->CopyPositions(selectedRows, 0, numSelectedRows);
+    }
+    return nullptr;
+}
+
 template <typename T>
 BaseVector *Projection::ColumnProjectionDictionaryVectorSliceHelper(int32_t numSelectedRows, BaseVector *colVec) const
 {
@@ -558,6 +574,8 @@ BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t sel
             return ColumnProjectionMapVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);
         case OMNI_ROW:
             return ColumnProjectionStructVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);
+        case OMNI_ARRAY:
+            return ColumnProjectionArrayVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);
         default:
             LogError("Do not support such vector type %d", typeIds[columnProjectionIndex]);
             return nullptr;

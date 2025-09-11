@@ -46,6 +46,13 @@ public:
         return (jobjectArray) env->CallObjectMethod(jDataType, getFieldTypesMethod);
     }
 
+    static void GetArrayElementType(JNIEnv *env, jobject jDataType, jobject *elementType)
+    {
+        jclass arrayTypeClass = env->GetObjectClass(jDataType);
+        jmethodID getElementTypeMethod = env->GetMethodID(arrayTypeClass, "getElementType", "()Lnova/hetu/omniruntime/type/DataType;");
+        *elementType = env->CallObjectMethod(jDataType, getElementTypeMethod);
+    }
+
     static void GetMapKeyValueTypes(JNIEnv *env, jobject jDataType, jobject *keyType, jobject *valueType)
     {
         jclass mapTypeClass = env->GetObjectClass(jDataType);
@@ -102,6 +109,13 @@ public:
                     env->DeleteLocalRef(jFieldType);
                 }
                 return std::make_shared<ContainerDataType>(fieldTypes);
+            }
+            case OMNI_ARRAY: {
+                jobject jElementType;
+                GetArrayElementType(env, jDataType, &jElementType);
+                DataTypePtr elementType = ConvertJavaDataTypeToCpp(env, jElementType);
+                env->DeleteLocalRef(jElementType);
+                return std::make_shared<ArrayType>(elementType);
             }
             case OMNI_MAP: {
                 jobject jKeyType;
