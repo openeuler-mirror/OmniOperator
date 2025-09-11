@@ -7,16 +7,12 @@ package nova.hetu.omniruntime.vector;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import nova.hetu.omniruntime.type.DataType;
-import nova.hetu.omniruntime.type.LongDataType;
-
 import nova.hetu.omniruntime.type.MapDataType;
-import nova.hetu.omniruntime.type.StructDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+
 import org.testng.annotations.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 /**
  * test map vec
@@ -54,7 +50,6 @@ public class TestMapVec {
             String str = tmpStr.substring(0, i) + i;
             originalVec.set(i, str.getBytes(StandardCharsets.UTF_8));
         }
-        //assertEquals(originalVec.getRealValueBufCapacityInBytes(), 55);
 
         VarcharVec valueVec = new VarcharVec(kvSize);
         String tmpValStr = "testvarcharVal";
@@ -72,7 +67,6 @@ public class TestMapVec {
         MapVec sliceMapVec1 = mapVec.slice(offset, 2);
         VarcharVec sliceVec1 = (VarcharVec) (sliceMapVec1.getKeyVec());
         assertEquals(sliceVec1.getSize(), 8);
-        // assertEquals(sliceVec1.getRealValueBufCapacityInBytes(), 22);
 
         for (int i = 0; i < sliceVec1.getSize(); i++) {
             byte[] actualValue = sliceVec1.get(i);
@@ -127,7 +121,6 @@ public class TestMapVec {
             byte[] expectedValue = originalVec.get(i + offsets[offset]);
             assertEquals(actualValue, expectedValue);
         }
-
 
         sliceMapVec1.close();
         mapVec.close();

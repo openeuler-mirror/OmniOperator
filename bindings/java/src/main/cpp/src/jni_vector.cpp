@@ -320,7 +320,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newComplexV
 
         std::vector<std::shared_ptr<DataType>> children = DataTypeUtil::ConvertJavaDataTypesToCpp(env, jDataTypes);
         if (jVectorEncodingId == OMNI_ENCODING_MAP) {
-            dataType = new MapType(children[0],children[1]);
+            dataType = new MapType(children[0], children[1]);
         } else if (jVectorEncodingId == OMNI_ENCODING_STRUCT) {
             dataType = new RowType(children);
         } else {
@@ -421,7 +421,7 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_newEmptyCom
 
         std::vector<std::shared_ptr<DataType>> children = DataTypeUtil::ConvertJavaDataTypesToCpp(env, jDataTypes);
         if (jVectorEncodingId == OMNI_ENCODING_MAP) {
-            dataType = new MapType(children[0],children[1]);
+            dataType = new MapType(children[0], children[1]);
         } else if (jVectorEncodingId == OMNI_ENCODING_STRUCT) {
             dataType = new RowType(children);
         } else {
@@ -459,30 +459,29 @@ JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_StructVec_appendVecNati
     rowVec->Append(addedVec);
 }
 
-static void LoadDataTypeCls(JNIEnv *env) {
+static void LoadDataTypeCls(JNIEnv *env)
+{
     if (dataTypeCls == nullptr) {
-
         dataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/DataType");
         createMethodId = env->GetStaticMethodID(
-                dataTypeCls,
-                "create",
-                "(I)Lnova/hetu/omniruntime/type/DataType;"
+            dataTypeCls,
+            "create",
+            "(I)Lnova/hetu/omniruntime/type/DataType;"
         );
 
         structDataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/StructDataType");
         structDataTypeInitMethodId = env->GetMethodID(
-                structDataTypeCls,
-                "<init>",
-                "([Lnova/hetu/omniruntime/type/DataType;)V"
+            structDataTypeCls,
+            "<init>",
+            "([Lnova/hetu/omniruntime/type/DataType;)V"
         );
 
         mapDataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/MapDataType");
         mapDataTypeInitMethodId = env->GetMethodID(
-                mapDataTypeCls,
-                "<init>",
-                "(Lnova/hetu/omniruntime/type/DataType;Lnova/hetu/omniruntime/type/DataType;)V"
+            mapDataTypeCls,
+            "<init>",
+            "(Lnova/hetu/omniruntime/type/DataType;Lnova/hetu/omniruntime/type/DataType;)V"
         );
-
     }
 }
 
@@ -521,8 +520,6 @@ static jobject GetDataType(JNIEnv *env, BaseVector *vec)
         }
     }
 }
-
-
 
 JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComplexDataTypeNative
         (JNIEnv *env, jclass jcls, jlong jNativeVector)

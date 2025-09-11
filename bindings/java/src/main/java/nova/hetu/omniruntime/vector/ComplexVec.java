@@ -4,9 +4,12 @@
 
 package nova.hetu.omniruntime.vector;
 
+import static nova.hetu.omniruntime.utils.OmniErrorType.OMNI_PARAM_ERROR;
+
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.MapDataType;
 import nova.hetu.omniruntime.type.StructDataType;
+import nova.hetu.omniruntime.utils.OmniRuntimeException;
 
 /**
  * base class of complex vec.
@@ -29,7 +32,6 @@ public abstract class ComplexVec extends Vec {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress, capacityInBytes, size,
             dataType);
     }
-
 
     protected static native int getComplexCapacityNative(long nativeVector, int vecEncodingId);
 
@@ -73,8 +75,7 @@ public abstract class ComplexVec extends Vec {
                 return new StructVec(nativeVector, (StructDataType) dataType);
             }
             default: {
-                throw new RuntimeException("UnSupport type :" +
-                        dataType.getId());
+                throw new OmniRuntimeException(OMNI_PARAM_ERROR, "UnSupport type :" + dataType.getId());
             }
         }
     }

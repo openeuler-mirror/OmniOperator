@@ -4,11 +4,10 @@
 
 package nova.hetu.omniruntime.vector;
 
+import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_MAP;
+
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.MapDataType;
-
-import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_MAP;
-import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_STRUCT;
 
 /**
  * map vec.

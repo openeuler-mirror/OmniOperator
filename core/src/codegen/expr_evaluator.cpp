@@ -137,6 +137,12 @@ void ComputeFieldExpr(Expr *expr, std::vector<std::vector<FieldExpr *>> &result)
     } else if (auto e = dynamic_cast<CoalesceExpr *>(expr)) {
         ComputeFieldExpr(e->value1, result);
         ComputeFieldExpr(e->value2, result);
+    } else if (auto e = dynamic_cast<SwitchExpr *>(expr)) {
+        ComputeFieldExpr(e->falseExpr, result);
+        for (auto arg : e->whenClause) {
+            ComputeFieldExpr(arg.first, result);
+            ComputeFieldExpr(arg.second, result);
+        }
     } else {
         throw std::runtime_error("Unsupported expr type in ComputeFieldExpr!");
     }
@@ -180,9 +186,9 @@ void GetAddr(std::vector<BaseVector *> vectors, intptr_t valueAddrs[], intptr_t 
 {
     intptr_t valuesAddress;
     intptr_t dictVecAddress;
-    int32_t vectorCount = vectors.size();
+    uint32_t vectorCount = vectors.size();
 
-    for (int32_t i = 0; i < vectorCount; i++) {
+    for (uint32_t i = 0; i < vectorCount; i++) {
         auto colVec = vectors[i];
         dictVecAddress = 0;
         valuesAddress = 0;
@@ -671,10 +677,10 @@ bool ExpressionEvaluator::IsSupportedExpr() const
 VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionContext *context,
     AlignedBuffer<int32_t> *selectedRowsBuffer)
 {
-    const int vectorCount = vecBatch->GetVectorCount();
+    const int32_t vectorCount = vecBatch->GetVectorCount();
     int32_t flatVectorCount = vectorCount;
     for (auto fieldVector : fieldExprMap) {
-        flatVectorCount += fieldVector.size();
+        flatVectorCount += static_cast<int32_t>(fieldVector.size());
     }
 
     intptr_t valueAddrs[flatVectorCount];

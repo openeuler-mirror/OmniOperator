@@ -50,35 +50,43 @@ public:
         return offsets[index + 1] - offsets[index];
     }
 
-    const std::shared_ptr<BaseVector> GetKeyVector() const {
+    const std::shared_ptr<BaseVector> GetKeyVector() const
+    {
         return keys;
     }
 
-    const std::shared_ptr<BaseVector> GetValueVector() const {
+    const std::shared_ptr<BaseVector> GetValueVector() const
+    {
         return values;
     }
 
-    void SetKeyVector(std::shared_ptr<BaseVector> keyVector) {
+    void SetKeyVector(std::shared_ptr<BaseVector> keyVector)
+    {
         keys = std::move(keyVector);
     }
     
-    void SetValueVector(std::shared_ptr<BaseVector> valueVector) {
+    void SetValueVector(std::shared_ptr<BaseVector> valueVector)
+    {
         values = std::move(valueVector);
     }
 
-    void SetOffset(int32_t index, int32_t offset) {
+    void SetOffset(int32_t index, int32_t offset)
+    {
         offsets[index] = offset;
     }
 
-    void SetSize(int32_t index, int32_t size) {
+    void SetSize(int32_t index, int32_t size)
+    {
         offsets[index + 1] = offsets[index] + size;
     }
 
-    void AddKeys(BaseVector* addedKeys) {
+    void AddKeys(BaseVector* addedKeys)
+    {
         keys = std::shared_ptr<BaseVector>(addedKeys);
     }
 
-    void AddValues(BaseVector* addedValues) {
+    void AddValues(BaseVector* addedValues)
+    {
         values = std::shared_ptr<BaseVector>(addedValues);
     }
 
@@ -105,11 +113,6 @@ public:
         sliced->SetValueVector(
             std::shared_ptr<BaseVector>(GetValueVector()->Slice(startOffset, sliced->GetOffset(length), isCopy)));
         return sliced;
-    }
-
-    BaseVector* CopyPositions(const int32_t *selectedRows, int32_t numSelectedRows, BaseVector *colVec) {
-        // TODO
-        return nullptr;
     }
 
     /* *
@@ -141,11 +144,10 @@ public:
             newMapVector->SetOffset(i, keyLength);
             keyLength += keySize;
 
-            updateKeyPositions(keyPositions, keyIndex, keySize);
+            UpdateKeyPositions(keyPositions, keyIndex, keySize);
         }
         newMapVector->SetOffset(length, keyLength);
 
-        // FIXME use constant vector instead of create empty base vector in future
         auto keyVector = this->GetKeyVector();
         if (UNLIKELY(keyLength == 0)) {
             newMapVector->AddKeys(new BaseVector(0, keyVector->GetEncoding(), keyVector->GetTypeId()));
@@ -164,8 +166,9 @@ public:
         return newMapVector;
     }
 
-    static void updateKeyPositions(std::vector<int> &keyPositions, int index, int size){
-        for(int i = 0; i < size; i++) {
+    static void UpdateKeyPositions(std::vector<int> &keyPositions, int index, int size)
+    {
+        for (int i = 0; i < size; i++) {
             keyPositions.push_back(index++);
         }
     }
@@ -175,7 +178,6 @@ protected:
     std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;
     std::shared_ptr<BaseVector> keys;
     std::shared_ptr<BaseVector> values;
-
 };
 }
 

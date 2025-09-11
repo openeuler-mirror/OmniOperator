@@ -42,6 +42,7 @@ template <> void v2_slice_get_set_value<std::string_view>()
 
     auto vector = (Vector<LargeStringContainer<std::string_view>> *)(parent->Slice(g_offset, g_len, false));
     EXPECT_EQ(vector->GetTypeId(), parent->GetTypeId());
+    EXPECT_ANY_THROW(parent->Slice(100, 100, false));
     delete parent;
 
     for (int i = 0; i < g_len; i++) {

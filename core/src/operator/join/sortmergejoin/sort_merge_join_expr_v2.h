@@ -165,7 +165,7 @@ public:
     {
         noMoreInput_ = true;
         auto eOfvectorBatch = new VectorBatch(0);
-        for (int i = 0; i < bufferedTypes.Get().size(); i++) {
+        for (unsigned int i = 0; i < bufferedTypes.Get().size(); i++) {
             auto type = bufferedTypes.GetType(i);
             auto vec = VectorHelper::CreateVector(OMNI_FLAT, static_cast<int32_t>(type->GetId()), 0);
             eOfvectorBatch->Append(vec);

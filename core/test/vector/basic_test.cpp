@@ -260,6 +260,9 @@ template <typename T> void vector_copy_positions_value()
     auto v1OffsetZero = (Vector<T> *)(vector.CopyPositions(index, offset1, copySize));
     auto v2OffsetNotZero = (Vector<T> *)(vector.CopyPositions(index, offset2, copySize));
 
+    EXPECT_ANY_THROW(vector.CopyPositions(nullptr, offset2, copySize));
+    EXPECT_ANY_THROW(vector.CopyPositions(index, offset2, -1));
+
     for (int32_t i = 0; i < copySize; i++) {
         if (i % 2 == 0) {
             EXPECT_EQ(v1OffsetZero->IsNull(i), true);
@@ -342,7 +345,7 @@ template <> void dict_copy_positions_value<std::string_view>()
     int32_t positions[] = {1, 3, 5, 6};
     int32_t offset = 1;
     int32_t newValueSize = 3;
-    auto copyPositions =(Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *)(vector->CopyPositions(positions, offset, newValueSize));
+    auto copyPositions = (Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *)(vector->CopyPositions(positions, offset, newValueSize));
 
     for (int i = 0; i < newValueSize; i++) {
         if (values[positions[i + offset]] % 2 == 0) {
@@ -517,6 +520,7 @@ TEST(vector, SliceVector)
     for (int i = 0; i < vecSize; i++) {
         vector->SetValue(i, i);
     }
+    EXPECT_ANY_THROW(VectorHelper::SliceVector(vector.get(), 100, 100));
     auto sliceVector = reinterpret_cast<Vector<int32_t>*>(VectorHelper::SliceVector(vector.get(), 3, 5));
     for (int i = 0; i < 5; i++) {
         EXPECT_EQ(sliceVector->GetValue(i), i+3);
@@ -606,27 +610,27 @@ TEST(vector, copy_positions_map)
     int mapSize = 4;
     int keySize = 11;
 
-    vec::Vector<double> keys{ keySize };
-    vec::Vector<int32_t> values{ keySize };
+    auto* keys = new vec::Vector<double>(keySize);
+    auto* values = new vec::Vector<int32_t>(keySize);
 
-    vec::MapVector mapVec(mapSize);
-
-    mapVec.SetOffset(0, 0);
-    mapVec.SetOffset(1, 3);
-    mapVec.SetOffset(2, 5);
-    mapVec.SetOffset(3, 9);
-    mapVec.SetOffset(4, 11);
-
-    for(int i = 0; i < keySize; i++) {
-        keys.SetValue(i, 0.1 * i);
-        values.SetValue(i, i);
+    for (int i = 0; i < keySize; i++) {
+        keys->SetValue(i, 0.1 * i);
+        values->SetValue(i, i);
     }
 
-    mapVec.AddKeys(&keys);
-    mapVec.AddValues(&values);
+    auto* mapVec = new MapVector(mapSize);
+
+    mapVec->SetOffset(0, 0);
+    mapVec->SetOffset(1, 3);
+    mapVec->SetOffset(2, 5);
+    mapVec->SetOffset(3, 9);
+    mapVec->SetOffset(4, 11);
+
+    mapVec->AddKeys(keys);
+    mapVec->AddValues(values);
 
     int positions[] = {1, 3};
-    auto newMapVector = mapVec.CopyPositions((const int*)positions, 0, 2);
+    auto* newMapVector = mapVec->CopyPositions((const int*)positions, 0, 2);
     EXPECT_EQ(newMapVector->GetOffset(0), 0);
     EXPECT_EQ(newMapVector->GetOffset(1), 2);
     EXPECT_EQ(newMapVector->GetOffset(2), 4);
@@ -643,7 +647,52 @@ TEST(vector, copy_positions_map)
     EXPECT_EQ(newValues->GetValue(2), 9);
     EXPECT_EQ(newValues->GetValue(3), 10);
 
+    auto* newMapVectorSlice = mapVec->Slice(1, 2);
+    EXPECT_EQ(newMapVectorSlice->GetOffset(0), 0);
+    EXPECT_EQ(newMapVectorSlice->GetOffset(1), 2);
+
+    EXPECT_ANY_THROW(mapVec->Slice(1, 10));
+    EXPECT_ANY_THROW(mapVec->CopyPositions(nullptr, 0, 2));
+
+    auto* newMapVectorNull = mapVec->CopyPositions((const int*)positions, 0, 0);
+
+    delete newMapVectorNull;
+    delete newMapVectorSlice;
     delete newMapVector;
+    delete mapVec;
+}
+
+TEST(vector, copy_positions_row)
+{
+    int rowSize = 2;
+    int childSize = 11;
+
+    auto* keys = new vec::Vector<double>(childSize);
+    auto* values = new vec::Vector<int32_t>(childSize);
+
+    for (int i = 0; i < childSize; i++) {
+        keys->SetValue(i, 0.1 * i);
+        values->SetValue(i, i);
+    }
+
+    auto* rowVec = new RowVector(rowSize);
+
+    rowVec->Append(keys);
+    rowVec->Append(values);
+
+    auto child = rowVec->ChildAt(0);
+
+    EXPECT_EQ(rowVec->ChildSize(), 2);
+    EXPECT_ANY_THROW(rowVec->Slice(0, 10));
+
+    int positions[] = {0};
+    auto* newRowVector = rowVec->CopyPositions((const int*)positions, 0, 1);
+    auto* newRowVectorSlice = rowVec->Slice(0, 1);
+    EXPECT_ANY_THROW(rowVec->CopyPositions(nullptr, 0, 1));
+
+    delete newRowVectorSlice;
+    delete newRowVector;
+    delete rowVec;
 }
 
 TEST(vector, dict_get_value_with_null_int32)

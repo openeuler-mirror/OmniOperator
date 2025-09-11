@@ -16,13 +16,15 @@ using namespace omniruntime::type;
 class DataTypeUtil {
 public:
 
-    static jint GetDataTypeId(JNIEnv *env, jobject jDataType) {
+    static jint GetDataTypeId(JNIEnv *env, jobject jDataType)
+    {
         jclass dataTypeClass = env->GetObjectClass(jDataType);
         jmethodID getIdValueMethod = env->GetMethodID(dataTypeClass, "getIdValue", "()I");
         return env->CallIntMethod(jDataType, getIdValueMethod);
     }
 
-    static void GetDecimalPrecisionAndScale(JNIEnv *env, jobject jDataType, jint *precision, jint *scale) {
+    static void GetDecimalPrecisionAndScale(JNIEnv *env, jobject jDataType, jint *precision, jint *scale)
+    {
         jclass decimalTypeClass = env->GetObjectClass(jDataType);
         jmethodID getPrecisionMethod = env->GetMethodID(decimalTypeClass, "getPrecision", "()I");
         jmethodID getScaleMethod = env->GetMethodID(decimalTypeClass, "getScale", "()I");
@@ -30,19 +32,22 @@ public:
         *scale = env->CallIntMethod(jDataType, getScaleMethod);
     }
 
-    static jint GetVarcharWidth(JNIEnv *env, jobject jDataType) {
+    static jint GetVarcharWidth(JNIEnv *env, jobject jDataType)
+    {
         jclass varcharTypeClass = env->GetObjectClass(jDataType);
         jmethodID getWidthMethod = env->GetMethodID(varcharTypeClass, "getWidth", "()I");
         return env->CallIntMethod(jDataType, getWidthMethod);
     }
 
-    static jobjectArray GetContainerFieldTypes(JNIEnv *env, jobject jDataType) {
+    static jobjectArray GetContainerFieldTypes(JNIEnv *env, jobject jDataType)
+    {
         jclass containerTypeClass = env->GetObjectClass(jDataType);
         jmethodID getFieldTypesMethod = env->GetMethodID(containerTypeClass, "getFieldTypes", "()[Lnova/hetu/omniruntime/type/DataType;");
         return (jobjectArray) env->CallObjectMethod(jDataType, getFieldTypesMethod);
     }
 
-    static void GetMapKeyValueTypes(JNIEnv *env, jobject jDataType, jobject *keyType, jobject *valueType) {
+    static void GetMapKeyValueTypes(JNIEnv *env, jobject jDataType, jobject *keyType, jobject *valueType)
+    {
         jclass mapTypeClass = env->GetObjectClass(jDataType);
         jmethodID getKeyTypeMethod = env->GetMethodID(mapTypeClass, "getKeyType", "()Lnova/hetu/omniruntime/type/DataType;");
         jmethodID getValueTypeMethod = env->GetMethodID(mapTypeClass, "getValueType", "()Lnova/hetu/omniruntime/type/DataType;");
@@ -50,7 +55,8 @@ public:
         *valueType = env->CallObjectMethod(jDataType, getValueTypeMethod);
     }
 
-    static DataTypePtr ConvertJavaDataTypeToCpp(JNIEnv *env, jobject jDataType) {
+    static DataTypePtr ConvertJavaDataTypeToCpp(JNIEnv *env, jobject jDataType)
+    {
         jint id = GetDataTypeId(env, jDataType);
         DataTypeId dataTypeId = static_cast<DataTypeId>(id);
 
@@ -66,12 +72,14 @@ public:
             case OMNI_SHORT:
                 return std::make_shared<ShortDataType>();
             case OMNI_DECIMAL64: {
-                jint precision, scale;
+                jint precision;
+                jint scale;
                 GetDecimalPrecisionAndScale(env, jDataType, &precision, &scale);
                 return std::make_shared<Decimal64DataType>(precision, scale);
             }
             case OMNI_DECIMAL128: {
-                jint precision, scale;
+                jint precision;
+                jint scale;
                 GetDecimalPrecisionAndScale(env, jDataType, &precision, &scale);
                 return std::make_shared<Decimal128DataType>(precision, scale);
             }
@@ -96,7 +104,8 @@ public:
                 return std::make_shared<ContainerDataType>(fieldTypes);
             }
             case OMNI_MAP: {
-                jobject jKeyType, jValueType;
+                jobject jKeyType;
+                jobject jValueType;
                 GetMapKeyValueTypes(env, jDataType, &jKeyType, &jValueType);
                 DataTypePtr keyType = ConvertJavaDataTypeToCpp(env, jKeyType);
                 DataTypePtr valueType = ConvertJavaDataTypeToCpp(env, jValueType);
@@ -121,7 +130,8 @@ public:
         }
     }
 
-    static std::vector<DataTypePtr> ConvertJavaDataTypesToCpp(JNIEnv *env, jobjectArray jDataTypes) {
+    static std::vector<DataTypePtr> ConvertJavaDataTypesToCpp(JNIEnv *env, jobjectArray jDataTypes)
+    {
         std::vector<DataTypePtr> cppDataTypes;
         jsize length = env->GetArrayLength(jDataTypes);
         cppDataTypes.reserve(length);
@@ -153,6 +163,4 @@ public:
         return cppDataTypes;
     }
 };
-
-
-#endif //OMNI_RUNTIME_DATA_TYPE_UTIL_H
+#endif // OMNI_RUNTIME_DATA_TYPE_UTIL_H

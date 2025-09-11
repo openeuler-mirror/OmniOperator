@@ -43,7 +43,7 @@ GroupingOperator::GroupingOperator(const std::shared_ptr<const GroupingNode> &gr
         } else {
             auto size = aggPlanNode_->OutputType()->GetSize();
             std::vector<ExprPtr> expressions(size);
-            for (int32_t i = 0; i < size; i++) {
+            for (unsigned int i = 0; i < size; i++) {
                 if (i < nullSizeEnd && i >= nullSizeFrond) {
                     expressions[i] = new LiteralExpr(0, aggPlanNode_->OutputType()->GetType(i), true);
                     continue;
@@ -137,7 +137,7 @@ std::shared_ptr<OperatorFactory> GroupingOperator::CreateResidualOperatorFactory
     auto groupBySize = aggregationNode->GetGroupByKeys().size();
     groupByKeys_.resize(groupBySize);
     std::vector<bool> inputRaws(aggregationNode->GetInputRaws().size(), false);
-    for (int32_t i = 0; i < groupBySize; i++) {
+    for (unsigned int i = 0; i < groupBySize; i++) {
         groupByKeys_[i] = new FieldExpr(i, sourceTypes->GetType(i));
     }
 

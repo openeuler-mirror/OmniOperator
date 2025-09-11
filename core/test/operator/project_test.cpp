@@ -3527,34 +3527,34 @@ TEST(ProjectionTest, Struct)
     auto overflowConfig = new OverflowConfig();
     std::string exprs[1];
     exprs[0] = R"({
-  "exprType" : "BINARY",
-  "returnType" : 1,
-  "operator" : "ADD",
-  "left" : {
+    "exprType" : "BINARY",
+    "returnType" : 1,
+    "operator" : "ADD",
+    "left" : {
     "exprType" : "FIELD_REFERENCE",
     "dataType" : 1,
     "ordinal" : 0,
     "input" : {
-      "exprType" : "FIELD_REFERENCE",
-      "dataType" : 32,
-      "ordinal" : 0,
-      "input" : {
         "exprType" : "FIELD_REFERENCE",
         "dataType" : 32,
+        "ordinal" : 0,
+        "input" : {
+        "e" : "FIELD_REFERENCE",
+        "dataType" : 32,
         "colVal" : 0
-      }
+        }
     }
-  },
-  "right" : {
+    },
+    "right" : {
     "exprType" : "FIELD_REFERENCE",
     "dataType" : 1,
     "ordinal" : 1,
     "input" : {
-      "exprType" : "FIELD_REFERENCE",
-      "dataType" : 32,
-      "colVal" : 0
+        "exprType" : "FIELD_REFERENCE",
+        "dataType" : 32,
+        "colVal" : 0
     }
-  }
+    }
 })";
     std::vector<omniruntime::expressions::Expr *> expressions;
     nlohmann::json jsonExprs[1];

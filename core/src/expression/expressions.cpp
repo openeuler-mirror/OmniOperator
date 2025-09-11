@@ -170,7 +170,8 @@ FieldExpr::FieldExpr(int32_t colIdx, DataTypePtr colType)
     colVal = colIdx;
 }
 
-omniruntime::vec::BaseVector *FieldExpr::GetFieldVector(omniruntime::vec::VectorBatch *vecBatch) {
+omniruntime::vec::BaseVector *FieldExpr::GetFieldVector(omniruntime::vec::VectorBatch *vecBatch)
+{
     if (!input) {
         return vecBatch->Get(colVal);
     }
@@ -310,7 +311,7 @@ uint8_t* BinaryExpr::computeEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t 
         case OMNI_VARCHAR: {
             auto target = literal->stringVal;
             if (target == nullptr) {
-                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "EQ Not Support stringVal is null." );
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "EQ Not Support stringVal is null.");
             }
             if (vector->GetEncoding() == vec::OMNI_FLAT) {
                 auto varCharVector = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vector);
@@ -361,7 +362,7 @@ uint8_t* BinaryExpr::computeNEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t
         case OMNI_VARCHAR: {
             auto target = literal->stringVal;
             if (target == nullptr) {
-                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "NEQ Not Support stringVal is null." );
+                throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "NEQ Not Support stringVal is null.");
             }
             if (vector->GetEncoding() == vec::OMNI_FLAT) {
                 auto varCharVector = reinterpret_cast<vec::Vector<vec::LargeStringContainer<std::string_view>> *>(vector);
@@ -456,8 +457,7 @@ uint8_t* UnaryExpr::computeNOT(omniruntime::vec::VectorBatch *vecBatch, uint8_t 
 
 uint8_t* UnaryExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
-    switch (op)
-    {
+    switch (op) {
         case Operator::NOT:
             return computeNOT(vecBatch, bitMark);
         default:
@@ -662,7 +662,6 @@ bool ALWAYS_INLINE RLikeStr(std::string_view src, std::wregex re)
 uint8_t* FuncExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
 {
     if (funcName == "RLike") {
-
         auto expr = dynamic_cast<FieldExpr*>(arguments[0]);
         auto pattern = dynamic_cast<LiteralExpr*>(arguments[1]);
         if (!expr || !pattern || !pattern->stringVal) {
@@ -702,10 +701,7 @@ uint8_t* FuncExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bit
                 throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "RLike Not Support Type : " +
                                                                                       std::to_string(static_cast<int>(dataTypeId)));
         }
-
         return bitMark;
-
-
     } else {
         throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", "FuncExpr Not Support: " + funcName);
     }

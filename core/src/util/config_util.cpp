@@ -159,6 +159,11 @@ void ConfigUtil::SetRoundingRule(RoundingRule rule)
     g_properties.GetPolicy()->SetRoundingRule(rule);
 }
 
+void ConfigUtil::SetIsComplexTypeWithCodegen(IsComplexTypeWithCodegen isEnable)
+{
+    g_properties.GetPolicy()->SetIsComplexTypeWithCodegen(isEnable);
+}
+
 RoundingRule ConfigUtil::GetRoundingRule()
 {
     return g_properties.GetPolicy()->GetRoundingRule();

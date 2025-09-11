@@ -127,10 +127,8 @@ public:
         using namespace omniruntime::type;
         auto fieldType = dataType->GetId();
         if (fieldType == OMNI_ROW) {
-            auto rowType = static_cast<RowType*>(dataType);
             return new RowVector(size);
         } else if (fieldType == OMNI_MAP) {
-            auto mapType = static_cast<MapType*>(dataType);
             return new MapVector(size);
         } else {
             return CreateFlatVector(fieldType, size);

@@ -96,10 +96,11 @@ OperatorFactory *CreateFilterOperatorFactory(
     std::shared_ptr<const FilterNode> filterNode, const config::QueryConfig &queryConfig);
     
 struct BitMaskIndex {
-    BitMaskIndex() {
-        for (int i = 0; i < (1 << N); i++) {
-            int32_t startIndex = i * (N + 1);
-            int32_t index = startIndex;
+    BitMaskIndex()
+    {
+        for (unsigned int i = 0; i < (1 << N); i++) {
+            unsigned int startIndex = i * (N + 1);
+            unsigned int index = startIndex;
             for (int bit = 0; bit < N; bit++) {
                 if (i & (1 << bit)) {
                     memo_[++index] = bit;
@@ -109,12 +110,13 @@ struct BitMaskIndex {
         }
     }
 
-    const inline uint8_t* operator[](size_t i) const {
+    const inline uint8_t* operator[](size_t i) const
+    {
         return memo_ + (i * (N + 1));
     }
 
 private:
-    static constexpr int N = 8;
+    static constexpr unsigned int N = 8;
     uint8_t memo_[(1 << N) * (N + 1)]{0};
 };
 
@@ -152,7 +154,6 @@ public:
     void SetStringVectorValue(int32_t rowCount, Vector<LargeStringContainer<std::string_view>> *baseVector,
                               Vector<LargeStringContainer<std::string_view>> *selectedBaseVector, const uint8_t *bitMark);
 
-
 private:
     omniruntime::mem::AlignedBuffer<int32_t> selectedRowsBuffer;
     omniruntime::vec::VectorBatch *projectedVecs;
@@ -185,7 +186,7 @@ public:
 
     Operator *CreateOperator() override;
 
-    bool SupportVectorizedCheck(Expr * filter);
+    bool SupportVectorizedCheck(Expr* filter);
 
 private:
     std::shared_ptr<ExpressionEvaluator> exprEvaluator;

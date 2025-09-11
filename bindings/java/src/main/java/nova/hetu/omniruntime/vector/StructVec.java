@@ -4,9 +4,9 @@
 
 package nova.hetu.omniruntime.vector;
 
-import nova.hetu.omniruntime.type.StructDataType;
-
 import static nova.hetu.omniruntime.vector.VecEncoding.OMNI_ENCODING_STRUCT;
+
+import nova.hetu.omniruntime.type.StructDataType;
 
 /**
  * struct vec.
