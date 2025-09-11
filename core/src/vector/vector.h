@@ -176,7 +176,7 @@ protected:
 template <typename RAW_DATA_TYPE> class Vector : public BaseVector {
 public:
     /* *
-     * Constructor for data types of arithematic types without encoding
+     * Constructor for data types of arithmetic types without encoding
      * @param vSize: size of array in variables nulls and values
      * @param dataTypeId: the dataTypeId of vector
      */

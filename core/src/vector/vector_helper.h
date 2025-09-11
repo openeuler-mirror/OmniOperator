@@ -13,6 +13,7 @@
 #include "omni_row.h"
 #include "row_vector.h"
 #include "map_vector.h"
+#include "array_vector.h"
 
 namespace omniruntime::vec {
 class VectorHelper {
@@ -117,6 +118,13 @@ public:
                 children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(mapType->Children()[i].get(), size)));
             }
             return new MapVector(size, children[0], children[1]);
+        } else if (fieldType == OMNI_ARRAY) {
+            std::vector<std::shared_ptr<BaseVector>> children;
+            auto arrayType = static_cast<ArrayType*>(dataType);
+            for (int i = 0; i < arrayType->Size(); i++) {
+                children.push_back(std::shared_ptr<BaseVector>(CreateComplexVector(arrayType->ElementType().get(), size)));
+            }
+            return new ArrayVector(size, children[0]);
         } else {
             return CreateFlatVector(fieldType, size);
         }
@@ -130,6 +138,9 @@ public:
             return new RowVector(size);
         } else if (fieldType == OMNI_MAP) {
             return new MapVector(size);
+        } else if (fieldType == OMNI_ARRAY) {
+            auto arrayType = static_cast<ArrayType*>(dataType);
+            return new ArrayVector(size);
         } else {
             return CreateFlatVector(fieldType, size);
         }
@@ -379,6 +390,7 @@ public:
             case type::OMNI_CONTAINER:
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<ContainerVector *>(vector)));
+            case type::OMNI_ARRAY:
             case type::OMNI_MAP:
             case type::OMNI_ROW:
                 return 0;
@@ -493,6 +505,9 @@ public:
             case type::OMNI_CHAR: {
                 return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(vector)->Slice(positionOffset,
                     length);
+            }
+            case type::OMNI_ARRAY: {
+                return reinterpret_cast<ArrayVector *>(vector)->Slice(positionOffset, length);
             }
             case type::OMNI_MAP: {
                 return reinterpret_cast<MapVector *>(vector)->Slice(positionOffset, length);

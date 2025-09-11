@@ -93,6 +93,10 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
             }
             return std::make_shared<RowType>(fieldTypes);
         }
+        case OMNI_ARRAY: {
+            DataTypePtr child = DataTypeJsonParser(dataTypeJson["child"]);
+            return std::make_shared<ArrayType>(child);
+        }
         default:
             LogError("Not Supported Data Type : %d", dataTypeId);
             return nullptr;

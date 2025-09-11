@@ -605,6 +605,59 @@ TEST(vector, copy_positions_dec128)
     vector_copy_positions_value<int128_t>();
 }
 
+TEST(vector, copy_positions_array)
+{
+    int arraySize = 4;
+    int elementSize = 11;
+
+    auto* elements = new vec::Vector<int32_t>(elementSize);
+
+    for (int i = 0; i < elementSize; i++) {
+        elements->SetValue(i, i);
+    }
+
+    auto* arrayVec = new ArrayVector(arraySize);
+
+    arrayVec->SetOffset(0, 0);
+    arrayVec->SetOffset(1, 3);
+    arrayVec->SetOffset(2, 5);
+    arrayVec->SetOffset(3, 9);
+    arrayVec->SetOffset(4, 11);
+
+    arrayVec->AddElements(elements);
+
+    int positions[] = {1, 3};
+    auto* newArrayVector = arrayVec->CopyPositions((const int*)positions, 0, 2);
+    EXPECT_EQ(newArrayVector->GetOffset(0), 0);
+    EXPECT_EQ(newArrayVector->GetOffset(1), 2);
+    EXPECT_EQ(newArrayVector->GetOffset(2), 4);
+
+    auto newElements = std::dynamic_pointer_cast<vec::Vector<int32_t>>(newArrayVector->GetElementVector());
+    EXPECT_EQ(newElements->GetValue(0), 3);
+    EXPECT_EQ(newElements->GetValue(1), 4);
+    EXPECT_EQ(newElements->GetValue(2), 9);
+    EXPECT_EQ(newElements->GetValue(3), 10);
+
+    auto* newArrayVectorSlice = arrayVec->Slice(1, 2);
+    EXPECT_EQ(newArrayVectorSlice->GetOffset(0), 0);
+    EXPECT_EQ(newArrayVectorSlice->GetOffset(1), 2);
+
+    EXPECT_ANY_THROW(arrayVec->Slice(1, 10));
+    EXPECT_ANY_THROW(arrayVec->CopyPositions(nullptr, 0, 2));
+
+    auto* newArrayVectorNull = arrayVec->CopyPositions((const int*)positions, 0, 0);
+
+    auto sepecifiedElementVec = std::dynamic_pointer_cast<vec::Vector<int32_t>>(arrayVec->GetArrayAt(1, false));
+    EXPECT_EQ(sepecifiedElementVec->GetValue(0), 3);
+
+    EXPECT_ANY_THROW(arrayVec->GetArrayAt(5, false));
+
+    delete newArrayVectorNull;
+    delete newArrayVectorSlice;
+    delete newArrayVector;
+    delete arrayVec;
+}
+
 TEST(vector, copy_positions_map)
 {
     int mapSize = 4;

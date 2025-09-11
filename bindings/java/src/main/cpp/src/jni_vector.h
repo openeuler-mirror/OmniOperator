@@ -277,6 +277,14 @@ JNIEXPORT jobject JNICALL Java_nova_hetu_omniruntime_vector_ComplexVec_getComple
 JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_MapVec_setSizeByIndexNative
         (JNIEnv *, jclass, jlong, jint, jint);
 
+/*
+ * Class:     nova_hetu_omniruntime_vector_ArrayVec
+ * Method:    setSizeByIndexNative
+ * Signature: (JII)J
+ */
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_setSizeByIndexNative
+        (JNIEnv *, jclass, jlong, jint, jint);
+
 static std::once_flag loadDataTypeClsFlag;
 
 static jclass dataTypeCls = nullptr;
@@ -286,6 +294,22 @@ static jclass mapDataTypeCls = nullptr;
 static jmethodID createMethodId = nullptr;
 static jmethodID structDataTypeInitMethodId = nullptr;
 static jmethodID mapDataTypeInitMethodId = nullptr;
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ArrayVec
+ * Method:    addElementsNative
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addElementsNative(JNIEnv *env, jclass jcls, jlong arrayVecAddr,
+    jlong elementsAddr);
+
+/*
+ * Class:     nova_hetu_omniruntime_vector_ArrayVec
+ * Method:    addOffsetsNative
+ * Signature: (J[I)V
+ */
+JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_addOffsetsNative(JNIEnv *env, jclass jcls, jlong arrayVecAddr,
+    jintArray offsetsAddr);
 
 
 #ifdef __cplusplus

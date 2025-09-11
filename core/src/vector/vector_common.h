@@ -13,6 +13,7 @@
 #include "omni_row.h"
 #include "map_vector.h"
 #include "row_vector.h"
+#include "array_vector.h"
 #include "memory/allocator.h"
 #include "memory/memory_manager.h"
 #include "memory/memory_trace.h"
