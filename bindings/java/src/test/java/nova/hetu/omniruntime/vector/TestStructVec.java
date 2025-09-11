@@ -11,14 +11,13 @@ import nova.hetu.omniruntime.type.BooleanDataType;
 import nova.hetu.omniruntime.type.DataType;
 import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
-
 import nova.hetu.omniruntime.type.MapDataType;
 import nova.hetu.omniruntime.type.StructDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+
 import org.testng.annotations.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 /**
  * test struct vec

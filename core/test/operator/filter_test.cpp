@@ -12,6 +12,7 @@
 #include "util/config_util.h"
 #include "vector/unsafe_vector.h"
 #include "expression/jsonparser/jsonparser.h"
+#include "type/data_type_serializer.h"
 
 namespace FilterTest {
 using namespace omniruntime::op;
@@ -212,6 +213,7 @@ TEST(FilterTest, LessThanProcessRow)
 TEST(FilterTest, ExprCodegenStringCompare)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(false);
+    ConfigUtil::SetIsComplexTypeWithCodegen(IsComplexTypeWithCodegen::TRUE);
     const int32_t numRows = 10000000;
 
     // prepare expression isnotnull(a) and isnotnull(b) and (a = b)
@@ -3252,171 +3254,171 @@ TEST(FilterTest, Test10SQLMutilThread)
 
     std::map<std::string, std::string> FILTERS = {
         { "q1",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":0},
-          {"exprType": "LITERAL" ,"dataType":1,"isNull":false,"value":1},
-          {"exprType": "LITERAL" ,"dataType":1,"isNull":false,"value":2}]},
-          "right":{"exprType":"BETWEEN","returnType":4,
-          "value":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
-          "lower_bound":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
-          "upper_bound":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":10}}},
-          "right":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":0},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}]}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":0},
+            {"exprType": "LITERAL" ,"dataType":1,"isNull":false,"value":1},
+            {"exprType": "LITERAL" ,"dataType":1,"isNull":false,"value":2}]},
+            "right":{"exprType":"BETWEEN","returnType":4,
+            "value":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
+            "lower_bound":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
+            "upper_bound":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":10}}},
+            "right":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":0},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}]}})" },
         { "q2",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"GREATER_THAN",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":0},
-          "right":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":0}},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
-          "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":10}}},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":3},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2}]},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":3},
-          "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"GREATER_THAN",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":0},
+            "right":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":0}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":10}}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":3},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2}]},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":3},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}}})" },
         { "q3",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":0,"width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"3","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"4","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"5","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"6","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"7","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"8","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"9","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"10","width":200}]},
-          "right":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":1,"width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200}]}},
-          "right":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":3},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":4},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":5}]}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":0,"width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"3","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"4","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"5","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"6","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"7","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"8","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"9","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"10","width":200}]},
+            "right":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":1,"width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200}]}},
+            "right":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":3},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":4},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":5}]}})" },
         { "q4",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":0,"width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"3","width":200}]},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
-          "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
-          "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":0,"width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"3","width":200}]},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}})" },
         { "q5",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":16,"colVal":0,"width":200},
-          "right":{"exprType":"LITERAL","dataType":16,"isNull":false,"value":"3","width":200}},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"GREATER_THAN_OR_EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
-          "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":10}}},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"LESS_THAN_OR_EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
-          "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":20}}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":16,"colVal":0,"width":200},
+            "right":{"exprType":"LITERAL","dataType":16,"isNull":false,"value":"3","width":200}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"GREATER_THAN_OR_EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":10}}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"LESS_THAN_OR_EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":20}}})" },
         { "q6",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":0,"width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"3","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"4","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"5","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"6","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"7","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"8","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"9","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"10","width":200}]},
-          "right":{"exprType":"BETWEEN","returnType":4,
-          "value":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":1},
-          "lower_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":1},
-          "upper_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":10}}},
-          "right":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":3},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":4},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":5}]}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":0,"width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"3","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"4","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"5","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"6","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"7","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"8","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"9","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"10","width":200}]},
+            "right":{"exprType":"BETWEEN","returnType":4,
+            "value":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":1},
+            "lower_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":1},
+            "upper_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":10}}},
+            "right":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":3},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":4},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":5}]}})" },
         { "q7",
-                R"({"exprType":"BETWEEN","returnType":4,
-          "value":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
-          "lower_bound":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3},
-          "upper_bound":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":5}})" },
+            R"({"exprType":"BETWEEN","returnType":4,
+            "value":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
+            "lower_bound":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3},
+            "upper_bound":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":5}})" },
         { "q8",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":0,"width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"3","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"4","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"5","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"6","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"7","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"8","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"9","width":200},
-          {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"10","width":200}]},
-          "right":{"exprType":"BETWEEN","returnType":4,
-          "value":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":2},
-          "lower_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":3},
-          "upper_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":5}}},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":3},
-          "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":15,"colVal":0,"width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"1","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"2","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"3","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"4","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"5","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"6","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"7","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"8","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"9","width":200},
+            {"exprType":"LITERAL","dataType":15,"isNull":false,"value":"10","width":200}]},
+            "right":{"exprType":"BETWEEN","returnType":4,
+            "value":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":2},
+            "lower_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":3},
+            "upper_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":5}}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":3},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}})" },
         { "q9",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-          "left":{"exprType":"BETWEEN","returnType":4,
-          "value":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":0},
-          "lower_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":3},
-          "upper_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":5}},
-          "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-          "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
-          "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}},
-          "right":{"exprType":"IN","returnType":4,
-          "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
-          {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2}]}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BETWEEN","returnType":4,
+            "value":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":0},
+            "lower_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":3},
+            "upper_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":5}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}},
+            "right":{"exprType":"IN","returnType":4,
+            "arguments":[{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":1},
+            {"exprType":"LITERAL","dataType":1,"isNull":false,"value":2}]}})" },
         { "q10",
-                R"({"exprType":"BINARY","returnType":4,"operator":"OR",
-        "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
-        "left":{"exprType":"BETWEEN","returnType":4,
-        "value":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":0},
-        "lower_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":3},
-        "upper_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":5}},
-        "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-        "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
-        "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}},
-        "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
-        "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
-        "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}})" },
+            R"({"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BINARY","returnType":4,"operator":"OR",
+            "left":{"exprType":"BETWEEN","returnType":4,
+            "value":{"exprType":"FIELD_REFERENCE","dataType":2,"colVal":0},
+            "lower_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":3},
+            "upper_bound":{"exprType":"LITERAL","dataType":2,"isNull":false,"value":5}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":1},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}},
+            "right":{"exprType":"BINARY","returnType":4,"operator":"EQUAL",
+            "left":{"exprType":"FIELD_REFERENCE","dataType":1,"colVal":2},
+            "right":{"exprType":"LITERAL","dataType":1,"isNull":false,"value":3}}})" },
     };
 
     const static std::map<int64_t, std::string> SQL_NAME = { { 0, "q1" }, { 1, "q2" }, { 2, "q3" }, { 3, "q4" },
@@ -3514,5 +3516,97 @@ TEST(FilterTest, Test10SQLMutilThread)
     PrintValueLine(eightThreadsCpuTime, FILTER_UNIT_TEST_TIME);
     std::cout << "sixteenThreadsCpuTime";
     PrintValueLine(sixteenThreadsCpuTime, FILTER_UNIT_TEST_TIME);
+}
+ 
+TEST(FilterTest, FilterStruct)
+{
+    std::string inputTypesCharPtr =
+        R"([{"id":32,"fieldTypes":[{"id":2,"idValue":2},{"id":2,"idValue":2}],"idValue":32}])";
+    auto inputDataTypes = Deserialize(inputTypesCharPtr);
+    auto overflowConfig = new OverflowConfig();
+    std::string exprs[1];
+    exprs[0] = R"({
+        "exprType" : "FIELD_REFERENCE",
+        "dataType" : 2,
+        "ordinal" : 1,
+        "input" : {
+            "exprType" : "FIELD_REFERENCE",
+            "dataType" : 32,
+            "colVal" : 0
+        }
+        })";
+            std::string filterExpr = R"({
+        "exprType": "BINARY",
+        "returnType": 4,
+        "operator": "AND",
+        "left": {
+            "exprType": "UNARY",
+            "returnType": 4,
+            "operator": "not",
+            "expr": {
+            "exprType": "IS_NULL",
+            "returnType": 4,
+            "arguments": [
+                {
+                "exprType": "FIELD_REFERENCE",
+                "dataType": 32,
+                "colVal": 0
+                }
+            ]
+            }
+        },
+        "right": {
+            "exprType": "BINARY",
+            "returnType": 4,
+            "operator": "EQUAL",
+            "left": {
+            "exprType": "FIELD_REFERENCE",
+            "dataType": 2,
+            "ordinal": 0,
+            "input": {
+                "exprType": "FIELD_REFERENCE",
+                "dataType": 32,
+                "colVal": 0
+            }
+            },
+            "right": {
+            "exprType": "LITERAL",
+            "dataType": 2,
+            "isNull": false,
+            "value": 1
+            }
+        }
+        })";
+    
+    int64_t col1[3] = {1, 23, 4};
+    int64_t col2[3] = {4, 23, 4};
+    std::vector<DataTypePtr> vecOfTypes = {LongType(), LongType()};
+    DataTypes inputTypes(vecOfTypes);
+    auto  children = CreateVectors(inputTypes, 3, col1, col2);
+
+    auto *vectorBatch2 = new VectorBatch(3);
+    auto rowVector = new RowVector(3, children);
+    vectorBatch2->Append(rowVector);
+
+    std::vector<omniruntime::expressions::Expr *> expressions;
+    nlohmann::json jsonExprs[1];
+    for (int32_t i = 0; i < 1; i++) {
+        jsonExprs[i] = nlohmann::json::parse(exprs[i]);
+    }
+    expressions = JSONParser::ParseJSON(jsonExprs, 1);
+    auto filterExpression = JSONParser::ParseJSON(filterExpr);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpression, expressions, inputDataTypes,
+        overflowConfig);
+    auto factory = new FilterAndProjectOperatorFactory(std::move(exprEvaluator));
+    auto filterOperator = factory->CreateOperator();
+    filterOperator->AddInput(vectorBatch2);
+    VectorBatch *outputVecBatch = nullptr;
+    filterOperator->GetOutput(&outputVecBatch);
+    VectorHelper::PrintVecBatch(outputVecBatch);
+
+    VectorHelper::FreeVecBatch(outputVecBatch);
+    delete filterOperator;
+    delete overflowConfig;
+    delete factory;
 }
 }

@@ -164,6 +164,8 @@ void AssertBoolEquals(std::vector<bool> &expected, bool *result);
 
 std::string GenerateSpillPath();
 
+std::vector<std::shared_ptr<vec::BaseVector>> CreateVectors(const type::DataTypes &types, int32_t rowCount, ...);
+
 int8_t *MakeBytes(int32_t size, const int32_t start = 0);
 
 int16_t *MakeShorts(int32_t size, const int32_t start = 0);

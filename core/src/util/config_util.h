@@ -67,6 +67,8 @@ public:
     // for test
     static void SetEnableBatchExprEvaluate(bool isEnable);
 
+    static void SetIsComplexTypeWithCodegen(IsComplexTypeWithCodegen isEnable);
+
 private:
     static std::map<std::string, std::string> configMap;
 

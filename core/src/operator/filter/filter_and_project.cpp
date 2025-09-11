@@ -131,11 +131,11 @@ template <typename FlatVector, typename RAW_DATA_TYPE>
 void FilterAndProjectOperator::SetFlatVectorValue(int32_t rowCount, BaseVector *baseVector, BaseVector *selectedBaseVector, const uint8_t *bitMark)
 {
     int32_t index = 0;
-    int32_t j = 0;
+    unsigned int j = 0;
     uint8_t mask;
     const BitMaskIndex bitMaskIndex;
-    const int32_t batchStep = 8;
-    for (; j + batchStep <= rowCount; j += batchStep) {
+    const unsigned int batchStep = 8;
+    for (; j + batchStep <= static_cast<unsigned int>(rowCount); j += batchStep) {
         mask = bitMark[j >> 3];
         if (mask == 0) {
             continue;
@@ -151,7 +151,7 @@ void FilterAndProjectOperator::SetFlatVectorValue(int32_t rowCount, BaseVector *
             }
         }
     }
-    for (; j < rowCount; j++) {
+    for (; j < static_cast<unsigned int>(rowCount); j++) {
         if (BitUtil::IsBitSet(bitMark, j)) {
             if (UNLIKELY(baseVector->IsNull(j))) {
                 static_cast<FlatVector *>(selectedBaseVector)->SetNull(index++);
@@ -164,16 +164,16 @@ void FilterAndProjectOperator::SetFlatVectorValue(int32_t rowCount, BaseVector *
 }
 
 void FilterAndProjectOperator::SetStringVectorValue(int32_t rowCount, Vector<LargeStringContainer<std::string_view>> *baseVector,
-        Vector<LargeStringContainer<std::string_view>> *selectedBaseVector, const uint8_t *bitMark)
+    Vector<LargeStringContainer<std::string_view>> *selectedBaseVector, const uint8_t *bitMark)
 {
     int32_t index = 0;
-    int32_t j = 0;
+    unsigned int j = 0;
     uint8_t mask;
 
     const BitMaskIndex bitMaskIndex;
-    const int32_t batchStep = 8;
+    const unsigned int batchStep = 8;
 
-    for (; j + batchStep <= rowCount; j += batchStep) {
+    for (; j + batchStep <= static_cast<unsigned int>(rowCount); j += batchStep) {
         mask = bitMark[j >> 3];
         if (mask == 0) {
             continue;
@@ -189,7 +189,7 @@ void FilterAndProjectOperator::SetStringVectorValue(int32_t rowCount, Vector<Lar
             }
         }
     }
-    for (; j < rowCount; j++) {
+    for (; j < static_cast<unsigned int>(rowCount); j++) {
         if (BitUtil::IsBitSet(bitMark, j)) {
             if (UNLIKELY(baseVector->IsNull(j))) {
                 selectedBaseVector->SetNull(index++);
@@ -219,12 +219,11 @@ void FilterAndProjectOperator::SetMapVectorValue(int32_t rowCount, MapVector *ba
             selectedBaseVector->SetOffset(index, keyLength);
             keyLength += keySize;
             index++;
-            MapVector::updateKeyPositions(keyPositions, keyIndex, keySize);
+            MapVector::UpdateKeyPositions(keyPositions, keyIndex, keySize);
         }
     }
     selectedBaseVector->SetOffset(resultSize, keyLength);
 
-    // FIXME use constant vector instead of create empty base vector in future
     auto keyVector = baseVector->GetKeyVector();
     if (UNLIKELY(keyLength == 0)) {
         selectedBaseVector->AddKeys(new BaseVector(0, keyVector->GetEncoding(), keyVector->GetTypeId()));
@@ -242,7 +241,8 @@ void FilterAndProjectOperator::SetMapVectorValue(int32_t rowCount, MapVector *ba
     }
 }
 
-BaseVector *FilterAndProjectOperator::CopyPositionsFromBitMark(DataTypeId dataType, int rowCount, BaseVector *baseVector, const uint8_t *bitMark, int32_t length) {
+BaseVector *FilterAndProjectOperator::CopyPositionsFromBitMark(DataTypeId dataType, int rowCount, BaseVector *baseVector, const uint8_t *bitMark, int32_t length)
+{
     switch (dataType) {
         case OMNI_INT:
         case OMNI_DATE32: {
@@ -320,7 +320,8 @@ BaseVector *FilterAndProjectOperator::CopyPositionsFromBitMark(DataTypeId dataTy
 }
 
 omniruntime::vec::VectorBatch* FilterAndProjectOperator::GetVecBatchFromBitMark(omniruntime::vec::VectorBatch &vecBatch,
-            uint8_t *bitMark, int32_t originalRowCount) {
+    uint8_t *bitMark, int32_t originalRowCount)
+{
     int32_t resultSize = BitUtil::CountBits(reinterpret_cast<const uint64_t *>(bitMark), 0, originalRowCount);
 
     auto result = new VectorBatch(resultSize);
@@ -346,8 +347,6 @@ void FilterAndProjectOperator::HandleVectorizedFilter(omniruntime::vec::VectorBa
 
     uint8_t *bitMark = filterExpr->compute(vecBatch, bitMarkBuf->GetBuffer());
     auto selectedRows = omniruntime::BitUtil::CountBits(reinterpret_cast<const uint64_t *>(bitMark), 0, size);
-
-
     if (selectedRows == 0) {
         // set projectedVecs nulllptr if no data selected
         projectedVecs = nullptr;

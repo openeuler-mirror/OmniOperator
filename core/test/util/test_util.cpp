@@ -471,6 +471,20 @@ void AssertDictionaryVectorEquals(BaseVector *vector, va_list &args)
     }
 }
 
+std::vector<std::shared_ptr<vec::BaseVector>> CreateVectors(const type::DataTypes &types, int32_t rowCount, ...)
+{
+    int32_t typesCount = types.GetSize();
+    std::vector<std::shared_ptr<BaseVector>> vectors;
+    va_list args;
+    va_start(args, rowCount);
+    for (int32_t i = 0; i < typesCount; i++) {
+        auto &type = types.GetType(i);
+        vectors.push_back(std::shared_ptr<BaseVector>(CreateVector(*type, rowCount, args)));
+    }
+    va_end(args);
+    return vectors;
+}
+
 void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, int32_t expectedRowCount, ...)
 {
     int32_t vectorCount = vectorBatch->GetVectorCount();

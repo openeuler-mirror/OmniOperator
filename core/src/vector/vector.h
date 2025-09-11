@@ -54,7 +54,7 @@ public:
     }
 
     BaseVector(int32_t size, Encoding encoding, DataTypeId dataTypeId, NullsBuffer *nullsBufferPtr = nullptr, int32_t sliceOffset = 0)
-            : size(size), encoding(encoding),dataTypeId(dataTypeId), offset(0), isSliced(false)
+        : size(size), encoding(encoding), dataTypeId(dataTypeId), offset(0), isSliced(false)
     {
         this->nullsBuffer = std::make_shared<NullsBuffer>(size, nullsBufferPtr, sliceOffset);
     }
@@ -149,11 +149,13 @@ public:
         return nullptr;
     }
 
-    void SetOffset(int32_t offset) {
+    void SetOffset(int32_t offset)
+    {
         this->offset = offset;
     }
 
-    void SetSliced(bool isSliced) {
+    void SetSliced(bool isSliced)
+    {
         this->isSliced = isSliced;
     }
 
@@ -161,7 +163,7 @@ protected:
     friend class unsafe::UnsafeBaseVector;
     int32_t size;
     Encoding encoding; // vector encoding, such as flat, dictionary
-    int32_t offset;
+    int32_t offset = 0;
     std::shared_ptr<NullsBuffer> nullsBuffer;
     bool isSliced;
     DataTypeId dataTypeId;

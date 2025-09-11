@@ -24,31 +24,35 @@ namespace omniruntime::vec {
 
         ~RowVector() override = default;
 
-
-        std::shared_ptr<BaseVector>& ChildAt(int32_t index) {
+        std::shared_ptr<BaseVector>& ChildAt(int32_t index)
+        {
             return children_[index];
         }
 
-        std::vector<std::shared_ptr<BaseVector>>& Children() {
+        std::vector<std::shared_ptr<BaseVector>>& Children()
+        {
             return children_;
         }
 
-        void AddChild(std::shared_ptr<BaseVector> child) {
+        void AddChild(std::shared_ptr<BaseVector> child)
+        {
             children_.push_back(std::move(child));
         }
 
-        int32_t ChildSize() const {
+        int32_t ChildSize() const
+        {
             return children_.size();
         }
 
-        void Add(int32_t index, BaseVector* addedVec) {
+        void Add(int32_t index, BaseVector* addedVec)
+        {
             children_[index] = std::shared_ptr<BaseVector>(addedVec);
         }
 
-        void Append(BaseVector* appendedVec) {
+        void Append(BaseVector* appendedVec)
+        {
             children_.emplace_back(std::shared_ptr<BaseVector>(appendedVec));
         }
-
 
         RowVector *Slice(int positionOffset, int length, bool isCopy = false) override
         {
@@ -71,7 +75,8 @@ namespace omniruntime::vec {
             return sliced;
         }
 
-        BaseVector* CopyPositions(const int *positions, int positionOffset, int length)  {
+        BaseVector* CopyPositions(const int *positions, int positionOffset, int length)
+        {
             if (UNLIKELY((positions == nullptr) || (length < 0))) {
                 std::string message("StructVector positions is null or the input length is incorrect: %d.", length);
                 throw OmniException("OPERATOR_RUNTIME_ERROR", message);

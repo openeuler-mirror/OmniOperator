@@ -93,7 +93,6 @@ public:
     virtual uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) { return nullptr; }
 
     virtual bool supportVectorized() { return false; }
-
 };
 
 class LiteralExpr : public Expr {
@@ -118,7 +117,8 @@ public:
     explicit LiteralExpr(std::string *val, DataTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
-    bool supportVectorized() override {
+    bool supportVectorized() override
+    {
         return true;
     }
     LiteralExpr* Copy()
@@ -144,7 +144,8 @@ public:
     int32_t ordinal = -1;
     Expr* input = nullptr;
 
-    bool operator==(const FieldExpr &other) const {
+    bool operator==(const FieldExpr &other) const
+    {
         return isNull == other.isNull && colVal == other.colVal &&
                ordinal == other.ordinal && input == other.input;
     }
@@ -159,7 +160,8 @@ public:
 
     omniruntime::vec::BaseVector *GetFieldVector(omniruntime::vec::VectorBatch *vecBatch);
 
-    bool supportVectorized() override {
+    bool supportVectorized() override
+    {
         return this->dataType->GetId() == OMNI_ROW || this->dataType->GetId() == OMNI_VARCHAR || this->dataType->GetId() == OMNI_MAP ;
     }
 };
@@ -180,7 +182,8 @@ public:
     uint8_t* computeNOT(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
-    bool supportVectorized() override {
+    bool supportVectorized() override
+    {
         return exp->supportVectorized();
     }
 };
@@ -203,7 +206,8 @@ public:
     uint8_t* computeNEQ(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark);
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
-    bool supportVectorized() override {
+    bool supportVectorized() override
+    {
         return left->supportVectorized() && right->supportVectorized();
     }
 };
@@ -286,7 +290,8 @@ public:
 
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
 
-    bool supportVectorized() override {
+    bool supportVectorized() override
+    {
         return value->supportVectorized();
     }
 };
@@ -318,7 +323,8 @@ public:
     uint8_t *compute(omniruntime::vec::VectorBatch *vecBatc, uint8_t *bitMark) override;
     std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
 
-    bool supportVectorized() override {
+    bool supportVectorized() override
+    {
         return funcName == "RLike";
     }
 };
