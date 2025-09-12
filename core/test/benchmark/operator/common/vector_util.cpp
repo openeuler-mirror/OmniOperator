@@ -19,6 +19,7 @@ VectorBatch *CreateSequenceVectorBatch(const std::vector<DataTypePtr> &types, in
                 case OMNI_DATE32:
                 case OMNI_LONG:
                 case OMNI_DOUBLE:
+                case OMNI_FLOAT:
                 case OMNI_DECIMAL64: {
                     auto val = index;
                     VectorHelper::SetValue(vector, index, &val);
@@ -57,6 +58,7 @@ VectorBatch *CreateSequenceVectorBatchWithDictionaryVector(const std::vector<Dat
                 case OMNI_DATE32:
                 case OMNI_LONG:
                 case OMNI_DOUBLE:
+                case OMNI_FLOAT:
                 case OMNI_DECIMAL64: {
                     auto val = index;
                     VectorHelper::SetValue(inner, index, &val);
@@ -102,6 +104,7 @@ VectorBatch *CreateVectorBatch(uint32_t encoding, const std::vector<DataTypePtr>
                 case OMNI_LONG:
                 case OMNI_DECIMAL64:
                 case OMNI_DOUBLE:
+                case OMNI_FLOAT:
                 case OMNI_BOOLEAN: {
                     auto val = values[i][index];
                     VectorHelper::SetValue(vector, index, &val);
@@ -173,6 +176,11 @@ void SetVectorBatchRow(VectorBatch *vb, std::vector<DataTypeId> dataTypes, int i
             }
             case OMNI_DOUBLE: {
                 auto item = std::stod(val);
+                VectorHelper::SetValue(vb->Get(i), index, &item);
+                break;
+            }
+            case OMNI_FLOAT: {
+                auto item = std::stof(val);
                 VectorHelper::SetValue(vb->Get(i), index, &item);
                 break;
             }

@@ -71,6 +71,9 @@ SortMergeJoinScanner::SortMergeJoinScanner(const DataTypes &streamedTableKeysTyp
             case OMNI_DOUBLE:
                 keyCompareFuncs[i] = (OperatorUtil::CompareValue<double, true, false, true>);
                 break;
+            case OMNI_FLOAT:
+                keyCompareFuncs[i] = (OperatorUtil::CompareValue<float, true, false, true>);
+                break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 keyCompareFuncs[i] = (OperatorUtil::CompareValue<std::string_view, true, false, true>);

@@ -36,6 +36,7 @@ public:
     static const int32_t SIZE_OF_INT = sizeof(int32_t);
     static const int32_t SIZE_OF_LONG = sizeof(int64_t);
     static const int32_t SIZE_OF_DOUBLE = sizeof(double);
+    static const int32_t SIZE_OF_FLOAT = sizeof(float);
     static const int32_t SIZE_OF_DECIMAL64 = SIZE_OF_LONG;
     static const int32_t SIZE_OF_DECIMAL128 = SIZE_OF_LONG << 1;
     static const int32_t SIZE_OF_DATE32 = SIZE_OF_INT;
@@ -56,6 +57,8 @@ public:
                 return OperatorUtil::SIZE_OF_LONG;
             case OMNI_DOUBLE:
                 return OperatorUtil::SIZE_OF_DOUBLE;
+            case OMNI_FLOAT:
+                return OperatorUtil::SIZE_OF_FLOAT;
             case OMNI_BOOLEAN:
                 return OperatorUtil::SIZE_OF_BOOL;
             case OMNI_SHORT:
@@ -68,6 +71,8 @@ public:
                 return OperatorUtil::SIZE_OF_DATE32;
             case OMNI_DATE64:
                 return OperatorUtil::SIZE_OF_DATE64;
+            case OMNI_BYTE:
+                return OperatorUtil::SIZE_OF_BYTE;
             case OMNI_CHAR: {
                 // if width is not set (which is the case when width=CHAR_MAX_WIDTH), we use 'DEFAULT_CHAR_LENGTH' width
                 // otherwise, estimation of row bytes would be too large and could overflow and be

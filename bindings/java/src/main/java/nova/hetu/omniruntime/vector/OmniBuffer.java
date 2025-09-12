@@ -190,6 +190,42 @@ public interface OmniBuffer {
     void setDoubleArray(int index, double[] src, int srcIndex, int length);
 
     /**
+     * get float array.
+     *
+     * @param index the byte offset of the element
+     * @param target target float array
+     * @param targetIndex the starting byte offset of the array
+     * @param length byte size
+     */
+    void getFloatArray(int index, float[] target, int targetIndex, int length);
+
+    /**
+     * set float value.
+     *
+     * @param index the byte offset of the element
+     * @param value float value
+     */
+    void setFloat(int index, float value);
+
+    /**
+     * get float value.
+     *
+     * @param index the byte offset of the element
+     * @return float value
+     */
+    float getFloat(int index);
+
+    /**
+     * set float array.
+     *
+     * @param index the byte offset of the element
+     * @param src source float array
+     * @param srcIndex the starting byte offset of the array
+     * @param length byte size
+     */
+    void setFloatArray(int index, float[] src, int srcIndex, int length);
+
+    /**
      * get double array.
      *
      * @param index the byte offset of the element

@@ -2218,6 +2218,9 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(const omniruntime::type::Data
         case OMNI_DOUBLE:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetDoubleStr, paramTypes, OMNI_DOUBLE);
             break;
+        case OMNI_FLOAT:
+            dictionaryFuncSignature = FunctionSignature(dictionaryGetFloatStr, paramTypes, OMNI_FLOAT);
+            break;
         case OMNI_BOOLEAN:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetBooleanStr, paramTypes, OMNI_BOOLEAN);
             break;

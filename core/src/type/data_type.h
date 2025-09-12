@@ -60,7 +60,8 @@ enum DataTypeId {
     OMNI_ROW = 32,
     OMNI_UNKNOWN = 33,
     OMNI_FUNCTION = 34,
-    OMNI_OPAQUE = 35
+    OMNI_OPAQUE = 35,
+    OMNI_INVALID
 };
 
 template <DataTypeId dataTypeId> struct NativeType {};
@@ -75,6 +76,10 @@ template <> struct NativeType<DataTypeId::OMNI_LONG> {
 
 template <> struct NativeType<DataTypeId::OMNI_DOUBLE> {
     using type = double;
+};
+
+template <> struct NativeType<DataTypeId::OMNI_FLOAT> {
+    using type = float;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_BOOLEAN> {
@@ -145,6 +150,9 @@ template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
             case OMNI_DOUBLE: {                                                               \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_DOUBLE>(__VA_ARGS__);     \
             }                                                                                 \
+            case OMNI_FLOAT: {                                                                \
+                return CALLBACK<omniruntime::type::DataTypeId::OMNI_FLOAT>(__VA_ARGS__);      \
+            }                                                                                 \
             case OMNI_BOOLEAN: {                                                              \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_BOOLEAN>(__VA_ARGS__);    \
             }                                                                                 \
@@ -177,6 +185,7 @@ template <> inline constexpr DataTypeId TYPE_ID<int16_t> = DataTypeId::OMNI_SHOR
 template <> inline constexpr DataTypeId TYPE_ID<int32_t> = DataTypeId::OMNI_INT;
 template <> inline constexpr DataTypeId TYPE_ID<int64_t> = DataTypeId::OMNI_LONG;
 template <> inline constexpr DataTypeId TYPE_ID<double> = DataTypeId::OMNI_DOUBLE;
+template <> inline constexpr DataTypeId TYPE_ID<float> = DataTypeId::OMNI_FLOAT;
 template <> inline constexpr DataTypeId TYPE_ID<bool> = DataTypeId::OMNI_BOOLEAN;
 template <> inline constexpr DataTypeId TYPE_ID<Decimal128> = DataTypeId::OMNI_DECIMAL128;
 template <> inline constexpr DataTypeId TYPE_ID<std::string_view> = DataTypeId::OMNI_CHAR;
@@ -257,6 +266,7 @@ public:
 using ByteDataType = FixedWidthDataType<OMNI_BYTE>;
 using IntDataType = FixedWidthDataType<OMNI_INT>;
 using ShortDataType = FixedWidthDataType<OMNI_SHORT>;
+using FloatDataType = FixedWidthDataType<OMNI_FLOAT>;
 using DoubleDataType = FixedWidthDataType<OMNI_DOUBLE>;
 using LongDataType = FixedWidthDataType<OMNI_LONG>;
 using BooleanDataType = FixedWidthDataType<OMNI_BOOLEAN>;

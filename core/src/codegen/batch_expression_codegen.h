@@ -120,6 +120,9 @@ private:
     void BatchBinaryExprDoubleHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
         Value *rightIsNull);
 
+    void BatchBinaryExprFloatHelper(const BinaryExpr *binaryExpr, Value *left, Value *right, Value *leftIsNull,
+        Value *rightIsNull);
+
     void BatchBinaryExprStringHelper(const BinaryExpr *binaryExpr, Value *left, Value *leftLen, Value *right,
         Value *rightLen, Value *leftIsNull, Value *rightIsNull);
 

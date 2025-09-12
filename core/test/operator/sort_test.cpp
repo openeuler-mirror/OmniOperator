@@ -598,22 +598,24 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMDPerformance)
     // construct input data
     const int64_t dataSize = 1000;
     double *data1 = new double[dataSize];
+    float *data2 = new float[dataSize];
     double baseNumber = 1.11111;
     for (int64_t i = 0; i < dataSize; i++) {
         data1[i] = baseNumber * static_cast<double>(i);
+        data2[i] = baseNumber * static_cast<float>(i);
     }
 
-    DataTypes sourceTypes(std::vector<DataTypePtr>({ DoubleType() }));
-    std::vector<DataTypePtr> typess = { DoubleType() };
-    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1);
+    DataTypes sourceTypes(std::vector<DataTypePtr>({ DoubleType(), FloatType() }));
+    std::vector<DataTypePtr> typess = { DoubleType(), FloatType() };
+    VectorBatch *vecBatch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
 
-    int outputCols[1] = {0};
+    int outputCols[2] = {0, 1};
     int sortCols[1] = {0};
     int ascendings[1] = {true};
     int nullFirsts[1] = {false};
 
     auto operatorFactory =
-        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 1, sortCols, ascendings, nullFirsts, 1);
+        SortOperatorFactory::CreateSortOperatorFactory(sourceTypes, outputCols, 2, sortCols, ascendings, nullFirsts, 1);
 
     auto sortOperator = dynamic_cast<SortOperator *>(CreateTestOperator(operatorFactory));
     auto start = std::chrono::high_resolution_clock::now();
@@ -626,6 +628,7 @@ TEST(NativeOmniSortTest, TestSortDoubleColumnAscSIMDPerformance)
     std::cout << "simd sort long cost: " << duration1.count() << " ms\n";
     // free memory
     delete[] data1;
+    delete[] data2;
     VectorHelper::FreeVecBatch(outputVecBatch);
     omniruntime::op::Operator::DeleteOperator(sortOperator);
     DeleteSortOperatorFactory(operatorFactory);
@@ -2247,6 +2250,18 @@ TEST(NativeOmniSortTest, TestInplaceSortFortAllType)
     Decimal128 expectData6[dataSize] = {11, 22, 33, 44, 55};
     sourceTypes = DataTypes(std::vector<DataTypePtr>({ Decimal128Type(2, 0) }));
     TestInplaceSort<Decimal128>(data6, expectData6, sourceTypes, dataSize);
+
+    // float
+    float data7[dataSize] = {55, 44, 33, 22, 11};
+    float expectData7[dataSize] = {11, 22, 33, 44, 55};
+    sourceTypes = DataTypes(std::vector<DataTypePtr>({ FloatType() }));
+    TestInplaceSort<float>(data7, expectData7, sourceTypes, dataSize);
+
+    // byte
+    byte data8[dataSize] = {(byte)55, (byte)44, (byte)33, (byte)22, (byte)11};
+    byte expectData8[dataSize] = {(byte)11, (byte)22, (byte)33, (byte)44, (byte)55};
+    sourceTypes = DataTypes(std::vector<DataTypePtr>({ ByteType() }));
+    TestInplaceSort<byte>(data8, expectData8, sourceTypes, dataSize);
 }
 
 TEST(NativeOmniSortTest, TestInplaceSortWithNullFirst)

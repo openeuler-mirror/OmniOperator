@@ -406,6 +406,9 @@ void SortOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t &
             case OMNI_DOUBLE:
                 SetSpillOutputVector<double>(outputVector, offset, rowCount, outputCol);
                 break;
+            case OMNI_FLOAT:
+                SetSpillOutputVector<float>(outputVector, offset, rowCount, outputCol);
+                break;
             case OMNI_BOOLEAN:
                 SetSpillOutputVector<bool>(outputVector, offset, rowCount, outputCol);
                 break;

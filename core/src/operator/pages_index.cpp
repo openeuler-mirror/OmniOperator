@@ -1237,6 +1237,10 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                 ConstructVector<OMNI_DOUBLE>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
                     outputIndex);
                 break;
+            case OMNI_FLOAT:
+                ConstructVector<OMNI_FLOAT>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
+                break;
             case OMNI_BOOLEAN:
                 ConstructVector<OMNI_BOOLEAN>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
                     outputIndex);

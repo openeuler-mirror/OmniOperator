@@ -103,6 +103,7 @@ void FreeVecBatches(vec::VectorBatch **vecBatches, int32_t vecBatchCount);
 void AssertVecBatchEquals(omniruntime::vec::VectorBatch *vectorBatch, int32_t expectedVecCount,
     int32_t expectedRowCount, ...);
 void AssertDoubleVectorEquals(omniruntime::vec::BaseVector *vector, double *expectedValues);
+void AssertFloatVectorEquals(omniruntime::vec::BaseVector *vector, float *expectedValues);
 void AssertVarcharVectorEquals(omniruntime::vec::BaseVector *vector, std::string *expectedValues);
 
 vec::BaseVector *CreateDictionaryVector(omniruntime::type::DataType &dataType, int32_t rowCount, int32_t *ids,

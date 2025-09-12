@@ -676,6 +676,15 @@ static ALWAYS_INLINE bool ValueEqualsLastValue(vec::VectorBatch *partitionVecBat
         } else {
             return false;
         }
+    } else if constexpr (std::is_same_v<T, float>) {
+        float lastValue = static_cast<Vector<float> *>(partitionVector)->GetValue(lastIdx);
+        float nextValue = static_cast<Vector<float> *>(currentVector)->GetValue(nextIdx);
+
+        if (std::abs(lastValue - nextValue) < __DBL_EPSILON__) {
+            return true;
+        } else {
+            return false;
+        }
     } else {
         T lastValue = static_cast<Vector<T> *>(partitionVector)->GetValue(lastIdx);
         T nextValue = static_cast<Vector<T> *>(currentVector)->GetValue(nextIdx);
@@ -715,6 +724,9 @@ bool WindowOperator::IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx)
                 break;
             case OMNI_DOUBLE:
                 isSame = ValueEqualsLastValue<double>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
+                break;
+            case OMNI_FLOAT:
+                isSame = ValueEqualsLastValue<float>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
                 break;
             case OMNI_BOOLEAN:
                 isSame = ValueEqualsLastValue<bool>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
@@ -761,6 +773,9 @@ void WindowOperator::PaddingPartitionVecBatch(vec::VectorBatch *partitionVecBatc
                 break;
             case OMNI_DOUBLE:
                 PaddingPartitionVector<double>(partitionVector, rowIdx, i);
+                break;
+            case OMNI_FLOAT:
+                PaddingPartitionVector<float>(partitionVector, rowIdx, i);
                 break;
             case OMNI_BOOLEAN:
                 PaddingPartitionVector<bool>(partitionVector, rowIdx, i);

@@ -25,6 +25,7 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
     VectorToLLVMTypeMap = { { OMNI_INT, I32Type() },
         { OMNI_LONG, I64Type() },
         { OMNI_DOUBLE, DoubleType() },
+        { OMNI_FLOAT, FloatType() },
         { OMNI_BOOLEAN, I1Type() },
         { OMNI_BYTE, I8Type() },
         { OMNI_SHORT, I16Type() },
@@ -69,6 +70,11 @@ Value *LLVMTypes::CreateConstantLong(int64_t v)
 }
 
 Value *LLVMTypes::CreateConstantDouble(double v)
+{
+    return ConstantFP::get(context, APFloat(v));
+}
+
+Value *LLVMTypes::CreateConstantFloat(float v)
 {
     return ConstantFP::get(context, APFloat(v));
 }
@@ -118,6 +124,11 @@ llvm::Type *LLVMTypes::DoubleType()
     return llvm::Type::getDoubleTy(context);
 }
 
+llvm::Type *LLVMTypes::FloatType()
+{
+    return llvm::Type::getFloatTy(context);
+}
+
 llvm::PointerType *LLVMTypes::PtrType(llvm::Type *type)
 {
     return type->getPointerTo();
@@ -158,6 +169,11 @@ llvm::PointerType *LLVMTypes::DoublePtrType()
     return PtrType(DoubleType());
 }
 
+llvm::PointerType *LLVMTypes::FloatPtrType()
+{
+    return PtrType(FloatType());
+}
+
 llvm::Type *LLVMTypes::ToLLVMType(DataTypeId id)
 {
     auto result = VectorToLLVMTypeMap.find(id);
@@ -185,6 +201,8 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
             return I64PtrType();
+        case OMNI_FLOAT:
+            return FloatPtrType();
         case OMNI_DOUBLE:
             return DoublePtrType();
         case OMNI_CHAR:

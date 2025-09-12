@@ -184,6 +184,90 @@ extern "C" DLLEXPORT void BatchPowerDouble(double *base, double *exponent, doubl
     }
 }
 
+extern "C" DLLEXPORT void BatchAddFloat(float *left, float *right, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        left[i] = left[i] + right[i];
+    }
+}
+
+extern "C" DLLEXPORT void BatchSubtractFloat(float *left, float *right, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        left[i] = left[i] - right[i];
+    }
+}
+
+extern "C" DLLEXPORT void BatchMultiplyFloat(float *left, float *right, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        left[i] = left[i] * right[i];
+    }
+}
+
+extern "C" DLLEXPORT void BatchDivideFloat(float *left, float *right, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        left[i] = left[i] / right[i];
+    }
+}
+
+extern "C" DLLEXPORT void BatchModulusFloat(float *left, float *right, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        left[i] = std::fmod(left[i], right[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchLessThanFloat(float *left, float *right, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = (left[i] < right[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchLessThanEqualFloat(float *left, float *right, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = (left[i] <= right[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchGreaterThanFloat(float *left, float *right, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = (left[i] > right[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchGreaterThanEqualFloat(float *left, float *right, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = (left[i] >= right[i]);
+    }
+}
+
+extern "C" DLLEXPORT void BatchEqualFloat(float *left, float *right, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = (std::fabs(left[i] - right[i]) < FLT_EPSILON);
+    }
+}
+
+extern "C" DLLEXPORT void BatchNotEqualFloat(float *left, float *right, bool *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; i++) {
+        output[i] = std::fabs(left[i] - right[i]) >= FLT_EPSILON;
+    }
+}
+
+extern "C" DLLEXPORT void BatchPowerFloat(float *base, float *exponent, float *output, int32_t rowCnt)
+{
+    for (int32_t i = 0; i < rowCnt; i++) {
+        output[i] = pow(base[i], exponent[i]);
+    }
+}
+
 extern "C" DLLEXPORT void BatchAddInt64(int64_t *left, int64_t *right, int32_t rowCnt)
 {
     for (int i = 0; i < rowCnt; i++) {

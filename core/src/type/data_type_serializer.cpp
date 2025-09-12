@@ -52,6 +52,8 @@ DataTypePtr DataTypeJsonParser(const nlohmann::json &dataTypeJson)
             return TimestampType();
         case OMNI_DOUBLE:
             return DoubleType();
+        case OMNI_FLOAT:
+            return FloatType();
         case OMNI_BOOLEAN:
             return BooleanType();
         case OMNI_BYTE:

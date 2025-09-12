@@ -34,6 +34,8 @@ public:
 
     llvm::Type *DoubleType();
 
+    llvm::Type *FloatType();
+
     llvm::PointerType *PtrType(llvm::Type *type);
 
     llvm::PointerType *I1PtrType();
@@ -48,6 +50,8 @@ public:
 
     llvm::PointerType *DoublePtrType();
 
+    llvm::PointerType *FloatPtrType();
+
     llvm::PointerType *I128PtrType();
 
     llvm::Value *CreateConstantBool(bool n);
@@ -61,6 +65,8 @@ public:
     llvm::Value *CreateConstantLong(int64_t n);
 
     llvm::Value *CreateConstantDouble(double n);
+
+    llvm::Value *CreateConstantFloat(float n);
 
     llvm::Value *CreateConstant128(int64_t v);
 

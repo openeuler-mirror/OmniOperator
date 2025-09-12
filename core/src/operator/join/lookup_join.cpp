@@ -1592,6 +1592,9 @@ void ALWAYS_INLINE LookupJoinOperator::PopulateProbeHashes()
             case omniruntime::type::OMNI_DOUBLE:
                 CalculateColHashes<double>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
+            case omniruntime::type::OMNI_FLOAT:
+                CalculateColHashes<float>(hashCol, rowCount, hashes, curProbeNulls);
+                break;
             case omniruntime::type::OMNI_BOOLEAN:
                 CalculateColHashes<bool>(hashCol, rowCount, hashes, curProbeNulls);
                 break;
@@ -1907,6 +1910,9 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
                 break;
             case OMNI_DOUBLE:
                 buildColumn = ConstructBuildColumn<double, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
+                break;
+            case OMNI_FLOAT:
+                buildColumn = ConstructBuildColumn<float, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
             case OMNI_BOOLEAN:
                 buildColumn = ConstructBuildColumn<bool, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);

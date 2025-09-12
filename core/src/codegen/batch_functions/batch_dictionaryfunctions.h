@@ -42,6 +42,9 @@ extern "C" DLLEXPORT void BatchGetLongFromVector(int64_t *vector, int32_t *rowId
 extern "C" DLLEXPORT void BatchGetDoubleFromVector(double *vector, int32_t *rowIdxArray, int32_t rowCnt,
     double *output);
 
+extern "C" DLLEXPORT void BatchGetFloatFromVector(float *vector, int32_t *rowIdxArray, int32_t rowCnt,
+    float *output);
+
 extern "C" DLLEXPORT void BatchGetBooleanFromVector(bool *vector, int32_t *rowIdxArray, int32_t rowCnt, bool *output);
 
 extern "C" DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t *offsetArray, const char *vector,
