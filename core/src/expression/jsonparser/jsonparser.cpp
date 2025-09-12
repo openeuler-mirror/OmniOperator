@@ -98,6 +98,10 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
             auto doubleVal = jsonExpr["value"].get<double>();
             return new LiteralExpr(doubleVal, std::make_shared<DoubleDataType>());
         }
+        case OMNI_FLOAT: {
+            auto floatVal = jsonExpr["value"].get<float>();
+            return new LiteralExpr(floatVal, std::make_shared<FloatDataType>());
+        }
         case OMNI_DECIMAL64: {
             auto decimalVal = jsonExpr["value"].get<int64_t>();
             return new LiteralExpr(decimalVal, std::make_shared<Decimal64DataType>(jsonExpr["precision"].get<int32_t>(),

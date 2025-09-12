@@ -23,6 +23,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Bool";
         case OMNI_DOUBLE:
             return "Double";
+        case OMNI_FLOAT:
+            return "Float";
         case OMNI_DATE32:
             return "Date32";
         case OMNI_TIME32:
@@ -182,6 +184,11 @@ std::shared_ptr<omniruntime::type::DataType> TimestampType()
 std::shared_ptr<DataType> DoubleType()
 {
     return DoubleDataType::Instance();
+}
+
+std::shared_ptr<DataType> FloatType()
+{
+    return FloatDataType::Instance();
 }
 
 std::shared_ptr<DataType> BooleanType()

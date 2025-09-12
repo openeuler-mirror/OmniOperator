@@ -1404,6 +1404,86 @@ TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilter)
     VectorHelper::FreeVecBatch(outputVecBatch);
 }
 
+TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilterDataType)
+{
+    std::vector<DataTypePtr> leftTypes = { IntType(), DoubleType(), LongType(), FloatType()};
+    DataTypes leftSourceTypes(leftTypes);
+    std::vector<DataTypePtr> rightTypes = { IntType(), DoubleType(), VarcharType(3) };
+    DataTypes rightSourceTypes(rightTypes);
+
+    int32_t leftCols[] = {0};
+    int32_t rightCols[] = {0};
+    auto *leftPagesIndex = new DynamicPagesIndex(leftSourceTypes, leftCols, 1);
+    auto *rightPagesIndex = new DynamicPagesIndex(rightSourceTypes, rightCols, 1);
+
+    const int32_t dataSize = 6;
+    int32_t leftData11[dataSize] = {0, 1, 2, 3, 4, 5};
+    double leftData12[dataSize] = {0.0, 1.1, 2.2, 3.3, 4.4, 5.5};
+    int64_t leftData33[dataSize] = {0, 1, 2, 3, 4, 5};
+    float leftData13[dataSize] = {0.0, 1.1, 2.2, 3.3, 4.4, 5.5};
+
+    VectorBatch *leftVecBatch = CreateVectorBatch(leftSourceTypes, dataSize, leftData11, leftData12, leftData33, leftData13);
+    leftPagesIndex->AddVecBatch(leftVecBatch);
+    std::vector<DataTypePtr> leftTableOutputTypes { IntType(), DoubleType(), LongType(), FloatType() };
+    int32_t leftTableOutputCols[4] = {0, 1, 2, 3};
+    int32_t leftTableOutputColsCount = 4;
+
+    int32_t rightData11[dataSize] = {5, 4, 3, 2, 1, 0};
+    double rightData12[dataSize] = {5.5, 4.4, 3.3, 2.2, 1.1, 0.0};
+    std::string rightData1_3[dataSize] = {"555", "444", "33", "22", "1", "0"};
+
+    VectorBatch *rightVecBatch = CreateVectorBatch(rightSourceTypes, dataSize, rightData11, rightData12, rightData1_3);
+    rightPagesIndex->AddVecBatch(rightVecBatch);
+    std::vector<DataTypePtr> rightTableOutputTypes { DoubleType(), VarcharType(3) };
+    int32_t rightTableOutputCols[2] = {1, 2};
+    int32_t rightTableOutputColsCount = 2;
+    string filter = "{\"exprType\":\"BINARY\",\"returnType\":4,\"operator\":\"GREATER_THAN\",\"left\":{\"exprType\":"
+                    "\"FIELD_REFERENCE\",\"dataType\":1,\"colVal\":0},\"right\":{\"exprType\":\"LITERAL\",\"dataType\":"
+                    "1,\"isNull\":false,\"value\":1}}";
+
+    auto *resultBuilder = new JoinResultBuilder(leftTableOutputTypes, leftTableOutputCols, leftTableOutputColsCount,
+                                                leftSourceTypes.GetSize(), leftPagesIndex, rightTableOutputTypes, rightTableOutputCols,
+                                                rightTableOutputColsCount, rightSourceTypes.GetSize(), rightPagesIndex, filter, OMNI_JOIN_TYPE_INNER, nullptr);
+
+    std::vector<int8_t> isPreMatched;
+    isPreMatched.insert(isPreMatched.end(), 3, 0);
+    std::vector<int64_t> leftAddress1 = { static_cast<int64_t>(EncodeSyntheticAddress(0, 1)),
+                                          static_cast<int64_t>(EncodeSyntheticAddress(0, 3)), static_cast<int64_t>(EncodeSyntheticAddress(0, 5)) };
+    std::vector<int64_t> rightAddress1 = { static_cast<int64_t>(EncodeSyntheticAddress(0, 0)),
+                                           static_cast<int64_t>(EncodeSyntheticAddress(0, 2)), static_cast<int64_t>(EncodeSyntheticAddress(0, 4)) };
+
+    std::vector<int8_t> isSameKey;
+    std::vector<int64_t> &builderBufferedAddress = resultBuilder->GetBufferedTableValueAddresses();
+    std::vector<int64_t> &builderStreamedAddress = resultBuilder->GetStreamedTableValueAddresses();
+    std::vector<int8_t> &builderIsPreMatched = resultBuilder->GetPreKeyMatched();
+    builderIsPreMatched.insert(builderIsPreMatched.end(), isPreMatched.begin(), isPreMatched.end());
+    builderBufferedAddress.insert(builderBufferedAddress.end(), rightAddress1.begin(), rightAddress1.end());
+    builderStreamedAddress.insert(builderStreamedAddress.end(), leftAddress1.begin(), leftAddress1.end());
+    ASSERT_EQ(resultBuilder->AddJoinValueAddresses(), 0);
+
+    VectorBatch *outputVecBatch;
+
+    resultBuilder->GetOutput(&outputVecBatch);
+    resultBuilder->Finish();
+
+    int32_t expectedData1[2] = {3, 5};
+    double expectedData2[2] = {3.3, 5.5};
+    long expectedData5[2] = {3, 5};
+    float expectedData6[2] = {3.3, 5.5};
+    double expectedData3[2] = {3.3, 1.1};
+    string expectedData4[2] = {"33", "1"};
+
+    AssertVecBatchEquals(outputVecBatch, 6, 2, expectedData1, expectedData2, expectedData5, expectedData6,
+                         expectedData3, expectedData4);
+
+    leftPagesIndex->FreeAllRemainingVecBatch();
+    rightPagesIndex->FreeAllRemainingVecBatch();
+    delete resultBuilder;
+    delete leftPagesIndex;
+    delete rightPagesIndex;
+    VectorHelper::FreeVecBatch(outputVecBatch);
+}
+
 TEST(NativeSortMergeJoinTest, TestSortMergeJoinResultBuilderWithFilterExpr)
 {
     std::vector<DataTypePtr> leftTypes = {IntType(), DoubleType()};

@@ -109,6 +109,9 @@ public class DictionaryVec extends FixedWidthVec {
             case OMNI_DOUBLE:
                 setValue(size, (DoubleVec) vector);
                 break;
+            case OMNI_FLOAT:
+                setValue(size, (FloatVec) vector);
+                break;
             case OMNI_SHORT:
                 setValue(size, (ShortVec) vector);
                 break;
@@ -177,6 +180,14 @@ public class DictionaryVec extends FixedWidthVec {
         for (int i = 0; i < size; i++) {
             if (!vector.isNull(i)) {
                 vector.set(i, getDouble(i));
+            }
+        }
+    }
+
+    private void setValue(int size, FloatVec vector) {
+        for (int i = 0; i < size; i++) {
+            if (!vector.isNull(i)) {
+                vector.set(i, getFloat(i));
             }
         }
     }
@@ -271,6 +282,11 @@ public class DictionaryVec extends FixedWidthVec {
     public double getDouble(int index) {
         int originIndex = getId(index);
         return JvmUtils.UNSAFE.getDouble(dataAddress + originIndex * Double.BYTES);
+    }
+
+    public float getFloat(int index) {
+        int originIndex = getId(index);
+        return JvmUtils.UNSAFE.getFloat(dataAddress + originIndex * Float.BYTES);
     }
 
     /**

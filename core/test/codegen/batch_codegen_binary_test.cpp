@@ -715,6 +715,75 @@ TEST(BatchCodeGenTest, DoubleArith)
     ConfigUtil::SetEnableBatchExprEvaluate(false);
 }
 
+TEST(BatchCodeGenTest, FloatArith)
+{
+    ConfigUtil::SetEnableBatchExprEvaluate(true);
+    auto *addLeft = new FieldExpr(0.0f, FloatType());
+    auto *addRight = new LiteralExpr(1.0f, FloatType());
+    auto *addExpr = new BinaryExpr(omniruntime::expressions::Operator::ADD, addLeft, addRight, FloatType());
+
+    auto *subLeft = new FieldExpr(1.0f, FloatType());
+    auto *subRight = new LiteralExpr(1.0f, FloatType());
+    auto *subExpr = new BinaryExpr(omniruntime::expressions::Operator::SUB, subLeft, subRight, FloatType());
+
+    auto *mulLeft = new FieldExpr(2.0f, FloatType());
+    auto *mulRight = new LiteralExpr(2.0f, FloatType());
+    auto *mulExpr = new BinaryExpr(omniruntime::expressions::Operator::MUL, mulLeft, mulRight, FloatType());
+
+    auto *divLeft = new FieldExpr(3.0f, FloatType());
+    auto *divRight = new LiteralExpr(2.0f, FloatType());
+    auto *divExpr = new BinaryExpr(omniruntime::expressions::Operator::DIV, divLeft, divRight, FloatType());
+
+    std::vector<Expr *> exprs = { addExpr, subExpr, mulExpr, divExpr };
+
+    const int32_t numCols = 4;
+    const int32_t numRows = 10;
+    float *col1 = new float[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col1[i] = i - 1.0;
+    }
+    float *col2 = new float[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col2[i] = i + 1.0;
+    }
+    float *col3 = new float[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col3[i] = i;
+    }
+    float *col4 = new float[numRows];
+    for (int32_t i = 0; i < numRows; i++) {
+        col4[i] = i * 2.0;
+    }
+
+    DataTypes inputTypes(std::vector<DataTypePtr>({ FloatType(), FloatType(), FloatType(), FloatType() }));
+    VectorBatch *vecBatch = CreateVectorBatch(inputTypes, numRows, col1, col2, col3, col4);
+
+    std::vector<std::unique_ptr<Projection>> projections;
+    auto filter = GenerateFilterAndProjections(nullptr, exprs, inputTypes, projections, nullptr);
+
+    int32_t numSelectedRows = numRows;
+    auto ret = FilterAndProject(filter, projections, numCols, vecBatch, numSelectedRows, inputTypes);
+
+    for (int32_t i = 0; i < numRows; i++) {
+        float val0 = (reinterpret_cast<Vector<float> *>(ret->Get(0)))->GetValue(i);
+        EXPECT_EQ(val0, i);
+        float val1 = (reinterpret_cast<Vector<float> *>(ret->Get(1)))->GetValue(i);
+        EXPECT_EQ(val1, i);
+        float val2 = (reinterpret_cast<Vector<float> *>(ret->Get(2)))->GetValue(i);
+        EXPECT_EQ(val2, i * 2.0);
+        float val3 = (reinterpret_cast<Vector<float> *>(ret->Get(3)))->GetValue(i);
+        EXPECT_EQ(val3, i);
+    }
+    Expr::DeleteExprs(exprs);
+    VectorHelper::FreeVecBatch(vecBatch);
+    VectorHelper::FreeVecBatch(ret);
+    delete[] col1;
+    delete[] col2;
+    delete[] col3;
+    delete[] col4;
+    ConfigUtil::SetEnableBatchExprEvaluate(false);
+}
+
 TEST(BatchCodeGenTest, Decimal64Arith1)
 {
     ConfigUtil::SetEnableBatchExprEvaluate(true);

@@ -27,6 +27,7 @@ import nova.hetu.omniruntime.vector.OmniBuffer;
 import nova.hetu.omniruntime.vector.OmniBufferFactory;
 import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.FloatVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecEncoding;
@@ -283,6 +284,9 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 break;
             case OMNI_BOOLEAN:
                 vec = new BooleanVec(vecSize);
+                break;
+            case OMNI_FLOAT:
+                vec = new FloatVec(vecSize);
                 break;
             case OMNI_DOUBLE:
                 vec = new DoubleVec(vecSize);

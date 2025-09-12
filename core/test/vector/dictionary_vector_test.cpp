@@ -295,6 +295,32 @@ TEST(DictionaryVector, Decimal128)
     delete dictVec;
 }
 
+TEST(DictionaryVector, Float)
+{
+    int32_t dicSize = 10;
+    int32_t valueSize = 100;
+    auto *values = new int32_t[valueSize];
+    for (int32_t i = 0; i < valueSize; ++i) {
+        values[i] = i % dicSize;
+    }
+
+    auto originVec = std::make_unique<Vector<float>>(dicSize);
+    for (int32_t j = 0; j < dicSize; ++j) {
+        auto val = float(j * j);
+        originVec->SetValue(j, val);
+    }
+
+    auto dictVecPtr = VectorHelper::CreateDictionary(values, valueSize, originVec.get());
+    auto *dictVec = reinterpret_cast<Vector<DictionaryContainer<float>> *>(dictVecPtr);
+
+    for (int32_t index = 0; index < valueSize; ++index) {
+        auto value = dictVec->GetValue(index);
+        EXPECT_EQ(value, originVec->GetValue(index % dicSize));
+    }
+    delete[] values;
+    delete dictVec;
+}
+
 TEST(DictionaryVector, testNullFlag)
 {
     int32_t dicSize = 10;

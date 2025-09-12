@@ -43,6 +43,7 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_BOOLEAN:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
+        case OMNI_FLOAT:
         case OMNI_ROW:
             this->supportedFlag = true;
             break;
@@ -68,6 +69,7 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
         case OMNI_ROW:
+        case OMNI_FLOAT:
             this->supportedFlag = true;
             break;
         default:
@@ -120,7 +122,8 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
 
     if (binaryExpr.left->GetReturnTypeId() == OMNI_BYTE ||binaryExpr.left->GetReturnTypeId() == OMNI_SHORT ||
         binaryExpr.left->GetReturnTypeId() == OMNI_INT || binaryExpr.left->GetReturnTypeId() == OMNI_LONG ||
-        binaryExpr.left->GetReturnTypeId() == OMNI_DATE32 || binaryExpr.left->GetReturnTypeId() == OMNI_DOUBLE) {
+        binaryExpr.left->GetReturnTypeId() == OMNI_DATE32 || binaryExpr.left->GetReturnTypeId() == OMNI_DOUBLE ||
+        binaryExpr.left->GetReturnTypeId() == OMNI_FLOAT) {
         this->supportedFlag = true;
         return;
     } else if (TypeUtil::IsStringType(binaryExpr.left->GetReturnTypeId()) ||

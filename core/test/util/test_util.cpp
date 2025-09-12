@@ -425,6 +425,16 @@ void AssertDoubleVectorEquals(BaseVector *vector, double *expectedValues)
     }
 }
 
+void AssertFloatVectorEquals(BaseVector *vector, float *expectedValues)
+{
+    for (int32_t i = 0; i < vector->GetSize(); i++) {
+        if (vector->IsNull(i)) {
+            continue;
+        }
+        EXPECT_TRUE(std::fabs(static_cast<Vector<float> *>(vector)->GetValue(i) - expectedValues[i]) <= DBL_EPSILON);
+    }
+}
+
 void AssertVarcharVectorEquals(BaseVector *vector, std::string *expectedValues)
 {
     for (int32_t i = 0; i < vector->GetSize(); i++) {
@@ -517,6 +527,9 @@ void AssertVecBatchEquals(VectorBatch *vectorBatch, int32_t expectedVecCount, in
                 break;
             case omniruntime::type::OMNI_DOUBLE:
                 AssertDoubleVectorEquals(vector, va_arg(args, double *));
+                break;
+            case omniruntime::type::OMNI_FLOAT:
+                AssertFloatVectorEquals(vector, va_arg(args, float *));
                 break;
             case omniruntime::type::OMNI_BOOLEAN:
                 AssertVectorEquals<bool>(vector, va_arg(args, bool *));
@@ -843,6 +856,10 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
         }
         case OMNI_DOUBLE: {
             isMatched = CompareUnorderedRows<double, double>(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_FLOAT: {
+            isMatched = CompareUnorderedRows<float, float>(resultVector, expectedVector, error);
             break;
         }
         case OMNI_LONG:

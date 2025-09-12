@@ -62,6 +62,8 @@ public class VecFactory {
                 return new LongVec(nativeVector);
             case OMNI_DOUBLE:
                 return new DoubleVec(nativeVector);
+            case OMNI_FLOAT:
+                return new FloatVec(nativeVector);
             case OMNI_SHORT:
                 return new ShortVec(nativeVector);
             case OMNI_BYTE:
@@ -134,6 +136,8 @@ public class VecFactory {
             case OMNI_DATE64:
             case OMNI_DECIMAL64:
                 return new LongVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
+            case OMNI_FLOAT:
+                return new FloatVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_DOUBLE:
                 return new DoubleVec(nativeVector, nativeVectorValueBufAddress, nativeVectorNullBufAddress, size);
             case OMNI_SHORT:
@@ -172,6 +176,8 @@ public class VecFactory {
                 return new LongVec(size);
             case OMNI_DOUBLE:
                 return new DoubleVec(size);
+            case OMNI_FLOAT:
+                return new FloatVec(size);
             case OMNI_SHORT:
                 return new ShortVec(size);
             case OMNI_BYTE:

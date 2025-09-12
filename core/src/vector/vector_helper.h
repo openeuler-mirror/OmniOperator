@@ -279,6 +279,9 @@ public:
             case type::OMNI_DOUBLE: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<double> *>(vector));
             }
+            case type::OMNI_FLOAT: {
+                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<float> *>(vector));
+            }
             case type::OMNI_BOOLEAN: {
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<bool> *>(vector));
             }
@@ -325,6 +328,10 @@ public:
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
                     reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)));
+            }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
+                    reinterpret_cast<Vector<DictionaryContainer<float>> *>(vector)));
             }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
@@ -377,6 +384,10 @@ public:
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<double> *>(vector)));
+            }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<void *>(
+                        unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<float> *>(vector)));
             }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<void *>(
@@ -442,6 +453,9 @@ public:
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)->Slice(positionOffset, length);
             }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<Vector<DictionaryContainer<float>> *>(vector)->Slice(positionOffset, length);
+            }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)->Slice(positionOffset, length);
             }
@@ -497,6 +511,9 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<double> *>(vector)->Slice(positionOffset, length);
+            }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<Vector<float> *>(vector)->Slice(positionOffset, length);
             }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<bool> *>(vector)->Slice(positionOffset, length);
@@ -555,6 +572,10 @@ public:
                 return reinterpret_cast<Vector<DictionaryContainer<double>> *>(vector)->CopyPositions(positions, offset,
                     length);
             }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<Vector<DictionaryContainer<float>> *>(vector)->CopyPositions(positions, offset,
+                    length);
+            }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<DictionaryContainer<bool>> *>(vector)->CopyPositions(positions, offset,
                     length);
@@ -597,6 +618,9 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 return reinterpret_cast<Vector<double> *>(vector)->CopyPositions(positions, offset, length);
+            }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<Vector<float> *>(vector)->CopyPositions(positions, offset, length);
             }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<Vector<bool> *>(vector)->CopyPositions(positions, offset, length);
@@ -651,6 +675,10 @@ public:
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
                     static_cast<Vector<DictionaryContainer<double>> *>(vector)));
             }
+            case type::OMNI_FLOAT: {
+                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
+                    static_cast<Vector<DictionaryContainer<float>> *>(vector)));
+            }
             case type::OMNI_BOOLEAN: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
                     static_cast<Vector<DictionaryContainer<bool>> *>(vector)));
@@ -699,6 +727,10 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 reinterpret_cast<Vector<double> *>(destVector)->Append(srcVector, offset, length);
+                break;
+            }
+            case type::OMNI_FLOAT: {
+                reinterpret_cast<Vector<float> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
             case type::OMNI_BOOLEAN: {
@@ -807,6 +839,9 @@ public:
             case type::OMNI_DOUBLE: {
                 return DecodeFlatDictionaryVector<double>(vector);
             }
+            case type::OMNI_FLOAT: {
+                return DecodeFlatDictionaryVector<float>(vector);
+            }
             case type::OMNI_BOOLEAN: {
                 return DecodeFlatDictionaryVector<bool>(vector);
             }
@@ -895,6 +930,10 @@ public:
             }
             case type::OMNI_DOUBLE: {
                 CopyFlatVector<double>(destVector, srcVector, offset, length);
+                break;
+            }
+            case type::OMNI_FLOAT: {
+                CopyFlatVector<float>(destVector, srcVector, offset, length);
                 break;
             }
             case type::OMNI_BOOLEAN: {

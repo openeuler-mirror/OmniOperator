@@ -80,6 +80,8 @@ std::shared_ptr<omniruntime::type::DataType> TimestampType();
 
 std::shared_ptr<omniruntime::type::DataType> DoubleType();
 
+std::shared_ptr<omniruntime::type::DataType> FloatType();
+
 std::shared_ptr<omniruntime::type::DataType> BooleanType();
 
 std::shared_ptr<omniruntime::type::DataType> VarcharType();

@@ -76,6 +76,11 @@ template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DOUBLE> {
     using vector = vec::Vector<type>;
     using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
 };
+template <> struct NativeAndVectorType<type::DataTypeId::OMNI_FLOAT> {
+    using type = float;
+    using vector = vec::Vector<type>;
+    using dictVector = vec::Vector<vec::DictionaryContainer<type>>;
+};
 template <> struct NativeAndVectorType<type::DataTypeId::OMNI_DECIMAL64> {
     using type = int64_t;
     using vector = vec::Vector<type>;

@@ -141,6 +141,12 @@ LiteralExpr::LiteralExpr(double val, DataTypePtr dt)
     doubleVal = val;
 }
 
+LiteralExpr::LiteralExpr(float val, DataTypePtr dt)
+{
+    dataType = std::move(dt);
+    floatVal = val;
+}
+
 LiteralExpr::LiteralExpr(std::string *val, DataTypePtr dt)
 {
     dataType = std::move(dt);

@@ -34,6 +34,8 @@ extern "C" DLLEXPORT void FillInt64(int64_t *dataArray, bool *nullArray, int64_t
 
 extern "C" DLLEXPORT void FillDouble(double *dataArray, bool *nullArray, double literal, bool isNull, int32_t rowCnt);
 
+extern "C" DLLEXPORT void FillFloat(float *dataArray, bool *nullArray, float literal, bool isNull, int32_t rowCnt);
+
 extern "C" DLLEXPORT void FillDecimal128(Decimal128 *dataArray, bool *nullArray, __int128_t literal, bool isNull,
     int32_t rowCnt);
 
@@ -71,6 +73,8 @@ extern "C" DLLEXPORT void CopyInt32(int32_t *dataArray, int32_t *output, int32_t
 extern "C" DLLEXPORT void CopyInt64(int64_t *dataArray, int64_t *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void CopyDouble(double *dataArray, double *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void CopyFloat(float *dataArray, float *output, int32_t rowCnt);
 
 extern "C" DLLEXPORT void CopyDecimal128(Decimal128 *dataArray, Decimal128 *output, int32_t rowCnt);
 

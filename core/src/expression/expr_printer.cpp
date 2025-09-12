@@ -104,6 +104,12 @@ std::string GetDoubleValOutput(const LiteralExpr &e)
     return output;
 }
 
+std::string GetFloatValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.floatVal);
+    return output;
+}
+
 std::string GetCharValOutput(const LiteralExpr &e)
 {
     string output = "Literal:";
@@ -236,6 +242,9 @@ void ExprPrinter::Visit(const LiteralExpr &e)
             break;
         case OMNI_DOUBLE:
             output += GetDoubleValOutput(e);
+            break;
+        case OMNI_FLOAT:
+            output += GetFloatValOutput(e);
             break;
         case OMNI_CHAR:
             output += GetCharValOutput(e);

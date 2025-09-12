@@ -65,6 +65,40 @@ extern "C" DLLEXPORT void BatchNormalizeNaNAndZero(double *input, bool *isAnyNul
 
 extern "C" DLLEXPORT void BatchPowerDouble(double *base, double *exponent, double *output, int32_t rowCnt);
 
+
+// float functions
+extern "C" DLLEXPORT void BatchCastFloatToInt32HalfUp(float *x, bool *resIsNull, int32_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastFloatToInt64HalfUp(float *x, bool *resIsNull, int64_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastFloatToInt32Down(float *x, bool *resIsNull, int32_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchCastFloatToInt64Down(float *x, bool *resIsNull, int64_t *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchAddFloat(float *left, float *right, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchSubtractFloat(float *left, float *right, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchMultiplyFloat(float *left, float *right, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchDivideFloat(float *left, float *right, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchModulusFloat(float *left, float *right, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchLessThanFloat(float *left, float *right, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchLessThanEqualFloat(float *left, float *right, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreaterThanFloat(float *left, float *right, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchGreaterThanEqualFloat(float *left, float *right, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchEqualFloat(float *left, float *right, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchNotEqualFloat(float *left, float *right, bool *output, int32_t rowCnt);
+
+extern "C" DLLEXPORT void BatchPowerFloat(float *base, float *exponent, float *output, int32_t rowCnt);
+
 // long functions
 extern "C" DLLEXPORT void BatchAddInt64(int64_t *left, int64_t *right, int32_t rowCnt);
 

@@ -104,6 +104,7 @@ public:
     int32_t intVal = 0;
     int64_t longVal = 0;
     double doubleVal = 0;
+    float floatVal = 0;
     std::string *stringVal = nullptr;
 
     LiteralExpr();
@@ -114,6 +115,7 @@ public:
     explicit LiteralExpr(int32_t val, DataTypePtr colType, bool isNull = false);
     explicit LiteralExpr(int64_t val, DataTypePtr colType);
     explicit LiteralExpr(double val, DataTypePtr colType);
+    explicit LiteralExpr(float val, DataTypePtr colType);
     explicit LiteralExpr(std::string *val, DataTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;

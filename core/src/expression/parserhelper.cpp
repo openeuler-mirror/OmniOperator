@@ -87,6 +87,8 @@ DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
             return std::make_shared<TimestampDataType>();
         case OMNI_DOUBLE:
             return std::make_shared<DoubleDataType>();
+        case OMNI_FLOAT:
+            return std::make_shared<FloatDataType>();
         case OMNI_DECIMAL64:
             precision = jsonExpr["precision"].get<int32_t>();
             scale = jsonExpr["scale"].get<int32_t>();
