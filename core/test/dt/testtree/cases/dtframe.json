@@ -1,0 +1,47 @@
+{
+	"METADATA": {
+		"description": "OmniOperator DT case",
+		"version": "1.9.0",
+		"author": "",
+		"date": "2023-06-01"
+	},
+	"DATA": [
+		{
+			"FuzzData": {
+				"shortValue": 0,
+				"intValue": 0,
+				"longValue": 0,
+				"boolValue": 0,
+				"doubleValue": 0,
+				"highBits": 0,
+				"lowBits": 0,
+				"strValue": {
+					"initValue": "str",
+					"maxLen": 65536
+				}
+			},
+			"loopCount": 20,
+			"filterExpr": {
+				"initValue": "str",
+				"maxLen": 65536
+			},
+			"opCnt": 1,
+			"chooseFunc": {
+				"initValue": 0,
+				"mutable": false
+			}
+		}
+	],
+	"TEST": [
+		{
+			"SUITE_NAME": "suite-01",
+			"CASES": [
+				{
+					"id": "case1",
+					"apiName": "GlobalFuzz($FuzzData, $loopCount, $filterExpr, $opCnt, $chooseFunc)",
+					"exeMode": "fuzz"
+				}
+			]
+		}
+	]
+}

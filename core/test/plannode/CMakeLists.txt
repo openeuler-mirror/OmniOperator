@@ -1,0 +1,6 @@
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR} PLAN_NODE_TESTS_LIST)
+set(PLAN_NODE_TEST_TARGET planNodeTest)
+
+add_library(${PLAN_NODE_TEST_TARGET} ${PLAN_NODE_TESTS_LIST})
+
+target_link_libraries(${PLAN_NODE_TEST_TARGET} ${OMNI_OPERATOR_SO})

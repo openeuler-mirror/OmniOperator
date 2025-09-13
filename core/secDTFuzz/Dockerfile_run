@@ -1,0 +1,1 @@
+FROM swr.cn-east-204-dev.myhuaweicloud.com/compute-fuzz-secdtfuzz/boostkit_openeuler_arm_20220424_new:v_omni_operator_10.0

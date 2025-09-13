@@ -1,0 +1,4 @@
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR} FUNCTION_TESTS_LIST)
+set(FUNCTION_TESTS_TARGET functest)
+add_library(${FUNCTION_TESTS_TARGET} ${FUNCTION_TESTS_LIST})
+target_include_directories(${FUNCTION_TESTS_TARGET} PUBLIC ${SOURCE_ROOT}/test)
