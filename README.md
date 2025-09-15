@@ -1,37 +1,45 @@
-# OmniOperator
+# OmniOperatorJIT
+OmniRuntime技术项目转产品化项目
 
-#### 介绍
-OmniOperator operator acceleration is implemented using native code (C/C++) to optimize big data SQL operators.
+##Welcome to OmniRuntime!
+### Overview
+The OmniRuntime is designed to
 
-#### 软件架构
-软件架构说明
+* Fast OmniRuntime data exchange, potential via TCP/UPD/RDMA to directly and efficiently transfer vectors into the memory
+* Support inter-language zero-copy
+* SIMD optimization via Weld/LLVM
+
+The OmniRuntime is library used to implement higher level data analytics logics
+
+#### OMVector - 
+The OmniRuntime provides c/c++ interface similar to `vector` with Java binding using JNI. The `OMVector` also provides SIMD enabled
+operations called 'in-situ operation', which normally takes another `vector` as parameter. For scalar parameters, it will be
+a `vector` with single value.
+
+We try to allocate the memory needed for the vector in continuous space as much as possible. Not requiring all
+elements stored in continuous memory space allows us to expand the `vectors` when needed. Separated allocated 
+memory spaces are referred to as `chunk`, which is the smallest unit of operator for allocation and de-allocation.
+
+To enable fast computation, the `vector` stores metadata such as `min`/`max`/`average`/`sum`/`bitmap`, this will help with
+aggregation and locating a specific element in the `vector`. The `vector` will also keep track of the `last used timestamp` of the chunks
+in the `vector`. 
+
+#### OMCache
+OmniRuntime will also provide a `OMCache` API which keep tracks of all the loaded `OMVector`. The OMCache also maintains the mapping between 
+the `OMVector` and the `Table`, e.g. the schema informtion to support SQL alike operations
 
 
-#### 安装教程
+#### Transport
+TO BE ADDED
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+#### Java Binding
+MORE DETAILS TO BE ADDED
 
-#### 使用说明
-
-1.  xxxx
-2.  xxxx
-3.  xxxx
-
-#### 参与贡献
-
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+##### Vector - the base java class
+##### LongVector - long data type
+##### VarcharVector - variable length string
+...
 
 
-#### 特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+### Getting Started
+We provide the guidance to help developers setup and install OmniRuntime. See [building OmniRuntime](./BUILDING.MD).

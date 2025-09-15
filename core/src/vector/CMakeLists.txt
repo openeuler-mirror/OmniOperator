@@ -1,0 +1,21 @@
+file(GLOB_RECURSE VECTOR_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
+set(VEC_TARGET ${OMNI_VECTOR_SO})
+
+add_library(${VEC_TARGET} SHARED ${VECTOR_LIST})
+target_link_libraries(${VEC_TARGET} PRIVATE -Wl,--whole-archive memory type -Wl,--no-whole-archive securec util pthread)
+target_include_directories(${VEC_TARGET} PUBLIC ${SOURCE_ROOT}/src/util)
+
+install(TARGETS ${VEC_TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+file(GLOB VECTOR_HEAD_FILES ${SOURCE_ROOT}/src/vector/*.h)
+install(FILES ${VECTOR_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vector)
+file(GLOB MEMORY_HEAD_FILES ${SOURCE_ROOT}/src/memory/*.h)
+install(FILES ${MEMORY_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/memory)
+file(GLOB UTIL_HEAD_FILES ${SOURCE_ROOT}/src/util/*.h)
+install(FILES ${UTIL_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/util)
+file(GLOB CONFIG_HEAD_FILES ${SOURCE_ROOT}/src/util/config/*.h)
+install(FILES ${CONFIG_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/util/config)
+install(FILES ${SOURCE_ROOT}/config.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
+file(GLOB DATA_TYPE_HEAD_FILES ${SOURCE_ROOT}/src/type/*.h)
+install(FILES ${DATA_TYPE_HEAD_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/type)
+install(FILES ${SOURCE_ROOT}/src/operator/aggregation/container_vector.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/operator/aggregation)

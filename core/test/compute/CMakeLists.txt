@@ -1,0 +1,6 @@
+aux_source_directory(${CMAKE_CURRENT_LIST_DIR} COMPUTE_TESTS_LIST)
+set(COMPUTE_TEST_TARGET computeTest)
+
+add_library(${COMPUTE_TEST_TARGET} ${COMPUTE_TESTS_LIST})
+
+target_link_libraries(${COMPUTE_TEST_TARGET} ${OMNI_OPERATOR_SO})
