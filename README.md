@@ -84,8 +84,7 @@ https://www.hikunpeng.com/document/detail/zh/kunpengbds/appAccelFeatures/sqlquer
 
 # 许可证书
 
-**若是参与开源，参考上游社区所用开源协议，在代码仓根目录下放置LICENSE文件。
-若是主导开源，则自行决定开源协议类型，然后同样代码仓根目录下放置LICENSE文件**
+https://www.apache.org/licenses/LICENSE-2.0
 
 # 参考文档
 
