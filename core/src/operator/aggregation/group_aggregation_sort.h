@@ -46,6 +46,16 @@ public:
         kv.value = value;
     }
 
+    template<typename T>
+    void ParseNullHashMapToVector(const T &key, AggregateState *value, size_t groupIndex)
+    {
+        auto &kv = kvVec[groupIndex];
+        kvString[groupIndex] = std::to_string(key);
+        kv.keyAddr = const_cast<char *>(kvString[groupIndex].c_str());
+        kv.keyLen = 0;
+        kv.value = value;
+    }
+
     void ClearVector()
     {
         kvVec.clear();
