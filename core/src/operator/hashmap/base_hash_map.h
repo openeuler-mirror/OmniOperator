@@ -629,6 +629,11 @@ public:
     void Reset()
     {
         elementsSize = 0;
+        if (nullSlot != nullptr) {
+            nullSlot->~Slot();
+            allocator.Release(reinterpret_cast<uint8_t *>(nullSlot), sizeof(Slot));
+            nullSlot = nullptr;
+        }
         memset_sp(identifiers, sizeof(ctrl_t) * capacity, kEmpty, sizeof(ctrl_t) * capacity);
         memset_sp(identifiers + capacity, sizeof(ctrl_t) * Group::kWidth, kSentinel, sizeof(ctrl_t) * Group::kWidth);
         memset_sp(slotsAddress, sizeof(Slot) * capacity, 0, sizeof(Slot) * capacity);
