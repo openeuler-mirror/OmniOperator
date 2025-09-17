@@ -21,6 +21,7 @@
 #include <operator/aggregation/non_group_aggregation_expr.h>
 #include "operator/expand/expand.h"
 #include "operator/grouping/grouping.h"
+#include "operator/unnest/unnest.h"
 
 namespace omniruntime::compute {
 
@@ -86,6 +87,8 @@ OperatorFactory* createOperatorFactory(
         return CreateExpandOperatorFactory(expandNode, queryConfig);
     } else if (auto groupingNode = std::dynamic_pointer_cast<const GroupingNode>(planNode)) {
         return GroupingOperatorFactory::CreateGroupingOperatorFactory(groupingNode, queryConfig);
+    } else if (auto unnestNode = std::dynamic_pointer_cast<const UnnestNode>(planNode)) {
+        return UnnestOperatorFactory::CreateUnnestOperatorFactory(unnestNode);
     } else {
         throw omniruntime::exception::OmniException(
             "PLANNODE_NOT_SUPPORT", "The plannode is not supported yet." + planNode->Id());

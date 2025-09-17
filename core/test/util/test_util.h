@@ -19,6 +19,7 @@
 #include "type/data_type.h"
 #include "vector/vector_helper.h"
 #include "vector/large_string_container.h"
+#include "vector/array_vector.h"
 
 namespace omniruntime::TestUtil {
 using namespace omniruntime::expressions;
@@ -31,6 +32,9 @@ bool VecBatchesIgnoreOrderMatch(std::vector<omniruntime::vec::VectorBatch *> &re
 bool ColumnMatch(vec::BaseVector *actualColumn, vec::BaseVector *expectColumn);
 
 vec::VectorBatch *CreateVectorBatch(const type::DataTypes &types, int32_t rowCount, ...);
+
+vec::VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<std::vector<int32_t>> &offsets,
+    int32_t dataSize, int32_t elementSize, ...);
 
 omniruntime::vec::BaseVector *CreateVector(type::DataType &dataType, int32_t rowCount, va_list &args);
 
