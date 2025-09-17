@@ -214,6 +214,16 @@ FieldExpr::FieldExpr(int32_t colIdx, DataTypePtr colType, int32_t oridinal, Expr
     this->input = input;
 }
 
+bool FieldExpr::FieldIsArray()
+{
+    return (dataType->GetId() == DataTypeId::OMNI_ARRAY);
+}
+
+bool FieldExpr::FieldIsMap()
+{
+    return (dataType->GetId() == DataTypeId::OMNI_MAP);
+}
+
 BinaryExpr::BinaryExpr()
 {
     dataType = BooleanType();

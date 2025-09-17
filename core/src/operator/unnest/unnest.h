@@ -1,0 +1,85 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ */
+#ifndef __UNNEST_H__
+#define __UNNEST_H__
+
+#include <string_view>
+#include "plannode/planNode.h"
+#include "operator/operator.h"
+#include "operator/operator_factory.h"
+#include "util/omni_exception.h"
+
+namespace omniruntime {
+namespace op {
+
+struct IdentityProjection {
+    IdentityProjection(uint32_t _inputChannel, uint32_t _outputChannel)
+        : inputChannel(_inputChannel), outputChannel(_outputChannel) {}
+
+    const uint32_t inputChannel;
+    const uint32_t outputChannel;
+};
+
+class UnnestOperatorFactory : public OperatorFactory {
+public:
+    explicit UnnestOperatorFactory(std::shared_ptr<const UnnestNode> planNode) : planNode_(planNode) {}
+
+    static UnnestOperatorFactory *CreateUnnestOperatorFactory(std::shared_ptr<const UnnestNode> planNode);
+
+    Operator *CreateOperator() override;
+private:
+    std::shared_ptr<const UnnestNode> planNode_;
+};
+
+class UnnestOperator : public Operator {
+public:
+    explicit UnnestOperator(std::shared_ptr<const UnnestNode> planNode);
+
+    ~UnnestOperator() override = default;
+
+    int32_t AddInput(omniruntime::vec::VectorBatch *vecBatch) override;
+
+    int32_t GetOutput(omniruntime::vec::VectorBatch **resultVecBatch) override;
+
+    OmniStatus Close() override;
+
+private:
+    // Generate output for 'size' input rows starting from 'start' input row.
+    // @param start First input row to include in the output.
+    // @param size Number of input rows to include in the output.
+    // @param outputSize Pre-computed number of output rows.
+    void generateOutput(int32_t numElements, omniruntime::vec::VectorBatch *vecBatch);
+
+    void generateRepeatedColumns(int32_t numElements, omniruntime::vec::VectorBatch *vecBatch,
+                                 omniruntime::vec::VectorBatch* resultVecBatch);
+    void generateUnrepeatedColumns(int32_t numElements, omniruntime::vec::VectorBatch *vecBatch,
+                                   omniruntime::vec::VectorBatch* resultVecBatch);
+
+    template<typename VectorType>
+    void generateRepeatedValues(VectorType* inputVector, VectorType* outputVector);
+
+    void generateArrayRepeatedValues(omniruntime::vec::BaseVector* inputVector,
+                                     omniruntime::vec::BaseVector* outputVector);
+
+    template<typename VectorType>
+    void generateArrayRepeatedValuesBase(int32_t inputSize, omniruntime::vec::ArrayVector* inputVector,
+                                         omniruntime::vec::ArrayVector* outputVector,
+                                         VectorType* inputElementVector, VectorType* outputElementVector);
+
+    template<typename VectorType>
+    void generateUnrepeatedValues(omniruntime::vec::BaseVector* inputVector,
+                                  VectorType* elementVector, VectorType* outputVector);
+
+    std::vector<int32_t> rawMaxSizes_;
+
+    std::vector<uint32_t> unnestChannels_;
+    std::vector<IdentityProjection> identityProjections_;
+
+    vec::VectorBatch *outputVecBatch;
+    int32_t outputTypeSize_;
+};
+}
+}
+
+#endif // __UNNEST_H__

@@ -37,11 +37,11 @@ struct PlanFragment {
     }
 
     PlanFragment(
-        std::shared_ptr<const PlanNode> topNode,
+        std::shared_ptr<const PlanNode> node,
         ExecutionStrategy strategy,
         int numberOfSplitGroups,
         const std::unordered_set<PlanNodeId> &groupedExecLeafNodeIds)
-        : planNode(std::move(topNode)),
+        : planNode(std::move(node)),
           executionStrategy(strategy),
           numSplitGroups(numberOfSplitGroups)
     {

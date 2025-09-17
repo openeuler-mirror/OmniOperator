@@ -165,6 +165,14 @@ bool ColumnMatch(BaseVector *actualColumn, BaseVector *expectColumn)
                     return false;
                 }
             }
+        } else if (typeId == OMNI_ARRAY) {
+            auto actualElementVector = static_cast<ArrayVector *>(actualColumn)->GetElementVector();
+            auto expectElementVector = static_cast<ArrayVector *>(expectColumn)->GetElementVector();
+            result =
+                ColumnMatch(reinterpret_cast<BaseVector *>(actualElementVector.get()), reinterpret_cast<BaseVector *>(expectElementVector.get()));
+            if (!result) {
+                return false;
+            }
         } else {
             result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, typeId, actualColumn, expectColumn, rowIndex);
             if (!result) {
@@ -185,6 +193,26 @@ VectorBatch *CreateVectorBatch(const DataTypes &types, int32_t rowCount, ...)
     for (int32_t i = 0; i < typesCount; i++) {
         auto &type = types.GetType(i);
         vectorBatch->Append(CreateVector(*type, rowCount, args));
+    }
+    va_end(args);
+    return vectorBatch;
+}
+
+VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<std::vector<int32_t>> &offsets,
+    int32_t dataSize, int32_t elementSize, ...)
+{
+    int32_t typesCount = types.GetSize();
+    auto *vectorBatch = new VectorBatch(elementSize);
+    va_list args;
+    va_start(args, elementSize);
+    for (int32_t i = 0; i < typesCount; i++) {
+        auto &type = types.GetType(i);
+        auto elementVector = std::make_shared<BaseVector>(CreateVector(*type, elementSize, args));
+        auto *arrayVector = new ArrayVector(dataSize, elementVector);
+        for (size_t j = 0; j < offsets.size(); j++) {
+            arrayVector->SetOffset(j, offsets[i][j]);
+        }
+        vectorBatch->Append(arrayVector);
     }
     va_end(args);
     return vectorBatch;

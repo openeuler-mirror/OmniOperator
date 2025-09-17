@@ -153,6 +153,9 @@ public:
     {
         return this->dataType->GetId() == OMNI_ROW || this->dataType->GetId() == OMNI_VARCHAR || this->dataType->GetId() == OMNI_MAP ;
     }
+
+    bool FieldIsArray();
+    bool FieldIsMap();
 };
 
 class UnaryExpr : public Expr {

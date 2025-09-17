@@ -923,4 +923,52 @@ private:
     const std::vector<PlanNodePtr> sources_;
     DataTypesPtr outputType_;
 };
+
+/// Expands arrays and maps into separate columns. Arrays are expanded into a
+/// single column, and maps are expanded into two columns (key, value). Can be
+/// used to expand multiple columns. In this case will produce as many rows as
+/// the highest cardinality array or map (the other columns are padded with
+/// nulls). Optionally can produce an ordinality column that specifies the row
+/// number starting with 1.
+class UnnestNode : public PlanNode {
+public:
+    /// @param replicateVariables Inputs that are projected as is
+    /// @param unnestVariables Inputs that are unnested. Must be of type ARRAY
+    /// or MAP.
+    UnnestNode(const PlanNodeId& id, std::vector<ExprPtr> replicateVariables,
+        std::vector<ExprPtr> unnestVariables, const PlanNodePtr& source)
+        : PlanNode(id), replicateVariables_(std::move(replicateVariables)),
+        unnestVariables_(std::move(unnestVariables)), sources_{source} {}
+
+    /// The order of columns in the output is: replicated columns (in the order
+    /// specified), unnested columns (in the order specified, for maps: key
+    /// comes before value), optional ordinality column.
+    const DataTypesPtr &OutputType() const override { return sources_[0]->OutputType(); }
+
+    const std::vector<PlanNodePtr>& Sources() const override
+    {
+        return sources_;
+    }
+
+    const std::vector<ExprPtr>& replicateVariables() const
+    {
+        return replicateVariables_;
+    }
+
+    const std::vector<ExprPtr>& unnestVariables() const
+    {
+        return unnestVariables_;
+    }
+
+    std::string_view Name() const override
+    {
+        return "Unnest";
+    }
+
+private:
+    const std::vector<ExprPtr> replicateVariables_;
+    const std::vector<ExprPtr> unnestVariables_;
+    const std::vector<PlanNodePtr> sources_;
+};
+
 } // namespace omniruntime
