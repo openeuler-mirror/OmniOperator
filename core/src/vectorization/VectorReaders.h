@@ -100,6 +100,45 @@ struct DicVectorReader {
     }
 };
 
+template <typename T>
+struct ConstVectorReader {
+    T value;
+    BaseVector *vector;
+
+    explicit ConstVectorReader(BaseVector *vector)
+        : vector(vector)
+    {
+        value = reinterpret_cast<ConstVector<T> *>(vector)->GetConstValue();
+    }
+
+    ~ConstVectorReader()
+    {
+        if (!vector->GetIsField()) {
+            delete vector;
+        }
+    }
+
+    T operator[](int32_t offset) const
+    {
+        return value;
+    }
+
+    T readNullFree(int32_t offset) const
+    {
+        return operator[](offset);
+    }
+
+    bool containsNull(int32_t startIndex, int32_t endIndex) const
+    {
+        for (auto index = startIndex; index < endIndex; ++index) {
+            if (containsNull(index)) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
 struct StringVectorReader {
     Vector<LargeStringContainer<std::string_view>> *vector;
 

@@ -112,11 +112,6 @@ OperatorFactory *CreateFilterOperatorFactory(
 
 int32_t FilterAndProjectOperator::AddInput(VectorBatch *vecBatch)
 {
-    if (supportVectorized) {
-        HandleVectorizedFilter(vecBatch);
-        return 0;
-    }
-
     if (vecBatch->GetRowCount() > 0) {
         projectedVecs = this->exprEvaluator->Evaluate(vecBatch, executionContext.get(), &selectedRowsBuffer);
     }

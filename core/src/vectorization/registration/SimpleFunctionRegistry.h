@@ -35,7 +35,7 @@ bool registerFunction(const std::string &name, std::vector<DataTypeId> paramsTyp
     using funcClass = Func<TReturn>;
     using holderClass = FunctionHolder<funcClass, TReturn, TArgs...>;
     auto signature = std::make_shared<FunctionSignature>(name, paramsType, returnType);
-    SimpleFunctionRegistry::functionMap_->insert(std::make_pair(signature,
+    VectorFunction::functionMap_->insert(std::make_pair(signature,
         std::make_shared<SimpleFunction<holderClass>>()));
     return true;
 }

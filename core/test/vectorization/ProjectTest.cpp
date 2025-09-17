@@ -29,11 +29,7 @@ TEST(VectorizationTest, SimpleFunction)
     auto type = std::make_shared<DataType>(OMNI_INT);
     std::vector<omniruntime::type::DataTypeId> args = {OMNI_INT, OMNI_INT};
     auto addExpr = new BinaryExpr(expressions::Operator::ADD, new FieldExpr(0, type), new FieldExpr(1, type), type);
-    auto signature = std::make_shared<FunctionSignature>("add", args, OMNI_INT);
-    addExpr->vectorFunction = SimpleFunctionRegistry::Find(signature);
-
     auto addExpr2 = new BinaryExpr(expressions::Operator::ADD, addExpr, new FieldExpr(1, type), type);
-    addExpr2->vectorFunction = SimpleFunctionRegistry::Find(signature);
 
     std::vector vecOfTypes = {IntType(), IntType()};
     DataTypes inputTypes(vecOfTypes);
@@ -46,7 +42,7 @@ TEST(VectorizationTest, SimpleFunction)
     context->SetResultRowSize(rowSize);
 
     ExprEval e(input, context);
-    e.Visit(*addExpr2);
+    e.VisitExpr(*addExpr2);
     auto result = e.GetResult();
     VectorBatch vectorBatch(rowSize);
     vectorBatch.Append(result);
@@ -83,7 +79,7 @@ TEST(VectorizationTest, AddInt)
     vectorBatch.Append(result);
     std::cout << "=== AddInt Result ===" << std::endl;
     VectorHelper::PrintVecBatch(&vectorBatch);
-    
+
     auto* resultVector = dynamic_cast<Vector<int32_t>*>(result);
     EXPECT_EQ(resultVector->GetValue(0), 4);
     EXPECT_TRUE(resultVector->IsNull(1));
@@ -117,7 +113,7 @@ TEST(VectorizationTest, SubInt)
     ExprEval e(input, context);
     e.Visit(*subExpr);
     auto result = e.GetResult();
-    
+
     VectorBatch vectorBatch(rowSize);
     vectorBatch.Append(result);
     std::cout << "=== SubInt Result ===" << std::endl;
@@ -156,7 +152,7 @@ TEST(VectorizationTest, MulInt)
     ExprEval e(input, context);
     e.Visit(*mulExpr);
     auto result = e.GetResult();
-    
+
     VectorBatch vectorBatch(rowSize);
     vectorBatch.Append(result);
     std::cout << "=== MulInt Result ===" << std::endl;
@@ -195,7 +191,7 @@ TEST(VectorizationTest, DivideInt)
     ExprEval e(input, context);
     e.Visit(*divExpr);
     auto result = e.GetResult();
-    
+
     VectorBatch vectorBatch(rowSize);
     vectorBatch.Append(result);
     std::cout << "=== DivideInt Result ===" << std::endl;
@@ -234,7 +230,7 @@ TEST(VectorizationTest, RemainderInt)
     ExprEval e(input, context);
     e.Visit(*remExpr);
     auto result = e.GetResult();
-    
+
     VectorBatch vectorBatch(rowSize);
     vectorBatch.Append(result);
     std::cout << "=== RemainderInt Result ===" << std::endl;
@@ -247,5 +243,34 @@ TEST(VectorizationTest, RemainderInt)
 
     delete input;
     delete remExpr;
+    delete context;
+}
+TEST(VectorizationTest, Filter)
+{
+    int rowSize = 3;
+    auto type = std::make_shared<DataType>(OMNI_INT);
+    std::vector<omniruntime::type::DataTypeId> args = {OMNI_INT, OMNI_INT};
+    auto addExpr = new BinaryExpr(expressions::Operator::ADD, new FieldExpr(0, type), new FieldExpr(1, type), type);
+    auto addExpr2 = new BinaryExpr(expressions::Operator::ADD, addExpr, new FieldExpr(1, type), type);
+
+    std::vector vecOfTypes = {IntType(), IntType()};
+    DataTypes inputTypes(vecOfTypes);
+    int32_t col1[rowSize] = {1, 2, 3};
+    int32_t col2[rowSize] = {3, 1, -4};
+    VectorBatch *input = CreateVectorBatch(inputTypes, rowSize, col1, col2);
+    input->Get(0)->SetNull(1);
+
+    auto context = new ExecutionContext();
+    context->SetResultRowSize(rowSize);
+
+    ExprEval e(input, context);
+    e.VisitExpr(*addExpr2);
+    auto result = e.GetResult();
+    VectorBatch vectorBatch(rowSize);
+    vectorBatch.Append(result);
+    VectorHelper::PrintVecBatch(&vectorBatch);
+
+    delete input;
+    delete addExpr2;
     delete context;
 }

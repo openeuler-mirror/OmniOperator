@@ -51,7 +51,20 @@ public:
         return resultRowSize;
     }
 
+    bool hasFilter = false;
+
+    bool *GetIsSelectRow() const
+    {
+        return isSelectRow;
+    }
+
+    void SetIsSelectRow(bool *inIsSelectRow)
+    {
+        isSelectRow = inIsSelectRow;
+    }
+
 private:
+    bool *isSelectRow;
     int32_t resultRowSize;
     mem::SimpleArenaAllocator arena;
     bool hasError = false;

@@ -60,7 +60,13 @@ public:
         return isSupported;
     }
 
+    const Expr *GetExpr() const
+    {
+        return expr;
+    }
+
 private:
+    const Expr *expr;
     std::unique_ptr<FilterCodeGen> codeGen;
     std::unique_ptr<BatchFilterCodeGen> batchCodeGen;
     bool isSupported;
@@ -89,6 +95,8 @@ public:
     BaseVector *Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
         ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds);
 
+    BaseVector *ProjectVec(VectorBatch *vecBatch ,ExecutionContext *context);
+
     omniruntime::type::DataType &GetOutputType() const
     {
         return *(this->outType);
@@ -112,6 +120,11 @@ public:
     int GetColumnProjectionIndex() const
     {
         return columnProjectionIndex;
+    }
+
+    const Expr *GetExpr() const
+    {
+        return expr;
     }
 
 private:
@@ -228,7 +241,18 @@ public:
 
     void ProjectFuncGeneration();
 
+    void SetSupportCodegen(const bool isSupport)
+    {
+        isSupportCodegen = isSupport;
+    }
+
+    bool IsSupportCodegen() const
+    {
+        return isSupportCodegen;
+    }
+
 private:
+    bool isSupportCodegen = true;
     Expr *filterExpr = nullptr;
     std::vector<Expr *> projExprs;
     int32_t projectVecCount = 0;
@@ -245,6 +269,8 @@ private:
     VectorBatch *ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context,
         AlignedBuffer<int32_t> *selectedRowsBuffer, intptr_t *valueAddrs, intptr_t *nullAddrs, intptr_t *offsetAddrs,
         intptr_t *dictionaries);
+
+    VectorBatch *ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context);
 
     VectorBatch *ProcessProject(VectorBatch *vecBatch, ExecutionContext *context, intptr_t *valueAddrs,
         intptr_t *nullAddrs, intptr_t *offsetAddrs, intptr_t *dictionaries);

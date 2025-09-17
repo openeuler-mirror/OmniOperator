@@ -8,15 +8,11 @@
 #include "expression/expr_visitor.h"
 #include "memory/allocator.h"
 
+namespace omniruntime::vectorization {
 class ExprEval : public ExprVisitor {
 public:
-    ExprEval(omniruntime::vec::VectorBatch *vectorBatch, omniruntime::op::ExecutionContext *context): context(context)
-    {
-        for (int i = 0; i < vectorBatch->GetVectorCount(); i++) {
-            vecBatch_.push_back(vectorBatch->Get(i));
-        }
-        rowSize = vectorBatch->GetRowCount();
-    }
+    ExprEval(omniruntime::vec::VectorBatch *vectorBatch, omniruntime::op::ExecutionContext *context,
+        const int32_t *typeIds = nullptr);
 
     ~ExprEval() override {}
 
@@ -42,20 +38,18 @@ public:
 
     void Visit(const omniruntime::expressions::SwitchExpr &e) override;
 
-    omniruntime::vec::BaseVector *GetResult()
-    {
-        return inputValues_.top();
-    }
+    void VisitExpr(const expressions::Expr &e);
 
-    int32_t GetRowCount() const
-    {
-        return rowSize;
-    }
+    vec::BaseVector *GetResult();
+
+    int32_t GetRowCount() const;
 
 private:
+    const int32_t *typeIds;
     omniruntime::op::ExecutionContext *context;
     std::vector<omniruntime::vec::BaseVector *> vecBatch_;
     std::stack<omniruntime::vec::BaseVector *> inputValues_;
     int32_t rowSize;
     omniruntime::mem::Allocator *allocator = omniruntime::mem::Allocator::GetAllocator();
 };
+}

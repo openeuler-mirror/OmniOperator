@@ -39,6 +39,7 @@ enum Encoding {
     OMNI_ENCODING_MAP = 3,
     OMNI_ENCODING_ARRAY = 4,
     OMNI_ENCODING_STRUCT = 5,
+    OMNI_ENCODING_CONST = 6,
     OMNI_ENCODING_INVALID
 };
 
@@ -183,6 +184,23 @@ protected:
     std::shared_ptr<NullsBuffer> nullsBuffer;
     bool isSliced;
     DataTypeId dataTypeId;
+};
+
+template <typename RAW_DATA_TYPE>
+class ConstVector final : public BaseVector {
+public:
+    ConstVector(RAW_DATA_TYPE value): value(value)
+    {
+        this->encoding = OMNI_ENCODING_CONST;
+    }
+
+    RAW_DATA_TYPE GetConstValue() const
+    {
+        return value;
+    }
+
+private:
+    RAW_DATA_TYPE value;
 };
 
 /**

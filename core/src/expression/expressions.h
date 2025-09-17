@@ -85,6 +85,7 @@ class Expr {
 public:
     DataTypePtr dataType; // dataType of returned value
     std::shared_ptr<VectorFunction> vectorFunction;
+    bool isAllSupportVectorization_ = true;
     DataTypePtr GetReturnType() const;
     omniruntime::type::DataTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;

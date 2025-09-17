@@ -34,6 +34,33 @@ void registerBinaryNumeric(const std::string &aliases)
 }
 
 template <template <class> typename T>
+void registerCompareIntegral(const std::string &aliases)
+{
+    registerFunction<T, bool, int8_t, int8_t>(aliases, {OMNI_BYTE, OMNI_BYTE}, OMNI_BOOLEAN);
+    registerFunction<T, bool, int16_t, int16_t>(aliases, {OMNI_SHORT, OMNI_SHORT}, OMNI_BOOLEAN);
+    registerFunction<T, bool, int32_t, int32_t>(aliases, {OMNI_INT, OMNI_INT}, OMNI_BOOLEAN);
+    registerFunction<T, bool, int64_t, int64_t>(aliases, {OMNI_LONG, OMNI_LONG}, OMNI_BOOLEAN);
+}
+
+template <template <class> typename T>
+void registerUnaryIntegral(const std::string &aliases)
+{
+    registerFunction<T, bool, bool>(aliases, {OMNI_BOOLEAN}, OMNI_BOOLEAN);
+}
+
+template <template <class> typename T>
+void registerBinaryLogical(const std::string &aliases)
+{
+    registerFunction<T, bool, bool, bool>(aliases, {OMNI_BOOLEAN, OMNI_BOOLEAN}, OMNI_BOOLEAN);
+}
+
+template <template <class> typename T>
+void registerBinaryCompare(const std::string &aliases)
+{
+    registerCompareIntegral<T>(aliases);
+}
+
+template <template <class> typename T>
 void registerString(const std::string &aliases)
 {
     registerFunction<T, bool, std::string_view, std::string_view>(aliases, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN);

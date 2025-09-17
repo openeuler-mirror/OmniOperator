@@ -84,22 +84,28 @@ private:
             auto arg = rawArgs.top();
             rawArgs.pop();
             using type = exec_arg_at<POSITION>;
-            IntersectNull(arg);
-            
+            if (arg->GetEncoding() != OMNI_ENCODING_CONST) {
+                IntersectNull(arg);
+            }
             if constexpr (is_string_type_v<type>) {
                 // string_view use StringVectorReader
                 auto reader = StringVectorReader(arg);
                 unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
             } else {
                 switch (arg->GetEncoding()) {
-                    case vec::OMNI_FLAT: {
+                    case OMNI_FLAT: {
                         auto reader = FlatVectorReader<type>(arg);
-                        unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
+                        unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
                         break;
                     }
-                    case vec::OMNI_DICTIONARY: {
+                    case OMNI_DICTIONARY: {
                         auto reader = FlatVectorReader<type>(arg);
-                        unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
+                        unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
+                        break;
+                    }
+                    case OMNI_ENCODING_CONST: {
+                        auto reader = ConstVectorReader<type>(arg);
+                        unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
                         break;
                     }
                     default: {}
@@ -114,24 +120,52 @@ private:
         auto rowSize = context->GetResultRowSize();
         auto resultAddr = static_cast<return_type_traits *>(vec::VectorHelper::UnsafeGetValues(result));
         auto nullBuffer = reinterpret_cast<uint64_t *>(vec::unsafe::UnsafeBaseVector::GetNulls(result));
-        applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
-            // Passing a stack variable have shown to be boost the performance
-            // of functions that repeatedly update the output. The opposite
-            // optimization (eliminating the temp) is easier to do by the
-            // compiler (assuming the function call is inlined).
-            return_type_traits out{};
-            bool notNull;
-            auto status = doApplyNotNull<0>(row, out, notNull, readers...);
-            if (status) {
-                return;
-            }
-            if (!notNull) {
-                BitUtil::SetBit(nullBuffer, row);
-            }
-            resultAddr[row] = out;
-        });
-        memcpy_s(nullBuffer, rowSize, rows_->allBits(), rowSize);
-        BitUtil::Negate(nullBuffer, rowSize);
+        if (context->hasFilter) {
+            auto isSelect = context->GetIsSelectRow();
+            int selectRow = 0;
+            applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
+                if (!isSelect[row]) {
+                    return;
+                }
+                // Passing a stack variable have shown to be boost the performance
+                // of functions that repeatedly update the output. The opposite
+                // optimization (eliminating the temp) is easier to do by the
+                // compiler (assuming the function call is inlined).
+                return_type_traits out{};
+                bool notNull;
+                auto status = doApplyNotNull<0>(row, out, notNull, readers...);
+                if (status) {
+                    return;
+                }
+
+                if (!notNull) {
+                    BitUtil::SetBit(nullBuffer, selectRow);
+                }
+                resultAddr[selectRow] = out;
+                ++selectRow;
+            });
+            memcpy_s(nullBuffer, rowSize, rows_->allBits(), rowSize);
+            BitUtil::Negate(nullBuffer, rowSize);
+        } else {
+            applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
+                // Passing a stack variable have shown to be boost the performance
+                // of functions that repeatedly update the output. The opposite
+                // optimization (eliminating the temp) is easier to do by the
+                // compiler (assuming the function call is inlined).
+                return_type_traits out{};
+                bool notNull;
+                auto status = doApplyNotNull<0>(row, out, notNull, readers...);
+                if (status) {
+                    return;
+                }
+                if (!notNull) {
+                    BitUtil::SetBit(nullBuffer, row);
+                }
+                resultAddr[row] = out;
+            });
+            memcpy_s(nullBuffer, rowSize, rows_->allBits(), rowSize);
+            BitUtil::Negate(nullBuffer, rowSize);
+        }
     }
 
     // If we're guaranteed not to have any nulls, pass all parameters as
