@@ -65,7 +65,7 @@ void ALWAYS_INLINE VariableTypeSerializer(const std::string_view &inValue, mem::
 
     // compress stringLen from 4 bytes to rowLenSize bytes
     // copy stringLen
-    memcpy_s(pos + sizeof(uint8_t), rowLenSize, &stringLen, rowLenSize);
+    memcpy(pos + sizeof(uint8_t), &stringLen, rowLenSize);
     // copy string
     std::copy(inValue.data(), inValue.data() + stringLen, pos + sizeof(uint8_t) + rowLenSize);
     result.size += resLen;
@@ -177,7 +177,7 @@ void FixedLenTypeSerializer(RawDataType value, mem::SimpleArenaAllocator &arenaA
     auto *pos = arenaAllocator.AllocateContinue(resSize, reinterpret_cast<const uint8_t *&>(data));
     (*pos) = rowDataSize;
     // copy value
-    memcpy_s(pos + sizeof(uint8_t), rowDataSize, &value, rowDataSize);
+    memcpy(pos + sizeof(uint8_t), &value, rowDataSize);
     result.size += resSize;
 }
 

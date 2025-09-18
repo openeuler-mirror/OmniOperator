@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 #include <sstream>
-#include <huawei_secure_c/include/securec.h>
+#include <cstring>
 
 #ifdef __cplusplus
 extern "C" {

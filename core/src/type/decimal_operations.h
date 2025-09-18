@@ -12,7 +12,7 @@
 #include <iostream>
 #include <climits>
 #include <cmath>
-#include <huawei_secure_c/include/securec.h>
+#include <cstring>
 #include "integer256.h"
 #include "util/debug.h"
 #include "util/omni_exception.h"

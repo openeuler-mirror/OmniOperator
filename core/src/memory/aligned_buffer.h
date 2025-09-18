@@ -52,7 +52,7 @@ public:
             // since capacity is usually large (> 1024 bytes), we can use memset_sp.
             // Based on benchmark memset_sp for large buffer sizes is not much worse than std::meset
             // but for smaller buffers (i.e. less than 100 bytes), memset_sp is x2 to x4 times slower than std::meset
-            memset_sp(buffer, capacity, 0, newCapacity);
+            memset(buffer, 0, newCapacity);
         }
         return buffer;
     }

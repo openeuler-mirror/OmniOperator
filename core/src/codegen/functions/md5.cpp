@@ -151,15 +151,15 @@ void Md5Function::Finish(unsigned char *outDigest)
     // Pad out to 56 mod 64
     if (bitsCount < 8) {
         // Two lots of padding:  Pad the first block to 64 bytes
-        memset_s(ptr, bitsCount, 0, bitsCount);
+        memset(ptr, 0, bitsCount);
         ByteReverse(in, 16);
         MD5Transform(buf, reinterpret_cast<unsigned int *>(in));
 
         // Now fill the next block with 56 bytes
-        memset_s(in, 56, 0, 56);
+        memset(in, 0, 56);
     } else {
         // Pad block to 56 bytes
-        memset_s(ptr, bitsCount - 8, 0, bitsCount - 8);
+        memset(ptr, 0, bitsCount - 8);
     }
     ByteReverse(in, 14);
 
@@ -168,7 +168,7 @@ void Md5Function::Finish(unsigned char *outDigest)
     (reinterpret_cast<unsigned int *>(in))[15] = bits[1];
     MD5Transform(buf, reinterpret_cast<unsigned int *>(in));
     ByteReverse(reinterpret_cast<unsigned char *>(buf), 4);
-    memcpy_s(outDigest, 16, buf, 16);
+    memcpy(outDigest, buf, 16);
 }
 
 void Md5Function::FinishHex(char *outDigest)
@@ -193,10 +193,10 @@ void Md5Function::MD5Update(const char *data, uint64_t len)
 
         temp = 64 - temp;
         if (len < temp) {
-            memcpy_s(p, len, data, len);
+            memcpy(p, data, len);
             return;
         }
-        memcpy_s(p, temp, data, temp);
+        memcpy(p, data, temp);
         ByteReverse(in, 16);
         MD5Transform(buf, reinterpret_cast<unsigned int *>(in));
         data += temp;
@@ -205,7 +205,7 @@ void Md5Function::MD5Update(const char *data, uint64_t len)
 
     // Process data in 64-byte chunks
     while (len >= 64) {
-        memcpy_s(in, 64, data, 64);
+        memcpy(in, data, 64);
         ByteReverse(in, 16);
         MD5Transform(buf, reinterpret_cast<unsigned int *>(in));
         data += 64;
@@ -213,7 +213,7 @@ void Md5Function::MD5Update(const char *data, uint64_t len)
     }
 
     // Handle any remaining bytes of data.
-    memcpy_s(in, len, data, len);
+    memcpy(in, data, len);
 }
 
 void Md5Function::DigestToBase16(const unsigned char *digest, char *zBuf)

@@ -6,7 +6,7 @@
 #define __HASH_UTIL_H__
 
 #include <cstdint>
-#include <huawei_secure_c/include/securec.h>
+#include <cstring>
 #include "util/compiler_util.h"
 #include "type/data_utils.h"
 #include "codegen/functions/murmur3_hash.h"
@@ -270,7 +270,7 @@ public:
     static ALWAYS_INLINE int64_t DoubleToLongBits(double value)
     {
         uint64_t bits;
-        memcpy_s(&bits, sizeof(bits), &value, sizeof(value));
+        memcpy(&bits, &value, sizeof(value));
         if ((bits & 9218868437227405312UL) == 9218868437227405312UL && (bits & 4503599627370495UL) != 0UL) {
             bits = 9221120237041090560L;
         }

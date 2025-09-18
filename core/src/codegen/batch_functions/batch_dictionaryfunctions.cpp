@@ -97,7 +97,6 @@ extern "C" DLLEXPORT void BatchGetBooleanFromVector(bool *vector, int32_t *rowId
 extern "C" DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t *offsetArray, const char *vector,
     int32_t *rowIdxArray, int32_t rowCnt, uint8_t **str, int32_t *length)
 {
-    errno_t err;
     char *ret;
     for (int i = 0; i < rowCnt; ++i) {
         length[i] = offsetArray[rowIdxArray[i] + 1] - offsetArray[rowIdxArray[i]];
@@ -106,12 +105,7 @@ extern "C" DLLEXPORT void BatchGetVarcharFromVector(int64_t contextPtr, int32_t 
             continue;
         }
         ret = ArenaAllocatorMalloc(contextPtr, length[i]);
-        err = memcpy_s(ret, length[i], vector + offsetArray[rowIdxArray[i]], length[i]);
-        if (err != EOK) {
-            SetError(contextPtr, "Get string from vector failed");
-            str[i] = nullptr;
-            continue;
-        }
+        memcpy(ret, vector + offsetArray[rowIdxArray[i]], length[i]);
         str[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }

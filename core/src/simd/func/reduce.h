@@ -7,7 +7,7 @@
 #include <limits>
 #include <cstring>
 #include "simd/simd.h"
-#include "huawei_secure_c/include/securec.h"
+#include <cstring>
 
 namespace simd {
 enum class ReduceFunc {
@@ -91,7 +91,7 @@ template <typename IN, typename OUT, ReduceFunc reduceFunc> OUT Reduce(const IN 
     OUT buf[lanes];
     std::fill(buf, buf + lanes, limitValue);
     if constexpr (std::is_same_v<IN, OUT>) {
-        memcpy_s(buf, (size - k) * sizeof(OUT), array + i, (size - k) * sizeof(OUT));
+        memcpy(buf, array + i, (size - k) * sizeof(OUT));
     } else {
         for (; i < size; i++) {
             buf[size - i] = static_cast<OUT>(array[i]);
@@ -138,8 +138,8 @@ OUT ReduceWithNulls(const IN *OMNI_RESTRICT array, const uint8_t *OMNI_RESTRICT 
     std::fill(buf, buf + lanes, limitValue);
     std::fill(nullBuf, nullBuf + lanes, 0);
     if constexpr (std::is_same_v<IN, OUT>) {
-        memcpy_s(buf, (size - k) * sizeof(OUT), array + i, (size - k) * sizeof(OUT));
-        memcpy_s(nullBuf, (size - k) * sizeof(uint8_t), nulls + i, (size - k) * sizeof(uint8_t));
+        memcpy(buf, array + i, (size - k) * sizeof(OUT));
+        memcpy(nullBuf, nulls + i, (size - k) * sizeof(uint8_t));
     } else {
         for (size_t j = i; j < size; j++) {
             buf[size - j] = static_cast<OUT>(array[j]);

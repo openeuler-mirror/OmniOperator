@@ -12,7 +12,7 @@
 #include <cstring>
 #include <regex>
 #include <cmath>
-#include <huawei_secure_c/include/securec.h>
+#include <cstring>
 #include "codegen/context_helper.h"
 #include "codegen/functions/decimal_arithmetic_functions.h"
 #include "codegen/functions/decimal_cast_functions.h"

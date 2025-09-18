@@ -66,18 +66,10 @@ extern "C" DLLEXPORT void FillDecimal128(Decimal128 *dataArray, bool *nullArray,
 extern "C" DLLEXPORT void FillString(int64_t contextPtr, uint8_t **dataArray, bool *nullArray, int32_t *lengthArray,
     uint8_t *literal, bool isNull, int32_t length, int32_t rowCnt)
 {
-    errno_t err;
     char *ret;
     for (int i = 0; i < rowCnt; i++) {
         ret = ArenaAllocatorMalloc(contextPtr, length + 1);
-        err = memcpy_s(ret, length + 1, literal, length);
-        if (err != EOK) {
-            SetError(contextPtr, "Fill string failed");
-            dataArray[i] = nullptr;
-            nullArray[i] = true;
-            lengthArray[i] = 0;
-            continue;
-        }
+        memcpy(ret, literal, length);
         dataArray[i] = reinterpret_cast<uint8_t *>(ret);
         nullArray[i] = isNull;
         lengthArray[i] = length;

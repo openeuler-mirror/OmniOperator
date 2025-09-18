@@ -167,7 +167,7 @@ ErrorCode SpillWriter::CreateTempFile()
     auto pid = static_cast<int>(getpid());
     auto tid = static_cast<uint32_t>(pthread_self());
     LogDebug("Spill writer create temp file at dir: %s.", dirPathChars);
-    if (snprintf_s(filePathChars, fileNameLen, fileNameLen, "%s/%d-%u-%s", dirPathChars, pid, tid,
+    if (snprintf(filePathChars, fileNameLen, "%s/%d-%u-%s", dirPathChars, pid, tid,
         SPILL_TEMPLATE_CHARS) < 0) {
         auto errorNum = errno;
         char errorBuf[ERROR_BUFFER_SIZE];
@@ -295,54 +295,26 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
 {
     uint8_t *nulls = unsafe::UnsafeBaseVector::GetNulls(vector);
     int32_t nullsSize = BitUtil::Nbytes(rowCount);
-    errno_t ret = memcpy_s(writeBuffer + writeOffset, nullsSize, nulls, nullsSize);
-    if (ret != EOK) {
-        auto errorNum = errno;
-        char errorBuf[ERROR_BUFFER_SIZE];
-        GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
-        LogError("Write value nulls to buffer failed since %s.", errorBuf);
-        return ErrorCode::WRITE_FAILED;
-    }
+    memcpy(writeBuffer + writeOffset, nulls, nullsSize);
     writeOffset += nullsSize;
 
     if constexpr (std::is_same_v<T, std::string_view>) {
         // write offsets
         auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
         auto offsetLength = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
-        ret = memcpy_s(writeBuffer + writeOffset, offsetLength, valueOffsets, offsetLength);
-        if (ret != EOK) {
-            auto errorNum = errno;
-            char errorBuf[ERROR_BUFFER_SIZE];
-            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
-            LogError("Write value offsets to buffer failed since %s.", errorBuf);
-            return op::ErrorCode::WRITE_FAILED;
-        }
+        memcpy(writeBuffer + writeOffset, valueOffsets, offsetLength);
         writeOffset += offsetLength;
 
         // write values
         char *values = unsafe::UnsafeStringVector::GetValues(reinterpret_cast<VarcharVector *>(vector));
         auto valueLength = static_cast<ssize_t>(valueOffsets[rowCount] - valueOffsets[0]);
-        ret = valueLength == 0 ? EOK : memcpy_s(writeBuffer + writeOffset, valueLength, values, valueLength);
-        if (ret != EOK) {
-            auto errorNum = errno;
-            char errorBuf[ERROR_BUFFER_SIZE];
-            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
-            LogError("Write values to buffer failed since %s.", errorBuf);
-            return op::ErrorCode::WRITE_FAILED;
-        }
+        memcpy(writeBuffer + writeOffset, values, valueLength);
         writeOffset += valueLength;
         return ErrorCode::SUCCESS;
     } else {
         auto length = static_cast<ssize_t>(rowCount * sizeof(T));
         T *values = unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<T> *>(vector));
-        ret = memcpy_s(writeBuffer + writeOffset, length, values, length);
-        if (ret != EOK) {
-            auto errorNum = errno;
-            char errorBuf[ERROR_BUFFER_SIZE];
-            GetErrorMsg(errorNum, errorBuf, ERROR_BUFFER_SIZE);
-            LogError("Write values to buffer failed since %s.", errorBuf);
-            return ErrorCode::WRITE_FAILED;
-        }
+        memcpy(writeBuffer + writeOffset, values, length);
         writeOffset += length;
         return ErrorCode::SUCCESS;
     }

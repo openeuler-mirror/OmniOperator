@@ -154,7 +154,7 @@ extern "C" DLLEXPORT const char* RegexpExtractRetNull(int64_t contextPtr, const 
         int startIdx = match.position(group); // Get start position of group 2
         *outLen = match.length(group);
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        memcpy_s(ret, *outLen + 1, str + startIdx, *outLen + 1);
+        memcpy(ret, str + startIdx, *outLen + 1);
         return ret;
     } else {
         *outIsNull = true;
@@ -407,12 +407,7 @@ extern "C" DLLEXPORT const char *CastIntToString(int64_t contextPtr, int32_t val
     std::string str = std::to_string(value);
     *outLen = static_cast<int32_t>(str.size());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        SetError(contextPtr, "cast failed");
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, str.c_str(), *outLen);
     return ret;
 }
 
@@ -424,12 +419,7 @@ extern "C" DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t va
     std::string str = std::to_string(value);
     *outLen = static_cast<int32_t>(strlen(str.c_str()));
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        SetError(contextPtr, "cast failed");
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, str.c_str(), *outLen);
     return ret;
 }
 
@@ -452,12 +442,7 @@ extern "C" DLLEXPORT const char *CastDecimal64ToString(int64_t contextPtr, int64
     std::string str = Decimal64(x).SetScale(scale).ToString();
     *outLen = static_cast<int32_t>(str.size());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        SetError(contextPtr, "cast failed");
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, str.c_str(), *outLen);
     return ret;
 }
 
@@ -470,12 +455,7 @@ extern "C" DLLEXPORT const char *CastDecimal128ToString(int64_t contextPtr, int6
     std::string stringDecimal = Decimal128Wrapper(high, low).SetScale(scale).ToString();
     *outLen = static_cast<int32_t>(stringDecimal.length());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, stringDecimal.c_str(), *outLen);
-    if (res != EOK) {
-        SetError(contextPtr, "cast failed");
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, stringDecimal.c_str(), *outLen);
     return ret;
 }
 
@@ -741,12 +721,7 @@ extern "C" DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool
     std::string str = std::to_string(value);
     *outLen = static_cast<int32_t>(str.size());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, str.c_str(), *outLen);
     return ret;
 }
 
@@ -756,12 +731,7 @@ extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, boo
     std::string str = std::to_string(value);
     *outLen = static_cast<int32_t>(strlen(str.c_str()));
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, str.c_str(), *outLen);
     return ret;
 }
 
@@ -779,12 +749,7 @@ extern "C" DLLEXPORT const char *CastDecimal64ToStringRetNull(int64_t contextPtr
     std::string str = Decimal64(x).SetScale(scale).ToString();
     *outLen = static_cast<int32_t>(str.size());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, str.c_str(), *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, str.c_str(), *outLen);
     return ret;
 }
 
@@ -795,12 +760,7 @@ extern "C" DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPt
     std::string stringDecimal = inputDecimal.SetScale(scale).ToString();
     *outLen = static_cast<int32_t>(stringDecimal.length());
     auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
-    errno_t res = memcpy_s(ret, *outLen, stringDecimal.c_str(), *outLen);
-    if (res != EOK) {
-        *isNull = true;
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(ret, stringDecimal.c_str(), *outLen);
     return ret;
 }
 
@@ -1079,12 +1039,7 @@ extern "C" DLLEXPORT const char *StaticInvokeVarcharTypeWriteSideCheck(int64_t c
     }
 
     auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
-    errno_t res = memcpy_s(padded, outByteNum, str, outByteNum);
-    if (res != EOK) {
-        SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(padded, str, outByteNum);
     padded[outByteNum] = '\0';
     *outLen = outByteNum;
     return padded;
@@ -1108,18 +1063,8 @@ extern "C" DLLEXPORT const char *StaticInvokeCharReadPadding(int64_t contextPtr,
     int32_t diff = limit - ssLen;
     int32_t outByteNum = len + diff + 1;
     auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
-    errno_t res = memcpy_s(padded, len, str, len);
-    if (res != EOK) {
-        SetError(contextPtr, "charReadPadding failed：memcpy_s error");
-        *outLen = 0;
-        return nullptr;
-    }
-    res = memset_s(padded + len, diff, ' ', diff);
-    if (res != EOK) {
-        SetError(contextPtr, "charReadPadding failed：memset_s error");
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(padded, str, len);
+    memset(padded + len, ' ', diff);
     padded[outByteNum] = '\0';
     *outLen = outByteNum - 1;
     return padded;
@@ -1146,12 +1091,7 @@ extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *
     // return the input string directly.
     if (index == 0) {
         auto result = ArenaAllocatorMalloc(contextPtr, strLen);
-        errno_t res = memcpy_s(result, strLen, str, strLen);
-        if (res != EOK) {
-            SetError(contextPtr, "charReadPadding failed：memcpy_s error");
-            *outLen = 0;
-            return nullptr;
-        }
+        memcpy(result, str, strLen);
         *outLen = strLen;
         return result;
     }
@@ -1167,12 +1107,7 @@ extern "C" DLLEXPORT const char *SubstringIndex(int64_t contextPtr, const char *
     }
 
     auto result = ArenaAllocatorMalloc(contextPtr, length);
-    errno_t res = memcpy_s(result, length, str + start, length);
-    if (res != EOK) {
-        SetError(contextPtr, "charReadPadding failed：memcpy_s error");
-        *outLen = 0;
-        return nullptr;
-    }
+    memcpy(result, str + start, length);
     *outLen = length;
     return result;
 }

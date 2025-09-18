@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <stdexcept>
+#include <cstdarg>
 #include "config.h"
 #include "util/global_log.h"
 
@@ -69,11 +70,11 @@ void LogInner(T logLevel, const char *fileName, const char *funcName, int line, 
         va_list argPtr;
         char logBuf[GLOBAL_LOG_BUF_SIZE];
 
-        auto ret1 = snprintf_s(logBuf, GLOBAL_LOG_BUF_SIZE - 1, GLOBAL_LOG_BUF_SIZE - 1, "[%s][%s][%d]:", fileName,
+        auto ret1 = snprintf(logBuf, GLOBAL_LOG_BUF_SIZE - 1, "[%s][%s][%d]:", fileName,
             funcName, line);
         va_start(argPtr, format);
         auto ret2 =
-            vsnprintf_s(logBuf + ret1, GLOBAL_LOG_BUF_SIZE - 1 - ret1, GLOBAL_LOG_BUF_SIZE - 1 - ret1, format, argPtr);
+            vsnprintf(logBuf + ret1, GLOBAL_LOG_BUF_SIZE - 1 - ret1, format, argPtr);
         va_end(argPtr);
         logBuf[ret1 + ret2 + 1] = '\0';
 

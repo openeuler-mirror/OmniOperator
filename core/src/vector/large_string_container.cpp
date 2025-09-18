@@ -33,13 +33,7 @@ void LargeStringContainer<RAW_DATA_TYPE>::SetValue(int index, std::string_view &
     int32_t needCapacityInBytes = offsets[index] + valueSize; // start offset, and then value size
     char *charBuffer = GetBufferWithSpace(needCapacityInBytes);
 
-    // src len can be 0, but dest len can not be 0 when empty strings, otherwise the memcpy_s return errno 34
-    errno_t result = memcpy_s(charBuffer + offsets[index], valueSize + 1, value.data(), valueSize);
-    if (UNLIKELY(result != EOK)) {
-        std::string omniExceptionInfo = "In function SetValue, memcpy faild, ret is：" + std::to_string(result) +
-                                        ", reason is: " + std::string(strerror(errno));
-        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", omniExceptionInfo);
-    }
+    memcpy(charBuffer + offsets[index], value.data(), valueSize);
 
     offsets[index + 1] = needCapacityInBytes;
     lastOffsetPosition = index;
@@ -106,14 +100,7 @@ char* LargeStringContainer<RAW_DATA_TYPE>::ExpandBufferToCapacity(size_t toCapac
     // Allocate a new buffer.
     std::unique_ptr<LargeStringBuffer> newBuffer = std::make_unique<LargeStringBuffer>(toCapacityInBytes);
     if (oldBuffer->Capacity() > 0) {
-        errno_t result =
-                memcpy_s(newBuffer->Data(), newBuffer->Capacity(), oldBuffer->Data(), oldBuffer->Capacity());
-        if (UNLIKELY(result != EOK)) {
-            std::string omniExceptionInfo = "In function ExpandBufferToCapacity, memcpy faild, ret is：" +
-                                            std::to_string(result) + ", reason is: " +
-                                            std::string(strerror(errno));
-            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", omniExceptionInfo);
-        }
+        memcpy(newBuffer->Data(), oldBuffer->Data(), oldBuffer->Capacity());
     }
     bufferSupplier = std::move(newBuffer);
     return bufferSupplier->Data();

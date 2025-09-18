@@ -182,7 +182,7 @@ void DuplicateKeyValueImpl(ValueState &state, BaseVector *vector, const uint32_t
     if constexpr (std::is_floating_point_v<D> || std::is_same_v<D, Decimal128>) {
         constexpr auto len = sizeof(D);
         uint8_t *ptr = context->GetArena()->Allocate(len);
-        memcpy_s(ptr, len, &data, len);
+        memcpy(ptr, &data, len);
         state.val = reinterpret_cast<int64_t>(ptr);
     } else {
         state.val = data;
@@ -201,7 +201,7 @@ void DuplicateVarcharKeyValue(ValueState &state, BaseVector *vector, const uint3
     int32_t valLen = str.size();
     uint8_t *tmp = reinterpret_cast<uint8_t *>(const_cast<char *>(str.data()));
     uint8_t *data = context->GetArena()->Allocate(valLen);
-    memcpy_s(data, valLen, tmp, static_cast<size_t>(valLen));
+    memcpy(data, tmp, static_cast<size_t>(valLen));
     state.val = reinterpret_cast<int64_t>(data);
     state.count = valLen;
 }
