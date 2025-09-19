@@ -5,7 +5,7 @@
 #ifndef OMNI_RUNTIME_DATA_UTILS_H
 #define OMNI_RUNTIME_DATA_UTILS_H
 #include <iostream>
-#include <huawei_secure_c/include/securec.h>
+#include <cstring>
 
 namespace omniruntime {
 namespace type {

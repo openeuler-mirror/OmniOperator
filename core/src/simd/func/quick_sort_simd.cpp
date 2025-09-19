@@ -6,7 +6,7 @@
 #include <cmath>
 #include "small_case_sort.h"
 #include "simd/simd.h"
-#include "huawei_secure_c/include/securec.h"
+#include <cstring>
 #include "quick_sort_simd.h"
 constexpr int32_t SMALL_CASE_LENGTH = 16;
 constexpr int32_t CHUNK_SIZE = 8;
@@ -120,10 +120,10 @@ int32_t PartitionToMultipleOfUnroll(D d, Traits st, RawType *values, AddrType *a
     }
     num -= static_cast<int>(bufR);
     auto copyByteSize = bufR * sizeof(int64_t);
-    memcpy_s(valuePosL, copyByteSize, values + num, copyByteSize);
-    memcpy_s(addrPosL, copyByteSize, addresses + num, copyByteSize);
-    memcpy_s(values + num, copyByteSize, valueBuf, copyByteSize);
-    memcpy_s(addresses + num, copyByteSize, addrBuf, copyByteSize);
+    memcpy(valuePosL, values + num, copyByteSize);
+    memcpy(addrPosL, addresses + num, copyByteSize);
+    memcpy(values + num, valueBuf, copyByteSize);
+    memcpy(addresses + num, addrBuf, copyByteSize);
     return static_cast<int32_t>(valuePosL - values);
 }
 template <class D, class Traits, typename T>

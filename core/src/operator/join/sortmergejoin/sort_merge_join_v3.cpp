@@ -370,9 +370,9 @@ void SortMergeJoinOperatorV3::JoinFilterCodeGen(OverflowConfig *overflowConfig)
     values = new int64_t[originalAllColsCount];
     nulls = new bool[originalAllColsCount];
     lengths = new int32_t[originalAllColsCount];
-    memset_sp(values, sizeof(int64_t) * originalAllColsCount, 0, sizeof(int64_t) * originalAllColsCount);
-    memset_sp(nulls, sizeof(bool) * originalAllColsCount, 0, sizeof(bool) * originalAllColsCount);
-    memset_sp(lengths, sizeof(int32_t) * originalAllColsCount, 0, sizeof(int32_t) * originalAllColsCount);
+    memset(values, 0, sizeof(int64_t) * originalAllColsCount);
+    memset(nulls, 0, sizeof(bool) * originalAllColsCount);
+    memset(lengths, 0, sizeof(int32_t) * originalAllColsCount);
 }
 
 int32_t SortMergeJoinOperatorV3::AddStreamInput(VectorBatch *vecBatch)
@@ -1032,7 +1032,7 @@ void SortMergeJoinOperatorV3::HandleMatchForRightJoin(uint64_t *streamAddresses,
 
     auto curBufferRowCount = curBufferRangeEnd - curPosInBufferRange;
     bool curBufferVisited[curBufferRowCount];
-    memset_sp(curBufferVisited, sizeof(bool) * curBufferRowCount, 0, sizeof(bool) * curBufferRowCount);
+    memset(curBufferVisited, 0, sizeof(bool) * curBufferRowCount);
     for (int32_t streamIdx = curPosInStreamRange; streamIdx < curStreamRangeEnd; streamIdx++) {
         auto streamRow = streamFilterRows + streamIdx * streamFilterColCount;
         auto streamRowIdx = streamRowIdxes[streamIdx];
@@ -1083,7 +1083,7 @@ void SortMergeJoinOperatorV3::HandleMatchForFullJoin(uint64_t *streamAddresses, 
 
     auto curBufferRowCount = curBufferRangeEnd - curPosInBufferRange;
     bool curBufferVisited[curBufferRowCount];
-    memset_sp(curBufferVisited, sizeof(bool) * curBufferRowCount, 0, sizeof(bool) * curBufferRowCount);
+    memset(curBufferVisited, 0, sizeof(bool) * curBufferRowCount);
     for (int32_t streamIdx = curPosInStreamRange; streamIdx < curStreamRangeEnd; streamIdx++) {
         bool hasProduceRow = false;
         auto streamRow = streamFilterRows + streamIdx * streamFilterColCount;

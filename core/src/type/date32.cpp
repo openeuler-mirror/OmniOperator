@@ -5,7 +5,7 @@
 #include <limits>
 #include <optional>
 #include <memory>
-#include "huawei_secure_c/include/securec.h"
+#include <cstring>
 #include "util/compiler_util.h"
 #include "date32.h"
 
@@ -123,7 +123,7 @@ int64_t Timestamp::TmToStringView(const std::tm &tmValue, char *const startPosit
         // Append leading zeros when there is the requirement for minumum width.
         if (minWidth.has_value() && numDigits < minWidth.value()) {
             const auto leadingZeros = minWidth.value() - numDigits;
-            memset_s(position, leadingZeros, '0', leadingZeros);
+            memset(position, '0', leadingZeros);
             offset += leadingZeros;
         }
 

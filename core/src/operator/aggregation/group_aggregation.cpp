@@ -249,21 +249,13 @@ void HashAggregationOperator::ResizeArrayMap(int64_t oldMin)
     newSlots[0] = oldSlots[0];
     newAssigned[0] = oldAssigned[0];
     bool hasAgg = aggregators.size() > 0;
-    errno_t res1 = EOK;
     if (hasAgg) {
-        res1 = memcpy_sp(newSlots + 1 + offSet, (newTableSize - 1) * sizeof(void *), oldSlots + 1,
-                         (oldTableSize - 1) * sizeof(void *));
+        memcpy(newSlots + 1 + offSet, oldSlots + 1,
+                (oldTableSize - 1) * sizeof(void *));
     }
-    errno_t res2 = memcpy_sp(newAssigned + 1 + offSet, (newTableSize - 1) * sizeof(bool), oldAssigned + 1,
+    memcpy(newAssigned + 1 + offSet, oldAssigned + 1,
                              (oldTableSize - 1) * sizeof(bool));
     newArrayTable->AddElementsSize(arrayTable->GetElementsSize());
-    if (UNLIKELY(res1 != EOK || res2 != EOK)) {
-        std::string omniExceptionInfo =
-                "In adjust hashagg array table, memcpy faild, ret1 is：" + std::to_string(res1) + " , ret2 is：" +
-                std::to_string(res2) +
-                ", reason is: " + std::string(strerror(errno));
-        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", omniExceptionInfo);
-    }
     arrayTable.reset(newArrayTable.release());
     resizeArrayMapCnt++;
 }

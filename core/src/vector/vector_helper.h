@@ -731,11 +731,7 @@ public:
         // copy values
         auto destValues = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(destVector));
         auto srcValues = unsafe::UnsafeVector::GetRawValues(static_cast<Vector<T> *>(srcVector)) + offset;
-        auto ret = memcpy_s(destValues, length * sizeof(T), srcValues, length * sizeof(T));
-        if (ret != EOK) {
-            std::string message("Values memory copy failed " + std::to_string(ret));
-            throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
-        }
+        memcpy(destValues, srcValues, length * sizeof(T));
     }
 
     // used for copy from flat vector to another flat vector, and it does not support string types
