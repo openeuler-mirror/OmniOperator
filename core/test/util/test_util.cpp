@@ -173,6 +173,21 @@ bool ColumnMatch(BaseVector *actualColumn, BaseVector *expectColumn)
             if (!result) {
                 return false;
             }
+        } else if (typeId == OMNI_MAP) {
+            auto actualKeyVector = static_cast<MapVector *>(actualColumn)->GetKeyVector();
+            auto expectKeyVector = static_cast<MapVector *>(expectColumn)->GetKeyVector();
+            auto actualValueVector = static_cast<MapVector *>(actualColumn)->GetValueVector();
+            auto expectValueVector = static_cast<MapVector *>(expectColumn)->GetValueVector();
+            result =
+                ColumnMatch(reinterpret_cast<BaseVector *>(actualKeyVector.get()), reinterpret_cast<BaseVector *>(expectKeyVector.get()));
+            if (!result) {
+                return false;
+            }
+            result =
+                ColumnMatch(reinterpret_cast<BaseVector*>(actualValueVector.get()), reinterpret_cast<BaseVector*>(expectValueVector.get()));
+            if (!result) {
+                return false;
+            }
         } else {
             result = DYNAMIC_TYPE_DISPATCH(ValueEqualsValueIgnoreNulls, typeId, actualColumn, expectColumn, rowIndex);
             if (!result) {

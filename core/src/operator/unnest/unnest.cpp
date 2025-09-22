@@ -19,13 +19,14 @@ Operator* UnnestOperatorFactory::CreateOperator()
     return unnestOperator;
 }
 
-UnnestOperator::UnnestOperator(std::shared_ptr<const UnnestNode> planNode) : outputVecBatch(nullptr)
+UnnestOperator::UnnestOperator(std::shared_ptr<const UnnestNode> planNode)
+    : withOrdinality_(planNode->withOrdinality()),
+      outputVecBatch(nullptr)
 {
-    const auto& inputType = planNode->Sources()[0]->OutputType();
     const auto& unnestVariables = planNode->unnestVariables();
     for (const auto& variable : unnestVariables) {
         auto fieldExpr = dynamic_cast<FieldExpr *>(variable);
-        if (!fieldExpr->FieldIsArray()) {
+        if (!fieldExpr->FieldIsArray() && !fieldExpr->FieldIsMap()) {
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest operator supports only ARRAY and MAP types");
         }
         unnestChannels_.push_back(fieldExpr->colVal);
@@ -51,16 +52,23 @@ int32_t UnnestOperator::AddInput(omniruntime::vec::VectorBatch* vecBatch)
     for (size_t channel = 0; channel < unnestChannels_.size(); ++channel) {
         const auto& unnestVector = vecBatch->Get(unnestChannels_[channel]);
 
-        if (auto inputVector = dynamic_cast<omniruntime::vec::ArrayVector*>(unnestVector)) {
+        auto processVector = [&](auto* inputVector) {
             for (auto row = 0; row < unnestVector->GetSize(); ++row) {
                 auto rowSize = inputVector->GetSize(row);
                 rawMaxSizes_[row] = (rowSize > rawMaxSizes_[row]) ? rowSize : rawMaxSizes_[row];
             }
+        };
+
+        if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(unnestVector)) {
+            processVector(arrayVector);
+        } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(unnestVector)) {
+            processVector(mapVector);
         }
     }
 
     numElements = std::max(std::accumulate(rawMaxSizes_.begin(), rawMaxSizes_.end(), 0), vecBatch->Get(0)->GetSize());
     generateOutput(numElements, vecBatch);
+    return 0;
 }
 
 
@@ -82,9 +90,12 @@ void UnnestOperator::generateOutput(int32_t numElements, omniruntime::vec::Vecto
 {
     auto result = std::make_unique<VectorBatch>(numElements);
     result->ResizeVectorCount(outputTypeSize_);
-    int32_t vecBatchSize = vecBatch->GetRowCount();
     generateRepeatedColumns(numElements, vecBatch, result.get());
     generateUnrepeatedColumns(numElements, vecBatch, result.get());
+
+    if (withOrdinality_) {
+        generateOrdinalityColumns(numElements, vecBatch, result.get());
+    }
 
     VectorHelper::FreeVecBatch(vecBatch);
     ResetInputVecBatch();
@@ -110,6 +121,54 @@ void UnnestOperator::generateRepeatedValues(VectorType* inputVector, VectorType*
     }
 }
 
+void UnnestOperator::generateComplexRepeatedValuesForType(DataTypeId typeId, int32_t inputSize, auto* inputVector, auto* outputVector,
+                                                          BaseVector* inputElementVector, BaseVector* outputElementVector)
+{
+    switch (typeId) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<int32_t>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputElementVector));
+            break;
+        case OMNI_SHORT:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<int16_t>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<int16_t>*>(outputElementVector));
+            break;
+        case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DECIMAL64:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<int64_t>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<int64_t>*>(outputElementVector));
+            break;
+        case OMNI_DECIMAL128:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<Decimal128>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<Decimal128>*>(outputElementVector));
+            break;
+        case OMNI_CHAR:
+        case OMNI_VARCHAR:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputElementVector));
+            break;
+        case OMNI_DOUBLE:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<double>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<double>*>(outputElementVector));
+            break;
+        case OMNI_BOOLEAN:
+            generateComplexRepeatedValues(inputSize, inputVector, outputVector,
+                                          dynamic_cast<omniruntime::vec::Vector<bool>*>(inputElementVector),
+                                          dynamic_cast<omniruntime::vec::Vector<bool>*>(outputElementVector));
+            break;
+        default:
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
+    }
+}
+
 void UnnestOperator::generateArrayRepeatedValues(omniruntime::vec::BaseVector* inputVector,
                                                  omniruntime::vec::BaseVector* outputVector)
 {
@@ -119,57 +178,29 @@ void UnnestOperator::generateArrayRepeatedValues(omniruntime::vec::BaseVector* i
     auto outputElementVector = outputArrayVector->GetElementVector().get();
     auto typeId = inputElementVector->GetTypeId();
     auto inputSize = inputVector->GetSize();
+    generateComplexRepeatedValuesForType(typeId, inputSize, inputArrayVector, outputArrayVector, inputElementVector, outputElementVector);
+}
 
-    switch (typeId) {
-        case OMNI_INT:
-        case OMNI_DATE32:
-            generateArrayRepeatedValuesBase(inputSize, inputArrayVector, outputArrayVector,
-                                            dynamic_cast<omniruntime::vec::Vector<int32_t>*>(inputElementVector),
-                                            dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputElementVector));
-            break;
-        case OMNI_SHORT:
-            generateArrayRepeatedValuesBase(inputSize, inputArrayVector, outputArrayVector,
-                                            dynamic_cast<omniruntime::vec::Vector<int16_t>*>(inputElementVector),
-                                            dynamic_cast<omniruntime::vec::Vector<int16_t>*>(outputElementVector));
-            break;
-        case OMNI_LONG:
-        case OMNI_TIMESTAMP:
-        case OMNI_DECIMAL64:
-            generateArrayRepeatedValuesBase(inputSize, inputArrayVector, outputArrayVector,
-                                            dynamic_cast<omniruntime::vec::Vector<int64_t>*>(inputElementVector),
-                                            dynamic_cast<omniruntime::vec::Vector<int64_t>*>(outputElementVector));
-            break;
-        case OMNI_DECIMAL128:
-            generateArrayRepeatedValuesBase(inputSize, inputArrayVector, outputArrayVector,
-                dynamic_cast<omniruntime::vec::Vector<Decimal128>*>(inputElementVector),
-                dynamic_cast<omniruntime::vec::Vector<Decimal128>*>(outputElementVector));
-            break;
-        case OMNI_CHAR:
-        case OMNI_VARCHAR:
-            generateArrayRepeatedValuesBase(inputSize, inputArrayVector, outputArrayVector,
-                                            dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(inputElementVector),
-                                            dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputElementVector));
-            break;
-        case OMNI_DOUBLE:
-            generateArrayRepeatedValuesBase(inputSize, inputArrayVector, outputArrayVector,
-                                            dynamic_cast<omniruntime::vec::Vector<double>*>(inputElementVector),
-                                            dynamic_cast<omniruntime::vec::Vector<double>*>(outputElementVector));
-            break;
-        case OMNI_BOOLEAN:
-            generateArrayRepeatedValuesBase(inputSize, inputArrayVector, outputArrayVector,
-                                            dynamic_cast<omniruntime::vec::Vector<bool>*>(inputElementVector),
-                                            dynamic_cast<omniruntime::vec::Vector<bool>*>(outputElementVector));
-            break;
-        default:
-            std::cout << typeId << std::endl;
-            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "2This type not supported yet");
-    }
+void UnnestOperator::generateMapRepeatedValues(omniruntime::vec::BaseVector* inputVector,
+                                               omniruntime::vec::BaseVector* outputVector)
+{
+    auto inputMapVector = dynamic_cast<omniruntime::vec::MapVector*>(inputVector);
+    auto outputMapVector = dynamic_cast<omniruntime::vec::MapVector*>(outputVector);
+    auto inputKeyVector = inputMapVector->GetKeyVector().get();
+    auto inputValueVector = inputMapVector->GetValueVector().get();
+    auto outputKeyVector = outputMapVector->GetKeyVector().get();
+    auto outputValueVector = outputMapVector->GetValueVector().get();
+    auto keyTypeId = inputKeyVector->GetTypeId();
+    auto valueTypeid = inputValueVector->GetTypeId();
+    auto inputSize = inputVector->GetSize();
+
+    generateComplexRepeatedValuesForType(keyTypeId, inputSize, inputMapVector, outputMapVector, inputKeyVector, outputKeyVector);
+    generateComplexRepeatedValuesForType(valueTypeid, inputSize, inputMapVector, outputMapVector, inputValueVector, outputValueVector);
 }
 
 template<typename VectorType>
-void UnnestOperator::generateArrayRepeatedValuesBase(int32_t inputSize, omniruntime::vec::ArrayVector* inputVector,
-                                                     omniruntime::vec::ArrayVector* outputVector,
-                                                     VectorType* inputElementVector, VectorType* outputElementVector)
+void UnnestOperator::generateComplexRepeatedValues(int32_t inputSize, auto* inputVector, auto* outputVector,
+                                                   VectorType* inputElementVector, VectorType* outputElementVector)
 {
     int32_t index = 0;
     int32_t elementIndex = 0;
@@ -195,25 +226,33 @@ void UnnestOperator::generateUnrepeatedValues(omniruntime::vec::BaseVector* inpu
 {
     int32_t index = 0;
     int32_t inputSize = inputVector->GetSize();
-    auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(inputVector);
-    for (auto i = 0; i < inputSize; ++i) {
-        if (arrayVector->IsNull(i)) {
-            for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
-                outputVector->SetNull(index++);
-            }
-        } else {
-            auto start = arrayVector->GetOffset(i);
-            auto length = arrayVector->GetSize(i);
-            for (auto j = 0; j < length; ++j) {
-                auto value = elementVector->GetValue(start + j);
-                outputVector->SetValue(index++, value);
-            }
-            if (rawMaxSizes_[i] > length) {
-                for (auto j = length; j < rawMaxSizes_[i]; ++j) {
+
+    auto insetVector = [&](auto* unrepeatVector, auto* outputVector) {
+        for (auto i = 0; i < inputSize; ++i) {
+            if (unrepeatVector->IsNull(i)) {
+                for (auto j = 0; j < rawMaxSizes_[i]; ++j) {
                     outputVector->SetNull(index++);
+                }
+            } else {
+                auto start = unrepeatVector->GetOffset(i);
+                auto length = unrepeatVector->GetSize(i);
+                for (auto j = 0; j < length; ++j) {
+                    auto value = elementVector->GetValue(start + j);
+                    outputVector->SetValue(index++, value);
+                }
+                if (rawMaxSizes_[i] > length) {
+                    for (auto j = length; j < rawMaxSizes_[i]; ++j) {
+                        outputVector->SetNull(index++);
+                    }
                 }
             }
         }
+    };
+
+    if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(inputVector)) {
+        insetVector(arrayVector, outputVector);
+    } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(inputVector)) {
+        insetVector(mapVector, outputVector);
     }
 }
 
@@ -222,7 +261,8 @@ void UnnestOperator::generateRepeatedColumns(int32_t numElements, omniruntime::v
 {
     for (const auto& projection : identityProjections_) {
         omniruntime::vec::BaseVector* inputVector = vecBatch->Get(projection.inputChannel);
-        if (inputVector->GetEncoding() != OMNI_FLAT && inputVector->GetEncoding() != OMNI_ENCODING_ARRAY) {
+        if (inputVector->GetEncoding() != OMNI_FLAT && inputVector->GetEncoding() != OMNI_ENCODING_ARRAY &&
+            inputVector->GetEncoding() != OMNI_ENCODING_MAP) {
             throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest not support this encoding.");
         }
         auto typeId = inputVector->GetTypeId();
@@ -239,6 +279,19 @@ void UnnestOperator::generateRepeatedColumns(int32_t numElements, omniruntime::v
             auto typeId = elementVector->GetTypeId();
             auto newElementVector = std::shared_ptr<BaseVector>(VectorHelper::CreateVector(OMNI_FLAT, typeId, totalSize));
             outputVector = new omniruntime::vec::ArrayVector(numElements, newElementVector);
+        } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(inputVector)) {
+            int64_t totalSize = 0;
+            for (auto i = 0; i < inputVector->GetSize(); ++i) {
+                totalSize += mapVector->GetSize(i) * rawMaxSizes_[i];
+            }
+            auto keyVector = mapVector->GetKeyVector().get();
+            auto valueVector = mapVector->GetValueVector().get();
+            if (keyVector->GetEncoding() != OMNI_FLAT || valueVector->GetEncoding() != OMNI_FLAT) {
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest not support this encoding.");
+            }
+            auto newKeyVector = std::shared_ptr<BaseVector>(VectorHelper::CreateVector(OMNI_FLAT, keyVector->GetTypeId(), totalSize));
+            auto newValueVector = std::shared_ptr<BaseVector>(VectorHelper::CreateVector(OMNI_FLAT, valueVector->GetTypeId(), totalSize));
+            outputVector = new omniruntime::vec::MapVector(numElements, newKeyVector, newValueVector);
         } else {
             outputVector = VectorHelper::CreateVector(OMNI_FLAT, typeId, numElements);
         }
@@ -279,8 +332,10 @@ void UnnestOperator::generateRepeatedColumns(int32_t numElements, omniruntime::v
             case OMNI_ARRAY:
                 generateArrayRepeatedValues(inputVector, outputVector);
                 break;
+            case OMNI_MAP:
+                generateMapRepeatedValues(inputVector, outputVector);
+                break;
             default:
-                std::cout << typeId << std::endl;
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
         }
 
@@ -294,59 +349,86 @@ void UnnestOperator::generateUnrepeatedColumns(int32_t numElements, omniruntime:
     size_t resultIndex = identityProjections_.size();
     for (auto channel : unnestChannels_) {
         omniruntime::vec::BaseVector* inputVector = vecBatch->Get(channel);
-        auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(inputVector);
-        auto elementVector = arrayVector->GetElementVector().get();
-        if (elementVector->GetEncoding() != OMNI_FLAT) {
-            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest not support this encoding.");
+        if (auto arrayVector = dynamic_cast<omniruntime::vec::ArrayVector*>(inputVector)) {
+            auto elementVector = arrayVector->GetElementVector().get();
+            resultVecBatch->SetVector(resultIndex++, generateUnrepeatedValuesForType(elementVector, inputVector, numElements));
+        } else if (auto mapVector = dynamic_cast<omniruntime::vec::MapVector*>(inputVector)) {
+            auto keyElementVector = mapVector->GetKeyVector().get();
+            resultVecBatch->SetVector(resultIndex++, generateUnrepeatedValuesForType(keyElementVector, inputVector, numElements));
+            auto valueElementVector = mapVector->GetValueVector().get();
+            resultVecBatch->Append(generateUnrepeatedValuesForType(valueElementVector, inputVector, numElements));
         }
-        auto typeId = elementVector->GetTypeId();
-        auto outputVector = VectorHelper::CreateVector(OMNI_FLAT, typeId, numElements);
-
-        switch (typeId) {
-            case OMNI_INT:
-            case OMNI_DATE32:
-                generateUnrepeatedValues(inputVector,
-                                         dynamic_cast<omniruntime::vec::Vector<int32_t>*>(elementVector),
-                                         dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputVector));
-                break;
-            case OMNI_SHORT:
-                generateUnrepeatedValues(inputVector,
-                                         dynamic_cast<omniruntime::vec::Vector<int16_t>*>(elementVector),
-                                         dynamic_cast<omniruntime::vec::Vector<int16_t>*>(outputVector));
-                break;
-            case OMNI_LONG:
-            case OMNI_TIMESTAMP:
-            case OMNI_DECIMAL64:
-                generateUnrepeatedValues(inputVector,
-                                         dynamic_cast<omniruntime::vec::Vector<int64_t>*>(elementVector),
-                                         dynamic_cast<omniruntime::vec::Vector<int64_t>*>(outputVector));
-                break;
-            case OMNI_DECIMAL128:
-                generateUnrepeatedValues(inputVector,
-                                         dynamic_cast<omniruntime::vec::Vector<Decimal128>*>(elementVector),
-                                         dynamic_cast<omniruntime::vec::Vector<Decimal128>*>(outputVector));
-                break;
-            case OMNI_CHAR:
-            case OMNI_VARCHAR:
-                generateUnrepeatedValues(inputVector,
-                                         dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(elementVector),
-                                         dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputVector));
-                break;
-            case OMNI_DOUBLE:
-                generateUnrepeatedValues(inputVector,
-                                         dynamic_cast<omniruntime::vec::Vector<double>*>(elementVector),
-                                         dynamic_cast<omniruntime::vec::Vector<double>*>(outputVector));
-                break;
-            case OMNI_BOOLEAN:
-                generateUnrepeatedValues(inputVector,
-                                         dynamic_cast<omniruntime::vec::Vector<bool>*>(elementVector),
-                                         dynamic_cast<omniruntime::vec::Vector<bool>*>(outputVector));
-                break;
-            default:
-                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
-        }
-        resultVecBatch->SetVector(resultIndex++, outputVector);
     }
+}
+
+omniruntime::vec::BaseVector* UnnestOperator::generateUnrepeatedValuesForType(omniruntime::vec::BaseVector* elementVector,
+                                                                              omniruntime::vec::BaseVector* inputVector, int32_t numElements)
+{
+    if (elementVector->GetEncoding() != OMNI_FLAT) {
+        throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest not support this encoding.");
+    }
+
+    auto typeId = elementVector->GetTypeId();
+    auto outputVector = VectorHelper::CreateVector(OMNI_FLAT, typeId, numElements);
+
+    switch (typeId) {
+        case OMNI_INT:
+        case OMNI_DATE32:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<int32_t>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<int32_t>*>(outputVector));
+            break;
+        case OMNI_SHORT:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<int16_t>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<int16_t>*>(outputVector));
+            break;
+        case OMNI_LONG:
+        case OMNI_TIMESTAMP:
+        case OMNI_DECIMAL64:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<int64_t>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<int64_t>*>(outputVector));
+            break;
+        case OMNI_DECIMAL128:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<Decimal128>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<Decimal128>*>(outputVector));
+            break;
+        case OMNI_CHAR:
+        case OMNI_VARCHAR:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<omniruntime::vec::LargeStringContainer<std::string_view>>*>(outputVector));
+            break;
+        case OMNI_DOUBLE:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<double>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<double>*>(outputVector));
+            break;
+        case OMNI_BOOLEAN:
+            generateUnrepeatedValues(inputVector,
+                                     dynamic_cast<omniruntime::vec::Vector<bool>*>(elementVector),
+                                     dynamic_cast<omniruntime::vec::Vector<bool>*>(outputVector));
+            break;
+        default:
+            throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "This type not supported yet");
+    }
+    return outputVector;
+}
+
+void UnnestOperator::generateOrdinalityColumns(int32_t numElements, omniruntime::vec::VectorBatch* vecBatch,
+    omniruntime::vec::VectorBatch* resultVecBatch)
+{
+    int32_t index = 0;
+    BaseVector* baseVector = VectorHelper::CreateVector(OMNI_FLAT, OMNI_LONG, numElements);
+    auto ordVector = dynamic_cast<omniruntime::vec::Vector<int64_t>*>(baseVector);
+    for (size_t i = 0; i < rawMaxSizes_.size(); ++i) {
+        for (int64_t j = 0; j < rawMaxSizes_[i]; ++j) {
+            ordVector->SetValue(index++, j);
+        }
+    }
+    resultVecBatch->Append(baseVector);
 }
 
 OmniStatus UnnestOperator::Close()

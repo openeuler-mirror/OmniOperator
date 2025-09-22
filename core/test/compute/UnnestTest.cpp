@@ -148,10 +148,11 @@ VectorBatch *CreateTestUnnestOutputVecBatchWithArray()
     int32_t data1[dataSize] = {0, 1, 1, 2, 2, 0, 1, 2, 2, 2};
     double data2[dataSize] = {6.6, 5.5, 5.5, 4.4, 4.4, 3.3, 2.2, 1.1, 1.1, 1.1};
     int32_t data3[dataSize] = {1, 2, 2, 3, 3, 4, 5, 6, 6, 6};
+    int64_t data4[dataSize] = {0, 0, 1, 0, 1, 0, 0, 0, 1, 2};
 
-    std::vector<DataTypePtr> types = { IntType(), DoubleType(), IntType() };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType(), IntType(), LongType() };
     DataTypes sourceTypes(types);
-    return CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3);
+    return CreateVectorBatch(sourceTypes, dataSize, data1, data2, data3, data4);
 }
 
 TEST(PipelineTest, TestUnestArray)
@@ -174,7 +175,7 @@ TEST(PipelineTest, TestUnestArray)
         static_cast<ExprPtr>(expr2)};
 
     auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr3) };
-    auto unnestNode = std::make_shared<const UnnestNode>("unnest", replicateVariables, unnestVariables, valueStreamNode);
+    auto unnestNode = std::make_shared<const UnnestNode>("unnest", replicateVariables, unnestVariables, valueStreamNode, true);
     std::unordered_set<PlanNodeId> emptySet;
     PlanFragment planFragment{unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
     auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
@@ -655,6 +656,148 @@ TEST(PipelineTest, TestUnestMultiType)
     EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
     Expr::DeleteExprs({expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9, expr10,
         expr11, expr12, expr13, expr14, expr15, expr16, expr17, expr18, expr19, expr20});
+    VectorHelper::FreeVecBatch(expVecBatch);
+    VectorHelper::FreeVecBatch(vectorBatch);
+}
+
+
+VectorBatch *CreateTestUnnestVecBatchWithMap()
+{
+    const int32_t dataSize = 3;
+    int32_t data1[dataSize] = {0, 1, 2};
+    double data2[dataSize] = {6.6, 5.5, 4.4};
+
+    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
+    DataTypes sourceTypes(types);
+    VectorBatch* batch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+
+    // Create map vector {null, {2: 2, 4: 4}, {3: 3}}
+    int32_t elementSize = 4;
+    auto keyVector = std::make_shared<vec::Vector<int32_t>>(elementSize);
+    auto valueVector = std::make_shared<vec::Vector<int32_t>>(elementSize);
+    keyVector->SetNull(0);
+    keyVector->SetValue(1, 2);
+    keyVector->SetValue(2, 4);
+    keyVector->SetValue(3, 3);
+    valueVector->SetNull(0);
+    valueVector->SetValue(1, 2);
+    valueVector->SetValue(2, 4);
+    valueVector->SetValue(3, 3);
+    vec::MapVector* mapVector = new vec::MapVector(dataSize, keyVector, valueVector);
+    mapVector->SetOffset(0, 0);
+    mapVector->SetOffset(1, 1);
+    mapVector->SetOffset(2, 3);
+    mapVector->SetOffset(3, 4);
+    batch->Append(mapVector);
+
+    // Create map vector {{1: 1}, {2: 2}, {3: 3}}
+    int32_t elementSize1 = 3;
+    auto keyVector1 = std::make_shared<vec::Vector<int32_t>>(elementSize1);
+    auto valueVector1 = std::make_shared<vec::Vector<int32_t>>(elementSize1);
+    keyVector1->SetValue(0, 1);
+    keyVector1->SetValue(1, 2);
+    keyVector1->SetValue(2, 3);
+    valueVector1->SetValue(0, 1);
+    valueVector1->SetValue(1, 2);
+    valueVector1->SetValue(2, 3);
+    vec::MapVector* mapVector1 = new vec::MapVector(dataSize, keyVector1, valueVector1);
+    mapVector1->SetOffset(0, 0);
+    mapVector1->SetOffset(1, 1);
+    mapVector1->SetOffset(2, 2);
+    mapVector1->SetOffset(3, 3);
+    batch->Append(mapVector1);
+    return batch;
+}
+
+VectorBatch *CreateTestUnnestOutputVecBatchWithMap()
+{
+    const int32_t dataSize = 3;
+    int32_t data1[dataSize] = {0, 1, 2};
+    double data2[dataSize] = {6.6, 5.5, 4.4};
+    std::vector<DataTypePtr> types = { IntType(), DoubleType() };
+    DataTypes sourceTypes(types);
+    VectorBatch* batch = CreateVectorBatch(sourceTypes, dataSize, data1, data2);
+
+    // Create map vector {null, {2: 2, 4: 4}, {3: 3}}
+    int32_t elementSize = 4;
+    auto keyVector = std::make_shared<vec::Vector<int32_t>>(elementSize);
+    auto valueVector = std::make_shared<vec::Vector<int32_t>>(elementSize);
+    keyVector->SetNull(0);
+    keyVector->SetValue(1, 2);
+    keyVector->SetValue(2, 4);
+    keyVector->SetValue(3, 3);
+    valueVector->SetNull(0);
+    valueVector->SetValue(1, 2);
+    valueVector->SetValue(2, 4);
+    valueVector->SetValue(3, 3);
+    vec::MapVector* mapVector = new vec::MapVector(dataSize, keyVector, valueVector);
+    mapVector->SetOffset(0, 0);
+    mapVector->SetOffset(1, 1);
+    mapVector->SetOffset(2, 3);
+    mapVector->SetOffset(3, 4);
+    batch->Append(mapVector);
+
+    int32_t elementSize1 = 3;
+    auto vector1 = new vec::Vector<int32_t>(elementSize1);
+    vector1->SetValue(0, 1);
+    vector1->SetValue(1, 2);
+    vector1->SetValue(2, 3);
+    auto vector2 = new vec::Vector<int32_t>(elementSize1);
+    vector2->SetValue(0, 1);
+    vector2->SetValue(1, 2);
+    vector2->SetValue(2, 3);
+    batch->Append(vector1);
+    batch->Append(vector2);
+    return batch;
+}
+
+TEST(PipelineTest, TestUnestMap)
+{
+    std::vector<DataTypePtr> types = {
+        IntType(),
+        DoubleType(),
+        std::make_shared<MapType>(IntType(), IntType()),
+        std::make_shared<MapType>(IntType(), IntType())
+    };
+    VectorBatch *vecBatch = CreateTestUnnestVecBatchWithMap();
+    std::vector<VectorBatch*> inputVector;
+    inputVector.push_back(vecBatch);
+
+    auto sourceBatchIterator = std::make_unique<TestBatchIterator>(inputVector);
+    auto resIterator = std::make_shared<ResultIterator>(std::move(sourceBatchIterator));
+    auto outTypes = std::make_shared<DataTypes>(types);
+    auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
+
+    auto expr1 = new FieldExpr(0, IntType());
+    auto expr2 = new FieldExpr(1, DoubleType());
+    auto expr3 = new FieldExpr(2, std::make_shared<MapType>(IntType(), IntType()));
+    auto expr4 = new FieldExpr(3, std::make_shared<MapType>(IntType(), IntType()));
+    auto replicateVariables = std::vector<ExprPtr>{
+        static_cast<ExprPtr>(expr1),
+        static_cast<ExprPtr>(expr2),
+        static_cast<ExprPtr>(expr3)
+    };
+
+    auto unnestVariables = std::vector<ExprPtr>{ static_cast<ExprPtr>(expr4) };
+    auto unnestNode = std::make_shared<const UnnestNode>("unnest", replicateVariables, unnestVariables, valueStreamNode);
+    std::unordered_set<PlanNodeId> emptySet;
+    PlanFragment planFragment{unnestNode, ExecutionStrategy::K_UNGROUPED, 1, emptySet};
+    auto task = std::make_shared<OmniTask>(planFragment, config::QueryConfig());
+    VectorBatch *vectorBatch = nullptr;
+    while (true) {
+        auto future = OmniFuture::makeEmpty();
+        auto out = task->Next(&future);
+        if (!future.valid()) {
+            vectorBatch = out;
+            break;
+        }
+        OMNI_CHECK(out == nullptr, "Expected to wait but still got non-null output from Omni task");
+        future.wait();
+    }
+
+    VectorBatch *expVecBatch = CreateTestUnnestOutputVecBatchWithMap();
+    EXPECT_TRUE(VecBatchMatch(vectorBatch, expVecBatch));
+    Expr::DeleteExprs({expr1, expr2, expr3, expr4});
     VectorHelper::FreeVecBatch(expVecBatch);
     VectorHelper::FreeVecBatch(vectorBatch);
 }

@@ -55,6 +55,14 @@ private:
                                  omniruntime::vec::VectorBatch* resultVecBatch);
     void generateUnrepeatedColumns(int32_t numElements, omniruntime::vec::VectorBatch *vecBatch,
                                    omniruntime::vec::VectorBatch* resultVecBatch);
+    void generateOrdinalityColumns(int32_t numElements, omniruntime::vec::VectorBatch *vecBatch,
+                                   omniruntime::vec::VectorBatch* resultVecBatch);
+
+    omniruntime::vec::BaseVector* generateUnrepeatedValuesForType(omniruntime::vec::BaseVector* elementVector,
+                                         omniruntime::vec::BaseVector* inputVector, int32_t numElements);
+
+    void generateComplexRepeatedValuesForType(DataTypeId typeId, int32_t inputSize, auto* inputVector, auto* outputVector,
+                                              BaseVector* inputElementVector, BaseVector* outputElementVector);
 
     template<typename VectorType>
     void generateRepeatedValues(VectorType* inputVector, VectorType* outputVector);
@@ -62,9 +70,11 @@ private:
     void generateArrayRepeatedValues(omniruntime::vec::BaseVector* inputVector,
                                      omniruntime::vec::BaseVector* outputVector);
 
+    void generateMapRepeatedValues(omniruntime::vec::BaseVector* inputVector,
+                                   omniruntime::vec::BaseVector* outputVector);
+
     template<typename VectorType>
-    void generateArrayRepeatedValuesBase(int32_t inputSize, omniruntime::vec::ArrayVector* inputVector,
-                                         omniruntime::vec::ArrayVector* outputVector,
+    void generateComplexRepeatedValues(int32_t inputSize, auto* inputVector, auto* outputVector,
                                          VectorType* inputElementVector, VectorType* outputElementVector);
 
     template<typename VectorType>
@@ -73,6 +83,7 @@ private:
 
     std::vector<int32_t> rawMaxSizes_;
 
+    const bool withOrdinality_;
     std::vector<uint32_t> unnestChannels_;
     std::vector<IdentityProjection> identityProjections_;
 

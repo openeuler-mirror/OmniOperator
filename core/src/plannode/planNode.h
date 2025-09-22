@@ -949,9 +949,9 @@ public:
     /// @param unnestVariables Inputs that are unnested. Must be of type ARRAY
     /// or MAP.
     UnnestNode(const PlanNodeId& id, std::vector<ExprPtr> replicateVariables,
-        std::vector<ExprPtr> unnestVariables, const PlanNodePtr& source)
+        std::vector<ExprPtr> unnestVariables, const PlanNodePtr& source, bool withOrdinality = false)
         : PlanNode(id), replicateVariables_(std::move(replicateVariables)),
-        unnestVariables_(std::move(unnestVariables)), sources_{source} {}
+        unnestVariables_(std::move(unnestVariables)), sources_{source}, withOrdinality_(withOrdinality) {}
 
     /// The order of columns in the output is: replicated columns (in the order
     /// specified), unnested columns (in the order specified, for maps: key
@@ -973,6 +973,11 @@ public:
         return unnestVariables_;
     }
 
+    bool withOrdinality() const
+    {
+        return withOrdinality_;
+    }
+
     std::string_view Name() const override
     {
         return "Unnest";
@@ -981,6 +986,7 @@ public:
 private:
     const std::vector<ExprPtr> replicateVariables_;
     const std::vector<ExprPtr> unnestVariables_;
+    const bool withOrdinality_;
     const std::vector<PlanNodePtr> sources_;
 };
 
