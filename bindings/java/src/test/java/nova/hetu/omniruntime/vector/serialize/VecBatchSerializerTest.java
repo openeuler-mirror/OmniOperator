@@ -21,6 +21,7 @@ import nova.hetu.omniruntime.type.IntDataType;
 import nova.hetu.omniruntime.type.LongDataType;
 import nova.hetu.omniruntime.type.ShortDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.ArrayDataType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.BooleanVec;
 import nova.hetu.omniruntime.vector.ContainerVec;
@@ -31,6 +32,7 @@ import nova.hetu.omniruntime.vector.IntVec;
 import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
+import nova.hetu.omniruntime.vector.ArrayVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecUtil;
@@ -636,5 +638,43 @@ public class VecBatchSerializerTest {
 
         freeVecBatch(vecBatch);
         freeVecBatch(vecBatchDeserialized);
+    }
+
+    @Test
+    public void testSerializeArrayVec() {
+        // prepare vector batch
+        int elementSize = 10;
+        int rowSize = 3;
+        ArrayDataType arrayDataType = new ArrayDataType(new VarcharDataType(16));
+        ArrayVec arrayVec = new ArrayVec(arrayDataType, rowSize, true);
+
+        VarcharVec elementVec = new VarcharVec(elementSize);
+        String tmpValStr = "testvarcharVal";
+        for (int i = 0; i < elementSize; i++) {
+            String str = tmpValStr.substring(0, i) + i;
+            elementVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+
+        int[] offsets = new int[]{0, 2, 5, 10};
+        arrayVec.addElements(elementVec);
+        arrayVec.addOffsets(offsets);
+        VecBatch vecBatch = new VecBatch(new Vec[]{arrayVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        ArrayVec checkResultVec = (ArrayVec) checkVecBatch.getVector(0);
+        VarcharVec deElementVec = (VarcharVec) checkResultVec.getElementVec();
+        assertEquals(rowSize, checkResultVec.getSize());
+        assertEquals(elementVec.getSize(), deElementVec.getSize());
+        assertEquals(new String(elementVec.get(2)), new String(deElementVec.get(2)));
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
     }
 }

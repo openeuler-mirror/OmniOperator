@@ -208,6 +208,13 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_VariableWidthVec_getVa
     return reinterpret_cast<uintptr_t>(offsetsAddr);
 }
 
+JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getValueOffsetsNative(JNIEnv *env,
+    jclass jcls, jlong jNativeVector)
+{
+    ArrayVector *nativeVector = reinterpret_cast<ArrayVector *>(jNativeVector);
+    return reinterpret_cast<uintptr_t>(nativeVector->GetOffsets());
+}
+
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_setGlobalMemoryLimitNative(JNIEnv *env,
     jclass jcls, jlong jLimit)
 {

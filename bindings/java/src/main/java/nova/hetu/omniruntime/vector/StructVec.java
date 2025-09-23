@@ -65,6 +65,11 @@ public class StructVec extends ComplexVec {
     }
 
     @Override
+    public VecEncoding getEncoding() {
+        return VecEncoding.OMNI_ENCODING_STRUCT;
+    }
+
+    @Override
     public Vec copyPositions(int[] positions, int offset, int length) {
         return null;
     }
