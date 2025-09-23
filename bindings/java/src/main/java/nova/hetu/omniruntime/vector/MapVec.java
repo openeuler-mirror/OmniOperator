@@ -63,6 +63,11 @@ public class MapVec extends ComplexVec {
     }
 
     @Override
+    public VecEncoding getEncoding() {
+        return VecEncoding.OMNI_ENCODING_MAP;
+    }
+
+    @Override
     public Vec copyPositions(int[] positions, int offset, int length) {
         return null;
     }

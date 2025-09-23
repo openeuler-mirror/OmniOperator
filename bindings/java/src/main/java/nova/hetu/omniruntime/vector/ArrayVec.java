@@ -17,6 +17,11 @@ import nova.hetu.omniruntime.type.ArrayDataType;
 public class ArrayVec extends ComplexVec {
     private Vec elementVec;
 
+    /**
+     * offsets buffer.
+     */
+    protected OmniBuffer offsetsBuf;
+
     public ArrayVec(ArrayDataType type, int size) {
         this(type, size, false);
     }
@@ -38,23 +43,42 @@ public class ArrayVec extends ComplexVec {
         super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress,
             getComplexCapacityNative(nativeVector, OMNI_ENCODING_ARRAY.ordinal()), size, type);
         this.elementVec = createVec(getElementsAddrNative(nativeVector), type.getElementType());
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
+            (size + 1) * Integer.BYTES);
     }
+
+    public ArrayVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
+        long nativeVectorOffsetBufAddress, int size, ArrayDataType type) {
+            super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress,
+                getComplexCapacityNative(nativeVector, OMNI_ENCODING_ARRAY.ordinal()), size, type);
+            this.elementVec = createVec(getElementsAddrNative(nativeVector), type.getElementType());
+            this.offsetsBuf = OmniBufferFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Integer.BYTES);
+        }
 
     public ArrayVec(long nativeVector, ArrayDataType type, int size, boolean isEmpty) {
         super(nativeVector, getComplexCapacityNative(nativeVector, OMNI_ENCODING_ARRAY.ordinal()), size, type);
         if (!isEmpty){
             this.elementVec = createVec(getElementsAddrNative(nativeVector), type.getElementType());
         }
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
+            (size + 1) * Integer.BYTES);
     }
 
     private ArrayVec(ArrayVec vector, int offset, int length) {
         super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_ARRAY.ordinal()));
         this.elementVec = createVec(getElementsAddrNative(nativeVector), ((ArrayDataType) getType()).getElementType());
+        this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
+            (length + 1) * Integer.BYTES);
     }
 
     @Override
     public ArrayVec slice(int start, int length) {
         return new ArrayVec(this, start, length);
+    }
+
+    @Override
+    public VecEncoding getEncoding() {
+        return VecEncoding.OMNI_ENCODING_ARRAY;
     }
 
     @Override
@@ -67,6 +91,27 @@ public class ArrayVec extends ComplexVec {
         return 0;
     }
 
+    @Override
+    public int getRealOffsetBufCapacityInBytes() {
+        return (size + 1) * Integer.BYTES;
+    }
+
+    public OmniBuffer getOffsetsBuf() {
+        return offsetsBuf;
+    }
+
+    public void setOffsetsBuf(byte[] buf) {
+        offsetsBuf.setBytes(0, buf, 0, buf.length);
+    }
+
+    /**
+     * get value offset buffer from native vector.
+     *
+     * @param nativeVector native vector address
+     * @return value offset buffer
+     */
+    protected static native long getValueOffsetsNative(long nativeVector);
+
     public long getOffset(long rowId) {
         return getOffsetNative(nativeVector, rowId);
     }
@@ -76,6 +121,7 @@ public class ArrayVec extends ComplexVec {
     }
 
     public void addElements(Vec elements) {
+        this.elementVec = elements;
         addElementsNative(this.nativeVector, elements.nativeVector);
     }
 

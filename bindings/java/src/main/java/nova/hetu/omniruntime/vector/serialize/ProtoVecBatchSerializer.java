@@ -13,6 +13,7 @@ import nova.hetu.omniruntime.type.Date32DataType;
 import nova.hetu.omniruntime.type.Date64DataType;
 import nova.hetu.omniruntime.type.DecimalDataType;
 import nova.hetu.omniruntime.type.VarcharDataType;
+import nova.hetu.omniruntime.type.ArrayDataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.BooleanVec;
@@ -29,6 +30,7 @@ import nova.hetu.omniruntime.vector.ShortVec;
 import nova.hetu.omniruntime.vector.ByteVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.FloatVec;
+import nova.hetu.omniruntime.vector.ArrayVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecEncoding;
@@ -90,6 +92,14 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 }
                 break;
             }
+            case OMNI_ENCODING_ARRAY: {
+                ArrayVec arrayVec = (ArrayVec) vec;
+                Vec elementVec = arrayVec.getElementVec();
+                VecBatchSerde.Vec elementProtoVec = buildProtoVec(elementVec, null);
+                protoDataTypeExtBuild.addChildren(elementProtoVec.getTypeExt());
+                protoVecBuilder.addSubVectors(elementProtoVec);
+                break;
+            }
             default:
                 throw new IllegalStateException("Unexpected encoding: " + encoding);
         }
@@ -97,22 +107,29 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         Vec compactVec = compactVec(vec, ids);
 
         ByteBuffer valueBuf;
-        if (compactVec instanceof VarcharVec) {
+        if (compactVec instanceof ArrayVec) {
+            ArrayVec arrayVec = (ArrayVec) compactVec;
+            ByteBuffer offsetsBuf = JvmUtils.directBuffer(arrayVec.getOffsetsBuf());
+            offsetsBuf.limit(arrayVec.getRealOffsetBufCapacityInBytes());
+            protoVecBuilder.setOffsets(ByteString.copyFrom(offsetsBuf));
+        } else if (compactVec instanceof VarcharVec) {
             VarcharVec varcharVec = (VarcharVec) compactVec;
             valueBuf = serializeVarcharVector(protoVecBuilder, varcharVec);
+            protoVecBuilder.setValues(ByteString.copyFrom(valueBuf));
         } else {
             // For fixed vector, only serialize value.
             valueBuf = JvmUtils.directBuffer(compactVec.getValuesBuf());
             // only serialize the data actually written
             valueBuf.limit(compactVec.getRealValueBufCapacityInBytes());
+            protoVecBuilder.setValues(ByteString.copyFrom(valueBuf));
         }
 
         ByteBuffer valueNullsBuf = JvmUtils.directBuffer(compactVec.getValueNullsBuf());
         // only serialize the actual null size
         valueNullsBuf.limit(compactVec.getRealNullBufCapacityInBytes());
         VecBatchSerde.Vec protoVec = protoVecBuilder.setTypeExt(protoDataTypeExtBuild.build())
-                .setVecEncoding(protoVecEncodingBuild.build()).setSize(compactVec.getSize())
-                .setValues(ByteString.copyFrom(valueBuf)).setNulls(ByteString.copyFrom(valueNullsBuf)).build();
+            .setVecEncoding(protoVecEncodingBuild.build()).setSize(compactVec.getSize())
+            .setNulls(ByteString.copyFrom(valueNullsBuf)).build();
 
         if (compactVec != vec) {
             compactVec.close();
@@ -261,7 +278,17 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                     subVecAddresses[i] = subVec.getNativeVector();
                     subDataTypes[i] = subVec.getType();
                 }
-                return new ContainerVec(vecCount, protoVec.getSize(), subVecAddresses, subDataTypes);
+                return new ContainerVec(vecCount, vecSize, subVecAddresses, subDataTypes);
+            case OMNI_ENCODING_ARRAY:
+                Vec elementVec = buildVec(protoVec.getSubVectors(0));
+                DataType child = elementVec.getType();
+                ArrayDataType arrayDataType = new ArrayDataType(child);
+
+                ArrayVec arrayVec = new ArrayVec(arrayDataType, vecSize);
+                arrayVec.addElements(elementVec);
+                arrayVec.setNullsBuf(protoVec.getNulls().toByteArray());
+                arrayVec.setOffsetsBuf(protoVec.getOffsets().toByteArray());
+                return arrayVec;
             default:
                 throw new IllegalStateException("Unexpected encoding: " + vecEncoding);
         }
