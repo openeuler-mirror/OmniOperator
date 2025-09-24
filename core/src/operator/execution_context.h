@@ -41,7 +41,18 @@ public:
         hasError = false;
     }
 
+    void SetResultRowSize(const int32_t size)
+    {
+        resultRowSize = size;
+    }
+
+    int32_t GetResultRowSize() const
+    {
+        return resultRowSize;
+    }
+
 private:
+    int32_t resultRowSize;
     mem::SimpleArenaAllocator arena;
     bool hasError = false;
     std::string errorMessage;

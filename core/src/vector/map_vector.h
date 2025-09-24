@@ -60,6 +60,11 @@ public:
         return values;
     }
 
+    std::vector<DataTypeId> ALWAYS_INLINE GetTypeIds() const override
+    {
+        return {keys->GetTypeId(), values->GetTypeId()};
+    }
+
     void SetKeyVector(std::shared_ptr<BaseVector> keyVector)
     {
         keys = std::move(keyVector);

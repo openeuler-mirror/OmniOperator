@@ -15,6 +15,7 @@
 #include <regex>
 #include <codecvt>
 #include "vector/vector_common.h"
+#include "vectorization/VectorFunction.h"
 
 class ExprVisitor;
 
@@ -22,6 +23,7 @@ namespace omniruntime {
 namespace expressions {
 using namespace type;
 using namespace codegen;
+using namespace vectorization;
 
 enum class Operator {
     // Comparison
@@ -82,6 +84,7 @@ enum ExprFunctionType { BUILTIN = 0, HIVE_UDF };
 class Expr {
 public:
     DataTypePtr dataType; // dataType of returned value
+    std::shared_ptr<VectorFunction> vectorFunction;
     DataTypePtr GetReturnType() const;
     omniruntime::type::DataTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;

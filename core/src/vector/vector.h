@@ -134,6 +134,11 @@ public:
         return offset;
     }
 
+    virtual std::vector<DataTypeId> ALWAYS_INLINE GetTypeIds() const
+    {
+        OMNI_THROW("Vector Error:", "1");
+    }
+
     DataTypeId ALWAYS_INLINE GetTypeId()
     {
         return dataTypeId;
@@ -159,7 +164,18 @@ public:
         this->isSliced = isSliced;
     }
 
+    void SetIsField(const bool isField)
+    {
+        isField_ = isField;
+    }
+
+    bool GetIsField() const
+    {
+        return isField_;
+    }
+
 protected:
+    bool isField_ = false;
     friend class unsafe::UnsafeBaseVector;
     int32_t size;
     Encoding encoding; // vector encoding, such as flat, dictionary
