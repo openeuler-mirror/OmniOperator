@@ -114,7 +114,7 @@ extern "C" DLLEXPORT int32_t DateTrunc(int64_t contextPtr, int32_t days, const c
 extern "C" DLLEXPORT int32_t DateTruncRetNull(bool *isNull, int32_t days, const char *levelStr, int32_t len)
 {
     type::DateTruncMode level = type::Date32::ParseTruncLevel(std::string(levelStr, len));
-    int32_t result;
+    int32_t result = 0;
     if (type::Date32::TruncDate(days, level, result) != type::Status::CONVERT_SUCCESS) {
         *isNull = true;
     }

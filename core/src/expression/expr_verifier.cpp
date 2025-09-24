@@ -4,9 +4,11 @@
  */
 #include "expr_verifier.h"
 #include "codegen/func_registry.h"
+#include "vectorization/registration/SimpleFunctionRegistry.h"
 
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
+using namespace omniruntime::vectorization;
 
 namespace omniruntime {
 namespace expressions {
@@ -45,6 +47,7 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
         case OMNI_DECIMAL128:
         case OMNI_FLOAT:
         case OMNI_ROW:
+        case OMNI_ARRAY:
             this->supportedFlag = true;
             break;
         default:
@@ -69,7 +72,7 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128:
         case OMNI_ROW:
-        case OMNI_FLOAT:
+        case OMNI_ARRAY:
             this->supportedFlag = true;
             break;
         default:
@@ -290,9 +293,11 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
             return;
         }
     }
-    auto signature = FunctionSignature(funcExpr.funcName, params, funcExpr.GetReturnTypeId());
-    auto function = codegen::FunctionRegistry::LookupFunction(&signature);
-    if (function == nullptr) {
+    auto signature = std::make_shared<FunctionSignature>(funcExpr.funcName, params, funcExpr.GetReturnTypeId());
+    auto function = codegen::FunctionRegistry::LookupFunction(signature.get());
+
+    auto function2 = VectorFunction::Find(signature);
+    if (function == nullptr && function2 == nullptr) {
         this->supportedFlag = false;
         return;
     }

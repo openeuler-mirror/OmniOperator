@@ -8,8 +8,10 @@
 
 #if defined(DEBUG) || defined(TRACE)
 #define ALWAYS_INLINE
+#define INLINE_LAMBDA
 #else
 #define ALWAYS_INLINE inline __attribute__((always_inline))
+#define INLINE_LAMBDA __attribute__((__always_inline__))
 #endif
 
 #define LIKELY(expr) __builtin_expect((expr), 1)

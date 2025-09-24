@@ -162,6 +162,24 @@ public:
         return new Vector<T>(size, typeId);
     }
 
+    static std::shared_ptr<BaseVector> CreateFlatVectorShared(int32_t dataTypeId, int32_t size,
+        int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    {
+        using namespace omniruntime::type;
+        return DYNAMIC_TYPE_DISPATCH(CreateFlatVectorShared, dataTypeId, size, capacityInBytes);
+    }
+
+    template <type::DataTypeId typeId>
+    static std::shared_ptr<BaseVector> CreateFlatVectorShared(int32_t size,
+        int32_t capacityInBytes = INITIAL_STRING_SIZE)
+    {
+        using T = typename type::NativeType<typeId>::type;
+        if constexpr (std::is_same_v<T, std::string_view>) {
+            return std::make_shared<Vector<LargeStringContainer<std::string_view>>>(size, capacityInBytes);
+        }
+        return std::make_shared<Vector<T>>(size, typeId);
+    }
+
     template <type::DataTypeId typeId> static void VectorSetValue(vec::BaseVector *vector, int32_t index, void *value)
     {
         using T = typename type::NativeType<typeId>::type;
