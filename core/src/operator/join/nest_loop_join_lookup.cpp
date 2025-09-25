@@ -117,6 +117,13 @@ NestLoopJoinLookupOperator::NestLoopJoinLookupOperator(JoinType joinType, std::v
     int32_t buildRowCount = buildVectorBatch->GetRowCount();
     joinedVectorBatch = std::make_unique<VectorBatch>(buildRowCount);
     selectedRows = new int32_t[buildRowCount];
+    if ((joinType == OMNI_JOIN_TYPE_RIGHT || joinType == OMNI_JOIN_TYPE_FULL) && this->filter != nullptr) {
+        buildMatchedRows.assign(buildRowCount, 0);
+        for (int32_t j = 0; j < probeOutputCols.size(); j++) {
+            DataTypeId vectorDateTypeId = probeTypes.GetType(probeOutputCols[j])->GetId();
+            probeOutputDataTypeIds.push_back(vectorDateTypeId);
+        }
+    }
 }
 
 void NestLoopJoinLookupOperator::InitJoinedVectorBatch()
@@ -219,7 +226,7 @@ void NestLoopJoinLookupOperator::ProbeOuterJoin(int32_t probeRowCount, int32_t r
     int32_t buildRowCount = buildVectorBatch->GetRowCount();
     int32_t numSelectedRows;
     int32_t probeOutputRows = 0;
-    if (buildRowCount == 0) {
+    if (buildRowCount == 0 && (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL)) {
         for (int32_t i = curProbePosition; i < probeRowCount; i++) {
             buildNullPosition.emplace_back(probeResultOutputRows.size());
             probeResultOutputRows.emplace_back(i);
@@ -238,11 +245,16 @@ void NestLoopJoinLookupOperator::ProbeOuterJoin(int32_t probeRowCount, int32_t r
         for (int32_t j = 0; j < numSelectedRows; j++) {
             buildResultOutputRows.emplace_back(selectedRows[j]);
         }
+        if (joinType == OMNI_JOIN_TYPE_RIGHT || joinType == OMNI_JOIN_TYPE_FULL) {
+            for (int32_t j = 0; j < numSelectedRows; j++) {
+                buildMatchedRows[selectedRows[j]] = 1;
+            }
+        }
 
         if (numSelectedRows > 0) {
             probeResultOutputRows.insert(probeResultOutputRows.end(), numSelectedRows, i);
             probeOutputRows += numSelectedRows;
-        } else {
+        } else if (joinType == OMNI_JOIN_TYPE_LEFT || joinType == OMNI_JOIN_TYPE_FULL) {
             buildNullPosition.emplace_back(probeResultOutputRows.size());
             probeResultOutputRows.emplace_back(i);
             buildResultOutputRows.emplace_back(0);
@@ -277,6 +289,7 @@ void NestLoopJoinLookupOperator::PrepareCurrentProbe()
                 break;
             case OMNI_JOIN_TYPE_LEFT:
             case OMNI_JOIN_TYPE_RIGHT:
+            case OMNI_JOIN_TYPE_FULL:
                 ProbeOuterJoin(probeRowCount, resultOutputRows);
                 break;
             default:
@@ -357,9 +370,53 @@ void NestLoopJoinLookupOperator::BuildOutput(VectorBatch **outputVecBatch)
     *outputVecBatch = output.release();
 }
 
+void NestLoopJoinLookupOperator::BuildNotMatchOutput(VectorBatch **outputVecBatch)
+{
+    int32_t probeOutputColsSize = probeOutputCols.size();
+    int32_t buildOutputColsSize = buildOutputCols.size();
+    // build side not match rows
+    buildResultOutputRows.clear();
+    for (int32_t i = 0; i < buildMatchedRows.size(); ++i) {
+        if (buildMatchedRows[i] == 0) {
+            buildResultOutputRows.push_back(i);
+        }
+    }
+    int32_t *buildDataPtr = buildResultOutputRows.data();
+    int32_t outputRows = buildResultOutputRows.size();
+    auto output = std::make_unique<VectorBatch>(outputRows);
+    VectorBatch *outputPtr = output.get();
+
+    // probe side set null
+    for (int32_t j = 0; j < probeOutputColsSize; j++) {
+        DataTypeId vectorDateTypeId = probeOutputDataTypeIds[probeOutputCols[j]];
+        BaseVector *outputVector = VectorHelper::CreateVector(OMNI_FLAT, vectorDateTypeId, outputRows);
+        for (int32_t i = 0; i < outputRows; ++i) {
+            outputVector->SetNull(i);
+        }
+        outputPtr->Append(outputVector);
+    }
+
+    // build side copy origin rows
+    for (int32_t j = 0; j < buildOutputColsSize; j++) {
+        BaseVector *outputVector = VectorHelper::CopyPositionsVector(buildVectorBatch->Get(buildOutputCols[j]),
+                                                                     buildDataPtr, 0, outputRows);
+        outputPtr->Append(outputVector);
+    }
+    *outputVecBatch = output.release();
+}
+
 int32_t NestLoopJoinLookupOperator::GetOutput(VectorBatch **outputVecBatch)
 {
     if (curInputBatch == nullptr) {
+        if (!buildMatchedRows.empty()) {
+            BuildNotMatchOutput(outputVecBatch);
+            if ((*outputVecBatch != nullptr)) {
+                UpdateGetOutputInfo((*outputVecBatch)->GetRowCount());
+            } else {
+                UpdateGetOutputInfo(0);
+            }
+            buildMatchedRows.clear();
+        }
         if (noMoreInput_) {
             SetStatus(OMNI_STATUS_FINISHED);
         }
@@ -376,7 +433,7 @@ int32_t NestLoopJoinLookupOperator::GetOutput(VectorBatch **outputVecBatch)
         curInputBatch = nullptr;
         curProbePosition = 0;
 
-        if (noMoreInput_) {
+        if (noMoreInput_ && buildMatchedRows.empty()) {
             SetStatus(OMNI_STATUS_FINISHED);
         }
     }
