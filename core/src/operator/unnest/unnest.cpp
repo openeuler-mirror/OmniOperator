@@ -356,7 +356,7 @@ void UnnestOperator::generateUnrepeatedColumns(int32_t numElements, omniruntime:
             auto keyElementVector = mapVector->GetKeyVector().get();
             resultVecBatch->SetVector(resultIndex++, generateUnrepeatedValuesForType(keyElementVector, inputVector, numElements));
             auto valueElementVector = mapVector->GetValueVector().get();
-            resultVecBatch->Append(generateUnrepeatedValuesForType(valueElementVector, inputVector, numElements));
+            resultVecBatch->SetVector(resultIndex++, generateUnrepeatedValuesForType(valueElementVector, inputVector, numElements));
         }
     }
 }
@@ -425,10 +425,10 @@ void UnnestOperator::generateOrdinalityColumns(int32_t numElements, omniruntime:
     auto ordVector = dynamic_cast<omniruntime::vec::Vector<int64_t>*>(baseVector);
     for (size_t i = 0; i < rawMaxSizes_.size(); ++i) {
         for (int64_t j = 0; j < rawMaxSizes_[i]; ++j) {
-            ordVector->SetValue(index++, j);
+            ordVector->SetValue(index++, j + 1);
         }
     }
-    resultVecBatch->Append(baseVector);
+    resultVecBatch->SetVector(outputTypeSize_ - 1, baseVector);
 }
 
 OmniStatus UnnestOperator::Close()
