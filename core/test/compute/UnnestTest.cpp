@@ -148,7 +148,7 @@ VectorBatch *CreateTestUnnestOutputVecBatchWithArray()
     int32_t data1[dataSize] = {0, 1, 1, 2, 2, 0, 1, 2, 2, 2};
     double data2[dataSize] = {6.6, 5.5, 5.5, 4.4, 4.4, 3.3, 2.2, 1.1, 1.1, 1.1};
     int32_t data3[dataSize] = {1, 2, 2, 3, 3, 4, 5, 6, 6, 6};
-    int64_t data4[dataSize] = {0, 0, 1, 0, 1, 0, 0, 0, 1, 2};
+    int64_t data4[dataSize] = {1, 1, 2, 1, 2, 1, 1, 1, 2, 3};
 
     std::vector<DataTypePtr> types = { IntType(), DoubleType(), IntType(), LongType() };
     DataTypes sourceTypes(types);

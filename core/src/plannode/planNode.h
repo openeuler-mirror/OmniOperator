@@ -938,12 +938,43 @@ public:
     UnnestNode(const PlanNodeId& id, std::vector<ExprPtr> replicateVariables,
         std::vector<ExprPtr> unnestVariables, const PlanNodePtr& source, bool withOrdinality = false)
         : PlanNode(id), replicateVariables_(std::move(replicateVariables)),
-        unnestVariables_(std::move(unnestVariables)), sources_{source}, withOrdinality_(withOrdinality) {}
+        unnestVariables_(std::move(unnestVariables)), sources_{source}, withOrdinality_(withOrdinality),
+        outputType_(MakeOutputType(replicateVariables_, unnestVariables_, withOrdinality_)) {}
 
     /// The order of columns in the output is: replicated columns (in the order
     /// specified), unnested columns (in the order specified, for maps: key
     /// comes before value), optional ordinality column.
-    const DataTypesPtr &OutputType() const override { return sources_[0]->OutputType(); }
+    static DataTypesPtr MakeOutputType(const std::vector<ExprPtr>& replicateVariables,
+                                       const std::vector<ExprPtr>& unnestVariables, bool withOrdinality = false)
+    {
+        std::vector<DataTypePtr> dataTypes;
+        for (const auto &variable : replicateVariables) {
+            dataTypes.push_back(variable->dataType);
+        }
+        for (const auto &variable : unnestVariables) {
+            auto fieldExpr = dynamic_cast<FieldExpr *>(variable);
+            if (fieldExpr->FieldIsArray()) {
+                auto arrayType = dynamic_cast<ArrayType*>(variable->dataType.get());
+                dataTypes.push_back(arrayType->ElementType());
+            } else if (fieldExpr->FieldIsMap()) {
+                auto mapType = dynamic_cast<MapType*>(variable->dataType.get());
+                dataTypes.push_back(mapType->Key());
+                dataTypes.push_back(mapType->Value());
+            } else {
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", "Unnest operator supports only ARRAY and MAP types");
+            }
+        }
+
+        if (withOrdinality) {
+            dataTypes.push_back(LongType());
+        }
+        return std::make_shared<DataTypes>(std::move(dataTypes));
+    }
+
+    const DataTypesPtr &OutputType() const override
+    {
+        return outputType_;
+    }
 
     const std::vector<PlanNodePtr>& Sources() const override
     {
@@ -975,6 +1006,7 @@ private:
     const std::vector<ExprPtr> unnestVariables_;
     const bool withOrdinality_;
     const std::vector<PlanNodePtr> sources_;
+    const DataTypesPtr outputType_;
 };
 
 } // namespace omniruntime
