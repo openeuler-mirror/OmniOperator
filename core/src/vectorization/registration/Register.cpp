@@ -60,7 +60,7 @@ void RegisterFunctions::registerFunctions(const std::string &prefix)
     // registerMiscFunctions(prefix);
     // registerRegexpFunctions(prefix);
     // registerSpecialFormGeneralFunctions(prefix);
-    // registerStringFunctions(prefix);
+    registerStringFunctions(prefix);
     // registerUrlFunctions(prefix);
 }
 

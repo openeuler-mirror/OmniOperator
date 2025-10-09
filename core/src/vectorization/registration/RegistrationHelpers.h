@@ -32,4 +32,10 @@ void registerBinaryNumeric(const std::string &aliases)
     registerBinaryIntegral<T>(aliases);
     registerBinaryFloatingPoint<T>(aliases);
 }
+
+template <template <class> typename T>
+void registerString(const std::string &aliases)
+{
+    registerFunction<T, bool, std::string_view, std::string_view>(aliases, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN);
+}
 }

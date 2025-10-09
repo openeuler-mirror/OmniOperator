@@ -11,5 +11,9 @@ namespace omniruntime::vectorization {
 void registerMathFunctions(const std::string &prefix)
 {
     registerBinaryNumeric<PlusFunction>({prefix + "add"});
+    registerBinaryNumeric<MinusFunction>({prefix + "subtract"});
+    registerBinaryNumeric<MultiplyFunction>({prefix + "multiply"});
+    registerBinaryNumeric<DivideFunction>({prefix + "divide"});
+    registerBinaryNumeric<RemainderFunction>({prefix + "remainder"});
 }
 }

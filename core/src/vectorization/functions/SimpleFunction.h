@@ -13,6 +13,10 @@
 #include "vector/unsafe_vector.h"
 
 namespace omniruntime::vectorization {
+
+template<typename T>
+inline constexpr bool is_string_type_v = std::is_same_v<T, std::string_view>;
+
 template <typename FUNC>
 class SimpleFunction final : public VectorFunction {
     using T = typename FUNC::exec_return_type;
@@ -81,18 +85,25 @@ private:
             rawArgs.pop();
             using type = exec_arg_at<POSITION>;
             IntersectNull(arg);
-            switch (arg->GetEncoding()) {
-                case vec::OMNI_FLAT: {
-                    auto reader = FlatVectorReader<type>(arg);
-                    unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
-                    break;
+            
+            if constexpr (is_string_type_v<type>) {
+                // string_view use StringVectorReader
+                auto reader = StringVectorReader(arg);
+                unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
+            } else {
+                switch (arg->GetEncoding()) {
+                    case vec::OMNI_FLAT: {
+                        auto reader = FlatVectorReader<type>(arg);
+                        unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
+                        break;
+                    }
+                    case vec::OMNI_DICTIONARY: {
+                        auto reader = FlatVectorReader<type>(arg);
+                        unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
+                        break;
+                    }
+                    default: {}
                 }
-                case vec::OMNI_DICTIONARY: {
-                    auto reader = FlatVectorReader<type>(arg);
-                    unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, readers..., reader);
-                    break;
-                }
-                default: {}
             }
         }
     }
@@ -135,8 +146,13 @@ private:
     ALWAYS_INLINE int doApplyNotNull(size_t idx, T &target, bool &notNull, R0 &currentReader,
         const TStuff &... extra) const
     {
-        decltype(currentReader[idx]) v0 = currentReader[idx];
-        return doApplyNotNull<POSITION + 1>(idx, target, notNull, extra..., v0);
+        if constexpr (std::is_same_v<R0, StringVectorReader>) {
+            std::string_view v0 = currentReader[idx];
+            return doApplyNotNull<POSITION + 1>(idx, target, notNull, extra..., v0);
+        } else {
+            decltype(currentReader[idx]) v0 = currentReader[idx];
+            return doApplyNotNull<POSITION + 1>(idx, target, notNull, extra..., v0);
+        }
     }
 
     // For default null behavior, Terminate by with UDFHolder::call.
