@@ -55,7 +55,7 @@ test_detail.xml
 boostkit-omniop-operator-*
 
 installtree
-registration
+/registration
 dist
 dtframe_
 log

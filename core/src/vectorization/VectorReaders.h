@@ -55,6 +55,11 @@ struct FlatVectorReader {
         return operator[](offset);
     }
 
+    bool containsNull(int32_t index) const
+    {
+        return vector->IsNull(index);
+    }
+
     bool containsNull(int32_t startIndex, int32_t endIndex) const
     {
         for (auto index = startIndex; index < endIndex; ++index) {
@@ -92,6 +97,37 @@ struct DicVectorReader {
             }
         }
         return false;
+    }
+};
+
+struct StringVectorReader {
+    Vector<LargeStringContainer<std::string_view>> *vector;
+
+    explicit StringVectorReader(BaseVector *vec)
+    {
+        vector = dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
+        if (vector == nullptr) {
+            throw std::invalid_argument("StringVectorReader: Input BaseVector pointer type does not match.");
+        }
+    }
+
+    std::string_view operator[](int32_t offset) const
+    {
+        if (vector == nullptr || offset >= vector->GetSize() || vector->IsNull(offset)) {
+            return std::string_view();
+        }
+        auto value = vector->GetValue(offset);
+        return value;
+    }
+
+    bool containsNull(int32_t offset) const
+    {
+        return vector == nullptr || offset >= vector->GetSize() || vector->IsNull(offset);
+    }
+
+    int32_t size() const
+    {
+        return vector ? vector->GetSize() : 0;
     }
 };
 }
