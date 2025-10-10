@@ -6,7 +6,7 @@
 #define __HASH_UTIL_H__
 
 #include <cstdint>
-#include <huawei_secure_c/include/securec.h>
+#include <libboundscheck/include/securec.h>
 #include "util/compiler_util.h"
 #include "type/data_utils.h"
 #include "codegen/functions/murmur3_hash.h"
