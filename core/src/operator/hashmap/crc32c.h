@@ -88,7 +88,11 @@ static const uint32_t table0_[256] = {
 static inline uint64_t LE_LOAD64(const uint8_t *p)
 {
     uint64_t res;
-    memcpy(&res, p, sizeof(res));
+    errno_t err = memcpy_sp(&res, sizeof(res), p, sizeof(res));
+    if (UNLIKELY(err != EOK)) {
+        std::string message = "memcpy_s failed in crc32";
+        throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", message);
+    }
     return res;
 }
 

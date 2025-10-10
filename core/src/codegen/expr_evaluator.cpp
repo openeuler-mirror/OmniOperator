@@ -201,7 +201,13 @@ bool Projection::NullColumnProjection(ExecutionContext *context, BaseVector *out
 {
     auto outNulls = unsafe::UnsafeBaseVector::GetNulls(outVec);
     auto outNullsSize = BitUtil::Nbytes(outVec->GetSize());
-    memset(outNulls, -1, outNullsSize);
+    auto result = memset_s(outNulls, outNullsSize, -1, outNullsSize);
+    if (result != EOK) {
+        std::string errorMessage = "Memset failed, ret " + std::to_string(result) + " destMax " +
+            std::to_string(outNullsSize) + " count " + std::to_string(outNullsSize);
+        context->SetError(errorMessage);
+        return false;
+    }
     return true;
 }
 

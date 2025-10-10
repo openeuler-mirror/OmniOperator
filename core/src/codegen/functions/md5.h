@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <huawei_secure_c/include/securec.h>
 
 namespace omniruntime::codegen::function {
 class Md5Function {
