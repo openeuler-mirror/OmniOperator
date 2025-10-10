@@ -7,7 +7,7 @@
 #include <limits>
 #include <cstring>
 #include "simd/simd.h"
-#include "huawei_secure_c/include/securec.h"
+#include "libboundscheck/include/securec.h"
 
 namespace simd {
 enum class ReduceFunc {

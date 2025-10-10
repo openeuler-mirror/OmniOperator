@@ -5,7 +5,7 @@
 #include <limits>
 #include <optional>
 #include <memory>
-#include "huawei_secure_c/include/securec.h"
+#include "libboundscheck/include/securec.h"
 #include "util/compiler_util.h"
 #include "date32.h"
 

@@ -36,7 +36,7 @@
 #include <string>
 #include <cstring>
 #include <limits>
-#include <huawei_secure_c/include/securec.h>
+#include <libboundscheck/include/securec.h>
 #include "width_integer.h"
 #include "big_integer.h"
 

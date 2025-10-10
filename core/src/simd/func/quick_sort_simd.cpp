@@ -6,7 +6,7 @@
 #include <cmath>
 #include "small_case_sort.h"
 #include "simd/simd.h"
-#include "huawei_secure_c/include/securec.h"
+#include "libboundscheck/include/securec.h"
 #include "quick_sort_simd.h"
 constexpr int32_t SMALL_CASE_LENGTH = 16;
 constexpr int32_t CHUNK_SIZE = 8;
