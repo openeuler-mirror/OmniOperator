@@ -84,12 +84,6 @@ setup_dependencies() {
   mkdir ${workspace}/${open_source_dir}/json/build
   cd ${workspace}/${open_source_dir}/json/build && sudo cmake ../ && sudo make -j16 && sudo make install
 
-  mkdir ${workspace}/${open_source_dir}/abseil-cpp/build
-  cd ${workspace}/${open_source_dir}/abseil-cpp/build && sudo cmake ../ -DBUILD_SHARED_LIBS=ON && sudo make -j16 && sudo make install
-
-  mkdir ${workspace}/${open_source_dir}/re2/build
-  cd ${workspace}/${open_source_dir}/re2/build && sudo cmake ../ -DBUILD_SHARED_LIBS=ON && sudo make -j16 && sudo make install
-
   if [ "$1" != "package" ] && [ "$1" != "release" ]; then
     cd ${workspace}/${open_source_dir}/benchmark
     cmake -E make_directory "build"
