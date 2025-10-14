@@ -12,7 +12,7 @@ using namespace omniruntime::vec;
 namespace {
 class IsNullFunction : public VectorFunction {
 public:
-    void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *result,
+    void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
     {
         const auto arg = args.top();

@@ -49,7 +49,7 @@ public:
 
     explicit SimpleFunction() {}
 
-    void apply(std::stack<VectorPtr> &args, const type::DataTypePtr &outputType, vec::BaseVector *result,
+    void apply(std::stack<VectorPtr> &args, const type::DataTypePtr &outputType, vec::BaseVector *&result,
         op::ExecutionContext *context) const override
     {
         unpackSpecializeForAllEncodings<0>(context, result, args);

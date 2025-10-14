@@ -22,7 +22,7 @@ public:
     explicit SplitFunction() {}
 
     void apply(std::stack<VectorPtr> &args, const type::DataTypePtr &outputType,
-               vec::BaseVector *result, op::ExecutionContext *context) const override
+               vec::BaseVector *&result, op::ExecutionContext *context) const override
     {
         auto limitArg = args.top();
         args.pop();

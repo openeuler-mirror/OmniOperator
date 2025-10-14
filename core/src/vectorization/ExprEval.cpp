@@ -42,33 +42,34 @@ ExprEval::ExprEval(VectorBatch *vectorBatch, ExecutionContext *context, const in
 
 void ExprEval::Visit(const LiteralExpr &e)
 {
+    auto typeId = e.dataType->GetId();
     switch (e.dataType->GetId()) {
         case OMNI_INT:
         case OMNI_DATE32:
-            inputValues_.push(new ConstVector(e.intVal));
+            inputValues_.push(new ConstVector(e.intVal, typeId));
             break;
         case OMNI_SHORT:
-            inputValues_.push(new ConstVector(e.shortVal));
+            inputValues_.push(new ConstVector(e.shortVal, typeId));
             break;
         case OMNI_BYTE:
-            inputValues_.push(new ConstVector(e.byteVal));
+            inputValues_.push(new ConstVector(e.byteVal, typeId));
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
-            inputValues_.push(new ConstVector(e.longVal));
+            inputValues_.push(new ConstVector(e.longVal, typeId));
             break;
         case OMNI_DOUBLE:
-            inputValues_.push(new ConstVector(e.doubleVal));
+            inputValues_.push(new ConstVector(e.doubleVal, typeId));
             break;
         case OMNI_FLOAT:
-            inputValues_.push(new ConstVector(e.floatVal));
+            inputValues_.push(new ConstVector(e.floatVal, typeId));
             break;
         case OMNI_BOOLEAN:
-            inputValues_.push(new ConstVector(e.boolVal));
+            inputValues_.push(new ConstVector(e.boolVal, typeId));
             break;
         case OMNI_DECIMAL128:
-            inputValues_.push(new ConstVector(e.stringVal));
+            inputValues_.push(new ConstVector(e.stringVal, typeId));
             break;
         default: LogError("Do not support such vector type %d", typeIds[e.dataType->GetId()]);
     }
@@ -116,6 +117,9 @@ void ExprEval::Visit(const FieldExpr &e)
             case OMNI_DECIMAL128:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<Decimal128>(colVec, selectRow, rowSize));
                 break;
+            case OMNI_ARRAY:
+                inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, rowSize));
+                break;
             default: LogError("Do not support such vector type %d", typeIds[e.colVal]);
         }
         return;
@@ -147,6 +151,9 @@ void ExprEval::Visit(const FieldExpr &e)
             break;
         case OMNI_DECIMAL128:
             inputValues_.push(ColumnProjectionHelper<Decimal128>(colVec, rowSize));
+            break;
+        case OMNI_ARRAY:
+            inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, rowSize));
             break;
         default: LogError("Do not support such vector type %d", typeIds[e.colVal]);
     }
@@ -192,7 +199,7 @@ void ExprEval::Visit(const FuncExpr &e)
         arg->Accept(*this);
     }
 
-    auto result = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
+    BaseVector *result = nullptr;
     e.vectorFunction->apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }

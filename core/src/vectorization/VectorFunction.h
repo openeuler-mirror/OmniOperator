@@ -42,7 +42,7 @@ class VectorFunction {
 public:
     virtual ~VectorFunction() = default;
 
-    virtual void apply(std::stack<VectorPtr> &args, const type::DataTypePtr &outputType, vec::BaseVector *result,
+    virtual void apply(std::stack<VectorPtr> &args, const type::DataTypePtr &outputType, vec::BaseVector *&result,
         op::ExecutionContext *context) const = 0;
 
     /// Registers stateless VectorFunction. The same instance will be used for all

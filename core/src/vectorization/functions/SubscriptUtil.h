@@ -28,25 +28,22 @@ class SubscriptImpl : public VectorFunction {
 public:
     explicit SubscriptImpl() {}
 
-    void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *result,
+    void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *&result,
         ExecutionContext *context) const override
     {
         std::vector<VectorPtr> inputs;
-
-        VectorPtr localResult;
-        auto arg = args.top();
-        inputs.push_back(arg);
+        inputs.push_back(args.top());
         args.pop();
         inputs.push_back(args.top());
         args.pop();
 
-        auto size = arg->GetSize();
-        auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(arg));
+        auto size = inputs[1]->GetSize();
+        auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(inputs[1]));
         auto rows = SelectivityVector(size);
         rows.setFromBitsNegate(nullBits, size);
-        switch (arg->GetTypeId()) {
+        switch (inputs[1]->GetTypeId()) {
             case OMNI_ARRAY:
-                localResult = applyArray(rows, inputs, context);
+                result = applyArray(rows, inputs, context);
                 break;
             default: OMNI_THROW("SubscriptImpl error:", "Not support type!");
         }
@@ -54,8 +51,8 @@ public:
 
     VectorPtr applyArray(const SelectivityVector &rows, std::vector<VectorPtr> &args, ExecutionContext *context) const
     {
-        auto arrayArg = args[0];
-        auto indexArg = args[1];
+        auto arrayArg = args[1];
+        auto indexArg = args[0];
 
         switch (indexArg->GetTypeId()) {
             case OMNI_INT:
@@ -68,6 +65,36 @@ public:
 
     template <typename I>
     VectorPtr applyArrayTyped(const SelectivityVector &rows, const VectorPtr &arrayArg, const VectorPtr &indexArg,
-        ExecutionContext *context) const {}
+        ExecutionContext *context) const
+    {
+        auto rowSize = arrayArg->GetSize();
+        int32_t dicIndex[rowSize];
+        memset(dicIndex, -1, sizeof(dicIndex));
+        auto arrayVector = dynamic_cast<ArrayVector *>(arrayArg);
+
+        I index = 0;
+        if (auto indexVector = dynamic_cast<ConstVector<I> *>(indexArg)) {
+            index = indexVector->GetConstValue();
+        } else {
+            OMNI_THROW("Runtime Error:", "Index only supported const type!");
+        }
+        auto offset = arrayVector->GetOffsets();
+        rows.applyToSelected([&](auto row) {
+            if (offset[row] + index < offset[row + 1]) {
+                dicIndex[row] = offset[row] + index;
+            } else {
+                dicIndex[row] = -1;
+            }
+        });
+
+        auto rawVector = reinterpret_cast<Vector<int32_t> *>(arrayVector->GetElementVector().get())->Slice(0, rowSize);
+        auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, rawVector, rawVector->GetTypeId());
+        for (auto i = 0; i < rowSize; i++) {
+            if (dicIndex[i] == -1) {
+                result->SetNull(i);
+            }
+        }
+        return result;
+    }
 };
 }

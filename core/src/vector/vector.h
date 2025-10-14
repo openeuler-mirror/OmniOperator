@@ -189,8 +189,9 @@ protected:
 template <typename RAW_DATA_TYPE>
 class ConstVector final : public BaseVector {
 public:
-    ConstVector(RAW_DATA_TYPE value): value(value)
+    ConstVector(RAW_DATA_TYPE value, DataTypeId dataTypeId): value(value)
     {
+        this->dataTypeId = dataTypeId;
         this->encoding = OMNI_ENCODING_CONST;
     }
 
