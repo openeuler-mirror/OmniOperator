@@ -1,0 +1,10 @@
+file(GLOB_RECURSE CONNECTORS_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
+set(CONNECTORS_TARGET connectors)
+add_library(${CONNECTORS_TARGET} ${CONNECTORS_LIST})
+target_include_directories(${CONNECTORS_TARGET} PUBLIC $ENV{JAVA_HOME}/include)
+target_include_directories(${CONNECTORS_TARGET} PUBLIC $ENV{JAVA_HOME}/include/linux)
+
+file(GLOB CONNECTORS_FILES ${SOURCE_ROOT}/src/connectors/*.h)
+install(FILES ${CONNECTORS_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/connectors)
+file(GLOB CONNECTORS_HIVE_FILES ${SOURCE_ROOT}/src/connectors/hive/*.h)
+install(FILES ${CONNECTORS_HIVE_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/connectors/hive)

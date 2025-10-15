@@ -19,10 +19,13 @@
 
 #include <string>
 #include <vector>
+#include "vector/vector_batch.h"
 #include "expression/expressions.h"
 #include "operator/config/operator_config.h"
 #include "type/data_types.h"
 #include "util/config/QueryConfig.h"
+#include "connectors/Connector.h"
+#include "type/data_type.h"
 
 namespace omniruntime {
 namespace op {
@@ -926,6 +929,73 @@ private:
     const std::vector<PlanNodePtr> sources;
 };
 
+class TableScanNode : public PlanNode {
+public:
+    TableScanNode(
+        const PlanNodeId &id,
+        std::vector <std::shared_ptr<DataType>> types,
+        std::vector <std::string> names,
+        const std::shared_ptr <connector::ConnectorTableHandle> tableHandle,
+        const std::unordered_map <
+        std::string,
+        std::shared_ptr<connector::ColumnHandle>> assignments)
+        : PlanNode(id),
+          tableHandle_(tableHandle),
+          assignments_(assignments),
+          types_(types),
+          names_(names)
+    {
+        outputTypes_ = std::make_shared<DataTypes>(types_);
+    }
+
+    bool supportsBarrier()
+    {
+        return true;
+    }
+
+    const std::vector <PlanNodePtr> &Sources() const override
+    {
+        return sources;
+    }
+
+    const DataTypesPtr &OutputType() const override
+    {
+        return outputTypes_;
+    }
+
+    RowTypePtr getRowTypePtr() const
+    {
+        return std::make_shared<const RowType>(types_, names_);
+    }
+
+    const std::shared_ptr <connector::ConnectorTableHandle> tableHandle() const
+    {
+        return tableHandle_;
+    }
+
+    const std::
+    unordered_map <std::string, std::shared_ptr<connector::ColumnHandle>>
+    assignments() const
+    {
+        return assignments_;
+    }
+
+    std::string_view Name() const override
+    {
+        return "TableScan";
+    }
+
+private:
+    std::vector <std::shared_ptr<DataType>> types_;
+    std::vector <std::string> names_;
+    const std::shared_ptr <connector::ConnectorTableHandle> tableHandle_;
+    const std::
+    unordered_map <std::string, std::shared_ptr<connector::ColumnHandle>>
+            assignments_;
+    const std::vector <PlanNodePtr> sources;
+    DataTypesPtr outputTypes_;
+};
+
 class ExpandNode : public PlanNode {
 public:
     ExpandNode(const PlanNodeId &id, std::vector<std::vector<ExprPtr>> &&projections, PlanNodePtr source)
@@ -1094,6 +1164,37 @@ private:
     const bool withOrdinality_;
     const std::vector<PlanNodePtr> sources_;
     const DataTypesPtr outputType_;
+};
+
+
+/// Calculates partition number for each row of the specified vector.
+class PartitionFunction {
+public:
+    virtual ~PartitionFunction() = default;
+
+    /// @param input VectorBatch to split into partitions.
+    /// @param [out] partitions Computed partition numbers for each row in
+    /// 'input'.
+    /// @return Returns partition number in case all rows of 'input' are
+    /// assigned to the same partition. In this case 'partitions' vector is left
+    /// unchanged. Used to optimize round-robin partitioning in local exchange.
+    virtual std::optional<uint32_t> partition(
+        const vec::VectorBatch& input,                                                                   //todo  RowVector
+        std::vector<uint32_t>& partitions) = 0;
+};
+
+/// Factory class for creating PartitionFunction instances.
+class PartitionFunctionSpec {
+public:
+    /// If 'localExchange' is true, the partition function is used for local
+    /// exchange within a velox task.
+    virtual std::unique_ptr<PartitionFunction> create(
+        int numPartitions,
+        bool localExchange = false) const = 0;
+
+    virtual ~PartitionFunctionSpec() = default;
+
+    virtual std::string toString() const = 0;
 };
 
 } // namespace omniruntime

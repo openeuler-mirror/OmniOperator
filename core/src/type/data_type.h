@@ -9,6 +9,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <climits>
+#include <optional>
 #include "decimal128.h"
 #include "util/debug.h"
 
@@ -35,6 +36,10 @@ const static int32_t DECIMAL128_DEFAULT_PRECISION = 38;
 const static int32_t DECIMAL64_DEFAULT_PRECISION = 18;
 const static int32_t DECIMAL128_DEFAULT_SCALE = 0;
 const static int32_t DECIMAL64_DEFAULT_SCALE = 0;
+using int128_t = __int128_t;
+using column_index_t = uint32_t;
+constexpr column_index_t kConstantChannel =
+        std::numeric_limits<column_index_t>::max();
 
 enum DataTypeId {
     OMNI_NONE = 0,
@@ -404,6 +409,11 @@ class RowType : public DataType {
 public:
     RowType(std::vector<std::shared_ptr<DataType>> &types): DataType(OMNI_ROW), children(std::move(types)) {}
 
+    RowType(std::vector<std::shared_ptr<DataType>> types, std::vector<std::string> names)
+        : DataType(OMNI_ROW),
+          children(types),
+          names_(names) {}
+
     bool operator ==(const DataType &right) const override
     {
         if (&right == this) {
@@ -419,6 +429,41 @@ public:
             }
         }
         return true;
+    }
+
+    uint32_t size() const {
+        return children.size();
+    }
+
+    const DataTypePtr& findChild(std::string_view name) const;
+
+    const std::vector<std::shared_ptr<DataType>>& children_() const
+    {
+        return children;
+    }
+
+    uint32_t getChildIdx(std::string_view name) const;
+
+    const DataTypePtr& childAt(uint32_t idx) const
+    {
+        return children[idx];
+    }
+
+    const std::string& nameOf(uint32_t idx) const
+    {
+        return names_[idx];
+    }
+
+    bool equivalent(const DataType& other) const {}
+
+    std::optional<uint32_t> getChildIdxIfExists(std::string_view name) const
+    {
+        for (uint32_t i = 0; i < names_.size(); i++) {
+            if (names_.at(i) == name) {
+                return i;
+            }
+        }
+        return std::nullopt;
     }
 
     size_t Size() const
@@ -438,9 +483,38 @@ public:
 
     void Serialize(nlohmann::json &nlohmannJson) const override {}
 
+    const std::vector<std::string>& names() const
+    {
+        return names_;
+    }
+
 protected:
     const std::vector<std::shared_ptr<DataType>> children;
+    const std::vector<std::string> names_;
 };
+
+template <DataTypeId KIND>
+struct TypeFactory;
+
+template <>
+struct TypeFactory<DataTypeId::OMNI_ROW> {
+    static std::shared_ptr<const RowType> create(
+            std::vector<std::string>&& names,
+            std::vector<DataTypePtr>&& types) {
+        std::vector<std::string> namesCopy = std::move(names);
+        std::vector<DataTypePtr> typesCopy = std::move(types);
+        return std::make_shared<RowType>(typesCopy, namesCopy);
+    }
+};
+
+inline std::shared_ptr<const RowType> ROW(
+    std::vector<std::string>&& names,
+    std::vector<DataTypePtr>&& types)
+{
+    return TypeFactory<DataTypeId::OMNI_ROW>::create(std::move(names), std::move(types));
+}
+
+using RowTypePtr = std::shared_ptr<const RowType>;
 
 class DecimalDataType : public DataType {
 public:

@@ -1,7 +1,14 @@
 /*
- * @Copyright: Copyright (c) Huawei Technologies Co., Ltd. 2022-2024. All rights reserved.
- * @Description: spill unit iterator
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *          http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
+
 #ifndef OMNI_RUNTIME_OPERATOR_CONFIG_H
 #define OMNI_RUNTIME_OPERATOR_CONFIG_H
 
@@ -297,6 +304,30 @@ private:
     int adaptivityThreshold = -1;
     bool isRowOutput = false;
     bool isStatisticalAggregate = false;
+};
+
+struct PrefixSortConfig {
+    PrefixSortConfig() = default;
+
+    PrefixSortConfig(
+            uint32_t _maxNormalizedKeyBytes,
+            uint32_t _minNumRows,
+            uint32_t _maxStringPrefixLength)
+            : maxNormalizedKeyBytes(_maxNormalizedKeyBytes),
+              minNumRows(_minNumRows),
+              maxStringPrefixLength(_maxStringPrefixLength) {}
+
+    /// Maximum bytes that can be used to store normalized keys in prefix-sort
+    /// buffer per entry. Same with QueryConfig kPrefixSortNormalizedKeyMaxBytes.
+    uint32_t maxNormalizedKeyBytes{128};
+
+    /// Minimum number of rows to apply prefix sort. Prefix sort does not perform
+    /// with small datasets.
+    uint32_t minNumRows{128};
+
+    /// Maximum number of bytes to be stored in prefix-sort buffer for a string
+    /// column.
+    uint32_t maxStringPrefixLength{16};
 };
 }
 }

@@ -13,6 +13,7 @@ set(OMNI_CODEGEN_SO boostkit-omniop-codegen-${OMNI_RUNTIME_VERSION}-${OS_ARCHITE
 set(OMNI_OPERATOR_SO boostkit-omniop-operator-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
 set(OMNI_RUNTIME_SO boostkit-omniop-runtime-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
 set(OMNI_VECTOR_SO boostkit-omniop-vector-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
+set(OMNI_READER_SO boostkit-omniop-reader-${OMNI_RUNTIME_VERSION}-${OS_ARCHITECTURES})
 
 # configure cmake
 set(CMAKE_CXX_STANDARD 17)
@@ -81,6 +82,7 @@ set(target_generated ${CMAKE_INSTALL_PREFIX}/lib${OMNI_RUNTIME_SO}.so
         ${CMAKE_INSTALL_PREFIX}/lib${OMNI_CODEGEN_SO}.so
         ${CMAKE_INSTALL_PREFIX}/ir
         ${CMAKE_INSTALL_PREFIX}/lib${OMNI_OPERATOR_SO}.so
+        ${CMAKE_INSTALL_PREFIX}/lib${OMNI_READER_SO}.so
         )
 foreach (file ${target_generated})
     if (EXISTS ${file})

@@ -142,6 +142,7 @@ public:
     static constexpr const char *KRowShuffleEnabled = "rowShuffle_enabled";
     static constexpr const char *KMaxBatchSizeInBytes = "maxBatchSizeInBytes";
     static constexpr const char *KMaxRowCount = "maxRowCount";
+    static constexpr const char *KMaxBatchSize = "max_batch_size";
     static constexpr const char *KAqeShuffle = "aqe_shuffle";
     static constexpr const char *KShuffleSpillBatchRowNum = "shuffleSpillBatchRowNum";
     static constexpr const char *KCompressBlockSize = "compressBlockSize";
@@ -167,6 +168,12 @@ public:
     {
         static constexpr uint64_t kDefault = 12UL << 20;
         return get<uint64_t>(KMaxRowCount, kDefault);
+    }
+
+    uint64_t MaxBatchSize() const
+    {
+        static constexpr uint64_t kDefault = 4096;
+        return get<uint64_t>(KMaxBatchSize, kDefault);
     }
 
     std::string SpillDir() const

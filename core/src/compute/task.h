@@ -28,7 +28,12 @@
 #include "vector/vector_batch.h"
 #include "operator/operator.h"
 #include "plannode/planFragment.h"
- 
+#include "type/data_type.h"
+#include "connectors/Split.h"
+
+using Split = omniruntime::connector::Split;
+using SplitsStore = omniruntime::connector::SplitsStore;
+
 namespace omniruntime {
 namespace compute {
 
@@ -61,6 +66,22 @@ public:
     /// structure.
     TaskStats GetTaskStats() const;
 
+    void addSplit(const omniruntime::PlanNodeId &planNodeId, Split &&split);
+
+    void noMoreSplits(const omniruntime::PlanNodeId &planNodeId);
+
+    std::shared_ptr <SplitsStore> getSplitsStoreLocked(const omniruntime::PlanNodeId &planNodeId);
+
+    std::shared_ptr <SplitsStore> getOrcreateSplitsStoreLocked(const omniruntime::PlanNodeId &planNodeId);
+
+    void addSplitLocked(SplitsStore &splitsStore, Split &&split);
+
+    void addSplitToStoreLocked(SplitsStore &splitsStore, Split &&split);
+
+    std::vector <omniruntime::PlanNodeId> getScanNodeIds(std::shared_ptr<const PlanNode> &planNode);
+
+    omniruntime::PlanNodeId getScanNodeId(std::shared_ptr<const PlanNode> &planNode);
+
 private:
     std::vector<std::shared_ptr<OmniDriver>> drivers_;
     std::vector<OperatorFactory*> operatorFactories_;
@@ -68,6 +89,8 @@ private:
     OperatorConfig operatorConfig_;
     TaskStats taskStats_;
     const config::QueryConfig queryConfig_;
+
+    std::unordered_map<omniruntime::PlanNodeId, std::shared_ptr<SplitsStore>> splitsStore_;
 };
 } // end of compute
 } // end of omniruntime

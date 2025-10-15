@@ -1,7 +1,14 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2021-2021. All rights reserved.
- * Description:
+ * Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *          http://license.coscl.org.cn/MulanPSL2
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
  */
+
 #ifndef __EXPRESSIONS_H__
 #define __EXPRESSIONS_H__
 
@@ -536,6 +543,37 @@ public:
 private:
     std::unique_ptr<op::BloomFilter> bloomFilter_;
 };
+
+class ITypedExpr;
+
+using TypedExprPtrNew = std::shared_ptr<const ITypedExpr>;
+
+class ITypedExpr {
+public:
+    explicit ITypedExpr(DataTypePtr type) : type_{std::move(type)}, inputs_{} {}
+
+    ITypedExpr(DataTypePtr type, std::vector<TypedExprPtrNew> inputs)
+        : type_{std::move(type)}, inputs_{std::move(inputs)} {}
+
+    const DataTypePtr& type() const
+    {
+        return type_;
+    }
+
+    virtual ~ITypedExpr() = default;
+
+    const std::vector<TypedExprPtrNew>& inputs() const
+    {
+        return inputs_;
+    }
+
+    virtual bool operator==(const ITypedExpr& other) const = 0;
+
+private:
+    DataTypePtr type_;
+    std::vector<TypedExprPtrNew> inputs_;
+};
+
 
 class ParamRefExpr : public Expr {
 public:
