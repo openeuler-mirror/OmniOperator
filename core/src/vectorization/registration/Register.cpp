@@ -55,7 +55,7 @@ void RegisterFunctions::registerFunctions(const std::string &prefix)
     // registerCompareFunctions(prefix);
     // registerDatetimeFunctions(prefix);
     // registerJsonFunctions(prefix);
-    // registerMapFunctions(prefix);
+    registerMapFunctions(prefix);
     registerMathFunctions(prefix);
     // registerMiscFunctions(prefix);
     // registerRegexpFunctions(prefix);

@@ -9,6 +9,7 @@
 
 #include "vector/unsafe_vector.h"
 #include "vector/vector.h"
+#include "vector/map_vector.h"
 
 namespace omniruntime {
 using namespace omniruntime::vec;
@@ -167,6 +168,60 @@ struct StringVectorReader {
     int32_t size() const
     {
         return vector ? vector->GetSize() : 0;
+    }
+};
+
+struct MapVectorReader {
+    vec::MapVector *vector;
+
+    explicit MapVectorReader(BaseVector *vec)
+    {
+        vector = dynamic_cast<vec::MapVector *>(vec);
+        if (vector == nullptr) {
+            throw std::invalid_argument("MapVectorReader: Input BaseVector pointer type does not match.");
+        }
+    }
+
+    int64_t GetSize(int32_t offset) const
+    {
+        if (vector == nullptr || offset >= GetVectorSize() || vector->IsNull(offset)) {
+            return 0;
+        }
+        return vector->GetSize(offset);
+    }
+
+    int64_t GetOffset(int32_t offset) const
+    {
+        if (vector == nullptr || offset >= GetVectorSize()) {
+            return 0;
+        }
+        return vector->GetOffset(offset);
+    }
+
+    const std::shared_ptr<BaseVector> GetKeyVector() const
+    {
+        return vector->GetKeyVector();
+    }
+
+    const std::shared_ptr<BaseVector> GetValueVector() const
+    {
+        return vector->GetValueVector();
+    }
+
+    bool containsNull(int32_t offset) const
+    {
+        return vector == nullptr || offset >= GetVectorSize() || vector->IsNull(offset);
+    }
+
+    int32_t size() const
+    {
+        return GetVectorSize();
+    }
+
+private:
+    int32_t GetVectorSize() const
+    {
+        return vector ? vector->vec::BaseVector::GetSize() : 0;
     }
 };
 }
