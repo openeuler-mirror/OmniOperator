@@ -153,6 +153,21 @@ LiteralExpr::LiteralExpr(std::string *val, DataTypePtr dt)
     stringVal = val;
 }
 
+uint8_t* LiteralExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark)
+{
+    if (dataType->GetId() != OMNI_BOOLEAN) {
+        throw omniruntime::exception::OmniException(
+            "OPERATOR_RUNTIME_ERROR", "LiteralExpr::compute Only Support Boolean.");
+    }
+    auto rowSize = vecBatch->GetRowCount();
+    if (boolVal) {
+        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0xFF, BitUtil::Nbytes(rowSize));
+    } else {
+        memset_s(bitMark, BitUtil::Nbytes(rowSize), 0, BitUtil::Nbytes(rowSize));
+    }
+    return bitMark;
+}
+
 // FieldExpr
 FieldExpr::FieldExpr() = default;
 
