@@ -122,6 +122,7 @@ public:
     explicit LiteralExpr(std::string *val, DataTypePtr colType);
     void Accept(ExprVisitor &visitor) const override;
     ExprType GetType() const override;
+    uint8_t *compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *bitMark) override;
     bool supportVectorized() override
     {
         return true;
