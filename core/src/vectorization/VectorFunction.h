@@ -53,7 +53,11 @@ public:
 
     static std::shared_ptr<VectorFunction> Find(const FunctionSignaturePtr &signature)
     {
-        return functionMap_->find(signature)->second;
+        auto res = functionMap_->find(signature);
+        if (res == functionMap_->end()) {
+            return nullptr;
+        }
+        return res->second;
     }
 
     static FunctionMap functionMap_;
