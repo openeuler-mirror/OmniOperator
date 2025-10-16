@@ -13,8 +13,7 @@
 #include "vector/unsafe_vector.h"
 
 namespace omniruntime::vectorization {
-
-template<typename T>
+template <typename T>
 inline constexpr bool is_string_type_v = std::is_same_v<T, std::string_view>;
 
 template <typename FUNC>
@@ -52,6 +51,7 @@ public:
     void apply(std::stack<VectorPtr> &args, const type::DataTypePtr &outputType, vec::BaseVector *&result,
         op::ExecutionContext *context) const override
     {
+        result = VectorHelper::CreateFlatVector(outputType->GetId(), args.top()->GetSize());
         unpackSpecializeForAllEncodings<0>(context, result, args);
     }
 

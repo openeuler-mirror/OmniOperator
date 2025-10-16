@@ -45,6 +45,9 @@ public:
             case OMNI_ARRAY:
                 result = applyArray(rows, inputs, context);
                 break;
+            case OMNI_MAP:
+                result = applyMap(rows, inputs, context);
+                break;
             default: OMNI_THROW("SubscriptImpl error:", "Not support type!");
         }
     }
@@ -62,6 +65,8 @@ public:
             default: OMNI_THROW("Unsupported type for element_at index {}", std::to_string(indexArg->GetTypeId()));
         }
     }
+
+    VectorPtr applyMap(const SelectivityVector &rows, std::vector<VectorPtr> &args, ExecutionContext *context) const;
 
     template <typename I>
     VectorPtr applyArrayTyped(const SelectivityVector &rows, const VectorPtr &arrayArg, const VectorPtr &indexArg,

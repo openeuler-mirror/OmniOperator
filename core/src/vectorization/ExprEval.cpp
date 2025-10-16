@@ -31,6 +31,20 @@ BaseVector *ColumnProjectionCopyPositionsHelper(BaseVector *colVec, int32_t *sel
     return reinterpret_cast<Vector<T> *>(colVec)->CopyPositions(selectedRows, 0, numSelectedRows);
 }
 
+template <typename T>
+BaseVector *ColumnProjectionVarCharVectorHelper(BaseVector *colVec, int32_t numSelectedRows)
+{
+    auto rowCnt = colVec->GetSize();
+    if (numSelectedRows != 0 && numSelectedRows == rowCnt) {
+        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+            return reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec)->Slice(0, numSelectedRows);
+        } else {
+            return reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(colVec)->Slice(0, numSelectedRows);
+        }
+    }
+    return nullptr;
+}
+
 ExprEval::ExprEval(VectorBatch *vectorBatch, ExecutionContext *context, const int32_t *typeIds): context(context),
     typeIds(typeIds)
 {
@@ -70,6 +84,10 @@ void ExprEval::Visit(const LiteralExpr &e)
             break;
         case OMNI_DECIMAL128:
             inputValues_.push(new ConstVector(e.stringVal, typeId));
+            break;
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+            inputValues_.push(new ConstVector(*e.stringVal, typeId));
             break;
         default: LogError("Do not support such vector type %d", typeIds[e.dataType->GetId()]);
     }
@@ -120,6 +138,9 @@ void ExprEval::Visit(const FieldExpr &e)
             case OMNI_ARRAY:
                 inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, rowSize));
                 break;
+            case OMNI_MAP:
+                inputValues_.push(reinterpret_cast<MapVector *>(colVec)->Slice(0, rowSize));
+                break;
             default: LogError("Do not support such vector type %d", typeIds[e.colVal]);
         }
         return;
@@ -152,8 +173,14 @@ void ExprEval::Visit(const FieldExpr &e)
         case OMNI_DECIMAL128:
             inputValues_.push(ColumnProjectionHelper<Decimal128>(colVec, rowSize));
             break;
+        case OMNI_VARCHAR:
+        case OMNI_CHAR:
+            inputValues_.push(ColumnProjectionVarCharVectorHelper<std::string_view>(colVec, rowSize));
         case OMNI_ARRAY:
             inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, rowSize));
+            break;
+        case OMNI_MAP:
+            inputValues_.push(reinterpret_cast<MapVector *>(colVec)->Slice(0, rowSize));
             break;
         default: LogError("Do not support such vector type %d", typeIds[e.colVal]);
     }
@@ -172,7 +199,7 @@ void ExprEval::Visit(const BinaryExpr &e)
     e.left->Accept(*this);
     e.right->Accept(*this);
 
-    auto result = VectorHelper::CreateFlatVector(e.dataType->GetId(), rowSize);
+    BaseVector *result = nullptr;
     e.vectorFunction->apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }
