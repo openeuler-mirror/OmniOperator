@@ -14,6 +14,7 @@
 
 using namespace omniruntime;
 using namespace TestUtil;
+using OmniArrayType = omniruntime::type::ArrayType;
  
 namespace UnionTest {
 class TestBatchIterator : public ColumnarBatchIterator {
@@ -157,7 +158,7 @@ VectorBatch *CreateTestUnnestOutputVecBatchWithArray()
 
 TEST(PipelineTest, TestUnestArray)
 {
-    std::vector<DataTypePtr> types = { IntType(), DoubleType(), std::make_shared<ArrayType>(IntType()) };
+    std::vector<DataTypePtr> types = { IntType(), DoubleType(), std::make_shared<OmniArrayType>(IntType()) };
     VectorBatch *vecBatch = CreateTestUnnestVecBatchWithArray();
     std::vector<VectorBatch*> inputVector;
     inputVector.push_back(vecBatch);
@@ -169,7 +170,7 @@ TEST(PipelineTest, TestUnestArray)
 
     auto expr1 = new FieldExpr(0, IntType());
     auto expr2 = new FieldExpr(1, DoubleType());
-    auto expr3 = new FieldExpr(2, std::make_shared<ArrayType>(IntType()));
+    auto expr3 = new FieldExpr(2, std::make_shared<OmniArrayType>(IntType()));
     auto replicateVariables = std::vector<ExprPtr>{
         static_cast<ExprPtr>(expr1),
         static_cast<ExprPtr>(expr2)};
@@ -306,8 +307,8 @@ TEST(PipelineTest, TestUnestMultiArray)
 {
     std::vector<DataTypePtr> types = {
         IntType(),
-        std::make_shared<ArrayType>(IntType()),
-        std::make_shared<ArrayType>(IntType())
+        std::make_shared<OmniArrayType>(IntType()),
+        std::make_shared<OmniArrayType>(IntType())
     };
     VectorBatch *vecBatch = CreateTestUnnestVecBatchWithTwoArray();
     std::vector<VectorBatch*> inputVector;
@@ -319,8 +320,8 @@ TEST(PipelineTest, TestUnestMultiArray)
     auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
 
     auto expr1 = new FieldExpr(0, IntType());
-    auto expr2 = new FieldExpr(1, std::make_shared<ArrayType>(IntType()));
-    auto expr3 = new FieldExpr(2, std::make_shared<ArrayType>(IntType()));
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(IntType()));
+    auto expr3 = new FieldExpr(2, std::make_shared<OmniArrayType>(IntType()));
     auto replicateVariables = std::vector<ExprPtr>{
         static_cast<ExprPtr>(expr1)
     };
@@ -415,8 +416,8 @@ TEST(PipelineTest, TestUnestOneArray)
 {
     std::vector<DataTypePtr> types = {
         IntType(),
-        std::make_shared<ArrayType>(IntType()),
-        std::make_shared<ArrayType>(IntType())
+        std::make_shared<OmniArrayType>(IntType()),
+        std::make_shared<OmniArrayType>(IntType())
     };
     VectorBatch *vecBatch = CreateTestUnnestVecBatchWithTwoArray();
     std::vector<VectorBatch*> inputVector;
@@ -428,8 +429,8 @@ TEST(PipelineTest, TestUnestOneArray)
     auto valueStreamNode = std::make_shared<const ValueStreamNode>("value_stream", outTypes, resIterator);
 
     auto expr1 = new FieldExpr(0, IntType());
-    auto expr2 = new FieldExpr(1, std::make_shared<ArrayType>(IntType()));
-    auto expr3 = new FieldExpr(2, std::make_shared<ArrayType>(IntType()));
+    auto expr2 = new FieldExpr(1, std::make_shared<OmniArrayType>(IntType()));
+    auto expr3 = new FieldExpr(2, std::make_shared<OmniArrayType>(IntType()));
     auto replicateVariables = std::vector<ExprPtr>{
         static_cast<ExprPtr>(expr1),
         static_cast<ExprPtr>(expr2)
@@ -571,16 +572,16 @@ TEST(PipelineTest, TestUnestMultiType)
         BooleanType(),
         CharDataType::Instance(),
         ShortType(),
-        std::make_shared<ArrayType>(IntType()),
-        std::make_shared<ArrayType>(DoubleType()),
-        std::make_shared<ArrayType>(VarcharType(10)),
-        std::make_shared<ArrayType>(LongType()),
-        std::make_shared<ArrayType>(Decimal128Type(10, 2)),
-        std::make_shared<ArrayType>(Date32Type()),
-        std::make_shared<ArrayType>(Decimal64DataType::Instance()),
-        std::make_shared<ArrayType>(BooleanType()),
-        std::make_shared<ArrayType>(CharDataType::Instance()),
-        std::make_shared<ArrayType>(ShortType())
+        std::make_shared<OmniArrayType>(IntType()),
+        std::make_shared<OmniArrayType>(DoubleType()),
+        std::make_shared<OmniArrayType>(VarcharType(10)),
+        std::make_shared<OmniArrayType>(LongType()),
+        std::make_shared<OmniArrayType>(Decimal128Type(10, 2)),
+        std::make_shared<OmniArrayType>(Date32Type()),
+        std::make_shared<OmniArrayType>(Decimal64DataType::Instance()),
+        std::make_shared<OmniArrayType>(BooleanType()),
+        std::make_shared<OmniArrayType>(CharDataType::Instance()),
+        std::make_shared<OmniArrayType>(ShortType())
     };
     VectorBatch *vecBatch = CreateTestUnnestVecBatchMultiType();
     std::vector<VectorBatch*> inputVector;
@@ -601,16 +602,16 @@ TEST(PipelineTest, TestUnestMultiType)
     auto expr8 = new FieldExpr(7, BooleanType());
     auto expr9 = new FieldExpr(8, CharDataType::Instance());
     auto expr10 = new FieldExpr(9, ShortType());
-    auto expr11 = new FieldExpr(10, std::make_shared<ArrayType>(IntType()));
-    auto expr12 = new FieldExpr(11, std::make_shared<ArrayType>(DoubleType()));
-    auto expr13 = new FieldExpr(12, std::make_shared<ArrayType>(VarcharType(10)));
-    auto expr14 = new FieldExpr(13, std::make_shared<ArrayType>(LongType()));
-    auto expr15 = new FieldExpr(14, std::make_shared<ArrayType>(Decimal128Type(10, 2)));
-    auto expr16 = new FieldExpr(15, std::make_shared<ArrayType>(Date32Type()));
-    auto expr17 = new FieldExpr(16, std::make_shared<ArrayType>(Decimal64DataType::Instance()));
-    auto expr18 = new FieldExpr(17, std::make_shared<ArrayType>(BooleanType()));
-    auto expr19 = new FieldExpr(18, std::make_shared<ArrayType>(CharDataType::Instance()));
-    auto expr20 = new FieldExpr(19, std::make_shared<ArrayType>(ShortType()));
+    auto expr11 = new FieldExpr(10, std::make_shared<OmniArrayType>(IntType()));
+    auto expr12 = new FieldExpr(11, std::make_shared<OmniArrayType>(DoubleType()));
+    auto expr13 = new FieldExpr(12, std::make_shared<OmniArrayType>(VarcharType(10)));
+    auto expr14 = new FieldExpr(13, std::make_shared<OmniArrayType>(LongType()));
+    auto expr15 = new FieldExpr(14, std::make_shared<OmniArrayType>(Decimal128Type(10, 2)));
+    auto expr16 = new FieldExpr(15, std::make_shared<OmniArrayType>(Date32Type()));
+    auto expr17 = new FieldExpr(16, std::make_shared<OmniArrayType>(Decimal64DataType::Instance()));
+    auto expr18 = new FieldExpr(17, std::make_shared<OmniArrayType>(BooleanType()));
+    auto expr19 = new FieldExpr(18, std::make_shared<OmniArrayType>(CharDataType::Instance()));
+    auto expr20 = new FieldExpr(19, std::make_shared<OmniArrayType>(ShortType()));
     auto replicateVariables = std::vector<ExprPtr>{
         static_cast<ExprPtr>(expr1),
         static_cast<ExprPtr>(expr2),
