@@ -5,6 +5,7 @@
 
 #include "ExprEval.h"
 #include "codegen/expr_evaluator.h"
+#include <iostream>
 
 namespace omniruntime::vectorization {
 using namespace omniruntime::expressions;
@@ -60,7 +61,8 @@ void ExprEval::Visit(const LiteralExpr &e)
     switch (e.dataType->GetId()) {
         case OMNI_INT:
         case OMNI_DATE32:
-            inputValues_.push(new ConstVector(e.intVal, typeId));
+//            inputValues_.push(new ConstVector(e.intVal, typeId));
+            inputValues_.push(new ConstVector(e.intVal, typeId, rowSize));
             break;
         case OMNI_SHORT:
             inputValues_.push(new ConstVector(e.shortVal, typeId));
@@ -134,6 +136,10 @@ void ExprEval::Visit(const FieldExpr &e)
                 break;
             case OMNI_DECIMAL128:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<Decimal128>(colVec, selectRow, rowSize));
+                break;
+            case OMNI_VARCHAR:
+            case OMNI_CHAR:
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<std::string_view>(colVec, selectRow, rowSize));
                 break;
             case OMNI_ARRAY:
                 inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, rowSize));
@@ -222,11 +228,40 @@ void ExprEval::Visit(const IsNullExpr &e)
 
 void ExprEval::Visit(const FuncExpr &e)
 {
-    for (auto arg : e.arguments) {
-        arg->Accept(*this);
+//    for (auto arg : e.arguments) {
+//        arg->Accept(*this);
+//    }
+//
+//    BaseVector *result = nullptr;
+//    e.vectorFunction->apply(inputValues_, e.dataType, result, context);
+//    inputValues_.push(result);
+    std::cout << "=== FuncExpr::Visit ===" << std::endl;
+    std::cout << "Number of arguments: " << e.arguments.size() << std::endl;
+
+    for (size_t i = 0; i < e.arguments.size(); i++) {
+        std::cout << "Argument " << i << " type: " << typeid(*e.arguments[i]).name() << std::endl;
+        std::cout << "  Before processing - stack size: " << inputValues_.size() << std::endl;
+
+        e.arguments[i]->Accept(*this);
+
+        std::cout << "  After processing - stack size: " << inputValues_.size() << std::endl;
+        if (!inputValues_.empty()) {
+            auto argResult = inputValues_.top();
+            std::cout << "  Result type: " << argResult->GetTypeId() << std::endl;
+            std::cout << "  Result size: " << argResult->GetSize() << std::endl;
+        }
     }
 
+    std::cout << "Final stack size before apply: " << inputValues_.size() << std::endl;
+    std::cout << "Calling function apply..." << std::endl;
+
     BaseVector *result = nullptr;
+    DataTypeId outputTypeId = e.dataType->GetId();
+    if (outputTypeId == OMNI_ARRAY) {
+        result = new ArrayVector(rowSize);
+    } else {
+        result = VectorHelper::CreateFlatVector(outputTypeId, rowSize);
+    }
     e.vectorFunction->apply(inputValues_, e.dataType, result, context);
     inputValues_.push(result);
 }

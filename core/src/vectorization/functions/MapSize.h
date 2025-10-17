@@ -23,7 +23,7 @@ public:
     void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *&result,
         ExecutionContext *context) const override
     {
-        std::cout << "using vectorization split" << std::endl;
+        std::cout << "using vectorization mapsize" << std::endl;
         if (args.empty()) {
             OMNI_THROW("MapSizeFunction Error:", "No arguments provided");
         }

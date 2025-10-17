@@ -129,6 +129,11 @@ struct ConstVectorReader {
         return operator[](offset);
     }
 
+    bool containsNull(int32_t index) const
+    {
+        return vector->IsNull(index);
+    }
+
     bool containsNull(int32_t startIndex, int32_t endIndex) const
     {
         for (auto index = startIndex; index < endIndex; ++index) {

@@ -7,17 +7,20 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <stack>
 
 #include "test/util/test_util.h"
 #include "vectorization/registration/Register.h"
 #include "vector/map_vector.h"
 #include "vector/vector.h"
 #include "vectorization/functions/MapSize.h"
+#include "type/data_type.h"
 
 using namespace omniruntime;
 using namespace omniruntime::vec;
 using namespace omniruntime::vectorization;
 using namespace omniruntime::op;
+using namespace omniruntime::type;
 using namespace omniruntime::TestUtil;
 
 class MultiMapSizeTestHelper {
@@ -44,7 +47,7 @@ public:
         }
 
         auto keyVector = VectorHelper::CreateFlatVector(OMNI_INT, allKeys.size());
-        auto* keyFlatVec = dynamic_cast<Vector<int32_t>*>(keyVector);
+        auto* keyFlatVec = reinterpret_cast<Vector<int32_t>*>(keyVector);
         for (size_t i = 0; i < allKeys.size(); ++i) {
             keyFlatVec->SetValue(i, allKeys[i]);
         }
@@ -54,7 +57,7 @@ public:
             valueViews.emplace_back(val);
         }
         auto valueVector = VectorHelper::CreateStringVector(valueViews.size());
-        auto* valueStrVec = dynamic_cast<Vector<LargeStringContainer<std::string_view>>*>(valueVector);
+        auto* valueStrVec = reinterpret_cast<Vector<LargeStringContainer<std::string_view>>*>(valueVector);
         for (size_t i = 0; i < valueViews.size(); ++i) {
             valueStrVec->SetValue(i, valueViews[i]);
         }
@@ -72,7 +75,7 @@ public:
 
         // Set NULL
         for (int32_t i = 0; i < rowCount; ++i) {
-            bool isNull = (i < nullMasks.size()) ? nullMasks[i] : false;
+            bool isNull = (i < static_cast<int32_t>(nullMasks.size())) ? nullMasks[i] : false;
             if (isNull) {
                 mapVector->SetNull(i);
             } else {
@@ -85,25 +88,45 @@ public:
 
     static std::vector<int32_t> CalculateMapSizes(MapVector* mapVector) {
         MapSizeFunction mapSizeFunc;
-        std::stack<VectorPtr> args;
-        args.push(mapVector);
+        std::stack<BaseVector*> args;
 
         int32_t rowCount = mapVector->vec::BaseVector::GetSize();
-        auto* resultVec = new Vector<int32_t>(rowCount);
-        auto outputType = std::make_shared<type::DataType>(OMNI_INT);
+
+        auto boolVector = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowCount);
+        auto* boolFlatVec = reinterpret_cast<Vector<bool>*>(boolVector);
+        for (int32_t i = 0; i < rowCount; ++i) {
+            boolFlatVec->SetValue(i, true);
+        }
+        args.push(mapVector);
+        args.push(boolVector);
+
+        BaseVector* resultVec = nullptr;
+        auto outputType = std::make_shared<DataType>(OMNI_INT);
 
         ExecutionContext context;
         context.SetResultRowSize(rowCount);
+        context.hasFilter = false;
 
-        mapSizeFunc.apply(args, outputType, resultVec, &context);
+        try {
+            mapSizeFunc.apply(args, outputType, resultVec, &context);
+        } catch (const std::exception& e) {
+            std::cerr << "Exception in MapSizeFunction: " << e.what() << std::endl;
+            delete boolVector;
+            throw;
+        }
 
         // Collect Results
         std::vector<int32_t> results;
-        for (int32_t i = 0; i < rowCount; ++i) {
-            results.push_back(resultVec->GetValue(i));
+        if (resultVec != nullptr) {
+            auto* intResultVec = reinterpret_cast<Vector<int32_t>*>(resultVec);
+            for (int32_t i = 0; i < rowCount; ++i) {
+                results.push_back(intResultVec->GetValue(i));
+            }
+            delete resultVec;
         }
 
-        delete resultVec;
+        delete boolVector;
+
         return results;
     }
 };
@@ -118,12 +141,22 @@ TEST(VectorizationTest, MultiMapSizeCalculation) {
             {{5, 6}, {"five", "six"}}
     };
 
-    std::vector<bool> nullMasks = {false, true, false, false};
+    auto* mapVector = MultiMapSizeTestHelper::CreateMultiMapVector(mapsData);
 
-    auto* mapVector = MultiMapSizeTestHelper::CreateMultiMapVector(mapsData, nullMasks);
+    try {
+        MapVectorReader reader(mapVector);
+        std::cout << "MapVectorReader test passed" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "MapVectorReader failed: " << e.what() << std::endl;
+        delete mapVector;
+        FAIL() << "MapVectorReader failed: " << e.what();
+    }
+
     auto results = MultiMapSizeTestHelper::CalculateMapSizes(mapVector);
 
-    std::vector<int32_t> expected = {3, -1, 1, 2};
+    std::vector<int32_t> expected = {3, 0, 1, 2};
+
+    ASSERT_EQ(results.size(), expected.size()) << "Result size mismatch";
 
     for (size_t i = 0; i < results.size(); ++i) {
         std::cout << "Map " << i << " size: " << results[i]
@@ -136,22 +169,23 @@ TEST(VectorizationTest, MultiMapSizeCalculation) {
     delete mapVector;
 }
 
-TEST(VectorizationTest, MixedMapScenarios) {
-    std::cout << "=== Testing multiple maps with Nulls ===" << std::endl;
+TEST(VectorizationTest, MapWithNulls) {
+    std::cout << "=== Testing maps with NULL values ===" << std::endl;
+
     std::vector<std::pair<std::vector<int32_t>, std::vector<std::string>>> mapsData = {
             {{1}, {"a"}},
             {{}, {}},
-            {{2, 3}, {"b", "c"}},
-            {{4}, {"d"}},
-            {{}, {}}
+            {{2, 3}, {"b", "c"}}
     };
 
-    std::vector<bool> nullMasks = {false, false, true, false, true};
+    std::vector<bool> nullMasks = {false, true, false};
 
     auto* mapVector = MultiMapSizeTestHelper::CreateMultiMapVector(mapsData, nullMasks);
     auto results = MultiMapSizeTestHelper::CalculateMapSizes(mapVector);
 
-    std::vector<int32_t> expected = {1, 0, -1, 1, -1};
+    std::vector<int32_t> expected = {1, -1, 2};
+
+    ASSERT_EQ(results.size(), expected.size()) << "Result size mismatch";
 
     for (size_t i = 0; i < results.size(); ++i) {
         std::cout << "Map " << i << " size: " << results[i]

@@ -194,6 +194,8 @@ public:
         this->dataTypeId = dataTypeId;
         this->encoding = OMNI_ENCODING_CONST;
     }
+    ConstVector(RAW_DATA_TYPE value, DataTypeId dataTypeId, int32_t size)
+            : BaseVector(size, OMNI_ENCODING_CONST, dataTypeId), value(value) {}
 
     RAW_DATA_TYPE GetConstValue() const
     {
