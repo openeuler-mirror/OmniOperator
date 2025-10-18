@@ -15,6 +15,7 @@ else ()
     add_subdirectory(memory)
     add_subdirectory(vectorization)
 if (DEFINED ENABLE_BENCHMARK AND ENABLE_BENCHMARK STREQUAL "ON")
+    find_package(benchmark REQUIRED)
     add_subdirectory(benchmark)
 endif ()
     add_subdirectory(parser)
@@ -54,7 +55,8 @@ endif ()
             stdc++
             dl
             LLVM-15
-            re2::re2)
+            re2::re2
+    $<$<BOOL:${ENABLE_BENCHMARK}>:benchmark::benchmark>)
     target_compile_options(${OM_TEST_TARGET} PUBLIC -g -O2 -fPIC)
 
     # dependent include
