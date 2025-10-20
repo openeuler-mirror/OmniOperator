@@ -3,7 +3,7 @@
  * Description: Inner supported aggregators source file
  */
 #include "perf_util.h"
-#include <huawei_secure_c/include/securec.h>
+#include <libboundscheck/include/securec.h>
 #include <cstdio>
 #include <unistd.h>
 #include <sys/ioctl.h>

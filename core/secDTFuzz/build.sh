@@ -20,8 +20,8 @@ cp -r ${SRC_ROOT}/tools/DTFrame/dist ${SRC_ROOT}/core/test/dt/testtree
 
 cd ${SRC_ROOT}
 mkdir omni-operator
-cp -r /usr1/huawei_secure_c/lib omni-operator
-cp -r /usr1/huawei_secure_c/include omni-operator/lib
+cp -r /usr1/libboundscheck/lib omni-operator
+cp -r /usr1/libboundscheck/include omni-operator/lib
 
 dos2unix core/build/build.sh
 bash core/build/build.sh coverage --enable-dt

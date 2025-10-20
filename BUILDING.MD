@@ -205,17 +205,16 @@ The json version of OmniOperator requires at least 3.7.3. If the GCC version is 
 
 Notice:The installation procedures for versions 3.9.1 and 3.7.3 are the same.
 
-### Install huawei securec
+### Install libboundscheck
 
-- Download source code from <https://codehub-y.huawei.com/hwsecurec_group/huawei_secure_c/files?ref=tag_Huawei_Secure_C_V100R001C01SPC011B003_00001> 
+- Download source code from <https://gitee.com/openeuler/libboundscheck> 
 
 - Run the following command to install jemalloc via  the source code
 
   ```
-  tar zxvf huawei_secure_c-tag_Huawei_Secure_C_V100R001C01SPC011B003_00001.tar.gz
-  mv huawei_secure_c-tag_Huawei_Secure_C_V100R001C01SPC011B003_00001 huawei_secure_c
-  cd huawei_secure_c/src
-  make
+  git clone https://gitee.com/openeuler/libboundscheck.git
+  cd libboundscheck
+  make CC=gcc 
   ```
 
 ### Install JDK
@@ -265,13 +264,13 @@ Run the command `vi /etc/profile `,and add the following content to the file:
   To compile OmniOperatorJit,  the huawei securec configuration is as follows:
 
   ```
-  export LD_LIBRARY_PATH(add the path) ":/opt/omni-operator/software/huawei_secure_c/lib"
-  export LIBRARY_PATH(add the path) ":/opt/omni-operator/software/huawei_secure_c/lib"
+  export LD_LIBRARY_PATH(add the path) ":/opt/omni-operator/software/libboundscheck/lib"
+  export LIBRARY_PATH(add the path) ":/opt/omni-operator/software/libboundscheck/lib"
   export C_INCLUDE_PATH(add the path) ":/opt/omni-operator/software"
   export CPLUS_INCLUDE_PATH(add the path) ":/opt/omni-operator/software"
   ```
 
-  huawei_secure_c is stored in the directory `/opt/omni-operator/software` . It is acceptable to place huawei_secure_c in a proper directory and specify the defined directory in the configuration file.
+  libboundscheck is stored in the directory `/opt/omni-operator/software` . It is acceptable to place libboundscheck in a proper directory and specify the defined directory in the configuration file.
 
 - Configure JDK
 

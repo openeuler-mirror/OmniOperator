@@ -3,7 +3,7 @@
  * Description: registry  function  implementation
  */
 
-#include <huawei_secure_c/include/securec.h>
+#include <libboundscheck/include/securec.h>
 #include "dtoa.h"
 
 namespace omniruntime::codegen::function {

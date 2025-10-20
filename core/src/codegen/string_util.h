@@ -11,7 +11,7 @@
 #include <memory>
 #include <locale>
 #include <codecvt>
-#include <huawei_secure_c/include/securec.h>
+#include <libboundscheck/include/securec.h>
 #include "util/utf8_util.h"
 
 namespace omniruntime::codegen::function {

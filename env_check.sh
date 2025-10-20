@@ -67,28 +67,22 @@ setup_dependencies() {
   local workspace=$(pwd)
   mkdir -p ${workspace}/${open_source_dir}
 
-  cp -r ${workspace}/../huawei_secure_c ${open_source_dir}
+  cp -r ${workspace}/../libboundscheck ${open_source_dir}
   cp -r ${workspace}/../json ${open_source_dir}
   if [ "$1" != "package" ] && [ "$1" != "release" ]; then
     cp -r ${workspace}/../benchmark ${open_source_dir}
     cp -r ${workspace}/../googletest ${open_source_dir}/benchmark
   fi
 
-  echo "Start build open source code for huawei_secure_c, json and gtest"
-  cd ${workspace}/${open_source_dir}/huawei_secure_c/src
-  sudo make
+  echo "Start build open source code for libboundscheck, json and gtest"
+  cd ${workspace}/${open_source_dir}/libboundscheck
+  sudo make CC=gcc
   cd ${workspace}/${open_source_dir}
-  sudo cp huawei_secure_c/lib/libsecurec.so $OMNI_HOME/lib
-  sudo cp -r huawei_secure_c/include/ $OMNI_HOME/lib
+  sudo cp libboundscheck/lib/libboundscheck.so $OMNI_HOME/lib
+  sudo cp -r libboundscheck/include/ $OMNI_HOME/lib
 
   mkdir ${workspace}/${open_source_dir}/json/build
   cd ${workspace}/${open_source_dir}/json/build && sudo cmake ../ && sudo make -j16 && sudo make install
-
-  mkdir ${workspace}/${open_source_dir}/abseil-cpp/build
-  cd ${workspace}/${open_source_dir}/abseil-cpp/build && sudo cmake ../ -DBUILD_SHARED_LIBS=ON && sudo make -j16 && sudo make install
-
-  mkdir ${workspace}/${open_source_dir}/re2/build
-  cd ${workspace}/${open_source_dir}/re2/build && sudo cmake ../ -DBUILD_SHARED_LIBS=ON && sudo make -j16 && sudo make install
 
   if [ "$1" != "package" ] && [ "$1" != "release" ]; then
     cd ${workspace}/${open_source_dir}/benchmark
