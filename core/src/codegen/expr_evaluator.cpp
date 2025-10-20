@@ -157,7 +157,8 @@ void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[],
     intptr_t valuesAddress;
     intptr_t dictVecAddress;
     int32_t vectorCount = vecBatch.GetVectorCount();
-    for (int32_t i = 0; i < vectorCount; i++) {
+    int32_t size = std::min(vectorCount, types.GetSize());
+    for (int32_t i = 0; i < size; i++) {
         auto colVec = vecBatch.Get(i);
         if (types.GetType(i)->GetId() == OMNI_ROW || types.GetType(i)->GetId() == OMNI_MAP) {
             dictionaries[i] = 0;
