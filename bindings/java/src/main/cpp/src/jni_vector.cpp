@@ -526,6 +526,22 @@ static jobject GetDataType(JNIEnv *env, BaseVector *vec)
             env->DeleteLocalRef(valueType);
             return mapType;
         }
+        case OMNI_ARRAY: {
+            auto arrayVec = reinterpret_cast<ArrayVector *>(vec);
+            BaseVector* elementVec = arrayVec->GetElementVector().get();
+            jobject elementType = GetDataType(env, elementVec);
+
+            static jclass arrayDataTypeCls = nullptr;
+            static jmethodID arrayDataTypeInitMethodId = nullptr;
+            if (arrayDataTypeCls == nullptr) {
+                arrayDataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/ArrayDataType");
+                arrayDataTypeInitMethodId = env->GetMethodID(arrayDataTypeCls, "<init>", "(Lnova/hetu/omniruntime/type/DataType;)V");
+            }
+
+            jobject arrayType = env->NewObject(arrayDataTypeCls, arrayDataTypeInitMethodId, elementType);
+            env->DeleteLocalRef(elementType);
+            return arrayType;
+        }
         default: {
             jobject flatType = env->CallStaticObjectMethod(dataTypeCls, createMethodId, (jint) id);
             return flatType;
