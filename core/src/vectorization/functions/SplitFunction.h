@@ -24,6 +24,7 @@ public:
     void apply(std::stack<VectorPtr> &args, const type::DataTypePtr &outputType,
                vec::BaseVector *&result, op::ExecutionContext *context) const override
     {
+
         std::cout << "outputType type: " << typeid(*outputType).name() << std::endl; // 查看是否为ArrayDataType
         std::cout << "outputType id: " << outputType->GetId() << std::endl; // 查看是否为OMNI_ARRAY
         std::cout << "SplitFunction::apply called" << std::endl;
@@ -43,6 +44,8 @@ public:
         }
         args.pop();
         auto delimiterArg = args.top();
+        auto rowSize = delimiterArg->GetSize();
+        result = new ArrayVector(rowSize);
         std::cout << "delimiterArg: " << delimiterArg << std::endl;
         if (delimiterArg) {
             std::cout << "  delimiterArg TypeId: " << delimiterArg->GetTypeId() << std::endl;
@@ -65,8 +68,6 @@ public:
         if (!arrayResult) {
             OMNI_THROW("SplitFunction Error:", "Result vector is not an ArrayVector");
         }
-
-        int32_t rowSize = context->GetResultRowSize();
         StringVectorReader inputReader(inputArg);
         StringVectorReader delimiterReader(delimiterArg);
         // FlatVectorReader<int32_t> limitReader(limitArg);

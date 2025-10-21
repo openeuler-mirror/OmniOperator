@@ -150,6 +150,7 @@ struct StringVectorReader {
 
     explicit StringVectorReader(BaseVector *vec)
     {
+
         vector = dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(vec);
         if (vector == nullptr) {
             throw std::invalid_argument("StringVectorReader: Input BaseVector pointer type does not match.");
