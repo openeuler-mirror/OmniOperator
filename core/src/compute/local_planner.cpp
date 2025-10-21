@@ -17,6 +17,7 @@
 #include "operator/topnsort/topn_sort_expr.h"
 #include "operator/union/union.h"
 #include "operator/window/window_expr.h"
+#include "operator/window/window_group_limit_expr.h"
 #include "operator/join/sortmergejoin/sort_merge_join_expr_v2.h"
 #include <operator/aggregation/non_group_aggregation_expr.h>
 #include "operator/expand/expand.h"
@@ -65,6 +66,8 @@ OperatorFactory* createOperatorFactory(
         return CreateFilterOperatorFactory(filterNode, queryConfig);
     } else if (auto windowNode = std::dynamic_pointer_cast<const WindowNode>(planNode)) {
         return WindowWithExprOperatorFactory::CreateWindowWithExprOperatorFactory(windowNode, queryConfig);
+    } else if (auto windowGroupLimitNode = std::dynamic_pointer_cast<const WindowGroupLimitNode>(planNode)) {
+        return WindowGroupLimitWithExprOperatorFactory::CreateWindowGroupLimitWithExprOperatorFactory(windowGroupLimitNode, queryConfig);
     } else if (auto topNNode = std::dynamic_pointer_cast<const TopNNode>(planNode)) {
         return TopNWithExprOperatorFactory::CreateTopNWithExprOperatorFactory(topNNode, queryConfig);
     } else if (auto topNSortNode = std::dynamic_pointer_cast<const TopNSortNode>(planNode)) {

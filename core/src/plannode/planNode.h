@@ -399,6 +399,64 @@ private:
     std::vector<int32_t> outputCols;
 };
 
+class WindowGroupLimitNode : public PlanNode {
+public:
+    WindowGroupLimitNode(
+        const PlanNodeId& id,
+        const PlanNodePtr& source,
+        int32_t n,
+        const std::string& funcName,
+        const std::vector<omniruntime::expressions::Expr *>& partitionKeys,
+        const std::vector<omniruntime::expressions::Expr *>& sortKeys,
+        const std::vector<int32_t>& sortAscendings,
+        const std::vector<int32_t>& sortNullFirsts,
+        const DataTypesPtr& outputTypes
+    )
+    : PlanNode(id),
+      sources({source}),
+      sourceTypes(source->OutputType()),
+      n(n),
+      funcName(funcName),
+      partitionKeys(partitionKeys),
+      sortKeys(sortKeys),
+      sortAscendings(sortAscendings),
+      sortNullFirsts(sortNullFirsts),
+      outputTypes(outputTypes) { }
+
+    ~WindowGroupLimitNode() override = default;
+
+    const DataTypesPtr &GetSourceType() const { return sourceTypes; }
+
+    int32_t GetN() const { return n; }
+
+    const std::string& GetFuncName() const { return funcName; }
+
+    const std::vector<omniruntime::expressions::Expr *>& GetPartitionKeys() const { return partitionKeys; }
+
+    const std::vector<omniruntime::expressions::Expr *>& GetSortKeys() const { return sortKeys; }
+
+    const std::vector<int32_t>& GetSortAscendings() const { return sortAscendings; }
+
+    const std::vector<int32_t>& GetSortNullFirsts() const { return sortNullFirsts; }
+
+    const std::vector<PlanNodePtr> &Sources() const override { return sources; }
+
+    const DataTypesPtr &OutputType() const override { return outputTypes; }
+
+    std::string_view Name() const override { return "WindowGroupLimit"; }
+
+private:
+    const DataTypesPtr sourceTypes;
+    const int32_t n;
+    const std::string funcName;
+    const std::vector<omniruntime::expressions::Expr *> partitionKeys;
+    const std::vector<omniruntime::expressions::Expr *> sortKeys;
+    const std::vector<int32_t> sortAscendings;
+    const std::vector<int32_t> sortNullFirsts;
+    const std::vector<PlanNodePtr> sources;
+    const DataTypesPtr outputTypes;
+};
+
 enum JoinType {
     OMNI_JOIN_TYPE_INNER = 0,
     OMNI_JOIN_TYPE_LEFT,

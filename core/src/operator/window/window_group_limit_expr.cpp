@@ -28,6 +28,23 @@ WindowGroupLimitWithExprOperatorFactory::WindowGroupLimitWithExprOperatorFactory
 
 WindowGroupLimitWithExprOperatorFactory::~WindowGroupLimitWithExprOperatorFactory() = default;
 
+WindowGroupLimitWithExprOperatorFactory *WindowGroupLimitWithExprOperatorFactory::CreateWindowGroupLimitWithExprOperatorFactory(
+    std::shared_ptr<const WindowGroupLimitNode> planNode, const config::QueryConfig &queryConfig)
+{
+    auto sourceDataTypes = planNode->GetSourceType();
+    auto n = planNode->GetN();
+    auto funcName = planNode->GetFuncName();
+    auto partitionKeys = planNode->GetPartitionKeys();
+    auto sortKeys = planNode->GetSortKeys();
+    auto sortAscendings = planNode->GetSortAscendings();
+    auto sortNullFirsts = planNode->GetSortNullFirsts();
+    OverflowConfig *overflowConfig = queryConfig.IsOverFlowASNull()? new OverflowConfig(OVERFLOW_CONFIG_NULL) : new OverflowConfig(OVERFLOW_CONFIG_EXCEPTION);
+
+    auto operatorFactory = new WindowGroupLimitWithExprOperatorFactory(*sourceDataTypes.get(), n, funcName, partitionKeys,
+        sortKeys, sortAscendings, sortNullFirsts, overflowConfig);
+    return operatorFactory;
+}
+
 Operator *WindowGroupLimitWithExprOperatorFactory::CreateOperator()
 {
     auto windowGroupLimitOperator =
