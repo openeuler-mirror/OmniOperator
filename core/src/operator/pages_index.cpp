@@ -1217,7 +1217,6 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
             case OMNI_BYTE:
                 ConstructVector<OMNI_BYTE>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
                     outputIndex);
-                break;
             case OMNI_INT:
             case OMNI_DATE32:
                 ConstructVector<OMNI_INT>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,

@@ -111,7 +111,7 @@ void JoinHashTableVariants<KeyType, RowRefListType>::ComputeMultiColKey(
         for (int i = 0; i < hashColCount; ++i) {
             switch (hashColumns[i]->GetTypeId()) {
                 case OMNI_BYTE:
-                    key = static_cast<KeyType>(key) << BITS_OF_BYTE | static_cast<KeyType>(
+                    key = static_cast<KeyType>(key) << BITS_OF_SHORT | static_cast<KeyType>(
                         hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
                         reinterpret_cast<Vector<DictionaryContainer<int8_t>> *>(hashColumns[i])->GetValue(index)
                         : reinterpret_cast<Vector<int8_t> *>(hashColumns[i])->GetValue(index));
