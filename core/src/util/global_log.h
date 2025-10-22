@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 #include <sstream>
-#include <cstring>
+#include <libboundscheck/include/securec.h>
 
 #ifdef __cplusplus
 extern "C" {

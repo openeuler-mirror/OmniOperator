@@ -479,8 +479,8 @@ public:
 
         allocator.Allocate((newCapacity + Group::kWidth) * sizeof(ctrl_t), &ctrlAddress);
         identifiers = reinterpret_cast<ctrl_t *>(ctrlAddress);
-        memset(identifiers, kEmpty, sizeof(ctrl_t) * newCapacity);
-        memset(identifiers + newCapacity, kSentinel, sizeof(ctrl_t) * Group::kWidth);
+        memset_sp(identifiers, sizeof(ctrl_t) * newCapacity, kEmpty, sizeof(ctrl_t) * newCapacity);
+        memset_sp(identifiers + newCapacity, sizeof(ctrl_t) * Group::kWidth, kSentinel, sizeof(ctrl_t) * Group::kWidth);
 
         allocator.Allocate(newCapacity * sizeof(Slot), &slotsAddress);
         slots = reinterpret_cast<Slot *>(slotsAddress);
@@ -678,9 +678,9 @@ public:
     void Reset()
     {
         elementsSize = 0;
-        memset(identifiers, kEmpty, sizeof(ctrl_t) * capacity);
-        memset(identifiers + capacity, kSentinel, sizeof(ctrl_t) * Group::kWidth);
-        memset(slotsAddress, 0, sizeof(Slot) * capacity);
+        memset_sp(identifiers, sizeof(ctrl_t) * capacity, kEmpty, sizeof(ctrl_t) * capacity);
+        memset_sp(identifiers + capacity, sizeof(ctrl_t) * Group::kWidth, kSentinel, sizeof(ctrl_t) * Group::kWidth);
+        memset_sp(slotsAddress, sizeof(Slot) * capacity, 0, sizeof(Slot) * capacity);
     }
 
     class HashmapIteratorOutput {

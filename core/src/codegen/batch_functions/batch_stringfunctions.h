@@ -10,7 +10,7 @@
 #include <memory>
 #include <locale>
 #include <codecvt>
-#include <cstring>
+#include <libboundscheck/include/securec.h>
 #include "util/utf8_util.h"
 #include "codegen/context_helper.h"
 #include "codegen/string_util.h"

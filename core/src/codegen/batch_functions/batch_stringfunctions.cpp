@@ -216,7 +216,12 @@ extern "C" DLLEXPORT void BatchCastIntToString(int64_t contextPtr, int32_t *valu
             continue;
         }
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        memcpy(ret, str.c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], str.c_str(), outLen[i]);
+        if (res != EOK) {
+            SetError(contextPtr, "cast failed");
+            output[i] = nullptr;
+            continue;
+        }
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }
@@ -238,7 +243,12 @@ extern "C" DLLEXPORT void BatchCastLongToString(int64_t contextPtr, int64_t *val
             continue;
         }
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        memcpy(ret, str.c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], str.c_str(), outLen[i]);
+        if (res != EOK) {
+            SetError(contextPtr, "cast failed");
+            output[i] = nullptr;
+            continue;
+        }
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }
@@ -270,7 +280,12 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToString(int64_t contextPtr, int64_t
             continue;
         }
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        memcpy(ret, str.c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], str.c_str(), outLen[i]);
+        if (res != EOK) {
+            SetError(contextPtr, "cast failed");
+            output[i] = nullptr;
+            continue;
+        }
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }
@@ -292,7 +307,12 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToString(int64_t contextPtr, Decima
             continue;
         }
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        memcpy(ret, stringDecimal.c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], stringDecimal.c_str(), outLen[i]);
+        if (res != EOK) {
+            SetError(contextPtr, "cast failed");
+            output[i] = nullptr;
+            continue;
+        }
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
 }
@@ -544,7 +564,12 @@ extern "C" DLLEXPORT void BatchCastIntToStringRetNull(bool *isNull, int64_t cont
         std::string str = std::to_string(value[i]);
         outLen[i] = static_cast<int32_t>(str.size());
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        memcpy(ret, str.c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i] + 1, str.c_str(), outLen[i]);
+        if (res != EOK) {
+            output[i] = nullptr;
+            isNull[i] = true;
+            continue;
+        }
         isNull[i] = false;
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
@@ -557,7 +582,12 @@ extern "C" DLLEXPORT void BatchCastLongToStringRetNull(bool *isNull, int64_t con
         std::string str = std::to_string(value[i]);
         outLen[i] = static_cast<int32_t>(strlen(str.c_str()));
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        memcpy(ret, str.c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], str.c_str(), outLen[i]);
+        if (res != EOK) {
+            output[i] = nullptr;
+            isNull[i] = true;
+            continue;
+        }
         isNull[i] = false;
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
@@ -586,7 +616,12 @@ extern "C" DLLEXPORT void BatchCastDecimal64ToStringRetNull(bool *isNull, int64_
             continue;
         }
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        memcpy(ret, str.c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], str.c_str(), outLen[i]);
+        if (res != EOK) {
+            output[i] = nullptr;
+            isNull[i] = true;
+            continue;
+        }
         isNull[i] = false;
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
@@ -604,7 +639,12 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToStringRetNull(bool *isNull, int64
             continue;
         }
         auto ret = ArenaAllocatorMalloc(contextPtr, outLen[i]);
-        memcpy(ret, stringDecimal.c_str(), outLen[i]);
+        errno_t res = memcpy_s(ret, outLen[i], stringDecimal.c_str(), outLen[i]);
+        if (res != EOK) {
+            output[i] = nullptr;
+            isNull[i] = true;
+            continue;
+        }
         isNull[i] = false;
         output[i] = reinterpret_cast<uint8_t *>(ret);
     }
@@ -1260,7 +1300,13 @@ extern "C" DLLEXPORT void BatchStaticInvokeVarcharTypeWriteSideCheck(int64_t con
             continue;
         }
         auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
-        memcpy(padded, ss, outByteNum);
+        errno_t res = memcpy_s(padded, outByteNum, ss, outByteNum);
+        if (res != EOK) {
+            SetError(contextPtr, "varcharTypeWriteSideCheck failed：memcpy_s error");
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        }
         padded[outByteNum] = '\0';
         outputLen[i] = outByteNum;
         outputStr[i] = padded;
@@ -1291,8 +1337,20 @@ extern "C" DLLEXPORT void BatchStaticInvokeCharReadPadding(int64_t contextPtr, c
         int32_t diff = limit - ssLen;
         int32_t outByteNum = len + diff + 1;
         auto padded = ArenaAllocatorMalloc(contextPtr, outByteNum);
-        memcpy(padded, ss, len);
-        memset(padded + len, ' ', diff);
+        errno_t res = memcpy_s(padded, len, ss, len);
+        if (res != EOK) {
+            SetError(contextPtr, "BatchStaticInvokeCharReadPadding failed：memcpy_s error");
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        }
+        res = memset_s(padded + len, diff, ' ', diff);
+        if (res != EOK) {
+            SetError(contextPtr, "BatchStaticInvokeCharReadPadding failed：memcpy_s error");
+            outputLen[i] = 0;
+            outputStr[i] = nullptr;
+            continue;
+        }
         padded[outByteNum] = '\0';
         outputLen[i] = outByteNum - 1;
         outputStr[i] = padded;

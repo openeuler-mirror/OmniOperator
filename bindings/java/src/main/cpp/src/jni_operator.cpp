@@ -4,7 +4,7 @@
  */
 
 #include <vector>
-#include <cstring>
+#include "securec.h"
 #include "vector/vector_batch.h"
 #include "vector/vector_helper.h"
 #include "jni_common_def.h"

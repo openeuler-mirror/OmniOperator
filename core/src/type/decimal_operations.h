@@ -12,7 +12,7 @@
 #include <iostream>
 #include <climits>
 #include <cmath>
-#include <cstring>
+#include <libboundscheck/include/securec.h>
 #include "integer256.h"
 #include "util/debug.h"
 #include "util/omni_exception.h"

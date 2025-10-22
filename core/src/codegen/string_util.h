@@ -11,7 +11,7 @@
 #include <memory>
 #include <locale>
 #include <codecvt>
-#include <cstring>
+#include <libboundscheck/include/securec.h>
 #include "util/utf8_util.h"
 
 namespace omniruntime::codegen::function {
@@ -79,12 +79,17 @@ public:
             return reinterpret_cast<const char *>(EMPTY);
         }
 
-        // allocate one more byte is mainly for memcpy, when the copy source and destination are
+        // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
         // both empty strings, the security function will not return an error.
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        memcpy(ret, ap, apLen);
-        memset(ret + apLen, ' ', aPaddingCount);
-        memcpy(ret + apLen + aPaddingCount, bp, bpLen);
+        errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
+        errno_t res2 = memset_s(ret + apLen, *outLen - apLen + 1, ' ', aPaddingCount);
+        errno_t res3 = memcpy_s(ret + apLen + aPaddingCount, *outLen - (apLen + aPaddingCount) + 1, bp, bpLen);
+        if (res1 != EOK || res2 != EOK || res3 != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
         return ret;
     }
 
@@ -96,11 +101,16 @@ public:
             *outLen = 0;
             return reinterpret_cast<const char *>(EMPTY);
         }
-        // allocate one more byte is mainly for memcpy, when the copy source and destination are
+        // allocate one more byte is mainly for memcpy_s, when the copy source and destination are
         // both empty strings, the security function will not return an error.
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        memcpy(ret, ap, apLen);
-        memcpy(ret + apLen, bp, bpLen);
+        errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
+        errno_t res2 = memcpy_s(ret + apLen, *outLen - apLen + 1, bp, bpLen);
+        if (res1 != EOK || res2 != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
         return ret;
     }
 
@@ -113,9 +123,14 @@ public:
             return reinterpret_cast<const char *>(EMPTY);
         }
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        memcpy(ret, ap, apLen);
-        memcpy(ret + apLen, separator, separatorLen);
-        memcpy(ret + apLen + separatorLen, bp, bpLen);
+        errno_t res1 = memcpy_s(ret, *outLen + 1, ap, apLen);
+        errno_t res2 = memcpy_s(ret + apLen, *outLen + 1 - apLen, separator, separatorLen);
+        errno_t res3 = memcpy_s(ret + apLen + separatorLen, *outLen + 1 - apLen - separatorLen, bp, bpLen);
+        if (res1 != EOK || res2 != EOK || res3 != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
         return ret;
     }
 
@@ -144,7 +159,12 @@ public:
 
         *outLen = static_cast<int32_t>(s.length());
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
-        memcpy(ret, s.c_str(), s.length());
+        error_t res = memcpy_s(ret, *outLen + 1, s.c_str(), s.length());
+        if (res != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
         return ret;
     }
 
@@ -155,15 +175,31 @@ public:
         *outLen = strLen + (strCodePoints + 1) * replaceLen;
         auto ret = ArenaAllocatorMalloc(contextPtr, *outLen + 1);
         int32_t indexBuffer = 0;
+        errno_t res;
         for (int32_t index = 0; index < strLen;) {
-            memcpy(ret + indexBuffer, replaceStr, replaceLen);
+            res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
+            if (res != EOK) {
+                *hasErr = true;
+                *outLen = 0;
+                return nullptr;
+            }
             indexBuffer += replaceLen;
             int32_t codePointLength = omniruntime::Utf8Util::LengthOfCodePoint(*(str + index));
-            memcpy(ret + indexBuffer, str + index, codePointLength);
+            res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, str + index, codePointLength);
+            if (res != EOK) {
+                *hasErr = true;
+                *outLen = 0;
+                return nullptr;
+            }
             indexBuffer += codePointLength;
             index += codePointLength;
         }
-        memcpy(ret + indexBuffer, replaceStr, replaceLen);
+        res = memcpy_s(ret + indexBuffer, *outLen - indexBuffer + 1, replaceStr, replaceLen);
+        if (res != EOK) {
+            *hasErr = true;
+            *outLen = 0;
+            return nullptr;
+        }
         return ret;
     }
 
