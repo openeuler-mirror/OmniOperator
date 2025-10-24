@@ -653,15 +653,16 @@ TEST(ExpressionTest, Decimal64BigIntToDecimal128)
     // Create row vector
     timer.Reset();
     VectorBatch *t = CreateVectorBatch(inputTypes, numRows, bigintCol);
-    time.CalculateElapse();
+    timer.CalculateElapse();
     std::cout << "make row vector: "
               << " wall " << timer.GetWallElapse() << " cpu " << timer.GetCpuElapse() << std::endl;
 
     // Prepare projection operator
     timer.Reset();
     auto overflowConfig = new OverflowConfig();
-    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(expr, inputTypes, overflowConfig);
+    auto exprEvaluator = std::make_shared<ExpressionEvaluator>(exprs, inputTypes, overflowConfig);
     auto *factory = new ProjectionOperatorFactory(std::move(exprEvaluator));
+    omniruntime::op::Operator *op = factory->CreateOperator();
 
     timer.CalculateElapse();
     std::cout << "compile expression : "

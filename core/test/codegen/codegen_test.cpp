@@ -791,13 +791,13 @@ TEST(CodeGenTest, DISABLED_CountChar)
     vals[2] = reinterpret_cast<int64_t>(s2->c_str());
     int32_t *selected = new int32_t[1];
 
-    auto **bitmap = new uint8_t *[3];
+    auto **bitmap = new bool *[3];
     for (int i = 0; i < 3; i++) {
         bitmap[i] = new bool[1];
         bitmap[i][0] = false;
     }
 
-    bool **offsets = new bool *[3];
+    auto **offsets = new int32_t *[3];
     offsets[0] = new int32_t[1];
     offsets[1] = new int32_t[2];
     offsets[1][0] = 0;
