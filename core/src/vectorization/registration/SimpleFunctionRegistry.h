@@ -29,12 +29,12 @@ public:
 // a while to maintain backwards compatibility, but the idea is to remove the
 // one above eventually.
 template <template <class> typename Func, typename TReturn, typename... TArgs>
-bool registerFunction(const std::string &name, std::vector<DataTypeId> paramsType,
+bool RegisterFunction(const std::string &name, std::vector<DataTypeId> paramsType,
     DataTypeId returnType)
 {
     using funcClass = Func<TReturn>;
     using holderClass = FunctionHolder<funcClass, TReturn, TArgs...>;
-    auto signature = std::make_shared<FunctionSignature>(name, paramsType, returnType);
+    auto signature = std::make_shared<codegen::FunctionSignature>(name, paramsType, returnType);
     VectorFunction::functionMap_->insert(std::make_pair(signature,
         std::make_shared<SimpleFunction<holderClass>>()));
     return true;

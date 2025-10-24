@@ -95,7 +95,7 @@ public:
     BaseVector *Project(VectorBatch *vecBatch, int64_t *valueAddrs, int64_t *nullAddrs, int64_t *offsetAddrs,
         ExecutionContext *context, int64_t *dictionaryVectors, const int32_t *typeIds);
 
-    BaseVector *ProjectVec(VectorBatch *vecBatch ,ExecutionContext *context);
+    BaseVector *ProjectVec(VectorBatch *vecBatch, ExecutionContext *context);
 
     omniruntime::type::DataType &GetOutputType() const
     {

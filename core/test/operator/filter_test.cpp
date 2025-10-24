@@ -186,6 +186,7 @@ TEST(FilterTest, LessThanProcessRow)
     auto *overflowConfig = new OverflowConfig();
 
     auto exprEvaluator = std::make_shared<ExpressionEvaluator>(filterExpr, projections, inputTypes, overflowConfig);
+    exprEvaluator->SetSupportCodegen(true);
     OperatorFactory *factory = new FilterAndProjectOperatorFactory(move(exprEvaluator));
     auto *op = dynamic_cast<FilterAndProjectOperator *>(factory->CreateOperator());
 

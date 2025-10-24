@@ -13,12 +13,12 @@ template <typename Cmp, DataTypeId kind>
 class ComparisonFunction final : public VectorFunction {
     using T = typename NativeType<kind>::type;
 
-    bool supportsFlatNoNullsFastPath() const override
+    bool SupportsFlatNoNullsFastPath() const override
     {
         return true;
     }
 
-    void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *&result,
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
     {
         const Cmp cmp;
@@ -26,8 +26,8 @@ class ComparisonFunction final : public VectorFunction {
         args.pop();
         auto leftArg = args.top();
         args.pop();
-        auto rowSize = rightArg->GetSize();
-        Vector<T> *flatResult = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize);
+        auto rowSize = context->GetResultRowSize();
+        auto *flatResult = reinterpret_cast<Vector<bool> *>(VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize));
         auto rows = std::make_shared<SelectivityVector>(rowSize);
         if (leftArg->GetEncoding() == OMNI_FLAT && rightArg->GetEncoding() == OMNI_FLAT) {
             // Fast path for (flat, flat).
@@ -53,6 +53,8 @@ class ComparisonFunction final : public VectorFunction {
             OMNI_THROW("ComparisonFunction Error:", "Not support decoded vector");
         }
         result = flatResult;
+        delete rightArg;
+        delete leftArg;
     }
 };
 

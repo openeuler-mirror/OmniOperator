@@ -88,27 +88,32 @@ struct GreaterOrEqual : private Less<T> {
     }
 };
 
-std::shared_ptr<VectorFunction> makeEqualTo(const std::string &name, const std::vector<DataTypeId> &inputArgs,
+std::shared_ptr<VectorFunction> makeEqualTo(const std::string &name, const std::vector<type::DataTypeId> &inputArgs,
     const config::QueryConfig &);
 
-std::shared_ptr<VectorFunction> makeLessThan(const std::string &name, const std::vector<DataTypeId> &inputArgs,
+std::shared_ptr<VectorFunction> makeLessThan(const std::string &name, const std::vector<type::DataTypeId> &inputArgs,
     const config::QueryConfig &);
 
-std::shared_ptr<VectorFunction> makeGreaterThan(const std::string &name, const std::vector<DataTypeId> &inputArgs,
+std::shared_ptr<VectorFunction> makeGreaterThan(const std::string &name, const std::vector<type::DataTypeId> &inputArgs,
     const config::QueryConfig &);
 
-std::shared_ptr<VectorFunction> makeLessThanOrEqual(const std::string &name, const std::vector<DataTypeId> &inputArgs,
-    const config::QueryConfig &);
+std::shared_ptr<VectorFunction> makeLessThanOrEqual(const std::string &name,
+    const std::vector<type::DataTypeId> &inputArgs, const config::QueryConfig &);
 
 std::shared_ptr<VectorFunction> makeGreaterThanOrEqual(const std::string &name,
-    const std::vector<DataTypeId> &inputArgs, const config::QueryConfig &);
+    const std::vector<type::DataTypeId> &inputArgs, const config::QueryConfig &);
 
-inline std::vector<std::shared_ptr<FunctionSignature>> ComparisonSignatures(const std::string &name)
+inline std::vector<std::shared_ptr<codegen::FunctionSignature>> ComparisonSignatures(const std::string &name)
 {
-    std::vector<std::shared_ptr<FunctionSignature>> signatures;
-    for (const auto &inputType : {OMNI_BYTE, OMNI_INT, OMNI_LONG, OMNI_DOUBLE, OMNI_DECIMAL64, OMNI_DECIMAL128}) {
+    std::vector<std::shared_ptr<codegen::FunctionSignature>> signatures;
+    for (const auto &inputType : {
+             type::OMNI_BYTE,
+             type::OMNI_INT,
+             type::OMNI_LONG,
+             type::OMNI_DOUBLE
+         }) {
         signatures.emplace_back(
-            FunctionSignatureBuilder().FuncName(name).ReturnType(OMNI_BOOLEAN).ArgumentType(inputType).
+            codegen::FunctionSignatureBuilder().FuncName(name).ReturnType(type::OMNI_BOOLEAN).ArgumentType(inputType).
             ArgumentType(inputType).Build());
     }
     return signatures;

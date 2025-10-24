@@ -194,9 +194,7 @@ private:
 class OperatorConfig {
 public:
     OperatorConfig()
-        : spillConfig(new SpillConfig()),
-          overflowConfig(new OverflowConfig()),
-          isSkipVerify(false),
+        : spillConfig(std::make_shared<SpillConfig>()), overflowConfig(std::make_shared<OverflowConfig>()), isSkipVerify(false),
           adaptivityThreshold(-1)
     {}
 
@@ -204,56 +202,56 @@ public:
 
     OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig, bool isSkipVerify,
         int adaptivityThreshold = -1, bool isRowOutput = false, bool isStatisticalAggregate = false)
-        : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig()),
-          overflowConfig((overflowConfig != nullptr) ? overflowConfig : new OverflowConfig()),
-          isSkipVerify(isSkipVerify),
-          adaptivityThreshold(adaptivityThreshold),
-        isRowOutput(isRowOutput),
+        : spillConfig((spillConfig != nullptr)
+                      ? std::shared_ptr<SpillConfig>(spillConfig)
+                      : std::make_shared<SpillConfig>()),
+        overflowConfig((overflowConfig != nullptr)
+                       ? std::shared_ptr<OverflowConfig>(overflowConfig)
+                       : std::make_shared<OverflowConfig>()), isSkipVerify(isSkipVerify),
+        adaptivityThreshold(adaptivityThreshold), isRowOutput(isRowOutput),
         isStatisticalAggregate(isStatisticalAggregate)
     {}
 
     OperatorConfig(SpillConfig *spillConfig, OverflowConfig *overflowConfig)
-        : spillConfig((spillConfig != nullptr) ? spillConfig : new SpillConfig()),
-          overflowConfig((overflowConfig != nullptr) ? overflowConfig : new OverflowConfig()),
-          isSkipVerify(false)
-    {}
+        : spillConfig((spillConfig != nullptr)
+                      ? std::shared_ptr<SpillConfig>(spillConfig)
+                      : std::make_shared<SpillConfig>()),
+        overflowConfig((overflowConfig != nullptr)
+                       ? std::shared_ptr<OverflowConfig>(overflowConfig)
+                       : std::make_shared<OverflowConfig>()), isSkipVerify(false) {}
 
     explicit OperatorConfig(const OverflowConfig &overflowConfig)
-        : spillConfig(new SpillConfig()), overflowConfig(new OverflowConfig(overflowConfig)), isSkipVerify(false)
-    {}
+        : spillConfig(std::make_shared<SpillConfig>()),
+        overflowConfig(std::make_shared<OverflowConfig>(overflowConfig)), isSkipVerify(false) {}
 
     explicit OperatorConfig(const SpillConfig &spillConfig)
-        : spillConfig(new SpillConfig(spillConfig)), overflowConfig(new OverflowConfig()), isSkipVerify(false)
-    {}
+        : spillConfig(std::make_shared<SpillConfig>(spillConfig)), overflowConfig(std::make_shared<OverflowConfig>()),
+        isSkipVerify(false) {}
 
     explicit OperatorConfig(const SparkSpillConfig &sparkSpillConfig)
-        : spillConfig(new SparkSpillConfig(sparkSpillConfig)), overflowConfig(new OverflowConfig()), isSkipVerify(false)
-    {}
+        : spillConfig(std::make_shared<SparkSpillConfig>(sparkSpillConfig)),
+        overflowConfig(std::make_shared<OverflowConfig>()), isSkipVerify(false) {}
 
-    ~OperatorConfig()
-    {
-        delete spillConfig;
-        delete overflowConfig;
-    }
+    ~OperatorConfig() {}
 
     SpillConfig *GetSpillConfig() const
     {
-        return spillConfig;
+        return spillConfig.get();
     }
 
     void SetSpillConfig(SpillConfig *pSpillConfig)
     {
-        this->spillConfig = pSpillConfig;
+        this->spillConfig = std::shared_ptr<SpillConfig>(pSpillConfig);
     }
 
     OverflowConfig *GetOverflowConfig() const
     {
-        return overflowConfig;
+        return overflowConfig.get();
     }
 
     void SetOverflowConfig(OverflowConfig *pOverflowConfig)
     {
-        this->overflowConfig = pOverflowConfig;
+        this->overflowConfig = std::shared_ptr<OverflowConfig>(pOverflowConfig);
     }
 
     bool IsSkipVerify() const
@@ -286,8 +284,8 @@ public:
     static void CheckSpillConfig(SpillConfig *spillConfig);
 
 private:
-    SpillConfig *spillConfig = nullptr;
-    OverflowConfig *overflowConfig = nullptr;
+    std::shared_ptr<SpillConfig> spillConfig = nullptr;
+    std::shared_ptr<OverflowConfig> overflowConfig = nullptr;
     bool isSkipVerify = false;
     int adaptivityThreshold = -1;
     bool isRowOutput = false;

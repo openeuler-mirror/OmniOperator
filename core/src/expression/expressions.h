@@ -86,6 +86,8 @@ public:
     DataTypePtr dataType; // dataType of returned value
     std::shared_ptr<VectorFunction> vectorFunction;
     bool isAllSupportVectorization_ = true;
+    bool isRoot = false;
+
     DataTypePtr GetReturnType() const;
     omniruntime::type::DataTypeId GetReturnTypeId() const;
     virtual ExprType GetType() const;

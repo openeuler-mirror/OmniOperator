@@ -12,7 +12,7 @@
 namespace omniruntime::vectorization {
 class RegisterFunctions {
 public:
-    static void registerFunctions(const std::string &prefix = "");
+    static void RegisterAllFunctions(const std::string &prefix = "");
 
     static int Register();
 

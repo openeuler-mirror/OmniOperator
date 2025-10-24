@@ -7,24 +7,25 @@
 #include "util/compiler_util.h"
 #include <algorithm>
 #include <stdexcept>
-#include <iostream>
+#include "vectorization/Status.h"
 
-namespace omniruntime {
+namespace omniruntime::vectorization {
 template <typename T>
 struct StartsWithFunction {
-    ALWAYS_INLINE void call(bool &result, const std::string_view &str, const std::string_view &pattern)
+    ALWAYS_INLINE Status call(bool &result, const std::string_view &str, const std::string_view &pattern)
     {
         if (pattern.length() > str.length()) {
             result = false;
-            return;
+            return Status::OK();
         }
 
         if (pattern.empty()) {
             result = true;
-            return;
+            return Status::OK();
         }
 
         result = std::equal(pattern.begin(), pattern.end(), str.begin());
+        return Status::OK();
     }
 };
 }

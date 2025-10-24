@@ -108,7 +108,7 @@ public:
         context.hasFilter = false;
 
         try {
-            mapSizeFunc.apply(args, outputType, resultVec, &context);
+            mapSizeFunc.Apply(args, outputType, resultVec, &context);
         } catch (const std::exception& e) {
             std::cerr << "Exception in MapSizeFunction: " << e.what() << std::endl;
             delete boolVector;

@@ -12,7 +12,7 @@ using namespace omniruntime::vec;
 namespace {
 class IsNullFunction : public VectorFunction {
 public:
-    void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *&result,
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
     {
         const auto arg = args.top();
@@ -22,15 +22,14 @@ public:
         for (int i = 0; i < size; i++) {
             raw[i] = false;
         }
-        std::cout << "isnull" << std::endl;
     }
 };
 }
 
-void registerIsNullFunction(const std::string &name)
+void RegisterIsNullFunction(const std::string &name)
 {
     std::vector<DataTypeId> param = {OMNI_INT};
-    auto signature = std::make_shared<FunctionSignature>(name, param, OMNI_BOOLEAN);
+    auto signature = std::make_shared<codegen::FunctionSignature>(name, param, OMNI_BOOLEAN);
     VectorFunction::functionMap_->insert(std::make_pair(signature, std::make_shared<IsNullFunction>()));
 }
 }

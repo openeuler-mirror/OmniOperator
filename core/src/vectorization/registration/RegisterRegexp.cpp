@@ -5,6 +5,6 @@
 
 #include <string>
 namespace omniruntime::vectorization {
-void registerRegexpFunctions(const std::string& prefix) {
+void RegisterRegexpFunctions(const std::string& prefix) {
 }
 }

@@ -41,8 +41,8 @@ bool IsNullLiteral(const std::string &value)
 
 bool IsComparisonOperator(Operator op)
 {
-    return op == Operator::GT || op == Operator::GTE || op == Operator::LT || op == Operator::LTE || op == Operator::EQ
-        || op == Operator::NEQ;
+    return op == Operator::GT || op == Operator::GTE || op == Operator::LT || op == Operator::LTE ||
+        op == Operator::EQ || op == Operator::NEQ;
 }
 
 bool IsLogicalOperator(Operator op)
@@ -248,17 +248,17 @@ std::string GetStringOp(Operator op)
 {
     switch (op) {
         case Operator::EQ:
-            return "eq";
+            return "equal";
         case Operator::NEQ:
-            return "neq";
+            return "notEqual";
         case Operator::LT:
-            return "lt";
+            return "lessThan";
         case Operator::LTE:
-            return "lte";
+            return "lessThanEqual";
         case Operator::GT:
             return "greaterThan";
         case Operator::GTE:
-            return "gte";
+            return "greaterThanEqual";
         case Operator::AND:
             return "and";
         case Operator::OR:
@@ -266,13 +266,13 @@ std::string GetStringOp(Operator op)
         case Operator::ADD:
             return "add";
         case Operator::SUB:
-            return "sub";
+            return "subtract";
         case Operator::MUL:
-            return "mul";
+            return "multiply";
         case Operator::DIV:
-            return "div";
+            return "divide";
         case Operator::MOD:
-            return "mod";
+            return "modulus";
         case Operator::NOT:
             return "not";
         default:

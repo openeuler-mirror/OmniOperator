@@ -6,7 +6,7 @@
 #include "vectorization/functions/Comparisons.h"
 
 namespace omniruntime::vectorization {
-void registerCompareFunctions(const std::string &prefix)
+void RegisterCompareFunctions(const std::string &prefix)
 {
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("equal"), makeEqualTo);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("greaterThan"), makeGreaterThan);

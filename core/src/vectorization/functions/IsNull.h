@@ -7,5 +7,5 @@
 #include <string>
 
 namespace omniruntime::vectorization {
-void registerIsNullFunction(const std::string &name);
+void RegisterIsNullFunction(const std::string &name);
 }

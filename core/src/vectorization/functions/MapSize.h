@@ -4,12 +4,12 @@
  */
 
 #pragma once
+#include <vector>
 #include "vectorization/VectorFunction.h"
 #include "vectorization/SelectivityVector.h"
 #include "vector/map_vector.h"
 #include "vectorization/VectorReaders.h"
 #include "util/debug.h"
-#include <vector>
 
 namespace omniruntime::vectorization {
 using namespace omniruntime::type;
@@ -20,7 +20,7 @@ class MapSizeFunction : public VectorFunction {
 public:
     explicit MapSizeFunction() {}
 
-    void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *&result,
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         ExecutionContext *context) const override
     {
         std::cout << "using vectorization mapsize" << std::endl;
@@ -46,7 +46,7 @@ public:
     }
 
 private:
-    void ProcessAllRows(vec::Vector<int32_t> *result, int32_t rowSize, const MapVectorReader &mapReader) const
+    void ProcessAllRows(Vector<int32_t> *result, int32_t rowSize, const MapVectorReader &mapReader) const
     {
         for (int32_t row = 0; row < rowSize; ++row) {
             if (mapReader.containsNull(row)) {

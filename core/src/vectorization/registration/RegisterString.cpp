@@ -9,9 +9,9 @@
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
-void registerStringFunctions(const std::string &prefix)
+void RegisterStringFunctions(const std::string &prefix)
 {
-    registerString<StartsWithFunction>({prefix + "startswith"});
+    RegisterString<StartsWithFunction>({prefix + "startswith"});
     VectorFunction::RegisterVectorFunction("split", {OMNI_VARCHAR, OMNI_VARCHAR, OMNI_INT}, OMNI_ARRAY,
         std::make_shared<SplitFunction>());
 }

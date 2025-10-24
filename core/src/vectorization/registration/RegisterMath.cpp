@@ -10,15 +10,15 @@
 #include "RegistrationHelpers.h"
 
 namespace omniruntime::vectorization {
-void registerMathFunctions(const std::string &prefix)
+void RegisterMathFunctions(const std::string &prefix)
 {
-    registerIsNullFunction(prefix + "isnull");
-    registerBinaryNumeric<PlusFunction>({prefix + "add"});
-    registerBinaryLogical<And>(prefix + "and");
-    registerUnaryIntegral<Not>(prefix + "not");
-    registerBinaryNumeric<MinusFunction>({prefix + "subtract"});
-    registerBinaryNumeric<MultiplyFunction>({prefix + "multiply"});
-    registerBinaryNumeric<DivideFunction>({prefix + "divide"});
-    registerBinaryNumeric<RemainderFunction>({prefix + "remainder"});
+    RegisterIsNullFunction(prefix + "isnull");
+    RegisterBinaryNumeric<PlusFunction>({prefix + "add"});
+    RegisterBinaryLogical<And>(prefix + "and");
+    RegisterUnaryIntegral<Not>(prefix + "not");
+    RegisterBinaryNumeric<MinusFunction>({prefix + "subtract"});
+    RegisterBinaryNumeric<MultiplyFunction>({prefix + "multiply"});
+    RegisterBinaryNumeric<DivideFunction>({prefix + "divide"});
+    RegisterBinaryNumeric<RemainderFunction>({prefix + "modulus"});
 }
 }

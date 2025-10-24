@@ -663,6 +663,7 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
     filterExpr = filterExpression;
     std::vector<std::vector<FieldExpr *>> tmpFieldExprMap(inputTypes.GetSize());
     for (auto &projectionExpr : projectionExprs) {
+        projectionExpr->isRoot = true;
         ComputeFieldExpr(projectionExpr, tmpFieldExprMap);
         projExprs.emplace_back(projectionExpr);
     }
@@ -681,6 +682,16 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
     for (int i = 0; isSupportedExpr && i < projectVecCount; ++i) {
         outputTypes.emplace_back(projExprs[i]->GetReturnType());
     }
+
+    ExprVerifier verifier;
+    verifier.VisitExpr(*filterExpr);
+    for (auto &projExpr : projExprs) {
+        verifier.VisitExpr(*projExpr);
+    }
+
+    if (verifier.IsSupportVectorization()) {
+        isSupportCodegen = false;
+    }
 }
 
 ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionExprs, const DataTypes &inputDataTypes,
@@ -688,14 +699,34 @@ ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionEx
     : inputTypes(const_cast<DataTypes &>(inputDataTypes))
 {
     hasFilter = false;
+    std::vector<std::vector<FieldExpr *>> tmpFieldExprMap(inputTypes.GetSize());
     for (auto &projectionExpr : projectionExprs) {
+        projectionExpr->isRoot = true;
+        ComputeFieldExpr(projectionExpr, tmpFieldExprMap);
         projExprs.emplace_back(projectionExpr);
     }
+    for (auto fieldVector : tmpFieldExprMap) {
+        if (!fieldVector.empty()) {
+            fieldExprMap.push_back(fieldVector);
+        }
+    }
+    std::vector<DataTypePtr> flatDataTypes;
+    ReSetColVec(inputDataTypes, fieldExprMap, flatDataTypes);
+    this->inputTypes = DataTypes(flatDataTypes);
     overflowConfig = std::make_unique<OverflowConfig>(*ofConfig);
     projectVecCount = static_cast<int32_t>(projectionExprs.size());
 
     for (int i = 0; isSupportedExpr && i < projectVecCount; ++i) {
         outputTypes.emplace_back(projExprs[i]->GetReturnType());
+    }
+
+    ExprVerifier verifier;
+    for (auto &projExpr : projExprs) {
+        verifier.VisitExpr(*projExpr);
+    }
+
+    if (verifier.IsSupportVectorization()) {
+        isSupportCodegen = false;
     }
 }
 
@@ -707,12 +738,21 @@ bool ExpressionEvaluator::IsSupportedExpr() const
 VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionContext *context,
     AlignedBuffer<int32_t> *selectedRowsBuffer)
 {
-    const int vectorCount = vecBatch->GetVectorCount();
-    intptr_t valueAddrs[vectorCount];
-    intptr_t nullAddrs[vectorCount];
-    intptr_t offsetAddrs[vectorCount];
-    intptr_t dictionaries[vectorCount];
-    GetAddr(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
+    const int32_t vectorCount = vecBatch->GetVectorCount();
+    int32_t flatVectorCount = vectorCount;
+    for (auto fieldVector : fieldExprMap) {
+        flatVectorCount += static_cast<int32_t>(fieldVector.size());
+    }
+
+    intptr_t valueAddrs[flatVectorCount];
+    intptr_t nullAddrs[flatVectorCount];
+    intptr_t offsetAddrs[flatVectorCount];
+    intptr_t dictionaries[flatVectorCount];
+
+    FlatVector(vecBatch, fieldExprMap);
+    if (isSupportCodegen) {
+        GetAddr(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
+    }
     if (hasFilter) {
         return ProcessFilterAndProject(vecBatch, context, selectedRowsBuffer, valueAddrs, nullAddrs, offsetAddrs,
             dictionaries);
@@ -723,14 +763,7 @@ VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionConte
 
 void ExpressionEvaluator::FilterFuncGeneration()
 {
-    ExprVerifier verifier;
-    verifier.VisitExpr(*filterExpr);
-    for (auto &projExpr : projExprs) {
-        verifier.VisitExpr(*projExpr);
-    }
-
-    if (verifier.IsSupportVectorization()) {
-        isSupportCodegen = false;
+    if (!isSupportCodegen) {
         return;
     }
 
@@ -751,13 +784,7 @@ void ExpressionEvaluator::FilterFuncGeneration()
 
 void ExpressionEvaluator::ProjectFuncGeneration()
 {
-    ExprVerifier verifier;
-    for (auto &projExpr : projExprs) {
-        verifier.VisitExpr(*projExpr);
-    }
-
-    if (verifier.IsSupportVectorization()) {
-        isSupportCodegen = false;
+    if (!isSupportCodegen) {
         return;
     }
 
@@ -781,7 +808,7 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
     if (!isSupportCodegen) {
         for (int32_t i = 0; i < projectVecCount; i++) {
             context->SetResultRowSize(vecBatch->GetRowCount());
-            ExprEval e(vecBatch, context, GetInputDataTypes().GetIds());
+            ExprEval e(vecBatch, context);
             e.VisitExpr(*projExprs[i]);
             auto outCol = e.GetResult();
             if (context->HasError()) {
@@ -789,7 +816,11 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
                 std::string errorMessage = context->GetError();
                 throw OmniException("OPERATOR_RUNTIME_ERROR", errorMessage);
             }
-            projectedVecs->Append(outCol);
+            if (outCol->GetEncoding() == OMNI_ENCODING_CONST) {
+                projectedVecs->Append(VectorHelper::CastConstVectorToVector(outCol));
+            } else {
+                projectedVecs->Append(outCol);
+            }
         }
     } else {
         for (int32_t i = 0; i < projectVecCount; i++) {
@@ -809,10 +840,11 @@ VectorBatch *ExpressionEvaluator::ProcessProject(VectorBatch *vecBatch, Executio
 
 VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch, ExecutionContext *context)
 {
+    context->hasFilter = false;
     const int rowCount = vecBatch->GetRowCount();
     int32_t numSelectedRows = 0;
-    context->SetResultRowSize(vecBatch->GetRowCount());
-    ExprEval e(vecBatch, context, GetInputDataTypes().GetIds());
+    context->SetResultRowSize(rowCount);
+    ExprEval e(vecBatch, context);
     e.VisitExpr(*filterExpr);
 
     auto selectVector = e.GetResult();
@@ -829,7 +861,7 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
     for (int32_t i = 0; i < projectVecCount; i++) {
         context->SetResultRowSize(vecBatch->GetRowCount());
 
-        ExprEval e2(vecBatch, context, GetInputDataTypes().GetIds());
+        ExprEval e2(vecBatch, context);
         e2.VisitExpr(*projExprs[i]);
         auto outCol = e2.GetResult();
         if (context->HasError()) {

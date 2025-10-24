@@ -28,10 +28,10 @@ class SubscriptImpl : public VectorFunction {
 public:
     explicit SubscriptImpl() {}
 
-    void apply(std::stack<VectorPtr> &args, const DataTypePtr &outputType, BaseVector *&result,
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         ExecutionContext *context) const override
     {
-        std::vector<VectorPtr> inputs;
+        std::vector<BaseVector *> inputs;
         inputs.push_back(args.top());
         args.pop();
         inputs.push_back(args.top());
@@ -50,9 +50,15 @@ public:
                 break;
             default: OMNI_THROW("SubscriptImpl error:", "Not support type!");
         }
+        for (auto input : inputs) {
+            if (input != nullptr) {
+                delete input;
+            }
+        }
     }
 
-    VectorPtr applyArray(const SelectivityVector &rows, std::vector<VectorPtr> &args, ExecutionContext *context) const
+    BaseVector *applyArray(const SelectivityVector &rows, std::vector<BaseVector *> &args,
+        ExecutionContext *context) const
     {
         auto arrayArg = args[1];
         auto indexArg = args[0];
@@ -66,15 +72,16 @@ public:
         }
     }
 
-    VectorPtr applyMap(const SelectivityVector &rows, std::vector<VectorPtr> &args, ExecutionContext *context) const;
+    BaseVector *applyMap(const SelectivityVector &rows, std::vector<BaseVector *> &args,
+        ExecutionContext *context) const;
 
     template <typename I>
-    VectorPtr applyArrayTyped(const SelectivityVector &rows, const VectorPtr &arrayArg, const VectorPtr &indexArg,
+    BaseVector *applyArrayTyped(const SelectivityVector &rows, BaseVector *arrayArg, BaseVector *indexArg,
         ExecutionContext *context) const
     {
         auto rowSize = arrayArg->GetSize();
         int32_t dicIndex[rowSize];
-        memset(dicIndex, -1, sizeof(dicIndex));
+        memset_s(dicIndex, sizeof(dicIndex), -1, sizeof(dicIndex));
         auto arrayVector = dynamic_cast<ArrayVector *>(arrayArg);
 
         I index = 0;
@@ -85,6 +92,10 @@ public:
         }
         auto offset = arrayVector->GetOffsets();
         rows.applyToSelected([&](auto row) {
+            if (index < 0) {
+                dicIndex[row] = -1;
+                return;
+            }
             if (offset[row] + index < offset[row + 1]) {
                 dicIndex[row] = offset[row] + index;
             } else {
@@ -92,8 +103,9 @@ public:
             }
         });
 
-        auto rawVector = reinterpret_cast<Vector<int32_t> *>(arrayVector->GetElementVector().get())->Slice(0, rowSize);
-        auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, rawVector, rawVector->GetTypeId());
+        auto elementVector = arrayVector->GetElementVector();
+        auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, elementVector.get(),
+            elementVector->GetTypeId());
         for (auto i = 0; i < rowSize; i++) {
             if (dicIndex[i] == -1) {
                 result->SetNull(i);

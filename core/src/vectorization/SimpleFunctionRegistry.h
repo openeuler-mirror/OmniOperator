@@ -9,7 +9,7 @@
 #include "util/compiler_util.h"
 
 namespace omniruntime::vectorization {
-using SignatureMap = std::unordered_map<FunctionSignature, std::unique_ptr<const VectorFunction>>;
+using SignatureMap = std::unordered_map<codegen::FunctionSignature, std::unique_ptr<const VectorFunction>>;
 
 class SimpleFunctionRegistry {
 };

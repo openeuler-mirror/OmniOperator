@@ -368,6 +368,76 @@ public:
         }
     }
 
+    static BaseVector *CastConstVectorToVector(BaseVector *vector)
+    {
+        switch (vector->GetTypeId()) {
+            case type::OMNI_INT:
+            case type::OMNI_DATE32: {
+                auto *col = new Vector<int32_t>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<int32_t> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_SHORT: {
+                auto *col = new Vector<int16_t>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<int16_t> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_BYTE: {
+                auto *col = new Vector<int8_t>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<int8_t> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_LONG:
+            case type::OMNI_TIMESTAMP:
+            case type::OMNI_DATE64:
+            case type::OMNI_DECIMAL64: {
+                auto *col = new Vector<int64_t>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<int64_t> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_DECIMAL128: {
+                auto *col = new Vector<Decimal128>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<Decimal128> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_DOUBLE: {
+                auto *col = new Vector<double>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<double> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_FLOAT: {
+                auto *col = new Vector<float>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<float> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_BOOLEAN: {
+                auto *col = new Vector<bool>(1);
+                col->SetValue(0, reinterpret_cast<ConstVector<bool> *>(vector)->GetConstValue());
+                delete vector;
+                return col;
+            }
+            case type::OMNI_VARCHAR:
+            case type::OMNI_CHAR: {
+                auto *col = new Vector<LargeStringContainer<std::string_view>>(1);
+                auto tmp = std::string_view(reinterpret_cast<ConstVector<std::string> *>(vector)->GetConstValue());
+                col->SetValue(0, tmp);
+                return col;
+            }
+            default: {
+                std::string omniExceptionInfo = "In function UnsafeGetValuesDictionary, no such data type " +
+                    std::to_string(vector->GetTypeId());
+                throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
+            }
+        }
+    }
+
     static void *UnsafeGetValues(BaseVector *vector)
     {
         if (vector->GetEncoding() == OMNI_DICTIONARY) {

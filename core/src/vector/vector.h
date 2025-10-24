@@ -193,9 +193,11 @@ public:
     {
         this->dataTypeId = dataTypeId;
         this->encoding = OMNI_ENCODING_CONST;
+        this->nullsBuffer = std::make_shared<NullsBuffer>(1, nullptr, 0);
     }
+
     ConstVector(RAW_DATA_TYPE value, DataTypeId dataTypeId, int32_t size)
-            : BaseVector(size, OMNI_ENCODING_CONST, dataTypeId), value(value) {}
+        : BaseVector(size, OMNI_ENCODING_CONST, dataTypeId), value(value) {}
 
     RAW_DATA_TYPE GetConstValue() const
     {

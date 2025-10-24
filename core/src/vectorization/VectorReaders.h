@@ -74,15 +74,21 @@ struct FlatVectorReader {
 
 template <typename T>
 struct DicVectorReader {
-    const T *values;
-    vec::BaseVector *vector;
+    Vector<DictionaryContainer<T>> *vector;
 
-    explicit DicVectorReader(vec::BaseVector *vector)
-        : values(vec::unsafe::UnsafeVector::GetRawValues(reinterpret_cast<vec::Vector<T> *>(vector))), vector(vector) {}
+    explicit DicVectorReader(BaseVector *vector)
+        : vector(reinterpret_cast<Vector<DictionaryContainer<T>> *>(vector)) {}
+
+    ~DicVectorReader()
+    {
+        if (!vector->GetIsField()) {
+            delete vector;
+        }
+    }
 
     T operator[](int32_t offset) const
     {
-        return values[offset];
+        return vector->GetValue(offset);
     }
 
     T readNullFree(int32_t offset) const

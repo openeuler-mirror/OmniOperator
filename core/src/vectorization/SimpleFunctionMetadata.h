@@ -5,11 +5,11 @@
 
 #pragma once
 
-#include <optional>
 #include <tuple>
 #include <util/compiler_util.h>
+#include "vectorization/Status.h"
 
-namespace omniruntime {
+namespace omniruntime::vectorization {
 // wraps a UDF object to provide the inheritance
 // this is basically just boilerplate-avoidance
 template <typename Fun, typename TReturn, typename... TArgs>
@@ -26,14 +26,19 @@ public:
     using exec_return_type = TReturn;
     using exec_arg_types = std::tuple<TArgs...>;
 
-    ALWAYS_INLINE bool callImpl(TReturn &out, bool &notNull, const TArgs &... args)
+    ALWAYS_INLINE Status callImpl(TReturn &out, bool &notNull, const TArgs &... args)
     {
-        instance_.call(out, args...);
-        notNull = true;
-        return false;
+        if constexpr (std::is_same_v<decltype(instance_.call(out, args...)), Status>) {
+            notNull = true;
+            return instance_.call(out, args...);
+        } else {
+            notNull = true;
+            instance_.call(out, args...);
+            return Status::OK();
+        }
     }
 
-    ALWAYS_INLINE bool call(TReturn &out, bool &notNull, const TArgs &... args)
+    ALWAYS_INLINE Status call(TReturn &out, bool &notNull, const TArgs &... args)
     {
         return callImpl(out, notNull, args...);
     }

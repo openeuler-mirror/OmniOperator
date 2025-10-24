@@ -111,7 +111,7 @@ public:
         args.push(delimiterVec);
         args.push(limitVec);
 
-        ASSERT_NO_THROW(function->apply(args, arrayType, resultVector, &context))
+        ASSERT_NO_THROW(function->Apply(args, arrayType, resultVector, &context))
             << "SplitFunction.apply() threw an unexpected exception";
 
         ValidateResult(resultVector, rowSize);
@@ -135,7 +135,6 @@ TEST(VectorizationTest, SplitFunctionTest) {
 
     delete inputVec;
     delete delimiterVec;
-    delete limitVec;
 
     std::cout << "=== Direct Test Completed ===" << std::endl;
 }
@@ -156,7 +155,6 @@ TEST(VectorizationTest, SplitFunctionLimitTest) {
 
     delete inputVec;
     delete delimiterVec;
-    delete limitVec;
 
     std::cout << "=== Multi-Row Test Completed ===" << std::endl;
 }

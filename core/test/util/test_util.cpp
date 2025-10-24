@@ -213,19 +213,19 @@ VectorBatch *CreateVectorBatch(const DataTypes &types, int32_t rowCount, ...)
     return vectorBatch;
 }
 
-VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<std::vector<int32_t>> &offsets,
+VectorBatch *CreateArrayVectorBatch(const DataTypes &types, std::vector<int32_t> &offsets,
     int32_t dataSize, int32_t elementSize, ...)
 {
     int32_t typesCount = types.GetSize();
-    auto *vectorBatch = new VectorBatch(elementSize);
+    auto *vectorBatch = new VectorBatch(dataSize);
     va_list args;
     va_start(args, elementSize);
     for (int32_t i = 0; i < typesCount; i++) {
         auto &type = types.GetType(i);
-        auto elementVector = std::make_shared<BaseVector>(CreateVector(*type, elementSize, args));
+        auto elementVector = std::shared_ptr<BaseVector>(CreateVector(*type, elementSize, args));
         auto *arrayVector = new ArrayVector(dataSize, elementVector);
         for (size_t j = 0; j < offsets.size(); j++) {
-            arrayVector->SetOffset(j, offsets[i][j]);
+            arrayVector->SetOffset(j, offsets[j]);
         }
         vectorBatch->Append(arrayVector);
     }

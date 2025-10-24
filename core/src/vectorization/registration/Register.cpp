@@ -7,31 +7,31 @@
 #include "SimpleFunctionRegistry.h"
 
 namespace omniruntime::vectorization {
-extern void registerArrayFunctions(const std::string &prefix);
+extern void RegisterArrayFunctions(const std::string &prefix);
 
-extern void registerBinaryFunctions(const std::string &prefix);
+extern void RegisterBinaryFunctions(const std::string &prefix);
 
-extern void registerBitwiseFunctions(const std::string &prefix);
+extern void RegisterBitwiseFunctions(const std::string &prefix);
 
-extern void registerCompareFunctions(const std::string &prefix);
+extern void RegisterCompareFunctions(const std::string &prefix);
 
-extern void registerDatetimeFunctions(const std::string &prefix);
+extern void RegisterDatetimeFunctions(const std::string &prefix);
 
-extern void registerJsonFunctions(const std::string &prefix);
+extern void RegisterJsonFunctions(const std::string &prefix);
 
-extern void registerMapFunctions(const std::string &prefix);
+extern void RegisterMapFunctions(const std::string &prefix);
 
-extern void registerMathFunctions(const std::string &prefix);
+extern void RegisterMathFunctions(const std::string &prefix);
 
-extern void registerMiscFunctions(const std::string &prefix);
+extern void RegisterMiscFunctions(const std::string &prefix);
 
-extern void registerRegexpFunctions(const std::string &prefix);
+extern void RegisterRegexpFunctions(const std::string &prefix);
 
-extern void registerSpecialFormGeneralFunctions(const std::string &prefix);
+extern void RegisterSpecialFormGeneralFunctions(const std::string &prefix);
 
-extern void registerStringFunctions(const std::string &prefix);
+extern void RegisterStringFunctions(const std::string &prefix);
 
-extern void registerUrlFunctions(const std::string &prefix);
+extern void RegisterUrlFunctions(const std::string &prefix);
 
 int RegisterFunctions::Register()
 {
@@ -47,25 +47,17 @@ int RegisterFunctions::Register()
         SimpleFunctionRegistry::functionMap_ = std::make_unique<std::unordered_map<FunctionSignaturePtr, std::shared_ptr
             <VectorFunction>, Hash, Equals>>();
     }
-    registerFunctions();
+    RegisterAllFunctions();
     return 1;
 }
 
-void RegisterFunctions::registerFunctions(const std::string &prefix)
+void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
 {
-    registerArrayFunctions(prefix);
-    // registerBinaryFunctions(prefix);
-    // registerBitwiseFunctions(prefix);
-    registerCompareFunctions(prefix);
-    // registerDatetimeFunctions(prefix);
-    // registerJsonFunctions(prefix);
-    registerMapFunctions(prefix);
-    registerMathFunctions(prefix);
-    // registerMiscFunctions(prefix);
-    // registerRegexpFunctions(prefix);
-    // registerSpecialFormGeneralFunctions(prefix);
-    registerStringFunctions(prefix);
-    // registerUrlFunctions(prefix);
+    RegisterArrayFunctions(prefix);
+    RegisterCompareFunctions(prefix);
+    RegisterMapFunctions(prefix);
+    RegisterMathFunctions(prefix);
+    RegisterStringFunctions(prefix);
 }
 
 void link_register_functions() {}

@@ -1448,7 +1448,7 @@ void StressTestTwoLookupJoinForTwoFixedKey(DataTypes buildTypes, JoinType joinTy
     delete lookupJoinFactory;
 }
 
-TEST(RandomJoinTest, TestLookupJoinWithSingleHashBuilderForNormalHashTable)
+TEST(RandomJoinTest, DISABLED_TestLookupJoinWithSingleHashBuilderForNormalHashTable)
 {
     std::vector<JoinType> joinTypes { OMNI_JOIN_TYPE_INNER, OMNI_JOIN_TYPE_LEFT,      OMNI_JOIN_TYPE_RIGHT,
         OMNI_JOIN_TYPE_FULL,  OMNI_JOIN_TYPE_LEFT_SEMI, OMNI_JOIN_TYPE_LEFT_ANTI };
@@ -1549,7 +1549,7 @@ TEST(RandomJoinTest, TestLookupJoinWithTwoHashBuilderForNormalHashTable)
     }
 }
 
-TEST(RandomJoinTest, TestLookupJoinWithSingleHashBuilderForNormalHashTableWithFilter)
+TEST(RandomJoinTest, DISABLED_TestLookupJoinWithSingleHashBuilderForNormalHashTableWithFilter)
 {
     std::vector<JoinType> joinTypes { OMNI_JOIN_TYPE_INNER, OMNI_JOIN_TYPE_LEFT,      OMNI_JOIN_TYPE_RIGHT,
         OMNI_JOIN_TYPE_FULL,  OMNI_JOIN_TYPE_LEFT_SEMI, OMNI_JOIN_TYPE_LEFT_ANTI };

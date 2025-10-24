@@ -11,6 +11,7 @@
 #include "type/data_type.h"
 #include "util/config/QueryConfig.h"
 #include "vector/unsafe_vector.h"
+#include "vectorization/Status.h"
 
 namespace omniruntime::vectorization {
 template <typename T>
@@ -27,56 +28,76 @@ class SimpleFunction final : public VectorFunction {
     using arg_at = std::tuple_element_t<POSITION, typename FUNC::arg_types>;
     std::unique_ptr<FUNC> fn_;
 
-    template <typename Callable>
-    void applyToSelectedNoThrow(Callable func)
-    {
-        rows_->applyToSelected([&](auto row) INLINE_LAMBDA {
-            try {
-                func(row);
-            } catch (const exception::OmniException &e) {
-                OMNI_THROW("Express Error:", e.what());
-            } catch (const std::exception &e) {
-                OMNI_THROW("Express Unknown Error:", e.what());
-            }
-        });
-    }
+    struct ApplyContext {
+        ApplyContext(SelectivityVector *_rows, const DataTypePtr outputType, op::ExecutionContext *_context)
+            : rows{_rows}, context{_context} {}
+
+        template <typename Callable>
+        void applyToSelectedNoThrow(Callable func)
+        {
+            rows->applyToSelected([&](auto row) INLINE_LAMBDA {
+                try {
+                    func(row);
+                } catch (const OmniException &e) {
+                    OMNI_THROW("Express Error:", e.what());
+                } catch (const std::exception &e) {
+                    OMNI_THROW("Express Unknown Error:", e.what());
+                }
+            });
+        }
+
+        int32_t GetResultRowSize() const
+        {
+            return context->GetResultRowSize();
+        }
+
+        bool hasFilter() const
+        {
+            return context->hasFilter;
+        }
+
+        bool *GetIsSelectRow() const
+        {
+            return context->GetIsSelectRow();
+        }
+
+        void IntersectNull(BaseVector *baseVector) const
+        {
+            const auto size = baseVector->GetSize();
+            const auto nullBits = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(baseVector));
+            SelectivityVector newRows(size);
+            newRows.setFromBitsNegate(nullBits, size);
+            rows->intersect(newRows);
+        }
+
+        SelectivityVector *rows;
+        VectorPtr result;
+        op::ExecutionContext *context;
+        bool mayHaveNullsRecursive{false};
+    };
 
 public:
-    SimpleFunction(const std::vector<type::DataTypePtr> &inputTypes, const config::QueryConfig &config,
+    SimpleFunction(const std::vector<DataTypePtr> &inputTypes, const config::QueryConfig &config,
         const std::vector<VectorPtr> &constantInputs)
         : fn_{std::make_unique<FUNC>()} {}
 
     explicit SimpleFunction() {}
 
-    void apply(std::stack<VectorPtr> &args, const type::DataTypePtr &outputType, vec::BaseVector *&result,
+    void Apply(std::stack<BaseVector *> &args, const DataTypePtr &outputType, BaseVector *&result,
         op::ExecutionContext *context) const override
     {
-        result = VectorHelper::CreateFlatVector(outputType->GetId(), args.top()->GetSize());
-        unpackSpecializeForAllEncodings<0>(context, result, args);
+        result = VectorHelper::CreateFlatVector(outputType->GetId(), context->GetResultRowSize());
+        auto rows = std::make_shared<SelectivityVector>(context->GetResultRowSize());
+        ApplyContext applyContext(rows.get(), outputType, context);
+        unpackSpecializeForAllEncodings<0>(applyContext, result, args);
     }
 
 private:
-    std::shared_ptr<SelectivityVector> rows_;
-
-    void IntersectNull(vec::BaseVector *baseVector)
-    {
-        auto size = baseVector->GetSize();
-        auto nullBits = reinterpret_cast<uint64_t *>(vec::unsafe::UnsafeBaseVector::GetNulls(baseVector));
-        if (rows_ == nullptr) {
-            rows_ = std::make_shared<SelectivityVector>(size);
-            rows_->setFromBitsNegate(nullBits, size);
-        } else {
-            SelectivityVector rows(size);
-            rows.setFromBitsNegate(nullBits, size);
-            rows_->intersect(rows);
-        }
-    }
-
     // This is called only when we know that all args are flat or constant and are
     // eligible for the optimization and the optimization is enabled.
     template <int32_t POSITION, typename... TReader>
-    void unpackSpecializeForAllEncodings(op::ExecutionContext *context, vec::BaseVector *result,
-        std::stack<VectorPtr> &rawArgs, TReader &... readers) const
+    void unpackSpecializeForAllEncodings(ApplyContext &context, BaseVector *result, std::stack<BaseVector *> &rawArgs,
+        TReader &... readers) const
     {
         if constexpr (POSITION == FUNC::num_args) {
             iterate(context, result, readers...);
@@ -85,7 +106,7 @@ private:
             rawArgs.pop();
             using type = exec_arg_at<POSITION>;
             if (arg->GetEncoding() != OMNI_ENCODING_CONST) {
-                IntersectNull(arg);
+                context.IntersectNull(arg);
             }
             if constexpr (is_string_type_v<type>) {
                 // string_view use StringVectorReader
@@ -99,7 +120,7 @@ private:
                         break;
                     }
                     case OMNI_DICTIONARY: {
-                        auto reader = FlatVectorReader<type>(arg);
+                        auto reader = DicVectorReader<type>(arg);
                         unpackSpecializeForAllEncodings<POSITION + 1>(context, result, rawArgs, reader, readers...);
                         break;
                     }
@@ -115,15 +136,18 @@ private:
     }
 
     template <typename... TReader>
-    void iterate(op::ExecutionContext *context, vec::BaseVector *result, TReader &... readers) const
+    void iterate(ApplyContext &context, BaseVector *result, TReader &... readers) const
     {
-        auto rowSize = context->GetResultRowSize();
-        auto resultAddr = static_cast<return_type_traits *>(vec::VectorHelper::UnsafeGetValues(result));
-        auto nullBuffer = reinterpret_cast<uint64_t *>(vec::unsafe::UnsafeBaseVector::GetNulls(result));
-        if (context->hasFilter) {
-            auto isSelect = context->GetIsSelectRow();
+        auto rowSize = context.GetResultRowSize();
+        auto resultAddr = static_cast<return_type_traits *>(VectorHelper::UnsafeGetValues(result));
+        auto nullBuffer = reinterpret_cast<uint64_t *>(unsafe::UnsafeBaseVector::GetNulls(result));
+        auto copyNullSize = NullsBuffer::CalculateNbytes(rowSize) - 8;
+        memcpy_s(nullBuffer, copyNullSize, context.rows->allBits(), copyNullSize);
+        BitUtil::Negate(nullBuffer, rowSize);
+        if (context.hasFilter()) {
+            auto isSelect = context.GetIsSelectRow();
             int selectRow = 0;
-            applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
+            context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
                 if (!isSelect[row]) {
                     return;
                 }
@@ -134,20 +158,19 @@ private:
                 return_type_traits out{};
                 bool notNull;
                 auto status = doApplyNotNull<0>(row, out, notNull, readers...);
-                if (status) {
+                if (!status.ok()) {
+                    BitUtil::SetBit(nullBuffer, selectRow, true);
                     return;
                 }
 
                 if (!notNull) {
-                    BitUtil::SetBit(nullBuffer, selectRow);
+                    BitUtil::SetBit(nullBuffer, selectRow, true);
                 }
                 resultAddr[selectRow] = out;
                 ++selectRow;
             });
-            memcpy_s(nullBuffer, rowSize, rows_->allBits(), rowSize);
-            BitUtil::Negate(nullBuffer, rowSize);
         } else {
-            applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
+            context.applyToSelectedNoThrow([&](auto row) INLINE_LAMBDA {
                 // Passing a stack variable have shown to be boost the performance
                 // of functions that repeatedly update the output. The opposite
                 // optimization (eliminating the temp) is easier to do by the
@@ -155,16 +178,15 @@ private:
                 return_type_traits out{};
                 bool notNull;
                 auto status = doApplyNotNull<0>(row, out, notNull, readers...);
-                if (status) {
+                if (!status.ok()) {
+                    BitUtil::SetBit(nullBuffer, row, true);
                     return;
                 }
                 if (!notNull) {
-                    BitUtil::SetBit(nullBuffer, row);
+                    BitUtil::SetBit(nullBuffer, row, true);
                 }
                 resultAddr[row] = out;
             });
-            memcpy_s(nullBuffer, rowSize, rows_->allBits(), rowSize);
-            BitUtil::Negate(nullBuffer, rowSize);
         }
     }
 
@@ -177,7 +199,7 @@ private:
     // since we don't have any nulls.
     template <size_t POSITION, typename R0, typename... TStuff, std::enable_if_t<POSITION != FUNC::num_args, int32_t>  =
         0>
-    ALWAYS_INLINE int doApplyNotNull(size_t idx, T &target, bool &notNull, R0 &currentReader,
+    ALWAYS_INLINE Status doApplyNotNull(size_t idx, T &target, bool &notNull, R0 &currentReader,
         const TStuff &... extra) const
     {
         if constexpr (std::is_same_v<R0, StringVectorReader>) {
@@ -191,7 +213,7 @@ private:
 
     // For default null behavior, Terminate by with UDFHolder::call.
     template <size_t POSITION, typename... Values, std::enable_if_t<POSITION == FUNC::num_args, int32_t>  = 0>
-    ALWAYS_INLINE int doApplyNotNull(size_t /*idx*/, T &target, bool &notNull, const Values &... values) const
+    ALWAYS_INLINE Status doApplyNotNull(size_t /*idx*/, T &target, bool &notNull, const Values &... values) const
     {
         return (*fn_).call(target, notNull, values...);
     }

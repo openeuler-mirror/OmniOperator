@@ -6,7 +6,9 @@
 #include "VectorFunction.h"
 
 namespace omniruntime::vectorization {
-using namespace type;
+using namespace omniruntime::type;
+using namespace omniruntime::codegen;
+
 FunctionMap VectorFunction::functionMap_ = nullptr;
 FunctionFactoryMap VectorFunction::functionFactoryMap_ = nullptr;
 

@@ -14,13 +14,13 @@ using namespace omniruntime::op;
 /// dictionary maintains a mapping from a given row to the index of the input
 /// map value vector. This allows us to ensure that element_at is zero-copy.
 template <DataTypeId kind>
-VectorPtr ApplyMapTyped(const SelectivityVector &rows, const VectorPtr mapArg, const VectorPtr indexArg,
+BaseVector *ApplyMapTyped(const SelectivityVector &rows, BaseVector *mapArg, BaseVector *indexArg,
     ExecutionContext *context)
 {
     using KeyType = typename NativeType<kind>::type;
     auto rowSize = mapArg->GetSize();
     int32_t dicIndex[rowSize];
-    memset(dicIndex, -1, sizeof(dicIndex));
+    memset_s(dicIndex, sizeof(dicIndex), -1, sizeof(dicIndex));
 
     auto mapVector = reinterpret_cast<MapVector *>(mapArg);
     if (indexArg->GetEncoding() == OMNI_ENCODING_CONST) {
@@ -49,24 +49,20 @@ VectorPtr ApplyMapTyped(const SelectivityVector &rows, const VectorPtr mapArg, c
             auto result = VectorHelper::CreateDictionaryVector(dicIndex, rowSize, rawVector, rawVector->GetTypeId());
             return result;
         } else {
-            auto keyVector = dynamic_cast<Vector<KeyType> *>(reinterpret_cast<MapVector *>(mapArg)->GetKeyVector().
-                get());
+            OMNI_THROW("ApplyMapTyped Error:", "Not support Key type!");
         }
     } else {
         OMNI_THROW("ApplyMapTyped Error:", "Not support Key type!");
     }
 }
 
-VectorPtr SubscriptImpl::applyMap(const SelectivityVector &rows, std::vector<VectorPtr> &args,
+BaseVector *SubscriptImpl::applyMap(const SelectivityVector &rows, std::vector<BaseVector *> &args,
     ExecutionContext *context) const
 {
     auto mapArg = args[1];
     auto indexArg = args[0];
 
     // Ensure map key type and second argument are the same.
-    // VELOX_CHECK(mapArg->type()->childAt(0)->equivalent(*indexArg->type()));
-
-    // bool triggerCaching = shouldTriggerCaching(mapArg);
     if (indexArg->GetTypeId() != OMNI_ARRAY) {
         return DYNAMIC_TYPE_DISPATCH(ApplyMapTyped, indexArg->GetTypeId(), rows, mapArg, indexArg, context);
     } else {

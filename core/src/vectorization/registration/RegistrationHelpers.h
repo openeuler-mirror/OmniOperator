@@ -11,58 +11,58 @@
 
 namespace omniruntime::vectorization {
 template <template <class> typename T>
-void registerBinaryIntegral(const std::string &aliases)
+void RegisterBinaryIntegral(const std::string &aliases)
 {
-    registerFunction<T, int8_t, int8_t, int8_t>(aliases, {OMNI_BYTE, OMNI_BYTE}, OMNI_BYTE);
-    registerFunction<T, int16_t, int16_t, int16_t>(aliases, {OMNI_SHORT, OMNI_SHORT}, OMNI_SHORT);
-    registerFunction<T, int32_t, int32_t, int32_t>(aliases, {OMNI_INT, OMNI_INT}, OMNI_INT);
-    registerFunction<T, int64_t, int64_t, int64_t>(aliases, {OMNI_LONG, OMNI_LONG}, OMNI_LONG);
+    RegisterFunction<T, int8_t, int8_t, int8_t>(aliases, {OMNI_BYTE, OMNI_BYTE}, OMNI_BYTE);
+    RegisterFunction<T, int16_t, int16_t, int16_t>(aliases, {OMNI_SHORT, OMNI_SHORT}, OMNI_SHORT);
+    RegisterFunction<T, int32_t, int32_t, int32_t>(aliases, {OMNI_INT, OMNI_INT}, OMNI_INT);
+    RegisterFunction<T, int64_t, int64_t, int64_t>(aliases, {OMNI_LONG, OMNI_LONG}, OMNI_LONG);
 }
 
 template <template <class> typename T>
-void registerBinaryFloatingPoint(const std::string &aliases)
+void RegisterBinaryFloatingPoint(const std::string &aliases)
 {
-    registerFunction<T, double, double, double>(aliases, {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
-    registerFunction<T, float, float, float>(aliases, {OMNI_FLOAT, OMNI_FLOAT}, OMNI_FLOAT);
+    RegisterFunction<T, double, double, double>(aliases, {OMNI_DOUBLE, OMNI_DOUBLE}, OMNI_DOUBLE);
+    RegisterFunction<T, float, float, float>(aliases, {OMNI_FLOAT, OMNI_FLOAT}, OMNI_FLOAT);
 }
 
 template <template <class> typename T>
-void registerBinaryNumeric(const std::string &aliases)
+void RegisterBinaryNumeric(const std::string &aliases)
 {
-    registerBinaryIntegral<T>(aliases);
-    registerBinaryFloatingPoint<T>(aliases);
+    RegisterBinaryIntegral<T>(aliases);
+    RegisterBinaryFloatingPoint<T>(aliases);
 }
 
 template <template <class> typename T>
-void registerCompareIntegral(const std::string &aliases)
+void RegisterCompareIntegral(const std::string &aliases)
 {
-    registerFunction<T, bool, int8_t, int8_t>(aliases, {OMNI_BYTE, OMNI_BYTE}, OMNI_BOOLEAN);
-    registerFunction<T, bool, int16_t, int16_t>(aliases, {OMNI_SHORT, OMNI_SHORT}, OMNI_BOOLEAN);
-    registerFunction<T, bool, int32_t, int32_t>(aliases, {OMNI_INT, OMNI_INT}, OMNI_BOOLEAN);
-    registerFunction<T, bool, int64_t, int64_t>(aliases, {OMNI_LONG, OMNI_LONG}, OMNI_BOOLEAN);
+    RegisterFunction<T, bool, int8_t, int8_t>(aliases, {OMNI_BYTE, OMNI_BYTE}, OMNI_BOOLEAN);
+    RegisterFunction<T, bool, int16_t, int16_t>(aliases, {OMNI_SHORT, OMNI_SHORT}, OMNI_BOOLEAN);
+    RegisterFunction<T, bool, int32_t, int32_t>(aliases, {OMNI_INT, OMNI_INT}, OMNI_BOOLEAN);
+    RegisterFunction<T, bool, int64_t, int64_t>(aliases, {OMNI_LONG, OMNI_LONG}, OMNI_BOOLEAN);
 }
 
 template <template <class> typename T>
-void registerUnaryIntegral(const std::string &aliases)
+void RegisterUnaryIntegral(const std::string &aliases)
 {
-    registerFunction<T, bool, bool>(aliases, {OMNI_BOOLEAN}, OMNI_BOOLEAN);
+    RegisterFunction<T, bool, bool>(aliases, {OMNI_BOOLEAN}, OMNI_BOOLEAN);
 }
 
 template <template <class> typename T>
-void registerBinaryLogical(const std::string &aliases)
+void RegisterBinaryLogical(const std::string &aliases)
 {
-    registerFunction<T, bool, bool, bool>(aliases, {OMNI_BOOLEAN, OMNI_BOOLEAN}, OMNI_BOOLEAN);
+    RegisterFunction<T, bool, bool, bool>(aliases, {OMNI_BOOLEAN, OMNI_BOOLEAN}, OMNI_BOOLEAN);
 }
 
 template <template <class> typename T>
-void registerBinaryCompare(const std::string &aliases)
+void RegisterBinaryCompare(const std::string &aliases)
 {
-    registerCompareIntegral<T>(aliases);
+    RegisterCompareIntegral<T>(aliases);
 }
 
 template <template <class> typename T>
-void registerString(const std::string &aliases)
+void RegisterString(const std::string &aliases)
 {
-    registerFunction<T, bool, std::string_view, std::string_view>(aliases, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN);
+    RegisterFunction<T, bool, std::string_view, std::string_view>(aliases, {OMNI_VARCHAR, OMNI_VARCHAR}, OMNI_BOOLEAN);
 }
 }
