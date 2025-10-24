@@ -39,6 +39,10 @@ int RegisterFunctions::Register()
         VectorFunction::functionMap_ = std::make_unique<std::unordered_map<FunctionSignaturePtr, std::shared_ptr<
             VectorFunction>, Hash, Equals>>();
     }
+    if (!VectorFunction::functionFactoryMap_) {
+        VectorFunction::functionFactoryMap_ = std::make_unique<std::unordered_map<FunctionSignaturePtr,
+            VectorFunctionFactory, Hash, Equals>>();
+    }
     if (!SimpleFunctionRegistry::functionMap_) {
         SimpleFunctionRegistry::functionMap_ = std::make_unique<std::unordered_map<FunctionSignaturePtr, std::shared_ptr
             <VectorFunction>, Hash, Equals>>();
@@ -52,7 +56,7 @@ void RegisterFunctions::registerFunctions(const std::string &prefix)
     registerArrayFunctions(prefix);
     // registerBinaryFunctions(prefix);
     // registerBitwiseFunctions(prefix);
-    // registerCompareFunctions(prefix);
+    registerCompareFunctions(prefix);
     // registerDatetimeFunctions(prefix);
     // registerJsonFunctions(prefix);
     registerMapFunctions(prefix);

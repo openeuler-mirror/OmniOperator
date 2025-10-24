@@ -14,7 +14,6 @@ void registerMathFunctions(const std::string &prefix)
 {
     registerIsNullFunction(prefix + "isnull");
     registerBinaryNumeric<PlusFunction>({prefix + "add"});
-    registerBinaryCompare<Greater>(prefix + "greaterThan");
     registerBinaryLogical<And>(prefix + "and");
     registerUnaryIntegral<Not>(prefix + "not");
     registerBinaryNumeric<MinusFunction>({prefix + "subtract"});

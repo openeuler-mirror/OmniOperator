@@ -103,4 +103,9 @@ std::string FunctionSignature::ToString(omniruntime::op::OverflowConfig *overflo
     result = result + "_" + TypeUtil::TypeToString(this->retType);
     return result;
 }
+
+std::shared_ptr<FunctionSignature> FunctionSignatureBuilder::Build()
+{
+    return std::make_shared<FunctionSignature>(funcName_, argumentTypes_, returnType_);
+}
 }
