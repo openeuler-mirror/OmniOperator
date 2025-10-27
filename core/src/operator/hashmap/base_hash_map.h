@@ -404,11 +404,7 @@ enum Ctrl : ctrl_t {
 
 struct Group {
     enum {
-#ifdef __ARM_FEATURE_SVE
-        kWidth = 32
-#else
         kWidth = 16
-#endif
     }; // the number of slots per group
 };
 

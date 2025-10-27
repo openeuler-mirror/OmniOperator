@@ -4866,14 +4866,21 @@ OMNI_INLINE int32_t FindFirstMatch(T value, const T* OMNI_RESTRICT in)
     return mask == 0 ? -1 : __builtin_ctz(mask);
 }
 
+template <typename T>
+OMNI_INLINE static unsigned FindFirstSetNonZeroSVE(T mask)
+{
+    if constexpr (std::is_same_v<T, unsigned>) {
+        return __builtin_ctz(static_cast<unsigned>(mask));
+    } else {
+        return __builtin_ctzll(mask);
+    }
+}
+
 template <typename T, size_t N>
 OMNI_INLINE size_t CountLeadingValue(T value, const T* OMNI_RESTRICT in)
 {
-    svbool_t pg = svwhilelt_b8(0, (int)N);
-    svint8_t data = svld1(pg, (int8_t*)in);
-    svbool_t res = svcmpne_n_s8(pg, data, value);
-    svbool_t pre = svbrkb_z(svptrue_b8(), res);
-    return static_cast<intptr_t>(svcntp_b8(svptrue_b8(), pre));
+    uint64_t nib = LeadingValueCountMask<T, N>(value, in);
+    return static_cast<size_t>(FindFirstSetNonZeroSVE(nib) >> 2);
 }
 
 namespace detail {
