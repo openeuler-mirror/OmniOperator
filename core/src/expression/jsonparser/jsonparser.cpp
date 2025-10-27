@@ -112,6 +112,7 @@ Expr *JSONParser::ParseJSONLiteral(const Json &jsonExpr)
 
 Expr *JSONParser::ParseJSONBinary(const Json &jsonExpr)
 {
+    using Operator = omniruntime::expressions::Operator;
     Operator op = StringToOperator(jsonExpr["operator"].get<string>());
     if (op == Operator::INVALIDOP) {
         return nullptr;
@@ -147,6 +148,7 @@ Expr *JSONParser::ParseJSONBinary(const Json &jsonExpr)
 
 Expr *JSONParser::TryGetCastedExpr(const nlohmann::json &jsonExpr)
 {
+    using Operator = omniruntime::expressions::Operator;
     // Currently this function is called by ParseJSONBinary. I assume op, left, right has been checked to be not null
     Operator op = StringToOperator(jsonExpr["operator"].get<string>());
     DataTypePtr resultType = ParserHelper::GetReturnDataType(jsonExpr);
@@ -201,6 +203,7 @@ Expr *JSONParser::TryGetCastedExpr(const nlohmann::json &jsonExpr)
 
 Expr *JSONParser::ParseJSONUnary(const Json &jsonExpr)
 {
+    using Operator = omniruntime::expressions::Operator;
     Operator op = StringToOperator(jsonExpr["operator"].get<string>());
     if (op == Operator::INVALIDOP) {
         return nullptr;
@@ -259,6 +262,7 @@ static void DeleteWhenClause(const std::vector<std::pair<Expr *, Expr *>> &whenC
 
 Expr *JSONParser::ParseJSONSwitch(const Json &jsonExpr)
 {
+    using Operator = omniruntime::expressions::Operator;
     auto numOfCases = jsonExpr["numOfCases"].get<int32_t>();
     std::vector<std::pair<Expr *, Expr *>> whenClause;
     for (int32_t i = 0; i < numOfCases; i++) {
@@ -400,6 +404,7 @@ Expr *JSONParser::ParseJsonIsNull(const Json &jsonExpr)
 
 Expr *JSONParser::ParseJsonIsNotNull(const Json &jsonExpr)
 {
+    using Operator = omniruntime::expressions::Operator;
     Expr *val = ParseJSON(jsonExpr["arguments"].at(0));
     auto isNullExpr = new IsNullExpr(val);
     return new UnaryExpr(Operator::NOT, isNullExpr, std::make_shared<BooleanDataType>());
@@ -506,6 +511,7 @@ Expr *JSONParser::ParseJSONFunc(const Json &jsonExpr)
 
 Expr *JSONParser::ParseJsonMultiAndOr(const Json &jsonExpr)
 {
+    using Operator = omniruntime::expressions::Operator;
     std::vector<Expr*> conditions;
     BinaryExpr* binaryExpression;
     DataTypePtr returnType = std::make_shared<DataType>(OMNI_BOOLEAN);

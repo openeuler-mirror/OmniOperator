@@ -8,14 +8,14 @@
 
 using namespace std;
 
-jmethodID logWarnId;
-jmethodID logErrorId;
-jmethodID logInfoId;
-jmethodID logDebugId;
-JavaVM *localJVM;
-jobject oplogObj;
-int g_logLevel;
-bool g_isDebugEnable = false;
+inline jmethodID logWarnId;
+inline jmethodID logErrorId;
+inline jmethodID logInfoId;
+inline jmethodID logDebugId;
+inline JavaVM *localJVM;
+inline jobject oplogObj;
+inline int g_logLevel;
+inline bool g_isDebugEnable = false;
 
 int GetLogLevel()
 {
