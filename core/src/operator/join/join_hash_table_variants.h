@@ -45,8 +45,8 @@ template <typename KeyType, typename RowRefListType> class JoinHashTableVariants
 public:
     using Key = KeyType;
     using Mapped = RowRefListType;
-    static constexpr bool IS_SIMPLE_KEY = (std::is_same_v<KeyType, int8_t> || std::is_same_v<KeyType, int16_t> ||
-                                           std::is_same_v<KeyType, int32_t> || std::is_same_v<KeyType, int64_t>);
+    static constexpr bool IS_SIMPLE_KEY = (std::is_same_v<KeyType, int16_t> || std::is_same_v<KeyType, int32_t> ||
+                                           std::is_same_v<KeyType, int64_t>);
 
     explicit JoinHashTableVariants(uint32_t hashTableCount, DataTypes *buildDataTypes,
         std::vector<int32_t> &buildHashCols, JoinType joinType, BuildSide buildSide, bool isMultiCols = false);
