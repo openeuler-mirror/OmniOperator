@@ -71,7 +71,6 @@ extern "C" DLLEXPORT int16_t CastDoubleToInt16Down(double x);
 
 extern "C" DLLEXPORT int8_t CastDoubleToInt8Down(double x);
 
-<<<<<<< HEAD
 extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x);
 
 extern "C" DLLEXPORT double CastInt16ToDouble(int16_t x);
@@ -100,8 +99,6 @@ extern "C" DLLEXPORT int16_t CastDoubleToInt16Down(double x);
 
 extern "C" DLLEXPORT int8_t CastDoubleToInt8Down(double x);
 
-=======
->>>>>>> 5735abc0 (!16 project算子Cast表达式支持short/byte类型)
 extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x);
 
 extern "C" DLLEXPORT double CastInt16ToDouble(int16_t x);

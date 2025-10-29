@@ -71,8 +71,6 @@ public:
                 return OperatorUtil::SIZE_OF_DATE32;
             case OMNI_DATE64:
                 return OperatorUtil::SIZE_OF_DATE64;
-            case OMNI_BYTE:
-                return OperatorUtil::SIZE_OF_BYTE;
             case OMNI_CHAR: {
                 // if width is not set (which is the case when width=CHAR_MAX_WIDTH), we use 'DEFAULT_CHAR_LENGTH' width
                 // otherwise, estimation of row bytes would be too large and could overflow and be
