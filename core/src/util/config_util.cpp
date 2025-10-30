@@ -8,7 +8,7 @@
 #include <functional>
 #include "config_util.h"
 
-std::map<std::string, std::string> ConfigUtil::configMap;
+inline std::map<std::string, std::string> ConfigUtil::configMap;
 
 static void Trim(std::string &value)
 {
