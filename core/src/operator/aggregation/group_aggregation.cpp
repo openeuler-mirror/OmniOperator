@@ -1053,7 +1053,7 @@ ErrorCode HashAggregationOperator::SpillToDisk()
                 aggregationSortPtr->ParseHashMapToVector(key, value, lambdaRowIndex);
                 ++lambdaRowIndex;
             }, [&](const auto &key, auto &value) mutable {
-                aggregationSortPtr->ParseHashMapToVector(key, value, lambdaRowIndex);
+                aggregationSortPtr->ParseNullHashMapToVector(key, value, lambdaRowIndex);
                 ++lambdaRowIndex;
             });
         } else if (fixedInt64 != nullptr) {
@@ -1064,7 +1064,7 @@ ErrorCode HashAggregationOperator::SpillToDisk()
                 aggregationSortPtr->ParseHashMapToVector(key, value, lambdaRowIndex);
                 ++lambdaRowIndex;
             }, [&](const auto &key, auto &value) mutable {
-                aggregationSortPtr->ParseHashMapToVector(key, value, lambdaRowIndex);
+                aggregationSortPtr->ParseNullHashMapToVector(key, value, lambdaRowIndex);
                 ++lambdaRowIndex;
             });
         } else if (fixedInt16 != nullptr) {
@@ -1077,7 +1077,7 @@ ErrorCode HashAggregationOperator::SpillToDisk()
                     ++lambdaRowIndex;
                 },
                 [&](const auto &key, auto &value) mutable {
-                    aggregationSortPtr->ParseHashMapToVector(key, value, lambdaRowIndex);
+                    aggregationSortPtr->ParseNullHashMapToVector(key, value, lambdaRowIndex);
                     ++lambdaRowIndex;
                 });
         }
@@ -1344,14 +1344,26 @@ VectorBatch *HashAggregationOperator::GetOutputFromDiskWithAgg(VectorBatch *outp
             if (serialize != nullptr) {
                 serialize->ParseKeyToCols(keyRef, groupOutputVectors, groupColNum, rowIdx);
             } else if (fixedInt32 != nullptr) {
-                auto key = static_cast<int32_t>(std::stoi(keyRef.ToString()));
-                fixedInt32->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                if (keyRef.size > 0) {
+                    auto key = static_cast<int32_t>(std::stoi(keyRef.ToString()));
+                    fixedInt32->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                } else {
+                    fixedInt32->ParseNull(0, groupOutputVectors, groupColNum, rowIdx);
+                }
             } else if (fixedInt64 != nullptr) {
-                auto key = static_cast<int64_t>(std::stoi(keyRef.ToString()));
-                fixedInt64->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                if (keyRef.size > 0) {
+                    auto key = static_cast<int64_t>(std::stoi(keyRef.ToString()));
+                    fixedInt64->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                } else {
+                    fixedInt64->ParseNull(0, groupOutputVectors, groupColNum, rowIdx);
+                }
             } else if (fixedInt16 != nullptr) {
-                auto key = static_cast<int16_t>(std::stoi(keyRef.ToString()));
-                fixedInt16->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                if (keyRef.size > 0) {
+                    auto key = static_cast<int16_t>(std::stoi(keyRef.ToString()));
+                    fixedInt16->ParseKeyToCols(key, groupOutputVectors, groupColNum, rowIdx);
+                } else {
+                    fixedInt16->ParseNull(0, groupOutputVectors, groupColNum, rowIdx);
+                }
             }
 
             currentGroupStates = groupStatesPtr + rowIdx * totalAggStatesSize;
