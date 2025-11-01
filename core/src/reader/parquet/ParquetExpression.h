@@ -20,10 +20,16 @@
 #ifndef OMNI_RUNTIME_PARQUETEXPRESSION_H
 #define OMNI_RUNTIME_PARQUETEXPRESSION_H
 
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <nlohmann/json.hpp>
 #include "reader/jni/jni_common.h"
 #include "arrow/compute/exec/expression.h"
 
 using namespace arrow::compute;
+using json = nlohmann::json;
+
 namespace omniruntime::reader {
     enum ParquetPredicateOperator {
         And,
@@ -52,16 +58,17 @@ namespace omniruntime::reader {
         Timestamp
     };
 
-    arrow::Result<Expression> GetSubExpr(JNIEnv *env, jobject &expressionTree, const char *sub);
+    arrow::Result<Expression> GetSubExpr(const json& json, const std::string& sub);
 
-    arrow::Result<Expression> GetFieldExpr(JNIEnv *env, jobject &expressionTree);
+    arrow::Result<Expression> GetFieldExpr(const json& json);
 
-    arrow::Result<Expression> GetLiteralExpr(JNIEnv *env, jobject &expressionTree);
+    arrow::Result<Expression> GetLiteralExpr(const json& json);
 
-    arrow::Result<std::shared_ptr<arrow::Array>> GetSetLiteralExpr(JNIEnv *env, jobject &expressionTree);
+    arrow::Result<std::shared_ptr<arrow::Array>> GetSetLiteralExpr(const json& json);
 
-    arrow::Result<Expression> ParseToArrowExpression(JNIEnv *env, jobject &expressionTree);
+    arrow::Result<Expression> ParseToArrowExpression(const json& json);
 
+    std::vector<std::string> GetFieldNames(const nlohmann::json& json);
 }
 
 #endif //OMNI_RUNTIME_PARQUETEXPRESSION_H

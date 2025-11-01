@@ -14,8 +14,7 @@
 using ::orc::InputStream;
 using ::orc::FileContents;
 using ::orc::DataBuffer;
-using ::orc::RowReader;
-using ::orc::Reader;
+using omniruntime::type::RowType;
 
 namespace omniruntime::reader {
 
@@ -23,20 +22,10 @@ class OrcRowReader : public omniruntime::reader::RowReader, public ::orc::RowRea
 public:
     OrcRowReader() = default;
 
-    OrcRowReader(std::shared_ptr<::orc::FileContents> contents, const OrcRowReaderOptions &options)
-        : ::orc::RowReaderImpl(contents, options.GetOrcRowReaderOptions())
-    {
-        contents_ = contents;
-    }
+    ~OrcRowReader() override = default;
 
-    OrcRowReader(std::shared_ptr<::orc::FileContents> contents, const ::orc::RowReaderOptions &options,
-        std::unique_ptr<common::JulianGregorianRebase> &julianPtr,
-        std::unique_ptr<common::PredicateCondition> &predicate)
-        : ::orc::RowReaderImpl(contents, options), julianPtr(std::move(julianPtr)), predicatePtr(std::move(predicate))
-    {
-        contents_ = contents;
-        julianDaysPtr = std::make_unique<common::JulianGregorianRebaseDays>();
-    }
+    OrcRowReader(std::shared_ptr<FileContents> contents, const std::shared_ptr<ReaderOptions> &options);
+
 
     /**
           * direct read VectorBatch in next
@@ -45,112 +34,43 @@ public:
           * @param batchLen the max row count of batch
           * @return the row size read
      */
-
     uint64_t Next(uint64_t size, vec::VectorPtr &result) override {};
 
-    uint64_t Next(std::vector<omniruntime::vec::BaseVector *> *batch, int *omniTypeId, uint64_t batchLen) override;
+    uint64_t NextDirect(std::vector<BaseVector *> *batch, int *omniTypeId, uint64_t batchLen) override;
 
-    void SetFormatRowReader(std::unique_ptr<::orc::RowReader> orc_row_reader)
-    {
-        orc_row_reader = std::move(orc_row_reader);
-    }
-
-    std::unique_ptr<::orc::RowReader> GetFormatRowReader()
-    {
-        return std::move(orc_row_reader);
-    }
+    uint64_t Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen) override;
 
     void StartNextStripe();
 
-    ~OrcRowReader() override = default;
-
-     std::unique_ptr<common::JulianGregorianRebase>& GetJulianPtr() override
-     {
-         return julianPtr;
-     }
-
-    std::unique_ptr<common::JulianGregorianRebaseDays>& GetJulianDaysPtr() override
-    {
-        return julianDaysPtr;
-    }
-
-     std::unique_ptr<common::PredicateCondition>& GetPredicatePtr() override
-     {
-         return predicatePtr;
-     }
-
 private:
-    std::unique_ptr<::orc::RowReader> orc_row_reader;
     std::shared_ptr <FileContents> contents_;
-    std::vector<omniruntime::vec::BaseVector *> *batch;
+    std::vector<BaseVector *> *batch;
     int *omniTypeId;
-    uint64_t batchLen;
-    std::unique_ptr<common::JulianGregorianRebase> julianPtr;
-    std::unique_ptr<common::JulianGregorianRebaseDays> julianDaysPtr;
-    std::unique_ptr<common::PredicateCondition> predicatePtr;
 };
 
 class OrcReader : public omniruntime::reader::Reader, public ::orc::ReaderImpl {
 public:
     OrcReader() = default;
 
-    OrcReader(std::shared_ptr<::orc::FileContents> contents, const OrcReaderOptions &opts,
-        uint64_t fileLength, uint64_t postscriptLength)
-        : ::orc::ReaderImpl(contents, opts.GetConstOrcReaderOptions(), fileLength, postscriptLength)
-    {
-        contents_ = contents;
-    }
-
-    OrcReader(std::shared_ptr<::orc::FileContents> contents, const ::orc::ReaderOptions &opts,
-        uint64_t fileLength, uint64_t postscriptLength)
-        : ::orc::ReaderImpl(contents, opts, fileLength, postscriptLength)
-    {
-        contents_ = contents;
-    }
-
-    std::unique_ptr <RowReader> CreateRowReader(
-        std::shared_ptr <RowReaderOptions> options,
-        std::unique_ptr<common::JulianGregorianRebase> &julianPtr,
-        std::unique_ptr<common::PredicateCondition> &predicate) override;
-
     ~OrcReader() override = default;
 
-private:
-    std::shared_ptr <FileContents> contents_;
-};
-
-std::unique_ptr<OrcReader> Create(
-    std::shared_ptr <FileContents> &contents,
-    std::unique_ptr <ORCBufferInput> &&orcBufferInput,
-    const ::orc::ReaderOptions &options);
-
-class OrcReaderFactory : public ReaderFactory {
-public:
-    OrcReaderFactory() : ReaderFactory(omniruntime::codegen::FileFormat::ORC) {}
-
-    ~OrcReaderFactory() = default;
-
-    std::unique_ptr <Reader> CreateReader(std::unique_ptr <BufferInput> stream,
-        std::shared_ptr <ReaderOptions> options) override
+    OrcReader(std::shared_ptr<::orc::FileContents> contents, const std::shared_ptr<ReaderOptions>& options,
+        uint64_t fileLength, uint64_t postscriptLength)
+        : ::orc::ReaderImpl(contents, options->GetOrcReaderOptions(), fileLength, postscriptLength)
     {
-        auto* orcStream = dynamic_cast<ORCBufferInput*>(stream.get());
-        auto* orcOptions = dynamic_cast<OrcReaderOptions*>(options.get());
-        if (!orcStream || !orcOptions) {
-            throw std::invalid_argument(
-                "OrcReaderFactory: Invalid input types. Expected ORCBufferInput and OrcReaderOptions."
-            );
-        }
+        options_ = options;
+        contents_ = contents;
+    }
 
-        std::unique_ptr<ORCBufferInput> derivedStream(orcStream);
-        std::shared_ptr<::orc::ReaderOptions> orcReaderOptions = orcOptions->GetOrcReaderOptions();
-        stream.release();
+    std::unique_ptr<RowReader> CreateRowReader() override
+    {
+        auto rowReader = std::make_unique<OrcRowReader>(contents_, options_);
+        return std::move(rowReader);
+    }
 
-        std::shared_ptr<FileContents> emptyFileContents;
-        auto orcReader = Create(emptyFileContents,
-            std::move(derivedStream), *orcReaderOptions);
-
-        return std::move(orcReader);
-    };
+private:
+    std::shared_ptr<FileContents> contents_;
 };
+
 }
 #endif // OMNIOPERATORJIT_ORCREADER_H

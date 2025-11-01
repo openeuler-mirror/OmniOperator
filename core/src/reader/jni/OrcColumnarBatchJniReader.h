@@ -71,9 +71,10 @@ int BuildLeaves(PredicateOperatorType leafOp, std::vector<orc::Literal> &litList
 
 bool StringToBool(const std::string &boolStr);
 
-void ParseEnhanceJson(nlohmann::json &json,
-    std::unique_ptr<common::JulianGregorianRebase>& julianPtr,
-    std::unique_ptr<common::PredicateCondition>& predicate,
+void ParseJson(nlohmann::json &json,
+    std::list<std::string>& includedColumnsList,
+    std::shared_ptr<common::JulianGregorianRebase>& julianPtr,
+    std::shared_ptr<common::PredicateCondition>& predicate,
     std::unique_ptr<::orc::SearchArgument>& searchArgument);
 
 #ifdef __cplusplus

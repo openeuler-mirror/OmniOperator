@@ -25,11 +25,19 @@ using namespace omniruntime::vec;
 
 namespace common {
     std::unique_ptr<PredicateCondition> buildLeafPredicateCondition(PredicateOperatorType &op,
-                                                                    nlohmann::json &jsonCondition) {
+                                                                    nlohmann::json &jsonCondition,
+                                                                    int32_t columnCount) {
         using namespace omniruntime::type;
         int32_t index = jsonCondition["index"].get<int32_t>();
         std::string value = jsonCondition["value"];
         DataTypeId typeId = jsonCondition["dataType"].get<DataTypeId>();
+        if (index >= columnCount) {
+            if (op == IS_NOT_NULL) {
+                return std::make_unique<LeafPredicateCondition<int8_t>>(FALSE, 0, 0);
+            } else {
+                return std::make_unique<LeafPredicateCondition<int8_t>>(TRUE, 0, 1);
+            }
+        }
         switch (typeId) {
             case OMNI_SHORT: {
                 return std::make_unique<LeafPredicateCondition<int16_t>>(op, index, static_cast<int16_t>(stoi(value)));
@@ -55,10 +63,11 @@ namespace common {
         }
     }
 
-    std::unique_ptr<PredicateCondition> buildPredicateCondition(nlohmann::json &jsonCondition) {
+    std::unique_ptr<PredicateCondition> buildPredicateCondition(nlohmann::json &jsonCondition, int32_t columnCount) {
         PredicateOperatorType op = jsonCondition["op"].get<PredicateOperatorType>();
         switch (op) {
             case TRUE:
+            case FALSE:
             case EQUAL_TO:
             case GREATER_THAN:
             case GREATER_THAN_OR_EQUAL:
@@ -66,20 +75,20 @@ namespace common {
             case LESS_THAN_OR_EQUAL:
             case IS_NOT_NULL:
             case IS_NULL: {
-                return buildLeafPredicateCondition(op, jsonCondition);
+                return buildLeafPredicateCondition(op, jsonCondition, columnCount);
             }
             case OR: {
-                auto orLeft = buildPredicateCondition(jsonCondition["left"]);
-                auto orRight = buildPredicateCondition(jsonCondition["right"]);
+                auto orLeft = buildPredicateCondition(jsonCondition["left"], columnCount);
+                auto orRight = buildPredicateCondition(jsonCondition["right"], columnCount);
                 return std::make_unique<OrPredicateCondition>(std::move(orLeft), std::move(orRight));
             }
             case AND: {
-                auto andLeft = buildPredicateCondition(jsonCondition["left"]);
-                auto andRight = buildPredicateCondition(jsonCondition["right"]);
+                auto andLeft = buildPredicateCondition(jsonCondition["left"], columnCount);
+                auto andRight = buildPredicateCondition(jsonCondition["right"], columnCount);
                 return std::make_unique<AndPredicateCondition>(std::move(andLeft), std::move(andRight));
             }
             case NOT: {
-                auto child = buildPredicateCondition(jsonCondition["child"]);
+                auto child = buildPredicateCondition(jsonCondition["child"], columnCount);
                 return std::make_unique<NotPredicateCondition>(std::move(child));
             }
             default: {
@@ -96,7 +105,7 @@ namespace common {
         const auto& conditionField = json["vecPredicateCondition"];
         std::string conditionStr = conditionField.get<std::string>();
         auto jsonCondition = nlohmann::json::parse(conditionStr);
-        auto predicate= buildPredicateCondition(jsonCondition);
+        auto predicate = buildPredicateCondition(jsonCondition, columnCount);
         predicate->buildNullColumns(columnCount);
         return predicate;
     }

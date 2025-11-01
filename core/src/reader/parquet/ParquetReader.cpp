@@ -38,6 +38,24 @@ static constexpr int32_t LOCAL_FILE_PREFIX_EXT = 7;
 static const std::string LOCAL_FILE = "file:";
 static const std::string HDFS_FILE = "hdfs:";
 
+uint64_t ParquetRowReader::Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen)
+{
+    auto recordBatch = new std::vector<omniruntime::vec::BaseVector *>(parquetReader_.columnReaders.size(), 0);
+    long batchRowSize = 0;
+    auto state = parquetReader_.ReadNextBatch(*recordBatch, &batchRowSize);
+    *batch = recordBatch;
+    if (state != Status::OK()) {
+        for (auto vec : *recordBatch) {
+            delete vec;
+        }
+        recordBatch->clear();
+        throw OmniException(state.ToString().c_str());
+        return 0;
+    }
+
+    return batchRowSize;
+}
+
 // the ugi is UserGroupInformation
 std::string omniruntime::reader::GetFileSystemKey(std::string& path, std::string& ugi)
 {
@@ -215,6 +233,7 @@ Status ParquetReader::GetRecordBatchReader(const std::vector<int> &row_group_ind
             return Status::OK();
     };
 
+    // todo zhangxin
     rb_reader = std::make_unique<OmniRecordBatchReader>(std::move(batches));
     return Status::OK();
 }

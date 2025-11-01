@@ -16,32 +16,30 @@
 #include <cstdint>
 #include "reader/orc/OrcFileOverride.hh"
 
-
 namespace omniruntime::connector::hive {
 namespace {
-
 struct SubfieldSpec {
-  const type::Subfield *subfield;
-  bool filterOnly;
+    const type::Subfield *subfield;
+    bool filterOnly;
 };
 
 inline bool isSynthesizedColumn(
     const std::string &name,
-    const std::unordered_map<std::string, std::shared_ptr<HiveColumnHandle>> &infoColumns)
+    const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>> &infoColumns)
 {
-  return infoColumns.count(name) != 0;
+    return infoColumns.count(name) != 0;
 }
 
 bool isSpecialColumn(const std::string &name,
-                     const std::optional<std::string> &specialName)
+                     const std::optional <std::string> &specialName)
 {
-  return specialName.has_value() && name == *specialName;
+    return specialName.has_value() && name == *specialName;
 }
 
 // Recursively add subfields to scan spec.
 void addSubfields(const type::DataType &type,
-    std::vector <SubfieldSpec> &subfields, int level,
-    codegen::ScanSpec &spec)
+                  std::vector <SubfieldSpec> &subfields, int level,
+                  codegen::ScanSpec &spec)
 {
     int newSize = 0;
     for (int i = 0; i < subfields.size(); ++i) {
@@ -76,14 +74,12 @@ void addSubfields(const type::DataType &type,
             break;
     }
 }
-
 } // namespace
 
 namespace {
-
 void processFieldSpec(const type::RowTypePtr &dataColumns,
-    const type::DataTypePtr &outputType,
-    codegen::ScanSpec &fieldSpec)
+                      const type::DataTypePtr &outputType,
+                      codegen::ScanSpec &fieldSpec)
 {
     fieldSpec.visit(*outputType,
                     [](const type::DataType &type, codegen::ScanSpec &spec) {});
@@ -97,18 +93,14 @@ void processFieldSpec(const type::RowTypePtr &dataColumns,
         }
     }
 }
-
 } // namespace
 
 std::shared_ptr <codegen::ScanSpec> makeScanSpec(
     const vec::RowTypePtr &rowType,
-    const std::unordered_map <std::string, std::vector<const type::Subfield *>>
-    &outputSubfields,
+    const std::unordered_map <std::string, std::vector<const type::Subfield *>> &outputSubfields,
     const vec::RowTypePtr &dataColumns,
-    const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>>
-    &partitionKeys,
-    const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>>
-    &infoColumns,
+    const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>> &partitionKeys,
+    const std::unordered_map <std::string, std::shared_ptr<HiveColumnHandle>> &infoColumns,
     const SpecialColumnNames &specialColumns)
 {
     auto spec = std::make_shared<codegen::ScanSpec>("root");
@@ -150,24 +142,23 @@ std::shared_ptr <codegen::ScanSpec> makeScanSpec(
 void configureReaderOptions(
     const std::shared_ptr<const HiveConfig> &hiveConfig,
     const std::shared_ptr<const HiveConnectorSplit> &hiveSplit,
-    std::shared_ptr <omniruntime::reader::ReaderOptions> &baseReaderOpts_)
+    std::shared_ptr <ReaderOptions> &baseReaderOpts)
 {
+    auto uri = stringToUriInfo(hiveSplit->getFilePath());
     switch (hiveSplit->getFileFormat()) {
-        case omniruntime::codegen::FileFormat::ORC: {
-            auto readerOptions = std::make_unique<orc::ReaderOptions>();
+        case FileFormat::ORC: {
+            auto orcReaderOptions = std::make_unique<::orc::ReaderOptions>();
             orc::MemoryPool *pool = orc::getDefaultPool();
-            readerOptions->setMemoryPool(*pool);
-            readerOptions->setTailLocation(std::numeric_limits<uint64_t>::max());
-            const std::string &SerializedFileTail = "";
-            readerOptions->setSerializedFileTail(SerializedFileTail);
-            auto orcReaderOptions = std::make_shared<OrcReaderOptions>(
-                std::shared_ptr<orc::ReaderOptions>(std::move(readerOptions))
-            );
-            baseReaderOpts_ = orcReaderOptions;
+            orcReaderOptions->setMemoryPool(*pool);
+            orcReaderOptions->setTailLocation(std::numeric_limits<uint64_t>::max());
+            const std::string SerializedFileTail = "";
+            orcReaderOptions->setSerializedFileTail(SerializedFileTail);
+            baseReaderOpts->SetUri(uri);
+            baseReaderOpts->SetOrcReaderOptions(std::shared_ptr<orc::ReaderOptions>(std::move(orcReaderOptions)));
             break;
         }
-        case omniruntime::codegen::FileFormat::PARQUET: {
-            throw std::runtime_error("Unsupported format PARQUET");
+        case FileFormat::PARQUET: {
+            baseReaderOpts->SetUri(uri);
             break;
         }
         default: {
@@ -178,35 +169,30 @@ void configureReaderOptions(
 }
 
 void configureRowReaderOptions(
-    const std::unordered_map <std::string, std::string> &tableParameters,
+    const std::shared_ptr<const HiveTableHandle> &hiveTableHandle,
     const omniruntime::type::RowTypePtr &rowType,
+    const omniruntime::type::RowTypePtr &fileRowType,
     const std::shared_ptr <omniruntime::codegen::ScanSpec> &scanSpec,
     const std::shared_ptr<const HiveConnectorSplit> &hiveSplit,
     const std::shared_ptr<const HiveConfig> &hiveConfig,
-    std::unique_ptr<::orc::SearchArgument> &searchArgument,
-    std::shared_ptr <omniruntime::reader::RowReaderOptions> &baseRowReaderOpts_)
+    std::shared_ptr <ReaderOptions> &baseReaderOpts)
 {
     switch (hiveSplit->getFileFormat()) {
-        case omniruntime::codegen::FileFormat::ORC: {
-            auto rowReaderOptions = std::make_unique<orc::RowReaderOptions>();
+        case FileFormat::ORC: {
+            auto rowReaderOptions = std::make_shared<orc::RowReaderOptions>();
             rowReaderOptions->range(hiveSplit->start, hiveSplit->length);
 
-            std::list <std::string> includedColumnsLenArray;
-            for (int i = 0; i < rowType->size(); i++) {
-                std::string name = rowType->nameOf(i);
-                includedColumnsLenArray.push_back(name);
-            }
+            std::list<std::string> includedColumnsLenArray = baseReaderOpts->GetIncludedColumnsList();
             rowReaderOptions->include(includedColumnsLenArray);
-            rowReaderOptions->searchArgument(std::unique_ptr<::orc::SearchArgument>(searchArgument.release()));
-
-            auto orcRowReaderOptions =
-                std::make_shared<omniruntime::reader::OrcRowReaderOptions>(
-                    std::shared_ptr<orc::RowReaderOptions>(std::move(rowReaderOptions)));
-            baseRowReaderOpts_ = orcRowReaderOptions;
+            rowReaderOptions->searchArgument(baseReaderOpts->releaseSearchArgument());
+            baseReaderOpts->SetOrcRowReaderOptions(rowReaderOptions);
+            baseReaderOpts->SetRowType(rowType);
+            baseReaderOpts->SetFileRowType(fileRowType);
             break;
         }
-        case omniruntime::codegen::FileFormat::PARQUET: {
-            throw std::runtime_error("Unsupported format PARQUET");
+        case FileFormat::PARQUET: {
+            baseReaderOpts->SetSplitStart(hiveSplit->start);
+            baseReaderOpts->SetSplitEnd(hiveSplit->start + hiveSplit->length);
             break;
         }
         default: {
@@ -216,7 +202,7 @@ void configureRowReaderOptions(
     }
 }
 
-UriInfo stringToUriInfo(std::string uriString)
+std::shared_ptr <UriInfo> stringToUriInfo(std::string uriString)
 {
     // 1. 提取 scheme (协议)
     size_t scheme_end = uriString.find("://");
@@ -262,30 +248,7 @@ UriInfo stringToUriInfo(std::string uriString)
         // 没有指定端口
     }
 
-    UriInfo uriInfo{schemaStr, fileStr, hostStr, std::to_string(port)};
-    return uriInfo;
+    return std::make_shared<UriInfo>(
+        uriString, schemaStr, fileStr, hostStr, std::to_string(port));
 }
-
-std::unique_ptr <omniruntime::reader::BufferInput> createBufferedInput(
-    std::shared_ptr <omniruntime::reader::ReaderOptions> readerOpts,
-    const std::shared_ptr<const HiveConnectorSplit> &hiveSplit)
-{
-    switch (readerOpts->GetFormat()) {
-        case omniruntime::codegen::FileFormat::ORC: {
-            UriInfo uri = stringToUriInfo(hiveSplit->getFilePath());
-            std::unique_ptr<::orc::InputStream> inputStream = omniruntime::reader::readFileOverride(uri);
-            return std::make_unique<omniruntime::reader::ORCBufferInput>(
-                std::move(inputStream));
-        }
-        case omniruntime::codegen::FileFormat::PARQUET: {
-            throw std::runtime_error("Unsupported format PARQUET");
-            break;
-        }
-        default: {
-            throw std::runtime_error("Unsupported format");
-            break;
-        }
-    }
-}
-
 }

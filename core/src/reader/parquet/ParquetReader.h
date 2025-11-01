@@ -26,82 +26,136 @@
 #include "ParquetColumnReader.h"
 #include "reader/common/UriInfo.h"
 #include "ParquetExpression.h"
+#include "reader/Reader.h"
 #include "reader/common/TimeRebaseInfo.h"
 
 using namespace arrow::internal;
 
 namespace omniruntime::reader {
 
-    class OmniRecordBatchReader {
-    public:
-        OmniRecordBatchReader(std::function<arrow::Status(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize)> batches)
-            : batches_(std::move(batches)) {}
+class OmniRecordBatchReader {
+public:
+    OmniRecordBatchReader(std::function<arrow::Status(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize)> batches)
+        : batches_(std::move(batches)) {}
 
-        ~OmniRecordBatchReader() {}
+    ~OmniRecordBatchReader() {}
 
-        arrow::Status ReadNext(std::vector<omniruntime::vec::BaseVector*> &out, long *batchRowSize) {
-            return batches_(out, batchRowSize);
+    arrow::Status ReadNext(std::vector<omniruntime::vec::BaseVector*> &out, long *batchRowSize) {
+        return batches_(out, batchRowSize);
+    }
+
+private:
+    std::function<arrow::Status(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize)> batches_;
+};
+
+class ParquetReader;
+class ParquetRowReader : public omniruntime::reader::RowReader {
+public:
+    explicit ParquetRowReader(ParquetReader &parquetReader) : parquetReader_(parquetReader) {}
+
+    ~ParquetRowReader() override = default;
+
+    uint64_t Next(uint64_t size, vec::VectorPtr &result) override {};
+
+    uint64_t NextDirect(std::vector<BaseVector *> *batch, int *omniTypeId, uint64_t batchLen) override {};
+
+    uint64_t Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen) override;
+
+private:
+    ParquetReader &parquetReader_;
+};
+
+
+class ParquetReader : public omniruntime::reader::Reader {
+public:
+    ParquetReader(
+        std::unique_ptr<common::TimeRebaseInfo> &rebaseInfoPtr,
+        const std::shared_ptr<ReaderOptions> &options) : rebaseInfoPtr(std::move(rebaseInfoPtr))
+    {
+        options_ = options;
+    }
+
+    arrow::Status InitReader(UriInfo &uri, int64_t capacity, std::string& ugi);
+
+    arrow::Status InitRecordReader(int64_t start, int64_t end, bool hasExpressionTree,
+        Expression pushedFilterArray, const std::vector<std::string>& fieldNames);
+
+    arrow::Status ReadNextBatch(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize);
+
+    std::unique_ptr<parquet::arrow::FileReader> arrow_reader;
+
+    std::unique_ptr<OmniRecordBatchReader> rb_reader;
+
+    std::vector<std::shared_ptr<ParquetColumnReader>> columnReaders;
+
+    arrow::MemoryPool* pool = arrow::default_memory_pool();
+
+    std::unique_ptr<RowReader> CreateRowReader() override
+    {
+        int64_t start = options_->GetSplitStart();
+        int64_t end = options_->GetSplitEnd();
+
+        auto jsonConfig = options_->GetEnhancementJson();
+        // Get Filter Expression
+        bool hasExpressionTree = jsonConfig->contains("expressionTree");
+        // todo zhangxin
+        Expression pushedFilterArray;
+        if (hasExpressionTree) {
+            auto expressionTree = jsonConfig->at("expressionTree");
+            auto result = omniruntime::reader::ParseToArrowExpression( expressionTree);
+            if (!result.ok()) {
+                throw OmniException(result.status().ToString().c_str());
+                return 0;
+            }
+            pushedFilterArray = result.MoveValueUnsafe();
         }
 
-    private:
-        std::function<arrow::Status(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize)> batches_;
-    };
+        auto fieldNames = GetFieldNames(*jsonConfig);
 
+        auto state = InitRecordReader(start, end, hasExpressionTree, pushedFilterArray, fieldNames);
+        if (state != Status::OK()) {
+            throw OmniException(state.ToString().c_str());
+            return 0;
+        }
 
-    class ParquetReader {
-    public:
-        ParquetReader(std::unique_ptr<common::TimeRebaseInfo> &rebaseInfoPtr) : rebaseInfoPtr(std::move(rebaseInfoPtr))
-        {}
+        auto rowReader = std::make_unique<ParquetRowReader>(*this);
+        return std::move(rowReader);
+    }
 
-        arrow::Status InitReader(UriInfo &uri, int64_t capacity, std::string& ugi);
+private:
+    arrow::Status GetRowGroupIndices(arrow::dataset::FileSource filesource, int64_t start, int64_t end,
+        bool hasExpressionTree, Expression pushedFilterArray, std::vector<int>& out);
 
-        arrow::Status InitRecordReader(int64_t start, int64_t end, bool hasExpressionTree,
-            Expression pushedFilterArray, const std::vector<std::string>& fieldNames);
+    arrow::Status GetColumnIndices(const std::vector<std::string>& vector, std::vector<int>& out);
 
-        arrow::Status ReadNextBatch(std::vector<omniruntime::vec::BaseVector*> &batch, long *batchRowSize);
+    arrow::Status GetRecordBatchReader(const std::vector<int> &row_group_indices, const std::vector<int> &column_indices);
 
-        std::unique_ptr<parquet::arrow::FileReader> arrow_reader;
+    arrow::Status GetFieldReaders(const std::vector<int> &row_group_indices, const std::vector<int> &column_indices,
+        std::vector<std::shared_ptr<ParquetColumnReader>>* out, std::shared_ptr<::arrow::Schema>* out_schema);
 
-        std::unique_ptr<OmniRecordBatchReader> rb_reader;
+    arrow::Status GetFieldReader(int i, const std::shared_ptr<std::unordered_set<int>>& included_leaves,
+        const std::vector<int> &row_group_indices, std::unique_ptr<ParquetColumnReader>* out);
 
-        std::vector<std::shared_ptr<ParquetColumnReader>> columnReaders;
+    arrow::Status GetReader(const parquet::arrow::SchemaField &field, const std::shared_ptr<arrow::Field> &arrow_field,
+        const std::shared_ptr<parquet::arrow::ReaderContext> &ctx, std::unique_ptr<ParquetColumnReader>* out);
 
-        arrow::MemoryPool* pool = arrow::default_memory_pool();
+    std::unique_ptr<common::TimeRebaseInfo> rebaseInfoPtr;
 
-    private:
-        arrow::Status GetRowGroupIndices(arrow::dataset::FileSource filesource, int64_t start, int64_t end,
-            bool hasExpressionTree, Expression pushedFilterArray, std::vector<int>& out);
+    std::shared_ptr<arrow::io::RandomAccessFile> file;
+};
 
-        arrow::Status GetColumnIndices(const std::vector<std::string>& vector, std::vector<int>& out);
+class Filesystem {
+public:
+    Filesystem() {}
 
-        arrow::Status GetRecordBatchReader(const std::vector<int> &row_group_indices, const std::vector<int> &column_indices);
+    /**
+     * File system holds the hdfs client, which should outlive the RecordBatchReader.
+     */
+    std::shared_ptr<arrow::fs::FileSystem> filesys_ptr;
+};
 
-        arrow::Status GetFieldReaders(const std::vector<int> &row_group_indices, const std::vector<int> &column_indices,
-            std::vector<std::shared_ptr<ParquetColumnReader>>* out, std::shared_ptr<::arrow::Schema>* out_schema);
+std::string GetFileSystemKey(std::string& path, std::string& ugi);
 
-        arrow::Status GetFieldReader(int i, const std::shared_ptr<std::unordered_set<int>>& included_leaves,
-            const std::vector<int> &row_group_indices, std::unique_ptr<ParquetColumnReader>* out);
-
-        arrow::Status GetReader(const parquet::arrow::SchemaField &field, const std::shared_ptr<arrow::Field> &arrow_field,
-            const std::shared_ptr<parquet::arrow::ReaderContext> &ctx, std::unique_ptr<ParquetColumnReader>* out);
-
-        std::unique_ptr<common::TimeRebaseInfo> rebaseInfoPtr;
-
-        std::shared_ptr<arrow::io::RandomAccessFile> file;
-    };
-
-    class Filesystem {
-    public:
-        Filesystem() {}
-
-        /**
-         * File system holds the hdfs client, which should outlive the RecordBatchReader.
-         */
-        std::shared_ptr<arrow::fs::FileSystem> filesys_ptr;
-    };
-
-    std::string GetFileSystemKey(std::string& path, std::string& ugi);
-
-    Filesystem* GetFileSystemPtr(UriInfo &uri, std::string& ugi, arrow::Status &status);
+Filesystem* GetFileSystemPtr(UriInfo &uri, std::string& ugi, arrow::Status &status);
 }
 #endif // OMNI_RUNTIME_PARQUETREADER_H

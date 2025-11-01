@@ -241,51 +241,28 @@ int initExpressionTree(SearchArgumentBuilder& builder,const nlohmann::json& json
     return 0;
 }
 
-void ParseEnhanceJson(nlohmann::json &json_config,
-    std::unique_ptr<common::JulianGregorianRebase>& julianPtr,
-    std::unique_ptr<common::PredicateCondition>& predicate,
+void ParseJson(nlohmann::json &jsonConfig,
+    std::list<std::string>& includedColumnsList,
+    std::shared_ptr<common::JulianGregorianRebase>& julianPtr,
+    std::shared_ptr<common::PredicateCondition>& predicate,
     std::unique_ptr<::orc::SearchArgument>& searchArgument)
 {
-    int64_t offset = 0;
-    if (json_config.contains("offset") && json_config["offset"].is_number()) {
-        offset = json_config["offset"].get<int64_t>();
-    }
-
-    int64_t length = 0;
-    if (json_config.contains("length") && json_config["length"].is_number()) {
-        length = json_config["length"].get<int64_t>();
-    }
-
-    std::list<std::string> includedColumnsList;
-    if (json_config.contains("includedColumns") && json_config["includedColumns"].is_string()) {
-        std::string colsStr = json_config["includedColumns"].get<std::string>();
-        std::stringstream ss(colsStr);
-        std::string col;
-        while (std::getline(ss, col, ',')) {
-            col.erase(0, col.find_first_not_of(" \t"));
-            col.erase(col.find_last_not_of(" \t") + 1);
-            if (!col.empty()) {
-                includedColumnsList.push_back(col);
-            }
-        }
-    }
-
-    if (json_config.contains("expressionTree") && json_config.contains("leaves")) {
-        const auto& exprTree = json_config["expressionTree"];
-        const auto& leaves = json_config["leaves"];
+    if (jsonConfig.contains("expressionTree") && jsonConfig.contains("leaves")) {
+        const auto& exprTree = jsonConfig["expressionTree"];
+        const auto& leaves = jsonConfig["leaves"];
 
         std::unique_ptr<SearchArgumentBuilder> builder = SearchArgumentFactory::newBuilder();
-        initExpressionTree(*builder, exprTree, leaves); // 需要你实现这个函数
+        initExpressionTree(*builder, exprTree, leaves);
         auto sargBuilded = builder->build();
         searchArgument = std::unique_ptr<SearchArgument>(sargBuilded.release());
     }
 
-    if (json_config.contains("tz") && json_config.contains("switches") && json_config.contains("diffs")) {
-        julianPtr = common::BuildJulianGregorianRebase(json_config);
+    if (jsonConfig.contains("tz") && jsonConfig.contains("switches") && jsonConfig.contains("diffs")) {
+        julianPtr = common::BuildJulianGregorianRebase(jsonConfig);
     }
 
-    if (json_config.contains("vecPredicateCondition")) {
-        predicate = common::BuildVecPredicateCondition(json_config, includedColumnsList.size());
+    if (jsonConfig.contains("vecPredicateCondition")) {
+        predicate = common::BuildVecPredicateCondition(jsonConfig, includedColumnsList.size());
     }
 }
 

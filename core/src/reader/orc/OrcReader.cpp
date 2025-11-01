@@ -1,82 +1,73 @@
 #include "OrcReader.h"
 #include "reader/Reader.h"
 #include "OmniColReader.hh"
+#include "reader/jni/OrcColumnarBatchJniReader.h"
 
 namespace omniruntime::reader {
 
-std::unique_ptr<OrcReader> Create(
-    std::shared_ptr <FileContents> &contents, std::unique_ptr <ORCBufferInput> &&orcBufferInput,
-    const ::orc::ReaderOptions &options)
+namespace
 {
-    std::unique_ptr<::orc::InputStream> stream = orcBufferInput->GetInputStream();
-    contents = std::make_shared<FileContents>();
-    contents->pool = options.getMemoryPool();
-    contents->errorStream = options.getErrorStream();
-    std::string serializedFooter = options.getSerializedFileTail();
-    uint64_t fileLength;
-    uint64_t postscriptLength;
-    if (serializedFooter.length() != 0) {
-        // Parse the file tail from the serialized one.
-        ::orc::proto::FileTail tail;
-        if (!tail.ParseFromString(serializedFooter)) {
-            throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT",
-                                                        "Failed to parse the file tail from string");
-        }
-        contents->postscript.reset(new ::orc::proto::PostScript(tail.postscript()));
-        contents->footer.reset(new ::orc::proto::Footer(tail.footer()));
-        fileLength = tail.filelength();
-        postscriptLength = tail.postscriptlength();
-    } else {
-        // figure out the size of the file using the option or filesystem
-        fileLength = std::min(options.getTailLocation(),
-                              static_cast<uint64_t>(stream->getLength()));
 
-        // read last bytes into buffer to get PostScript
-        uint64_t readSize = std::min(fileLength, ::orc::DIRECTORY_SIZE_GUESS);
-        static constexpr uint64_t MIN_ORC_POSTSCRIPT_SIZE = 4;
-        if (readSize < MIN_ORC_POSTSCRIPT_SIZE) {
-            throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", "File size too small");
-        }
-        auto buffer = std::make_unique<DataBuffer<char>>(*contents->pool, readSize);
-        stream->read(buffer->data(), readSize, fileLength - readSize);
-
-        postscriptLength = buffer->data()[readSize - 1] & 0xff;
-        contents->postscript = REDUNDANT_MOVE(readPostscript(stream.get(),
-                                                             buffer.get(), postscriptLength));
-        uint64_t footerSize = contents->postscript->footerlength();
-        uint64_t tailSize = 1 + postscriptLength + footerSize;
-        if (tailSize >= fileLength) {
-            std::string msg =
-                "Invalid ORC tailSize=" + std::to_string(tailSize) + ", fileLength=" + std::to_string(fileLength);
-            throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT", msg);
-        }
-        uint64_t footerOffset;
-
-        if (tailSize > readSize) {
-            buffer->resize(footerSize);
-            stream->read(buffer->data(), footerSize, fileLength - tailSize);
-            footerOffset = 0;
-        } else {
-            footerOffset = readSize - tailSize;
-        }
-
-        contents->footer = REDUNDANT_MOVE(readFooter(stream.get(), buffer.get(),
-                                                     footerOffset, *contents->postscript, *contents->pool));
+void ClearRecordBatch(std::vector<BaseVector*>& recordBatch)
+{
+    for (auto vec : recordBatch)
+    {
+        delete vec;
     }
-    contents->stream = std::move(stream);
-    return std::make_unique<OrcReader>(contents, options, fileLength, postscriptLength);
+    recordBatch.clear();
 }
 
-std::unique_ptr <RowReader> OrcReader::CreateRowReader(
-    std::shared_ptr <RowReaderOptions> options,
-    std::unique_ptr<common::JulianGregorianRebase> &julianPtr,
-    std::unique_ptr<common::PredicateCondition> &predicate)
+uint64_t FilterData(uint8_t *bitMark, std::vector<BaseVector*> *recordBatch, int32_t vectorSize,
+    const std::set<int32_t>& isNullSet, const std::set<int32_t>& isNotNullSet)
 {
-    std::shared_ptr<OrcRowReaderOptions> orcOptions = std::dynamic_pointer_cast<OrcRowReaderOptions>(options);
-    auto rowReader = std::make_unique<OrcRowReader>(
-        contents_, orcOptions->GetOrcRowReaderOptions(), julianPtr, predicate);
-    return std::move(rowReader);
+    std::vector<BaseVector*> resultBatch;
+    if (common::GetFlatBaseVectorsFromBitMark(*recordBatch, resultBatch, bitMark, vectorSize, isNullSet, isNotNullSet)) {
+        ClearRecordBatch(*recordBatch);
+        *recordBatch = std::move(resultBatch);
+        return (*recordBatch)[0]->GetSize();
+    }
+    // 失败返回原始的
+    ClearRecordBatch(resultBatch);
+    return vectorSize;
 }
+
+bool ReadAndFilterData(OrcRowReader& rowReaderPtr,
+std::vector<BaseVector*> *recordBatch, uint64_t &batchRowSize, int *omniTypeId, uint64_t batchLen)
+{
+    batchRowSize = rowReaderPtr.NextDirect(recordBatch, omniTypeId, batchLen);
+    std::shared_ptr<common::PredicateCondition>& predicateCondition = rowReaderPtr.GetPredicatePtr();
+    if (batchRowSize == 0 || predicateCondition == nullptr) {
+        return false;
+    }
+    try {
+        uint8_t *bitMark = predicateCondition->compute(*recordBatch);
+        int32_t vectorSize = (*recordBatch)[0]->GetSize();
+        if (omniruntime::BitUtil::CountBits(reinterpret_cast<const uint64_t *>(bitMark), 0, vectorSize) == 0) {
+            ClearRecordBatch(*recordBatch);
+            return true;
+        }
+        batchRowSize = FilterData(bitMark, recordBatch, vectorSize, predicateCondition->getIsAllNullColumns(),
+            predicateCondition->getIsAllNotNullColumns());
+    } catch (const std::exception &e) {
+        LogError("filterData fail: %s", e.what());
+    }
+    return false;
+}
+
+}
+
+OrcRowReader::OrcRowReader(std::shared_ptr<FileContents> contents, const std::shared_ptr<ReaderOptions>& options)
+: ::orc::RowReaderImpl(contents, options->GetOrcRowReaderOptions())
+{
+    contents_ = contents;
+    options_ = options;
+    julianDaysPtr = std::make_unique<common::JulianGregorianRebaseDays>();
+    julianPtr = options->GetJulianPtr();
+    predicatePtr = options->GetPredicatePtr();
+    rowType_ = options->GetRowType();
+    fileRowType_ = options->GetFileRowType();
+}
+
 
 void OrcRowReader::StartNextStripe()
 {
@@ -125,7 +116,7 @@ void OrcRowReader::StartNextStripe()
                                                currentStripeFooter, currentStripeInfo.offset(),
                                                *contents_->stream, writerTimezone,
                                                readerTimezone);
-        reader = omniruntime::reader::omniBuildReader(*contents_->schema, stripeStreams,
+        reader = omniruntime::reader::omniBuildReader(getSelectedType(), stripeStreams,
             (julianPtr == nullptr) ? nullptr : julianPtr.get());
 
         if (sargsApplier) {
@@ -140,7 +131,7 @@ void OrcRowReader::StartNextStripe()
     }
 }
 
-uint64_t OrcRowReader::Next(std::vector<omniruntime::vec::BaseVector *> *batch, int *omniTypeId, uint64_t batchLen)
+uint64_t OrcRowReader::NextDirect(std::vector<BaseVector *> *batch, int *omniTypeId, uint64_t batchLen)
 {
     if (currentStripe >= lastStripe) {
         if (lastStripe > 0) {
@@ -190,5 +181,32 @@ uint64_t OrcRowReader::Next(std::vector<omniruntime::vec::BaseVector *> *batch, 
         currentRowInStripe = 0;
     }
     return rowsToRead;
+}
+
+uint64_t OrcRowReader::Next(std::vector<BaseVector *> **batch, int *omniTypeId, uint64_t batchLen)
+{
+    auto recordBatch = new std::vector<BaseVector *>();
+    uint64_t batchRowSize = 0;
+    bool needReadAgain = ReadAndFilterData(*this, recordBatch, batchRowSize, omniTypeId, batchLen);
+    while (needReadAgain) {
+        needReadAgain = ReadAndFilterData(*this, recordBatch, batchRowSize, omniTypeId, batchLen);
+    }
+    *batch = recordBatch;
+    if (batchRowSize <= 0) {
+        return batchRowSize;
+    }
+
+    for (int i = 0; i < fileRowType_->size(); ++i) {
+        if (fileRowType_->childAt(i)->GetId() == type::DataTypeId::OMNI_DATE32) {
+            auto vector = recordBatch->at(i);
+            for (int j = 0; j < batchRowSize; ++j) {
+                auto intVector = reinterpret_cast<Vector<int32_t> *>(vector);
+                auto srcVal = intVector->GetValue(j);
+                auto finalVal = (GetJulianDaysPtr()->RebaseJulianToGregorianDays(srcVal));
+                intVector->SetValue(j, finalVal);
+            }
+        }
+    }
+    return batchRowSize;
 }
 }

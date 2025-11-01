@@ -30,7 +30,7 @@ class HiveColumnHandle;
 class HiveTableHandle;
 class HiveConfig;
 struct HiveConnectorSplit;
-using omniruntime::reader::OrcReaderOptions;
+using omniruntime::reader::ReaderOptions;
 
 struct SpecialColumnNames {
     std::optional<std::string> rowIndex;
@@ -51,18 +51,17 @@ std::shared_ptr<codegen::ScanSpec> makeScanSpec(
 void configureReaderOptions(
     const std::shared_ptr<const HiveConfig> &hiveConfig,
     const std::shared_ptr<const HiveConnectorSplit> &hiveSplit,
-    std::shared_ptr<omniruntime::reader::ReaderOptions> &baseReaderOpts_);
+    std::shared_ptr<ReaderOptions> &baseReaderOpts);
 
 void configureRowReaderOptions(
-    const std::unordered_map<std::string, std::string> &tableParameters,
+    const std::shared_ptr<const HiveTableHandle>  &hiveTableHandle,
     const omniruntime::type::RowTypePtr &rowType,
+    const omniruntime::type::RowTypePtr& fileRowType,
     const std::shared_ptr<omniruntime::codegen::ScanSpec> &scanSpec,
     const std::shared_ptr<const HiveConnectorSplit> &hiveSplit,
     const std::shared_ptr<const HiveConfig> &hiveConfig,
-    std::unique_ptr<::orc::SearchArgument> &searchArgument,
-    std::shared_ptr<omniruntime::reader::RowReaderOptions> &baseRowReaderOpts_);
+    std::shared_ptr<ReaderOptions> &baseReaderOpts);
 
-std::unique_ptr<omniruntime::reader::BufferInput> createBufferedInput(
-    std::shared_ptr<omniruntime::reader::ReaderOptions> readerOpts,
-    const std::shared_ptr<const HiveConnectorSplit> &hiveSplit);
+std::shared_ptr<UriInfo> stringToUriInfo(std::string uriString);
+
 }
