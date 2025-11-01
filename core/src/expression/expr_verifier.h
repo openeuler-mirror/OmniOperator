@@ -23,9 +23,14 @@ public:
     void Visit(const omniruntime::expressions::SwitchExpr &switchExpr) override;
     bool VisitExpr(const omniruntime::expressions::Expr &e);
     bool VisitExpr(const std::shared_ptr<const Expr> &e);
+    std::string& GetUnSupportedReason()
+    {
+        return unSupportedReason;
+    }
 
 private:
     bool supportedFlag = false;
+    std::string unSupportedReason = "";
     static bool AreInvalidDataTypes(omniruntime::type::DataTypeId type1, omniruntime::type::DataTypeId type2);
 };
 }
