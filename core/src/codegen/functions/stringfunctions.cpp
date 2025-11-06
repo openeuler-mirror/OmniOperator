@@ -538,8 +538,6 @@ extern "C" DLLEXPORT int8_t CastStringToByte(int64_t contextPtr, const char *str
     }
     int8_t result = 0;
     Status status = ConvertStringToInteger<int8_t, false>(result, str, strLen);
-    std::ostringstream errorMessage;
-    SetError(contextPtr, errorMessage.str());
     if (status == Status::IS_NOT_A_NUMBER) {
         std::string s(str, strLen);
         std::ostringstream errorMessage;
