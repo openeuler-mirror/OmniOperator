@@ -180,8 +180,7 @@ Expr *JSONParser::TryGetCastedExpr(const nlohmann::json &jsonExpr)
         Expr *leftExprCasted = leftDataId != returnDataId ? getCastFunc(leftExpr, resultType) : leftExpr;
         Expr *rightExprCasted = rightDataId != returnDataId ? getCastFunc(rightExpr, resultType) : rightExpr;
         return new BinaryExpr(op, leftExprCasted, rightExprCasted, resultType);
-    } else if (!IsComparisonOperator(op) && !TypeUtil::IsDecimalType(returnDataId)
-        && !TypeUtil::IsDecimalType(returnDataId) && !TypeUtil::IsDecimalType(returnDataId)) {
+    } else if (!IsComparisonOperator(op) && !TypeUtil::IsDecimalType(returnDataId)) {
         // 2. Not comparison and none of them are decimal. Int-like types can be casted according to Id
         Expr *binaryExpr;
         if (leftDataId > rightDataId) {
@@ -195,8 +194,7 @@ Expr *JSONParser::TryGetCastedExpr(const nlohmann::json &jsonExpr)
             return getCastFunc(binaryExpr, resultType);
         }
         return binaryExpr;
-    } else if (IsComparisonOperator(op) && !TypeUtil::IsDecimalType(returnDataId)
-    && !TypeUtil::IsDecimalType(returnDataId) && !TypeUtil::IsDecimalType(returnDataId)) {
+    } else if (IsComparisonOperator(op) && !TypeUtil::IsDecimalType(returnDataId)) {
         // 3. Comparison between int-like values. Similar as situation 1, but returnType is bool
         if (leftDataId > rightDataId) {
             Expr *castFunc = getCastFunc(rightExpr, leftExpr->GetReturnType());
