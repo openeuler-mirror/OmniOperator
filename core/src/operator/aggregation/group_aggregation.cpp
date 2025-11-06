@@ -750,6 +750,11 @@ void HashAggregationOperator::EmplaceToArrayMap(VectorBatch *vecBatch, BaseVecto
                     InsertValueToArrayMap<int16_t>(*this->arrayTable, groupVector, rowIdx);
                 }
                 break;
+            case OMNI_BYTE:
+                for (int32_t rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+                    InsertValueToArrayMap<int8_t>(*this->arrayTable, groupVector, rowIdx);
+                }
+                break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
@@ -779,6 +784,13 @@ void HashAggregationOperator::EmplaceToArrayMap(VectorBatch *vecBatch, BaseVecto
                 ArrayGroupProbeSIMD<int16_t, true>(groupVector, vecBatch);
             } else {
                 ArrayGroupProbeSIMD<int16_t, false>(groupVector, vecBatch);
+            }
+            break;
+        case OMNI_BYTE:
+            if (groupVector->HasNull()) {
+                ArrayGroupProbeSIMD<int8_t, true>(groupVector, vecBatch);
+            } else {
+                ArrayGroupProbeSIMD<int8_t, false>(groupVector, vecBatch);
             }
             break;
         case OMNI_LONG:
@@ -977,6 +989,9 @@ void HashAggregationOperator::TraverseArrayMap(BaseVector *groupVector,
             break;
         case OMNI_SHORT:
             TraverseArrayMapGetOutput<hasAgg, int16_t>(groupVector, states, minValue);
+            break;
+        case OMNI_BYTE:
+            TraverseArrayMapGetOutput<hasAgg, int8_t>(groupVector, states, minValue);
             break;
         case OMNI_LONG:
         case OMNI_TIMESTAMP:

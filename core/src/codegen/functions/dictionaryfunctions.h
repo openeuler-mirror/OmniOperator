@@ -17,6 +17,10 @@ namespace omniruntime::codegen::function {
 
 extern DLLEXPORT int32_t GetIntFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
+extern DLLEXPORT int8_t GetByteFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+
+extern DLLEXPORT int16_t GetShortFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
+
 extern DLLEXPORT int64_t GetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);
 
 extern DLLEXPORT double GetDoubleFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index);

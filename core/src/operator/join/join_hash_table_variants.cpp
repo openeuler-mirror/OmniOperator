@@ -49,6 +49,9 @@ JoinHashTableVariants<KeyType, RowRefListType>::JoinHashTableVariants(uint32_t h
         for (const int32_t buildHashCol : buildHashCols) {
             auto type = buildTypes->GetIds()[buildHashCol];
             switch (type) {
+                case OMNI_BYTE:
+                    fixedKeysSize += OperatorUtil::SIZE_OF_BYTE;
+                    break;
                 case OMNI_INT:
                 case OMNI_DATE32:
                     fixedKeysSize += OperatorUtil::SIZE_OF_INT;
@@ -107,6 +110,12 @@ void JoinHashTableVariants<KeyType, RowRefListType>::ComputeMultiColKey(
                   std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
         for (int i = 0; i < hashColCount; ++i) {
             switch (hashColumns[i]->GetTypeId()) {
+                case OMNI_BYTE:
+                    key = static_cast<KeyType>(key) << BITS_OF_BYTE | static_cast<KeyType>(
+                        hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
+                        reinterpret_cast<Vector<DictionaryContainer<int8_t>> *>(hashColumns[i])->GetValue(index)
+                        : reinterpret_cast<Vector<int8_t> *>(hashColumns[i])->GetValue(index));
+                    break;
                 case OMNI_SHORT:
                     key = static_cast<KeyType>(key) << BITS_OF_SHORT | static_cast<KeyType>(
                         hashColumns[i]->GetEncoding() == OMNI_DICTIONARY ?
@@ -143,16 +152,17 @@ InsertResult<RowRefListType *> JoinHashTableVariants<KeyType, RowRefListType>::F
 {
     KeyType key;
     if (isMultiCols) {
-        if constexpr (std::is_same_v<KeyType, int32_t> ||
-                      std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
+        if constexpr (std::is_same_v<KeyType, int8_t> || std::is_same_v<KeyType, int16_t> ||
+                      std::is_same_v<KeyType, int32_t> || std::is_same_v<KeyType, int64_t> ||
+                      std::is_same_v<KeyType, int128_t>) {
             key = 0;
         }
         ComputeMultiColKey(probeHashColumns, probeHashColCount, probePosition, key);
         return hashTables[partition]->FindValueFromHashmap(key);
     }
 
-    if constexpr (std::is_same_v<KeyType, int16_t> || std::is_same_v<KeyType, int32_t> ||
-        std::is_same_v<KeyType, int64_t>) {
+    if constexpr (std::is_same_v<KeyType, int8_t> || std::is_same_v<KeyType, int16_t> ||
+                  std::is_same_v<KeyType, int32_t> || std::is_same_v<KeyType, int64_t>) {
         if (probeHashColumns[0]->GetEncoding() != OMNI_DICTIONARY) {
             auto curVector = reinterpret_cast<Vector<KeyType> *>(probeHashColumns[0]);
             key = curVector->GetValue(probePosition);
@@ -342,8 +352,9 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceMultiNotNullKeyToNor
             unNullKey = unNullKey && (!buildVectors[i]->IsNull(offset));
         }
         if (LIKELY(unNullKey)) {
-            if constexpr (std::is_same_v<KeyType, int32_t> ||
-                          std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
+            if constexpr (std::is_same_v<KeyType, int8_t> || std::is_same_v<KeyType, int16_t> ||
+                          std::is_same_v<KeyType, int32_t> || std::is_same_v<KeyType, int64_t> ||
+                          std::is_same_v<KeyType, int128_t>) {
                 key = 0;
             }
             ComputeMultiColKey(buildVectors, buildHashCols.size(), offset, key);
@@ -376,8 +387,9 @@ void JoinHashTableVariants<KeyType, RowRefListType>::EmplaceMultiKeyToNormalHash
             unNullKey = unNullKey && (!buildVectors[i]->IsNull(offset));
         }
         if (LIKELY(unNullKey)) {
-            if constexpr (std::is_same_v<KeyType, int32_t> ||
-                          std::is_same_v<KeyType, int64_t> || std::is_same_v<KeyType, int128_t>) {
+            if constexpr (std::is_same_v<KeyType, int8_t> || std::is_same_v<KeyType, int16_t> ||
+                          std::is_same_v<KeyType, int32_t> || std::is_same_v<KeyType, int64_t> ||
+                          std::is_same_v<KeyType, int128_t>) {
                 key = 0;
             }
             ComputeMultiColKey(buildVectors, buildHashCols.size(), offset, key);
@@ -707,6 +719,13 @@ void JoinHashTableVariants<KeyType, RowRefListType>::BuildHashTable(int32_t part
             case omniruntime::type::OMNI_LONG: {
                 int64_t min;
                 int64_t max;
+                shouldBuildArrayTable =
+                    TryToBuildArrayTable(buildHashCols[0], min, max, lengthOfArrayHT, partitionIndex);
+                break;
+            }
+            case omniruntime::type::OMNI_BYTE: {
+                int8_t min;
+                int8_t max;
                 shouldBuildArrayTable =
                     TryToBuildArrayTable(buildHashCols[0], min, max, lengthOfArrayHT, partitionIndex);
                 break;

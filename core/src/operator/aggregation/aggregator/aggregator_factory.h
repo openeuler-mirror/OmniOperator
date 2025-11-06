@@ -31,6 +31,9 @@ protected:
             case OMNI_BOOLEAN:
                 return FromKnownOutput<OMNI_BOOLEAN>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
+            case OMNI_BYTE:
+                return FromKnownOutput<OMNI_BYTE>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
             case OMNI_SHORT:
                 return FromKnownOutput<OMNI_SHORT>(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);
@@ -79,6 +82,9 @@ protected:
             case OMNI_BOOLEAN:
                 return T<OMNI_BOOLEAN, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels,
                     inputRaw, outputPartial, isOverflowAsNull);
+            case OMNI_BYTE:
+                return T<OMNI_BYTE, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
+                    outputPartial, isOverflowAsNull);
             case OMNI_SHORT:
                 return T<OMNI_SHORT, OUT_ID>::Create(std::move(inputTypes), std::move(outputTypes), channels, inputRaw,
                     outputPartial, isOverflowAsNull);

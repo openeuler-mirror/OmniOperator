@@ -30,6 +30,14 @@ int64_t ALWAYS_INLINE HashLong(int64_t val, int64_t seed)
     return hash;
 }
 
+extern "C" DLLEXPORT int64_t XxH64Int8(int8_t val, bool isValNull, int64_t seed, bool isSeedNull)
+{
+    if (isSeedNull) {
+        seed = 0;
+    }
+    return isValNull ? seed : HashInt(static_cast<int32_t>(val), seed);
+}
+
 extern "C" DLLEXPORT int64_t XxH64Int16(int16_t val, bool isValNull, int64_t seed, bool isSeedNull)
 {
     if (isSeedNull) {

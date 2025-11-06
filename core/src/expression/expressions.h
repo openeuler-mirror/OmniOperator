@@ -91,6 +91,7 @@ class LiteralExpr : public Expr {
 public:
     bool isNull = false;
     bool boolVal = false;
+    int8_t byteVal = 0;
     int16_t shortVal = 0;
     int32_t intVal = 0;
     int64_t longVal = 0;
@@ -100,6 +101,8 @@ public:
     LiteralExpr();
     ~LiteralExpr() override;
     explicit LiteralExpr(bool val, DataTypePtr colType);
+    explicit LiteralExpr(int8_t val, DataTypePtr colType, bool isNull = false);
+    explicit LiteralExpr(int16_t val, DataTypePtr colType, bool isNull = false);
     explicit LiteralExpr(int32_t val, DataTypePtr colType, bool isNull = false);
     explicit LiteralExpr(int64_t val, DataTypePtr colType);
     explicit LiteralExpr(double val, DataTypePtr colType);

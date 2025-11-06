@@ -112,6 +112,9 @@ public class DictionaryVec extends FixedWidthVec {
             case OMNI_SHORT:
                 setValue(size, (ShortVec) vector);
                 break;
+            case OMNI_BYTE:
+                setValue(size, (ByteVec) vector);
+                break;
             case OMNI_BOOLEAN:
                 setValue(size, (BooleanVec) vector);
                 break;
@@ -158,6 +161,14 @@ public class DictionaryVec extends FixedWidthVec {
         for (int i = 0; i < size; i++) {
             if (!vector.isNull(i)) {
                 vector.set(i, getShort(i));
+            }
+        }
+    }
+
+    private void setValue(int size, ByteVec vector) {
+        for (int i = 0; i < size; i++) {
+            if (!vector.isNull(i)) {
+                vector.set(i, getByte(i));
             }
         }
     }
@@ -216,6 +227,17 @@ public class DictionaryVec extends FixedWidthVec {
     public short getShort(int index) {
         int originIndex = getId(index);
         return JvmUtils.UNSAFE.getShort(dataAddress + originIndex * Short.BYTES);
+    }
+
+    /**
+     * get the specified byte at the specified absolute.
+     *
+     * @param index the element offset in vec
+     * @return byte value
+     */
+    public byte getByte(int index) {
+        int originIndex = getId(index);
+        return JvmUtils.UNSAFE.getByte(dataAddress + originIndex * Byte.BYTES);
     }
 
     /**

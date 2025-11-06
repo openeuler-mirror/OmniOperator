@@ -293,12 +293,10 @@ void LookupJoinOperator::PrepareCurrentProbe()
         isSingleHT &&
         std::visit([&](auto&& arg) { return arg.CanProbeSIMD(probeHashColumns, probeHashCols.size(), partitionMask); },
                    *hashTables);
-    if (isSingleHT) {
-        if (!probeSimd) {
-            curProbeNulls.resize(curInputBatch->GetRowCount());
-            std::fill(curProbeNulls.begin(), curProbeNulls.end(), 0);
-            PopulateProbeNulls();
-        }
+    if (isSingleHT && !probeSimd) {
+        curProbeNulls.resize(curInputBatch->GetRowCount());
+        std::fill(curProbeNulls.begin(), curProbeNulls.end(), 0);
+        PopulateProbeNulls();
     } else {
         curProbeNulls.resize(curInputBatch->GetRowCount());
         std::fill(curProbeNulls.begin(), curProbeNulls.end(), 0);
@@ -1407,8 +1405,9 @@ template <bool hasJoinFilter, bool singleHT> void LookupJoinOperator::ProbeBatch
                     ProbeJoinPosition<hasJoinFilter>(probePosition);
                     while (it.IsOk()) {
                         if constexpr (hasJoinFilter) {
-                            hasProduceRow = BuildJoinPosition(partition, it->rowIdx, it->vecBatchIdx, contextPtr);
-                            if (hasProduceRow) {
+                            auto filterResult = BuildJoinPosition(partition, it->rowIdx, it->vecBatchIdx, contextPtr);
+                            if (filterResult) {
+                                hasProduceRow = true;
                                 outputBuilder->AppendExistenceRow<true>(probePosition);
                                 break;
                             }
@@ -1911,6 +1910,9 @@ void NO_INLINE LookupJoinOutputBuilder::ConstructBuildColumns(VectorBatch *vecto
                 break;
             case OMNI_BOOLEAN:
                 buildColumn = ConstructBuildColumn<bool, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
+                break;
+            case OMNI_BYTE:
+                buildColumn = ConstructBuildColumn<int8_t, isInnerJoin, isShuffleExchangeBuildPlan>(buildTemp, outputCol, rowCount);
                 break;
             default:
                 break;

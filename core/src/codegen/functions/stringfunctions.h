@@ -72,6 +72,10 @@ extern "C" DLLEXPORT int32_t CastStringToDateAllowReducePrecison(int64_t context
 // Cast numeric type to string
 extern "C" DLLEXPORT const char *CastIntToString(int64_t contextPtr, int32_t value, bool isNull, int32_t *outLen);
 
+extern "C" DLLEXPORT const char *CastInt16ToString(int64_t contextPtr, int16_t value, bool isNull, int32_t *outLen);
+
+extern "C" DLLEXPORT const char *CastInt8ToString(int64_t contextPtr, int8_t value, bool isNull, int32_t *outLen);
+
 extern "C" DLLEXPORT const char *CastLongToString(int64_t contextPtr, int64_t value, bool isNull, int32_t *outLen);
 
 extern "C" DLLEXPORT const char *CastDoubleToString(int64_t contextPtr, double value, bool isNull, int32_t *outLen);
@@ -86,6 +90,11 @@ extern "C" DLLEXPORT const char *CastStrWithDiffWidths(int64_t contextPtr, const
     int32_t srcWidth, bool isNull, int32_t dstWidth, int32_t *outLen);
 
 // Cast string to numeric type
+
+extern "C" DLLEXPORT int8_t CastStringToByte(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
+
+extern "C" DLLEXPORT int16_t CastStringToShort(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
+
 extern "C" DLLEXPORT int32_t CastStringToInt(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
 
 extern "C" DLLEXPORT int64_t CastStringToLong(int64_t contextPtr, const char *str, int32_t strLen, bool isNull);
@@ -291,6 +300,12 @@ extern "C" DLLEXPORT int32_t CastStringToDateRetNullNotAllowReducePrecison(bool 
 extern "C" DLLEXPORT const char *CastIntToStringRetNull(int64_t contextPtr, bool *isNull, int32_t value,
     int32_t *outLen);
 
+extern "C" DLLEXPORT const char *CastInt16ToStringRetNull(int64_t contextPtr, bool *isNull, int16_t value,
+    int32_t *outLen);
+
+extern "C" DLLEXPORT const char *CastInt8ToStringRetNull(int64_t contextPtr, bool *isNull, int8_t value,
+    int32_t *outLen);
+
 extern "C" DLLEXPORT const char *CastLongToStringRetNull(int64_t contextPtr, bool *isNull, int64_t value,
     int32_t *outLen);
 
@@ -302,6 +317,11 @@ extern "C" DLLEXPORT const char *CastDecimal64ToStringRetNull(int64_t contextPtr
 
 extern "C" DLLEXPORT const char *CastDecimal128ToStringRetNull(int64_t contextPtr, bool *isNull, int64_t high,
     uint64_t low, int32_t precision, int32_t scale, int32_t *outLen);
+
+
+extern "C" DLLEXPORT int8_t CastStringToByteRetNull(bool *isNull, const char *str, int32_t strLen);
+
+extern "C" DLLEXPORT int16_t CastStringToShortRetNull(bool *isNull, const char *str, int32_t strLen);
 
 extern "C" DLLEXPORT int32_t CastStringToIntRetNull(bool *isNull, const char *str, int32_t strLen);
 

@@ -38,6 +38,8 @@ std::vector<Function> HashFunctionRegistry::GetFunctions()
             INPUT_DATA_AND_NULL),
         Function(reinterpret_cast<void *>(Mm3Boolean), mm3FnStr, {}, { OMNI_BOOLEAN, OMNI_INT }, retTypeInt,
             INPUT_DATA_AND_NULL),
+        Function(reinterpret_cast<void *>(XxH64Int8), xxH64FnStr, {}, { OMNI_BYTE, OMNI_LONG }, retTypeLong,
+            INPUT_DATA_AND_NULL),
         Function(reinterpret_cast<void *>(XxH64Int16), xxH64FnStr, {}, { OMNI_SHORT, OMNI_LONG }, retTypeLong,
             INPUT_DATA_AND_NULL),
         Function(reinterpret_cast<void *>(XxH64Int32), xxH64FnStr, {}, { OMNI_INT, OMNI_LONG }, retTypeLong,

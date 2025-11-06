@@ -90,6 +90,9 @@ ErrorCode SpillReader::ReadVecBatch(std::unique_ptr<vec::VectorBatch> &vectorBat
             case OMNI_DECIMAL128:
                 result = ReadVector<Decimal128>(vector, rowCount);
                 break;
+            case OMNI_BYTE:
+                result = ReadVector<int8_t>(vector, rowCount);
+                break;
             default:
                 result = ErrorCode::READ_FAILED;
                 break;
@@ -235,6 +238,9 @@ void SpillMerger::SetCompareFunctions(const type::DataTypes &dataTypes, const st
                 break;
             case OMNI_DECIMAL128:
                 SetCompareFunction<Decimal128>(isAscending, isNullsFirst, sortCompareFuncs);
+                break;
+            case OMNI_BYTE:
+                SetCompareFunction<int8_t>(isAscending, isNullsFirst, sortCompareFuncs);
                 break;
             default:
                 break;

@@ -26,6 +26,7 @@ import nova.hetu.omniruntime.vector.LongVec;
 import nova.hetu.omniruntime.vector.OmniBuffer;
 import nova.hetu.omniruntime.vector.OmniBufferFactory;
 import nova.hetu.omniruntime.vector.ShortVec;
+import nova.hetu.omniruntime.vector.ByteVec;
 import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
@@ -120,6 +121,7 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
 
     private void setProtoDataTypeExt(VecBatchSerde.DataTypeExt.Builder protoDataTypeExtBuild, DataType dataType) {
         switch (dataType.getId()) {
+            case OMNI_BYTE:
             case OMNI_INT:
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
@@ -268,6 +270,9 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
             VecBatchSerde.Vec protoVec) {
         Vec vec;
         switch (dataTypeId) {
+            case OMNI_BYTE:
+                vec = new ByteVec(vecSize);
+                break;
             case OMNI_INT:
             case OMNI_DATE32:
                 vec = new IntVec(vecSize);

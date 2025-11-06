@@ -125,6 +125,9 @@ public class DataTypeSerializer {
                 case OMNI_SHORT:
                     subType = ShortDataType.class;
                     break;
+                case OMNI_BYTE:
+                    subType = ByteDataType.class;
+                    break;
                 case OMNI_CONTAINER:
                     subType = ContainerDataType.class;
                     break;
