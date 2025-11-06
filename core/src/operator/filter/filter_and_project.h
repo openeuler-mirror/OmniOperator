@@ -94,39 +94,13 @@ private:
 
 OperatorFactory *CreateFilterOperatorFactory(
     std::shared_ptr<const FilterNode> filterNode, const config::QueryConfig &queryConfig);
-    
-struct BitMaskIndex {
-    BitMaskIndex()
-    {
-        for (unsigned int i = 0; i < (1 << N); i++) {
-            unsigned int startIndex = i * (N + 1);
-            unsigned int index = startIndex;
-            for (int bit = 0; bit < N; bit++) {
-                if (i & (1 << bit)) {
-                    memo_[++index] = bit;
-                }
-            }
-            memo_[startIndex] = index - startIndex;
-        }
-    }
-
-    const inline uint8_t* operator[](size_t i) const
-    {
-        return memo_ + (i * (N + 1));
-    }
-
-private:
-    static constexpr unsigned int N = 8;
-    uint8_t memo_[(1 << N) * (N + 1)]{0};
-};
 
 class FilterAndProjectOperator : public Operator {
 public:
-    explicit FilterAndProjectOperator(std::shared_ptr<ExpressionEvaluator> &exprEvaluator, bool supportVectorized = false)
-        : projectedVecs(nullptr), exprEvaluator(exprEvaluator), supportVectorized(supportVectorized)
+    explicit FilterAndProjectOperator(std::shared_ptr<ExpressionEvaluator> &exprEvaluator)
+        : projectedVecs(nullptr), exprEvaluator(exprEvaluator)
     {
         SetOperatorName(metricsNameFilter);
-        filterExpr = exprEvaluator->GetFilterExpression();
     }
 
     ~FilterAndProjectOperator() override = default;
@@ -137,29 +111,12 @@ public:
 
     bool ProcessRow(int64_t valueAddrs[], const int32_t inputLens[], int64_t outValueAddrs[], int32_t outLens[]);
 
-    void HandleVectorizedFilter(omniruntime::vec::VectorBatch *vecBatch);
-
     OmniStatus Close() override;
-
-    omniruntime::vec::VectorBatch* GetVecBatchFromBitMark(omniruntime::vec::VectorBatch &vecBatch,
-        uint8_t *bitMark, int32_t originalRowCount);
-
-    BaseVector *CopyPositionsFromBitMark(DataTypeId dataType, int rowCount, BaseVector *baseVector, const uint8_t *bitMark, int32_t length);
-
-    void SetMapVectorValue(int32_t rowCount, MapVector *baseVector, MapVector *selectedBaseVector, const uint8_t *bitMark);
-
-    template <typename FlatVector, typename RAW_DATA_TYPE>
-    void SetFlatVectorValue(int32_t rowCount, BaseVector *baseVector, BaseVector *selectedBaseVector, const uint8_t *bitMark);
-
-    void SetStringVectorValue(int32_t rowCount, Vector<LargeStringContainer<std::string_view>> *baseVector,
-                              Vector<LargeStringContainer<std::string_view>> *selectedBaseVector, const uint8_t *bitMark);
 
 private:
     omniruntime::mem::AlignedBuffer<int32_t> selectedRowsBuffer;
     omniruntime::vec::VectorBatch *projectedVecs;
     std::shared_ptr<ExpressionEvaluator> &exprEvaluator;
-    const bool supportVectorized;
-    Expr *filterExpr;
 };
 
 class FilterAndProjectOperatorFactory : public OperatorFactory {
@@ -174,11 +131,8 @@ public:
 
     Operator *CreateOperator() override;
 
-    bool SupportVectorizedCheck(Expr* filter);
-
 private:
     std::shared_ptr<ExpressionEvaluator> exprEvaluator;
-    bool supportVectorized = false;
 };
 } // namespace op
 } // namespace omniruntime

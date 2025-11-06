@@ -50,112 +50,6 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
     }
 }
 
-BaseVector *FlatComplexVector(BaseVector *vector, FieldExpr *expr)
-{
-    BaseVector *newVector = vector;
-    if (expr->input != nullptr) {
-        switch (expr->input->dataType->GetId()) {
-            case OMNI_ROW: {
-                auto rowVector = reinterpret_cast<RowVector *>(newVector);
-                return FlatComplexVector(rowVector->ChildAt(expr->ordinal).get(),
-                    reinterpret_cast<FieldExpr *>(expr->input));
-            }
-            default:
-                throw std::runtime_error("Unsupported data type in FlatComplexVector!");
-        }
-    }
-    return newVector;
-}
-
-int32_t GetColVec(FieldExpr *expr)
-{
-    if (expr->input != nullptr) {
-        return GetColVec(reinterpret_cast<FieldExpr *>(expr->input));
-    }
-    return expr->colVal;
-}
-
-void ReSetColVec(const DataTypes &types, const std::vector<std::vector<FieldExpr *>> &complexFields,
-    std::vector<DataTypePtr> &dataTypes)
-{
-    const int vectorCount = types.GetSize();
-    auto typeIds = types.Get();
-    int32_t index = 0;
-    for (auto type : typeIds) {
-        dataTypes.push_back(type);
-    }
-    for (auto fieldExprs : complexFields) {
-        for (auto fieldExpr : fieldExprs) {
-            fieldExpr->oColVal = GetColVec(fieldExpr);
-            fieldExpr->colVal = vectorCount + index;
-            dataTypes.push_back(fieldExpr->dataType);
-            ++index;
-        }
-    }
-}
-
-void FlatVector(VectorBatch *vecBatch, const std::vector<std::vector<FieldExpr *>> &complexFields)
-{
-    for (auto fields : complexFields) {
-        for (auto field : fields) {
-            vecBatch->AppendFlat(FlatComplexVector(vecBatch->Get(field->oColVal), field));
-        }
-    }
-}
-
-int32_t GetStructColId(FieldExpr *expr)
-{
-    if (expr->input != nullptr) {
-        return GetStructColId(reinterpret_cast<FieldExpr *>(expr->input));
-    }
-    return expr->colVal;
-}
-
-void ComputeFieldExpr(Expr *expr, std::vector<std::vector<FieldExpr *>> &result)
-{
-    if (auto e = dynamic_cast<FieldExpr *>(expr)) {
-        if (e->input != nullptr) {
-            result[GetStructColId(e)].push_back(e);
-        }
-    } else if (auto e = dynamic_cast<FuncExpr *>(expr)) {
-        for (const auto arg : e->arguments) {
-            ComputeFieldExpr(arg, result);
-        }
-    } else if (auto e = dynamic_cast<BinaryExpr *>(expr)) {
-        ComputeFieldExpr(e->left, result);
-        ComputeFieldExpr(e->right, result);
-    } else if (dynamic_cast<LiteralExpr *>(expr)) {
-        return;
-    } else if (auto e = dynamic_cast<UnaryExpr *>(expr)) {
-        ComputeFieldExpr(e->exp, result);
-    } else if (auto e = dynamic_cast<IsNullExpr *>(expr)) {
-        ComputeFieldExpr(e->value, result);
-    } else if (auto e = dynamic_cast<IfExpr *>(expr)) {
-        ComputeFieldExpr(e->condition, result);
-        ComputeFieldExpr(e->trueExpr, result);
-        ComputeFieldExpr(e->falseExpr, result);
-    } else if (auto e = dynamic_cast<InExpr *>(expr)) {
-        for (auto arg : e->arguments) {
-            ComputeFieldExpr(arg, result);
-        }
-    } else if (auto e = dynamic_cast<BetweenExpr *>(expr)) {
-        ComputeFieldExpr(e->value, result);
-        ComputeFieldExpr(e->lowerBound, result);
-        ComputeFieldExpr(e->upperBound, result);
-    } else if (auto e = dynamic_cast<CoalesceExpr *>(expr)) {
-        ComputeFieldExpr(e->value1, result);
-        ComputeFieldExpr(e->value2, result);
-    } else if (auto e = dynamic_cast<SwitchExpr *>(expr)) {
-        ComputeFieldExpr(e->falseExpr, result);
-        for (auto arg : e->whenClause) {
-            ComputeFieldExpr(arg.first, result);
-            ComputeFieldExpr(arg.second, result);
-        }
-    } else {
-        throw std::runtime_error("Unsupported expr type in ComputeFieldExpr!");
-    }
-}
-
 void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[], intptr_t offsetAddrs[],
     intptr_t dictionaries[], const DataTypes &types)
 {
@@ -165,40 +59,6 @@ void GetAddr(VectorBatch &vecBatch, intptr_t valueAddrs[], intptr_t nullAddrs[],
     int32_t size = std::min(vectorCount, types.GetSize());
     for (int32_t i = 0; i < size; i++) {
         auto colVec = vecBatch.Get(i);
-        if (types.GetType(i)->GetId() == OMNI_ROW || types.GetType(i)->GetId() == OMNI_MAP) {
-            dictionaries[i] = 0;
-            nullAddrs[i] = reinterpret_cast<intptr_t>(unsafe::UnsafeBaseVector::GetNulls(colVec));
-            continue;
-        }
-        dictVecAddress = 0;
-        valuesAddress = 0;
-        if (colVec->GetEncoding() == OMNI_DICTIONARY) {
-            dictVecAddress = reinterpret_cast<intptr_t>(reinterpret_cast<void *>(colVec));
-        } else {
-            valuesAddress = GetRawAddr(types, i, colVec);
-        }
-
-        // data handling
-        dictionaries[i] = dictVecAddress;
-        valueAddrs[i] = valuesAddress;
-
-        // nulls handling
-        nullAddrs[i] = reinterpret_cast<intptr_t>(unsafe::UnsafeBaseVector::GetNulls(colVec));
-
-        // offsets handling
-        offsetAddrs[i] = reinterpret_cast<intptr_t>(VectorHelper::UnsafeGetOffsetsAddr(colVec));
-    }
-}
-
-void GetAddr(std::vector<BaseVector *> vectors, intptr_t valueAddrs[], intptr_t nullAddrs[], intptr_t offsetAddrs[],
-    intptr_t dictionaries[], const DataTypes &types)
-{
-    intptr_t valuesAddress;
-    intptr_t dictVecAddress;
-    uint32_t vectorCount = vectors.size();
-
-    for (uint32_t i = 0; i < vectorCount; i++) {
-        auto colVec = vectors[i];
         dictVecAddress = 0;
         valuesAddress = 0;
         if (colVec->GetEncoding() == OMNI_DICTIONARY) {
@@ -290,7 +150,8 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
             literalVal.value.stringVal = std::string_view(*(literalExpr->stringVal));
             break;
         }
-        default: LogError("Do not support such vector type %d", outType->GetId());
+        default:
+            LogError("Do not support such vector type %d", outType->GetId());
             return false;
     }
     return true;
@@ -661,21 +522,9 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
 {
     hasFilter = true;
     filterExpr = filterExpression;
-    std::vector<std::vector<FieldExpr *>> tmpFieldExprMap(inputTypes.GetSize());
     for (auto &projectionExpr : projectionExprs) {
-        projectionExpr->isRoot = true;
-        ComputeFieldExpr(projectionExpr, tmpFieldExprMap);
         projExprs.emplace_back(projectionExpr);
     }
-    ComputeFieldExpr(filterExpression, tmpFieldExprMap);
-    for (auto fieldVector : tmpFieldExprMap) {
-        if (!fieldVector.empty()) {
-            fieldExprMap.push_back(fieldVector);
-        }
-    }
-    std::vector<DataTypePtr> flatDataTypes;
-    ReSetColVec(inputDataTypes, fieldExprMap, flatDataTypes);
-    this->inputTypes = DataTypes(flatDataTypes);
     overflowConfig = std::make_unique<OverflowConfig>(*ofConfig);
     projectVecCount = static_cast<int32_t>(projectionExprs.size());
 
@@ -699,20 +548,10 @@ ExpressionEvaluator::ExpressionEvaluator(const std::vector<Expr *> &projectionEx
     : inputTypes(const_cast<DataTypes &>(inputDataTypes))
 {
     hasFilter = false;
-    std::vector<std::vector<FieldExpr *>> tmpFieldExprMap(inputTypes.GetSize());
     for (auto &projectionExpr : projectionExprs) {
         projectionExpr->isRoot = true;
-        ComputeFieldExpr(projectionExpr, tmpFieldExprMap);
         projExprs.emplace_back(projectionExpr);
     }
-    for (auto fieldVector : tmpFieldExprMap) {
-        if (!fieldVector.empty()) {
-            fieldExprMap.push_back(fieldVector);
-        }
-    }
-    std::vector<DataTypePtr> flatDataTypes;
-    ReSetColVec(inputDataTypes, fieldExprMap, flatDataTypes);
-    this->inputTypes = DataTypes(flatDataTypes);
     overflowConfig = std::make_unique<OverflowConfig>(*ofConfig);
     projectVecCount = static_cast<int32_t>(projectionExprs.size());
 
@@ -739,17 +578,11 @@ VectorBatch *ExpressionEvaluator::Evaluate(VectorBatch *vecBatch, ExecutionConte
     AlignedBuffer<int32_t> *selectedRowsBuffer)
 {
     const int32_t vectorCount = vecBatch->GetVectorCount();
-    int32_t flatVectorCount = vectorCount;
-    for (auto fieldVector : fieldExprMap) {
-        flatVectorCount += static_cast<int32_t>(fieldVector.size());
-    }
+    intptr_t valueAddrs[vectorCount];
+    intptr_t nullAddrs[vectorCount];
+    intptr_t offsetAddrs[vectorCount];
+    intptr_t dictionaries[vectorCount];
 
-    intptr_t valueAddrs[flatVectorCount];
-    intptr_t nullAddrs[flatVectorCount];
-    intptr_t offsetAddrs[flatVectorCount];
-    intptr_t dictionaries[flatVectorCount];
-
-    FlatVector(vecBatch, fieldExprMap);
     if (isSupportCodegen) {
         GetAddr(*vecBatch, valueAddrs, nullAddrs, offsetAddrs, dictionaries, this->inputTypes);
     }

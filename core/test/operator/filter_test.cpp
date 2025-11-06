@@ -3519,7 +3519,7 @@ TEST(FilterTest, Test10SQLMutilThread)
     PrintValueLine(sixteenThreadsCpuTime, FILTER_UNIT_TEST_TIME);
 }
  
-TEST(FilterTest, FilterStruct)
+TEST(FilterTest, DISABLED_FilterStruct)
 {
     std::string inputTypesCharPtr =
         R"([{"id":32,"fieldTypes":[{"id":2,"idValue":2},{"id":2,"idValue":2}],"idValue":32}])";

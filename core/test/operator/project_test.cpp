@@ -3519,6 +3519,7 @@ TEST(ProjectionTest, Nulls)
     delete factory;
     delete overflowConfig;
 }
+
 TEST(ProjectionTest, Struct)
 {
     std::string inputTypesCharPtr =
