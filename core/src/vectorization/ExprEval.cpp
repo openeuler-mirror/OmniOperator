@@ -174,9 +174,26 @@ void ExprEval::Visit(const LiteralExpr &e)
     inputValues_.push(outVec);
 }
 
+BaseVector *GetStructField(const Expr *e, const std::vector<BaseVector *> &inputVecBatch)
+{
+    auto fieldExpr = dynamic_cast<const FieldExpr *>(e);
+    if (fieldExpr != nullptr) {
+        if (fieldExpr->input == nullptr) {
+            return inputVecBatch[fieldExpr->colVal];
+        }
+        auto tmpVec = dynamic_cast<RowVector *>(GetStructField(fieldExpr->input, inputVecBatch));
+        if (tmpVec != nullptr) {
+            return tmpVec->ChildAt(fieldExpr->colVal).get();
+        }
+        OMNI_THROW("Express Error:", "GetStructField error!!");
+    }
+    OMNI_THROW("Express Error:", "GetStructField error!");
+}
+
 void ExprEval::Visit(const FieldExpr &e)
 {
-    auto colVec = vecBatch_[e.colVal];
+    auto colVec = GetStructField(&e, vecBatch_);
+    auto typeId = colVec->GetTypeId();
     vecBatch_[e.colVal]->SetIsField(true);
     if (context->hasFilter) {
         auto isSelect = context->GetIsSelectRow();
@@ -188,7 +205,7 @@ void ExprEval::Visit(const FieldExpr &e)
                 ++selectSize;
             }
         }
-        switch (typeIds[e.colVal]) {
+        switch (typeId) {
             case OMNI_INT:
             case OMNI_DATE32:
                 inputValues_.push(ColumnProjectionCopyPositionsHelper<int32_t>(colVec, selectRow, rowSize));
@@ -230,7 +247,7 @@ void ExprEval::Visit(const FieldExpr &e)
         }
         return;
     }
-    switch (typeIds[e.colVal]) {
+    switch (typeId) {
         case OMNI_INT:
         case OMNI_DATE32:
             inputValues_.push(ColumnProjectionHelper<int32_t>(colVec, rowSize));
