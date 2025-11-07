@@ -388,8 +388,6 @@ inline DataTypePtr GetType(DataTypeId typeId)
     switch (typeId) {
         case OMNI_NONE:
             return NoneType();
-        case OMNI_BYTE:
-            return ByteType();
         case OMNI_BOOLEAN:
             return BooleanType();
         case OMNI_SHORT:

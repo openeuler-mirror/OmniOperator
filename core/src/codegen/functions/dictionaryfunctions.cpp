@@ -18,20 +18,6 @@ extern DLLEXPORT int32_t GetIntFromDictionaryVector(int64_t dictionaryVectorAddr
     return dictionaryVectorPtr->GetValue(index);
 }
 
-extern DLLEXPORT int8_t GetByteFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index)
-{
-    auto dictionaryVectorPtr =
-        reinterpret_cast<vec::Vector<vec::DictionaryContainer<int8_t>> *>(dictionaryVectorAddr);
-    return dictionaryVectorPtr->GetValue(index);
-}
-
-extern DLLEXPORT int16_t GetShortFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index)
-{
-    auto dictionaryVectorPtr =
-        reinterpret_cast<vec::Vector<vec::DictionaryContainer<int16_t>> *>(dictionaryVectorAddr);
-    return dictionaryVectorPtr->GetValue(index);
-}
-
 extern DLLEXPORT int64_t GetLongFromDictionaryVector(int64_t dictionaryVectorAddr, int32_t index)
 {
     auto dictionaryVectorPtr =

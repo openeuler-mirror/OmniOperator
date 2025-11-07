@@ -283,12 +283,6 @@ LiteralExpr *Parser::GenerateLiteralExprHelper(const string &literalStr, DataTyp
         case OMNI_BOOLEAN: {
             return new LiteralExpr(stoi(literalStr), std::move(currType));
         }
-        case OMNI_BYTE: {
-            return new LiteralExpr(static_cast<int8_t>(stoi(literalStr)), std::move(currType));
-        }
-        case OMNI_SHORT: {
-            return new LiteralExpr(static_cast<int16_t>(stoi(literalStr)), std::move(currType));
-        }
         case OMNI_INT:
         case OMNI_DATE32: {
             LiteralExpr *e = new LiteralExpr(stoi(literalStr), std::move(currType));

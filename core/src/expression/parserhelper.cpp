@@ -7,8 +7,6 @@ using namespace std;
 using namespace omniruntime::expressions;
 using namespace omniruntime::type;
 
-constexpr int8_t BYTE_DEFAULT_VALUE = 0;
-constexpr int16_t SHORT_DEFAULT_VALUE = 0;
 constexpr int32_t INT_DEFAULT_VALUE = 0;
 constexpr int64_t LONG_DEFAULT_VALUE = 0L;
 constexpr double DOUBLE_DEFAULT_VALUE = 0.000;
@@ -36,10 +34,6 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
     } else {
         destType = std::make_shared<DataType>(destTypeId);
         switch (destTypeId) {
-            case OMNI_BYTE:
-                return new LiteralExpr(BYTE_DEFAULT_VALUE, std::move(destType));
-            case OMNI_SHORT:
-                return new LiteralExpr(SHORT_DEFAULT_VALUE, std::move(destType));
             case OMNI_INT:
             case OMNI_DATE32:
                 return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
@@ -73,10 +67,6 @@ DataTypePtr ParserHelper::GetReturnDataType(nlohmann::json jsonExpr)
     switch (typeId) {
         case OMNI_BOOLEAN:
             return std::make_shared<BooleanDataType>();
-        case OMNI_BYTE:
-            return std::make_shared<ByteDataType>();
-        case OMNI_SHORT:
-            return std::make_shared<ShortDataType>();
         case OMNI_INT:
             return std::make_shared<IntDataType>();
         case OMNI_DATE32:

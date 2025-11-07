@@ -74,18 +74,6 @@ std::string GetBoolValOutput(const LiteralExpr &e)
     return output;
 }
 
-std::string GetShortValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.shortVal);
-    return output;
-}
-
-std::string GetByteValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.byteVal);
-    return output;
-}
-
 std::string GetIntValOutput(const LiteralExpr &e)
 {
     string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.intVal);
@@ -219,12 +207,6 @@ void ExprPrinter::Visit(const LiteralExpr &e)
     switch (e.GetReturnTypeId()) {
         case OMNI_BOOLEAN:
             output += GetBoolValOutput(e);
-            break;
-        case OMNI_BYTE:
-            output += GetByteValOutput(e);
-            break;
-        case OMNI_SHORT:
-            output += GetShortValOutput(e);
             break;
         case OMNI_INT:
         case OMNI_DATE32:

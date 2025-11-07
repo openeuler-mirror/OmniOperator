@@ -216,8 +216,6 @@ public:
             }
             case type::OMNI_SHORT:
                 return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int16_t> *>(vector));
-            case type::OMNI_BYTE:
-                return CreateDictionary(values, valueSize, reinterpret_cast<Vector<int8_t> *>(vector));
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
@@ -257,10 +255,6 @@ public:
             case type::OMNI_SHORT: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
                     reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)));
-            }
-            case type::OMNI_BYTE: {
-                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetIds(
-                    reinterpret_cast<Vector<DictionaryContainer<int8_t>> *>(vector)));
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
@@ -309,10 +303,6 @@ public:
             case type::OMNI_SHORT: {
                 return reinterpret_cast<void *>(
                     unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(vector)));
-            }
-            case type::OMNI_BYTE: {
-                return reinterpret_cast<void *>(
-                    unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int8_t> *>(vector)));
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
@@ -374,9 +364,6 @@ public:
             case type::OMNI_SHORT: {
                 return reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)->Slice(positionOffset, length);
             }
-            case type::OMNI_BYTE: {
-                return reinterpret_cast<Vector<DictionaryContainer<int8_t>> *>(vector)->Slice(positionOffset, length);
-            }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
@@ -430,9 +417,6 @@ public:
             case type::OMNI_SHORT: {
                 return reinterpret_cast<Vector<int16_t> *>(vector)->Slice(positionOffset, length);
             }
-            case type::OMNI_BYTE: {
-                return reinterpret_cast<Vector<int8_t> *>(vector)->Slice(positionOffset, length);
-            }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
@@ -472,10 +456,6 @@ public:
             }
             case type::OMNI_SHORT: {
                 return reinterpret_cast<Vector<DictionaryContainer<int16_t>> *>(vector)->CopyPositions(positions,
-                    offset, length);
-            }
-            case type::OMNI_BYTE: {
-                return reinterpret_cast<Vector<DictionaryContainer<int8_t>> *>(vector)->CopyPositions(positions,
                     offset, length);
             }
             case type::OMNI_LONG:
@@ -524,9 +504,6 @@ public:
             case type::OMNI_SHORT: {
                 return reinterpret_cast<Vector<int16_t> *>(vector)->CopyPositions(positions, offset, length);
             }
-            case type::OMNI_BYTE: {
-                return reinterpret_cast<Vector<int8_t> *>(vector)->CopyPositions(positions, offset, length);
-            }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
@@ -569,10 +546,6 @@ public:
             case type::OMNI_SHORT: {
                 return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
                     static_cast<Vector<DictionaryContainer<int16_t>> *>(vector)));
-            }
-            case type::OMNI_BYTE: {
-                return reinterpret_cast<void *>(unsafe::UnsafeDictionaryVector::GetDictionary(
-                    static_cast<Vector<DictionaryContainer<int8_t>> *>(vector)));
             }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
@@ -618,10 +591,6 @@ public:
             }
             case type::OMNI_SHORT: {
                 reinterpret_cast<Vector<int16_t> *>(destVector)->Append(srcVector, offset, length);
-                break;
-            }
-            case type::OMNI_BYTE: {
-                reinterpret_cast<Vector<int8_t> *>(destVector)->Append(srcVector, offset, length);
                 break;
             }
             case type::OMNI_LONG:
@@ -730,9 +699,6 @@ public:
             case type::OMNI_SHORT: {
                 return DecodeFlatDictionaryVector<int16_t>(vector);
             }
-            case type::OMNI_BYTE: {
-                return DecodeFlatDictionaryVector<int8_t>(vector);
-            }
             case type::OMNI_LONG:
             case type::OMNI_TIMESTAMP:
             case type::OMNI_DATE64:
@@ -814,10 +780,6 @@ public:
             }
             case type::OMNI_SHORT: {
                 CopyFlatVector<int16_t>(destVector, srcVector, offset, length);
-                break;
-            }
-            case type::OMNI_BYTE: {
-                CopyFlatVector<int8_t>(destVector, srcVector, offset, length);
                 break;
             }
             case type::OMNI_LONG:

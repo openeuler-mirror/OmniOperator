@@ -54,12 +54,6 @@ extern "C" DLLEXPORT
             case OMNI_VARCHAR:
                 errorMessage << "VARCHAR";
                 break;
-            case OMNI_BYTE:
-                errorMessage << "TINYINT";
-                break;
-            case OMNI_SHORT:
-                errorMessage << "SMALLINT";
-                break;
             case OMNI_INT:
                 errorMessage << "INTEGER";
                 break;

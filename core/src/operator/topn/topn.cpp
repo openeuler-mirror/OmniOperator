@@ -202,9 +202,6 @@ void TopNOperator::UpdateSingleRowVectorBatch(VectorBatch *vectorBatch, VectorBa
             case OMNI_DECIMAL128:
                 SetValueForSingleRowVecBatch<OMNI_DECIMAL128>(singleRowVecBatch, i, vector, position);
                 break;
-            case OMNI_BYTE:
-                SetValueForSingleRowVecBatch<OMNI_BYTE>(singleRowVecBatch, i, vector, position);
-                break;
             default:
                 break;
         }

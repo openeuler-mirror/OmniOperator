@@ -31,8 +31,6 @@ bool ExprVerifier::AreInvalidDataTypes(DataTypeId type1, DataTypeId type2)
 void ExprVerifier::Visit(const LiteralExpr &literalExpr)
 {
     switch (literalExpr.GetReturnTypeId()) {
-        case OMNI_BYTE:
-        case OMNI_SHORT:
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:
@@ -54,8 +52,6 @@ void ExprVerifier::Visit(const LiteralExpr &literalExpr)
 void ExprVerifier::Visit(const FieldExpr &fieldExpr)
 {
     switch (fieldExpr.GetReturnTypeId()) {
-        case OMNI_BYTE:
-        case OMNI_SHORT:
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:
@@ -70,8 +66,6 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
             break;
         default:
             this->supportedFlag = false;
-            this->unSupportedReason = "unSupported FieldExpr DataTypeId: "
-                                      + std::to_string(static_cast<int>(fieldExpr.GetReturnTypeId()));
             break;
     }
 }
@@ -118,8 +112,7 @@ void ExprVerifier::Visit(const BinaryExpr &binaryExpr)
         return;
     }
 
-    if (binaryExpr.left->GetReturnTypeId() == OMNI_BYTE ||binaryExpr.left->GetReturnTypeId() == OMNI_SHORT ||
-        binaryExpr.left->GetReturnTypeId() == OMNI_INT || binaryExpr.left->GetReturnTypeId() == OMNI_LONG ||
+    if (binaryExpr.left->GetReturnTypeId() == OMNI_INT || binaryExpr.left->GetReturnTypeId() == OMNI_LONG ||
         binaryExpr.left->GetReturnTypeId() == OMNI_DATE32 || binaryExpr.left->GetReturnTypeId() == OMNI_DOUBLE) {
         this->supportedFlag = true;
         return;
@@ -150,8 +143,6 @@ void ExprVerifier::Visit(const InExpr &inExpr)
 {
     Expr *toCompare = inExpr.arguments[0];
     switch (toCompare->GetReturnTypeId()) {
-        case OMNI_BYTE:
-        case OMNI_SHORT:
         case OMNI_INT:
         case OMNI_DATE32:
         case OMNI_LONG:

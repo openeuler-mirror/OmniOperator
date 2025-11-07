@@ -217,13 +217,6 @@ int64_t WindowPartition::GetFrameValue(int32_t channel, std::string &valueTypeNa
     }
 
     switch (typeId) {
-        case OMNI_BYTE:
-            if (columnVector->GetEncoding() == OMNI_DICTIONARY) {
-                value = static_cast<Vector<DictionaryContainer<int8_t>> *>(columnVector)->GetValue(rowIndex);
-            } else {
-                value = static_cast<Vector<int8_t> *>(columnVector)->GetValue(rowIndex);
-            }
-            break;
         case OMNI_INT:
         case OMNI_DATE32:
             if (columnVector->GetEncoding() == OMNI_DICTIONARY) {

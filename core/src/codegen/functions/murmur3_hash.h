@@ -36,8 +36,6 @@ extern "C" DLLEXPORT int32_t Mm3Boolean(bool val, bool isValNull, int32_t seed, 
 uint32_t HashUnsafeBytes(char *base, uint32_t lengthInBytes, uint32_t seed);
 uint32_t HashLong(uint64_t input, uint32_t seed);
 uint32_t HashInt(uint32_t input, uint32_t seed);
-uint32_t HashShort(uint16_t input, uint32_t seed);
-uint32_t HashByte(uint8_t input, uint32_t seed);
 }
 // OMNI_RUNTIME_MURMUR3_HASH_H
 #endif

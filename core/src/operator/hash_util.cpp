@@ -44,7 +44,6 @@ std::unique_ptr<omniruntime::vec::Vector<int32_t>> HashUtil::ComputePartitionIds
     std::vector<uint32_t> partitionIds(rowCount, MM3HASH_SEED);
     for (auto col = 0; col < colCount; col++) {
         switch (vecs[col]->GetTypeId()) {
-            case type::OMNI_BYTE:
             case type::OMNI_SHORT:
             case type::OMNI_INT:
             case type::OMNI_DATE32:

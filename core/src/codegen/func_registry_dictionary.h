@@ -8,8 +8,6 @@
 #include "func_registry_base.h"
 
 // functions called directly from codegen
-const std::string dictionaryGetByteStr = "DictionaryGetByte";
-const std::string dictionaryGetShortStr = "DictionaryGetShort";
 const std::string dictionaryGetIntStr = "DictionaryGetInt";
 const std::string dictionaryGetLongStr = "DictionaryGetLong";
 const std::string dictionaryGetDoubleStr = "DictionaryGetDouble";

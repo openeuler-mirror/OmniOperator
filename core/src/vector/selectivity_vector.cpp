@@ -80,10 +80,6 @@ bool SelectivityVector::GetFlatBaseVectorsFromSelectivityVector(std::vector<Base
                 SetFlatVectorValue<Vector<int16_t>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
                 break;
             }
-            case OMNI_BYTE: {
-                SetFlatVectorValue<Vector<int8_t>>(rowCount, baseVector, selectedBaseVector, selectivityVector);
-                break;
-            }
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64: {

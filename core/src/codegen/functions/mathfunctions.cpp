@@ -21,26 +21,6 @@ const uint64_t DOUBLE_BIT_MASK = ((static_cast<uint64_t>(1) << (sizeof(double) *
 namespace omniruntime::codegen::function {
 static constexpr char DIVIDE_ZERO_EROR[] = "Divided by zero error!";
 
-extern "C" DLLEXPORT int16_t CastInt32ToInt16(int32_t x)
-{
-    return static_cast<int16_t>(x);
-}
-
-extern "C" DLLEXPORT int8_t CastInt32ToInt8(int32_t x)
-{
-    return static_cast<int8_t>(x);
-}
-
-extern "C" DLLEXPORT int16_t CastInt64ToInt16(int64_t x)
-{
-    return static_cast<int16_t>(x);
-}
-
-extern "C" DLLEXPORT int8_t CastInt64ToInt8(int64_t x)
-{
-    return static_cast<int8_t>(x);
-}
-
 extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
 {
     return static_cast<int64_t>(x);
@@ -49,37 +29,6 @@ extern "C" DLLEXPORT int64_t CastInt32ToInt64(int32_t x)
 extern "C" DLLEXPORT int32_t CastInt64ToInt32(int64_t x)
 {
     return static_cast<int32_t>(x);
-}
-
-
-extern "C" DLLEXPORT int32_t CastInt16ToInt32(int16_t x)
-{
-    return static_cast<int32_t>(x);
-}
-
-extern "C" DLLEXPORT int32_t CastInt8ToInt32(int8_t x)
-{
-    return static_cast<int32_t>(x);
-}
-
-extern "C" DLLEXPORT int64_t CastInt16ToInt64(int16_t x)
-{
-    return static_cast<int64_t>(x);
-}
-
-extern "C" DLLEXPORT int64_t CastInt8ToInt64(int8_t x)
-{
-    return static_cast<int64_t>(x);
-}
-
-extern "C" DLLEXPORT double CastInt16ToDouble(int16_t x)
-{
-    return static_cast<double>(x);
-}
-
-extern "C" DLLEXPORT double CastInt8ToDouble(int8_t x)
-{
-    return static_cast<double>(x);
 }
 
 extern "C" DLLEXPORT double CastInt32ToDouble(int32_t x)
@@ -97,16 +46,6 @@ extern "C" DLLEXPORT int32_t CastDoubleToInt32Down(double x)
     return static_cast<int32_t>(x);
 }
 
-extern "C" DLLEXPORT int16_t CastDoubleToInt16Down(double x)
-{
-    return static_cast<int16_t>(x);
-}
-
-extern "C" DLLEXPORT int8_t CastDoubleToInt8Down(double x)
-{
-    return static_cast<int8_t>(x);
-}
-
 extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x)
 {
     return static_cast<int64_t>(x);
@@ -115,16 +54,6 @@ extern "C" DLLEXPORT int64_t CastDoubleToInt64Down(double x)
 extern "C" DLLEXPORT int32_t CastDoubleToInt32HalfUp(double x)
 {
     return static_cast<int32_t>(Round(x, 0));
-}
-
-extern "C" DLLEXPORT int16_t CastDoubleToInt16HalfUp(double x)
-{
-    return static_cast<int16_t>(Round(x, 0));
-}
-
-extern "C" DLLEXPORT int8_t CastDoubleToInt8HalfUp(double x)
-{
-    return static_cast<int8_t>(Round(x, 0));
 }
 
 extern "C" DLLEXPORT int64_t CastDoubleToInt64HalfUp(double x)
@@ -409,176 +338,4 @@ extern "C" DLLEXPORT int64_t RoundLong(int64_t num, int32_t decimals)
 {
     return RoundOperator(num, decimals);
 }
-}
-
-// short functions
-
-extern "C" DLLEXPORT int16_t AddInt16(int16_t left, int16_t right)
-{
-    return left + right;
-}
-
-extern "C" DLLEXPORT int16_t SubtractInt16(int16_t left, int16_t right)
-{
-    return left - right;
-}
-
-extern "C" DLLEXPORT int16_t MultiplyInt16(int16_t left, int16_t right)
-{
-    return left * right;
-}
-
-extern "C" DLLEXPORT int16_t DivideInt16(bool *isNull, int16_t divident, int16_t divisor)
-{
-    if (divisor == 0) {
-        *isNull = true;
-        return 0;
-    }
-    return divident / divisor;
-}
-
-extern "C" DLLEXPORT int16_t ModulusInt16(bool *isNull, int16_t divident, int16_t divisor)
-{
-    if (divisor == 0) {
-        *isNull = true;
-        return 0;
-    }
-    return divident % divisor;
-}
-
-extern "C" DLLEXPORT int16_t AddInt16RetNull(bool *isNull, int16_t left, int16_t right)
-{
-    int16_t result;
-    *isNull = __builtin_add_overflow(left, right, &result);
-    return result;
-}
-
-extern "C" DLLEXPORT int16_t SubtractInt16RetNull(bool *isNull, int16_t left, int16_t right)
-{
-    int16_t result;
-    *isNull = __builtin_sub_overflow(left, right, &result);
-    return result;
-}
-
-extern "C" DLLEXPORT int16_t MultiplyInt16RetNull(bool *isNull, int16_t left, int16_t right)
-{
-    int16_t result;
-    *isNull = __builtin_mul_overflow(left, right, &result);
-    return result;
-}
-
-extern "C" DLLEXPORT bool LessThanInt16(int16_t left, int16_t right)
-{
-    return left < right;
-}
-
-extern "C" DLLEXPORT bool LessThanEqualInt16(int16_t left, int16_t right)
-{
-    return left <= right;
-}
-
-extern "C" DLLEXPORT bool GreaterThanInt16(int16_t left, int16_t right)
-{
-    return left > right;
-}
-
-extern "C" DLLEXPORT bool GreaterThanEqualInt16(int16_t left, int16_t right)
-{
-    return left >= right;
-}
-
-extern "C" DLLEXPORT bool EqualInt16(int16_t left, int16_t right)
-{
-    return left == right;
-}
-
-extern "C" DLLEXPORT bool NotEqualInt16(int16_t left, int16_t right)
-{
-    return left != right;
-}
-
-// byte functions
-
-extern "C" DLLEXPORT int8_t AddInt8(int8_t left, int8_t right)
-{
-    return left + right;
-}
-
-extern "C" DLLEXPORT int8_t SubtractInt8(int8_t left, int8_t right)
-{
-    return left - right;
-}
-
-extern "C" DLLEXPORT int8_t MultiplyInt8(int8_t left, int8_t right)
-{
-    return left * right;
-}
-
-extern "C" DLLEXPORT int8_t DivideInt8(bool *isNull, int8_t divident, int8_t divisor)
-{
-    if (divisor == 0) {
-        *isNull = true;
-        return 0;
-    }
-    return divident / divisor;
-}
-
-extern "C" DLLEXPORT int8_t ModulusInt8(bool *isNull, int8_t divident, int8_t divisor)
-{
-    if (divisor == 0) {
-        *isNull = true;
-        return 0;
-    }
-    return divident % divisor;
-}
-
-extern "C" DLLEXPORT int8_t AddInt8RetNull(bool *isNull, int8_t left, int8_t right)
-{
-    int8_t result;
-    *isNull = __builtin_add_overflow(left, right, &result);
-    return result;
-}
-
-extern "C" DLLEXPORT int8_t SubtractInt8RetNull(bool *isNull, int8_t left, int8_t right)
-{
-    int8_t result;
-    *isNull = __builtin_sub_overflow(left, right, &result);
-    return result;
-}
-
-extern "C" DLLEXPORT int8_t MultiplyInt8RetNull(bool *isNull, int8_t left, int8_t right)
-{
-    int8_t result;
-    *isNull = __builtin_mul_overflow(left, right, &result);
-    return result;
-}
-
-extern "C" DLLEXPORT bool LessThanInt8(int8_t left, int8_t right)
-{
-    return left < right;
-}
-
-extern "C" DLLEXPORT bool LessThanEqualInt8(int8_t left, int8_t right)
-{
-    return left <= right;
-}
-
-extern "C" DLLEXPORT bool GreaterThanInt8(int8_t left, int8_t right)
-{
-    return left > right;
-}
-
-extern "C" DLLEXPORT bool GreaterThanEqualInt8(int8_t left, int8_t right)
-{
-    return left >= right;
-}
-
-extern "C" DLLEXPORT bool EqualInt8(int8_t left, int8_t right)
-{
-    return left == right;
-}
-
-extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right)
-{
-    return left != right;
 }

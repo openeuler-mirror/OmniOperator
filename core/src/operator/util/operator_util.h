@@ -47,8 +47,6 @@ public:
     static int32_t GetTypeSize(const DataTypePtr dataTypePtr)
     {
         switch (dataTypePtr->GetId()) {
-            case OMNI_BYTE:
-                return OperatorUtil::SIZE_OF_BYTE;
             case OMNI_INT:
                 return OperatorUtil::SIZE_OF_INT;
             case OMNI_TIMESTAMP:
@@ -127,8 +125,6 @@ public:
         vec::BaseVector *rightColumn, int32_t rightColumnPosition)
     {
         switch (colTypeId) {
-            case OMNI_BYTE:
-                return CompareTemplate<int8_t>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_BOOLEAN:
                 return CompareTemplate<bool>(leftColumn, leftColumnPosition, rightColumn, rightColumnPosition);
             case OMNI_INT:

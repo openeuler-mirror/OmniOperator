@@ -15,9 +15,6 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
         case OMNI_SHORT:
             return reinterpret_cast<int64_t>(
                 unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int16_t> *>(colVec)));
-        case OMNI_BYTE:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int8_t> *>(colVec)));
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:
@@ -113,10 +110,6 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
         }
         case OMNI_SHORT: {
             literalVal.value.shortVal = literalExpr->shortVal;
-            break;
-        }
-        case OMNI_BYTE: {
-            literalVal.value.byteVal = literalExpr->byteVal;
             break;
         }
         case OMNI_LONG:
@@ -248,9 +241,6 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
         case OMNI_SHORT:
             SetConstantValues<int16_t>(literalVal.value.shortVal, outVec);
             break;
-        case OMNI_BYTE:
-            SetConstantValues<int8_t>(literalVal.value.byteVal, outVec);
-            break;
         case OMNI_LONG:
         case OMNI_DECIMAL64:
         case OMNI_TIMESTAMP:
@@ -370,8 +360,6 @@ BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t sel
             return ColumnProjectionHelper<int32_t>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_SHORT:
             return ColumnProjectionHelper<int16_t>(vecBatch, selectedRows, numSelectedRows);
-        case OMNI_BYTE:
-            return ColumnProjectionHelper<int8_t>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DECIMAL64:

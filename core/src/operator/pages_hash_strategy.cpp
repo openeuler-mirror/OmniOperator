@@ -120,8 +120,6 @@ bool ValueEqualsValueIgnoreNulls(int32_t dataType, BaseVector *leftVector, uint3
     BaseVector *rightVector, uint32_t rightRowIndex)
 {
     switch (dataType) {
-        case OMNI_BYTE:
-            return ValueEqualsValueIgnoreNulls<int8_t>(leftVector, leftRowIndex, rightVector, rightRowIndex);
         case OMNI_INT:
         case OMNI_DATE32:
             return ValueEqualsValueIgnoreNulls<int32_t>(leftVector, leftRowIndex, rightVector, rightRowIndex);

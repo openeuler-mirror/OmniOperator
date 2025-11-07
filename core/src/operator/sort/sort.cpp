@@ -284,9 +284,6 @@ void SortOperator::PrepareSort()
             case OMNI_DECIMAL64:
                 pagesIndex->PrepareRadixSort<OMNI_DECIMAL64>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
                 break;
-            case OMNI_BYTE:
-                pagesIndex->PrepareRadixSort<OMNI_BYTE>(sortAscendings[0], sortNullFirsts[0], sortCols[0]);
-                break;
             default:
                 std::string errStr = "Do not support the data type" + std::to_string(typeId) + " in radix sort.";
                 throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR", errStr);
@@ -418,9 +415,6 @@ void SortOperator::SetSpillOutputVecBatch(VectorBatch *outputVecBatch, int32_t &
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 SetSpillOutputVector<std::string_view>(outputVector, offset, rowCount, outputCol);
-                break;
-            case OMNI_BYTE:
-                SetSpillOutputVector<int8_t>(outputVector, offset, rowCount, outputCol);
                 break;
             default:
                 break;

@@ -107,9 +107,6 @@ bool VectorAnalyzer::DecideHashMode(omniruntime::vec::VectorBatch *&vectorBatch)
         case OMNI_DATE32:
             blChangeMap = HandleInputValues<OMNI_INT>(vectorBatch, idx);
             break;
-        case OMNI_BYTE:
-            blChangeMap = HandleInputValues<OMNI_BYTE>(vectorBatch, idx);
-            break;
         case OMNI_SHORT:
             blChangeMap = HandleInputValues<OMNI_SHORT>(vectorBatch, idx);
             break;

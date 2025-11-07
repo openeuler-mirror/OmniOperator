@@ -132,9 +132,6 @@ uint64_t Spiller::CollectVecBatchSize(vec::VectorBatch *vectorBatch)
             case OMNI_CHAR:
                 result += CollectVectorSize<std::string_view>(vector);
                 break;
-            case OMNI_BYTE:
-                result += CollectVectorSize<int8_t>(vector);
-                break;
             default: {
                 break;
             }
@@ -280,9 +277,6 @@ ErrorCode SpillWriter::WriteVecBatchToBuffer(vec::VectorBatch *vectorBatch)
             case OMNI_CHAR:
                 result = WriteVectorToBuffer<std::string_view>(vector, rowCount, writeOffset);
                 break;
-            case OMNI_BYTE:
-                result = WriteVectorToBuffer<int8_t>(vector, rowCount, writeOffset);
-                break;
             default: {
                 result = ErrorCode::WRITE_FAILED;
                 break;
@@ -391,9 +385,6 @@ ErrorCode SpillWriter::WriteVecBatchToFile(vec::VectorBatch *vectorBatch)
             case OMNI_VARCHAR:
             case OMNI_CHAR:
                 result = WriteVector<std::string_view>(vector, rowCount);
-                break;
-            case OMNI_BYTE:
-                result = WriteVector<int8_t>(vector, rowCount);
                 break;
             default: {
                 result = ErrorCode::WRITE_FAILED;

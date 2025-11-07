@@ -118,8 +118,6 @@ template void PagesIndex::PrepareRadixSort<type::OMNI_BOOLEAN>(const bool ascend
     const uint32_t sortCol);
 template void PagesIndex::PrepareRadixSort<type::OMNI_DECIMAL64>(const bool ascending, const bool nullsFirst,
     const uint32_t sortCol);
-template void PagesIndex::PrepareRadixSort<type::OMNI_BYTE>(const bool ascending, const bool nullsFirst,
-    const uint32_t sortCol);
 
 template <DataTypeId typeId>
 void PagesIndex::PrepareRadixSort(const bool ascending, const bool nullsFirst, const uint32_t sortCol)
@@ -1086,11 +1084,6 @@ void PagesIndex::ColumnarSort(const int32_t *sortCols, const int32_t *sortAscend
     int32_t currentCol)
 {
     switch (dataTypes.GetType(sortCols[currentCol])->GetId()) {
-        case OMNI_BYTE: {
-            ColumnarSort<int8_t>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from,
-                to, currentCol);
-            break;
-        }
         case OMNI_INT:
         case OMNI_DATE32: {
             ColumnarSort<int32_t>(sortCols, sortAscendings, sortNullFirsts, sortColCount, values, varcharLength, from,
@@ -1214,10 +1207,6 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
         const bool hasNull = hasNulls[outputCol];
         auto outputVector = outputVecBatch->Get(j);
         switch (colTypeId) {
-            case OMNI_BYTE:
-                ConstructVector<OMNI_BYTE>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
-                    outputIndex);
-                break;
             case OMNI_INT:
             case OMNI_DATE32:
                 ConstructVector<OMNI_INT>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
@@ -1270,10 +1259,6 @@ void PagesIndex::GetOutputRadixSort(int32_t *outputCols, int32_t outputColsCount
         bool hasNull = hasNulls[outputCol];
         auto outputVector = outputVecBatch->Get(j);
         switch (colTypeId) {
-            case OMNI_BYTE:
-                ConstructVectorRadixSort<OMNI_BYTE>(vaStart, length, inputVectors, hasNull, hasDictionary,
-                    radixRowWidth, outputVector);
-                break;
             case OMNI_INT:
             case OMNI_DATE32:
                 ConstructVectorRadixSort<OMNI_INT>(vaStart, length, inputVectors, hasNull, hasDictionary,

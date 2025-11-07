@@ -230,8 +230,7 @@ static std::vector<GetValueFunc> getValueFromFlatFuncs = {
     nullptr,                           // OMNI_INTERVAL_DAY_TIME
     GetValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     GetValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                           // OMNI_CONTAINER,
-    GetValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                            // OMNI_CONTAINER,
 };
 
 static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
@@ -252,8 +251,7 @@ static std::vector<CompareOptimizeFunc> compareOptimizeFromFlatFuncs = {
     nullptr,                                       // OMNI_INTERVAL_DAY_TIME
     CompareValueOptimizeFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueOptimizeFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                                       // OMNI_CONTAINER,
-    CompareValueOptimizeFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                                        // OMNI_CONTAINER,
 };
 
 static std::vector<CompareFunc> compareFromFlatFuncs = {
@@ -274,8 +272,7 @@ static std::vector<CompareFunc> compareFromFlatFuncs = {
     nullptr,                               // OMNI_INTERVAL_DAY_TIME
     CompareValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                               // OMNI_CONTAINER,
-    CompareValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                                // OMNI_CONTAINER,
 };
 
 static std::vector<CompareFunc> compareFromDictionaryFuncs = {
@@ -296,8 +293,7 @@ static std::vector<CompareFunc> compareFromDictionaryFuncs = {
     nullptr,                                     // OMNI_INTERVAL_DAY_TIME
     CompareValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CompareValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                                     // OMNI_CONTAINER,
-    CompareValueFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                                      // OMNI_CONTAINER,
 };
 
 static std::vector<EqualFunc> equalFromFlatFuncs = {
@@ -318,8 +314,7 @@ static std::vector<EqualFunc> equalFromFlatFuncs = {
     nullptr,                             // OMNI_INTERVAL_DAY_TIME
     EqualValueTemplate<OMNI_VARCHAR>,    // OMNI_VARCHAR
     EqualValueTemplate<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                             // OMNI_CONTAINER,
-    EqualValueTemplate<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                              // OMNI_CONTAINER,
 };
 
 static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
@@ -340,8 +335,7 @@ static std::vector<CreateVectorFunc> createVectorFromFlatFuncs = {
     nullptr,                               // OMNI_INTERVAL_DAY_TIME
     CreateVectorFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CreateVectorFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                               // OMNI_CONTAINER,
-    CreateVectorFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                                // OMNI_CONTAINER,
 };
 
 static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
@@ -362,8 +356,7 @@ static std::vector<CreateVectorFunc> createVectorFromDictionaryFuncs = {
     nullptr,                                     // OMNI_INTERVAL_DAY_TIME
     CreateVectorFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     CreateVectorFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                                     // OMNI_CONTAINER,
-    CreateVectorFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                                      // OMNI_CONTAINER,
 };
 
 static std::vector<SetValueFunc> setValueFromFlatFuncs = {
@@ -384,8 +377,7 @@ static std::vector<SetValueFunc> setValueFromFlatFuncs = {
     nullptr,                           // OMNI_INTERVAL_DAY_TIME
     SetValueFromFlat<OMNI_VARCHAR>,    // OMNI_VARCHAR
     SetValueFromFlat<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                           // OMNI_CONTAINER,
-    SetValueFromFlat<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                            // OMNI_CONTAINER,
 };
 
 static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
@@ -406,8 +398,7 @@ static std::vector<SetValueFunc> setValueFromDictionaryFuncs = {
     nullptr,                                 // OMNI_INTERVAL_DAY_TIME
     SetValueFromDictionary<OMNI_VARCHAR>,    // OMNI_VARCHAR
     SetValueFromDictionary<OMNI_CHAR>,       // OMNI_CHAR,
-    nullptr,                                 // OMNI_CONTAINER,
-    SetValueFromDictionary<OMNI_BYTE>        // OMNI_BYTE
+    nullptr                                  // OMNI_CONTAINER,
 };
 
 TopNSortOperator::TopNSortOperator(const type::DataTypes &sourceTypes, int32_t n, bool isStrictTopN,

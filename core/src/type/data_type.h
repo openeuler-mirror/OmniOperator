@@ -47,7 +47,7 @@ enum DataTypeId {
     OMNI_VARCHAR = 15,
     OMNI_CHAR = 16,
     OMNI_CONTAINER = 17,
-    OMNI_BYTE = 18,
+    OMNI_INVALID = 18,
     OMNI_TIME_WITHOUT_TIME_ZONE = 19,
     OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 20,
     OMNI_TIMESTAMP_WITH_TIME_ZONE = 21,
@@ -58,8 +58,7 @@ enum DataTypeId {
     OMNI_ROW = 32,
     OMNI_UNKNOWN = 33,
     OMNI_FUNCTION = 34,
-    OMNI_OPAQUE = 35,
-    OMNI_INVALID
+    OMNI_OPAQUE = 35
 };
 
 template <DataTypeId dataTypeId> struct NativeType {};
@@ -82,10 +81,6 @@ template <> struct NativeType<DataTypeId::OMNI_BOOLEAN> {
 
 template <> struct NativeType<DataTypeId::OMNI_SHORT> {
     using type = int16_t;
-};
-
-template <> struct NativeType<DataTypeId::OMNI_BYTE> {
-    using type = int8_t;
 };
 
 template <> struct NativeType<DataTypeId::OMNI_DECIMAL64> {
@@ -150,9 +145,6 @@ template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
             case OMNI_SHORT: {                                                                \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_SHORT>(__VA_ARGS__);      \
             }                                                                                 \
-            case OMNI_BYTE: {                                                                \
-                return CALLBACK<omniruntime::type::DataTypeId::OMNI_BYTE>(__VA_ARGS__);      \
-            }                                                                                 \
             case OMNI_DECIMAL128: {                                                           \
                 return CALLBACK<omniruntime::type::DataTypeId::OMNI_DECIMAL128>(__VA_ARGS__); \
             }                                                                                 \
@@ -171,7 +163,6 @@ template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
     }()
 
 template <typename T> constexpr DataTypeId TYPE_ID = DataTypeId::OMNI_INVALID;
-template <> inline constexpr DataTypeId TYPE_ID<int8_t> = DataTypeId::OMNI_BYTE;
 template <> inline constexpr DataTypeId TYPE_ID<int16_t> = DataTypeId::OMNI_SHORT;
 template <> inline constexpr DataTypeId TYPE_ID<int32_t> = DataTypeId::OMNI_INT;
 template <> inline constexpr DataTypeId TYPE_ID<int64_t> = DataTypeId::OMNI_LONG;
@@ -253,7 +244,6 @@ public:
     }
 };
 
-using ByteDataType = FixedWidthDataType<OMNI_BYTE>;
 using IntDataType = FixedWidthDataType<OMNI_INT>;
 using ShortDataType = FixedWidthDataType<OMNI_SHORT>;
 using DoubleDataType = FixedWidthDataType<OMNI_DOUBLE>;

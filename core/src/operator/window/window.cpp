@@ -701,9 +701,6 @@ bool WindowOperator::IsSamePartition(VectorBatch *lastBatch, int32_t lastIdx)
         bool isSame;
         auto columnTypeId = sourceTypes.GetType(columnId)->GetId();
         switch (columnTypeId) {
-            case OMNI_BYTE:
-                isSame = ValueEqualsLastValue<int8_t>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
-                break;
             case OMNI_INT:
             case OMNI_DATE32:
                 isSame = ValueEqualsLastValue<int32_t>(lastBatch, currentBatch, columnId, lastIdx, currentRowIdx);
@@ -747,9 +744,6 @@ void WindowOperator::PaddingPartitionVecBatch(vec::VectorBatch *partitionVecBatc
         auto partitionVector = partitionVecBatch->Get(i);
         auto typeId = sourceTypes.GetType(i)->GetId();
         switch (typeId) {
-            case OMNI_BYTE:
-                PaddingPartitionVector<int8_t>(partitionVector, rowIdx, i);
-                break;
             case OMNI_INT:
             case OMNI_DATE32:
                 PaddingPartitionVector<int32_t>(partitionVector, rowIdx, i);

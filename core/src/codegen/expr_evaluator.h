@@ -28,7 +28,6 @@ typedef struct LiteralValue {
     bool isNull = false;
     union Value {
         bool boolVal;
-        int8_t byteVal;
         int16_t shortVal;
         int32_t intVal;
         int64_t longVal;

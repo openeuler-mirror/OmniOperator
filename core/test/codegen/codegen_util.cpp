@@ -15,9 +15,6 @@ namespace CodegenUtil {
 int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
 {
     switch (types.GetIds()[i]) {
-        case OMNI_BYTE:
-            return reinterpret_cast<int64_t>(
-                unsafe::UnsafeVector::GetRawValues(reinterpret_cast<Vector<int8_t> *>(colVec)));
         case OMNI_INT:
         case OMNI_DATE32:
             return reinterpret_cast<int64_t>(

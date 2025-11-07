@@ -26,8 +26,6 @@ static const uint32_t FMIX_MULTIPLY_N = 0xc2b2ae35;
 
 static const uint32_t HASH_LONG_RIGHT_SHIFT = 32;
 
-static const uint32_t MM3_SIZE_BYTE = 1;
-static const uint32_t MM3_SIZE_SHORT = 2;
 static const uint32_t MM3_SIZE_INT = 4;
 static const uint32_t MM3_SIZE_LONG = 8;
 
@@ -105,23 +103,6 @@ uint32_t ALWAYS_INLINE HashBytesByInt(char *base, uint32_t lengthInBytes, uint32
     return h1;
 }
 
-uint32_t HashShort(uint16_t input, uint32_t seed)
-{
-    uint32_t k1 = static_cast<uint32_t>(input);
-    k1 = MixK1(k1);
-    uint32_t h1 = MixH1(seed, k1);
-
-    return Fmix(h1, MM3_SIZE_SHORT);
-}
-
-uint32_t HashByte(uint8_t input, uint32_t seed)
-{
-    uint32_t k1 = static_cast<uint32_t>(input);
-    k1 = MixK1(k1);
-    uint32_t h1 = MixH1(seed, k1);
-
-    return Fmix(h1, MM3_SIZE_BYTE);
-}
 
 uint32_t HashInt(uint32_t input, uint32_t seed)
 {

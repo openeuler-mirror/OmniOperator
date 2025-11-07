@@ -81,10 +81,6 @@ std::unique_ptr<Aggregator> SumSparkAggregatorFactory::CreateAggregator(const Da
 {
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
-        case OMNI_BYTE: {
-            return std::make_unique<SumFlatIMAggregator<OMNI_BYTE, OMNI_LONG>>(inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
-        }
         case OMNI_SHORT: {
             return std::make_unique<SumFlatIMAggregator<OMNI_SHORT, OMNI_LONG>>(inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
@@ -130,10 +126,6 @@ std::unique_ptr<Aggregator> TrySumSparkAggregatorFactory::CreateAggregator(const
 {
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
-        case OMNI_BYTE: {
-            return std::make_unique<TrySumFlatIMAggregator<OMNI_BYTE, OMNI_LONG>>(inputTypes, outputTypes, channels,
-                inputRaw, outputPartial, isOverflowAsNull);
-        }
         case OMNI_SHORT: {
             return std::make_unique<TrySumFlatIMAggregator<OMNI_SHORT, OMNI_LONG>>(inputTypes, outputTypes, channels,
                 inputRaw, outputPartial, isOverflowAsNull);
@@ -184,10 +176,6 @@ std::unique_ptr<Aggregator> AverageSparkAggregatorFactory::CreateAggregator(cons
     //    boolean, date, binnary: not support
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
-        case OMNI_BYTE: {
-            return std::make_unique<AverageFlatIMAggregator<OMNI_BYTE>>(inputTypes, outputTypes, channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        }
         case OMNI_SHORT: {
             return std::make_unique<AverageFlatIMAggregator<OMNI_SHORT>>(inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, isOverflowAsNull);
@@ -240,10 +228,6 @@ std::unique_ptr<Aggregator> TryAverageSparkAggregatorFactory::CreateAggregator(c
     //    boolean, date, binnary: not support
     auto inputTypeId = inputTypes.GetIds()[0];
     switch (inputTypeId) {
-        case OMNI_BYTE: {
-            return std::make_unique<AverageFlatIMAggregator<OMNI_BYTE>>(inputTypes, outputTypes, channels, inputRaw,
-                outputPartial, true);
-        }
         case OMNI_SHORT: {
             return std::make_unique<AverageFlatIMAggregator<OMNI_SHORT>>(inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, true);
@@ -358,10 +342,6 @@ std::unique_ptr<Aggregator> FirstAggregatorFactory::CreateAggregator(const DataT
     switch (inputTypeId) {
         case OMNI_BOOLEAN: {
             return CreateFirstAggregatorHelper<bool>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
-                outputPartial, isOverflowAsNull);
-        }
-        case OMNI_BYTE: {
-            return CreateFirstAggregatorHelper<int8_t>(aggregateType, inputTypes, outputTypes, channels, inputRaw,
                 outputPartial, isOverflowAsNull);
         }
         case OMNI_SHORT: {
