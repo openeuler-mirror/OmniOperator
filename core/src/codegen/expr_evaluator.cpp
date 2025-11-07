@@ -523,6 +523,7 @@ ExpressionEvaluator::ExpressionEvaluator(Expr *filterExpression, const std::vect
     hasFilter = true;
     filterExpr = filterExpression;
     for (auto &projectionExpr : projectionExprs) {
+        projectionExpr->isRoot = true;
         projExprs.emplace_back(projectionExpr);
     }
     overflowConfig = std::make_unique<OverflowConfig>(*ofConfig);
