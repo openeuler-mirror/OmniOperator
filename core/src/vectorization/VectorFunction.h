@@ -78,8 +78,8 @@ public:
         if (it != functionMap_.end()) {
             return it->second;
         }
-        auto factory = functionMap_.find(signature);
-        if (factory != functionMap_.end()) {
+        auto factory = functionFactoryMap_.find(signature);
+        if (factory != functionFactoryMap_.end()) {
             return factory->second(signature->GetName(), signature->GetParams(), config);
         }
         return nullptr;
