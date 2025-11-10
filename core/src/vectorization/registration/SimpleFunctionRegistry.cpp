@@ -6,5 +6,5 @@
 #include "SimpleFunctionRegistry.h"
 
 namespace omniruntime::vectorization {
-FunctionMap SimpleFunctionRegistry::functionMap_ = nullptr;
+FunctionMap SimpleFunctionRegistry::functionMap_;
 }

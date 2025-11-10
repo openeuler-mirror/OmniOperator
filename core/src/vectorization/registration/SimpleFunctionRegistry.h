@@ -18,7 +18,7 @@ class SimpleFunctionRegistry {
 public:
     static std::shared_ptr<VectorFunction> Find(const FunctionSignaturePtr &signature)
     {
-        return functionMap_->find(signature)->second;
+        return functionMap_.find(signature)->second;
     }
 
     static FunctionMap functionMap_;
@@ -35,7 +35,7 @@ bool RegisterFunction(const std::string &name, std::vector<DataTypeId> paramsTyp
     using funcClass = Func<TReturn>;
     using holderClass = FunctionHolder<funcClass, TReturn, TArgs...>;
     auto signature = std::make_shared<codegen::FunctionSignature>(name, paramsType, returnType);
-    VectorFunction::functionMap_->insert(std::make_pair(signature,
+    VectorFunction::functionMap_.insert(std::make_pair(signature,
         std::make_shared<SimpleFunction<holderClass>>()));
     return true;
 }

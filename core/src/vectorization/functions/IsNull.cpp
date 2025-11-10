@@ -30,6 +30,6 @@ void RegisterIsNullFunction(const std::string &name)
 {
     std::vector<DataTypeId> param = {OMNI_INT};
     auto signature = std::make_shared<codegen::FunctionSignature>(name, param, OMNI_BOOLEAN);
-    VectorFunction::functionMap_->insert(std::make_pair(signature, std::make_shared<IsNullFunction>()));
+    VectorFunction::functionMap_.insert(std::make_pair(signature, std::make_shared<IsNullFunction>()));
 }
 }

@@ -33,14 +33,12 @@ struct Equals {
 };
 
 class VectorFunction;
-using FunctionMap = std::unique_ptr<std::unordered_map<FunctionSignaturePtr, std::shared_ptr<VectorFunction>, Hash,
-    Equals>>;
+using FunctionMap = std::unordered_map<FunctionSignaturePtr, std::shared_ptr<VectorFunction>, Hash, Equals>;
 
 using VectorFunctionFactory = std::function<std::shared_ptr<VectorFunction>(const std::string &name,
     const std::vector<type::DataTypeId> &inputArgs, const config::QueryConfig &config)>;
 
-using FunctionFactoryMap = std::unique_ptr<std::unordered_map<FunctionSignaturePtr, VectorFunctionFactory, Hash,
-    Equals>>;
+using FunctionFactoryMap = std::unordered_map<FunctionSignaturePtr, VectorFunctionFactory, Hash, Equals>;
 
 using VectorPtr = std::shared_ptr<vec::BaseVector>;
 
