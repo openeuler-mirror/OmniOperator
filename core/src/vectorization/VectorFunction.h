@@ -74,12 +74,12 @@ public:
     static std::shared_ptr<VectorFunction> Find(const FunctionSignaturePtr &signature,
         const config::QueryConfig &config = config::QueryConfig())
     {
-        auto it = functionMap_->find(signature);
-        if (it != functionMap_->end()) {
+        auto it = functionMap_.find(signature);
+        if (it != functionMap_.end()) {
             return it->second;
         }
-        auto factory = functionFactoryMap_->find(signature);
-        if (factory != functionFactoryMap_->end()) {
+        auto factory = functionMap_.find(signature);
+        if (factory != functionMap_.end()) {
             return factory->second(signature->GetName(), signature->GetParams(), config);
         }
         return nullptr;
