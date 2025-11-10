@@ -307,6 +307,11 @@ template <typename T> extern DLLEXPORT T BitwiseAndFunction(T a, T b)
     return a & b;
 }
 
+template <typename T> extern DLLEXPORT T BitwiseOrFunction(T a, T b)
+{
+    return a | b;
+}
+
 template <typename T1, typename T2> T1 ShiftRight(T1 a, T2 b)
 {
     if constexpr (std::is_same_v<T1, int32_t>) {
@@ -326,6 +331,27 @@ template <typename T1, typename T2> T1 ShiftRight(T1 a, T2 b)
         }
     }
     return a >> b;
+}
+
+template <typename T1, typename T2> T1 ShiftLeft(T1 a, T2 b)
+{
+    if constexpr (std::is_same_v<T1, int32_t>) {
+        if (b < 0) {
+            b = b % 32 + 32;
+        }
+        if (b >= 32) {
+            b = b % 32;
+        }
+    }
+    if constexpr (std::is_same_v<T1, int64_t>) {
+        if (b < 0) {
+            b = b % 64 + 64;
+        }
+        if (b >= 64) {
+            b = b % 64;
+        }
+    }
+    return a << b;
 }
 }
 
