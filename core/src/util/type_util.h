@@ -88,6 +88,10 @@ std::shared_ptr<omniruntime::type::DataType> VarcharType();
 
 std::shared_ptr<omniruntime::type::DataType> CharType();
 
+std::shared_ptr<omniruntime::type::DataType> VarBinaryType();
+
+std::shared_ptr<omniruntime::type::DataType> VarBinaryType(int32_t width);
+
 std::shared_ptr<omniruntime::type::DataType> VarcharType(int32_t width);
 
 std::shared_ptr<omniruntime::type::DataType> CharType(int32_t width);

@@ -47,9 +47,9 @@ enum DataTypeId {
     OMNI_VARCHAR = 15,
     OMNI_CHAR = 16,
     OMNI_CONTAINER = 17,
-    OMNI_INVALID = 18,
-    OMNI_BYTE = 19,
-    OMNI_FLOAT = 20,
+    OMNI_BYTE = 18,
+    OMNI_FLOAT = 19,
+    OMNI_VARBINARY = 20,
     OMNI_TIME_WITHOUT_TIME_ZONE = 21,
     OMNI_TIMESTAMP_WITHOUT_TIME_ZONE = 22,
     OMNI_TIMESTAMP_WITH_TIME_ZONE = 23,
@@ -118,6 +118,10 @@ template <> struct NativeType<DataTypeId::OMNI_VARCHAR> {
 };
 
 template <> struct NativeType<DataTypeId::OMNI_CHAR> {
+    using type = std::string_view;
+};
+
+template <> struct NativeType<DataTypeId::OMNI_VARBINARY> {
     using type = std::string_view;
 };
 
@@ -304,6 +308,65 @@ public:
 
 protected:
     std::shared_ptr<DataType> child;
+};
+
+class VarBinaryDataType : public DataType {
+public:
+    VarBinaryDataType(const VarBinaryDataType &type) : VarBinaryDataType(type.GetWidth()) {}
+    explicit VarBinaryDataType() : VarBinaryDataType(INT_MAX) {}
+
+    explicit VarBinaryDataType(uint32_t width) : DataType(DataTypeId::OMNI_VARBINARY)
+    {
+        this->width = width;
+    }
+
+    ~VarBinaryDataType() override = default;
+
+    static DataTypePtr Instance()
+    {
+        return std::make_shared<VarBinaryDataType>(INT_MAX);
+    }
+
+    uint32_t GetWidth() const
+    {
+        return width;
+    }
+
+    void SetWidth(const uint32_t newWidth)
+    {
+        width = newWidth;
+    }
+
+    bool operator ==(const DataType &right) const override
+    {
+        if (id != right.GetId()) {
+            return false;
+        } else if (width != static_cast<const VarBinaryDataType &>(right).GetWidth()) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    VarBinaryDataType &operator =(const VarBinaryDataType &right)
+    {
+        id = right.GetId();
+        width = static_cast<const VarBinaryDataType &>(right).GetWidth();
+        return *this;
+    }
+
+    void Serialize(nlohmann::json &nlohmannJson) const override
+    {
+        nlohmannJson = nlohmann::json{{ID, id}, {WIDTH, width}};
+    }
+
+protected:
+    uint32_t width;
+
+    explicit VarBinaryDataType(uint32_t width, DataTypeId dataTypeId) : DataType(dataTypeId)
+    {
+        this->width = width;
+    }
 };
 
 class RowType : public DataType {

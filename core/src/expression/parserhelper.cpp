@@ -56,6 +56,9 @@ omniruntime::expressions::LiteralExpr *ParserHelper::GetDefaultValueForType(Data
             case OMNI_VARCHAR:
                 return new LiteralExpr(new string(CHAR_DEFAULT_VALUE),
                                        std::make_shared<VarcharDataType>(CHAR_DEFAULT_WIDTH));
+            case OMNI_VARBINARY:
+                return new LiteralExpr(new string(CHAR_DEFAULT_VALUE),
+                                       std::make_shared<VarBinaryDataType>(CHAR_DEFAULT_WIDTH));
             case OMNI_NONE:
                 return new LiteralExpr(INT_DEFAULT_VALUE, std::move(destType));
             default:

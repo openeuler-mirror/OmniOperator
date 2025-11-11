@@ -163,6 +163,9 @@ void ExprPrinter::Visit(const LiteralExpr &e)
         case OMNI_VARCHAR:
             output += GetCharValOutput(e);
             break;
+        case OMNI_VARBINARY:
+            output += GetCharValOutput(e);
+            break;
         case OMNI_DECIMAL64:
             output += GetDecimal64ValOutput(e);
             break;

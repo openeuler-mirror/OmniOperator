@@ -45,6 +45,8 @@ std::string TypeUtil::TypeToString(omniruntime::type::DataTypeId id)
             return "Timestamp";
         case OMNI_VARCHAR:
             return "String";
+        case OMNI_VARBINARY:
+            return "Binary";
         case OMNI_CHAR:
             return "Char";
         case OMNI_DECIMAL64:
@@ -204,6 +206,16 @@ std::shared_ptr<DataType> VarcharType()
 std::shared_ptr<DataType> CharType()
 {
     return std::make_shared<CharDataType>(CHAR_MAX_WIDTH);
+}
+
+std::shared_ptr<DataType> VarBinaryType()
+{
+    return VarBinaryDataType::Instance();
+}
+
+std::shared_ptr<DataType> VarBinaryType(int32_t width)
+{
+    return std::make_shared<VarBinaryDataType>(width);
 }
 
 std::shared_ptr<DataType> VarcharType(int32_t width)
