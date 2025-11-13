@@ -64,7 +64,7 @@ static std::vector<SetValueFunction> setValueFunctions{
     SetValueIntoVector<uint8_t *>,  // OMNI_VARCHAR = 15
     SetValueIntoVector<uint8_t *>,  // OMNI_CHAR = 16
     nullptr,                        // OMNI_CONTAINER = 17
-    SetValueIntoVector<int8_t>      // OMNI_BYTE = 18
+    SetValueIntoVector<int8_t>      // OMNI_BYTE = 19
 };
 /**
  * handle resource by RAII
