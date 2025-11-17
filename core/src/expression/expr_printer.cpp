@@ -66,95 +66,6 @@ string ExprPrinter::GenerateIndentation() const
     return indent;
 }
 
-
-std::string GetBoolValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:bool:";
-    e.boolVal ? output += "true" : output += "false";
-    return output;
-}
-
-std::string GetShortValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.shortVal);
-    return output;
-}
-
-std::string GetByteValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.byteVal);
-    return output;
-}
-
-std::string GetIntValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.intVal);
-    return output;
-}
-
-std::string GetLongValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.longVal);
-    return output;
-}
-
-std::string GetDoubleValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.doubleVal);
-    return output;
-}
-
-std::string GetFloatValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.floatVal);
-    return output;
-}
-
-std::string GetCharValOutput(const LiteralExpr &e)
-{
-    string output = "Literal:";
-    if (e.GetReturnTypeId() == OMNI_CHAR) {
-        // meant to look like "%s[%d]:'%s'"
-        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + +"[" +
-            to_string(static_cast<CharDataType *>(e.dataType.get())->GetWidth()) + "]" + ":'" + *(e.stringVal) + "'";
-    } else {
-        std::string tmp = e.stringVal == nullptr ? "null" : *e.stringVal;
-        // meant to look like "%s:'%s'"
-        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + ":'" + tmp + "'";
-    }
-    return output;
-}
-
-std::string GetDecimal64ValOutput(const LiteralExpr &e)
-{
-    // meant to look like "Literal:%s(%d, %d):%ld"
-    string output = "Literal:";
-    output += TypeUtil::TypeToString(e.GetReturnTypeId());
-    output += "(";
-    output += to_string(static_cast<Decimal64DataType *>(e.dataType.get())->GetPrecision());
-    output += ", ";
-    output += to_string(static_cast<Decimal64DataType *>(e.dataType.get())->GetScale());
-    output += "):";
-    output += to_string(e.longVal);
-    return output;
-}
-
-std::string GetDecimal128ValOutput(const LiteralExpr &e)
-{
-    // meant to look like "%s(%d, %d):'%s'"
-    string output = "Literal:";
-    output += TypeUtil::TypeToString(e.GetReturnTypeId());
-    output += "(";
-    output += to_string(static_cast<Decimal128DataType *>(e.dataType.get())->GetPrecision());
-    output += ", ";
-    output += to_string(static_cast<Decimal128DataType *>(e.dataType.get())->GetScale());
-    output += "):";
-    output += "'";
-    output += *(e.stringVal);
-    output += "'";
-    return output;
-}
-
 /*
  * EXAMPLE
  *
@@ -178,14 +89,14 @@ void ExprPrinter::Visit(const BinaryExpr &e)
         message = "InvalidBinaryOperator:" + to_string(static_cast<int32_t>(e.op)) + "(";
     }
     message = indent + message;
-    printf("%s\n", message.c_str());
+    std::cout << message << '\n';
 
     this->indentationDepth++;
     (e.left)->Accept(*this);
 
     (e.right)->Accept(*this);
     string lastParentheses = indent + ")";
-    printf("%s\n", lastParentheses.c_str());
+     std::cout << lastParentheses << '\n';
     this->indentationDepth--;
 }
 
@@ -211,11 +122,11 @@ void ExprPrinter::Visit(const UnaryExpr &e)
             output += "InvalidUnaryOperator:" + to_string(static_cast<int32_t>(e.op)) + "(";
             break;
     }
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
     this->indentationDepth++;
     (e.exp)->Accept(*this);
     string lastParentheses = indent + ")";
-    printf("%s\n", lastParentheses.c_str());
+    std::cout << lastParentheses << '\n';
     this->indentationDepth--;
 }
 
@@ -261,7 +172,7 @@ void ExprPrinter::Visit(const LiteralExpr &e)
         default:
             output += "Literal:invalid DataType " + to_string(e.GetReturnTypeId());
     }
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
 }
 
 void ExprPrinter::Visit(const FieldExpr &e)
@@ -278,7 +189,7 @@ void ExprPrinter::Visit(const FieldExpr &e)
         output += ")";
     }
     output += ":#" + to_string(e.colVal);
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
 }
 
 /*
@@ -296,12 +207,12 @@ void ExprPrinter::Visit(const InExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "In:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
     this->indentationDepth++;
     for (uint32_t i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
         if (i == e.arguments.size() - 1) {
-            printf("%s\n", (indent + ")").c_str());
+            std::cout << indent + ")" << '\n';
         }
     }
     this->indentationDepth--;
@@ -325,14 +236,14 @@ void ExprPrinter::Visit(const SwitchExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "Switch:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
     this->indentationDepth++;
     for (const auto &i : e.whenClause) {
         (i.first)->Accept(*this);
         (i.second)->Accept(*this);
     }
     e.falseExpr->Accept(*this);
-    printf("%s\n", (indent + ")").c_str());
+    std::cout << indent + ")" << '\n';
     this->indentationDepth--;
 }
 /*
@@ -349,14 +260,14 @@ void ExprPrinter::Visit(const BetweenExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "Between:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
     this->indentationDepth++;
     (e.value)->Accept(*this);
 
     (e.lowerBound)->Accept(*this);
 
     (e.upperBound)->Accept(*this);
-    printf("%s\n", (indent + ")").c_str());
+    std::cout << indent + ")" << '\n';
     this->indentationDepth--;
 }
 
@@ -383,14 +294,14 @@ void ExprPrinter::Visit(const IfExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "If:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
     this->indentationDepth++;
     e.condition->Accept(*this);
 
     e.trueExpr->Accept(*this);
 
     e.falseExpr->Accept(*this);
-    printf("%s\n", (indent + ")").c_str());
+    std::cout << indent + ")" << '\n';
     this->indentationDepth--;
 }
 
@@ -410,12 +321,12 @@ void ExprPrinter::Visit(const CoalesceExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "Coalesce:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
     this->indentationDepth++;
     e.value1->Accept(*this);
 
     e.value2->Accept(*this);
-    printf("%s\n", (indent + ")").c_str());
+    std::cout << indent + ")" << '\n';
     this->indentationDepth--;
 }
 
@@ -433,10 +344,10 @@ void ExprPrinter::Visit(const IsNullExpr &e)
 {
     string indent = GenerateIndentation();
     string output = indent + "IsNull:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + "(";
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
     this->indentationDepth++;
     e.value->Accept(*this);
-    printf("%s\n", (indent + ")").c_str());
+    std::cout << indent + ")" << '\n';
     this->indentationDepth--;
 }
 
@@ -466,12 +377,12 @@ void ExprPrinter::Visit(const FuncExpr &e)
     }
 
     string output = indent + "Function:" + ":" + e.funcName + ":" + typeStr + "(";
-    printf("%s\n", output.c_str());
+    std::cout << output << '\n';
     this->indentationDepth++;
     for (uint32_t i = 0; i < e.arguments.size(); i++) {
         (e.arguments[i])->Accept(*this);
         if (i == e.arguments.size() - 1) {
-            printf("%s\n", (indent + ")").c_str());
+            std::cout << indent + ")" << '\n';
         }
     }
     this->indentationDepth--;

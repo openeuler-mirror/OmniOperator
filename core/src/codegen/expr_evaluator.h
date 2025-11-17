@@ -12,6 +12,7 @@
 #include "codegen/batch_projection_codegen.h"
 #include "util/config_util.h"
 #include "vector/vector_helper.h"
+#include "util/cache_map.h"
 
 namespace omniruntime::codegen {
 using namespace omniruntime::expressions;
@@ -67,7 +68,9 @@ public:
 
 private:
     const Expr *expr;
-    std::unique_ptr<FilterCodeGen> codeGen;
+    static CacheMap<std::string, intptr_t> filterFuncCache;
+    static CacheMap<std::string, std::shared_ptr<FilterCodeGen>> rtCache;
+    std::shared_ptr<FilterCodeGen> codeGen;
     std::unique_ptr<BatchFilterCodeGen> batchCodeGen;
     bool isSupported;
     FilterFunc apply;
@@ -128,8 +131,10 @@ public:
     }
 
 private:
+    static CacheMap<std::string, intptr_t> projFuncCache;
+    static CacheMap<std::string, std::shared_ptr<ProjectionCodeGen>> rtCache;
     const omniruntime::expressions::Expr *expr;
-    std::unique_ptr<ProjectionCodeGen> codeGen { nullptr };
+    std::shared_ptr<ProjectionCodeGen> codeGen { nullptr };
     std::unique_ptr<BatchProjectionCodeGen> batchCodeGen { nullptr };
     bool isSupported = true;
     bool isColumnProjection = false;

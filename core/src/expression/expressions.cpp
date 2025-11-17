@@ -168,6 +168,130 @@ uint8_t* LiteralExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *
     return bitMark;
 }
 
+std::string GetBoolValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:bool:";
+    e.boolVal ? output += "true" : output += "false";
+    return output;
+}
+
+std::string GetIntValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.intVal);
+    return output;
+}
+
+std::string GetLongValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.longVal);
+    return output;
+}
+
+std::string GetDoubleValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.doubleVal);
+    return output;
+}
+
+std::string GetCharValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:";
+    if (e.GetReturnTypeId() == OMNI_CHAR) {
+        // meant to look like "%s[%d]:'%s'"
+        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + +"[" +
+                  to_string(static_cast<CharDataType *>(e.dataType.get())->GetWidth()) + "]" + ":'" + *(e.stringVal) + "'";
+    } else {
+        // meant to look like "%s:'%s'"
+        output += TypeUtil::TypeToString(e.GetReturnTypeId()) + ":'" + *(e.stringVal) + "'";
+    }
+    return output;
+}
+
+std::string GetDecimal64ValOutput(const LiteralExpr &e)
+{
+    // meant to look like "Literal:%s(%d, %d):%ld"
+    string output = "Literal:";
+    output += TypeUtil::TypeToString(e.GetReturnTypeId());
+    output += "(";
+    output += to_string(static_cast<Decimal64DataType *>(e.dataType.get())->GetPrecision());
+    output += ", ";
+    output += to_string(static_cast<Decimal64DataType *>(e.dataType.get())->GetScale());
+    output += "):";
+    output += to_string(e.longVal);
+    return output;
+}
+
+std::string GetDecimal128ValOutput(const LiteralExpr &e)
+{
+    // meant to look like "%s(%d, %d):'%s'"
+    string output = "Literal:";
+    output += TypeUtil::TypeToString(e.GetReturnTypeId());
+    output += "(";
+    output += to_string(static_cast<Decimal128DataType *>(e.dataType.get())->GetPrecision());
+    output += ", ";
+    output += to_string(static_cast<Decimal128DataType *>(e.dataType.get())->GetScale());
+    output += "):";
+    output += "'";
+    output += *(e.stringVal);
+    output += "'";
+    return output;
+}
+
+std::string GetShortValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.shortVal);
+    return output;
+}
+
+std::string GetByteValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.byteVal);
+    return output;
+}
+
+std::string GetFloatValOutput(const LiteralExpr &e)
+{
+    string output = "Literal:" + TypeUtil::TypeToString(e.GetReturnTypeId()) + ":" + to_string(e.floatVal);
+    return output;
+}
+
+
+std::string LiteralExpr::toString() const
+{
+    string output = "";
+    switch (this->GetReturnTypeId()) {
+        case OMNI_BOOLEAN:
+            output += GetBoolValOutput(*this);
+            break;
+        case OMNI_INT:
+        case OMNI_DATE32:
+            output += GetIntValOutput(*this);
+            break;
+        case OMNI_TIMESTAMP:
+        case OMNI_LONG:
+            output += GetLongValOutput(*this);
+            break;
+        case OMNI_DOUBLE:
+            output += GetDoubleValOutput(*this);
+            break;
+        case OMNI_CHAR:
+            output += GetCharValOutput(*this);
+            break;
+        case OMNI_VARCHAR:
+            output += GetCharValOutput(*this);
+            break;
+        case OMNI_DECIMAL64:
+            output += GetDecimal64ValOutput(*this);
+            break;
+        case OMNI_DECIMAL128:
+            output += GetDecimal128ValOutput(*this);
+            break;
+        default:
+            output += "Literal:invalid DataType " + to_string(this->GetReturnTypeId());
+    }
+    return output;
+}
+
 // FieldExpr
 FieldExpr::FieldExpr() = default;
 
@@ -478,6 +602,65 @@ uint8_t *BinaryExpr::compute(omniruntime::vec::VectorBatch *vecBatch, uint8_t *b
             throw omniruntime::exception::OmniException("OPERATOR_RUNTIME_ERROR",
                 "BinaryExpr Not Support: " + std::to_string(static_cast<int>(op)));
     }
+}
+
+string BinaryExprPrinterHelper(const Operator &op, const DataType &type)
+{
+    string typeStr = TypeUtil::TypeToString(type.GetId());
+    if (TypeUtil::IsDecimalType(type.GetId())) {
+        typeStr += "(";
+        typeStr += to_string(static_cast<const DecimalDataType &>(type).GetPrecision());
+        typeStr += ", ";
+        typeStr += to_string(static_cast<const DecimalDataType &>(type).GetScale());
+        typeStr += ")";
+    }
+
+    switch (op) {
+        case Operator::EQ:
+            return "Cmp:" + typeStr + "(EQ ";
+        case Operator::NEQ:
+            return "Cmp:" + typeStr + "(NEQ ";
+        case Operator::LT:
+            return "Cmp:" + typeStr + "(LT ";
+        case Operator::LTE:
+            return "Cmp:" + typeStr + "(LTE ";
+        case Operator::GT:
+            return "Cmp:" + typeStr + "(GT ";
+        case Operator::GTE:
+            return "Cmp:" + typeStr + "(GTE ";
+        case Operator::AND:
+            return "Bin:" + typeStr + "(AND ";
+        case Operator::OR:
+            return "Bin:" + typeStr + "(OR ";
+        case Operator::ADD:
+            return "Arith:" + typeStr + "(ADD ";
+        case Operator::SUB:
+            return "Arith:" + typeStr + "(SUB ";
+        case Operator::MUL:
+            return "Arith:" + typeStr + "(MUL ";
+        case Operator::DIV:
+            return "Arith:" + typeStr + "(DIV ";
+        case Operator::MOD:
+            return "Arith:" + typeStr + "(MOD ";
+        default:
+            return "Invalid";
+    }
+}
+
+std::string BinaryExpr::toString() const
+{
+    std::string indent = "";
+    std::string message = BinaryExprPrinterHelper(this->op, *(this->GetReturnType()));
+    if (message == "Invalid") {
+        message = "InvalidBinaryOperator:" + std::to_string(static_cast<int32_t>(this->op)) + "(";
+    }
+    message = indent + message;
+
+    message += this->left->toString();
+
+    message += this->right->toString();
+    message += indent + ")";
+    return message;
 }
 
 UnaryExpr::UnaryExpr()
