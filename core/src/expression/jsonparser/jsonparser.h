@@ -34,8 +34,6 @@ private:
     static omniruntime::expressions::Expr *ParseJSONFunc(const nlohmann::json &jsonExpr);
     static omniruntime::expressions::Expr *ParseJSONSwitch(const nlohmann::json &jsonExpr);
     static omniruntime::expressions::Expr *ParseJSONSwitchGeneral(const nlohmann::json &jsonExpr);
-    static omniruntime::expressions::Expr *TryGetCastedExpr(const nlohmann::json &jsonExpr);
-    static omniruntime::expressions::Expr *TryGetSpecialFunction(const nlohmann::json &jsonExpr);
     static omniruntime::expressions::Expr *ParseJsonMultiAndOr(const nlohmann::json &jsonExpr);
 };
 

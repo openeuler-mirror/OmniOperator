@@ -346,6 +346,16 @@ void QuickSortInternalSIMD(D d, Traits st, RawType *values, AddrType *addresses,
     }
 }
 // only for ut
+#ifdef COVERAGE
+template void QuickSortInternalSIMD<simd::Simd<long, 2ul, 0>,
+    simd::SharedTraits<simd::TraitsLane<simd::OrderAscending<long> > >, long>(simd::Simd<long, 2ul, 0>,
+    simd::SharedTraits<simd::TraitsLane<simd::OrderAscending<long> > >, long *, unsigned long *, int, int, long *,
+    unsigned long *, bool, long);
+template void QuickSortInternalSIMD<simd::Simd<long, 2ul, 0>,
+    simd::SharedTraits<simd::TraitsLane<simd::OrderDescending<long> > >, long>(simd::Simd<long, 2ul, 0>,
+    simd::SharedTraits<simd::TraitsLane<simd::OrderDescending<long> > >, long *, unsigned long *, int, int, long *,
+    unsigned long *, bool, long);
+#else
 template void QuickSortInternalSIMD<simd::Simd<long, 4ul, 0>,
     simd::SharedTraits<simd::TraitsLane<simd::OrderAscending<long> > >, long>(simd::Simd<long, 4ul, 0>,
     simd::SharedTraits<simd::TraitsLane<simd::OrderAscending<long> > >, long *, unsigned long *, int, int, long *,
@@ -354,6 +364,8 @@ template void QuickSortInternalSIMD<simd::Simd<long, 4ul, 0>,
     simd::SharedTraits<simd::TraitsLane<simd::OrderDescending<long> > >, long>(simd::Simd<long, 4ul, 0>,
     simd::SharedTraits<simd::TraitsLane<simd::OrderDescending<long> > >, long *, unsigned long *, int, int, long *,
     unsigned long *, bool, long);
+#endif
+
 template <class ValType> void QuickSortAscSIMD(ValType *values, AddrType *addresses, int32_t from, int32_t to)
 {
     const SortTag<ValType> d;

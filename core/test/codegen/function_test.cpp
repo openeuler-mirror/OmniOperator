@@ -30,8 +30,8 @@ void Date32TruncTest(const std::string &input, const std::string &level, const s
     bool isNull = false;
     int32_t result = DateTruncRetNull(&isNull, static_cast<int32_t>(date32Value), level.c_str(), level.length());
     Date32 resDate(result);
-    char resStr[11];
-    resDate.ToString(resStr, 11);
+    char resStr[16];
+    resDate.ToString(resStr, 16);
     if (!expectIsNull) {
         EXPECT_EQ(expect, std::string(resStr, 10));
     }

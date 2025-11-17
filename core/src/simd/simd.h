@@ -5,7 +5,12 @@
 #define OMNI_SIMD_H
 
 #include "base.h"
+#ifdef COVERAGE
+#include "instruction/arm_neon-inl.h"
+#else
 #include "instruction/arm_sve-inl.h"
+#endif // OMNI_TARGET
+
 #include "instruction/generic_ops-inl.h"
 
 #endif // OMNI_SIMD_H

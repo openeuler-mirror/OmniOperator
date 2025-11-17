@@ -43,7 +43,12 @@ if (CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif (CCACHE_FOUND)
 
-set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc+sve -fpermissive")
+if (DEFINED COVERAGE AND COVERAGE STREQUAL "ON")
+    add_definitions(-DCOVERAGE)
+    set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc -fpermissive")
+else ()
+    set(SIMD_COMPILE_LEVEL "-march=armv8-a+crc+sve -fpermissive")
+endif ()
 
 #-ffast-math
 #-fopt-info-vec-optimized

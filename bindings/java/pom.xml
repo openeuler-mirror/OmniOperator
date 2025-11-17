@@ -166,10 +166,21 @@
                 <version>3.1.2</version>
                 <executions>
                     <execution>
+                        <id>default-jar</id>
                         <goals>
                             <goal>jar</goal>
                         </goals>
-                        <id>default-jar</id>
+                        <configuration>
+                            <archive>
+                                <addMavenDescriptor>false</addMavenDescriptor>
+                            </archive>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>jar-aarch64</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
                         <configuration>
                             <classifier>aarch64</classifier>
                             <archive>

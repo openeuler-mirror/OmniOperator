@@ -147,62 +147,48 @@ Expr *JSONParser::ParseJSONBinary(const Json &jsonExpr)
     } else if (!TypeUtil::IsDecimalType(leftDataId) || !TypeUtil::IsDecimalType(rightDataId)) {
         // Directly cast one decimal to another have the possibility of precision overflow.
         // We only do this if one is not decimal type
-        return TryGetCastedExpr(jsonExpr);
+        const auto returnDataId = dataType->GetId();
+        auto getCastFunc = [](Expr *expr, DataTypePtr returnType)->omniruntime::expressions::FuncExpr* {
+            auto signature = FunctionSignature("CAST", {expr->GetReturnTypeId()}, returnType->GetId());
+            auto function = omniruntime::codegen::FunctionRegistry::LookupFunction(&signature);
+            if (function) {
+                return new FuncExpr("CAST", {expr}, returnType, function);
+            }
+            throw std::runtime_error("No matching function found for signature: " + signature.ToString());
+        };
+        // 1. Not comparison op and return is decimal. Cast both left and right to return type
+        if (!IsComparisonOperator(op) && TypeUtil::IsDecimalType(returnDataId)) {
+            // Cast non-decimal operands to result decimal type
+            Expr *leftExprCasted = leftDataId != returnDataId ? getCastFunc(leftExpr, dataType) : leftExpr;
+            Expr *rightExprCasted = rightDataId != returnDataId ? getCastFunc(rightExpr, dataType) : rightExpr;
+            return new BinaryExpr(op, leftExprCasted, rightExprCasted, dataType);
+        } else if (!IsComparisonOperator(op) && !TypeUtil::IsDecimalType(returnDataId)) {
+            // 2. Not comparison and none of them are decimal. Int-like types can be casted according to Id
+            Expr *binaryExpr;
+            if (leftDataId > rightDataId) {
+                Expr *castFunc = getCastFunc(rightExpr, leftExpr->GetReturnType());
+                binaryExpr = new BinaryExpr(op, leftExpr, castFunc, std::move(leftExpr->GetReturnType()));
+            } else if (leftDataId < rightDataId) {
+                Expr *castFunc = getCastFunc(leftExpr, rightExpr->GetReturnType());
+                binaryExpr = new BinaryExpr(op, castFunc, rightExpr, std::move(rightExpr->GetReturnType()));
+            }
+            if (binaryExpr->GetReturnType()->GetId() != returnDataId) {
+                return getCastFunc(binaryExpr, dataType);
+            }
+            return binaryExpr;
+        } else if (IsComparisonOperator(op) && !TypeUtil::IsDecimalType(returnDataId)) {
+            // 3. Comparison between int-like values. Similar as situation 1, but returnType is bool
+            if (leftDataId > rightDataId) {
+                Expr *castFunc = getCastFunc(rightExpr, leftExpr->GetReturnType());
+                return new BinaryExpr(op, leftExpr, castFunc, std::move(dataType));
+            } else {
+                Expr *castFunc = getCastFunc(leftExpr, rightExpr->GetReturnType());
+                return new BinaryExpr(op, castFunc, rightExpr, std::move(dataType));
+            }
+        }
+        return nullptr;
     } else {
         throw std::runtime_error("Unsupported operation");
-    }
-    return nullptr;
-}
-
-Expr *JSONParser::TryGetCastedExpr(const nlohmann::json &jsonExpr)
-{
-    using Operator = omniruntime::expressions::Operator;
-    // Currently this function is called by ParseJSONBinary. I assume op, left, right has been checked to be not null
-    Operator op = StringToOperator(jsonExpr["operator"].get<string>());
-    DataTypePtr resultType = ParserHelper::GetReturnDataType(jsonExpr);
-    Expr *leftExpr = ParseJSON(jsonExpr["left"]);
-    Expr *rightExpr = ParseJSON(jsonExpr["right"]);
-
-    const auto leftDataId = leftExpr->GetReturnType()->GetId();
-    const auto rightDataId = rightExpr->GetReturnType()->GetId();
-    const auto returnDataId = resultType->GetId();
-    auto getCastFunc = [](Expr *expr, DataTypePtr returnType)->omniruntime::expressions::FuncExpr* {
-        auto signature = FunctionSignature("CAST", {expr->GetReturnTypeId()}, returnType->GetId());
-        auto function = omniruntime::codegen::FunctionRegistry::LookupFunction(&signature);
-        if (function) {
-            return new FuncExpr("CAST", {expr}, returnType, function);
-        }
-        throw std::runtime_error("No matching function found for signature: " + signature.ToString());
-    };
-    // 1. Not comparison op and return is decimal. Cast both left and right to return type
-    if (!IsComparisonOperator(op) && TypeUtil::IsDecimalType(returnDataId)) {
-        // Cast non-decimal operands to result decimal type
-        Expr *leftExprCasted = leftDataId != returnDataId ? getCastFunc(leftExpr, resultType) : leftExpr;
-        Expr *rightExprCasted = rightDataId != returnDataId ? getCastFunc(rightExpr, resultType) : rightExpr;
-        return new BinaryExpr(op, leftExprCasted, rightExprCasted, resultType);
-    } else if (!IsComparisonOperator(op) && !TypeUtil::IsDecimalType(returnDataId)) {
-        // 2. Not comparison and none of them are decimal. Int-like types can be casted according to Id
-        Expr *binaryExpr;
-        if (leftDataId > rightDataId) {
-            Expr *castFunc = getCastFunc(rightExpr, leftExpr->GetReturnType());
-            binaryExpr = new BinaryExpr(op, leftExpr, castFunc, std::move(leftExpr->GetReturnType()));
-        } else if (leftDataId < rightDataId) {
-            Expr *castFunc = getCastFunc(leftExpr, rightExpr->GetReturnType());
-            binaryExpr = new BinaryExpr(op, castFunc, rightExpr, std::move(rightExpr->GetReturnType()));
-        }
-        if (binaryExpr->GetReturnType()->GetId() != returnDataId) {
-            return getCastFunc(binaryExpr, resultType);
-        }
-        return binaryExpr;
-    } else if (IsComparisonOperator(op) && !TypeUtil::IsDecimalType(returnDataId)) {
-        // 3. Comparison between int-like values. Similar as situation 1, but returnType is bool
-        if (leftDataId > rightDataId) {
-            Expr *castFunc = getCastFunc(rightExpr, leftExpr->GetReturnType());
-            return new BinaryExpr(op, leftExpr, castFunc, std::move(resultType));
-        } else {
-            Expr *castFunc = getCastFunc(leftExpr, rightExpr->GetReturnType());
-            return new BinaryExpr(op, castFunc, rightExpr, std::move(resultType));
-        }
     }
     return nullptr;
 }
