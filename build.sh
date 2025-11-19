@@ -43,8 +43,8 @@ case "$1" in
     [ -f "$ZIP_NAME.zip" ] && rm -rf $ZIP_NAME.zip
 
     cp -r $OMNI_HOME/lib $TARGZ_NAME
-    cp $CWD/bindings/java/target/*.jar $TARGZ_NAME
-    cp $CWD/core/src/udf/java/target/*.jar $TARGZ_NAME
+    cp $CWD/bindings/java/target/*-aarch64.jar $TARGZ_NAME
+    cp $CWD/core/src/udf/java/target/*-aarch64.jar $TARGZ_NAME
     tar --owner root --group root -zcvf $TARGZ_NAME.tar.gz $TARGZ_NAME
     zip $ZIP_NAME.zip $TARGZ_NAME.tar.gz
     ;;
@@ -100,8 +100,8 @@ case "$1" in
     [ -f "$ZIP_NAME.zip" ] && rm -rf $ZIP_NAME.zip
 
     cp -r $OMNI_HOME/lib $TARGZ_NAME
-    cp $CWD/bindings/java/target/*.jar $TARGZ_NAME
-    cp $CWD/core/src/udf/java/target/*.jar $TARGZ_NAME
+    cp $CWD/bindings/java/target/*-aarch64.jar $TARGZ_NAME
+    cp $CWD/core/src/udf/java/target/*-aarch64.jar $TARGZ_NAME
     tar --owner root --group root -zcvf $TARGZ_NAME.tar.gz $TARGZ_NAME
     zip $ZIP_NAME.zip $TARGZ_NAME.tar.gz
     ;;
