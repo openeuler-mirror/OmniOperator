@@ -16,6 +16,8 @@
 #include <codecvt>
 #include "vector/vector_common.h"
 #include "vectorization/VectorFunction.h"
+#include "codegen/bloom_filter.h"
+#include "memory/aligned_buffer.h"
 
 class ExprVisitor;
 
@@ -146,7 +148,7 @@ public:
     explicit LiteralExpr(int8_t val, DataTypePtr colType, bool isNull = false);
     explicit LiteralExpr(int16_t val, DataTypePtr colType, bool isNull = false);
     explicit LiteralExpr(int32_t val, DataTypePtr colType, bool isNull = false);
-    explicit LiteralExpr(int64_t val, DataTypePtr colType);
+    explicit LiteralExpr(int64_t val, DataTypePtr colType, bool isNulls = false);
     explicit LiteralExpr(double val, DataTypePtr colType);
     explicit LiteralExpr(float val, DataTypePtr colType);
     explicit LiteralExpr(std::string *val, DataTypePtr colType);
@@ -500,6 +502,24 @@ public:
         }
         return output;
     }
+};
+
+class BloomFilterFuncExpr : public FuncExpr
+{
+public:
+    BloomFilterFuncExpr(const std::string &fnName, const std::vector<Expr *> &args, DataTypePtr returnType,
+        std::unique_ptr<mem::AlignedBuffer<int8_t>> bloomFilterBuf, std::unique_ptr<op::BloomFilter> bloomFilter)
+     : FuncExpr(fnName, args, returnType),
+       bloomFilterBuf_(std::move(bloomFilterBuf)),
+       bloomFilter_(std::move(bloomFilter)) {}
+   ~BloomFilterFuncExpr() = default;
+   BloomFilterFuncExpr(const BloomFilterFuncExpr &) = delete;
+   BloomFilterFuncExpr &operator=(const BloomFilterFuncExpr &) = delete;
+   BloomFilterFuncExpr(BloomFilterFuncExpr &&) = delete;
+   BloomFilterFuncExpr &operator=(BloomFilterFuncExpr &&) = delete;
+private:
+    std::unique_ptr<mem::AlignedBuffer<int8_t>> bloomFilterBuf_;
+    std::unique_ptr<op::BloomFilter> bloomFilter_;
 };
 } // namespace expressions
 } // namespace omniruntime
