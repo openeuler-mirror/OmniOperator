@@ -16,6 +16,7 @@ import nova.hetu.omniruntime.type.VarcharDataType;
 import nova.hetu.omniruntime.type.VarBinaryDataType;
 import nova.hetu.omniruntime.type.ArrayDataType;
 import nova.hetu.omniruntime.type.StructDataType;
+import nova.hetu.omniruntime.type.MapDataType;
 import nova.hetu.omniruntime.utils.OmniErrorType;
 import nova.hetu.omniruntime.utils.OmniRuntimeException;
 import nova.hetu.omniruntime.vector.BooleanVec;
@@ -34,6 +35,7 @@ import nova.hetu.omniruntime.vector.VarcharVec;
 import nova.hetu.omniruntime.vector.FloatVec;
 import nova.hetu.omniruntime.vector.ArrayVec;
 import nova.hetu.omniruntime.vector.StructVec;
+import nova.hetu.omniruntime.vector.MapVec;
 import nova.hetu.omniruntime.vector.Vec;
 import nova.hetu.omniruntime.vector.VecBatch;
 import nova.hetu.omniruntime.vector.VecEncoding;
@@ -113,6 +115,18 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 }
                 break;
             }
+            case OMNI_ENCODING_MAP: {
+                MapVec mapVec = (MapVec) vec;
+                Vec keyVec = mapVec.getKeyVec();
+                Vec valueVec = mapVec.getValueVec();
+                VecBatchSerde.Vec protoKeyVec = buildProtoVec(keyVec, null);
+                VecBatchSerde.Vec protoValueVec = buildProtoVec(valueVec, null);
+                protoDataTypeExtBuild.addChildren(protoKeyVec.getTypeExt());
+                protoDataTypeExtBuild.addChildren(protoValueVec.getTypeExt());
+                protoVecBuilder.addSubVectors(protoKeyVec);
+                protoVecBuilder.addSubVectors(protoValueVec);
+                break;
+            }
             default:
                 throw new IllegalStateException("Unexpected encoding: " + encoding);
         }
@@ -120,7 +134,12 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         Vec compactVec = compactVec(vec, ids);
 
         ByteBuffer valueBuf;
-        if (compactVec instanceof ArrayVec) {
+        if (compactVec instanceof MapVec) {
+            MapVec mapVec = (MapVec) compactVec;
+            ByteBuffer offsetsBuf = JvmUtils.directBuffer(mapVec.getOffsetsBuf());
+            offsetsBuf.limit(mapVec.getRealOffsetBufCapacityInBytes());
+            protoVecBuilder.setOffsets(ByteString.copyFrom(offsetsBuf));
+        } else if (compactVec instanceof ArrayVec) {
             ArrayVec arrayVec = (ArrayVec) compactVec;
             ByteBuffer offsetsBuf = JvmUtils.directBuffer(arrayVec.getOffsetsBuf());
             offsetsBuf.limit(arrayVec.getRealOffsetBufCapacityInBytes());
@@ -328,6 +347,22 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
                 }
                 structVec.setNullsBuf(protoVec.getNulls().toByteArray());
                 return structVec;
+            case OMNI_ENCODING_MAP:
+                if (protoVec.getSubVectorsCount() != 2) {
+                    throw new IllegalStateException("MapVec must have exactly two subVectors");
+                }
+                Vec keyVec = buildVec(protoVec.getSubVectors(0));
+                Vec valueVec = buildVec(protoVec.getSubVectors(1));
+                DataType keyType = keyVec.getType();
+                DataType valueType = valueVec.getType();
+                MapDataType mapDataType = new MapDataType(keyType, valueType);
+
+                MapVec mapVec = new MapVec(mapDataType, vecSize);
+                mapVec.AddKeys(keyVec);
+                mapVec.AddValues(valueVec);
+                mapVec.setNullsBuf(protoVec.getNulls().toByteArray());
+                mapVec.setOffsetsBuf(protoVec.getOffsets().toByteArray());
+                return mapVec;
             default:
                 throw new IllegalStateException("Unexpected encoding: " + vecEncoding);
         }

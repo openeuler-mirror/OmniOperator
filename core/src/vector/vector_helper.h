@@ -348,6 +348,36 @@ public:
         }
     }
 
+    static void PrintMapVectorValue(MapVector *mapVec, int32_t rowIndex)
+    {
+        if (mapVec->IsNull(rowIndex)) {
+            std::cout << "NULL\t";
+            return;
+        }
+
+        auto offsets = mapVec->GetOffsets();
+        uint32_t start = offsets[rowIndex];
+        uint32_t end = offsets[rowIndex + 1];
+
+        if (start == end) {
+            std::cout << "{}\t";
+            return;
+        }
+        std::cout << "{";
+        auto keysVec = mapVec->GetKeyVector();
+        auto valuesVec = mapVec->GetValueVector();
+
+        for (uint32_t i = start; i < end; ++i) {
+            if (i > start) {
+                std::cout << ",";
+            }
+            PrintVectorValue(keysVec.get(), static_cast<int32_t>(i));
+            std::cout << ":";
+            PrintVectorValue(valuesVec.get(), static_cast<int32_t>(i));
+        }
+        std::cout << "}\t";
+    }
+
     static void PrintVectorValue(BaseVector *vector, int32_t rowIndex)
     {
         using namespace omniruntime::type;
@@ -371,6 +401,8 @@ public:
             PrintArrayVectorValue(vector, rowIndex);
         } else if (encoding == vec::OMNI_ENCODING_STRUCT) {
             PrintStructVectorValue(vector, rowIndex);
+        } else if (encoding == vec::OMNI_ENCODING_MAP) {
+            PrintMapVectorValue(static_cast<MapVector *>(vector), rowIndex);
         } else {
             DYNAMIC_TYPE_DISPATCH(PrintFlatVectorValue, vector->GetTypeId(), vector, rowIndex);
         }
@@ -948,6 +980,39 @@ public:
                     "In function AppendVector, no such data type " + std::to_string(dataTypeId);
                 throw omniruntime::exception::OmniException("UNSUPPORTED_ERROR", omniExceptionInfo);
             }
+        }
+    }
+
+    static void ExpandElementVector(BaseVector *elementVec, type::DataTypeId typeId, int32_t newSize) {
+        switch (typeId) {
+            case type::OMNI_INT: {
+                auto *vec = dynamic_cast<Vector<int32_t> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
+            case type::OMNI_LONG: {
+                auto *vec = dynamic_cast<Vector<int64_t> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
+            case type::OMNI_DOUBLE: {
+                auto *vec = dynamic_cast<Vector<double> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
+            case type::OMNI_BOOLEAN: {
+                auto *vec = dynamic_cast<Vector<bool> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
+            case type::OMNI_CHAR:
+            case type::OMNI_VARCHAR: {
+                auto *vec = dynamic_cast<Vector<LargeStringContainer<std::string_view>> *>(elementVec);
+                vec->Expand(newSize);
+                break;
+            }
+            default:
+                throw OmniException("ExpandElementVector", "Unsupported element type: " + std::to_string(typeId));
         }
     }
 

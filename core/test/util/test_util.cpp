@@ -949,6 +949,57 @@ bool CompareVarcharUnorderedRows(BaseVector *resultVector, BaseVector *expectedV
     return true;
 }
 
+bool CompareMapUnorderedRows(BaseVector *resVec, BaseVector *dstVec, const double error) {
+    auto resultVec = dynamic_cast<MapVector *>(resVec);
+    auto expectedVec = dynamic_cast<MapVector *>(dstVec);
+    if (!resultVec || !expectedVec) {
+        std::cout << "ERROR: MapVector dynamic_cast failed !" << std::endl;
+        return false;
+    }
+    if (resultVec->vec::BaseVector::GetSize() != expectedVec->vec::BaseVector::GetSize()) {
+        std::cout << "WARN: Vector size does not match !" << std::endl;
+        return false;
+    }
+
+    for (int row = 0; row < resultVec->vec::BaseVector::GetSize(); row++) {
+        if (resultVec->IsNull(row) != expectedVec->IsNull(row)) {
+            return false;
+        }
+        if (resultVec->IsNull(row)) {
+            continue;
+        }
+
+        int32_t resSize = resultVec->GetSize(row);
+        int32_t expSize = expectedVec->GetSize(row);
+        if (resSize != expSize) {
+            return false;
+        }
+
+        int32_t resOffset = resultVec->GetOffset(row);
+        int32_t expOffset = expectedVec->GetOffset(row);
+        auto resMapKey = resultVec->GetKeyVector()->Slice(resOffset, resSize, false);
+        auto expMapKey = expectedVec->GetKeyVector()->Slice(expOffset, expSize, false);
+        bool match = ColumnMatchIgnoreOrder(resMapKey, expMapKey, error);
+
+        delete resMapKey;
+        delete expMapKey;
+        if (!match) {
+            return false;
+        }
+
+        auto resMapValue = resultVec->GetValueVector()->Slice(resOffset, resSize, false);
+        auto expMapValue = expectedVec->GetValueVector()->Slice(expOffset, expSize, false);
+        match = ColumnMatchIgnoreOrder(resMapValue, expMapValue, error);
+
+        delete resMapValue;
+        delete expMapValue;
+        if (!match) {
+            return false;
+        }
+    }
+    return true;
+}
+
 template <typename D, typename V>
 bool CompareUnorderedRows(BaseVector *resultVector, BaseVector *expectedVector, const double error)
 {
@@ -1076,6 +1127,10 @@ bool ColumnMatchIgnoreOrder(BaseVector *resultVector, BaseVector *expectedVector
         }
         case OMNI_ROW: {
             isMatched = CompareStructUnorderedRows(resultVector, expectedVector, error);
+            break;
+        }
+        case OMNI_MAP: {
+            isMatched = CompareMapUnorderedRows(resultVector, expectedVector, error);
             break;
         }
         default: {
