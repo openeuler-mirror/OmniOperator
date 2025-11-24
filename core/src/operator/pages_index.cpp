@@ -586,14 +586,14 @@ static void ALWAYS_INLINE QuickSortDoubleSmall(int64_t *values, uint64_t *addres
         while (j >= from) {
             auto jValuePtr = values[j];
             auto jValue = *(reinterpret_cast<double *>(&jValuePtr));
-            if constexpr (sortAscending == 0) {
-                // double equal condition which means jValue >= iValue
-                if (DoubleCompare<sortAscending>(jValue, iValue) >= 0) {
+			if constexpr (sortAscending == 0) {
+                // condition is jValue >= iValue
+                if (DoubleEqual(jValue, iValue) || jValue > iValue) {
                     break;
                 }
             } else {
-                // double equal condition which means jValue <= iValue
-                if (DoubleCompare<sortAscending>(jValue, iValue) <= 0) {
+                // condition is jValue <= iValue
+                if (DoubleEqual(jValue, iValue) || jValue < iValue) {
                     break;
                 }
             }
