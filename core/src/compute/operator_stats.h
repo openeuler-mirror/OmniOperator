@@ -96,15 +96,15 @@ struct OperatorStats {
     int numDrivers = 0;
 
     // For BHJ/SHJ
-    uint64_t buildInputRows;
-    uint64_t buildNumInputVecBatches;
+    uint64_t buildInputRows{0};
+    uint64_t buildNumInputVecBatches{0};
     CpuWallTiming buildAddInputTime;
     CpuWallTiming buildGetOutputTime;
 
-    uint64_t lookupInputRows;
-    uint64_t lookupNumInputVecBatches;
-    uint64_t lookupOutputRows;
-    uint64_t lookupNumOutputVecBatches;
+    uint64_t lookupInputRows{0};
+    uint64_t lookupNumInputVecBatches{0};
+    uint64_t lookupOutputRows{0};
+    uint64_t lookupNumOutputVecBatches{0};
     CpuWallTiming lookupAddInputTime;
     CpuWallTiming lookupGetOutputTime;
  
