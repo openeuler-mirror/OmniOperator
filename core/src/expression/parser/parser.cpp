@@ -165,6 +165,7 @@ Expr *Parser::ParseRowExpression(const string &inputStr, DataTypes &inputTypes, 
         string currVal = exprStr.substr(commaPositions[i - 1] + 1, commaPositions[i] - commaPositions[i - 1] - 1);
         expr = ParseRowExpression(currVal, inputTypes, vecCount);
         if (expr == nullptr) {
+            Expr::DeleteExprs(args);
             return nullptr;
         }
         args.push_back(expr);
@@ -236,6 +237,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
         } else if (args[0]->GetType() == ExprType::FIELD_E) {
             return static_cast<FieldExpr *>(args[0]);
         } else {
+            Expr::DeleteExprs(args);
             return nullptr;
         }
     }
@@ -258,6 +260,7 @@ Expr *Parser::ParseRowExpressionHelper(string opStr, vector<Expr *> args)
 
     // No expression can be matched
     LogWarn("operator is not supported: %s", opStr.c_str());
+    Expr::DeleteExprs(args);
     return nullptr;
 }
 
