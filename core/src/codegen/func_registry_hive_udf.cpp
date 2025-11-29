@@ -46,8 +46,10 @@ void HiveUdfRegistry::GenerateHiveUdfMap(std::unordered_map<std::string, std::st
     std::ifstream file(realPathRes);
     if (!file.good()) {
         LogWarn("%s does not exist.", realPathRes);
+        free(realPathRes);
         return;
     }
+    free(realPathRes);
 
     std::string s;
     while (getline(file, s)) {
