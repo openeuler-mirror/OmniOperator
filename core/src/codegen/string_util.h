@@ -211,7 +211,7 @@ public:
 
     static inline bool StrContainsStr(const char *srcStr, int32_t srcLen, const char *matchStr, int32_t matchLen)
     {
-        int next[matchLen];
+        std::unique_ptr<int[]>next = std::make_unique<int[]>(matchLen);
         next[0] = -1;
         int i = 0;
         int j = -1;

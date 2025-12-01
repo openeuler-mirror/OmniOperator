@@ -196,13 +196,11 @@ extern "C" DLLEXPORT void BatchCastDecimal128ToDoubleDown(Decimal128 *x, int32_t
 extern "C" DLLEXPORT void BatchCastDecimal128ToDoubleHalfUp(Decimal128 *x, int32_t precision, int32_t scale,
     const bool *isAnyNull, double *output, int32_t rowCnt)
 {
-    std::string doubleString;
     for (int i = 0; i < rowCnt; ++i) {
         if (isAnyNull[i]) {
             continue;
         }
-        doubleString = Decimal128Wrapper(x[i]).SetScale(scale).ToString();
-        output[i] = stod(doubleString);
+        output[i] = stod(Decimal128Wrapper(x[i]).SetScale(scale).ToString());
     }
 }
 

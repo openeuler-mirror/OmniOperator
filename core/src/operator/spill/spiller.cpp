@@ -314,7 +314,7 @@ ErrorCode SpillWriter::WriteVectorToBuffer(vec::BaseVector *vector, int32_t rowC
     if constexpr (std::is_same_v<T, std::string_view>) {
         // write offsets
         auto valueOffsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(vector));
-        auto offsetLength = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
+        auto offsetLength = (static_cast<ssize_t>(rowCount) + 1) * sizeof(int32_t);
         ret = memcpy_s(writeBuffer + writeOffset, offsetLength, valueOffsets, offsetLength);
         if (ret != EOK) {
             auto errorNum = errno;

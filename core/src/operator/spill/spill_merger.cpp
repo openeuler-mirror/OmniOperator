@@ -130,7 +130,7 @@ template <typename T> ErrorCode SpillReader::ReadVector(BaseVector *vector, int3
         }
 
         // read offsets
-        auto offsetSize = static_cast<ssize_t>((rowCount + 1) * sizeof(int32_t));
+        auto offsetSize = (static_cast<ssize_t>(rowCount) + 1) * sizeof(int32_t);
         auto offsets = reinterpret_cast<int32_t *>(VectorHelper::UnsafeGetOffsetsAddr(resultVector));
         if (Read(offsets, offsetSize) != ErrorCode::SUCCESS) {
             LogError("Read value offsets from %s failed.", filePath.c_str());
