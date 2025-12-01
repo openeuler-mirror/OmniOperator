@@ -285,7 +285,7 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampDict(double &__restrict mean_, do
         ptr = (const double *)__builtin_assume_aligned(ptr, ARRAY_ALIGNMENT);
         indexMap = (const int32_t *)__builtin_assume_aligned(indexMap, ARRAY_ALIGNMENT);
 
-        alignas(ARRAY_ALIGNMENT) auto inputArr = new double[rowCount];
+        auto inputArr = std::make_unique<double[]>(rowCount);
         for (size_t i = 0; i < rowCount; ++i) {
             inputArr[i] = ptr[indexMap[i]];
         }
@@ -293,7 +293,6 @@ VECTORIZE_LOOP FAST_MATH NO_INLINE void AddSampDict(double &__restrict mean_, do
         for (size_t i = 0; i < rowCount; ++i) {
             OP(mean_, m2, cnt_, inputArr[i]);
         }
-        delete[] inputArr;
     }
 }
 

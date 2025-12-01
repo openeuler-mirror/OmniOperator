@@ -42,16 +42,19 @@ AggregationWithExprOperatorFactory::AggregationWithExprOperatorFactory(
     std::vector<int8_t> hasAggFilters(aggFilterNum, 0);
     for (int32_t i = 0; i < aggFilterNum; ++i) {
         auto aggFilter = aggFilters[i];
-        if (aggFilter != nullptr) {
-            auto simpleFilter = new SimpleFilter(*aggFilter);
-            if (simpleFilter->Initialize(overflowConfig)) {
-                aggSimpleFilters[i] = simpleFilter;
-                hasAggFilters[i] = 1;
-            } else {
-                delete simpleFilter;
-                throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT",
-                    "The expression is not supported yet.");
+        if (aggFilter == nullptr) continue;
+        auto simpleFilter = new SimpleFilter(*aggFilter);
+        if (simpleFilter->Initialize(overflowConfig)) {
+            aggSimpleFilters[i] = simpleFilter;
+            hasAggFilters[i] = 1;
+        } else {
+            delete simpleFilter;
+            for (auto it : aggSimpleFilters) {
+                delete it;
             }
+            aggSimpleFilters.clear();
+            throw omniruntime::exception::OmniException("EXPRESSION_NOT_SUPPORT",
+                "The expression is not supported yet.");
         }
     }
 
