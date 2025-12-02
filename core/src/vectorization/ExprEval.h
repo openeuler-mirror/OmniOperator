@@ -6,6 +6,7 @@
 #pragma once
 #include "expression/expr_visitor.h"
 #include "memory/allocator.h"
+#include "util/config/QueryConfig.h"
 
 namespace omniruntime::vectorization {
 class ExprEval : public ExprVisitor {
@@ -49,5 +50,6 @@ private:
     std::stack<vec::BaseVector *> inputValues_;
     int32_t rowSize;
     mem::Allocator *allocator = mem::Allocator::GetAllocator();
+    config::QueryConfig queryConfig;
 };
 }

@@ -294,6 +294,8 @@ class InExpr : public Expr {
 public:
     // first element of arguments is the value to be compared to every other argument
     std::vector<Expr *> arguments;
+    Expr* fieldExpr = nullptr;
+    std::shared_ptr<vec::RowVector> constantRowVec;
 
     InExpr();
     ~InExpr() override;

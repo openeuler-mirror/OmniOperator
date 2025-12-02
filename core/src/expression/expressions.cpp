@@ -732,10 +732,67 @@ InExpr::~InExpr()
     DeleteExprs(arguments);
 }
 
-InExpr::InExpr(std::vector<Expr *> args)
-{
+InExpr::InExpr(std::vector<Expr *> args) {
     dataType = BooleanType();
     arguments = std::move(args);
+    if (arguments.empty()) {
+        fieldExpr = nullptr;
+        return;
+    }
+    fieldExpr = arguments[0];
+    if (!fieldExpr) {
+        OMNI_THROW("InExpr Error", "Field expression is null");
+    }
+
+    DataTypeId fieldTypeId = fieldExpr->GetReturnTypeId();
+    int32_t constantCount = arguments.size() - 1;
+    constantRowVec = std::make_shared<vec::RowVector>(constantCount);
+
+    for (size_t i = 1; i < arguments.size(); ++i) {
+        auto* literal = dynamic_cast<LiteralExpr*>(arguments[i]);
+        if (!literal) {
+            OMNI_THROW("InExpr Error", "IN list only support literal constants");
+        }
+        if (literal->GetReturnTypeId() != fieldTypeId) {
+            OMNI_THROW("InExpr Error", "Constant type mismatch with field (field: %d, constant: %d)",
+                fieldTypeId, literal->GetReturnTypeId());
+        }
+        std::shared_ptr<vec::BaseVector> constVec;
+        switch (fieldTypeId) {
+            case OMNI_INT:
+                constVec = std::make_shared<vec::ConstVector<int32_t>>(literal->intVal, OMNI_INT);
+                if (literal->isNull) constVec->SetNull(0);
+                break;
+            case OMNI_LONG:
+                constVec = std::make_shared<vec::ConstVector<int64_t>>(literal->longVal, OMNI_LONG);
+                if (literal->isNull) constVec->SetNull(0);
+                break;
+            case OMNI_VARCHAR:
+                constVec = std::make_shared<vec::ConstVector<std::string>>(*literal->stringVal, OMNI_VARCHAR);
+                if (literal->isNull) constVec->SetNull(0);
+                break;
+            case OMNI_FLOAT:
+                constVec = std::make_shared<vec::ConstVector<float>>(literal->floatVal, OMNI_FLOAT);
+                if (literal->isNull) constVec->SetNull(0);
+                break;
+            case OMNI_DOUBLE:
+                constVec = std::make_shared<vec::ConstVector<double>>(literal->doubleVal, OMNI_DOUBLE);
+                if (literal->isNull) constVec->SetNull(0);
+                break;
+            default:
+                OMNI_THROW("InExpr Error", "Unsupported field type: %d", fieldTypeId);
+        }
+        constantRowVec->AddChild(constVec);
+    }
+
+    std::vector<DataTypeId> argTypes = {fieldTypeId, OMNI_ROW};
+    auto signature = std::make_shared<codegen::FunctionSignature>("in", argTypes, OMNI_BOOLEAN);
+
+    std::vector<vectorization::VectorPtr> constantInputs = {constantRowVec};
+    vectorFunction = vectorization::VectorFunction::Find(signature, config::QueryConfig(), constantInputs);
+    if (!vectorFunction) {
+        OMNI_THROW("InExpr Error", "Failed to find In vector function for signature: " + signature->ToString());
+    }
 }
 
 ExprType InExpr::GetType() const

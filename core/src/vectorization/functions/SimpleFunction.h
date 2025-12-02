@@ -76,10 +76,20 @@ class SimpleFunction final : public VectorFunction {
         bool mayHaveNullsRecursive{false};
     };
 
+    template <int32_t POSITION, typename... Values>
+    void unpackInitialize(const std::vector<type::DataTypePtr>& inputTypes, const config::QueryConfig& config,
+                          const std::vector<VectorPtr>& packed, const Values*... values) const
+    {
+        (*fn_).initialize(inputTypes, config, packed);
+    }
+
 public:
     SimpleFunction(const std::vector<DataTypePtr> &inputTypes, const config::QueryConfig &config,
         const std::vector<VectorPtr> &constantInputs)
-        : fn_{std::make_unique<FUNC>()} {}
+        : fn_{std::make_unique<FUNC>()}
+    {
+        unpackInitialize<0>(inputTypes, config, constantInputs);
+    }
 
     explicit SimpleFunction() {}
 

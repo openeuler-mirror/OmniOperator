@@ -4,6 +4,7 @@
  */
 
 #include "vectorization/functions/Comparisons.h"
+#include "vectorization/functions/In.h"
 
 namespace omniruntime::vectorization {
 void RegisterCompareFunctions(const std::string &prefix)
@@ -13,5 +14,6 @@ void RegisterCompareFunctions(const std::string &prefix)
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("greaterThanEqual"), makeGreaterThanOrEqual);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("lessThan"), makeLessThan);
     VectorFunction::RegisterVectorFunctionFactory(ComparisonSignatures("lessThanEqual"), makeLessThanOrEqual);
+    VectorFunction::RegisterVectorFunctionFactory(getInSignatures("in"), makeInSimpleFunction);
 }
 }

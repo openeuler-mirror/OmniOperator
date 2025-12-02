@@ -48,6 +48,20 @@ BaseVector *ColumnProjectionVarCharVectorHelper(BaseVector *colVec, int32_t numS
 }
 
 template <typename T>
+BaseVector *ColumnProjectionVarCharCopyPositionsHelper(BaseVector *colVec, const int32_t *selectedRows, int32_t numSelectedRows)
+{
+    if (colVec->GetEncoding() == OMNI_FLAT) {
+        auto flatVec = reinterpret_cast<Vector<LargeStringContainer<T>> *>(colVec);
+        return flatVec->CopyPositions(selectedRows, 0, numSelectedRows);
+    } else if (colVec->GetEncoding() == OMNI_DICTIONARY) {
+        auto dictVec = reinterpret_cast<Vector<DictionaryContainer<T>> *>(colVec);
+        return dictVec->CopyPositions(selectedRows, 0, numSelectedRows);
+    } else {
+        OMNI_THROW("String Projection Error", "Unsupported encoding for varchar vector");
+    }
+}
+
+template <typename T>
 void SetConstantValues(T value, BaseVector *outVec)
 {
     auto rowCount = outVec->GetSize();
@@ -208,40 +222,43 @@ void ExprEval::Visit(const FieldExpr &e)
         switch (typeId) {
             case OMNI_INT:
             case OMNI_DATE32:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<int32_t>(colVec, selectRow, rowSize));
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<int32_t>(colVec, selectRow, selectSize));
                 break;
             case OMNI_SHORT:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<int16_t>(colVec, selectRow, rowSize));
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<int16_t>(colVec, selectRow, selectSize));
                 break;
             case OMNI_BYTE:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<int8_t>(colVec, selectRow, rowSize));
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<int8_t>(colVec, selectRow, selectSize));
                 break;
             case OMNI_LONG:
             case OMNI_TIMESTAMP:
             case OMNI_DECIMAL64:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<int64_t>(colVec, selectRow, rowSize));
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<int64_t>(colVec, selectRow, selectSize));
                 break;
             case OMNI_DOUBLE:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<double>(colVec, selectRow, rowSize));
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<double>(colVec, selectRow, selectSize));
                 break;
             case OMNI_FLOAT:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<float>(colVec, selectRow, rowSize));
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<float>(colVec, selectRow, selectSize));
                 break;
             case OMNI_BOOLEAN:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<bool>(colVec, selectRow, rowSize));
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<bool>(colVec, selectRow, selectSize));
                 break;
             case OMNI_DECIMAL128:
-                inputValues_.push(ColumnProjectionCopyPositionsHelper<Decimal128>(colVec, selectRow, rowSize));
+                inputValues_.push(ColumnProjectionCopyPositionsHelper<Decimal128>(colVec, selectRow, selectSize));
                 break;
             case OMNI_VARCHAR:
             case OMNI_CHAR:
-                inputValues_.push(ColumnProjectionVarCharVectorHelper<std::string_view>(colVec, rowSize));
+                {
+                    auto strVec = ColumnProjectionVarCharCopyPositionsHelper<std::string_view>(colVec, selectRow, selectSize);
+                    inputValues_.push(strVec);
+                }
                 break;
             case OMNI_ARRAY:
-                inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, rowSize));
+                inputValues_.push(reinterpret_cast<ArrayVector *>(colVec)->Slice(0, selectSize));
                 break;
             case OMNI_MAP:
-                inputValues_.push(reinterpret_cast<MapVector *>(colVec)->Slice(0, rowSize));
+                inputValues_.push(reinterpret_cast<MapVector *>(colVec)->Slice(0, selectSize));
                 break;
             default: LogError("Do not support such vector type %d", typeIds[e.colVal]);
         }
@@ -307,7 +324,13 @@ void ExprEval::Visit(const BinaryExpr &e)
     inputValues_.push(result);
 }
 
-void ExprEval::Visit(const InExpr &e) {}
+void ExprEval::Visit(const InExpr &e)
+{
+    e.fieldExpr->Accept(*this);
+    BaseVector* result = VectorHelper::CreateFlatVector(OMNI_BOOLEAN, rowSize);
+    e.vectorFunction->Apply(inputValues_, e.dataType, result, context);
+    inputValues_.push(result);
+}
 
 void ExprEval::Visit(const BetweenExpr &e) {}
 

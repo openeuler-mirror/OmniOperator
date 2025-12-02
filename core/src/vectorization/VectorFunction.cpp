@@ -9,9 +9,6 @@ namespace omniruntime::vectorization {
 using namespace omniruntime::type;
 using namespace omniruntime::codegen;
 
-FunctionMap VectorFunction::functionMap_;
-FunctionFactoryMap VectorFunction::functionFactoryMap_;
-
 bool VectorFunction::RegisterVectorFunction(const std::string &name, const std::vector<DataTypeId> &paramsType,
     DataTypeId returnType, const std::shared_ptr<VectorFunction> &func)
 {
@@ -33,6 +30,16 @@ bool VectorFunction::RegisterVectorFunctionFactory(std::vector<std::shared_ptr<F
 {
     for (const auto &signature : functionSignatures) {
         functionFactoryMap_.insert(std::make_pair(signature, factory));
+    }
+    return true;
+}
+
+bool VectorFunction::RegisterVectorFunctionFactory(
+        std::vector<std::shared_ptr<codegen::FunctionSignature>> functionSignatures,
+        const VectorFunctionFactoryWithConstants &factory)
+{
+    for (const auto &signature : functionSignatures) {
+        functionFactoryWithConstantsMap_.insert(std::make_pair(signature, factory));
     }
     return true;
 }

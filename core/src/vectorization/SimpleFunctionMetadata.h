@@ -8,6 +8,9 @@
 #include <tuple>
 #include <util/compiler_util.h>
 #include "vectorization/Status.h"
+#include <vector>
+#include "type/data_type.h"
+#include "util/config/QueryConfig.h"
 
 namespace omniruntime::vectorization {
 // wraps a UDF object to provide the inheritance
@@ -41,6 +44,12 @@ public:
     ALWAYS_INLINE Status call(TReturn &out, bool &notNull, const TArgs &... args)
     {
         return callImpl(out, notNull, args...);
+    }
+
+    template <typename... Args>
+    void initialize(const std::vector<type::DataTypePtr>& inputTypes, const config::QueryConfig& config, Args&&... args)
+    {
+        instance_.initialize(inputTypes, config, std::forward<Args>(args)...);
     }
 };
 }

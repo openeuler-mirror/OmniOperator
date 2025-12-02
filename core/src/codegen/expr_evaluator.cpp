@@ -717,10 +717,22 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
 
     auto selectVector = e.GetResult();
     auto selectAddr = static_cast<bool *>(VectorHelper::UnsafeGetValues(selectVector));
+    // FIXME: The null value check here is a temporary workaround.
+    // The In expression relies on SimpleFunction.h which skips null value processing internally.
+    // This check ensures nulls are properly filtered, but can be removed once the null handling logic in SimpleFunction
+    // is updated to handle null values natively for In expressions.
+    auto* boolSelectVec = static_cast<vec::Vector<bool>*>(selectVector);
     for (int i = 0; i < rowCount; i++) {
-        if (selectAddr[i]) {
-            ++numSelectedRows;
+        if (boolSelectVec->IsNull(i)) {
+            selectAddr[i] = false;
+        } else {
+            if (selectAddr[i]) {
+                ++numSelectedRows;
+            }
         }
+    }
+    if (numSelectedRows == 0) {
+        return nullptr;
     }
     auto projectedVecs = std::make_unique<VectorBatch>(numSelectedRows);
 
@@ -739,7 +751,8 @@ VectorBatch *ExpressionEvaluator::ProcessFilterAndProject(VectorBatch *vecBatch,
         }
         projectedVecs->Append(outCol);
     }
-
+    context->hasFilter = false;
+    context->SetIsSelectRow(nullptr);
     return projectedVecs.release();
 }
 
