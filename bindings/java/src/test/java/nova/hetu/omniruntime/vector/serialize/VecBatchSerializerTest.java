@@ -677,4 +677,44 @@ public class VecBatchSerializerTest {
         freeVecBatch(vecBatch);
         freeVecBatch(checkVecBatch);
     }
+
+    @Test
+    public void testSerializeArrayVecWithNull() {
+        // prepare vector batch
+        int elementSize = 11;
+        int rowSize = 4;
+        ArrayDataType arrayDataType = new ArrayDataType(new VarcharDataType(16));
+        ArrayVec arrayVec = new ArrayVec(arrayDataType, rowSize, true);
+
+        VarcharVec elementVec = new VarcharVec(elementSize);
+        String tmpValStr = "testvarcharVal";
+        for (int i = 0; i < elementSize - 1; i++) {
+            String str = tmpValStr.substring(0, i) + i;
+            elementVec.set(i, str.getBytes(StandardCharsets.UTF_8));
+        }
+        elementVec.setNull(10);
+
+        int[] offsets = new int[]{0, 2, 5, 10, 11};
+        arrayVec.addElements(elementVec);
+        arrayVec.addOffsets(offsets);
+        VecBatch vecBatch = new VecBatch(new Vec[]{arrayVec});
+
+        // serialize
+        VecBatchSerializer serializer = VecBatchSerializerFactory.create();
+        byte[] str = serializer.serialize(vecBatch);
+
+        // deserialize
+        VecBatch checkVecBatch = serializer.deserialize(str);
+
+        // check result
+        ArrayVec checkResultVec = (ArrayVec) checkVecBatch.getVector(0);
+        VarcharVec deElementVec = (VarcharVec) checkResultVec.getElementVec();
+        assertEquals(checkResultVec.getSize(3), 0);
+        assertEquals(rowSize, checkResultVec.getSize());
+        assertEquals(elementVec.getSize(), deElementVec.getSize());
+        assertEquals(new String(elementVec.get(2)), new String(deElementVec.get(2)));
+
+        freeVecBatch(vecBatch);
+        freeVecBatch(checkVecBatch);
+    }
 }

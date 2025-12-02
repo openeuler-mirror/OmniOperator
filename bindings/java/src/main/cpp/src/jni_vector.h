@@ -298,10 +298,12 @@ static std::once_flag loadDataTypeClsFlag;
 static jclass dataTypeCls = nullptr;
 static jclass structDataTypeCls = nullptr;
 static jclass mapDataTypeCls = nullptr;
+static jclass arrayDataTypeCls = nullptr;
 
 static jmethodID createMethodId = nullptr;
 static jmethodID structDataTypeInitMethodId = nullptr;
 static jmethodID mapDataTypeInitMethodId = nullptr;
+static jmethodID arrayDataTypeInitMethodId = nullptr;
 
 /*
  * Class:     nova_hetu_omniruntime_vector_ArrayVec

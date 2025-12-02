@@ -212,7 +212,12 @@ JNIEXPORT jlong JNICALL Java_nova_hetu_omniruntime_vector_ArrayVec_getValueOffse
     jclass jcls, jlong jNativeVector)
 {
     ArrayVector *nativeVector = reinterpret_cast<ArrayVector *>(jNativeVector);
-    return reinterpret_cast<uintptr_t>(nativeVector->GetOffsets());
+    auto offsetsAddr = nativeVector->GetOffsets();
+    if (UNLIKELY(offsetsAddr == nullptr)) {
+        throw omniruntime::exception::OmniException("GET_OFFSETS_FAILED",
+            "return a null pointer when getting offsets address");
+    }
+    return reinterpret_cast<uintptr_t>(offsetsAddr);
 }
 
 JNIEXPORT void JNICALL Java_nova_hetu_omniruntime_memory_MemoryManager_setGlobalMemoryLimitNative(JNIEnv *env,
@@ -494,11 +499,22 @@ static void LoadDataTypeCls(JNIEnv *env)
             "<init>",
             "(Lnova/hetu/omniruntime/type/DataType;Lnova/hetu/omniruntime/type/DataType;)V"
         );
+
+        arrayDataTypeCls = CreateGlobalClassRef(env, "nova/hetu/omniruntime/type/ArrayDataType");
+        arrayDataTypeInitMethodId = env->GetMethodID(
+            arrayDataTypeCls,
+            "<init>",
+            "(Lnova/hetu/omniruntime/type/DataType;)V"
+        );
     }
 }
 
 static jobject GetDataType(JNIEnv *env, BaseVector *vec)
 {
+    if (UNLIKELY(vec == nullptr)) {
+        throw omniruntime::exception::OmniException("CREATE_COMPLEX_VECTOR_FAILED",
+            "GetDataType received null vector");
+    }
     auto id = vec->GetTypeId();
     switch (id) {
         case OMNI_ROW: {

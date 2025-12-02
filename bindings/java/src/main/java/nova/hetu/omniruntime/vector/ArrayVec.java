@@ -44,7 +44,7 @@ public class ArrayVec extends ComplexVec {
             getComplexCapacityNative(nativeVector, OMNI_ENCODING_ARRAY.ordinal()), size, type);
         this.elementVec = createVec(getElementsAddrNative(nativeVector), type.getElementType());
         this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
-            (size + 1) * Integer.BYTES);
+            (size + 1) * Long.BYTES);
     }
 
     public ArrayVec(long nativeVector, long nativeValueBufAddress, long nativeVectorNullBufAddress,
@@ -52,7 +52,7 @@ public class ArrayVec extends ComplexVec {
             super(nativeVector, nativeValueBufAddress, nativeVectorNullBufAddress,
                 getComplexCapacityNative(nativeVector, OMNI_ENCODING_ARRAY.ordinal()), size, type);
             this.elementVec = createVec(getElementsAddrNative(nativeVector), type.getElementType());
-            this.offsetsBuf = OmniBufferFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Integer.BYTES);
+            this.offsetsBuf = OmniBufferFactory.create(nativeVectorOffsetBufAddress, (size + 1) * Long.BYTES);
         }
 
     public ArrayVec(long nativeVector, ArrayDataType type, int size, boolean isEmpty) {
@@ -61,14 +61,14 @@ public class ArrayVec extends ComplexVec {
             this.elementVec = createVec(getElementsAddrNative(nativeVector), type.getElementType());
         }
         this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
-            (size + 1) * Integer.BYTES);
+            (size + 1) * Long.BYTES);
     }
 
     private ArrayVec(ArrayVec vector, int offset, int length) {
         super(vector, offset, length, getComplexCapacityNative(vector.getNativeVector(), OMNI_ENCODING_ARRAY.ordinal()));
         this.elementVec = createVec(getElementsAddrNative(nativeVector), ((ArrayDataType) getType()).getElementType());
         this.offsetsBuf = OmniBufferFactory.create(getValueOffsetsNative(getNativeVector()),
-            (length + 1) * Integer.BYTES);
+            (length + 1) * Long.BYTES);
     }
 
     @Override
@@ -93,7 +93,7 @@ public class ArrayVec extends ComplexVec {
 
     @Override
     public int getRealOffsetBufCapacityInBytes() {
-        return (size + 1) * Integer.BYTES;
+        return (size + 1) * Long.BYTES;
     }
 
     public OmniBuffer getOffsetsBuf() {

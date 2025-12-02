@@ -194,6 +194,10 @@ public class ProtoVecBatchSerializer implements VecBatchSerializer {
         return vec;
     }
 
+    // For String types, copying is generally costly,
+    // so we try to reuse the original Vec as much as possible.
+    // We need to handle the offset case separately,
+    // and generate Vec based on the slice characteristics.
     private ByteBuffer serializeVarcharVector(VecBatchSerde.Vec.Builder protoVecBuilder, VarcharVec varcharVec) {
         ByteBuffer valueBuf;
         ByteBuffer offsetBuf;
