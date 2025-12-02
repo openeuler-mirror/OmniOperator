@@ -46,6 +46,7 @@ void RegisterFunctions::RegisterAllFunctions(const std::string &prefix)
     RegisterMapFunctions(prefix);
     RegisterMathFunctions(prefix);
     RegisterStringFunctions(prefix);
+    RegisterBitwiseFunctions(prefix);
 }
 
 void link_register_functions() {}
