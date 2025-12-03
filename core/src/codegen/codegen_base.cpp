@@ -65,6 +65,9 @@ Value *CodegenBase::GetPtrTypeFromInt(omniruntime::type::DataTypeId dataTypeId, 
         case OMNI_DOUBLE:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->DoublePtrType());
             break;
+        case OMNI_FLOAT:
+            elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->FloatPtrType());
+            break;
         case OMNI_CHAR:
         case OMNI_VARCHAR:
             elementPtr = builder->CreateIntToPtr(elementAddr, llvmTypes->I8PtrType());

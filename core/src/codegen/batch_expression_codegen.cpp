@@ -771,6 +771,9 @@ Value *BatchExpressionCodeGen::GetTypeSize(DataTypeId dataTypeId)
         case OMNI_DOUBLE:
             typeSize = sizeof(double);
             break;
+        case OMNI_FLOAT:
+            typeSize = sizeof(float);
+            break;
         case OMNI_BOOLEAN:
             typeSize = sizeof(bool);
             break;
@@ -1000,6 +1003,7 @@ void BatchExpressionCodeGen::Visit(const IfExpr &ifExpr)
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
+        case OMNI_FLOAT:
         case OMNI_BOOLEAN: {
             CallExternFunction("batch_if", { baseType }, baseType,
                 { evCond->data, evCond->isNull, evTrueValue, evTrueNull, evFalseValue, evFalseNull,
@@ -1130,6 +1134,7 @@ void BatchExpressionCodeGen::Visit(const InExpr &inExpr)
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
         case OMNI_DOUBLE:
+        case OMNI_FLOAT:
         case OMNI_DECIMAL64:
         case OMNI_DECIMAL128: {
             args = { llvmTypes->CreateConstantInt(size - 1),
@@ -1235,6 +1240,7 @@ void BatchExpressionCodeGen::Visit(const SwitchExpr &switchExpr)
         case OMNI_DATE32:
         case OMNI_LONG:
         case OMNI_TIMESTAMP:
+        case OMNI_FLOAT:
         case OMNI_DOUBLE: {
             args = { llvmTypes->CreateConstantInt(size),
                 whenClauses,

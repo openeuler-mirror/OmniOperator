@@ -34,6 +34,7 @@ typedef struct LiteralValue {
         int32_t intVal;
         int64_t longVal;
         double doubleVal;
+        float floatVal;
         Decimal128 decimal128Val;
         std::string_view stringVal;
 

@@ -234,6 +234,8 @@ llvm::Type *LLVMTypes::ToBatchDataPointerType(DataTypeId typeId)
             return I64PtrType();
         case OMNI_DOUBLE:
             return DoublePtrType();
+        case OMNI_FLOAT:
+            return FloatPtrType();
         case OMNI_CHAR:
         case OMNI_VARCHAR:
             return PtrType(I8PtrType());

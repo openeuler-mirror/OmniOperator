@@ -72,6 +72,9 @@ extern "C" DLLEXPORT
             case OMNI_DOUBLE:
                 errorMessage << "DOUBLE";
                 break;
+            case OMNI_FLOAT:
+                errorMessage << "FLOAT";
+                break;
             case OMNI_DECIMAL64:
             case OMNI_DECIMAL128:
                 errorMessage << "DECIMAL(" << va_arg(v, int32_t) << ", " << va_arg(v, int32_t) << ")";

@@ -157,6 +157,10 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
             literalVal.value.doubleVal = literalExpr->doubleVal;
             break;
         }
+        case OMNI_FLOAT: {
+            literalVal.value.floatVal = literalExpr->floatVal;
+            break;
+        }
         case OMNI_BOOLEAN: {
             literalVal.value.boolVal = literalExpr->boolVal;
             break;
@@ -299,6 +303,9 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
             break;
         case OMNI_DOUBLE:
             SetConstantValues<double>(literalVal.value.doubleVal, outVec);
+            break;
+        case OMNI_FLOAT:
+            SetConstantValues<float>(literalVal.value.floatVal, outVec);
             break;
         case OMNI_BOOLEAN:
             SetConstantValues<bool>(literalVal.value.boolVal, outVec);
