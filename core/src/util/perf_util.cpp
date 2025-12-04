@@ -102,5 +102,6 @@ PerfUtil::~PerfUtil()
         if (close(fd) == -1) {
             perror("PerfUtil close error");
         }
+        fd = -1;
     }
 }
