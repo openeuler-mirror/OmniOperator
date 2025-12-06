@@ -302,6 +302,15 @@ template <typename T> extern DLLEXPORT T Greatest(T lValue, bool lIsNull, T rVal
     return lValue;
 }
 
+template <typename T> extern DLLEXPORT int64_t Floor(T x)
+{
+    if constexpr (std::is_same_v<T, int64_t>) {
+        return x;
+    } else {
+        return std::floor(x);
+    }
+}
+
 template <typename T> extern DLLEXPORT T BitwiseAndFunction(T a, T b)
 {
     return a & b;

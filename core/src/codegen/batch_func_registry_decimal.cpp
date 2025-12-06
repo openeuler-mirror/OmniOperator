@@ -14,6 +14,7 @@ namespace {
 const std::string ABS_FN_STR = "batch_abs";
 const std::string ROUND_FN_STR = "batch_round";
 const std::string ROUND_NULL_FN_STR = "batch_round_null";
+const std::string FLOOR_FN_STR = "batch_floor";
 const std::string CAST_FN_STR = "batch_CAST";
 const std::string CAST_NULL_FN_STR = "batch_CAST_null";
 const std::string ADD_NULL_FN_STR = "batch_add_null";
@@ -66,6 +67,10 @@ std::vector<Function> BatchDecimalFunctionRegistry::GetFunctions()
             OMNI_DECIMAL64, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(BatchRoundDecimal64WithoutRound), ROUND_FN_STR, {}, { OMNI_DECIMAL64 },
             OMNI_DECIMAL64, INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchFloorDecimal128), FLOOR_FN_STR, {}, { OMNI_DECIMAL128 }, OMNI_DECIMAL128,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(BatchFloorDecimal64), FLOOR_FN_STR, {}, { OMNI_DECIMAL64 }, OMNI_DECIMAL64,
+            INPUT_DATA, true),
 
         // decimal64 compare
         Function(reinterpret_cast<void *>(BatchLessThanDecimal64), LESS_THAN_FN_STR, {}, paramTypes64, OMNI_BOOLEAN,

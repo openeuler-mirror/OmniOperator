@@ -13,6 +13,7 @@ namespace {
 const std::string ABS_FN_STR = "batch_abs";
 const std::string CAST_FN_STR = "batch_CAST";
 const std::string ROUND_FN_STR = "batch_round";
+const std::string FLOOR_FN_STR = "batch_floor";
 const std::string ADD_FN_STR = "batch_add";
 const std::string SUBTRACT_FN_STR = "batch_subtract";
 const std::string MULTIPLY_FN_STR = "batch_multiply";
@@ -146,7 +147,9 @@ std::vector<Function> BatchMathFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(BatchGreatest<bool>), GREATEST_NUM_FN_STR, {}, { OMNI_BOOLEAN, OMNI_BOOLEAN },
             OMNI_BOOLEAN, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(BatchGreatest<double>), GREATEST_NUM_FN_STR, {}, { OMNI_DOUBLE, OMNI_DOUBLE },
-            OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL)
+            OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(BatchFloor<int64_t>), FLOOR_FN_STR, {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(BatchFloor<double>), FLOOR_FN_STR, {}, { OMNI_DOUBLE }, OMNI_LONG, INPUT_DATA)
     };
 
     return batchMathFunctions;

@@ -20,6 +20,12 @@ const std::string RoundFnStr()
     return roundFnStr;
 }
 
+const std::string FloorFnStr()
+{
+    const std::string floorFnStr = "floor";
+    return floorFnStr;
+}
+
 const std::string AddFnStr()
 {
     const std::string addFnStr = "add";
@@ -273,6 +279,8 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             OMNI_BOOLEAN, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
         Function(reinterpret_cast<void *>(Greatest<double>), GreatestFnStr(), {}, { OMNI_DOUBLE, OMNI_DOUBLE },
             OMNI_DOUBLE, INPUT_DATA_AND_NULL_AND_RETURN_NULL),
+        Function(reinterpret_cast<void *>(Floor<int64_t>), FloorFnStr(), {}, { OMNI_LONG }, OMNI_LONG, INPUT_DATA),
+        Function(reinterpret_cast<void *>(Floor<double>), FloorFnStr(), {}, { OMNI_DOUBLE }, OMNI_LONG, INPUT_DATA),
 
         // insert native function for each short operations
         Function(reinterpret_cast<void *>(AddInt16), AddFnStr(), {}, shortParams, OMNI_SHORT, INPUT_DATA),

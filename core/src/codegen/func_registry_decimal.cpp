@@ -64,6 +64,12 @@ const std::string RoundNullFnStr()
     return roundNullFnStr;
 }
 
+const std::string DecimalFloorFnStr()
+{
+    const std::string decimalFloorFnStr = "floor";
+    return decimalFloorFnStr;
+}
+
 const std::string UnscaledValueFnStr()
 {
     const std::string unscaledValueFnStr = "UnscaledValue";
@@ -296,6 +302,11 @@ std::vector<Function> DecimalFunctionRegistry::GetFunctions()
             retType128, INPUT_DATA, true),
         Function(reinterpret_cast<void *>(RoundDecimal64WithoutRound), DecimalRoundFnStr(), {}, { OMNI_DECIMAL64 },
             retType64, INPUT_DATA, true),
+
+        Function(reinterpret_cast<void *>(FloorDecimal128), DecimalFloorFnStr(), {}, { OMNI_DECIMAL128 }, retType128,
+            INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(FloorDecimal64), DecimalFloorFnStr(), {}, { OMNI_DECIMAL64 }, retType64,
+            INPUT_DATA, true),
 
         Function(reinterpret_cast<void *>(Decimal64Compare), Decimal64CompareFnStr(), {}, paramTypes64, OMNI_INT),
         Function(reinterpret_cast<void *>(Decimal128Compare), Decimal128CompareFnStr(), {}, paramTypes128, OMNI_INT),

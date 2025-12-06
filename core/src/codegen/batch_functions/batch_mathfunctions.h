@@ -194,5 +194,19 @@ extern DLLEXPORT void BatchGreatest(T *xValue, bool *xIsNull, T *yValue, bool *y
         output[i] = xValue[i];
     }
 }
+template <typename T> extern DLLEXPORT void BatchFloor(T *x, bool *isAnyNull, int64_t *output, int32_t rowCnt)
+{
+    for (int i = 0; i < rowCnt; ++i) {
+        if (isAnyNull[i]) {
+            output[i] = 0;
+            continue;
+        }
+        if constexpr (std::is_same_v<T, int64_t>) {
+            output[i] = x[i];
+        } else {
+            output[i] = std::floor(x[i]);
+        }
+    }
+}
 }
 #endif // OMNI_RUNTIME_BATCH_MATHFUNCTIONS_H
