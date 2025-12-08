@@ -17,6 +17,8 @@ public:
 
     long long GetData() const;
 
+    ~PerfUtil();
+
 private:
     int fd;
     bool initialized;

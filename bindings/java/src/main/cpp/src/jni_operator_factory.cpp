@@ -1059,6 +1059,8 @@ Java_nova_hetu_omniruntime_operator_aggregator_OmniAggregationWithExprOperatorFa
         DeserializeJsonToArray(aggChannelCharPtr, expressions);
         aggKeysVector.push_back(expressions);
         aggColsNums.push_back(expressions.size());
+
+        env->ReleaseStringUTFChars(jAggChannel, aggChannelCharPtr);
     }
 
     auto sourceTypesCharPtr = env->GetStringUTFChars(jSourceType, JNI_FALSE);

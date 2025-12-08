@@ -95,3 +95,13 @@ long long PerfUtil::GetData() const
     }
     return -1;
 }
+
+PerfUtil::~PerfUtil()
+{
+    if (initialized) {
+        if (close(fd) == -1) {
+            perror("PerfUtil close error");
+        }
+        fd = -1;
+    }
+}
