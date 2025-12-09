@@ -45,6 +45,13 @@ public:
           hasAggFilters(hasAggFilters),
           operatorConfig(operatorConfig)
     {
+        isStepPartials = outputPartials.size() != 0;
+        for (auto outputPartial : outputPartials) {
+            if (!outputPartial) {
+                isStepPartials = false;
+                break;
+            }
+        }
         for (auto hasFilter: hasAggFilters) {
             if (hasFilter == 1) {
                 aggFiltersCount++;
@@ -86,6 +93,11 @@ public:
     void SetRowCountPerBatch(int32_t rowCount)
     {
         this->rowsPerBatch = rowCount;
+    }
+
+    bool IsStepPartials() const
+    {
+        return isStepPartials;
     }
 
 private:
@@ -177,6 +189,7 @@ private:
     int64_t memoryChunkSize = 0;
 
     // for spill
+    bool isStepPartials = true;
     OperatorConfig operatorConfig;
     SpillMerger *spillMerger = nullptr;
     Spiller *spiller = nullptr;

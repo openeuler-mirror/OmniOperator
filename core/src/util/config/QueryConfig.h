@@ -157,6 +157,10 @@ public:
     static constexpr const char *KColumnarSpillWriteBufferSize = "columnar_spill_write_buffer_size";
     static constexpr const char *KColumnarSpillDirDiskReserveSize = "columnar_spil_dir_disk_reserve_size";
 
+    static constexpr const char *KEnableAdaptivePartialAggregation = "enable_adaptive_partial_aggregation";
+    static constexpr const char *KAdaptivePartialAggregationMinRows = "adaptive_partial_aggregation_min_rows";
+    static constexpr const char *KAdaptivePartialAggregationRatio = "adaptive_partial_aggregation_ratio";
+
     uint64_t maxRowCount() const
     {
         static constexpr uint64_t kDefault = 12UL << 20;
@@ -349,6 +353,24 @@ public:
     {
         constexpr int32_t kDefaultValue = INT32_MAX;
         return get<int32_t>(KSpillSortRowThreshold, kDefaultValue);
+    }
+
+    bool EnableAdaptivePartialAggregation() const
+    {
+        constexpr bool kDefaultValue = true;
+        return get<bool>(KEnableAdaptivePartialAggregation, kDefaultValue);
+    }
+
+    int32_t AdaptivePartialAggregationMinRows() const
+    {
+        constexpr int32_t kDefaultValue = 500000;
+        return get<int32_t>(KAdaptivePartialAggregationMinRows, kDefaultValue);
+    }
+
+    double AdaptivePartialAggregationRatio() const
+    {
+        constexpr double kDefaultValue = 0.8;
+        return get<double>(KAdaptivePartialAggregationRatio, kDefaultValue);
     }
 
     /// Test-only method to override the current query config properties.
