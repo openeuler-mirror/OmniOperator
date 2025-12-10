@@ -582,3 +582,8 @@ extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right)
 {
     return left != right;
 }
+
+extern "C" DLLEXPORT bool ExpFunction(double a)
+{
+    return std::exp(a);
+}

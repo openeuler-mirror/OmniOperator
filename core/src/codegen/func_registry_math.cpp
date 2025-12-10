@@ -321,6 +321,7 @@ std::vector<Function> MathFunctionRegistry::GetFunctions()
             INPUT_DATA),
         Function(reinterpret_cast<void *>(EqualInt8), EqualFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(NotEqualInt8), NotEqualFnStr(), {}, byteParams, OMNI_BOOLEAN, INPUT_DATA),
+        Function(reinterpret_cast<void *>(ExpFunction), "exp", {}, {OMNI_DOUBLE}, OMNI_DOUBLE, INPUT_DATA),
 
         Function(reinterpret_cast<void *>(BitwiseAndFunction<int8_t>), BitwiseAndFnStr(), {}, { OMNI_BYTE, OMNI_BYTE}, OMNI_BYTE, INPUT_DATA),
         Function(reinterpret_cast<void *>(BitwiseAndFunction<int16_t>), BitwiseAndFnStr(), {}, { OMNI_SHORT, OMNI_SHORT}, OMNI_SHORT, INPUT_DATA),

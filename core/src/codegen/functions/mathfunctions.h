@@ -276,6 +276,8 @@ extern "C" DLLEXPORT bool EqualInt8(int8_t left, int8_t right);
 
 extern "C" DLLEXPORT bool NotEqualInt8(int8_t left, int8_t right);
 
+extern "C" DLLEXPORT bool ExpFunction(double a);
+
 template <typename T> extern DLLEXPORT T Round(T num, int32_t decimals)
 {
     if (std::isnan(num) || std::isinf(num)) {
