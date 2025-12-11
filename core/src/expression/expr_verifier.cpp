@@ -72,6 +72,7 @@ void ExprVerifier::Visit(const FieldExpr &fieldExpr)
         case OMNI_VARCHAR:
         case OMNI_BOOLEAN:
         case OMNI_DECIMAL64:
+        case OMNI_VARBINARY:
         case OMNI_FLOAT:
         case OMNI_DECIMAL128:
         case OMNI_ROW:

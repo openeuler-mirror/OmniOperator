@@ -48,6 +48,7 @@ int64_t GetRawAddr(const DataTypes &types, int32_t i, BaseVector *colVec)
                 reinterpret_cast<Vector<Decimal128> *>(colVec)));
         case OMNI_VARCHAR:
         case OMNI_CHAR:
+        case OMNI_VARBINARY:
             return reinterpret_cast<int64_t>(unsafe::UnsafeStringVector::GetValues(
                 reinterpret_cast<Vector<LargeStringContainer<std::string_view>> *>(colVec)));
         case OMNI_TIMESTAMP_WITHOUT_TIME_ZONE:
@@ -172,6 +173,7 @@ bool Projection::SetLiteralValue(const LiteralExpr *literalExpr)
             break;
         }
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
         case OMNI_CHAR: {
             literalVal.value.stringVal = std::string_view(*(literalExpr->stringVal));
             break;
@@ -315,6 +317,7 @@ bool Projection::ConstantColumnProjection(ExecutionContext *context, BaseVector 
             break;
         case OMNI_VARCHAR:
         case OMNI_CHAR:
+        case OMNI_VARBINARY:
             SetConstantValues<std::string_view>(literalVal.value.stringVal, outVec);
             break;
         default:
@@ -491,6 +494,7 @@ BaseVector *Projection::ColumnProjectionProxy(VectorBatch *vecBatch, int32_t sel
             return ColumnProjectionHelper<Decimal128>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_VARCHAR:
         case OMNI_CHAR:
+        case OMNI_VARBINARY:
             return ColumnProjectionVarCharVectorHelper<std::string_view>(vecBatch, selectedRows, numSelectedRows);
         case OMNI_MAP:
             return ColumnProjectionMapVectorSliceHelper(vecBatch, selectedRows, numSelectedRows);

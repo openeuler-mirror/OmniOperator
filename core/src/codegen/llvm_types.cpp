@@ -38,6 +38,7 @@ LLVMTypes::LLVMTypes(llvm::LLVMContext &context) : context(context)
         { OMNI_INTERVAL_DAY_TIME, I32Type() },
         { OMNI_VARCHAR, I8PtrType() },
         { OMNI_CHAR, I8PtrType() },
+        { OMNI_VARBINARY, I8PtrType() },
         { OMNI_ROW, I64Type() }
     };
 }
@@ -207,6 +208,7 @@ llvm::Type *LLVMTypes::ToPointerType(DataTypeId typeId)
             return DoublePtrType();
         case OMNI_CHAR:
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
             return I8PtrType();
         case OMNI_DECIMAL128:
             return I128PtrType();
@@ -238,6 +240,7 @@ llvm::Type *LLVMTypes::ToBatchDataPointerType(DataTypeId typeId)
             return FloatPtrType();
         case OMNI_CHAR:
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
             return PtrType(I8PtrType());
         case OMNI_DECIMAL128:
             return I128PtrType();

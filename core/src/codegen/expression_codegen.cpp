@@ -2240,6 +2240,7 @@ Value *ExpressionCodeGen::GetDictionaryVectorValue(const omniruntime::type::Data
             break;
         case OMNI_CHAR:
         case OMNI_VARCHAR:
+        case OMNI_VARBINARY:
             dictionaryFuncSignature = FunctionSignature(dictionaryGetVarcharStr, paramTypes, OMNI_VARCHAR);
             break;
         case OMNI_ROW:

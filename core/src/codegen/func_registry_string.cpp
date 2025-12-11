@@ -327,6 +327,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
 
         Function(reinterpret_cast<void *>(Md5Str), Md5FnStr(), {}, { OMNI_VARCHAR }, OMNI_VARCHAR,
             INPUT_DATA, true),
+        Function(reinterpret_cast<void *>(Md5Str), Md5FnStr(), {}, { OMNI_VARBINARY }, OMNI_VARCHAR,
+            INPUT_DATA, true),
         Function(reinterpret_cast<void *>(ContainsStr), ContainsFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},
             OMNI_BOOLEAN, INPUT_DATA),
         Function(reinterpret_cast<void *>(GreatestStr), GreatestStrFnStr(), {}, {OMNI_VARCHAR, OMNI_VARCHAR},

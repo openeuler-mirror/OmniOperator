@@ -8,7 +8,7 @@ using namespace omniruntime::type;
 
 bool TypeUtil::IsStringType(omniruntime::type::DataTypeId id)
 {
-    return id == OMNI_CHAR || id == OMNI_VARCHAR;
+    return id == OMNI_CHAR || id == OMNI_VARCHAR || id == OMNI_VARBINARY;
 }
 
 bool TypeUtil::IsDecimalType(omniruntime::type::DataTypeId type)
