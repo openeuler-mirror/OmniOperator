@@ -44,6 +44,7 @@ if (CCACHE_FOUND)
 endif (CCACHE_FOUND)
 
 find_package(re2 REQUIRED)
+find_package(fmt REQUIRED)
 
 if (DEFINED COVERAGE AND COVERAGE STREQUAL "ON")
     add_definitions(-DCOVERAGE)
