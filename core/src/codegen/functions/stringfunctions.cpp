@@ -10,6 +10,7 @@
 #include "md5.h"
 #include "dtoa.h"
 #include "type/string_Impl.h"
+#include "type/TimestampConversion.h"
 
 namespace omniruntime::codegen::function {
 
@@ -1539,5 +1540,23 @@ extern "C" DLLEXPORT const char *RightTrimStr(int64_t contextPtr, const char *tr
     return ret;
 }
 
+extern "C" DLLEXPORT int64_t CastStringToTimestamp(int64_t contextPtr, const char *str, int32_t strLen, bool isNull)
+{
+    if (isNull) {
+        return 0;
+    }
+    std::string_view view(str, strLen);
+    auto conversionResult = util::fromTimestampWithTimezoneString(view.data(), view.size());
+    if (!conversionResult.has_value()) {
+        std::string s(str, strLen);
+        std::ostringstream errorMessage;
+        errorMessage << "Cannot cast '" << s << "' to Timestamp.";
+        SetError(contextPtr, errorMessage.str());
+        return 0;
+    }
+
+    auto sessionTimezone = tz::locateZone("Asia/Shanghai");
+    return util::fromParsedTimestampWithTimeZone(conversionResult.value(), sessionTimezone).getSeconds();
+}
 }
 
