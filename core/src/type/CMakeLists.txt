@@ -1,4 +1,4 @@
-aux_source_directory(${CMAKE_CURRENT_LIST_DIR} TYPE_LIST)
+file(GLOB_RECURSE TYPE_LIST ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
 set(TYPE_TARGET type)
 add_library(${TYPE_TARGET} ${TYPE_LIST})
 

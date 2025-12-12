@@ -57,6 +57,48 @@ static inline bool NegateCheckedOverflow(const T a, T &r)
     r = std::negate<std::remove_cv_t<T>>()(a);
     return false;
 }
+
+template <typename T>
+T checkedPlus(const T &a, const T &b, const char *typeName = "integer")
+{
+    T result;
+    bool overflow = __builtin_add_overflow(a, b, &result);
+    if (UNLIKELY(overflow)) {
+        OMNI_THROW("checkedPlus error:", "{} overflow: {} + {}", typeName, a, b);
+    }
+    return result;
+}
+
+template <typename T>
+T checkedMinus(const T &a, const T &b, const char *typeName = "integer")
+{
+    T result;
+    bool overflow = __builtin_sub_overflow(a, b, &result);
+    if (UNLIKELY(overflow)) {
+        OMNI_THROW("checkedMinus error:", "{} overflow: {} - {}", typeName, a, b);
+    }
+    return result;
+}
+
+template <typename T>
+T checkedMultiply(const T &a, const T &b, const char *typeName = "integer")
+{
+    T result;
+    bool overflow = __builtin_mul_overflow(a, b, &result);
+    if (UNLIKELY(overflow)) {
+        OMNI_THROW("checkedMultiply error:", "{} overflow: {} * {}", typeName, a, b);
+    }
+    return result;
+}
+
+template <typename T>
+T checkedNegate(const T &a)
+{
+    if (UNLIKELY(a == std::numeric_limits<T>::min())) {
+        OMNI_THROW("checkedNegate error:", "Cannot negate minimum value");
+    }
+    return std::negate<std::remove_cv_t<T>>()(a);
+}
 }
 
 #endif //OMNI_RUNTIME_BASE_OPERATIONS_H

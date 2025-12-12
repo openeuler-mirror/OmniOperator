@@ -1,0 +1,354 @@
+/*
+* Copyright (c) Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
+ * Description: base operations implementation
+ */
+#pragma once
+#include <chrono>
+#include <string>
+#include <limits>
+
+#include "util/omni_exception.h"
+#include "type/tz/TimeZoneMap.h"
+
+namespace omniruntime {
+namespace tz {
+class TimeZone;
+}
+
+enum class TimestampPrecision : int8_t {
+    kMilliseconds = 3, // 10^3 milliseconds are equal to one second.
+    kMicroseconds = 6, // 10^6 microseconds are equal to one second.
+    kNanoseconds = 9, // 10^9 nanoseconds are equal to one second.
+};
+
+struct Timestamp {
+    static constexpr int64_t kMillisecondsInSecond = 1'000;
+    static constexpr int64_t kMicrosecondsInMillisecond = 1'000;
+    static constexpr int64_t kMicrosecondsInSecond = kMicrosecondsInMillisecond * kMillisecondsInSecond;
+    static constexpr int64_t kNanosecondsInMicrosecond = 1'000;
+    static constexpr int64_t kNanosecondsInMillisecond = 1'000'000;
+    static constexpr int64_t kNanosInSecond = kNanosecondsInMillisecond * kMillisecondsInSecond;
+    // The number of days between the Julian epoch and the Unix epoch.
+    static constexpr int64_t kJulianToUnixEpochDays = 2440588LL;
+    static constexpr int64_t kSecondsInDay = 86400LL;
+
+    // Limit the range of seconds to avoid some problems. Seconds should be
+    // in the range [INT64_MIN/1000 - 1, INT64_MAX/1000].
+    // Presto's Timestamp is stored in one 64-bit signed integer for
+    // milliseconds, this range ensures that Timestamp's range in Velox will not
+    // be smaller than Presto, and can make Timestamp::toString work correctly.
+    static constexpr int64_t kMaxSeconds = std::numeric_limits<int64_t>::max() / kMillisecondsInSecond;
+    static constexpr int64_t kMinSeconds = std::numeric_limits<int64_t>::min() / kMillisecondsInSecond - 1;
+
+    // Nanoseconds should be less than 1 second.
+    static constexpr uint64_t kMaxNanos = 999'999'999;
+
+    constexpr Timestamp() : seconds_(0), nanos_(0) {}
+
+    Timestamp(int64_t seconds, uint64_t nanos)
+        : seconds_(seconds), nanos_(nanos)
+    {
+        OMNI_CHECK(seconds>kMinSeconds, "Timestamp seconds out of range");
+        OMNI_CHECK(seconds<kMaxSeconds, "Timestamp seconds out of range");
+        OMNI_CHECK(nanos<kMaxNanos, "Timestamp nanos out of range");
+    }
+
+    Timestamp(int64_t seconds)
+        : seconds_(seconds), nanos_(0)
+    {
+        OMNI_CHECK(seconds>kMinSeconds, "Timestamp seconds out of range");
+        OMNI_CHECK(seconds<kMaxSeconds, "Timestamp seconds out of range");
+    }
+
+    /// Creates a timestamp from the number of days since the Julian epoch
+    /// and the number of nanoseconds.
+    static Timestamp fromDaysAndNanos(int32_t days, int64_t nanos);
+
+    // date is the number of days since unix epoch.
+    static Timestamp fromDate(int32_t date);
+
+    // Returns the current unix timestamp (ms precision).
+    static Timestamp now();
+
+    int64_t getSeconds() const
+    {
+        return seconds_;
+    }
+
+    uint64_t getNanos() const
+    {
+        return nanos_;
+    }
+
+    // Keep it in header for getting inlined.
+    int64_t toMillis() const
+    {
+        // We use int128_t to make sure the computation does not overflow since
+        // there are cases such that seconds*1000 does not fit in int64_t,
+        // but seconds*1000 + nanos does, an example is Timestamp::minMillis().
+
+        // If the final result does not fit in int64_t we throw.
+        __int128_t result = (__int128_t) seconds_ * 1'000 + (int64_t) (nanos_ / 1'000'000);
+        if (result < INT64_MIN || result > INT64_MAX) {
+            OMNI_FAIL("Could not convert Timestamp({}, {}) to milliseconds", seconds_, nanos_);
+        }
+        return result;
+    }
+
+    // Keep it in header for getting inlined.
+    int64_t toMillisAllowOverflow() const
+    {
+        // Similar to the above toMillis() except that overflowed integer is allowed
+        // as result.
+        auto result = seconds_ * 1'000 + (int64_t) (nanos_ / 1'000'000);
+        return result;
+    }
+
+    // Keep it in header for getting inlined.
+    int64_t toMicros() const
+    {
+        // We use int128_t to make sure the computation does not overflows since
+        // there are cases such that a negative seconds*1000000 does not fit in
+        // int64_t, but seconds*1000000 + nanos does. An example is
+        // Timestamp(-9223372036855, 224'192'000).
+
+        // If the final result does not fit in int64_t we throw.
+        __int128_t result = static_cast<__int128_t>(seconds_) * 1'000'000 + static_cast<int64_t>(nanos_ / 1'000);
+        if (result < INT64_MIN || result > INT64_MAX) {
+            OMNI_FAIL("Could not convert Timestamp({}, {}) to microseconds", seconds_, nanos_);
+        }
+        return result;
+    }
+
+    Timestamp toPrecision(const TimestampPrecision &precision) const
+    {
+        uint64_t nanos = nanos_;
+        switch (precision) {
+            case TimestampPrecision::kMilliseconds:
+                nanos = nanos / 1'000'000 * 1'000'000;
+                break;
+            case TimestampPrecision::kMicroseconds:
+                nanos = nanos / 1'000 * 1'000;
+                break;
+            case TimestampPrecision::kNanoseconds:
+                break;
+        }
+        return Timestamp(seconds_, nanos);
+    }
+
+    /// Exports the current timestamp as a std::chrono::time_point of millisecond
+    /// precision. Note that the conversion may overflow since the internal
+    /// `seconds_` value will need to be multiplied by 1000.
+    ///
+    /// If `allowOverflow` is true, integer overflow is allowed in converting
+    /// to milliseconds.
+    ///
+    /// Due to the limit of velox/external/date, throws if timestamp is outside of
+    /// [-32767-01-01, 32767-12-31] range.
+    std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>
+    toTimePointMs(bool allowOverflow = false) const;
+
+    static Timestamp fromMillis(int64_t millis)
+    {
+        if (millis >= 0 || millis % 1'000 == 0) {
+            return Timestamp(millis / 1'000, (millis % 1'000) * 1'000'000);
+        }
+        auto second = millis / 1'000 - 1;
+        auto nano = ((millis - second * 1'000) % 1'000) * 1'000'000;
+        return Timestamp(second, nano);
+    }
+
+    static Timestamp fromMillisNoError(int64_t millis)
+#if defined(__has_feature)
+#if __has_feature(__address_sanitizer__)
+      __attribute__((__no_sanitize__("signed-integer-overflow")))
+#endif
+#endif
+    {
+        if (millis >= 0 || millis % 1'000 == 0) {
+            return Timestamp(millis / 1'000, (millis % 1'000) * 1'000'000);
+        }
+        auto second = millis / 1'000 - 1;
+        auto nano = ((millis - second * 1'000) % 1'000) * 1'000'000;
+        return Timestamp(second, nano);
+    }
+
+    static Timestamp fromMicros(int64_t micros)
+    {
+        if (micros >= 0 || micros % 1'000'000 == 0) {
+            return Timestamp(micros / 1'000'000, (micros % 1'000'000) * 1'000);
+        }
+        auto second = micros / 1'000'000 - 1;
+        auto nano = ((micros - second * 1'000'000) % 1'000'000) * 1'000;
+        return Timestamp(second, nano);
+    }
+
+    static Timestamp fromMicrosNoError(int64_t micros)
+#if defined(__has_feature)
+#if __has_feature(__address_sanitizer__)
+      __attribute__((__no_sanitize__("signed-integer-overflow")))
+#endif
+#endif
+    {
+        if (micros >= 0 || micros % 1'000'000 == 0) {
+            return Timestamp(micros / 1'000'000, (micros % 1'000'000) * 1'000);
+        }
+        auto second = micros / 1'000'000 - 1;
+        auto nano = ((micros - second * 1'000'000) % 1'000'000) * 1'000;
+        return Timestamp(second, nano);
+    }
+
+    static Timestamp fromNanos(int64_t nanos)
+    {
+        if (nanos >= 0 || nanos % 1'000'000'000 == 0) {
+            return Timestamp(nanos / 1'000'000'000, nanos % 1'000'000'000);
+        }
+        auto second = nanos / 1'000'000'000 - 1;
+        auto nano = (nanos - second * 1'000'000'000) % 1'000'000'000;
+        return Timestamp(second, nano);
+    }
+
+    static const Timestamp minMillis()
+    {
+        // The minimum Timestamp that toMillis() method will not overflow.
+        // Used to calculate the minimum value of the Presto timestamp.
+        constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+        return Timestamp(kMinSeconds,
+            (kMin % kMillisecondsInSecond + kMillisecondsInSecond) * kNanosecondsInMillisecond);
+    }
+
+    static const Timestamp maxMillis()
+    {
+        // The maximum Timestamp that toMillis() method will not overflow.
+        // Used to calculate the maximum value of the Presto timestamp.
+        constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+        return Timestamp(kMaxSeconds, kMax % kMillisecondsInSecond * kNanosecondsInMillisecond);
+    }
+
+    static const Timestamp min()
+    {
+        return Timestamp(kMinSeconds, 0);
+    }
+
+    static const Timestamp max()
+    {
+        return Timestamp(kMaxSeconds, kMaxNanos);
+    }
+
+    /// Our own version of gmtime_r to avoid expensive calls to __tz_convert.
+    /// This might not be very significant in micro benchmark, but is causing
+    /// significant context switching cost in real world queries with higher
+    /// concurrency (71% of time is on __tz_convert for some queries).
+    ///
+    /// Return whether the epoch second can be converted to a valid std::tm.
+    static bool epochToCalendarUtc(int64_t seconds, std::tm &out);
+
+    /// Our own version of timegm to avoid expensive calls to __tz_convert.
+    ///
+    /// This function is guaranteed to give same result as std::timegm when it is
+    /// successful.
+    static int64_t calendarUtcToEpoch(const std::tm &tm);
+
+    /// Truncates a Timestamp value to the specified precision.
+    static Timestamp truncate(Timestamp ts, TimestampPrecision precision)
+    {
+        switch (precision) {
+            case TimestampPrecision::kMilliseconds:
+                return Timestamp::fromMillis(ts.toMillis());
+            case TimestampPrecision::kMicroseconds:
+                return Timestamp::fromMicros(ts.toMicros());
+            case TimestampPrecision::kNanoseconds:
+                return ts;
+            default:
+                OMNI_FAIL("Unsupport");
+        }
+    }
+
+    // Assuming the timestamp represents a time at zone, converts it to the GMT
+    // time at the same moment. For example:
+    //
+    //  Timestamp ts{0, 0};
+    //  ts.Timezone("America/Los_Angeles");
+    //  ts.toString(); // returns January 1, 1970 08:00:00
+    void toGMT(const tz::TimeZone &zone);
+
+    /// Assuming the timestamp represents a GMT time, converts it to the time at
+    /// the same moment at zone. For example:
+    ///
+    ///  Timestamp ts{0, 0};
+    ///  ts.Timezone("America/Los_Angeles");
+    ///  ts.toString(); // returns December 31, 1969 16:00:00
+    void toTimezone(const tz::TimeZone &zone);
+
+    /// A default time zone that is same across the process.
+    static const tz::TimeZone &defaultTimezone();
+
+    bool operator==(const Timestamp &b) const
+    {
+        return seconds_ == b.seconds_ && nanos_ == b.nanos_;
+    }
+
+    bool operator!=(const Timestamp &b) const
+    {
+        return seconds_ != b.seconds_ || nanos_ != b.nanos_;
+    }
+
+    bool operator<(const Timestamp &b) const
+    {
+        return seconds_ < b.seconds_ || (seconds_ == b.seconds_ && nanos_ < b.nanos_);
+    }
+
+    bool operator<=(const Timestamp &b) const
+    {
+        return seconds_ < b.seconds_ || (seconds_ == b.seconds_ && nanos_ <= b.nanos_);
+    }
+
+    bool operator>(const Timestamp &b) const
+    {
+        return seconds_ > b.seconds_ || (seconds_ == b.seconds_ && nanos_ > b.nanos_);
+    }
+
+    bool operator>=(const Timestamp &b) const
+    {
+        return seconds_ > b.seconds_ || (seconds_ == b.seconds_ && nanos_ >= b.nanos_);
+    }
+
+    void operator++()
+    {
+        if (nanos_ < kMaxNanos) {
+            nanos_++;
+            return;
+        }
+        if (seconds_ < kMaxSeconds) {
+            seconds_++;
+            nanos_ = 0;
+            return;
+        }
+        OMNI_FAIL("Timestamp nanos out of range");
+    }
+
+    void operator--()
+    {
+        if (nanos_ > 0) {
+            nanos_--;
+            return;
+        }
+        if (seconds_ > kMinSeconds) {
+            seconds_--;
+            nanos_ = kMaxNanos;
+            return;
+        }
+        OMNI_FAIL("Timestamp nanos out of range");
+    }
+
+    // Pretty printer for gtest.
+    friend void PrintTo(const Timestamp &timestamp, std::ostream *os)
+    {
+        *os << "sec: " << timestamp.seconds_ << ", ns: " << timestamp.nanos_;
+    }
+
+private:
+    int64_t seconds_;
+    uint64_t nanos_;
+};
+}
