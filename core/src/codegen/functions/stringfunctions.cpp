@@ -625,6 +625,15 @@ extern "C" DLLEXPORT int16_t CastStringToShort(int64_t contextPtr, const char *s
     return result;
 }
 
+extern "C" DLLEXPORT const char *CastStringToBinary(int64_t contextPtr, const char *str, int32_t strLen, bool isNull,
+    int32_t *outLen)
+{
+    *outLen = strLen;
+    auto ret = ArenaAllocatorMalloc(contextPtr, *outLen);
+    errno_t res = memcpy_s(ret, *outLen, str, *outLen);
+    return ret;
+}
+
 extern "C" DLLEXPORT int8_t CastStringToByte(int64_t contextPtr, const char *str, int32_t strLen, bool isNull)
 {
     if (isNull) {

@@ -239,6 +239,8 @@ std::vector<Function> StringFunctionRegistry::GetFunctions()
         Function(reinterpret_cast<void *>(CastDateToString), CastFnStr(), {}, { OMNI_DATE32 }, OMNI_VARCHAR, INPUT_DATA,
             true),
 
+        Function(reinterpret_cast<void *>(CastStringToBinary), CastFnStr(), {}, {OMNI_VARCHAR}, OMNI_VARBINARY,
+            INPUT_DATA, true),
         Function(reinterpret_cast<void *>(CastStringToByte), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_BYTE, INPUT_DATA,
             true),
         Function(reinterpret_cast<void *>(CastStringToShort), CastFnStr(), {}, { OMNI_VARCHAR }, OMNI_SHORT, INPUT_DATA,
