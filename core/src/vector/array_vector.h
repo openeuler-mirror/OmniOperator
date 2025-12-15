@@ -230,7 +230,7 @@ public:
 
     void SetValue(int index, BaseVector* elements);
 
-    ALWAYS_INLINE BaseVector* GetValue(int index);
+    BaseVector* GetValue(int index);
 
 protected:
     int64_t* offsets;

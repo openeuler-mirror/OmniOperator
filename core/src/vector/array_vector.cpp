@@ -26,7 +26,7 @@ void ArrayVector::SetValue(int index, BaseVector *value)
     SetSize(index, valueSize);
 }
 
-ALWAYS_INLINE BaseVector* ArrayVector::GetValue(int index)
+BaseVector* ArrayVector::GetValue(int index)
 {
     if (UNLIKELY(index < 0 || index >= size)) {
         std::string message("slice vector out of range(needed size:%d, real size:%d).", index,
