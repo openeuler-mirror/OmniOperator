@@ -119,5 +119,12 @@ char* LargeStringContainer<RAW_DATA_TYPE>::ExpandBufferToCapacity(size_t toCapac
     return bufferSupplier->Data();
 }
 
+template<typename RAW_DATA_TYPE>
+void LargeStringContainer<RAW_DATA_TYPE>::Expand(int32_t needSize)
+{
+    size = needSize;
+    offsets.resize(needSize + 1);
+}
+
 template class LargeStringContainer<std::string_view>;
 }

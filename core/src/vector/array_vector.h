@@ -8,13 +8,14 @@
 
 #include <vector>
 #include <memory>
+#include "vector.h"
 
 namespace omniruntime::vec {
 class ArrayVector : public BaseVector {
 public:
     ArrayVector(int64_t size, std::shared_ptr<BaseVector> elementVector)
         : BaseVector(size, OMNI_ENCODING_ARRAY, OMNI_ARRAY),
-          elements(std::move(elementVector))
+          elements(std::move(elementVector)), capacity(size)
     {
         offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
         offsets = offsetsBuffer->GetBuffer();
@@ -22,7 +23,7 @@ public:
     }
 
     ArrayVector(int64_t size)
-        : BaseVector(size, OMNI_ENCODING_ARRAY, OMNI_ARRAY)
+        : BaseVector(size, OMNI_ENCODING_ARRAY, OMNI_ARRAY), capacity(size)
     {
         offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(size + 1);
         offsets = offsetsBuffer->GetBuffer();
@@ -48,6 +49,8 @@ public:
     {
         return offsets[index + 1] - offsets[index];
     }
+
+    using BaseVector::GetSize;
 
     const std::shared_ptr<BaseVector> GetElementVector() const
     {
@@ -145,17 +148,23 @@ public:
         int elementLength = 0;
         for (int32_t i = 0; i < length; i++) {
             int position = startPositions[i];
+            // position == -1 means that this position in newArrayVector should be set to NULL.
+            if (UNLIKELY(position == -1)) {
+                newArrayVector->SetNull(i);
+                elementPositions.push_back(-1);
+                elementLength += 1;
+                newArrayVector->SetSize(i, 1);
+                continue;
+            }
             if (UNLIKELY(IsNull(position))) {
                 newArrayVector->SetNull(i);
             }
             int elementIndex = this->GetOffset(position);
             int elementSize = this->GetSize(position);
-
-            newArrayVector->SetOffset(i, elementLength);
+            newArrayVector->SetSize(i, elementSize);
             elementLength += elementSize;
             updateElementPositions(elementPositions, elementIndex, elementSize);
         }
-        newArrayVector->SetOffset(length, elementLength);
 
         auto elementVector = this->GetElementVector();
         if (UNLIKELY(elementLength == 0)) {
@@ -175,10 +184,59 @@ public:
         }
     }
 
+    void Expand(int64_t needCapacity)
+    {
+        if (needCapacity <= size) {
+            return;
+        }
+
+        if (needCapacity <= capacity) {
+            size = needCapacity;
+            return;
+        }
+
+        int64_t newCapacity = std::max(capacity * 2, needCapacity);
+        int64_t oldSize = size;
+
+        auto oldOffsetsBuffer = offsetsBuffer;
+        offsetsBuffer = std::make_shared<AlignedBuffer<int64_t>>(newCapacity + 1);
+        offsets = offsetsBuffer->GetBuffer();
+
+        if (oldOffsetsBuffer != nullptr) {
+            errno_t res = memcpy_s(
+                    offsets,
+                    (newCapacity + 1) * sizeof(int64_t),
+                    oldOffsetsBuffer->GetBuffer(),
+                    (oldSize + 1) * sizeof(int64_t)
+            );
+            if (res != EOK) {
+                throw OmniException("ERROR : ArrayVector Expand memcpy_s failed ! ", std::to_string(res));
+            }
+        } else {
+            memset(offsets, 0, (newCapacity + 1) * sizeof(int64_t));
+        }
+
+        auto oldNullsBuffer = nullsBuffer;
+        nullsBuffer = std::make_shared<NullsBuffer>(newCapacity);
+        if (oldNullsBuffer != nullptr) {
+            nullsBuffer->SetNulls(0, oldNullsBuffer.get(), oldSize);
+        } else {
+            nullsBuffer->SetNulls(0, false, newCapacity);
+        }
+
+        capacity = newCapacity;
+        size = needCapacity;
+    }
+
+    void SetValue(int index, BaseVector* elements);
+
+    ALWAYS_INLINE BaseVector* GetValue(int index);
+
 protected:
     int64_t* offsets;
     std::shared_ptr<AlignedBuffer<int64_t>> offsetsBuffer;
     std::shared_ptr<BaseVector> elements;
+    int64_t capacity;
 };
 }
 

@@ -175,6 +175,11 @@ public:
         return isField_;
     }
 
+    virtual void Expand(int32_t needCapacity)
+    {
+        OMNI_THROW("Vector Error: ", "Expand method not implemented for this vector type");
+    }
+
 protected:
     bool isField_ = false;
     friend class unsafe::UnsafeBaseVector;
@@ -224,6 +229,7 @@ public:
         this->dataTypeId = dataTypeId;
         valuesBuffer = std::make_shared<AlignedBuffer<RAW_DATA_TYPE>>(vSize);
         values = valuesBuffer->GetBuffer();
+        capacity = vSize;
         // vector class capacity, valuesBuffer class capacity and nullsBuffer class capacity
         int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>) + sizeof(NullsBuffer) + sizeof(AlignedBuffer<uint8_t>) +
             sizeof(AlignedBuffer<RAW_DATA_TYPE>);
@@ -247,7 +253,9 @@ public:
     // used for container vector, dictionary vector and varchar vector.
     Vector(int vSize, Encoding encoding, NullsBuffer *nullsBufferPtr = nullptr, int32_t sliceOffset = 0)
         : BaseVector(vSize, encoding, nullsBufferPtr, sliceOffset)
-    {}
+    {
+        capacity = vSize;
+    }
 
     // used for vector slice, sliced vector use same values as parent vector
     Vector(int vSize, Encoding encoding, NullsBuffer *nullsBufferPtr,
@@ -257,6 +265,7 @@ public:
         this->dataTypeId = dataTypeId;
         this->valuesBuffer = valuesBuffer; // copy the data field shared_ptr
         values = valuesBuffer->GetBuffer();
+        capacity = vSize;
         // vector class capacity
         int64_t vectorCapacity = sizeof(Vector<RAW_DATA_TYPE>) + sizeof(NullsBuffer);
         omniruntime::mem::ThreadMemoryManager::ReportMemory(vectorCapacity);
@@ -326,7 +335,7 @@ public:
             auto src = reinterpret_cast<Vector<RAW_DATA_TYPE> *>(other);
             SetNulls(positionOffset, src->nullsBuffer.get(), length);
             SetValues(positionOffset, src->values + src->offset, length);
-        } else { // for dictionay
+        } else { // for dictionary
             auto src = reinterpret_cast<Vector<DictionaryContainer<RAW_DATA_TYPE>> *>(other);
             for (int32_t i = 0; i < length; i++) {
                 auto index = i + positionOffset;
@@ -352,6 +361,12 @@ public:
         auto startPositions = positions + positionOffset;
         for (int32_t i = 0; i < length; i++) {
             int position = startPositions[i];
+            // when position = -1
+            if (UNLIKELY(position == -1)) {
+                vector->SetNull(i);
+                continue;
+            }
+
             if (UNLIKELY(IsNull(position))) {
                 vector->nullsBuffer->SetNull(i);
             }
@@ -383,10 +398,47 @@ public:
         return sliced;
     }
 
+    ALWAYS_INLINE void Expand(int32_t needCapacity)
+    {
+        if(needCapacity <= size){
+            return;
+        }
+
+        if (needCapacity <= capacity) {
+            size = needCapacity;
+            return;
+        }
+
+        int32_t newCapacity = std::max(capacity * 2, needCapacity);
+        int32_t oldSize = size;
+        auto oldValuesBuffer = valuesBuffer;
+        auto oldValues = values;
+
+        valuesBuffer = std::make_shared<AlignedBuffer<RAW_DATA_TYPE>>(newCapacity);
+        values = valuesBuffer->GetBuffer();
+
+        if (oldValues != nullptr) {
+            error_t res = memcpy_s(values, newCapacity * sizeof(RAW_DATA_TYPE),
+                                   oldValues, oldSize * sizeof(RAW_DATA_TYPE));
+            if (res != EOK) {
+                throw OmniException("ERROR : Vector Expand memcpy_s failed ", std::to_string(res));
+            }
+        }
+
+        auto oldNullsBuffer = nullsBuffer;
+        nullsBuffer = std::make_shared<NullsBuffer>(newCapacity);
+        if (oldNullsBuffer != nullptr) {
+            nullsBuffer->SetNulls(0, oldNullsBuffer.get(), oldSize);
+        }
+        capacity = newCapacity;
+        size = needCapacity;
+    }
+
 protected:
     friend class unsafe::UnsafeVector;
     std::shared_ptr<AlignedBuffer<RAW_DATA_TYPE>> valuesBuffer; // manage values memory and it's metadata
     RAW_DATA_TYPE *values; // valuesBuffer->GetBuffer(), for primitive types without encoding
+    int32_t capacity = 0;
 };
 
 /**
@@ -614,7 +666,7 @@ public:
                     SetNull(index);
                 }
             }
-        } else { // for dictionay
+        } else { // for dictionary
             auto src = reinterpret_cast<Vector<DictionaryContainer<std::string_view, LargeStringContainer>> *>(other);
             for (int32_t i = 0; i < length; i++) {
                 bool isNull = src->IsNull(i);
@@ -677,6 +729,31 @@ public:
         sliced->SetOffset(this->offset + positionOffset); // update offset
         sliced->SetSliced(true);
         return std::move(sliced);
+    }
+
+    ALWAYS_INLINE void Expand(int32_t needCapacity)
+    {
+        if(needCapacity <= this->size){
+            return;
+        }
+
+        if (needCapacity <= this->capacity) {
+            this->size = needCapacity;
+            container->Expand(needCapacity);
+            return;
+        }
+
+        int32_t newCapacity = std::max(this->capacity * 2, needCapacity);
+        int32_t oldSize = this->size;
+
+        auto oldNullsBuffer = this->nullsBuffer;
+        this->nullsBuffer = std::make_shared<NullsBuffer>(newCapacity);
+        if (oldNullsBuffer != nullptr) {
+            this->nullsBuffer->SetNulls(0, oldNullsBuffer.get(), oldSize);
+        }
+        this->capacity = newCapacity;
+        this->size = needCapacity;
+        container->Expand(needCapacity);
     }
 
 private:

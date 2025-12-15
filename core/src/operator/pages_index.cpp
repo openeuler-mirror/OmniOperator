@@ -1527,6 +1527,11 @@ void PagesIndex::GetOutput(int32_t *outputCols, int32_t outputColsCount, VectorB
                     outputIndex);
                 break;
             }
+            case OMNI_ARRAY: {
+                ConstructVector<OMNI_ARRAY>(vaStart, length, inputVecBatch, hasNull, hasDictionary, outputVector,
+                    outputIndex);
+                break;
+            }
             default:
                 break;
         }
@@ -1635,10 +1640,16 @@ static ALWAYS_INLINE void SetValue(BaseVector *inputVector, int32_t inputIndex, 
             } else {
                 value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
             }
+            static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
         } else {
-            value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
+            if constexpr (dataTypeId == OMNI_ARRAY) {
+                value = static_cast<ArrayVector *>(inputVector)->GetValue(inputIndex);
+                static_cast<ArrayVector *>(outputVector)->SetValue(outputIndex, value);
+            } else {
+                value = static_cast<Vector<T> *>(inputVector)->GetValue(inputIndex);
+                static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
+            }
         }
-        static_cast<Vector<T> *>(outputVector)->SetValue(outputIndex, value);
     }
 }
 

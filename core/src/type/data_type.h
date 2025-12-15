@@ -13,6 +13,12 @@
 #include "util/debug.h"
 
 namespace omniruntime {
+namespace vec {
+class BaseVector;
+}
+}
+
+namespace omniruntime {
 namespace type {
 constexpr int32_t DATA_TYPE_MAX_COUNT = 20;
 const std::string ID = "id";
@@ -131,6 +137,10 @@ template <> struct NativeType<DataTypeId::OMNI_CONTAINER> {
 
 template <> struct NativeType<DataTypeId::OMNI_TIMESTAMP> {
     using type = int64_t;
+};
+
+template <> struct NativeType<DataTypeId::OMNI_ARRAY> {
+    using type = vec::BaseVector*;
 };
 
 #define DYNAMIC_TYPE_DISPATCH(CALLBACK, typeId, ...)                                          \
@@ -304,10 +314,21 @@ public:
         return 1;
     }
 
+    size_t GetElementSize() const
+    {
+        return elementSize;
+    }
+
+    void SetElementSize(size_t size)
+    {
+        elementSize = size;
+    }
+
     void Serialize(nlohmann::json &nlohmannJson) const override {}
 
 protected:
     std::shared_ptr<DataType> child;
+    size_t elementSize;
 };
 
 class VarBinaryDataType : public DataType {

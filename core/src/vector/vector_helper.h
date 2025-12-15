@@ -221,6 +221,14 @@ public:
         }
     }
 
+    static void PrintVec(BaseVector *vector, int32_t rowCount)
+    {
+        for (int32_t rowIdx = 0; rowIdx < rowCount; ++rowIdx) {
+            PrintVectorValue(vector, rowIdx);
+            std::cout << std::endl;
+        }
+    }
+
     template <type::DataTypeId typeId> static void PrintDictionaryVectorValue(BaseVector *vector, int32_t rowIndex)
     {
         using namespace omniruntime::type;
@@ -231,6 +239,17 @@ public:
         } else {
             std::cout << std::dec << static_cast<Vector<DictionaryContainer<T>> *>(vector)->GetValue(rowIndex) << "\t";
         }
+    }
+
+    static void PrintArrayVectorOffsetsAndNulls(BaseVector* vector, int32_t rowIndex)
+    {
+        auto* arrayVec = dynamic_cast<ArrayVector*>(vector);
+        if (!arrayVec) {
+            throw omniruntime::exception::OmniException("RUNTIME_ERROR", "ArrayVector is null!");
+        }
+        int32_t offset = arrayVec->GetOffset(rowIndex);
+        int32_t size = arrayVec->GetSize(rowIndex);
+        std::cout << rowIndex << "--- offset: " << offset << "; size: " << size << "; isNull: " << arrayVec->IsNull(rowIndex) << std::endl;
     }
 
     template <type::DataTypeId typeId> static void PrintFlatVectorValue(BaseVector *vector, int32_t rowIndex)
@@ -847,7 +866,7 @@ public:
     {
         const std::vector<omniruntime::type::DataTypePtr> &types = sourceTypes.Get();
         for (int i = 0; i < sourceTypes.GetSize(); i++) {
-            vectorBatch->Append(CreateVector(OMNI_FLAT, types[i]->GetId(), positionCount));
+            vectorBatch->Append(CreateComplexVector(types[i].get(), positionCount));
         }
     }
 

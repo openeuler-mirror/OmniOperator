@@ -512,7 +512,7 @@ static void LoadDataTypeCls(JNIEnv *env)
 static jobject GetDataType(JNIEnv *env, BaseVector *vec)
 {
     if (UNLIKELY(vec == nullptr)) {
-        throw omniruntime::exception::OmniException("CREATE_COMPLEX_VECTOR_FAILED",
+        throw omniruntime::exception::OmniException("GET_DATA_TYPE_FAILED",
             "GetDataType received null vector");
     }
     auto id = vec->GetTypeId();
