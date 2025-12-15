@@ -295,10 +295,6 @@ void ExprVerifier::Visit(const FuncExpr &funcExpr)
     if (funcExpr.vectorFunction == nullptr) {
         this->isSupportVectorization_ = false;
     }
-    if (funcExpr.funcName == "LIKE") {
-        this->isSupportCodegen_ = false;
-        return;
-    }
 
     if (funcExpr.funcName == "DateFormat") {
         if (funcExpr.arguments.size() >= 2) {
