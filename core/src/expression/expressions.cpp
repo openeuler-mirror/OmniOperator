@@ -863,6 +863,10 @@ IfExpr::IfExpr(Expr *cond, Expr *texp, Expr *fexp)
     condition = cond;
     trueExpr = texp;
     falseExpr = fexp;
+    std::vector<omniruntime::type::DataTypeId> args = {condition->dataType->GetId(),
+                                                       trueExpr->dataType->GetId(), falseExpr->dataType->GetId()};
+    auto signature = std::make_shared<FunctionSignature>("if", args, dataType->GetId());
+    vectorFunction = VectorFunction::Find(signature);
 }
 
 ExprType IfExpr::GetType() const
