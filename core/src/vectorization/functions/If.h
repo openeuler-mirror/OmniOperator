@@ -31,10 +31,6 @@ namespace omniruntime::vectorization {
                 OMNI_THROW("If expr Error", "condVec must be a BooleanVector");
             }
 
-            if (trueVec->GetEncoding() != OMNI_ENCODING_CONST) {
-                OMNI_THROW("If expr Error", "trueVec must be a ConstVector");
-            }
-
             auto *stringTrueVector = static_cast<ConstVector<std::string> *>(trueVec);
             auto *boolVec = static_cast<Vector<bool> *>(condVec);
 
@@ -49,9 +45,14 @@ namespace omniruntime::vectorization {
                 }
                 auto cond = boolVec->GetValue(row);
                 if (cond) {
-                    auto res = stringTrueVector->GetConstValue();
-                    std::string_view sv = res;
-                    static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,sv);
+                    if (trueVec->GetEncoding() == OMNI_ENCODING_CONST) {
+                        auto res =  static_cast<ConstVector<std::string> *>(trueVec)->GetConstValue();
+                        std::string_view sv = res;
+                        static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,sv);
+                    } else {
+                        auto res = static_cast<Vector<LargeStringContainer<std::string_view>> *>(trueVec)->GetValue(row);
+                        static_cast<Vector<LargeStringContainer<std::string_view>> *>(result)->SetValue(row,res);
+                    }
                 } else {
                     if (falseVec->GetEncoding() == OMNI_ENCODING_CONST) {
                         auto res =  static_cast<ConstVector<std::string> *>(falseVec)->GetConstValue();
