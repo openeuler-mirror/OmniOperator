@@ -110,7 +110,7 @@ template <typename T> T GetValue(uint8_t rowDataSize, const char *pos)
             if constexpr (std::is_same_v<T, float>) {
                 value = *reinterpret_cast<const float *>(pos);
             } else {
-                value = static_cast<T>(*reinterpret_cast<const int64_t *>(pos));
+                value = static_cast<T>(*reinterpret_cast<const int32_t *>(pos));
             }
             break;
         case BYTE_8:
